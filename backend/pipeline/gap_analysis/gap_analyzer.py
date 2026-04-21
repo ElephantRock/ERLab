@@ -1,6 +1,5 @@
 """Gap analysis — identify underexplored research areas."""
 
-import json
 import logging
 
 from backend.pipeline.gap_analysis.cluster_service import ClusterService
@@ -93,11 +92,20 @@ class GapAnalyzer:
                                     "title": {"type": "string"},
                                     "description": {"type": "string"},
                                     "gap_type": {"type": "string"},
-                                    "related_clusters": {"type": "array", "items": {"type": "integer"}},
+                                    "related_clusters": {
+                                        "type": "array",
+                                        "items": {"type": "integer"},
+                                    },
                                     "potential_impact": {"type": "string"},
                                     "confidence": {"type": "number"},
                                 },
-                                "required": ["title", "description", "gap_type", "potential_impact", "confidence"],
+                                "required": [
+                                    "title",
+                                    "description",
+                                    "gap_type",
+                                    "potential_impact",
+                                    "confidence",
+                                ],
                             },
                         }
                     },
@@ -169,8 +177,9 @@ class GapAnalyzer:
         for c in report.clusters:
             lines.append(
                 f"- Cluster {c.cluster_id} ({c.label}): {c.paper_count} papers, "
-                f"avg citations: {c.avg_citations:.1f}" if c.avg_citations else
-                f"- Cluster {c.cluster_id} ({c.label}): {c.paper_count} papers"
+                f"avg citations: {c.avg_citations:.1f}"
+                if c.avg_citations
+                else f"- Cluster {c.cluster_id} ({c.label}): {c.paper_count} papers"
             )
         return "\n".join(lines)
 

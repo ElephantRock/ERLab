@@ -11,7 +11,7 @@ from backend.pipeline.literature.models import Author, Paper, SearchResult
 
 logger = logging.getLogger(__name__)
 
-ARXIV_API = "http://export.arxiv.org/api/query"
+ARXIV_API = "https://export.arxiv.org/api/query"
 ATOM_NS = "{http://www.w3.org/2005/Atom}"
 ARXIV_NS = "{http://arxiv.org/schemas/atom}"
 
@@ -33,7 +33,9 @@ class ArxivSource(AcademicSearchSource):
     ) -> list[SearchResult]:
         search_query = f'all:"{query}"'
         if year_from or year_to:
-            search_query += f" AND submittedDate:[{year_from or 2000}01010000 TO {year_to or 2030}12312359]"
+            search_query += (
+                f" AND submittedDate:[{year_from or 2000}01010000 TO {year_to or 2030}12312359]"
+            )
 
         params = {
             "search_query": search_query,
@@ -57,7 +59,9 @@ class ArxivSource(AcademicSearchSource):
     async def get_paper(self, paper_id: str) -> Paper | None:
         try:
             await asyncio.sleep(3)
-            response = await self._client.get(ARXIV_API, params={"id_list": paper_id, "max_results": 1})
+            response = await self._client.get(
+                ARXIV_API, params={"id_list": paper_id, "max_results": 1}
+            )
             response.raise_for_status()
             results = self._parse_feed(response.text)
             return results[0].paper if results else None
@@ -74,7 +78,7 @@ class ArxivSource(AcademicSearchSource):
         return []
 
     def _parse_feed(self, xml_text: str) -> list[SearchResult]:
-        results = []
+        results: list[SearchResult] = []
         try:
             root = ET.fromstring(xml_text)
         except ET.ParseError:
@@ -100,8 +104,7 @@ class ArxivSource(AcademicSearchSource):
             year = int(published[:4]) if len(published) >= 4 else None
 
             categories = [
-                cat.get("term", "")
-                for cat in entry.findall(f"{ARXIV_NS}primary_category")
+                cat.get("term", "") for cat in entry.findall(f"{ARXIV_NS}primary_category")
             ]
 
             paper = Paper(

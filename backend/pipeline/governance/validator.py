@@ -8,8 +8,8 @@ to fix issues when validation fails.
 import logging
 
 from backend.pipeline.governance.contracts import (
-    BoundaryContract,
     DEFAULT_CONTRACTS,
+    BoundaryContract,
     GovernanceCheck,
     OutputVerdict,
 )
@@ -67,7 +67,7 @@ class OutputValidator:
         all_checks: list[GovernanceCheck] = []
         current_content = content
 
-        for attempt in range(max_reasks + 1):
+        for _attempt in range(max_reasks + 1):
             checks = await self.validate(current_content, output_type)
             all_checks.extend(checks)
 
@@ -77,7 +77,8 @@ class OutputValidator:
             # Build reask prompt with rejection reasons
             rejections = [
                 f"- {c.contract_name}: {c.reason}"
-                for c in checks if c.verdict == OutputVerdict.REJECTED
+                for c in checks
+                if c.verdict == OutputVerdict.REJECTED
             ]
             current_content = await self._reask(current_content, rejections)
 
@@ -107,19 +108,19 @@ class OutputValidator:
 
     async def _llm_check(self, content: str) -> list[GovernanceCheck]:
         """Use LLM to validate content quality."""
-        checks_desc = "\n".join(
-            f"- {c.name} ({c.constraint_type})"
-            for c in self._contracts
-        )
+        checks_desc = "\n".join(f"- {c.name} ({c.constraint_type})" for c in self._contracts)
 
         try:
             result = await self._provider.structured_output(
                 messages=[
                     {"role": "system", "content": "You validate research output quality."},
-                    {"role": "user", "content": VALIDATION_PROMPT.format(
-                        content=content[:3000],  # Truncate for cost
-                        checks=checks_desc,
-                    )},
+                    {
+                        "role": "user",
+                        "content": VALIDATION_PROMPT.format(
+                            content=content[:3000],  # Truncate for cost
+                            checks=checks_desc,
+                        ),
+                    },
                 ],
                 schema={
                     "type": "object",
@@ -149,11 +150,13 @@ class OutputValidator:
                     verdict = OutputVerdict(verdict_str)
                 except ValueError:
                     verdict = OutputVerdict.ACCEPTED
-                checks.append(GovernanceCheck(
-                    contract_name=c.get("contract_name", "unknown"),
-                    verdict=verdict,
-                    reason=c.get("reason", ""),
-                ))
+                checks.append(
+                    GovernanceCheck(
+                        contract_name=c.get("contract_name", "unknown"),
+                        verdict=verdict,
+                        reason=c.get("reason", ""),
+                    )
+                )
             return checks
 
         except Exception as e:
@@ -166,11 +169,14 @@ class OutputValidator:
             result = await self._provider.structured_output(
                 messages=[
                     {"role": "system", "content": "You revise research output to fix issues."},
-                    {"role": "user", "content": (
-                        f"Revise this research output to address these issues:\n"
-                        + "\n".join(rejections)
-                        + f"\n\nOriginal content:\n{content[:2000]}"
-                    )},
+                    {
+                        "role": "user",
+                        "content": (
+                            "Revise this research output to address these issues:\n"
+                            + "\n".join(rejections)
+                            + f"\n\nOriginal content:\n{content[:2000]}"
+                        ),
+                    },
                 ],
                 schema={
                     "type": "object",

@@ -1,6 +1,5 @@
 """Semantic Scholar API client."""
 
-import asyncio
 import logging
 
 import httpx
@@ -40,7 +39,7 @@ class SemanticScholarSource(AcademicSearchSource):
             params["year"] = year_range
 
         try:
-            response = await self._client.get("/paper/search", params=params)
+            response = await self._client.get("/paper/search", params=params)  # type: ignore[arg-type]
             response.raise_for_status()
             data = response.json()
         except (httpx.HTTPError, KeyError) as e:
@@ -51,11 +50,13 @@ class SemanticScholarSource(AcademicSearchSource):
         for item in data.get("data", []):
             paper = self._parse_paper(item)
             if paper:
-                results.append(SearchResult(
-                    paper=paper,
-                    relevance_score=item.get("relevanceScore"),
-                    source=self.source_name,
-                ))
+                results.append(
+                    SearchResult(
+                        paper=paper,
+                        relevance_score=item.get("relevanceScore"),
+                        source=self.source_name,
+                    )
+                )
         return results
 
     async def get_paper(self, paper_id: str) -> Paper | None:
@@ -117,8 +118,7 @@ class SemanticScholarSource(AcademicSearchSource):
             title=data["title"],
             abstract=data.get("abstract"),
             authors=[
-                Author(name=a.get("name", "Unknown"), id=a.get("authorId"))
-                for a in authors_data
+                Author(name=a.get("name", "Unknown"), id=a.get("authorId")) for a in authors_data
             ],
             year=data.get("year"),
             venue=data.get("venue"),

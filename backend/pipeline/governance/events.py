@@ -4,7 +4,6 @@ ESAA-inspired event sourcing with SHA-256 hash chain verification.
 """
 
 import hashlib
-import json
 import logging
 from datetime import datetime
 from pathlib import Path
@@ -15,9 +14,9 @@ logger = logging.getLogger(__name__)
 
 
 class GovernanceEvent(BaseModel):
-    event_type: str     # "output.accepted", "output.rejected", "output.revised"
+    event_type: str  # "output.accepted", "output.rejected", "output.revised"
     stage: str
-    content_hash: str   # SHA-256 of original content
+    content_hash: str  # SHA-256 of original content
     checks_summary: str = ""
     timestamp: datetime = datetime.now()
     previous_hash: str = ""
@@ -73,7 +72,7 @@ class GovernanceAuditLog:
     def _load(self) -> None:
         if not self._path.exists():
             return
-        with open(self._path, "r", encoding="utf-8") as f:
+        with open(self._path, encoding="utf-8") as f:
             for line in f:
                 line = line.strip()
                 if not line:

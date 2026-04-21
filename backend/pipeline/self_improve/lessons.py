@@ -2,7 +2,7 @@
 
 import logging
 
-from backend.pipeline.orchestrator import PipelineResult
+from backend.pipeline.result import PipelineResult
 from backend.providers.base import LLMProvider
 
 logger = logging.getLogger(__name__)
@@ -54,7 +54,8 @@ class LessonExtractor:
 
         gaps_text = "\n".join(f"- {g.title}: {g.description[:150]}" for g in result.gaps[:5])
         ideas_text = "\n".join(
-            f"- {i.title} (score: {i.score:.2f})" for i in sorted(result.ideas, key=lambda x: x.score, reverse=True)[:5]
+            f"- {i.title} (score: {i.score:.2f})"
+            for i in sorted(result.ideas, key=lambda x: x.score, reverse=True)[:5]
         )
 
         prompt = LESSON_PROMPT.format(
@@ -69,7 +70,10 @@ class LessonExtractor:
         try:
             raw = await self._provider.structured_output(
                 messages=[
-                    {"role": "system", "content": "You are a research pipeline improvement advisor."},
+                    {
+                        "role": "system",
+                        "content": "You are a research pipeline improvement advisor.",
+                    },
                     {"role": "user", "content": prompt},
                 ],
                 schema={
@@ -91,7 +95,7 @@ class LessonExtractor:
                 },
             )
 
-            return [l.get("lesson", "") for l in raw.get("lessons", []) if l.get("lesson")]
+            return [lesson.get("lesson", "") for lesson in raw.get("lessons", []) if lesson.get("lesson")]
 
         except Exception as e:
             logger.error("Lesson extraction failed: %s", e)

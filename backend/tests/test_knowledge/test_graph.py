@@ -32,38 +32,55 @@ class TestEntityResolution:
 class TestKnowledgeGraph:
     def test_add_entity(self, tmp_path):
         kg = KnowledgeGraph(persist_path=str(tmp_path / "kg.json"))
-        eid = kg.add_entity(KnowledgeEntity(
-            id="paper:attention",
-            entity_type=EntityType.PAPER,
-            name="Attention Is All You Need",
-            truth=TruthValue.from_observation(0.9),
-        ))
+        eid = kg.add_entity(
+            KnowledgeEntity(
+                id="paper:attention",
+                entity_type=EntityType.PAPER,
+                name="Attention Is All You Need",
+                truth=TruthValue.from_observation(0.9),
+            )
+        )
         assert eid == "paper:attention"
         assert kg.get_entity("paper:attention") is not None
 
     def test_add_relationship(self, tmp_path):
         kg = KnowledgeGraph(persist_path=str(tmp_path / "kg.json"))
-        kg.add_entity(KnowledgeEntity(
-            id="paper:a", entity_type=EntityType.PAPER, name="Paper A",
-        ))
-        kg.add_entity(KnowledgeEntity(
-            id="paper:b", entity_type=EntityType.PAPER, name="Paper B",
-        ))
-        kg.add_relationship(KnowledgeRelationship(
-            source_id="paper:a",
-            target_id="paper:b",
-            relation_type=RelationType.CITES,
-            evidence=["paper:a"],
-        ))
+        kg.add_entity(
+            KnowledgeEntity(
+                id="paper:a",
+                entity_type=EntityType.PAPER,
+                name="Paper A",
+            )
+        )
+        kg.add_entity(
+            KnowledgeEntity(
+                id="paper:b",
+                entity_type=EntityType.PAPER,
+                name="Paper B",
+            )
+        )
+        kg.add_relationship(
+            KnowledgeRelationship(
+                source_id="paper:a",
+                target_id="paper:b",
+                relation_type=RelationType.CITES,
+                evidence=["paper:a"],
+            )
+        )
         assert len(kg._relationships) == 1
 
     def test_reinforce_edge(self, tmp_path):
         kg = KnowledgeGraph(persist_path=str(tmp_path / "kg.json"))
         kg.add_entity(KnowledgeEntity(id="p:a", entity_type=EntityType.PAPER, name="A"))
         kg.add_entity(KnowledgeEntity(id="p:b", entity_type=EntityType.PAPER, name="B"))
-        kg.add_relationship(KnowledgeRelationship(
-            source_id="p:a", target_id="p:b", relation_type=RelationType.CITES, weight=1.0,
-        ))
+        kg.add_relationship(
+            KnowledgeRelationship(
+                source_id="p:a",
+                target_id="p:b",
+                relation_type=RelationType.CITES,
+                weight=1.0,
+            )
+        )
         kg.reinforce("p:a", "p:b", RelationType.CITES, delta=0.2)
         assert kg._relationships[0].weight == 1.2
 
@@ -71,9 +88,14 @@ class TestKnowledgeGraph:
         kg = KnowledgeGraph(persist_path=str(tmp_path / "kg.json"))
         kg.add_entity(KnowledgeEntity(id="p:a", entity_type=EntityType.PAPER, name="A"))
         kg.add_entity(KnowledgeEntity(id="p:b", entity_type=EntityType.PAPER, name="B"))
-        kg.add_relationship(KnowledgeRelationship(
-            source_id="p:a", target_id="p:b", relation_type=RelationType.CITES, weight=1.0,
-        ))
+        kg.add_relationship(
+            KnowledgeRelationship(
+                source_id="p:a",
+                target_id="p:b",
+                relation_type=RelationType.CITES,
+                weight=1.0,
+            )
+        )
         kg.weaken("p:a", "p:b", RelationType.CITES, delta=0.3)
         assert kg._relationships[0].weight == 0.7
 
@@ -82,12 +104,20 @@ class TestKnowledgeGraph:
         kg.add_entity(KnowledgeEntity(id="p:a", entity_type=EntityType.PAPER, name="A"))
         kg.add_entity(KnowledgeEntity(id="p:b", entity_type=EntityType.PAPER, name="B"))
         kg.add_entity(KnowledgeEntity(id="p:c", entity_type=EntityType.PAPER, name="C"))
-        kg.add_relationship(KnowledgeRelationship(
-            source_id="p:a", target_id="p:b", relation_type=RelationType.CITES,
-        ))
-        kg.add_relationship(KnowledgeRelationship(
-            source_id="p:c", target_id="p:a", relation_type=RelationType.EXTENDS,
-        ))
+        kg.add_relationship(
+            KnowledgeRelationship(
+                source_id="p:a",
+                target_id="p:b",
+                relation_type=RelationType.CITES,
+            )
+        )
+        kg.add_relationship(
+            KnowledgeRelationship(
+                source_id="p:c",
+                target_id="p:a",
+                relation_type=RelationType.EXTENDS,
+            )
+        )
         neighbors = kg.get_neighbors("p:a")
         names = {n.name for n in neighbors}
         assert "B" in names
@@ -95,8 +125,12 @@ class TestKnowledgeGraph:
 
     def test_merge_entities(self, tmp_path):
         kg = KnowledgeGraph(persist_path=str(tmp_path / "kg.json"))
-        kg.add_entity(KnowledgeEntity(id="auth:vaswani", entity_type=EntityType.AUTHOR, name="Vaswani"))
-        kg.add_entity(KnowledgeEntity(id="auth:vaswani_a", entity_type=EntityType.AUTHOR, name="Vaswani A."))
+        kg.add_entity(
+            KnowledgeEntity(id="auth:vaswani", entity_type=EntityType.AUTHOR, name="Vaswani")
+        )
+        kg.add_entity(
+            KnowledgeEntity(id="auth:vaswani_a", entity_type=EntityType.AUTHOR, name="Vaswani A.")
+        )
         kg.merge_entities("auth:vaswani", "auth:vaswani_a")
         # Both should resolve to same canonical
         assert kg._resolution.are_same("auth:vaswani", "auth:vaswani_a")
@@ -104,9 +138,13 @@ class TestKnowledgeGraph:
     def test_persistence(self, tmp_path):
         path = str(tmp_path / "kg.json")
         kg1 = KnowledgeGraph(persist_path=path)
-        kg1.add_entity(KnowledgeEntity(
-            id="p:test", entity_type=EntityType.PAPER, name="Test Paper",
-        ))
+        kg1.add_entity(
+            KnowledgeEntity(
+                id="p:test",
+                entity_type=EntityType.PAPER,
+                name="Test Paper",
+            )
+        )
         kg1.save()
 
         kg2 = KnowledgeGraph(persist_path=path)
@@ -118,9 +156,13 @@ class TestKnowledgeGraph:
         kg.add_entity(KnowledgeEntity(id="p:1", entity_type=EntityType.PAPER, name="P1"))
         kg.add_entity(KnowledgeEntity(id="p:2", entity_type=EntityType.PAPER, name="P2"))
         kg.add_entity(KnowledgeEntity(id="m:1", entity_type=EntityType.METHOD, name="M1"))
-        kg.add_relationship(KnowledgeRelationship(
-            source_id="p:1", target_id="p:2", relation_type=RelationType.CITES,
-        ))
+        kg.add_relationship(
+            KnowledgeRelationship(
+                source_id="p:1",
+                target_id="p:2",
+                relation_type=RelationType.CITES,
+            )
+        )
         stats = kg.get_graph_stats()
         assert stats["entity_count"] == 3
         assert stats["relationship_count"] == 1

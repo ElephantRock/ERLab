@@ -77,10 +77,7 @@ class TestCheckConvergence:
 
 class TestDetectLoop:
     def _make_critiques(self, weaknesses: list[list[str]]) -> list[Critique]:
-        return [
-            Critique(idea_title=f"Idea {i}", weaknesses=w)
-            for i, w in enumerate(weaknesses)
-        ]
+        return [Critique(idea_title=f"Idea {i}", weaknesses=w) for i, w in enumerate(weaknesses)]
 
     def test_loop_detected(self):
         current = self._make_critiques([["lacks novelty", "poor evaluation"]])
@@ -105,15 +102,33 @@ class TestDetectLoop:
 class TestKeepBestN:
     def test_filters_by_min_score(self):
         ideas = [
-            ResearchIdea(title="A", problem_statement="", proposed_method="",
-                         expected_contributions="", novelty_rationale="",
-                         evaluation_approach="", score=0.8),
-            ResearchIdea(title="B", problem_statement="", proposed_method="",
-                         expected_contributions="", novelty_rationale="",
-                         evaluation_approach="", score=0.2),
-            ResearchIdea(title="C", problem_statement="", proposed_method="",
-                         expected_contributions="", novelty_rationale="",
-                         evaluation_approach="", score=0.5),
+            ResearchIdea(
+                title="A",
+                problem_statement="",
+                proposed_method="",
+                expected_contributions="",
+                novelty_rationale="",
+                evaluation_approach="",
+                score=0.8,
+            ),
+            ResearchIdea(
+                title="B",
+                problem_statement="",
+                proposed_method="",
+                expected_contributions="",
+                novelty_rationale="",
+                evaluation_approach="",
+                score=0.2,
+            ),
+            ResearchIdea(
+                title="C",
+                problem_statement="",
+                proposed_method="",
+                expected_contributions="",
+                novelty_rationale="",
+                evaluation_approach="",
+                score=0.5,
+            ),
         ]
         result = keep_best_n(ideas, n=3, min_score=0.3)
         assert len(result) == 2
@@ -122,9 +137,15 @@ class TestKeepBestN:
 
     def test_limits_to_n(self):
         ideas = [
-            ResearchIdea(title=f"I{i}", problem_statement="", proposed_method="",
-                         expected_contributions="", novelty_rationale="",
-                         evaluation_approach="", score=0.9 - i * 0.1)
+            ResearchIdea(
+                title=f"I{i}",
+                problem_statement="",
+                proposed_method="",
+                expected_contributions="",
+                novelty_rationale="",
+                evaluation_approach="",
+                score=0.9 - i * 0.1,
+            )
             for i in range(10)
         ]
         result = keep_best_n(ideas, n=3)

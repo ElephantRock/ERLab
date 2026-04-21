@@ -32,6 +32,9 @@ dependencies = [
     "hdbscan>=0.8.33",
     "scikit-learn>=1.4",
     "numpy>=1.26",
+    "rank-bm25>=0.2",
+    "slowapi>=0.1.9",
+    "cryptography>=43.0",
 ]
 
 [project.optional-dependencies]
@@ -39,8 +42,12 @@ dev = [
     "pytest>=8.0",
     "pytest-asyncio>=0.23",
     "pytest-cov>=5.0",
+    "pytest-benchmark>=4.0",
     "ruff>=0.4",
     "mypy>=1.10",
+]
+sandbox = [
+    "wasmtime>=20.0",
 ]
 
 [project.scripts]
@@ -56,6 +63,33 @@ line-length = 100
 [tool.ruff.lint]
 select = ["E", "F", "I", "N", "UP", "B", "SIM"]
 
+[tool.ruff.lint.per-file-ignores]
+"backend/pipeline/feasibility/*.py" = ["E501"]
+"backend/pipeline/gap_analysis/*.py" = ["E501"]
+"backend/pipeline/generation/ideator_agent.py" = ["E501"]
+"backend/pipeline/governance/validator.py" = ["E501"]
+"backend/pipeline/knowledge/retriever.py" = ["E501"]
+"backend/pipeline/memory/extraction.py" = ["E501"]
+"backend/pipeline/metacognition/monitor.py" = ["E501"]
+"backend/pipeline/novelty/novelty_checker.py" = ["E501"]
+"backend/pipeline/self_improve/lessons.py" = ["E501"]
+"backend/pipeline/skills/proposer_generator.py" = ["E501"]
+"backend/api/routes/gaps.py" = ["E501"]
+"backend/cli/main.py" = ["E501", "N806"]
+"backend/tests/**" = ["E501", "E402", "N806", "B011"]
+"backend/providers/provider_factory.py" = ["N806"]
+"backend/pipeline/literature/arxiv_source.py" = ["N817"]
+
 [tool.pytest.ini_options]
 testpaths = ["backend/tests"]
 addopts = "-p no:asyncio"
+markers = ["slow: marks tests as slow (deselect with '-m \"not slow\"')", "integration: marks tests requiring external APIs"]
+
+[tool.coverage.run]
+source = ["backend"]
+omit = ["backend/tests/*", "backend/cli/*", "backend/api/*"]
+
+[tool.coverage.report]
+fail_under = 69
+show_missing = true
+exclude_lines = ["pragma: no cover", "if TYPE_CHECKING:", "raise NotImplementedError"]

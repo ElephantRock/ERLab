@@ -11,6 +11,7 @@ class Author(BaseModel):
 
 class Paper(BaseModel):
     """Normalized paper representation across all academic sources."""
+
     id: str
     source: str  # semantic_scholar, arxiv, openalex
     title: str

@@ -4,10 +4,9 @@ DeepAgents-inspired hook dispatch that allows registering handlers
 for pipeline events (session.start, pipeline.complete, gap.found, etc.).
 """
 
-import asyncio
 import logging
 from collections import defaultdict
-from typing import Awaitable, Callable
+from collections.abc import Awaitable, Callable
 
 logger = logging.getLogger(__name__)
 

@@ -3,7 +3,6 @@
 import asyncio
 import hashlib
 import logging
-from typing import Sequence
 
 from backend.config import get_settings
 from backend.pipeline.literature.base import AcademicSearchSource
@@ -46,11 +45,11 @@ class SearchService:
         results_per_source = await asyncio.gather(*tasks, return_exceptions=True)
 
         all_results: list[SearchResult] = []
-        for name, result in zip(active.keys(), results_per_source):
+        for name, result in zip(active.keys(), results_per_source, strict=True):
             if isinstance(result, Exception):
                 logger.warning("Search failed for %s: %s", name, result)
             else:
-                all_results.extend(result)
+                all_results.extend(result)  # type: ignore[arg-type]
 
         if deduplicate:
             return self._deduplicate(all_results)
@@ -73,7 +72,7 @@ class SearchService:
     @staticmethod
     def _deduplicate(results: list[SearchResult]) -> list[Paper]:
         """Deduplicate papers by DOI or title hash, preferring Semantic Scholar data."""
-        seen: dict[str, Paper] = []
+        seen: list[Paper] = []  # type: ignore[assignment]
         dedup_keys: set[str] = set()
 
         # Sort to prefer semantic_scholar data when merging
@@ -89,9 +88,9 @@ class SearchService:
             if key in dedup_keys:
                 continue
             dedup_keys.add(key)
-            seen.append(paper)
+            seen.append(paper)  # type: ignore[arg-type]
 
-        return seen
+        return seen  # type: ignore[return-value]
 
     @staticmethod
     def _default_sources() -> list[AcademicSearchSource]:

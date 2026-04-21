@@ -50,6 +50,7 @@ class PDFService:
         """Use S1-Parser (magic_pdf) directly."""
         try:
             import fitz  # PyMuPDF as primary fallback
+
             doc = fitz.open(file_path)
             pages = [page.get_text() for page in doc]
             full_text = "\n\n".join(pages)

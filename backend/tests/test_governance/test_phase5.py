@@ -2,7 +2,7 @@
 
 import asyncio
 
-from backend.pipeline.autonomy.goals import GoalManager, GoalStatus, ResearchGoal
+from backend.pipeline.autonomy.goals import GoalManager, GoalStatus
 from backend.pipeline.gap_analysis.models import ResearchGap
 from backend.pipeline.governance.contracts import (
     BoundaryContract,
@@ -38,31 +38,49 @@ class TestGovernanceContracts:
 class TestGovernanceAuditLog:
     def test_record_event(self, tmp_path):
         log = GovernanceAuditLog(persist_path=str(tmp_path / "audit.jsonl"))
-        log.record(GovernanceEvent(
-            event_type="output.accepted",
-            stage="proposal_synthesis",
-            content_hash="abc123",
-        ))
+        log.record(
+            GovernanceEvent(
+                event_type="output.accepted",
+                stage="proposal_synthesis",
+                content_hash="abc123",
+            )
+        )
         assert len(log.get_events()) == 1
 
     def test_verify_chain(self, tmp_path):
         log = GovernanceAuditLog(persist_path=str(tmp_path / "audit.jsonl"))
-        log.record(GovernanceEvent(
-            event_type="output.accepted", stage="s1", content_hash="h1",
-        ))
-        log.record(GovernanceEvent(
-            event_type="output.rejected", stage="s2", content_hash="h2",
-        ))
+        log.record(
+            GovernanceEvent(
+                event_type="output.accepted",
+                stage="s1",
+                content_hash="h1",
+            )
+        )
+        log.record(
+            GovernanceEvent(
+                event_type="output.rejected",
+                stage="s2",
+                content_hash="h2",
+            )
+        )
         assert log.verify_chain() is True
 
     def test_filter_by_stage(self, tmp_path):
         log = GovernanceAuditLog(persist_path=str(tmp_path / "audit.jsonl"))
-        log.record(GovernanceEvent(
-            event_type="output.accepted", stage="synthesis", content_hash="h1",
-        ))
-        log.record(GovernanceEvent(
-            event_type="output.accepted", stage="export", content_hash="h2",
-        ))
+        log.record(
+            GovernanceEvent(
+                event_type="output.accepted",
+                stage="synthesis",
+                content_hash="h1",
+            )
+        )
+        log.record(
+            GovernanceEvent(
+                event_type="output.accepted",
+                stage="export",
+                content_hash="h2",
+            )
+        )
         assert len(log.get_events("synthesis")) == 1
 
     def test_content_hash(self):
@@ -114,38 +132,46 @@ class TestGoalManager:
 
     def test_decompose(self, tmp_path):
         gm = GoalManager(persist_path=str(tmp_path / "goals.json"))
-        goals = gm.create_from_gaps([
-            ResearchGap(title="Complex Gap", description="Complex", confidence=0.9),
-        ])
+        goals = gm.create_from_gaps(
+            [
+                ResearchGap(title="Complex Gap", description="Complex", confidence=0.9),
+            ]
+        )
         subs = gm.decompose(goals[0])
         assert len(subs) == 3
         assert all(s.parent_goal_id == goals[0].id for s in subs)
 
     def test_prioritize(self, tmp_path):
         gm = GoalManager(persist_path=str(tmp_path / "goals.json"))
-        gm.create_from_gaps([
-            ResearchGap(title="Low", description="L", confidence=0.3),
-            ResearchGap(title="High", description="H", confidence=0.9),
-            ResearchGap(title="Mid", description="M", confidence=0.6),
-        ])
+        gm.create_from_gaps(
+            [
+                ResearchGap(title="Low", description="L", confidence=0.3),
+                ResearchGap(title="High", description="H", confidence=0.9),
+                ResearchGap(title="Mid", description="M", confidence=0.6),
+            ]
+        )
         prioritized = gm.prioritize()
         assert prioritized[0].title == "Investigate: High"
         assert prioritized[-1].title == "Investigate: Low"
 
     def test_update_progress(self, tmp_path):
         gm = GoalManager(persist_path=str(tmp_path / "goals.json"))
-        goals = gm.create_from_gaps([
-            ResearchGap(title="Test", description="T", confidence=0.5),
-        ])
+        goals = gm.create_from_gaps(
+            [
+                ResearchGap(title="Test", description="T", confidence=0.5),
+            ]
+        )
         gm.update_progress(goals[0].id, 1.0)
         assert gm._goals[goals[0].id].status == GoalStatus.COMPLETED
 
     def test_get_next_goal(self, tmp_path):
         gm = GoalManager(persist_path=str(tmp_path / "goals.json"))
-        gm.create_from_gaps([
-            ResearchGap(title="Low", description="L", confidence=0.3),
-            ResearchGap(title="High", description="H", confidence=0.9),
-        ])
+        gm.create_from_gaps(
+            [
+                ResearchGap(title="Low", description="L", confidence=0.3),
+                ResearchGap(title="High", description="H", confidence=0.9),
+            ]
+        )
         next_goal = gm.get_next_goal()
         assert next_goal is not None
         assert "High" in next_goal.title

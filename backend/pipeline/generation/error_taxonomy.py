@@ -24,24 +24,55 @@ class ErrorCategory(str, Enum):
 # Keyword mapping for classifying critique weaknesses into error categories
 _KEYWORD_MAP: dict[ErrorCategory, list[str]] = {
     ErrorCategory.METHODOLOGICAL: [
-        "method", "evaluation", "experiment", "baseline", "metric",
-        "ablation", "validation", "protocol", "reproducib",
+        "method",
+        "evaluation",
+        "experiment",
+        "baseline",
+        "metric",
+        "ablation",
+        "validation",
+        "protocol",
+        "reproducib",
     ],
     ErrorCategory.NOVELTY: [
-        "novel", "existing", "prior", "overlap", "incremental",
-        "similar", "already", "previous work", "state-of-the-art",
+        "novel",
+        "existing",
+        "prior",
+        "overlap",
+        "incremental",
+        "similar",
+        "already",
+        "previous work",
+        "state-of-the-art",
     ],
     ErrorCategory.FEASIBILITY: [
-        "feasib", "resource", "compute", "data", "cost",
-        "practical", "implement", "scalab", "hardware",
+        "feasib",
+        "resource",
+        "compute",
+        "data",
+        "cost",
+        "practical",
+        "implement",
+        "scalab",
+        "hardware",
     ],
     ErrorCategory.SCOPE: [
-        "scope", "broad", "narrow", "ambitious", "focused",
-        "realistic", "manageable", "direction",
+        "scope",
+        "broad",
+        "narrow",
+        "ambitious",
+        "focused",
+        "realistic",
+        "manageable",
+        "direction",
     ],
     ErrorCategory.CITATION: [
-        "citation", "reference", "cite", "missing reference",
-        "related work", "bibliography",
+        "citation",
+        "reference",
+        "cite",
+        "missing reference",
+        "related work",
+        "bibliography",
     ],
 }
 
@@ -92,10 +123,7 @@ class ErrorTaxonomy:
         total = sum(self._counts.values())
         if total == 0:
             return {cat: 1.0 / len(ErrorCategory) for cat in ErrorCategory}
-        return {
-            cat: self._counts.get(cat.value, 0) / total
-            for cat in ErrorCategory
-        }
+        return {cat: self._counts.get(cat.value, 0) / total for cat in ErrorCategory}
 
     def format_prompt_section(self) -> str:
         """Format error weights as a prompt section for the Critic."""
@@ -104,10 +132,12 @@ class ErrorTaxonomy:
             return ""
 
         lines = ["## Historical Error Focus (weight indicates past frequency):"]
-        for cat in sorted(weights, key=weights.get, reverse=True):
+        for cat in sorted(weights, key=weights.get, reverse=True):  # type: ignore[arg-type]
             count = self._counts.get(cat.value, 0)
             if count > 0:
-                lines.append(f"- **{cat.value}**: {weights[cat]:.0%} of past errors ({count} occurrences)")
+                lines.append(
+                    f"- **{cat.value}**: {weights[cat]:.0%} of past errors ({count} occurrences)"
+                )
         lines.append("Focus more attention on high-frequency error categories.\n")
         return "\n".join(lines)
 
@@ -119,7 +149,12 @@ class ErrorTaxonomy:
 
     def _save(self) -> None:
         self._path.parent.mkdir(parents=True, exist_ok=True)
-        self._path.write_text(json.dumps({
-            "counts": dict(self._counts),
-            "descriptions": self._descriptions,
-        }, indent=2))
+        self._path.write_text(
+            json.dumps(
+                {
+                    "counts": dict(self._counts),
+                    "descriptions": self._descriptions,
+                },
+                indent=2,
+            )
+        )

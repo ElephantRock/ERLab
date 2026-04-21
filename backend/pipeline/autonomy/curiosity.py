@@ -51,7 +51,10 @@ class CuriosityDriver:
             result = await self._provider.structured_output(
                 messages=[
                     {"role": "system", "content": "You are a research exploration agent."},
-                    {"role": "user", "content": EXPLORATION_PROMPT.format(explored_topics=topics_text)},
+                    {
+                        "role": "user",
+                        "content": EXPLORATION_PROMPT.format(explored_topics=topics_text),
+                    },
                 ],
                 schema={
                     "type": "object",

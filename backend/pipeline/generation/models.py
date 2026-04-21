@@ -5,6 +5,7 @@ from pydantic import BaseModel, Field
 
 class IdeaCandidate(BaseModel):
     """A raw research idea from the IdeatorAgent."""
+
     title: str
     problem_statement: str
     proposed_method: str
@@ -15,6 +16,7 @@ class IdeaCandidate(BaseModel):
 
 class Critique(BaseModel):
     """Feedback from the CriticAgent on an idea."""
+
     idea_title: str
     strengths: list[str] = Field(default_factory=list)
     weaknesses: list[str] = Field(default_factory=list)
@@ -26,6 +28,7 @@ class Critique(BaseModel):
 
 class ResearchIdea(BaseModel):
     """A refined research idea ready for novelty/feasibility evaluation."""
+
     title: str
     problem_statement: str
     proposed_method: str
@@ -36,3 +39,4 @@ class ResearchIdea(BaseModel):
     round_generated: int = 1
     score: float = 0.0
     supporting_papers: list[str] = Field(default_factory=list)  # paper IDs
+    source_gap_ids: list[str] = Field(default_factory=list)

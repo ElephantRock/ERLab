@@ -1,34 +1,34 @@
 """Tests for impasse detection and resolution."""
 
 from backend.pipeline.generation.impasse import (
-    ImpasseDetector,
     ImpasseDetected,
+    ImpasseDetector,
     ImpasseType,
-    Resolution,
 )
 from backend.pipeline.generation.models import Critique, ResearchIdea
 
 
 class TestImpasseDetector:
-    def _make_ideas(self, titles: list[str], scores: list[float] | None = None) -> list[ResearchIdea]:
+    def _make_ideas(
+        self, titles: list[str], scores: list[float] | None = None
+    ) -> list[ResearchIdea]:
         ideas = []
         for i, title in enumerate(titles):
-            ideas.append(ResearchIdea(
-                title=title,
-                problem_statement="",
-                proposed_method="",
-                expected_contributions="",
-                novelty_rationale="",
-                evaluation_approach="",
-                score=scores[i] if scores and i < len(scores) else 0.5,
-            ))
+            ideas.append(
+                ResearchIdea(
+                    title=title,
+                    problem_statement="",
+                    proposed_method="",
+                    expected_contributions="",
+                    novelty_rationale="",
+                    evaluation_approach="",
+                    score=scores[i] if scores and i < len(scores) else 0.5,
+                )
+            )
         return ideas
 
     def _make_critiques(self, weaknesses: list[list[str]]) -> list[Critique]:
-        return [
-            Critique(idea_title=f"Idea {i}", weaknesses=w)
-            for i, w in enumerate(weaknesses)
-        ]
+        return [Critique(idea_title=f"Idea {i}", weaknesses=w) for i, w in enumerate(weaknesses)]
 
     def test_detect_duplicate_ideas(self):
         detector = ImpasseDetector()

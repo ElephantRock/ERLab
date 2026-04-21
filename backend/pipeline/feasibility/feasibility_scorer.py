@@ -79,13 +79,18 @@ class FeasibilityScorer:
             contributions=idea.expected_contributions,
             evaluation=idea.evaluation_approach,
             novelty_score=novelty_report.overall_score if novelty_report else 0.5,
-            novelty_arguments=novelty_report.novelty_arguments if novelty_report else "Not assessed",
+            novelty_arguments=novelty_report.novelty_arguments
+            if novelty_report
+            else "Not assessed",
         )
 
         try:
             result = await self._provider.structured_output(
                 messages=[
-                    {"role": "system", "content": "You are an expert research feasibility evaluator for AI/NLP projects."},
+                    {
+                        "role": "system",
+                        "content": "You are an expert research feasibility evaluator for AI/NLP projects.",
+                    },
                     {"role": "user", "content": prompt},
                 ],
                 schema={
@@ -110,8 +115,12 @@ class FeasibilityScorer:
             return FeasibilityReport(
                 overall_score=min(10, max(0, result.get("overall_score", 5.0))),
                 data_availability=min(10, max(0, result.get("data_availability", 5.0))),
-                computational_requirements=min(10, max(0, result.get("computational_requirements", 5.0))),
-                methodological_complexity=min(10, max(0, result.get("methodological_complexity", 5.0))),
+                computational_requirements=min(
+                    10, max(0, result.get("computational_requirements", 5.0))
+                ),
+                methodological_complexity=min(
+                    10, max(0, result.get("methodological_complexity", 5.0))
+                ),
                 evaluation_plan=min(10, max(0, result.get("evaluation_plan", 5.0))),
                 novelty_grounding=min(10, max(0, result.get("novelty_grounding", 5.0))),
                 impact_potential=min(10, max(0, result.get("impact_potential", 5.0))),

@@ -1,11 +1,11 @@
 """Anthropic (Claude) provider implementation."""
 
 import json
-from typing import AsyncIterator
+from collections.abc import AsyncIterator
 
 import anthropic
 
-from backend.providers.base import LLMProvider
+from backend.providers.base import LLMProvider, LLMResponse
 
 
 class AnthropicProvider(LLMProvider):
@@ -13,9 +13,14 @@ class AnthropicProvider(LLMProvider):
         self,
         api_key: str,
         model: str = "claude-sonnet-4-20250514",
-        embedding_model: str = "text-embedding-3-small",  # Falls back to OpenAI for embeddings
+        embedding_model: str = "text-embedding-3-small",
+        base_url: str | None = None,
     ):
-        self._client = anthropic.AsyncAnthropic(api_key=api_key)
+        super().__init__()
+        kwargs = {"api_key": api_key}
+        if base_url:
+            kwargs["base_url"] = base_url
+        self._client = anthropic.AsyncAnthropic(**kwargs)
         self._model = model
         self._embedding_model = embedding_model
 
@@ -37,11 +42,34 @@ class AnthropicProvider(LLMProvider):
         response = await self._client.messages.create(
             model=self._model,
             system=system or "You are a helpful research assistant.",
-            messages=filtered,
+            messages=filtered,  # type: ignore[arg-type]
             temperature=temperature,
             max_tokens=max_tokens,
         )
-        return response.content[0].text
+        return response.content[0].text  # type: ignore[return-value, union-attr]
+
+    async def complete_with_usage(
+        self,
+        messages: list[dict],
+        temperature: float = 0.7,
+        max_tokens: int = 4096,
+    ) -> LLMResponse:
+        system, filtered = self._extract_system(messages)
+        response = await self._client.messages.create(
+            model=self._model,
+            system=system or "You are a helpful research assistant.",
+            messages=filtered,  # type: ignore[arg-type]
+            temperature=temperature,
+            max_tokens=max_tokens,
+        )
+        inp = response.usage.input_tokens
+        out = response.usage.output_tokens
+        self._report_cost(inp, out)
+        return LLMResponse(
+            content=response.content[0].text,
+            input_tokens=inp,
+            output_tokens=out,
+        )
 
     async def complete_stream(
         self,
@@ -53,7 +81,7 @@ class AnthropicProvider(LLMProvider):
         async with self._client.messages.stream(
             model=self._model,
             system=system or "You are a helpful research assistant.",
-            messages=filtered,
+            messages=filtered,  # type: ignore[arg-type]
             temperature=temperature,
             max_tokens=max_tokens,
         ) as stream:
@@ -67,22 +95,112 @@ class AnthropicProvider(LLMProvider):
         temperature: float = 0.3,
     ) -> dict:
         system, filtered = self._extract_system(messages)
-        # Use tool-use with a single tool matching the schema
-        response = await self._client.messages.create(
-            model=self._model,
-            system=system or "You are a helpful research assistant.",
-            messages=filtered,
-            temperature=temperature,
-            tools=[
-                {
-                    "name": "structured_output",
-                    "description": "Return structured output",
-                    "input_schema": schema,
-                }
-            ],
-            tool_choice={"type": "tool", "name": "structured_output"},
+        try:
+            response = await self._client.messages.create(  # type: ignore[call-overload]
+                model=self._model,
+                system=system or "You are a helpful research assistant.",
+                messages=filtered,
+                temperature=temperature,
+                tools=[
+                    {
+                        "name": "structured_output",
+                        "description": "Return structured output",
+                        "input_schema": schema,
+                    }
+                ],
+                tool_choice={"type": "tool", "name": "structured_output"},
+            )
+            return response.content[0].input  # type: ignore[return-value, union-attr]
+        except Exception:
+            # Fallback: ask the model to return JSON directly (for non-Anthropic endpoints)
+            return await self._structured_output_fallback(messages, schema, temperature)
+
+    async def structured_output_with_usage(
+        self,
+        messages: list[dict],
+        schema: dict,
+        temperature: float = 0.3,
+    ) -> LLMResponse:
+        system, filtered = self._extract_system(messages)
+        try:
+            response = await self._client.messages.create(  # type: ignore[call-overload]
+                model=self._model,
+                system=system or "You are a helpful research assistant.",
+                messages=filtered,
+                temperature=temperature,
+                tools=[
+                    {
+                        "name": "structured_output",
+                        "description": "Return structured output",
+                        "input_schema": schema,
+                    }
+                ],
+                tool_choice={"type": "tool", "name": "structured_output"},
+            )
+            inp = response.usage.input_tokens
+            out = response.usage.output_tokens
+            self._report_cost(inp, out)
+            return LLMResponse(
+                content="",
+                structured=response.content[0].input,
+                input_tokens=inp,
+                output_tokens=out,
+            )
+        except Exception:
+            result = await self._structured_output_fallback(messages, schema, temperature)
+            return LLMResponse(content="", structured=result)
+
+    async def complete_with_tools(
+        self,
+        messages: list[dict],
+        tools: list[dict] | None = None,
+        temperature: float = 0.3,
+        max_tokens: int = 4096,
+        stage: str = "",
+    ) -> LLMResponse:
+        system, filtered = self._extract_system(messages)
+        kwargs: dict = {
+            "model": self._model,
+            "system": system or "You are a helpful research assistant.",
+            "messages": filtered,
+            "temperature": temperature,
+            "max_tokens": max_tokens,
+        }
+        if tools:
+            anthropic_tools = []
+            for t in tools:
+                func = t.get("function", t)
+                anthropic_tools.append({
+                    "name": func["name"],
+                    "description": func.get("description", ""),
+                    "input_schema": func.get("parameters", {"type": "object", "properties": {}}),
+                })
+            kwargs["tools"] = anthropic_tools
+            kwargs["tool_choice"] = {"type": "auto"}
+
+        response = await self._client.messages.create(**kwargs)  # type: ignore[arg-type]
+        inp = response.usage.input_tokens
+        out = response.usage.output_tokens
+        self._report_cost(inp, out, stage)
+
+        content_text = ""
+        tool_calls = []
+        for block in response.content:
+            if block.type == "text":
+                content_text += block.text
+            elif block.type == "tool_use":
+                tool_calls.append({
+                    "id": block.id,
+                    "name": block.name,
+                    "arguments": json.dumps(block.input),
+                })
+
+        return LLMResponse(
+            content=content_text,
+            structured={"tool_calls": tool_calls} if tool_calls else None,
+            input_tokens=inp,
+            output_tokens=out,
         )
-        return response.content[0].input
 
     async def embed(self, texts: list[str]) -> list[list[float]]:
         # Anthropic doesn't offer embeddings — use OpenAI as fallback
@@ -90,7 +208,34 @@ class AnthropicProvider(LLMProvider):
 
         client = _openai.AsyncOpenAI()
         response = await client.embeddings.create(model=self._embedding_model, input=texts)
-        return [item.embedding for item in response.data]
+        return [item.embedding for item in response.data]  # type: ignore[return-value, union-attr]
+
+    async def _structured_output_fallback(
+        self,
+        messages: list[dict],
+        schema: dict,
+        temperature: float = 0.3,
+    ) -> dict:
+        """Fallback: extract JSON from a regular completion when tool_use isn't supported."""
+        import json
+
+        schema_hint = json.dumps(schema, indent=2)
+        prompt = (
+            f"Return a JSON object matching this schema:\n```json\n{schema_hint}\n```\n\n"
+            "Return ONLY the JSON object, no markdown fences, no explanation."
+        )
+        augmented = messages + [{"role": "user", "content": prompt}]
+        text = await self.complete(augmented, temperature=temperature)
+
+        # Strip markdown fences if present
+        text = text.strip()
+        if text.startswith("```"):
+            text = text.split("\n", 1)[-1]
+        if text.endswith("```"):
+            text = text.rsplit("```", 1)[0]
+        text = text.strip()
+
+        return json.loads(text)
 
     @staticmethod
     def _extract_system(messages: list[dict]) -> tuple[str | None, list[dict]]:

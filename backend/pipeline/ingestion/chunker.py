@@ -5,6 +5,7 @@ from pydantic import BaseModel
 
 class DocumentChunk(BaseModel):
     """A chunk of text from a parsed document."""
+
     text: str
     paper_id: str
     section: str = "unknown"
@@ -15,9 +16,21 @@ class DocumentChunk(BaseModel):
 
 # Section headers that indicate major boundaries
 SECTION_PATTERNS = [
-    "abstract", "introduction", "background", "related work", "methodology",
-    "methods", "approach", "experiments", "results", "discussion",
-    "conclusion", "conclusions", "references", "acknowledgments", "appendix",
+    "abstract",
+    "introduction",
+    "background",
+    "related work",
+    "methodology",
+    "methods",
+    "approach",
+    "experiments",
+    "results",
+    "discussion",
+    "conclusion",
+    "conclusions",
+    "references",
+    "acknowledgments",
+    "appendix",
 ]
 
 
@@ -33,7 +46,7 @@ def chunk_text(
 
     # Try to split by sections first
     sections = _split_sections(text)
-    chunks = []
+    chunks: list[DocumentChunk] = []
 
     for section_name, section_text in sections:
         if not section_text.strip():
@@ -41,12 +54,14 @@ def chunk_text(
 
         # If section is short enough, keep it as one chunk
         if len(section_text) <= chunk_size:
-            chunks.append(DocumentChunk(
-                text=section_text.strip(),
-                paper_id=paper_id,
-                section=section_name,
-                chunk_index=len(chunks),
-            ))
+            chunks.append(
+                DocumentChunk(
+                    text=section_text.strip(),
+                    paper_id=paper_id,
+                    section=section_name,
+                    chunk_index=len(chunks),
+                )
+            )
         else:
             # Split long sections with overlap
             start = 0
@@ -61,12 +76,14 @@ def chunk_text(
                         end = start + last_period + 1
                         chunk_text_part = section_text[start:end]
 
-                chunks.append(DocumentChunk(
-                    text=chunk_text_part.strip(),
-                    paper_id=paper_id,
-                    section=section_name,
-                    chunk_index=len(chunks),
-                ))
+                chunks.append(
+                    DocumentChunk(
+                        text=chunk_text_part.strip(),
+                        paper_id=paper_id,
+                        section=section_name,
+                        chunk_index=len(chunks),
+                    )
+                )
                 start = end - overlap if end < len(section_text) else end
 
     return chunks

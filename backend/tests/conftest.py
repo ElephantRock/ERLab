@@ -6,6 +6,9 @@ from backend.pipeline.gap_analysis.models import ResearchGap
 from backend.pipeline.generation.models import IdeaCandidate, ResearchIdea
 from backend.pipeline.literature.models import Paper
 from backend.providers.base import LLMProvider
+from backend.providers.resilience.circuit_breaker import CircuitBreaker
+from backend.providers.resilience.retry import RetryConfig
+from backend.providers.secrets import KeyVault
 
 
 class FakeLLMProvider(LLMProvider):
@@ -24,11 +27,13 @@ class FakeLLMProvider(LLMProvider):
         yield "Test"
 
     async def structured_output(self, messages, schema, temperature=0.3) -> dict:
-        self._call_log.append({
-            "method": "structured_output",
-            "messages": messages,
-            "schema": schema,
-        })
+        self._call_log.append(
+            {
+                "method": "structured_output",
+                "messages": messages,
+                "schema": schema,
+            }
+        )
         return self._responses.get("structured_output", {})
 
     async def embed(self, texts) -> list[list[float]]:
@@ -125,3 +130,51 @@ def sample_candidates():
             proposed_method="Method B",
         ),
     ]
+
+
+class FlakyLLMProvider(FakeLLMProvider):
+    """Provider that fails N times before succeeding."""
+
+    def __init__(self, fail_count: int = 3, responses: dict | None = None):
+        super().__init__(responses)
+        self._fail_count = fail_count
+        self._attempt = 0
+
+    async def complete(self, messages, temperature=0.7, max_tokens=4096) -> str:
+        self._attempt += 1
+        if self._attempt <= self._fail_count:
+            raise ConnectionError(f"Simulated failure {self._attempt}/{self._fail_count}")
+        return await super().complete(messages, temperature, max_tokens)
+
+
+@pytest.fixture
+def flaky_provider():
+    return FlakyLLMProvider(fail_count=3)
+
+
+@pytest.fixture
+def circuit_breaker():
+    return CircuitBreaker(failure_threshold=3, reset_timeout=0.5)
+
+
+@pytest.fixture
+def retry_config():
+    return RetryConfig(
+        max_retries=5,
+        base_delay=0.01,
+        max_delay=0.05,
+        jitter=0.0,
+        cooldown_delay=0.05,
+    )
+
+
+@pytest.fixture
+def key_vault(tmp_path):
+    vault = KeyVault(
+        master_password="test-master-password",
+        persist_path=str(tmp_path / "vault.json"),
+    )
+    vault.add_key("openai", "sk-test-key-1")
+    vault.add_key("openai", "sk-test-key-2")
+    vault.add_key("openai", "sk-test-key-3")
+    return vault

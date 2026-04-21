@@ -40,7 +40,10 @@ class RefinerAgent:
         try:
             result = await self._provider.structured_output(
                 messages=[
-                    {"role": "system", "content": "You are an expert AI/NLP research idea refiner."},
+                    {
+                        "role": "system",
+                        "content": "You are an expert AI/NLP research idea refiner.",
+                    },
                     {"role": "user", "content": prompt},
                 ],
                 schema={
@@ -58,7 +61,10 @@ class RefinerAgent:
                                     "novelty_rationale": {"type": "string"},
                                     "evaluation_approach": {"type": "string"},
                                     "score": {"type": "number"},
-                                    "supporting_papers": {"type": "array", "items": {"type": "string"}},
+                                    "supporting_papers": {
+                                        "type": "array",
+                                        "items": {"type": "string"},
+                                    },
                                 },
                                 "required": ["title", "problem_statement", "proposed_method"],
                             },
@@ -71,17 +77,19 @@ class RefinerAgent:
 
             refined = []
             for item in result.get("ideas", []):
-                refined.append(ResearchIdea(
-                    title=item.get("title", "Untitled"),
-                    problem_statement=item.get("problem_statement", ""),
-                    proposed_method=item.get("proposed_method", ""),
-                    expected_contributions=item.get("expected_contributions", ""),
-                    novelty_rationale=item.get("novelty_rationale", ""),
-                    evaluation_approach=item.get("evaluation_approach", ""),
-                    round_generated=round_num,
-                    score=min(1.0, max(0.0, item.get("score", 0.5))),
-                    supporting_papers=item.get("supporting_papers", []),
-                ))
+                refined.append(
+                    ResearchIdea(
+                        title=item.get("title", "Untitled"),
+                        problem_statement=item.get("problem_statement", ""),
+                        proposed_method=item.get("proposed_method", ""),
+                        expected_contributions=item.get("expected_contributions", ""),
+                        novelty_rationale=item.get("novelty_rationale", ""),
+                        evaluation_approach=item.get("evaluation_approach", ""),
+                        round_generated=round_num,
+                        score=min(1.0, max(0.0, item.get("score", 0.5))),
+                        supporting_papers=item.get("supporting_papers", []),
+                    )
+                )
             return sorted(refined, key=lambda r: r.score, reverse=True)
 
         except Exception as e:

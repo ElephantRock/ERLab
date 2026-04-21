@@ -7,12 +7,10 @@ and learned skills. Quality-gated: LLM validates before storing.
 import logging
 from datetime import datetime
 
-from backend.pipeline.gap_analysis.models import ResearchGap
-from backend.pipeline.generation.models import ResearchIdea
 from backend.pipeline.knowledge.truth import TruthValue
 from backend.pipeline.memory.models import MemoryEntry, MemoryType
 from backend.pipeline.memory.service import MemoryService
-from backend.pipeline.orchestrator import PipelineResult
+from backend.pipeline.result import PipelineResult
 from backend.providers.base import LLMProvider
 
 logger = logging.getLogger(__name__)
@@ -52,9 +50,7 @@ async def extract_from_pipeline_result(
         logger.info("No ideas or gaps to extract from")
         return 0
 
-    gaps_text = "\n".join(
-        f"- {g.title}: {g.description[:200]}" for g in result.gaps[:10]
-    )
+    gaps_text = "\n".join(f"- {g.title}: {g.description[:200]}" for g in result.gaps[:10])
     ideas_text = "\n".join(
         f"- {i.title} (score: {i.score:.2f}): {i.proposed_method[:200]}"
         for i in sorted(result.ideas, key=lambda x: x.score, reverse=True)[:10]
@@ -109,7 +105,9 @@ async def extract_from_pipeline_result(
                 id="",  # Will be set by MemoryService.store()
                 content=content,
                 memory_type=mem_type,
-                namespace="research_facts" if mem_type == MemoryType.SEMANTIC else "pipeline_experience",
+                namespace="research_facts"
+                if mem_type == MemoryType.SEMANTIC
+                else "pipeline_experience",
                 truth=TruthValue.from_observation(frequency=0.8),
                 source_run_id=run_id,
                 tags=ext.get("tags", []),
@@ -145,6 +143,6 @@ async def _quality_gate(content: str, provider: LLMProvider) -> bool:
             temperature=0.1,
         )
         return result.get("is_valid", False)
-    except Exception:
-        # On failure, allow the fact through (fail-open for quality gate)
-        return True
+    except Exception as exc:
+        logger.warning("Quality gate check failed, rejecting fact: %s", exc)
+        return False

@@ -30,8 +30,10 @@ class ImpasseDetected(BaseModel):
 
 
 class Resolution(BaseModel):
-    action: str       # "change_perspective", "increase_temperature", "switch_strategy", "inject_constraint"
-    params: dict = {} # Parameters for the resolution action
+    action: (
+        str
+    )  # "change_perspective", "increase_temperature", "switch_strategy", "inject_constraint"
+    params: dict = {}  # Parameters for the resolution action
 
 
 class ImpasseDetector:
@@ -63,6 +65,11 @@ class ImpasseDetector:
         if plateau:
             impasses.append(plateau)
 
+        # Check low diversity
+        diversity = self._check_low_diversity(current_ideas, previous_ideas)
+        if diversity:
+            impasses.append(diversity)
+
         # Return most severe impasse
         if impasses:
             return max(impasses, key=lambda i: i.severity)
@@ -88,7 +95,9 @@ class ImpasseDetector:
                 params={"perspective": _random_perspective()},
             ),
         }
-        return strategies.get(impasse.impasse_type, Resolution(action="increase_temperature", params={"delta": 0.1}))
+        return strategies.get(
+            impasse.impasse_type, Resolution(action="increase_temperature", params={"delta": 0.1})
+        )
 
     def _check_duplicate_ideas(
         self,
@@ -175,6 +184,34 @@ class ImpasseDetector:
             )
         return None
 
+    def _check_low_diversity(
+        self,
+        current_ideas: list[ResearchIdea],
+        previous_ideas: list[ResearchIdea],
+    ) -> ImpasseDetected | None:
+        if len(current_ideas) < 2:
+            return None
+
+        title_words = [set(i.title.lower().split()) for i in current_ideas]
+        similarities: list[float] = []
+        for i in range(len(title_words)):
+            for j in range(i + 1, len(title_words)):
+                if not title_words[i] or not title_words[j]:
+                    continue
+                jaccard = len(title_words[i] & title_words[j]) / len(title_words[i] | title_words[j])
+                similarities.append(jaccard)
+
+        if not similarities:
+            return None
+        avg_similarity = sum(similarities) / len(similarities)
+        if avg_similarity > 0.5:
+            return ImpasseDetected(
+                impasse_type=ImpasseType.LOW_DIVERSITY,
+                severity=min(1.0, avg_similarity),
+                evidence=f"Average pairwise title similarity: {avg_similarity:.2f}",
+            )
+        return None
+
 
 # Resolution helpers
 
@@ -198,9 +235,11 @@ _PERSPECTIVES = [
 
 def _random_constraint() -> str:
     import random
+
     return random.choice(_CONSTRAINTS)
 
 
 def _random_perspective() -> str:
     import random
+
     return random.choice(_PERSPECTIVES)

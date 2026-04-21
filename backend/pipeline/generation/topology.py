@@ -17,31 +17,48 @@ logger = logging.getLogger(__name__)
 
 
 class NodeType(str, Enum):
-    MAP = "map"        # Parallel fan-out (one gap -> N idea branches)
+    MAP = "map"  # Parallel fan-out (one gap -> N idea branches)
     SWITCH = "switch"  # Conditional routing (simple vs complex gap)
-    LOOP = "loop"      # Iterative refinement (Ideator-Critic-Refiner cycle)
-    MERGE = "merge"    # Fan-in (collect results from parallel branches)
-    GATE = "gate"      # Quality gate (KeepBestN)
-    ROUTE = "route"    # LLM-based router for strategy selection
+    LOOP = "loop"  # Iterative refinement (Ideator-Critic-Refiner cycle)
+    MERGE = "merge"  # Fan-in (collect results from parallel branches)
+    GATE = "gate"  # Quality gate (KeepBestN)
+    ROUTE = "route"  # LLM-based router for strategy selection
+    HANDOFF = "handoff"  # Transfer context between agents with input_filter
 
 
 class DAGNode(BaseModel):
     id: str
     node_type: NodeType
-    agent_name: str | None = None   # "ideator", "critic", "refiner", "router"
+    agent_name: str | None = None  # "ideator", "critic", "refiner", "router"
     config: dict = {}
 
 
 class DAGEdge(BaseModel):
     from_node: str
     to_node: str
-    condition: str | None = None    # For SWITCH edges: "simple" or "complex"
+    condition: str | None = None  # For SWITCH edges: "simple" or "complex"
 
 
 class ExecutionDAG(BaseModel):
     nodes: list[DAGNode]
     edges: list[DAGEdge]
     entry_node: str = "entry"
+
+    @property
+    def adj_matrix(self) -> list[list[int]]:
+        """Adjacency matrix representation of the DAG topology.
+
+        Enables mathematical operations: eigenvalue analysis, path finding,
+        graph comparison. Adopted from GPTSwarm (ICML 2024 Oral).
+        """
+        node_ids = [n.id for n in self.nodes]
+        idx = {nid: i for i, nid in enumerate(node_ids)}
+        n = len(node_ids)
+        matrix = [[0] * n for _ in range(n)]
+        for edge in self.edges:
+            if edge.from_node in idx and edge.to_node in idx:
+                matrix[idx[edge.from_node]][idx[edge.to_node]] = 1
+        return matrix
 
 
 def keep_best_n(ideas: list[ResearchIdea], n: int, min_score: float = 0.3) -> list[ResearchIdea]:
@@ -64,16 +81,28 @@ def build_default_dag() -> ExecutionDAG:
     return ExecutionDAG(
         entry_node="entry",
         nodes=[
-            DAGNode(id="entry", node_type=NodeType.MAP, agent_name=None, config={"fan_out_on": "gaps"}),
+            DAGNode(
+                id="entry", node_type=NodeType.MAP, agent_name=None, config={"fan_out_on": "gaps"}
+            ),
             DAGNode(id="route", node_type=NodeType.ROUTE, agent_name="router", config={}),
-            DAGNode(id="simple_ideator", node_type=NodeType.MAP, agent_name="ideator",
-                    config={"strategy": "react", "temperature": 0.8}),
-            DAGNode(id="complex_loop", node_type=NodeType.LOOP, agent_name=None,
-                    config={"agents": ["ideator", "critic", "refiner"], "max_iters": 3}),
+            DAGNode(
+                id="simple_ideator",
+                node_type=NodeType.MAP,
+                agent_name="ideator",
+                config={"strategy": "react", "temperature": 0.8},
+            ),
+            DAGNode(
+                id="complex_loop",
+                node_type=NodeType.LOOP,
+                agent_name=None,
+                config={"agents": ["ideator", "critic", "refiner"], "max_iters": 3},
+            ),
             DAGNode(id="simple_gate", node_type=NodeType.GATE, config={"min_score": 0.3}),
             DAGNode(id="complex_gate", node_type=NodeType.GATE, config={"min_score": 0.3}),
             DAGNode(id="merge", node_type=NodeType.MERGE, config={}),
-            DAGNode(id="final_gate", node_type=NodeType.GATE, config={"min_score": 0.4, "top_n": 10}),
+            DAGNode(
+                id="final_gate", node_type=NodeType.GATE, config={"min_score": 0.4, "top_n": 10}
+            ),
         ],
         edges=[
             DAGEdge(from_node="entry", to_node="route"),

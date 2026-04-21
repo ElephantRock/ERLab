@@ -21,7 +21,9 @@ class ClusterService:
     ) -> ClusterReport:
         """Cluster papers and return a report with labeled clusters."""
         if len(papers) < min_cluster_size:
-            logger.warning("Too few papers (%d) for clustering, min=%d", len(papers), min_cluster_size)
+            logger.warning(
+                "Too few papers (%d) for clustering, min=%d", len(papers), min_cluster_size
+            )
             return ClusterReport(total_papers=len(papers))
 
         # Get embeddings or fall back to TF-IDF
@@ -102,7 +104,7 @@ class ClusterService:
         labels: np.ndarray,
     ) -> list[ClusterInfo]:
         """Build cluster info with TF-IDF labels."""
-        clusters = {}
+        clusters: dict[int, list[Paper]] = {}
 
         for i, label in enumerate(labels):
             if label == -1:  # Noise cluster from HDBSCAN
@@ -123,16 +125,20 @@ class ClusterService:
                 top_terms = []
 
             avg_citations = None
-            citation_counts = [p.citation_count for p in cluster_papers if p.citation_count is not None]
+            citation_counts = [
+                p.citation_count for p in cluster_papers if p.citation_count is not None
+            ]
             if citation_counts:
                 avg_citations = sum(citation_counts) / len(citation_counts)
 
-            cluster_infos.append(ClusterInfo(
-                cluster_id=int(cluster_id),
-                label=" / ".join(top_terms[:3]) if top_terms else f"Cluster {cluster_id}",
-                paper_count=len(cluster_papers),
-                top_terms=top_terms,
-                avg_citations=avg_citations,
-            ))
+            cluster_infos.append(
+                ClusterInfo(
+                    cluster_id=int(cluster_id),
+                    label=" / ".join(top_terms[:3]) if top_terms else f"Cluster {cluster_id}",
+                    paper_count=len(cluster_papers),
+                    top_terms=top_terms,
+                    avg_citations=avg_citations,
+                )
+            )
 
         return sorted(cluster_infos, key=lambda c: c.paper_count, reverse=True)

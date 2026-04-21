@@ -40,25 +40,27 @@ class VectorStore:
         all_embeddings = []
         all_metadata = []
 
-        for paper, paper_chunks in zip(papers, chunks):
+        for paper, paper_chunks in zip(papers, chunks, strict=True):
             texts = [c.text for c in paper_chunks]
             if not texts:
                 continue
 
             embeddings = await self._embedding_service.embed_texts(texts)
 
-            for i, (chunk, embedding) in enumerate(zip(paper_chunks, embeddings)):
+            for i, (chunk, embedding) in enumerate(zip(paper_chunks, embeddings, strict=True)):
                 chunk_id = f"{paper.id}_chunk_{i}"
                 all_ids.append(chunk_id)
                 all_texts.append(chunk.text)
                 all_embeddings.append(embedding)
-                all_metadata.append({
-                    "paper_id": paper.id,
-                    "paper_title": paper.title[:500],
-                    "source": paper.source,
-                    "section": chunk.section,
-                    "year": paper.year or 0,
-                })
+                all_metadata.append(
+                    {
+                        "paper_id": paper.id,
+                        "paper_title": paper.title[:500],
+                        "source": paper.source,
+                        "section": chunk.section,
+                        "year": paper.year or 0,
+                    }
+                )
 
         if all_ids:
             # ChromaDB add is synchronous
@@ -92,12 +94,14 @@ class VectorStore:
         # Format results
         formatted = []
         for i in range(len(results["ids"][0])):
-            formatted.append({
-                "id": results["ids"][0][i],
-                "text": results["documents"][0][i],
-                "distance": results["distances"][0][i] if "distances" in results else None,
-                "metadata": results["metadatas"][0][i] if "metadatas" in results else {},
-            })
+            formatted.append(
+                {
+                    "id": results["ids"][0][i],
+                    "text": results["documents"][0][i],
+                    "distance": results["distances"][0][i] if "distances" in results else None,
+                    "metadata": results["metadatas"][0][i] if "metadatas" in results else {},
+                }
+            )
         return formatted
 
     async def query_by_embedding(
@@ -113,12 +117,14 @@ class VectorStore:
 
         formatted = []
         for i in range(len(results["ids"][0])):
-            formatted.append({
-                "id": results["ids"][0][i],
-                "text": results["documents"][0][i],
-                "distance": results["distances"][0][i] if "distances" in results else None,
-                "metadata": results["metadatas"][0][i] if "metadatas" in results else {},
-            })
+            formatted.append(
+                {
+                    "id": results["ids"][0][i],
+                    "text": results["documents"][0][i],
+                    "distance": results["distances"][0][i] if "distances" in results else None,
+                    "metadata": results["metadatas"][0][i] if "metadatas" in results else {},
+                }
+            )
         return formatted
 
     def get_stats(self) -> dict:

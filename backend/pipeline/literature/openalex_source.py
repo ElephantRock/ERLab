@@ -36,7 +36,7 @@ class OpenAlexSource(AcademicSearchSource):
             params["filter"] = year_filter
 
         try:
-            response = await self._client.get("/works", params=params)
+            response = await self._client.get("/works", params=params)  # type: ignore[arg-type]
             response.raise_for_status()
             data = response.json()
         except httpx.HTTPError as e:
@@ -47,11 +47,13 @@ class OpenAlexSource(AcademicSearchSource):
         for item in data.get("results", []):
             paper = self._parse_work(item)
             if paper:
-                results.append(SearchResult(
-                    paper=paper,
-                    relevance_score=item.get("relevance_score"),
-                    source=self.source_name,
-                ))
+                results.append(
+                    SearchResult(
+                        paper=paper,
+                        relevance_score=item.get("relevance_score"),
+                        source=self.source_name,
+                    )
+                )
         return results
 
     async def get_paper(self, paper_id: str) -> Paper | None:
@@ -71,9 +73,7 @@ class OpenAlexSource(AcademicSearchSource):
             )
             response.raise_for_status()
             return [
-                p
-                for item in response.json().get("results", [])
-                if (p := self._parse_work(item))
+                p for item in response.json().get("results", []) if (p := self._parse_work(item))
             ]
         except httpx.HTTPError as e:
             logger.warning("OpenAlex citations failed: %s", e)
@@ -87,9 +87,7 @@ class OpenAlexSource(AcademicSearchSource):
             )
             response.raise_for_status()
             return [
-                p
-                for item in response.json().get("results", [])
-                if (p := self._parse_work(item))
+                p for item in response.json().get("results", []) if (p := self._parse_work(item))
             ]
         except httpx.HTTPError as e:
             logger.warning("OpenAlex references failed: %s", e)
@@ -108,8 +106,7 @@ class OpenAlexSource(AcademicSearchSource):
             title=data["title"],
             abstract=self._reconstruct_abstract(data.get("abstract_inverted_index")),
             authors=[
-                Author(name=a.get("author", {}).get("display_name", "Unknown"))
-                for a in authorships
+                Author(name=a.get("author", {}).get("display_name", "Unknown")) for a in authorships
             ],
             year=data.get("publication_year"),
             venue=(data.get("primary_location") or {}).get("source", {}).get("display_name"),

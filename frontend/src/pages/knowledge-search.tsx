@@ -1,0 +1,110 @@
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { searchKnowledge } from "@/api/knowledge";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Search, Database, AlertCircle } from "lucide-react";
+import { cn } from "@/lib/utils";
+
+function distanceColor(distance: number): string {
+  if (distance < 0.3) return "text-green-600";
+  if (distance < 0.6) return "text-amber-600";
+  return "text-red-600";
+}
+
+function distanceLabel(distance: number): string {
+  if (distance < 0.3) return "High";
+  if (distance < 0.6) return "Medium";
+  return "Low";
+}
+
+export default function KnowledgeSearch() {
+  const [query, setQuery] = useState("");
+  const [submittedQuery, setSubmittedQuery] = useState<string | null>(null);
+
+  const { data, isLoading, isError } = useQuery({
+    queryKey: ["knowledge-search", submittedQuery],
+    queryFn: () => searchKnowledge(submittedQuery!),
+    enabled: !!submittedQuery,
+  });
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!query.trim()) return;
+    setSubmittedQuery(query.trim());
+  }
+
+  const results = data?.results ?? [];
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight">Knowledge Base</h1>
+        <p className="text-muted-foreground">Search the indexed literature and papers.</p>
+      </div>
+
+      <form onSubmit={handleSubmit} className="relative">
+        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+        <Input
+          placeholder="Search papers, methods, findings..."
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          className="pl-9"
+        />
+      </form>
+
+      {isLoading ? (
+        <div className="space-y-3">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <Skeleton key={i} className="h-24 w-full" />
+          ))}
+        </div>
+      ) : isError ? (
+        <div className="text-center py-12 text-destructive">
+          <AlertCircle className="h-8 w-8 mx-auto mb-2 opacity-70" />
+          <p>Search failed. Please try again.</p>
+        </div>
+      ) : submittedQuery && results.length === 0 ? (
+        <div className="text-center py-12 text-muted-foreground">
+          <Database className="h-8 w-8 mx-auto mb-2 opacity-50" />
+          <p>No results found for "{submittedQuery}".</p>
+        </div>
+      ) : results.length > 0 ? (
+        <div className="space-y-3">
+          <p className="text-sm text-muted-foreground">
+            {results.length} result{results.length !== 1 ? "s" : ""} for "{submittedQuery}"
+          </p>
+          {results.map((result) => (
+            <Card key={result.id}>
+              <CardContent className="p-4">
+                <p className="text-sm whitespace-pre-wrap line-clamp-4">{result.text}</p>
+                <div className="flex items-center flex-wrap gap-2 mt-3">
+                  {result.metadata.source && (
+                    <Badge variant="outline" className="text-xs">
+                      {result.metadata.source}
+                    </Badge>
+                  )}
+                  {result.metadata.year && (
+                    <Badge variant="outline" className="text-xs">
+                      {result.metadata.year}
+                    </Badge>
+                  )}
+                  {result.metadata.authors && (
+                    <span className="text-xs text-muted-foreground truncate max-w-[200px]">
+                      {result.metadata.authors}
+                    </span>
+                  )}
+                  <span className={cn("text-xs font-medium ml-auto", distanceColor(result.distance))}>
+                    Relevance: {distanceLabel(result.distance)} ({result.distance.toFixed(3)})
+                  </span>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      ) : null}
+    </div>
+  );
+}

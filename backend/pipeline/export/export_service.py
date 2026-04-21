@@ -50,7 +50,7 @@ class ExportService:
             slug = "".join(c for c in slug if c.isalnum() or c == "-")
             output_path = str(Path(self._output_dir) / f"{slug}{ext}")
 
-        content = exporter.export(proposal, output_path=output_path)
+        exporter.export(proposal, output_path=output_path)  # type: ignore[attr-defined]
         logger.info("Exported proposal to %s", output_path)
 
         return output_path

@@ -1,0 +1,26 @@
+import { Routes, Route, Navigate } from "react-router-dom";
+import { AppShell } from "./components/layout/app-shell";
+import DashboardPage from "./pages/dashboard";
+import PipelineNewPage from "./pages/pipeline-new";
+import IdeasBrowserPage from "./pages/ideas-browser";
+import IdeaDetailPage from "./pages/idea-detail";
+import GapsExplorerPage from "./pages/gaps-explorer";
+import KnowledgeSearchPage from "./pages/knowledge-search";
+import SettingsPage from "./pages/settings";
+
+export default function App() {
+  return (
+    <AppShell>
+      <Routes>
+        <Route path="/" element={<DashboardPage />} />
+        <Route path="/pipeline/new" element={<PipelineNewPage />} />
+        <Route path="/ideas" element={<IdeasBrowserPage />} />
+        <Route path="/ideas/:id" element={<IdeaDetailPage />} />
+        <Route path="/gaps" element={<GapsExplorerPage />} />
+        <Route path="/knowledge" element={<KnowledgeSearchPage />} />
+        <Route path="/settings" element={<SettingsPage />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </AppShell>
+  );
+}

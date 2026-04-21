@@ -36,4 +36,5 @@ class AcademicSearchSource(ABC):
 
     @property
     @abstractmethod
-    def source_name(self) -> str: ...
+    def source_name(self) -> str:
+        ...

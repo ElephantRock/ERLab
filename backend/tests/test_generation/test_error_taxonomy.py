@@ -12,16 +12,24 @@ class TestErrorCategory:
     def test_classify_methodological(self):
         taxonomy = ErrorTaxonomy()
         assert taxonomy.classify("The evaluation method is flawed") == ErrorCategory.METHODOLOGICAL
-        assert taxonomy.classify("Poor baseline choice and metric selection") == ErrorCategory.METHODOLOGICAL
+        assert (
+            taxonomy.classify("Poor baseline choice and metric selection")
+            == ErrorCategory.METHODOLOGICAL
+        )
 
     def test_classify_novelty(self):
         taxonomy = ErrorTaxonomy()
         assert taxonomy.classify("This overlaps with prior work") == ErrorCategory.NOVELTY
-        assert taxonomy.classify("Not novel, similar to existing approaches") == ErrorCategory.NOVELTY
+        assert (
+            taxonomy.classify("Not novel, similar to existing approaches") == ErrorCategory.NOVELTY
+        )
 
     def test_classify_feasibility(self):
         taxonomy = ErrorTaxonomy()
-        assert taxonomy.classify("Not feasible with current compute resources") == ErrorCategory.FEASIBILITY
+        assert (
+            taxonomy.classify("Not feasible with current compute resources")
+            == ErrorCategory.FEASIBILITY
+        )
         assert taxonomy.classify("Data availability is a concern") == ErrorCategory.FEASIBILITY
 
     def test_classify_scope(self):

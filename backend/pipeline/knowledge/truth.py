@@ -19,6 +19,7 @@ class TruthValue(BaseModel):
     frequency: float = 0.5
     confidence: float = 0.5
     evidence_count: int = 0
+    propagation_debt: float = 0.0  # How stale downstream consumers are
 
     @property
     def expectation(self) -> float:
@@ -42,10 +43,13 @@ class TruthValue(BaseModel):
             )
         new_freq = (w1 * self.frequency + w2 * other.frequency) / total_w
         new_conf = total_w / (total_w + 1)
+        # Propagation debt: how much truth changed, flagging downstream consumers as stale
+        debt = abs(new_freq - self.frequency) * self.confidence
         return TruthValue(
             frequency=max(0.0, min(1.0, new_freq)),
             confidence=min(0.99, new_conf),
             evidence_count=self.evidence_count + other.evidence_count + 1,
+            propagation_debt=debt,
         )
 
     def decay(self, rate: float = 0.99) -> "TruthValue":
@@ -54,6 +58,15 @@ class TruthValue(BaseModel):
             frequency=self.frequency,
             confidence=self.confidence * rate,
             evidence_count=self.evidence_count,
+        )
+
+    def settle_debt(self) -> "TruthValue":
+        """Mark propagation debt as resolved after downstream update."""
+        return TruthValue(
+            frequency=self.frequency,
+            confidence=self.confidence,
+            evidence_count=self.evidence_count,
+            propagation_debt=0.0,
         )
 
     @staticmethod

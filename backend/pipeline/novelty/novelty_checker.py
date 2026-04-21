@@ -1,10 +1,20 @@
-"""Novelty checking — compare generated ideas against existing literature."""
+"""Novelty checking — compare generated ideas against existing literature.
+
+When a TwoStageRetriever is available, uses hybrid BM25+semantic search
+for better coverage. Falls back to VectorStore-only semantic search.
+"""
+
+from __future__ import annotations
 
 import logging
+from typing import TYPE_CHECKING
 
 from backend.pipeline.generation.models import ResearchIdea
 from backend.pipeline.knowledge.vector_store import VectorStore
 from backend.providers.base import LLMProvider
+
+if TYPE_CHECKING:
+    from backend.pipeline.knowledge.retriever import TwoStageRetriever
 
 logger = logging.getLogger(__name__)
 
@@ -53,9 +63,15 @@ class NoveltyReport:
 
 
 class NoveltyChecker:
-    def __init__(self, provider: LLMProvider, store: VectorStore):
+    def __init__(
+        self,
+        provider: LLMProvider,
+        store: VectorStore,
+        retriever: TwoStageRetriever | None = None,
+    ):
         self._provider = provider
         self._store = store
+        self._retriever = retriever
 
     async def check_novelty(
         self,
@@ -63,9 +79,16 @@ class NoveltyChecker:
         top_k: int = 20,
     ) -> NoveltyReport:
         """Check idea novelty against the knowledge base."""
-        # Step 1: Find similar papers
         query = f"{idea.title} {idea.proposed_method}"
-        similar = await self._store.query(query, n_results=top_k)
+
+        if self._retriever:
+            results = await self._retriever.retrieve(query, n_results=top_k)
+            similar = [
+                {"id": r.id, "text": r.text, "metadata": r.metadata, "distance": 1.0 - r.score}
+                for r in results
+            ]
+        else:
+            similar = await self._store.query(query, n_results=top_k)
 
         if not similar:
             # No similar papers found — high novelty by default
@@ -122,8 +145,12 @@ class NoveltyChecker:
                 novelty_arguments=result.get("novelty_arguments", ""),
                 closest_matches=[
                     {
-                        "title": s.get("metadata", {}).get("paper_title", "Unknown"),
-                        "distance": s.get("distance"),
+                        "title": s.get("metadata", {}).get("paper_title", "Unknown"),  # type: ignore[attr-defined]
+                        "distance": s.get("distance"),  # type: ignore[attr-defined]
+                        "id": s.get("id", ""),
+                        "abstract": (s.get("text") or "")[:200],
+                        "doi": s.get("metadata", {}).get("doi", ""),
+                        "url": s.get("metadata", {}).get("url", ""),
                     }
                     for s in similar[:5]
                 ],
@@ -132,7 +159,9 @@ class NoveltyChecker:
         except Exception as e:
             logger.error("Novelty check LLM call failed: %s", e)
             # Fall back to distance-based scoring
-            avg_distance = sum(s.get("distance", 0.5) for s in similar[:5]) / max(1, len(similar[:5]))
+            avg_distance = sum(s.get("distance", 0.5) for s in similar[:5]) / max(  # type: ignore[attr-defined, misc]
+                1, len(similar[:5])
+            )
             score = min(1.0, max(0.0, avg_distance))  # Higher distance = more novel
             return NoveltyReport(
                 overall_score=score,
@@ -141,7 +170,15 @@ class NoveltyChecker:
                 domain_transfer=0.5,
                 combination_novelty=score,
                 novelty_arguments=f"Fallback distance-based score. Avg distance: {avg_distance:.3f}",
-                closest_matches=[],
+                closest_matches=[
+                    {
+                        "title": s.get("metadata", {}).get("paper_title", "Unknown"),
+                        "distance": s.get("distance"),
+                        "id": s.get("id", ""),
+                        "abstract": (s.get("text") or "")[:200],
+                    }
+                    for s in similar[:5]
+                ],
             )
 
     @staticmethod

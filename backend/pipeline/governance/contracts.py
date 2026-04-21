@@ -17,8 +17,9 @@ class OutputVerdict(str, Enum):
 
 class BoundaryContract(BaseModel):
     """Declarative constraints for pipeline outputs."""
+
     name: str
-    constraint_type: str    # "no_harmful_content", "citation_required", "max_length", etc.
+    constraint_type: str  # "no_harmful_content", "citation_required", "max_length", etc.
     params: dict = {}
 
 

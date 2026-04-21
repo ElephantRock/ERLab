@@ -6,6 +6,7 @@ from pathlib import Path
 from jinja2 import Template
 
 from backend.pipeline.generation.error_taxonomy import ErrorTaxonomy
+from backend.pipeline.generation.mechanical_checks import mechanical_quality_check
 from backend.pipeline.generation.models import Critique, IdeaCandidate
 from backend.pipeline.generation.strategies import CriticStrategy
 from backend.pipeline.literature.models import Paper
@@ -32,12 +33,14 @@ class CriticAgent:
         ideas_text = self._format_ideas(ideas)
         literature_context = self._format_literature(context_papers)
         error_focus = self._error_taxonomy.format_prompt_section()
+        mechanical_context = self._format_mechanical_flags(ideas)
 
         prompt = Template(self._prompt_template).render(
             ideas_text=ideas_text,
             literature_context=literature_context,
             strategy=strategy.value if strategy else None,
             error_focus=error_focus,
+            mechanical_flags=mechanical_context,
         )
 
         try:
@@ -57,8 +60,14 @@ class CriticAgent:
                                     "idea_title": {"type": "string"},
                                     "strengths": {"type": "array", "items": {"type": "string"}},
                                     "weaknesses": {"type": "array", "items": {"type": "string"}},
-                                    "prior_art_concerns": {"type": "array", "items": {"type": "string"}},
-                                    "feasibility_concerns": {"type": "array", "items": {"type": "string"}},
+                                    "prior_art_concerns": {
+                                        "type": "array",
+                                        "items": {"type": "string"},
+                                    },
+                                    "feasibility_concerns": {
+                                        "type": "array",
+                                        "items": {"type": "string"},
+                                    },
                                     "suggestions": {"type": "array", "items": {"type": "string"}},
                                     "overall_assessment": {"type": "string"},
                                 },
@@ -92,7 +101,22 @@ class CriticAgent:
 
         except Exception as e:
             logger.error("CriticAgent failed: %s", e)
-            return [Critique(idea_title=idea.title, overall_assessment=f"Critique failed: {e}") for idea in ideas]
+            return [
+                Critique(idea_title=idea.title, overall_assessment=f"Critique failed: {e}")
+                for idea in ideas
+            ]
+
+    @staticmethod
+    def _format_mechanical_flags(ideas: list[IdeaCandidate]) -> str:
+        """Build mechanical quality flags for injection into critic prompt."""
+        parts: list[str] = []
+        for idea in ideas:
+            report = mechanical_quality_check(idea)
+            if report.flagged_issues:
+                parts.append(
+                    f"**Pre-review flags for '{idea.title}'**: " + "; ".join(report.flagged_issues)
+                )
+        return "\n".join(parts) if parts else ""
 
     @staticmethod
     def _format_ideas(ideas: list[IdeaCandidate]) -> str:

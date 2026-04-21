@@ -2,8 +2,10 @@
 
 Entity types: PAPER, AUTHOR, METHOD, DATASET, CONCEPT.
 Union-Find provides O(α(n)) deduplication across runs.
+Content-hash provides O(1) structural identity and dedup-by-construction.
 """
 
+import hashlib
 from enum import Enum
 
 from pydantic import BaseModel, Field
@@ -20,12 +22,18 @@ class EntityType(str, Enum):
 
 
 class KnowledgeEntity(BaseModel):
-    id: str                         # Deterministic: f"{entity_type}:{normalized_name}"
+    id: str  # Deterministic: f"{entity_type}:{normalized_name}"
     entity_type: EntityType
     name: str
     aliases: list[str] = Field(default_factory=list)
     properties: dict = {}
     truth: TruthValue = Field(default_factory=TruthValue.initial)
+
+    @property
+    def content_hash(self) -> str:
+        """Content-addressable identity hash (SHA-256[:16])."""
+        raw = f"{self.entity_type.value}:{self.name}:{self.truth.frequency}:{self.truth.confidence}"
+        return hashlib.sha256(raw.encode()).hexdigest()[:16]
 
 
 class EntityResolution:

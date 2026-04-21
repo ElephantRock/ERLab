@@ -15,10 +15,11 @@ from pydantic import BaseModel
 
 
 class FrontierType(str, Enum):
-    QUALITY = "quality"          # Maximize average idea score
-    NOVELTY = "novelty"          # Maximize average novelty score
-    DIVERSITY = "diversity"      # Maximize idea diversity
-    EFFICIENCY = "efficiency"    # Minimize tokens per good idea
+    QUALITY = "quality"  # Maximize average idea score
+    NOVELTY = "novelty"  # Maximize average novelty score
+    DIVERSITY = "diversity"  # Maximize idea diversity
+    EFFICIENCY = "efficiency"  # Minimize tokens per good idea
+    FITNESS = "fitness"  # Multi-dimensional fitness composite
 
 
 class FrontierPoint(BaseModel):
@@ -73,13 +74,13 @@ class ParetoFrontier:
         parents = random.sample(self._points, min(2, len(self._points)))
 
         # Semantic crossover: for each param, pick from parent A or parent B
-        child = {}
+        child: dict[str, float | int | str] = {}
         all_keys = set(parents[0].params.keys()) | set(parents[1].params.keys())
         for key in all_keys:
             if key in parents[0].params and key in parents[1].params:
                 val_a = parents[0].params[key]
                 val_b = parents[1].params[key]
-                if isinstance(val_a, (int, float)) and isinstance(val_b, (int, float)):
+                if isinstance(val_a, int | float) and isinstance(val_b, int | float):
                     # Numeric: weighted average with random weight
                     w = random.random()
                     child[key] = type(val_a)(w * val_a + (1 - w) * val_b)
@@ -87,7 +88,7 @@ class ParetoFrontier:
                     # Categorical: random selection
                     child[key] = random.choice([val_a, val_b])
             else:
-                child[key] = parents[0].params.get(key, parents[1].params.get(key))
+                child[key] = parents[0].params.get(key, parents[1].params.get(key))  # type: ignore[arg-type]
 
         return child
 
@@ -120,6 +121,12 @@ class ParetoFrontier:
 
     def _save(self) -> None:
         self._path.parent.mkdir(parents=True, exist_ok=True)
-        self._path.write_text(json.dumps({
-            "points": [p.model_dump(mode="json") for p in self._points],
-        }, indent=2, default=str))
+        self._path.write_text(
+            json.dumps(
+                {
+                    "points": [p.model_dump(mode="json") for p in self._points],
+                },
+                indent=2,
+                default=str,
+            )
+        )

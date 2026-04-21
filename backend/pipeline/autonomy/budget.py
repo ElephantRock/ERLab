@@ -4,19 +4,25 @@ Adopted from mcp-agent's Budget-Policy-Verifier trio. Tracks token
 usage, cost, and time per pipeline stage with policy-based decisions.
 """
 
+from __future__ import annotations
+
 import logging
 import time
 from enum import Enum
+from typing import TYPE_CHECKING
 
 from pydantic import BaseModel
+
+if TYPE_CHECKING:
+    from backend.providers.provider_factory import CostTracker
 
 logger = logging.getLogger(__name__)
 
 
 class BudgetPolicy(str, Enum):
-    CONTINUE = "continue"    # Within budget, proceed normally
-    REPLAN = "replan"        # Approaching limit, drop low-priority stages
-    STOP = "stop"            # Over budget, halt pipeline
+    CONTINUE = "continue"  # Within budget, proceed normally
+    REPLAN = "replan"  # Approaching limit, drop low-priority stages
+    STOP = "stop"  # Over budget, halt pipeline
 
 
 class StageCost(BaseModel):
@@ -41,12 +47,14 @@ class SimpleBudget:
         max_tokens: int = 500000,
         max_cost_usd: float = 10.0,
         max_seconds: float = 600,
+        cost_tracker: CostTracker | None = None,
     ):
         self._max_tokens = max_tokens
         self._max_cost_usd = max_cost_usd
         self._max_seconds = max_seconds
         self._stages: dict[str, StageCost] = {}
         self._start_time: float | None = None
+        self._cost_tracker = cost_tracker
 
     def start(self) -> None:
         """Mark the start of pipeline execution."""
@@ -84,21 +92,31 @@ class SimpleBudget:
         """Decide whether to continue, replan, or stop based on budget."""
         snap = self.snapshot()
 
+        # Supplement with actual costs from CostTracker if available
+        actual_cost = snap.total_cost_usd
+        if self._cost_tracker:
+            actual_cost = max(actual_cost, self._cost_tracker.summary().get("total_cost_usd", 0.0))
+
         # Hard stops
         if snap.total_tokens >= self._max_tokens:
             logger.warning("Budget STOP: tokens %d >= %d", snap.total_tokens, self._max_tokens)
             return BudgetPolicy.STOP
-        if snap.total_cost_usd >= self._max_cost_usd:
-            logger.warning("Budget STOP: cost $%.2f >= $%.2f", snap.total_cost_usd, self._max_cost_usd)
+        if snap.total_cost_usd >= self._max_cost_usd or actual_cost >= self._max_cost_usd:
+            logger.warning(
+                "Budget STOP: cost $%.2f (tracked $%.2f) >= $%.2f",
+                snap.total_cost_usd, actual_cost, self._max_cost_usd,
+            )
             return BudgetPolicy.STOP
         if snap.total_seconds >= self._max_seconds:
-            logger.warning("Budget STOP: time %.1fs >= %.1fs", snap.total_seconds, self._max_seconds)
+            logger.warning(
+                "Budget STOP: time %.1fs >= %.1fs", snap.total_seconds, self._max_seconds
+            )
             return BudgetPolicy.STOP
 
         # Replan thresholds (80% of budget)
         if snap.total_tokens >= self._max_tokens * 0.8:
             return BudgetPolicy.REPLAN
-        if snap.total_cost_usd >= self._max_cost_usd * 0.8:
+        if snap.total_cost_usd >= self._max_cost_usd * 0.8 or actual_cost >= self._max_cost_usd * 0.8:
             return BudgetPolicy.REPLAN
 
         return BudgetPolicy.CONTINUE
@@ -164,8 +182,14 @@ class PlanVerifier:
         remaining_cost = budget._max_cost_usd - snap.total_cost_usd
 
         if estimate.total_tokens > remaining_tokens:
-            return False, f"Estimated {estimate.total_tokens} tokens exceeds remaining {remaining_tokens}"
+            return (
+                False,
+                f"Estimated {estimate.total_tokens} tokens exceeds remaining {remaining_tokens}",
+            )
         if estimate.total_cost_usd > remaining_cost:
-            return False, f"Estimated ${estimate.total_cost_usd:.2f} exceeds remaining ${remaining_cost:.2f}"
+            return (
+                False,
+                f"Estimated ${estimate.total_cost_usd:.2f} exceeds remaining ${remaining_cost:.2f}",
+            )
 
         return True, f"Plan fits: ~{estimate.total_tokens} tokens, ~${estimate.total_cost_usd:.2f}"

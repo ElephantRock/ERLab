@@ -15,11 +15,11 @@ logger = logging.getLogger(__name__)
 
 
 class ConsciousnessState(str, Enum):
-    IDLE = "idle"                    # No active work, waiting for triggers
-    EXPLORING = "exploring"          # Broad literature search, trend scanning
-    FOCUSED = "focused"              # Deep dive on specific gaps
+    IDLE = "idle"  # No active work, waiting for triggers
+    EXPLORING = "exploring"  # Broad literature search, trend scanning
+    FOCUSED = "focused"  # Deep dive on specific gaps
     CONTEMPLATING = "contemplating"  # Analyzing results, synthesizing insights
-    DREAMING = "dreaming"            # Consolidating memory, updating world model
+    DREAMING = "dreaming"  # Consolidating memory, updating world model
 
 
 class StateTransition(BaseModel):
@@ -85,7 +85,9 @@ class ConsciousnessStateMachine:
             trigger=trigger,
         )
         self._history.append(transition)
-        logger.info("State transition: %s → %s (trigger: %s)", old_state.value, new_state.value, trigger)
+        logger.info(
+            "State transition: %s → %s (trigger: %s)", old_state.value, new_state.value, trigger
+        )
 
         return self._state
 

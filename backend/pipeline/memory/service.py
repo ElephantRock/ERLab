@@ -1,18 +1,25 @@
-"""Memory service — persistent agent memory backed by JSONL + ChromaDB.
+"""Memory service — persistent agent memory backed by JSONL + optional hybrid retrieval.
 
 Implements the Ajnan Universal Kernel-Write Invariant: every write passes
 through redact_and_validate() with no exceptions.
+
+When a TwoStageRetriever is provided, recall() uses BM25+semantic hybrid
+search instead of substring matching.
 """
 
+from __future__ import annotations
+
 import hashlib
-import json
 import logging
 import re
 from datetime import datetime
 from pathlib import Path
+from typing import TYPE_CHECKING
 
-from backend.pipeline.knowledge.truth import TruthValue
-from backend.pipeline.memory.models import MemoryEntry, MemoryQuery, MemoryType
+from backend.pipeline.memory.models import MemoryEntry, MemoryQuery, MemoryRevision, MemoryType
+
+if TYPE_CHECKING:
+    from backend.pipeline.knowledge.retriever import TwoStageRetriever
 
 logger = logging.getLogger(__name__)
 
@@ -26,11 +33,17 @@ _REDACTION_PATTERNS = [
 class MemoryService:
     """Persistent agent memory with typed storage and quality gates."""
 
-    def __init__(self, persist_path: str = "./data/memory"):
+    def __init__(
+        self,
+        persist_path: str = "./data/memory",
+        retriever: TwoStageRetriever | None = None,
+    ):
         self._path = Path(persist_path)
         self._path.mkdir(parents=True, exist_ok=True)
         self._store_path = self._path / "memory.jsonl"
         self._index: dict[str, MemoryEntry] = {}
+        self._retriever = retriever
+        self._last_decay: datetime = datetime.now()
         self._load()
 
     async def store(self, entry: MemoryEntry) -> str:
@@ -41,6 +54,7 @@ class MemoryService:
             content=validated,
             memory_type=entry.memory_type,
             namespace=entry.namespace,
+            agent_id=entry.agent_id,
             truth=entry.truth,
             source_run_id=entry.source_run_id,
             tags=entry.tags,
@@ -48,8 +62,16 @@ class MemoryService:
         )
 
         if entry.id in self._index:
-            # Revise truth value for duplicate content
             existing = self._index[entry.id]
+            # Record provenance before updating
+            revision = MemoryRevision(
+                revision_number=len(existing.revision_history) + 1,
+                content=existing.content,
+                truth=existing.truth,
+                agent_id=entry.agent_id,
+                reason="update",
+            )
+            existing.revision_history.append(revision)
             existing.truth = existing.truth.revise(entry.truth)
             existing.access_count += 1
             existing.accessed_at = datetime.now()
@@ -57,10 +79,35 @@ class MemoryService:
             self._index[entry.id] = entry
 
         self._append(entry)
+
+        # Keep BM25 index in sync (if retriever is configured)
+        if self._retriever is not None:
+            self._retriever.bm25_index.add_documents(  # type: ignore[attr-defined]
+                ids=[entry.id],
+                texts=[entry.content],
+                metadatas=[
+                    {
+                        "memory_type": entry.memory_type.value,
+                        "namespace": entry.namespace,
+                    }
+                ],
+            )
+
         return entry.id
 
     async def recall(self, query: MemoryQuery) -> list[MemoryEntry]:
-        """Retrieve memories matching query criteria."""
+        """Retrieve memories matching query criteria.
+
+        Uses hybrid retrieval when a TwoStageRetriever is configured,
+        otherwise falls back to substring matching.
+        """
+        await self.maybe_decay()
+        if self._retriever:
+            return await self._semantic_recall(query)
+        return await self._text_recall(query)
+
+    async def _text_recall(self, query: MemoryQuery) -> list[MemoryEntry]:
+        """Original substring-based recall (backward compatible)."""
         results: list[MemoryEntry] = []
 
         for entry in self._index.values():
@@ -68,24 +115,47 @@ class MemoryService:
                 continue
             if query.namespace and entry.namespace != query.namespace:
                 continue
+            if query.agent_id and entry.agent_id != query.agent_id:
+                continue
             if entry.truth.confidence < query.min_confidence:
                 continue
-            # Simple text matching for recall
             if query.query.lower() in entry.content.lower():
                 results.append(entry)
 
-        # Sort by truth expectation (frequency * confidence), then recency
         results.sort(
             key=lambda e: (e.truth.expectation, e.created_at.timestamp()),
             reverse=True,
         )
 
-        # Update access stats
         for entry in results[: query.top_k]:
             entry.access_count += 1
             entry.accessed_at = datetime.now()
 
         return results[: query.top_k]
+
+    async def _semantic_recall(self, query: MemoryQuery) -> list[MemoryEntry]:
+        """Hybrid BM25+semantic recall via TwoStageRetriever."""
+        filter_meta: dict = {}
+        if query.memory_type:
+            filter_meta["memory_type"] = query.memory_type.value
+        if query.namespace:
+            filter_meta["namespace"] = query.namespace
+
+        retrieval_results = await self._retriever.retrieve(  # type: ignore[union-attr]
+            query=query.query,
+            n_results=query.top_k,
+            filter_metadata=filter_meta or None,
+        )
+
+        results: list[MemoryEntry] = []
+        for r in retrieval_results:
+            entry = self._index.get(r.id)
+            if entry and entry.truth.confidence >= query.min_confidence:
+                entry.access_count += 1
+                entry.accessed_at = datetime.now()
+                results.append(entry)
+
+        return results
 
     async def consolidate(self, similarity_threshold: float = 0.9) -> int:
         """Consolidate similar memories. Returns number of merges performed."""
@@ -140,6 +210,25 @@ class MemoryService:
             self._save_all()
         return count
 
+    async def maybe_decay(self, decay_rate: float = 0.99, min_interval_hours: int = 24) -> int:
+        """Apply decay only if min_interval_hours have elapsed since last decay."""
+        elapsed = (datetime.now() - self._last_decay).total_seconds() / 3600
+        if elapsed < min_interval_hours:
+            return 0
+        count = await self.apply_decay(decay_rate)
+        self._last_decay = datetime.now()
+        if count:
+            logger.info("Applied decay to %d memories (interval=%.1fh)", count, elapsed)
+        return count
+
+    async def delete(self, entry_id: str) -> bool:
+        """Delete a memory entry by ID. Returns True if found and removed."""
+        if entry_id not in self._index:
+            return False
+        del self._index[entry_id]
+        self._save_all()
+        return True
+
     def redact_and_validate(self, content: str) -> str:
         """Ajnan Universal Kernel-Write Invariant.
 
@@ -176,7 +265,7 @@ class MemoryService:
         """Load existing memories from JSONL log."""
         if not self._store_path.exists():
             return
-        with open(self._store_path, "r", encoding="utf-8") as f:
+        with open(self._store_path, encoding="utf-8") as f:
             for line in f:
                 line = line.strip()
                 if not line:

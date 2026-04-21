@@ -1,6 +1,5 @@
 """Tests for consciousness state machine."""
 
-import time
 
 from backend.pipeline.autonomy.state_machine import (
     ConsciousnessState,
