@@ -105,9 +105,46 @@ class InMemoryProcessor(TracingProcessor):
         self._spans.clear()
 
 
+class CompositeProcessor(TracingProcessor):
+    """Fan-out processor that delegates to N sub-processors."""
+
+    def __init__(self, processors: list[TracingProcessor] | None = None):
+        self._processors: list[TracingProcessor] = list(processors or [])
+
+    def add(self, processor: TracingProcessor) -> None:
+        self._processors.append(processor)
+
+    def remove(self, processor_type: type) -> None:
+        self._processors = [p for p in self._processors if not isinstance(p, processor_type)]
+
+    def get(self, processor_type: type) -> TracingProcessor | None:
+        for p in self._processors:
+            if isinstance(p, processor_type):
+                return p
+        return None
+
+    @property
+    def processors(self) -> list[TracingProcessor]:
+        return list(self._processors)
+
+    def on_span_start(self, span: Span) -> None:
+        for p in self._processors:
+            try:
+                p.on_span_start(span)
+            except Exception:
+                logger.exception("Processor %s failed in on_span_start", type(p).__name__)
+
+    def on_span_end(self, span: Span) -> None:
+        for p in self._processors:
+            try:
+                p.on_span_end(span)
+            except Exception:
+                logger.exception("Processor %s failed in on_span_end", type(p).__name__)
+
+
 # ---- Module-level singleton ----
 
-_processor: TracingProcessor = NoOpProcessor()
+_processor: TracingProcessor = CompositeProcessor()
 
 
 def get_tracer() -> TracingProcessor:
@@ -117,6 +154,21 @@ def get_tracer() -> TracingProcessor:
 def set_tracer(processor: TracingProcessor) -> None:
     global _processor
     _processor = processor
+
+
+def get_composite() -> CompositeProcessor:
+    """Return the global processor as CompositeProcessor, wrapping if needed."""
+    global _processor
+    if isinstance(_processor, CompositeProcessor):
+        return _processor
+    composite = CompositeProcessor([_processor])
+    _processor = composite
+    return composite
+
+
+def _notify_span_start(span: Span) -> None:
+    """Called by SpanContext.__enter__ to notify the processor."""
+    _processor.on_span_start(span)
 
 
 def _notify_span_end(span: Span) -> None:

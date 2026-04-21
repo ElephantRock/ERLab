@@ -139,6 +139,16 @@ class Settings(BaseSettings):
     sandbox_docker_image_shell: str = "alpine:3.19"
     sandbox_docker_image_python: str = "python:3.11-slim"
 
+    # Observability (WP-04)
+    observability_enabled: bool = False
+    observability_trace_memory: bool = True
+    observability_trace_logging: bool = True
+    observability_max_memory_spans: int = 10000
+    observability_otlp_enabled: bool = False
+    observability_otlp_endpoint: str = "http://localhost:4317"
+    observability_otlp_protocol: str = "grpc"
+    observability_metrics_enabled: bool = True
+
     # Model routing (P3)
     model_routing_enabled: bool = False
     model_routing: dict[str, dict] = {}

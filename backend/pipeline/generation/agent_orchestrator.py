@@ -13,6 +13,7 @@ from backend.pipeline.gap_analysis.models import ResearchGap
 from backend.pipeline.generation.borda import (
     BordaTournament,
 )
+from backend.pipeline.tracing.spans import SpanKind, create_span
 from backend.pipeline.generation.critic_agent import CriticAgent
 from backend.pipeline.generation.ideator_agent import IdeatorAgent
 from backend.pipeline.generation.impasse import ImpasseDetector, Resolution
@@ -132,7 +133,8 @@ class AgentOrchestrator:
                 strategy.value,
             )
 
-            raw_ideas = await self._ideator.generate_ideas(
+            with create_span(SpanKind.AGENT, "ideator.generate", round=round_num) as _span:
+                raw_ideas = await self._ideator.generate_ideas(
                 gaps=gaps,
                 context_papers=context_papers,
                 prior_critique=prior_critiques if prior_critiques else None,
@@ -147,7 +149,8 @@ class AgentOrchestrator:
 
             # Step 2: Critique with strategy-aware evaluation
             logger.info("Critiquing ideas (strategy: %s)...", strategy.value)
-            critiques = await self._critic.critique_ideas(
+            with create_span(SpanKind.AGENT, "critic.evaluate", strategy=strategy.value) as _cspan:
+                critiques = await self._critic.critique_ideas(
                 ideas=raw_ideas,
                 context_papers=context_papers,
                 strategy=strategy,
@@ -178,7 +181,8 @@ class AgentOrchestrator:
 
             # Step 3: Refine
             logger.info("Refining ideas based on critiques...")
-            refined = await self._refiner.refine_ideas(
+            with create_span(SpanKind.AGENT, "refiner.refine", round=round_num) as _rspan:
+                refined = await self._refiner.refine_ideas(
                 ideas=raw_ideas,
                 critiques=critiques,
                 context_papers=context_papers,

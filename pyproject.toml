@@ -49,6 +49,12 @@ dev = [
 sandbox = [
     "wasmtime>=20.0",
 ]
+observability = [
+    "opentelemetry-api>=1.20",
+    "opentelemetry-sdk>=1.20",
+    "opentelemetry-exporter-otlp-proto-grpc>=1.20",
+    "opentelemetry-exporter-otlp-proto-http>=1.20",
+]
 
 [project.scripts]
 erock = "backend.cli.main:app"

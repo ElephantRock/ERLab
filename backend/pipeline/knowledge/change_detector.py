@@ -136,7 +136,7 @@ class WorldModelChangeDetector:
         if not hasattr(target_kg, "_version_log") or target_kg._version_log is None:
             return None
 
-        current_version = target_kg._version_log.get_version()
+        current_version = target_kg._version_log.latest_version
         if current_version == 0:
             return None
 

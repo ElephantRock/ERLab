@@ -180,27 +180,33 @@ class ToolRegistry:
                 self._audit(tool.name, "blocked", 0.0)
                 raise RuntimeError(f"Tool '{name}' blocked: {result.blocked_reason}")
 
-        # Execute with timeout
-        t0 = time.time()
-        try:
-            result = await asyncio.wait_for(
-                tool.handler(**kwargs),
-                timeout=tool.timeout,
-            )
-        except asyncio.TimeoutError:
+        from backend.pipeline.tracing.spans import SpanKind, create_span
+
+        with create_span(SpanKind.TOOL, name, trust=tool.trust_level) as span:
+            # Execute with timeout
+            t0 = time.time()
+            try:
+                result = await asyncio.wait_for(
+                    tool.handler(**kwargs),
+                    timeout=tool.timeout,
+                )
+            except asyncio.TimeoutError:
+                elapsed_ms = (time.time() - t0) * 1000
+                self._audit(tool.name, "timeout", elapsed_ms)
+                span.set_status("error")
+                span.attributes["error"] = "timeout"
+                raise RuntimeError(f"Tool '{name}' timed out after {tool.timeout}s")
+
             elapsed_ms = (time.time() - t0) * 1000
-            self._audit(tool.name, "timeout", elapsed_ms)
-            raise RuntimeError(f"Tool '{name}' timed out after {tool.timeout}s")
+            span.attributes["duration_ms"] = elapsed_ms
 
-        elapsed_ms = (time.time() - t0) * 1000
+            # Output size limit for untrusted tools
+            if isinstance(result, str) and len(result.encode()) > tool.max_output_bytes:
+                result = result[:tool.max_output_bytes]
 
-        # Output size limit for untrusted tools
-        if isinstance(result, str) and len(result.encode()) > tool.max_output_bytes:
-            result = result[:tool.max_output_bytes]
-
-        self._audit(tool.name, "success", elapsed_ms)
-        logger.info("Tool '%s' called successfully (%.0fms)", name, elapsed_ms)
-        return result
+            self._audit(tool.name, "success", elapsed_ms)
+            logger.info("Tool '%s' called successfully (%.0fms)", name, elapsed_ms)
+            return result
 
     def _audit(self, tool_name: str, status: str, duration_ms: float, error: str | None = None) -> None:
         """Record a tool execution event to the audit log."""

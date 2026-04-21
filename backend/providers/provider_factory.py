@@ -345,6 +345,13 @@ class CostTracker:
     def reset(self) -> None:
         self._events.clear()
 
+    def events_in_range(self, start: float, end: float) -> list:
+        """Return cost events whose timestamp falls within [start, end] epoch seconds."""
+        return [
+            e for e in self._events
+            if start <= e.timestamp.timestamp() <= end
+        ]
+
     def persist(self, path: str) -> None:
         """Write all cost events to a JSONL file."""
         from pathlib import Path

@@ -82,7 +82,6 @@ class PipelineOrchestrator:
 
         # Tracing
         self._trace_processor = InMemoryProcessor()
-        set_tracer(LoggingProcessor())
 
         # Guardrails
         from backend.pipeline.governance.guardrails import default_input_guardrails
@@ -95,6 +94,7 @@ class PipelineOrchestrator:
         self._init_governance(settings)
         self._init_evaluation(settings)
         self._init_sandboxing(settings)
+        self._init_observability(settings)
 
         # Wire hooks to agent orchestrator for impasse events
         self._agent.set_hooks(self._hooks)
@@ -495,6 +495,28 @@ class PipelineOrchestrator:
         logger.info(
             "Sandboxing enabled (backend: %s)", self._sandbox_manager.backend_name,
         )
+
+    def _init_observability(self, settings) -> None:
+        self._observability = None
+        if not getattr(settings, "observability_enabled", False):
+            from backend.pipeline.tracing.processor import LoggingProcessor, set_tracer
+            set_tracer(LoggingProcessor())
+            return
+        from backend.pipeline.observability import ObservabilityManager
+        from backend.pipeline.observability.manager import set_active_manager
+
+        self._observability = ObservabilityManager(
+            trace_logging=getattr(settings, "observability_trace_logging", True),
+            trace_memory=getattr(settings, "observability_trace_memory", True),
+            max_memory_spans=getattr(settings, "observability_max_memory_spans", 10000),
+            otlp_enabled=getattr(settings, "observability_otlp_enabled", False),
+            otlp_endpoint=getattr(settings, "observability_otlp_endpoint", "http://localhost:4317"),
+            otlp_protocol=getattr(settings, "observability_otlp_protocol", "grpc"),
+            metrics_enabled=getattr(settings, "observability_metrics_enabled", True),
+            cost_tracker=self._cost_tracker,
+        )
+        set_active_manager(self._observability)
+        logger.info("Observability enabled")
 
     # ── Stage Builder ────────────────────────────────────────────────
 

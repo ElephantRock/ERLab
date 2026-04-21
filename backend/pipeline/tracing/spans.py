@@ -49,10 +49,12 @@ class Span:
     status: str = "ok"  # ok, error, skipped
     attributes: dict[str, Any] = field(default_factory=dict)
     events: list[SpanEvent] = field(default_factory=list)
+    cost_usd: float | None = None
+    token_count: int | None = None
 
     @property
     def duration_ms(self) -> float:
-        if self.end_time and self.start_time:
+        if self.end_time > self.start_time:
             return (self.end_time - self.start_time) * 1000
         return 0.0
 
@@ -65,6 +67,29 @@ class Span:
     def end(self) -> None:
         if not self.end_time:
             self.end_time = time.time()
+
+    def to_dict(self) -> dict[str, Any]:
+        d: dict[str, Any] = {
+            "span_id": self.span_id,
+            "trace_id": self.trace_id,
+            "parent_id": self.parent_id,
+            "kind": self.kind.value,
+            "name": self.name,
+            "start_time": self.start_time,
+            "end_time": self.end_time,
+            "duration_ms": self.duration_ms,
+            "status": self.status,
+            "attributes": self.attributes,
+            "events": [
+                {"name": e.name, "timestamp": e.timestamp, "attributes": e.attributes}
+                for e in self.events
+            ],
+        }
+        if self.cost_usd is not None:
+            d["cost_usd"] = self.cost_usd
+        if self.token_count is not None:
+            d["token_count"] = self.token_count
+        return d
 
 
 # Context variables for trace/span propagation
@@ -110,6 +135,8 @@ class SpanContext:
         self.span.start_time = time.time()
         self._trace_token = _trace_id.set(self.span.trace_id)
         self._parent_token = _parent_span_id.set(self.span.span_id)
+        from backend.pipeline.tracing.processor import _notify_span_start
+        _notify_span_start(self.span)
         return self.span
 
     def __exit__(self, exc_type, exc_val, exc_tb) -> None:

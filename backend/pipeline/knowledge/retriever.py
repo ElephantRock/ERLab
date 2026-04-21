@@ -81,6 +81,27 @@ class TwoStageRetriever:
         effective_k = rrf_k if rrf_k is not None else self._default_rrf_k
         fetch_count = n_results * overfetch
 
+        from backend.pipeline.tracing.spans import SpanKind, create_span
+
+        with create_span(
+            SpanKind.RETRIEVAL, f"retrieve:{query[:50]}",
+            n_results=n_results, mode=self._retrieval_mode,
+        ) as _rspan:
+            results = await self._retrieve_inner(
+                query, fetch_count, effective_k, n_results, min_score, filter_metadata
+            )
+            _rspan.attributes["result_count"] = len(results)
+            return results
+
+    async def _retrieve_inner(
+        self,
+        query: str,
+        fetch_count: int,
+        effective_k: int,
+        n_results: int,
+        min_score: float,
+        filter_metadata: dict | None,
+    ) -> list[RetrievalResult]:
         # Stage 0: Query transformation (optional multi-query)
         queries = [query]
         if self._query_transformer:
