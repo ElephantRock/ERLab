@@ -149,6 +149,14 @@ class Settings(BaseSettings):
     observability_otlp_protocol: str = "grpc"
     observability_metrics_enabled: bool = True
 
+    # Semantic Caching (WP-05)
+    caching_enabled: bool = False
+    caching_type: str = "memory"
+    caching_max_size: int = 1000
+    caching_similarity_threshold: float = 0.95
+    caching_ttl_seconds: int = 3600
+    caching_persist_dir: str = "./data/chroma"
+
     # Model routing (P3)
     model_routing_enabled: bool = False
     model_routing: dict[str, dict] = {}

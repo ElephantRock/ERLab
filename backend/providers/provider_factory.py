@@ -121,6 +121,9 @@ class ProviderRegistry:
         if self._cost_tracker:
             provider.set_cost_callback(self._cost_tracker.record)
 
+        if getattr(settings, "caching_enabled", False):
+            provider = _wrap_cached(provider, name, settings)
+
         if getattr(settings, "resilience_enabled", False):
             provider = _wrap_resilient(provider, name, settings)
 
@@ -235,6 +238,49 @@ def _get_vault(settings: Any) -> KeyVault | None:
     except Exception:
         logger.warning("Failed to load key vault — starting fresh")
     return _vault
+
+
+def _wrap_cached(
+    provider: LLMProvider, name: str, settings: Any
+) -> LLMProvider:
+    from backend.providers.cache import CachedProvider, InMemoryCache, SemanticCache
+
+    cache_type = getattr(settings, "caching_type", "memory")
+    max_size = getattr(settings, "caching_max_size", 1000)
+    ttl_seconds = getattr(settings, "caching_ttl_seconds", 3600)
+
+    if cache_type == "semantic":
+        from backend.pipeline.knowledge.embedding_providers import create_embedding_provider
+        from backend.pipeline.knowledge.embedding_service import EmbeddingService
+
+        emb_provider = create_embedding_provider(
+            provider_name=getattr(settings, "embedding_provider", "openai"),
+            model=getattr(settings, "embedding_model", "text-embedding-3-small"),
+            api_key=getattr(settings, "openai_api_key", ""),
+            base_url=getattr(settings, "ollama_base_url", "http://localhost:11434"),
+            dimension=getattr(settings, "embedding_dimension", 1536) or None,
+        )
+        emb_service = EmbeddingService(
+            emb_provider,
+            batch_size=getattr(settings, "embedding_batch_size", 100),
+        )
+        semantic_cache = SemanticCache(
+            embedding_service=emb_service,
+            persist_dir=getattr(settings, "caching_persist_dir", "./data/chroma"),
+            similarity_threshold=getattr(settings, "caching_similarity_threshold", 0.95),
+            ttl_seconds=ttl_seconds,
+            max_size=max_size,
+        )
+        memory_cache = InMemoryCache(max_size=max_size, ttl_seconds=ttl_seconds)
+        return CachedProvider(
+            wrapped=provider,
+            cache=memory_cache,
+            cache_type="semantic",
+            semantic_cache=semantic_cache,
+        )
+
+    memory_cache = InMemoryCache(max_size=max_size, ttl_seconds=ttl_seconds)
+    return CachedProvider(wrapped=provider, cache=memory_cache, cache_type="memory")
 
 
 def _wrap_resilient(
