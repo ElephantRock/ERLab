@@ -101,6 +101,7 @@ class PipelineOrchestrator:
         self._init_consolidation(settings)
         self._init_adaptation(settings)
         self._init_graph_rag(settings)
+        self._init_tool_discovery(settings)
 
         # Wire hooks to agent orchestrator for impasse events
         self._agent.set_hooks(self._hooks)
@@ -649,6 +650,35 @@ class PipelineOrchestrator:
         logger.info("Graph RAG enabled (weight=%.2f, max_hops=%d)",
                      getattr(settings, "graph_rag_weight", 0.3),
                      getattr(settings, "graph_rag_walk_max_hops", 2))
+
+    def _init_tool_discovery(self, settings) -> None:
+        self._tool_matcher = None
+        self._tool_scorer = None
+        if not getattr(settings, "tool_discovery_enabled", False):
+            return
+        from backend.pipeline.knowledge.bm25_index import BM25Index
+        from backend.pipeline.tools.tool_index import ToolEmbeddingIndex
+        from backend.pipeline.tools.tool_matcher import ToolMatcher
+        from backend.pipeline.tools.tool_scoring import ToolScorer
+
+        tool_index = ToolEmbeddingIndex(
+            persist_dir=settings.chroma_persist_dir,
+            embedding_service=self._embedding,
+        )
+        bm25 = BM25Index(persist_dir=getattr(settings, "tool_discovery_bm25_dir", "./data/tool_bm25"))
+
+        self._tool_matcher = ToolMatcher(
+            tool_embedding_index=tool_index,
+            bm25_index=bm25,
+            registry=self._tool_registry,
+            rrf_k=getattr(settings, "tool_discovery_rrf_k", 60),
+        )
+        self._tool_scorer = ToolScorer(
+            trust_penalty=getattr(settings, "tool_discovery_trust_penalty", 0.2),
+            relevance_weight=getattr(settings, "tool_discovery_relevance_weight", 0.7),
+            recency_weight=getattr(settings, "tool_discovery_recency_weight", 0.1),
+        )
+        logger.info("Tool discovery enabled (rrf_k=%d)", getattr(settings, "tool_discovery_rrf_k", 60))
 
     def _build_stages(self) -> list[PipelineStage]:
         ref_validator = ReferenceValidator(store=self._store)

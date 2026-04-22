@@ -40,15 +40,15 @@ def embedding_service():
 
 class TestGraphEmbeddingIndex:
     @pytest.mark.anyio
-    async def test_index_entity_stores_embedding(self, embedding_service, tmp_path):
-        idx = GraphEmbeddingIndex(str(tmp_path / "emb1"), embedding_service)
+    async def test_index_entity_stores_embedding(self, embedding_service, chroma_client):
+        idx = GraphEmbeddingIndex(".", embedding_service, client=chroma_client, collection_name="ge1")
         entity = _make_entity("BERT", EntityType.METHOD)
         await idx.index_entity(entity)
         assert idx._collection.count() == 1
 
     @pytest.mark.anyio
-    async def test_index_graph_indexes_all_entities(self, embedding_service, tmp_path):
-        idx = GraphEmbeddingIndex(str(tmp_path / "emb2"), embedding_service)
+    async def test_index_graph_indexes_all_entities(self, embedding_service, chroma_client):
+        idx = GraphEmbeddingIndex(".", embedding_service, client=chroma_client, collection_name="ge2")
         kg = KnowledgeGraph(persist_path="NUL")
         kg.add_entity(_make_entity("A"))
         kg.add_entity(_make_entity("B"))
@@ -56,30 +56,30 @@ class TestGraphEmbeddingIndex:
         assert count == 2
 
     @pytest.mark.anyio
-    async def test_query_similar_returns_matching(self, embedding_service, tmp_path):
-        idx = GraphEmbeddingIndex(str(tmp_path / "emb3"), embedding_service)
+    async def test_query_similar_returns_matching(self, embedding_service, chroma_client):
+        idx = GraphEmbeddingIndex(".", embedding_service, client=chroma_client, collection_name="ge3")
         await idx.index_entity(_make_entity("BERT", EntityType.METHOD))
         results = await idx.query_similar("transformer model", n_results=5)
         assert len(results) >= 1
         assert results[0]["id"] == "method:bert"
 
     @pytest.mark.anyio
-    async def test_query_by_embedding(self, embedding_service, tmp_path):
-        idx = GraphEmbeddingIndex(str(tmp_path / "emb4"), embedding_service)
+    async def test_query_by_embedding(self, embedding_service, chroma_client):
+        idx = GraphEmbeddingIndex(".", embedding_service, client=chroma_client, collection_name="ge4")
         await idx.index_entity(_make_entity("GPT", EntityType.METHOD))
         embedding = [0.1 * (i + 1) for i in range(10)]
         results = await idx.query_by_embedding(embedding, n_results=5)
         assert len(results) >= 1
 
     @pytest.mark.anyio
-    async def test_empty_collection_returns_empty(self, embedding_service, tmp_path):
-        idx = GraphEmbeddingIndex(str(tmp_path / "emb5"), embedding_service)
+    async def test_empty_collection_returns_empty(self, embedding_service, chroma_client):
+        idx = GraphEmbeddingIndex(".", embedding_service, client=chroma_client, collection_name="ge5")
         results = await idx.query_similar("anything", n_results=5)
         assert results == []
 
     @pytest.mark.anyio
-    async def test_index_empty_graph(self, embedding_service, tmp_path):
-        idx = GraphEmbeddingIndex(str(tmp_path / "emb6"), embedding_service)
+    async def test_index_empty_graph(self, embedding_service, chroma_client):
+        idx = GraphEmbeddingIndex(".", embedding_service, client=chroma_client, collection_name="ge6")
         kg = KnowledgeGraph(persist_path="NUL")
         count = await idx.index_graph(kg)
         assert count == 0
@@ -101,8 +101,8 @@ class TestGraphEmbeddingIndex:
         assert len(results) >= 1
 
     @pytest.mark.anyio
-    async def test_query_with_type_filter(self, embedding_service, tmp_path):
-        idx = GraphEmbeddingIndex(str(tmp_path / "emb8"), embedding_service)
+    async def test_query_with_type_filter(self, embedding_service, chroma_client):
+        idx = GraphEmbeddingIndex(".", embedding_service, client=chroma_client, collection_name="ge8")
         await idx.index_entity(_make_entity("BERT", EntityType.METHOD))
         await idx.index_entity(_make_entity("NLP", EntityType.CONCEPT))
         results = await idx.query_similar("model", n_results=5, entity_type=EntityType.METHOD)

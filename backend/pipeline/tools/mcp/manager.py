@@ -20,9 +20,11 @@ class MCPManager:
         self,
         server_registry: MCPServerRegistry,
         tool_registry: Any | None = None,
+        tool_index: Any | None = None,
     ) -> None:
         self._server_registry = server_registry
         self._tool_registry = tool_registry
+        self._tool_index = tool_index
         self._clients: dict[str, MCPClient] = {}
         self._started = False
 
@@ -52,6 +54,8 @@ class MCPManager:
                             timeout=tool_def.timeout,
                             trust_level=tool_def.trust_level,
                         )
+                        if self._tool_index:
+                            await self._tool_index.index_tool(tool_def)
                     total_tools += len(tools)
                     logger.info(
                         "MCP server '%s': discovered %d tools",

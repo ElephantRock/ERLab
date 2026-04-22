@@ -255,6 +255,14 @@ class Settings(BaseSettings):
     graph_rag_weight: float = 0.3
     graph_rag_extract_on_ingest: bool = True
 
+    # Dynamic Tool Discovery (WP-14)
+    tool_discovery_enabled: bool = False
+    tool_discovery_bm25_dir: str = "./data/tool_bm25"
+    tool_discovery_rrf_k: int = 60
+    tool_discovery_trust_penalty: float = 0.2
+    tool_discovery_relevance_weight: float = 0.7
+    tool_discovery_recency_weight: float = 0.1
+
 
 @functools.lru_cache()
 def get_settings() -> Settings:

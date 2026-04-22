@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import chromadb
 
@@ -20,11 +20,18 @@ COLLECTION_NAME = "kg_entity_embeddings"
 class GraphEmbeddingIndex:
     """Stores and queries embeddings for KG entities in a dedicated ChromaDB collection."""
 
-    def __init__(self, persist_dir: str, embedding_service: EmbeddingService) -> None:
-        self._client = chromadb.PersistentClient(path=persist_dir)
+    def __init__(
+        self,
+        persist_dir: str,
+        embedding_service: EmbeddingService,
+        *,
+        client: Any | None = None,
+        collection_name: str | None = None,
+    ) -> None:
+        self._client = client or chromadb.PersistentClient(path=persist_dir)
         self._embedding = embedding_service
         self._collection = self._client.get_or_create_collection(
-            name=COLLECTION_NAME,
+            name=collection_name or COLLECTION_NAME,
             metadata={"hnsw:space": "cosine"},
         )
 
