@@ -248,6 +248,13 @@ class Settings(BaseSettings):
     adaptation_feedback_window: int = 5
     adaptation_min_improvement: float = 0.02
 
+    # Graph RAG (WP-13)
+    graph_rag_enabled: bool = False
+    graph_rag_walk_max_hops: int = 2
+    graph_rag_walk_max_results: int = 20
+    graph_rag_weight: float = 0.3
+    graph_rag_extract_on_ingest: bool = True
+
 
 @functools.lru_cache()
 def get_settings() -> Settings:

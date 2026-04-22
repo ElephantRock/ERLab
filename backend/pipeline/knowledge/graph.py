@@ -155,6 +155,24 @@ class KnowledgeGraph:
             or self._resolution.canonical_id(r.target_id) == canonical
         ]
 
+    def get_outgoing_relationships(self, entity_id: str) -> list[KnowledgeRelationship]:
+        canonical = self._resolution.canonical_id(entity_id)
+        return [
+            r for r in self._relationships
+            if self._resolution.canonical_id(r.source_id) == canonical
+        ]
+
+    def get_incoming_relationships(self, entity_id: str) -> list[KnowledgeRelationship]:
+        canonical = self._resolution.canonical_id(entity_id)
+        return [
+            r for r in self._relationships
+            if self._resolution.canonical_id(r.target_id) == canonical
+        ]
+
+    @property
+    def entity_count(self) -> int:
+        return len(self._entities)
+
     def get_neighbors(
         self,
         entity_id: str,

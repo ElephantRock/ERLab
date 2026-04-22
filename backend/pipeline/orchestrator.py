@@ -100,6 +100,7 @@ class PipelineOrchestrator:
         self._init_streaming(settings)
         self._init_consolidation(settings)
         self._init_adaptation(settings)
+        self._init_graph_rag(settings)
 
         # Wire hooks to agent orchestrator for impasse events
         self._agent.set_hooks(self._hooks)
@@ -615,6 +616,39 @@ class PipelineOrchestrator:
         )
         logger.info("Behavioral adaptation enabled (window=%d, min_improvement=%.3f)",
                      settings.adaptation_feedback_window, settings.adaptation_min_improvement)
+
+    def _init_graph_rag(self, settings) -> None:
+        self._graph_rag_retriever = None
+        if not getattr(settings, "graph_rag_enabled", False):
+            return
+        from backend.pipeline.knowledge.community_detection import CommunityDetector
+        from backend.pipeline.knowledge.entity_extractor import EntityExtractor
+        from backend.pipeline.knowledge.graph_embeddings import GraphEmbeddingIndex
+        from backend.pipeline.knowledge.graph_rag_retriever import GraphRAGRetriever
+        from backend.pipeline.knowledge.graph_walks import GraphWalker
+
+        graph_index = GraphEmbeddingIndex(
+            persist_dir=settings.chroma_persist_dir,
+            embedding_service=self._embedding,
+        )
+        walker = GraphWalker(self._kg)
+        community_detector = CommunityDetector(self._kg)
+        entity_extractor = EntityExtractor(self._provider)
+
+        self._graph_rag_retriever = GraphRAGRetriever(
+            base_retriever=self._retriever,
+            kg=self._kg,
+            graph_embedding_index=graph_index,
+            graph_walker=walker,
+            community_detector=community_detector,
+            entity_extractor=entity_extractor,
+            graph_weight=getattr(settings, "graph_rag_weight", 0.3),
+            walk_max_hops=getattr(settings, "graph_rag_walk_max_hops", 2),
+            walk_max_results=getattr(settings, "graph_rag_walk_max_results", 20),
+        )
+        logger.info("Graph RAG enabled (weight=%.2f, max_hops=%d)",
+                     getattr(settings, "graph_rag_weight", 0.3),
+                     getattr(settings, "graph_rag_walk_max_hops", 2))
 
     def _build_stages(self) -> list[PipelineStage]:
         ref_validator = ReferenceValidator(store=self._store)
