@@ -163,6 +163,12 @@ class Settings(BaseSettings):
     cost_routing_per_provider_limits: dict[str, float] = {}
     cost_routing_latency_window: int = 100
 
+    # Metacognitive Strategy (WP-07)
+    metacognitive_enabled: bool = False
+    metacognitive_plateau_window: int = 3
+    metacognitive_plateau_threshold: float = 0.02
+    metacognitive_max_evals: int = 5
+
     # Model routing (P3)
     model_routing_enabled: bool = False
     model_routing: dict[str, dict] = {}

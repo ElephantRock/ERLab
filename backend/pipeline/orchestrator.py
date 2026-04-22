@@ -94,6 +94,7 @@ class PipelineOrchestrator:
         self._init_evaluation(settings)
         self._init_sandboxing(settings)
         self._init_observability(settings)
+        self._init_metacognitive(settings)
 
         # Wire hooks to agent orchestrator for impasse events
         self._agent.set_hooks(self._hooks)
@@ -517,6 +518,22 @@ class PipelineOrchestrator:
         set_active_manager(self._observability)
         logger.info("Observability enabled")
 
+    def _init_metacognitive(self, settings) -> None:
+        self._metacog = None
+        if not getattr(settings, "metacognitive_enabled", False):
+            return
+        from backend.pipeline.metacognitive import MetacognitiveManager, PlateauDetector
+
+        detector = PlateauDetector(
+            window_size=getattr(settings, "metacognitive_plateau_window", 3),
+            threshold=getattr(settings, "metacognitive_plateau_threshold", 0.02),
+            max_evals=getattr(settings, "metacognitive_max_evals", 5),
+        )
+        self._metacog = MetacognitiveManager(plateau_detector=detector)
+        if hasattr(self, '_agent') and self._agent is not None:
+            self._agent._metacog = self._metacog
+        logger.info("Metacognitive strategy enabled")
+
     # ── Stage Builder ────────────────────────────────────────────────
 
     def _build_stages(self) -> list[PipelineStage]:
@@ -716,6 +733,8 @@ class PipelineOrchestrator:
             elapsed = time.time() - t0
             self._record_stage(stage.name, t0)
             self._compaction.record_usage(stage.name)
+            if self._metacog:
+                self._metacog.record_stage(stage.name, {"elapsed_seconds": elapsed})
             await self._hooks.dispatch_sync_safe(
                 "pipeline.stage.complete",
                 {"stage": stage.name, "elapsed": elapsed, "run_id": run_id},
@@ -761,6 +780,12 @@ class PipelineOrchestrator:
                                 er.quality_gate_result.failures,
                                 er.quality_gate_result.recommendation,
                             )
+                    if self._metacog:
+                        for er in eval_reports.values():
+                            self._metacog.record_evaluation(er)
+                        plateau = self._metacog.check_plateau("overall_score")
+                        if plateau.is_plateau:
+                            logger.warning("Metacognitive plateau: %s", plateau.reason)
 
             if stage.name == "proposal_synthesis":
                 self._persistence.persist_proposals(result, db_run_id)

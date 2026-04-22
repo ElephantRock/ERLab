@@ -60,6 +60,7 @@ class AgentOrchestrator:
         self.last_critique_history: dict[int, list] = {}
         self.last_refinement_history: dict[int, list[dict]] = {}
         self._hooks = None
+        self._metacog = None
 
         # In-loop context compression
         from backend.pipeline.compaction.agent_context import WorkingContext
@@ -199,6 +200,12 @@ class AgentOrchestrator:
                 idea_count=len(refined),
                 avg_score=avg_refined_score,
             ))
+
+            # Record round-level metrics for metacognitive tracking
+            if self._metacog:
+                self._metacog.record_stage("idea_generation", {
+                    "avg_refined_score": avg_refined_score,
+                }, round_num=round_num)
 
             # Tag refined ideas with source gap IDs
             for idea in refined:
