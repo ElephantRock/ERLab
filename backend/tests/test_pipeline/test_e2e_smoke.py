@@ -19,9 +19,8 @@ from unittest.mock import MagicMock, patch
 import numpy as np
 import pytest
 
-# Mock chromadb before any pipeline imports
-sys.modules.setdefault("chromadb", MagicMock())
-sys.modules.setdefault("google.generativeai", MagicMock())
+# Mock google.generativeai only — chromadb must be real for e2e
+sys.modules["google.generativeai"] = MagicMock()
 
 from backend.config import Settings, get_settings
 from backend.pipeline.orchestrator import PipelineOrchestrator
@@ -91,8 +90,17 @@ def orchestrator(test_env):
     tmp, settings = test_env
     random_emb = RandomEmbeddingProvider(64)
 
-    # Patch both get_settings and create_embedding_provider before construction
-    with patch("backend.config.get_settings", return_value=settings), patch(
+    # The conftest.py mocks chromadb for smoke tests, but this e2e test needs real ChromaDB.
+    # Remove the mock and clear cached submodules so the real module loads fresh.
+    _chromadb_keys = [k for k in sys.modules if k == "chromadb" or k.startswith("chromadb.")]
+    for k in _chromadb_keys:
+        del sys.modules[k]
+
+    # Patch get_settings at all import sites and create_embedding_provider before construction
+    with patch("backend.config.get_settings", return_value=settings), \
+         patch("backend.pipeline.orchestrator.get_settings", return_value=settings), \
+         patch("backend.providers.provider_factory.get_settings", return_value=settings), \
+         patch(
         "backend.pipeline.knowledge.embedding_providers.create_embedding_provider",
         return_value=random_emb,
     ):
