@@ -238,6 +238,11 @@ class Settings(BaseSettings):
     streaming_enabled: bool = False
     streaming_dedup_window: float = 1.0
 
+    # Memory Consolidation Enhancement (WP-12)
+    consolidation_enabled: bool = False
+    consolidation_similarity_threshold: float = 0.9
+    consolidation_interval_hours: int = 24
+
 
 @functools.lru_cache()
 def get_settings() -> Settings:

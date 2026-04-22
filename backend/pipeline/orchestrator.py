@@ -98,6 +98,7 @@ class PipelineOrchestrator:
         self._init_mcp(settings)
         self._init_context_management(settings)
         self._init_streaming(settings)
+        self._init_consolidation(settings)
 
         # Wire hooks to agent orchestrator for impasse events
         self._agent.set_hooks(self._hooks)
@@ -576,6 +577,27 @@ class PipelineOrchestrator:
             dedup_window=getattr(settings, "streaming_dedup_window", 1.0),
         )
         logger.info("Streaming enabled (dedup_window=%.1fs)", self._stream_manager._dedup_window)
+
+    def _init_consolidation(self, settings) -> None:
+        self._consolidator = None
+        self._consolidation_scheduler = None
+        if not getattr(settings, "consolidation_enabled", False):
+            return
+        from backend.pipeline.memory.consolidation import LLMConsolidator
+        from backend.pipeline.memory.scheduler import ConsolidationScheduler
+
+        self._consolidator = LLMConsolidator(
+            provider=self._provider,
+            similarity_threshold=getattr(settings, "consolidation_similarity_threshold", 0.9),
+        )
+        self._consolidation_scheduler = ConsolidationScheduler(
+            memory=self._memory,
+            consolidator=self._consolidator,
+            interval_hours=getattr(settings, "consolidation_interval_hours", 24),
+        )
+        logger.info("Memory consolidation enabled (threshold=%.2f, interval=%dh)",
+                     self._consolidator._similarity_threshold,
+                     self._consolidation_scheduler._interval_hours)
 
     def _build_stages(self) -> list[PipelineStage]:
         ref_validator = ReferenceValidator(store=self._store)
