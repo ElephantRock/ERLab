@@ -99,6 +99,7 @@ class PipelineOrchestrator:
         self._init_context_management(settings)
         self._init_streaming(settings)
         self._init_consolidation(settings)
+        self._init_adaptation(settings)
 
         # Wire hooks to agent orchestrator for impasse events
         self._agent.set_hooks(self._hooks)
@@ -598,6 +599,22 @@ class PipelineOrchestrator:
         logger.info("Memory consolidation enabled (threshold=%.2f, interval=%dh)",
                      self._consolidator._similarity_threshold,
                      self._consolidation_scheduler._interval_hours)
+
+    def _init_adaptation(self, settings) -> None:
+        self._adaptation_manager = None
+        if not getattr(settings, "adaptation_enabled", False):
+            return
+        from backend.pipeline.adaptation.manager import AdaptationManager
+
+        self._adaptation_manager = AdaptationManager(
+            evolver=self._evolver,
+            lesson_extractor=self._lesson_extractor,
+            metacog=getattr(self, "_metacog", None),
+            feedback_window=getattr(settings, "adaptation_feedback_window", 5),
+            min_improvement=getattr(settings, "adaptation_min_improvement", 0.02),
+        )
+        logger.info("Behavioral adaptation enabled (window=%d, min_improvement=%.3f)",
+                     settings.adaptation_feedback_window, settings.adaptation_min_improvement)
 
     def _build_stages(self) -> list[PipelineStage]:
         ref_validator = ReferenceValidator(store=self._store)

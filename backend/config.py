@@ -243,6 +243,11 @@ class Settings(BaseSettings):
     consolidation_similarity_threshold: float = 0.9
     consolidation_interval_hours: int = 24
 
+    # Behavioral Adaptation (WP-10)
+    adaptation_enabled: bool = False
+    adaptation_feedback_window: int = 5
+    adaptation_min_improvement: float = 0.02
+
 
 @functools.lru_cache()
 def get_settings() -> Settings:
