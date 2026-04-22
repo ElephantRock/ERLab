@@ -273,6 +273,16 @@ class Settings(BaseSettings):
     negotiation_critique_timeout: float = 30.0
     negotiation_min_agents: int = 2
 
+    # Session Lifecycle (WP-16)
+    session_enabled: bool = False
+    session_data_dir: str = "./data/sessions"
+    session_default_max_runs: int = 10
+    session_default_max_cost_usd: float = 50.0
+    session_default_max_tokens: int = 5_000_000
+    session_default_max_duration_hours: float = 24.0
+    session_gc_idle_timeout_hours: float = 48.0
+    session_gc_expiry_hours: float = 168.0  # 7 days
+
 
 @functools.lru_cache()
 def get_settings() -> Settings:

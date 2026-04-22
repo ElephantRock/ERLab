@@ -167,11 +167,16 @@ class GovernancePolicy:
         return scope_match and cap_match
 
     def _eval_condition(self, condition: str, context: dict) -> bool:
+        # Backward compat: simple context key truthiness check
         if condition in context:
             return bool(context[condition])
-        if condition.startswith("score>"):
-            threshold = float(condition.split(">")[1])
-            return context.get("score", 0) > threshold
+        # Try structured condition evaluator
+        try:
+            from backend.pipeline.governance.condition_eval import evaluate as eval_expr
+
+            return eval_expr(condition, context)
+        except (ValueError, ImportError):
+            pass
         return True
 
     def _audit_decision(self, decision: PolicyDecision, scope: str, capability: str) -> None:

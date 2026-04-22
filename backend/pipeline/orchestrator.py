@@ -103,6 +103,7 @@ class PipelineOrchestrator:
         self._init_graph_rag(settings)
         self._init_tool_discovery(settings)
         self._init_negotiation(settings)
+        self._init_session(settings)
 
         # Wire hooks to agent orchestrator for impasse events
         self._agent.set_hooks(self._hooks)
@@ -696,6 +697,16 @@ class PipelineOrchestrator:
         self._consensus_engine = ConsensusEngine(algorithm=algorithm)
         logger.info("Negotiation enabled (algorithm=%s)", algorithm.value)
 
+    def _init_session(self, settings) -> None:
+        self._session_manager = None
+        if not getattr(settings, "session_enabled", False):
+            return
+        from backend.pipeline.session.manager import SessionManager
+
+        data_dir = getattr(settings, "session_data_dir", "./data/sessions")
+        self._session_manager = SessionManager(data_dir=data_dir, hooks=self._hooks)
+        logger.info("Session management enabled (data_dir=%s)", data_dir)
+
     def _build_stages(self) -> list[PipelineStage]:
         ref_validator = ReferenceValidator(store=self._store)
         return [
@@ -735,6 +746,7 @@ class PipelineOrchestrator:
         run_synthesis: bool = True,
         export_format: str | None = "markdown",
         run_id: str | None = None,
+        session_id: str | None = None,
     ) -> PipelineResult:
         """Execute the full pipeline from literature search to export."""
         result = PipelineResult()
@@ -743,6 +755,14 @@ class PipelineOrchestrator:
 
         run_id = run_id or datetime.now().strftime("run_%Y%m%d_%H%M%S")
         result.run_id = run_id
+
+        # Session: register run and check budget
+        if session_id and self._session_manager:
+            budget_check = self._session_manager.check_budget(session_id)
+            if budget_check["over_budget"]:
+                logger.warning("Session %s is over budget — aborting run", session_id)
+                return result
+            self._session_manager.register_run(session_id, run_id)
 
         # Self-improvement: propose evolved parameters
         params = {
@@ -1093,6 +1113,12 @@ class PipelineOrchestrator:
         if self._cost_tracker and self._cost_tracker._events:
             cost_dir = getattr(self._settings, "cost_persist_dir", "./data/costs")
             self._cost_tracker.persist(f"{cost_dir}/{run_id}.jsonl")
+
+        # Session: complete run record
+        if session_id and self._session_manager:
+            tokens = self._cost_tracker.total_tokens if self._cost_tracker else 0
+            cost = self._cost_tracker.total_cost if self._cost_tracker else 0.0
+            self._session_manager.complete_run(session_id, run_id, tokens_used=tokens, cost_usd=cost)
 
         return result
 

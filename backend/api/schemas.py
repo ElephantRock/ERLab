@@ -13,6 +13,7 @@ class PipelineRunRequest(BaseModel):
     run_feasibility: bool = Field(default=True)
     run_synthesis: bool = Field(default=True)
     export_format: str = Field(default="markdown")
+    session_id: str | None = None
 
 
 class SearchRequest(BaseModel):
@@ -28,3 +29,13 @@ class IdeaFeedbackRequest(BaseModel):
 class AutonomousCycleRequest(BaseModel):
     domain: str = Field(default="AI/NLP", max_length=200)
     max_runs: int = Field(default=3, ge=1, le=20)
+
+
+class SessionCreateRequest(BaseModel):
+    name: str = Field(default="", max_length=200)
+    max_runs: int = Field(default=10, ge=1, le=1000)
+    max_cost_usd: float = Field(default=50.0, ge=0.0)
+    max_tokens: int = Field(default=5_000_000, ge=0)
+    max_duration_hours: float = Field(default=24.0, ge=0.1)
+    tags: list[str] = Field(default_factory=list)
+    metadata: dict = Field(default_factory=dict)

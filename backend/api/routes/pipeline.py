@@ -11,7 +11,7 @@ from fastapi import APIRouter, Query
 from fastapi.responses import StreamingResponse
 
 from backend.api.errors import NotFoundError
-from backend.api.schemas import AutonomousCycleRequest, PipelineRunRequest
+from backend.api.schemas import AutonomousCycleRequest, PipelineRunRequest, SessionCreateRequest
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -70,6 +70,7 @@ async def trigger_run(request: PipelineRunRequest):
                 run_synthesis=request.run_synthesis,
                 export_format=request.export_format,
                 run_id=run_id,
+                session_id=request.session_id,
             )
         except Exception as e:
             logger.error("Pipeline run %s failed: %s", run_id, e)
@@ -284,3 +285,101 @@ async def scheduler_status():
     if result is None:
         return {"status": "not_configured"}
     return result
+
+
+# ── Session Management ────────────────────────────────────────────────────
+
+
+def _get_session_manager():
+    orch = _get_orchestrator()
+    mgr = getattr(orch, "_session_manager", None)
+    if mgr is None:
+        raise NotFoundError("Session management not enabled")
+    return mgr
+
+
+def _session_to_dict(session):
+    return {
+        "id": session.id,
+        "name": session.name,
+        "state": session.state.value,
+        "created_at": session.created_at,
+        "updated_at": session.updated_at,
+        "ended_at": session.ended_at,
+        "run_count": session.run_count,
+        "total_tokens": session.total_tokens,
+        "total_cost": session.total_cost,
+        "tags": session.tags,
+        "metadata": session.metadata,
+    }
+
+
+@router.post("/sessions")
+async def create_session(request: SessionCreateRequest):
+    from backend.pipeline.session.models import SessionBudget
+
+    mgr = _get_session_manager()
+    budget = SessionBudget(
+        max_runs=request.max_runs,
+        max_total_cost_usd=request.max_cost_usd,
+        max_total_tokens=request.max_tokens,
+        max_duration_hours=request.max_duration_hours,
+    )
+    session = mgr.create(name=request.name, budget=budget, tags=request.tags, metadata=request.metadata)
+    return _session_to_dict(session)
+
+
+@router.get("/sessions")
+async def list_sessions(
+    state: str | None = Query(default=None),
+    limit: int = Query(default=20, ge=1, le=100),
+):
+    from backend.pipeline.session.models import SessionState
+
+    mgr = _get_session_manager()
+    s = SessionState(state) if state else None
+    sessions = mgr.list(state=s, limit=limit)
+    return {"sessions": [_session_to_dict(s) for s in sessions]}
+
+
+@router.get("/sessions/{session_id}")
+async def get_session(session_id: str):
+    mgr = _get_session_manager()
+    session = mgr.get(session_id)
+    if not session:
+        raise NotFoundError("Session not found")
+    return _session_to_dict(session)
+
+
+@router.post("/sessions/{session_id}/activate")
+async def activate_session(session_id: str):
+    mgr = _get_session_manager()
+    session = mgr.activate(session_id)
+    return _session_to_dict(session)
+
+
+@router.post("/sessions/{session_id}/pause")
+async def pause_session(session_id: str):
+    mgr = _get_session_manager()
+    session = mgr.pause(session_id)
+    return _session_to_dict(session)
+
+
+@router.post("/sessions/{session_id}/resume")
+async def resume_session(session_id: str):
+    mgr = _get_session_manager()
+    session = mgr.resume(session_id)
+    return _session_to_dict(session)
+
+
+@router.post("/sessions/{session_id}/end")
+async def end_session(session_id: str):
+    mgr = _get_session_manager()
+    session = mgr.end(session_id)
+    return _session_to_dict(session)
+
+
+@router.get("/sessions/{session_id}/budget")
+async def session_budget(session_id: str):
+    mgr = _get_session_manager()
+    return mgr.check_budget(session_id)
