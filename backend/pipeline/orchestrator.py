@@ -97,6 +97,7 @@ class PipelineOrchestrator:
         self._init_metacognitive(settings)
         self._init_mcp(settings)
         self._init_context_management(settings)
+        self._init_streaming(settings)
 
         # Wire hooks to agent orchestrator for impasse events
         self._agent.set_hooks(self._hooks)
@@ -564,6 +565,17 @@ class PipelineOrchestrator:
             offload_dir=getattr(settings, "context_offload_dir", "./data/context_offload"),
         )
         logger.info("Context management enabled (trigger=%.0f%%)", self._context_window_manager._trigger_fraction * 100)
+
+    def _init_streaming(self, settings) -> None:
+        self._stream_manager = None
+        if not getattr(settings, "streaming_enabled", False):
+            return
+        from backend.pipeline.streaming.manager import StreamManager
+
+        self._stream_manager = StreamManager(
+            dedup_window=getattr(settings, "streaming_dedup_window", 1.0),
+        )
+        logger.info("Streaming enabled (dedup_window=%.1fs)", self._stream_manager._dedup_window)
 
     def _build_stages(self) -> list[PipelineStage]:
         ref_validator = ReferenceValidator(store=self._store)

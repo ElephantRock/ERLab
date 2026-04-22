@@ -234,6 +234,10 @@ class Settings(BaseSettings):
     context_trigger_fraction: float = 0.85
     context_offload_dir: str = "./data/context_offload"
 
+    # Streaming Enhancement (WP-11)
+    streaming_enabled: bool = False
+    streaming_dedup_window: float = 1.0
+
 
 @functools.lru_cache()
 def get_settings() -> Settings:
