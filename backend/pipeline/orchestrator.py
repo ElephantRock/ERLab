@@ -96,6 +96,7 @@ class PipelineOrchestrator:
         self._init_observability(settings)
         self._init_metacognitive(settings)
         self._init_mcp(settings)
+        self._init_context_management(settings)
 
         # Wire hooks to agent orchestrator for impasse events
         self._agent.set_hooks(self._hooks)
@@ -550,6 +551,19 @@ class PipelineOrchestrator:
             tool_registry=self._tool_registry,
         )
         logger.info("MCP integration configured (%d servers)", server_registry.server_count)
+
+    def _init_context_management(self, settings) -> None:
+        self._context_window_manager = None
+        if not getattr(settings, "context_management_enabled", False):
+            return
+        from backend.pipeline.compaction.window_manager import ContextWindowManager
+
+        self._context_window_manager = ContextWindowManager(
+            provider=self._provider,
+            trigger_fraction=getattr(settings, "context_trigger_fraction", 0.85),
+            offload_dir=getattr(settings, "context_offload_dir", "./data/context_offload"),
+        )
+        logger.info("Context management enabled (trigger=%.0f%%)", self._context_window_manager._trigger_fraction * 100)
 
     def _build_stages(self) -> list[PipelineStage]:
         ref_validator = ReferenceValidator(store=self._store)

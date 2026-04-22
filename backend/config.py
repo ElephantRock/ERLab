@@ -229,6 +229,11 @@ class Settings(BaseSettings):
     mcp_servers_path: str = "./mcp_servers.yaml"
     mcp_default_timeout: float = 30.0
 
+    # Context Management Enhancement (WP-09)
+    context_management_enabled: bool = False
+    context_trigger_fraction: float = 0.85
+    context_offload_dir: str = "./data/context_offload"
+
 
 @functools.lru_cache()
 def get_settings() -> Settings:
