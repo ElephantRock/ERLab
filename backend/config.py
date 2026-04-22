@@ -157,6 +157,12 @@ class Settings(BaseSettings):
     caching_ttl_seconds: int = 3600
     caching_persist_dir: str = "./data/chroma"
 
+    # Cost Routing (WP-06)
+    cost_routing_enabled: bool = False
+    cost_routing_strategy: str = "cheapest"
+    cost_routing_per_provider_limits: dict[str, float] = {}
+    cost_routing_latency_window: int = 100
+
     # Model routing (P3)
     model_routing_enabled: bool = False
     model_routing: dict[str, dict] = {}

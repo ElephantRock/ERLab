@@ -71,13 +71,12 @@ class PipelineOrchestrator:
 
         # Task routing (optional per-stage model selection)
         self._task_router = None
-        if getattr(settings, "model_routing_enabled", False):
-            from backend.providers.task_router import TaskRouter
-            self._task_router = TaskRouter(
+        if getattr(settings, "model_routing_enabled", False) or getattr(settings, "cost_routing_enabled", False):
+            from backend.providers.task_router import create_router
+            self._task_router = create_router(
                 registry=self._registry,
                 cost_tracker=self._cost_tracker,
-                routing_config=getattr(settings, "model_routing", {}),
-                fallback_chain=getattr(settings, "model_fallback_chain", []),
+                settings=settings,
             )
 
         # Tracing

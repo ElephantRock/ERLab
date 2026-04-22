@@ -118,3 +118,50 @@ class TaskRouter:
         provider = self._registry.create(name)
         self._provider_cache[cache_key] = provider
         return provider
+
+
+def create_router(
+    registry: ProviderRegistry,
+    cost_tracker: CostTracker | None = None,
+    settings: Any = None,
+) -> TaskRouter | CostAwareRouter:
+    """Create the appropriate router based on settings.
+
+    Returns CostAwareRouter if cost_routing_enabled, otherwise TaskRouter.
+    """
+    if getattr(settings, "cost_routing_enabled", False):
+        from backend.providers.routing import BudgetManager, CostAwareRouter, LatencyTracker, RoutingStrategy
+
+        strategy = RoutingStrategy(getattr(settings, "cost_routing_strategy", "cheapest"))
+        per_provider = getattr(settings, "cost_routing_per_provider_limits", {})
+        window = getattr(settings, "cost_routing_latency_window", 100)
+        max_cost = getattr(settings, "budget_max_cost_usd", 10.0)
+        max_tokens = getattr(settings, "budget_max_tokens", 0)
+
+        budget = BudgetManager(
+            max_cost_usd=max_cost,
+            max_tokens=max_tokens,
+            per_provider_limits=per_provider or None,
+        )
+        return CostAwareRouter(
+            registry=registry,
+            cost_tracker=cost_tracker or registry.cost_tracker,
+            strategy=strategy,
+            routing_config=getattr(settings, "model_routing", {}),
+            fallback_chain=getattr(settings, "model_fallback_chain", []),
+            budget_manager=budget,
+            latency_tracker=LatencyTracker(window_size=window),
+        )
+
+    return TaskRouter(
+        registry=registry,
+        cost_tracker=cost_tracker,
+        routing_config=getattr(settings, "model_routing", {}),
+        fallback_chain=getattr(settings, "model_fallback_chain", []),
+    )
+
+
+# Lazy import to avoid circular dependency
+if TYPE_CHECKING:
+    from typing import Any
+    from backend.providers.routing.cost_router import CostAwareRouter
