@@ -95,6 +95,7 @@ class PipelineOrchestrator:
         self._init_sandboxing(settings)
         self._init_observability(settings)
         self._init_metacognitive(settings)
+        self._init_mcp(settings)
 
         # Wire hooks to agent orchestrator for impasse events
         self._agent.set_hooks(self._hooks)
@@ -534,7 +535,21 @@ class PipelineOrchestrator:
             self._agent._metacog = self._metacog
         logger.info("Metacognitive strategy enabled")
 
-    # ── Stage Builder ────────────────────────────────────────────────
+    def _init_mcp(self, settings) -> None:
+        self._mcp_manager = None
+        if not getattr(settings, "mcp_enabled", False):
+            return
+        from backend.pipeline.tools.mcp.manager import MCPManager
+        from backend.pipeline.tools.mcp.server_registry import MCPServerRegistry
+
+        server_registry = MCPServerRegistry(
+            config_path=getattr(settings, "mcp_servers_path", "./mcp_servers.yaml"),
+        )
+        self._mcp_manager = MCPManager(
+            server_registry=server_registry,
+            tool_registry=self._tool_registry,
+        )
+        logger.info("MCP integration configured (%d servers)", server_registry.server_count)
 
     def _build_stages(self) -> list[PipelineStage]:
         ref_validator = ReferenceValidator(store=self._store)
@@ -622,6 +637,14 @@ class PipelineOrchestrator:
                 logger.warning("Budget validation failed: %s. Aborting.", msg)
                 return result
             self._budget.start()
+
+        # MCP: connect servers and discover tools
+        if self._mcp_manager and not self._mcp_manager._started:
+            try:
+                tool_count = await self._mcp_manager.start()
+                logger.info("MCP manager started: %d tools registered", tool_count)
+            except Exception as e:
+                logger.warning("MCP startup failed (continuing without MCP tools): %s", e)
 
         # Hook: pipeline.start
         await self._hooks.dispatch_sync_safe(

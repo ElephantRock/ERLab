@@ -224,6 +224,11 @@ class Settings(BaseSettings):
     autonomy_schedule_enabled: bool = False
     autonomy_schedule_interval_seconds: int = 3600
 
+    # MCP Integration (WP-08)
+    mcp_enabled: bool = False
+    mcp_servers_path: str = "./mcp_servers.yaml"
+    mcp_default_timeout: float = 30.0
+
 
 @functools.lru_cache()
 def get_settings() -> Settings:

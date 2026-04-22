@@ -49,6 +49,7 @@ class ToolDefinition:
     timeout: float = 30.0
     trust_level: str = "trusted"  # "trusted" or "untrusted"
     max_output_bytes: int = 1_000_000
+    source: str = "builtin"  # "builtin" or "mcp"
 
     @property
     def enabled(self) -> bool:
