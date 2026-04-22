@@ -58,6 +58,7 @@ class DAGExecutor:
             NodeType.ROUTE: self._execute_route,
             NodeType.GATE: self._execute_gate,
             NodeType.HANDOFF: self._execute_handoff,
+            NodeType.NEGOTIATE: self._execute_negotiate,
         }
         # Custom executor overrides keyed by node id
         self._custom_executors: dict[str, NodeExecutor] = {}
@@ -535,6 +536,51 @@ class DAGExecutor:
             logger.warning("Context summarization failed: %s", e)
 
         return items[-max_items:]
+
+    async def _execute_negotiate(self, node: DAGNode, inputs: list[Any]) -> list[Any]:
+        """NEGOTIATE: run multi-agent negotiation to reach consensus."""
+        config = node.config or {}
+        topic = config.get("topic", "")
+        context = config.get("context", "")
+        if not topic and inputs:
+            topic = str(inputs[0])[:200]
+
+        try:
+            from backend.pipeline.negotiation.agent import NegotiationAgent
+            from backend.pipeline.negotiation.consensus import ConsensusEngine
+            from backend.pipeline.negotiation.protocol import NegotiationConfig
+            from backend.pipeline.negotiation.session import NegotiationSession
+
+            agent_names = config.get("agents", [])
+            agents = []
+            for name in agent_names:
+                agents.append(NegotiationAgent(
+                    agent_id=name,
+                    provider=self._provider,
+                    role=name,
+                ))
+
+            if not agents:
+                return inputs
+
+            neg_config = NegotiationConfig(
+                max_rounds=config.get("max_rounds", 5),
+                consensus_threshold=config.get("consensus_threshold", 0.7),
+            )
+            engine = ConsensusEngine()
+            session = NegotiationSession(
+                topic=topic,
+                agents=agents,
+                config=neg_config,
+                consensus_engine=engine,
+            )
+            result = await session.run(context=context or "")
+            if result.proposal_id:
+                return [{"proposal_id": result.proposal_id, "consensus": result.is_consensus}]
+        except Exception as e:
+            logger.warning("Negotiation failed, passing through: %s", e)
+
+        return inputs
 
     # ── Helpers ─────────────────────────────────────────────────
 

@@ -263,6 +263,16 @@ class Settings(BaseSettings):
     tool_discovery_relevance_weight: float = 0.7
     tool_discovery_recency_weight: float = 0.1
 
+    # Multi-Agent Negotiation (WP-15)
+    negotiation_enabled: bool = False
+    negotiation_max_rounds: int = 5
+    negotiation_consensus_threshold: float = 0.7
+    negotiation_consensus_algorithm: str = "weighted_score"
+    negotiation_deadlock_threshold: float = 0.02
+    negotiation_proposal_timeout: float = 60.0
+    negotiation_critique_timeout: float = 30.0
+    negotiation_min_agents: int = 2
+
 
 @functools.lru_cache()
 def get_settings() -> Settings:

@@ -102,6 +102,7 @@ class PipelineOrchestrator:
         self._init_adaptation(settings)
         self._init_graph_rag(settings)
         self._init_tool_discovery(settings)
+        self._init_negotiation(settings)
 
         # Wire hooks to agent orchestrator for impasse events
         self._agent.set_hooks(self._hooks)
@@ -679,6 +680,21 @@ class PipelineOrchestrator:
             recency_weight=getattr(settings, "tool_discovery_recency_weight", 0.1),
         )
         logger.info("Tool discovery enabled (rrf_k=%d)", getattr(settings, "tool_discovery_rrf_k", 60))
+
+    def _init_negotiation(self, settings) -> None:
+        self._consensus_engine = None
+        if not getattr(settings, "negotiation_enabled", False):
+            return
+        from backend.pipeline.negotiation.consensus import ConsensusAlgorithm, ConsensusEngine
+
+        algo_name = getattr(settings, "negotiation_consensus_algorithm", "weighted_score")
+        try:
+            algorithm = ConsensusAlgorithm(algo_name)
+        except ValueError:
+            algorithm = ConsensusAlgorithm.WEIGHTED_SCORE
+
+        self._consensus_engine = ConsensusEngine(algorithm=algorithm)
+        logger.info("Negotiation enabled (algorithm=%s)", algorithm.value)
 
     def _build_stages(self) -> list[PipelineStage]:
         ref_validator = ReferenceValidator(store=self._store)

@@ -24,6 +24,7 @@ class NodeType(str, Enum):
     GATE = "gate"  # Quality gate (KeepBestN)
     ROUTE = "route"  # LLM-based router for strategy selection
     HANDOFF = "handoff"  # Transfer context between agents with input_filter
+    NEGOTIATE = "negotiate"  # Multi-agent negotiation for consensus
 
 
 class DAGNode(BaseModel):
