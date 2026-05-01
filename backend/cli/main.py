@@ -673,5 +673,10 @@ def _print_score_guide():
     )
 
 
+from backend.cli.commands.setup import setup_wizard
+
+app.command("setup")(setup_wizard)
+
+
 if __name__ == "__main__":
     app()
