@@ -6,7 +6,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added — AIV Batch Execution
-- **BATCH-08**: `erock dev` CLI command — concurrent backend + frontend server start with colored logs, port conflict detection, and graceful shutdown
+- **BATCH-09**: README rewrite — value proposition, 30-second quick start, architecture diagram, interface guide
 
 ## [0.1.0] - 2026-05-01
 
