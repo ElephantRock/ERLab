@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING, Any
 if TYPE_CHECKING:
     from backend.providers.secrets import KeyVault
 
+from backend.api.errors import ProviderConfigurationError
 from backend.config import get_settings
 from backend.providers.base import CostEvent, LLMProvider
 
@@ -177,11 +178,13 @@ class ProviderRegistry:
         attr_name, env_var = _KEY_MAP[provider_name]
         value = getattr(settings, attr_name, None)
         if not value or not value.strip():
-            raise SystemExit(
-                f"{env_var} not set. "
-                f"Add it to .env or set the environment variable:\n"
-                f"  export {env_var}=sk-...\n"
-                f"Or switch to a provider that doesn't require a key: ollama"
+            raise ProviderConfigurationError(
+                detail=f"{env_var} not set",
+                hint=(
+                    f"Add it to .env or set the environment variable: "
+                    f"export {env_var}=sk-... "
+                    f"Or switch to a provider that doesn't require a key: ollama"
+                ),
             )
 
 
@@ -294,6 +297,7 @@ def _wrap_resilient(
         CircuitBreaker(
             failure_threshold=settings.circuit_breaker_failure_threshold,
             reset_timeout=settings.circuit_breaker_reset_timeout,
+            cooldown_percent=getattr(settings, "circuit_breaker_cooldown_percent", 0.1),
         ),
     )
     retry_config = RetryConfig(

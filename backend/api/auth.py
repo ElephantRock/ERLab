@@ -1,7 +1,8 @@
 """API key authentication dependency."""
 
-from fastapi import HTTPException, Request
+from fastapi import Request
 
+from backend.api.errors import UnauthorizedError
 from backend.config import get_settings
 
 
@@ -11,4 +12,4 @@ async def verify_api_key(request: Request):
         return  # auth disabled when key not set
     key = request.headers.get("X-API-Key", "")
     if key != settings.api_key:
-        raise HTTPException(status_code=401, detail="Invalid or missing API key")
+        raise UnauthorizedError()

@@ -7,7 +7,19 @@ from backend.api.auth import verify_api_key
 
 
 def _make_app():
+    from backend.api.errors import APIError
+
     app = FastAPI()
+
+    @app.exception_handler(APIError)
+    async def handle_api_error(request, exc):
+        from fastapi.responses import JSONResponse
+        import uuid
+        return JSONResponse(
+            status_code=exc.status_code,
+            content=exc.to_dict(),
+            headers={"X-Request-Id": str(uuid.uuid4())},
+        )
 
     @app.get("/test", dependencies=[Depends(verify_api_key)])
     async def test_endpoint():

@@ -1,8 +1,10 @@
 """Elephant Rock Research API — FastAPI application."""
 
 import time
+import uuid
 
 from fastapi import Depends, FastAPI, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
@@ -70,17 +72,62 @@ def _get_limiter():
     return _limiter
 
 
-# ── Exception Handlers ─────────────────────────────────────────────
+# ── Unified Error Handler ─────────────────────────────────────────
+# AR-01: The unified error handler is the single authority for error
+# serialization. All error responses use the format:
+#   {"error": {"code": "...", "message": "...", "hint": "..."}}
+# with an X-Request-Id header (UUID4).
 
 
 @app.exception_handler(APIError)
-async def api_error_handler(request, exc):
-    return JSONResponse(status_code=exc.status_code, content={"error": exc.detail})
+async def api_error_handler(request: Request, exc: APIError):
+    """Handle all APIError exceptions with standardized format."""
+    request_id = str(uuid.uuid4())
+    body = exc.to_dict()
+    return JSONResponse(
+        status_code=exc.status_code,
+        content=body,
+        headers={"X-Request-Id": request_id},
+    )
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_error_handler(request: Request, exc: RequestValidationError):
+    """Handle Pydantic/FastAPI validation errors (422) with standardized format."""
+    request_id = str(uuid.uuid4())
+    details = []
+    for err in exc.errors():
+        loc = ".".join(str(l) for l in err.get("loc", []))
+        details.append(f"{loc}: {err.get('msg', 'validation error')}")
+    message = "; ".join(details) if details else "Validation error"
+    return JSONResponse(
+        status_code=422,
+        content={
+            "error": {
+                "code": "UNPROCESSABLE_ENTITY",
+                "message": message,
+                "hint": "Check request body fields against the API schema",
+            }
+        },
+        headers={"X-Request-Id": request_id},
+    )
 
 
 @app.exception_handler(Exception)
-async def generic_error_handler(request, exc):
-    return JSONResponse(status_code=500, content={"error": "Internal server error"})
+async def generic_error_handler(request: Request, exc: Exception):
+    """Handle all unhandled exceptions with standardized format."""
+    request_id = str(uuid.uuid4())
+    return JSONResponse(
+        status_code=500,
+        content={
+            "error": {
+                "code": "INTERNAL_ERROR",
+                "message": "Internal server error",
+                "hint": f"Quote request ID {request_id} when reporting this issue",
+            }
+        },
+        headers={"X-Request-Id": request_id},
+    )
 
 
 # ── Routes ─────────────────────────────────────────────────────────
@@ -118,6 +165,11 @@ async def startup():
     _get_limiter()
 
 
-@app.get("/health")
+@app.get("/health", summary="Health check", description="Returns platform health status and version.")
 async def health():
+    """Health check endpoint.
+
+    Returns:
+        {"status": "ok", "version": "0.1.0"}
+    """
     return {"status": "ok", "version": "0.1.0"}

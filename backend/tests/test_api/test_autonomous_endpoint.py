@@ -20,7 +20,7 @@ def _make_app():
     async def api_error_handler(request, exc):
         from fastapi.responses import JSONResponse
 
-        return JSONResponse(status_code=exc.status_code, content={"error": exc.detail})
+        return JSONResponse(status_code=exc.status_code, content=exc.to_dict())
 
     app.include_router(router)
     return app
