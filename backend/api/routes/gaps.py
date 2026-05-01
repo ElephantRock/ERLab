@@ -7,12 +7,27 @@ from backend.api.errors import NotFoundError
 router = APIRouter()
 
 
-@router.get("/")
+@router.get(
+    "/",
+    summary="List research gaps",
+    description="List research gaps from a pipeline run. Uses the latest completed run if run_id is omitted.",
+)
 async def list_gaps(
     run_id: int | None = Query(default=None, help="Pipeline run ID (latest if omitted)"),
     limit: int = Query(default=20, ge=1, le=100),
 ):
-    """List research gaps from a pipeline run (latest if run_id omitted)."""
+    """List research gaps from a pipeline run.
+
+    Args:
+        run_id: Optional pipeline run ID. Defaults to the latest completed run.
+        limit: Maximum number of gaps to return.
+
+    Returns:
+        {"gaps": [...], "total": 5, "run_id": 1}
+
+    Example response:
+        {"gaps": [{"id": 1, "title": "Limited cross-domain evaluation", "description": "...", "gap_type": "methodological", "confidence": 0.85, "potential_impact": "high"}], "total": 5, "run_id": 1}
+    """
     from sqlalchemy import select
 
     from backend.db.crud import count_gaps_by_run, list_gaps_by_run
@@ -54,9 +69,23 @@ async def list_gaps(
         }
 
 
-@router.get("/{gap_id}")
+@router.get(
+    "/{gap_id}",
+    summary="Get gap details",
+    description="Get full details for a specific research gap by its ID.",
+)
 async def get_gap(gap_id: int):
-    """Get gap details."""
+    """Get gap details.
+
+    Args:
+        gap_id: The database primary key of the gap.
+
+    Returns:
+        {"gap": {...}}
+
+    Example response:
+        {"gap": {"id": 1, "title": "Limited cross-domain evaluation", "description": "...", "gap_type": "methodological", "confidence": 0.85, "potential_impact": "high", "pipeline_run_id": 1, "created_at": "2026-05-02T14:30:00"}}
+    """
     from backend.db.crud import get_gap as db_get_gap
     from backend.db.database import get_session
 

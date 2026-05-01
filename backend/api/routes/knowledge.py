@@ -8,9 +8,20 @@ from backend.api.schemas import SearchRequest
 router = APIRouter()
 
 
-@router.get("/stats")
+@router.get(
+    "/stats",
+    summary="Knowledge base statistics",
+    description="Get knowledge base configuration and statistics.",
+)
 async def knowledge_stats():
-    """Get knowledge base statistics."""
+    """Get knowledge base statistics.
+
+    Returns:
+        {"chroma_persist_dir": "...", "embedding_provider": "...", "embedding_model": "..."}
+
+    Example response:
+        {"chroma_persist_dir": "./data/chroma", "embedding_provider": "openai", "embedding_model": "text-embedding-3-small"}
+    """
     from backend.config import get_settings
 
     settings = get_settings()
@@ -21,9 +32,20 @@ async def knowledge_stats():
     }
 
 
-@router.post("/search")
+@router.post(
+    "/search",
+    summary="Search knowledge base",
+    description="Perform semantic search across the knowledge base using vector similarity.",
+)
 async def search_knowledge(request: SearchRequest):
-    """Semantic search across the knowledge base."""
+    """Semantic search across the knowledge base.
+
+    Example request:
+        {"query": "transformer attention mechanisms", "top_k": 10}
+
+    Example response:
+        {"query": "transformer attention mechanisms", "results": [{"content": "...", "score": 0.92, "metadata": {}}]}
+    """
     try:
         from backend.config import get_settings
         from backend.pipeline.knowledge.embedding_service import EmbeddingService
@@ -36,4 +58,7 @@ async def search_knowledge(request: SearchRequest):
         results = await store.query(request.query, n_results=request.top_k)
         return {"query": request.query, "results": results}
     except ImportError:
-        raise ServiceUnavailableError("ChromaDB not installed. Run: pip install chromadb") from None
+        raise ServiceUnavailableError(
+            "ChromaDB not installed",
+            hint="Run: pip install chromadb",
+        ) from None

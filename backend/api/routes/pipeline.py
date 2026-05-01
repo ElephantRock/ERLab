@@ -22,9 +22,23 @@ _progress_queues: dict[str, asyncio.Queue] = {}
 _background_tasks: set[asyncio.Task] = set()
 
 
-@router.post("/run")
+@router.post(
+    "/run",
+    summary="Trigger pipeline run",
+    description="Start a new research pipeline run. Returns 202 with run_id immediately; the pipeline executes asynchronously.",
+)
 async def trigger_run(request: PipelineRunRequest):
-    """Trigger a new pipeline run. Returns 202 with run_id immediately."""
+    """Trigger a new pipeline run.
+
+    Returns 202 with run_id immediately. The pipeline runs asynchronously;
+    use /runs/{run_id}/progress to stream progress via SSE.
+
+    Example request:
+        {"domain": "AI/NLP", "max_gaps": 5, "generation_rounds": 2, "ideas_per_round": 3}
+
+    Example response:
+        {"run_id": "run_20260502_143000", "status": "running"}
+    """
     from backend.pipeline.orchestrator import PipelineOrchestrator
 
     # Pre-generate run_id so SSE/cancel can work from t=0
@@ -87,12 +101,27 @@ async def trigger_run(request: PipelineRunRequest):
     return {"run_id": run_id, "status": "running"}
 
 
-@router.get("/runs")
+@router.get(
+    "/runs",
+    summary="List pipeline runs",
+    description="List all pipeline runs with pagination support.",
+)
 async def list_runs(
     limit: int = Query(default=20, ge=1, le=100),
     offset: int = Query(default=0, ge=0),
 ):
-    """List pipeline runs."""
+    """List pipeline runs with pagination.
+
+    Args:
+        limit: Maximum number of runs to return (1-100).
+        offset: Number of runs to skip.
+
+    Returns:
+        {"runs": [...], "total": 42}
+
+    Example response:
+        {"runs": [{"id": 1, "status": "completed", "domain": "AI/NLP", "current_stage": "done", "ideas_count": 5, "created_at": "...", "completed_at": "...", "error_message": null}], "total": 42}
+    """
     from backend.db.crud import list_pipeline_runs, count_pipeline_runs
     from backend.db.database import get_session
 
@@ -117,13 +146,63 @@ async def list_runs(
         }
 
 
+@router.post(
+    "/resume/{run_id}",
+    summary="Resume a pipeline run",
+    description="Resume a failed pipeline from its last successful checkpoint. Reconstructs prior stage outputs then continues from the first unfinished stage.",
+)
+async def resume_pipeline(run_id: str):
+    """Resume a failed pipeline from its last successful checkpoint.
+
+    Reconstructs prior stage outputs from database + cross-stage context,
+    then continues execution from the first unfinished stage.
+
+    Args:
+        run_id: The run identifier string (e.g. run_20260502_143000).
+
+    Returns:
+        {"status": "resumed", "run_id": "...", "ideas_count": 3, "gaps_count": 2, "proposals_count": 1}
+
+    Example response:
+        {"status": "resumed", "run_id": "run_20260502_143000", "ideas_count": 3, "gaps_count": 2, "proposals_count": 1}
+    """
+    from backend.pipeline.orchestrator import PipelineOrchestrator
+
+    orchestrator = PipelineOrchestrator()
+    result = await orchestrator.resume(run_id)
+    if result is None:
+        raise NotFoundError(f"No checkpoint found for run {run_id}")
+
+    return {
+        "status": "resumed",
+        "run_id": run_id,
+        "ideas_count": len(result.ideas),
+        "gaps_count": len(result.gaps),
+        "proposals_count": len(result.proposals),
+    }
+
+
 # NOTE: Static paths (/runs/detail/) must be registered before dynamic
 # ones (/runs/{run_id_str}/) to avoid path conflicts with FastAPI routing.
 
 
-@router.get("/runs/detail/{run_id}")
+@router.get(
+    "/runs/detail/{run_id}",
+    summary="Get run details",
+    description="Get full details for a pipeline run by its database ID, including config, stages, and ideas.",
+)
 async def get_run(run_id: int):
-    """Get full run details by DB id."""
+    """Get full run details by DB id.
+
+    Args:
+        run_id: The database primary key of the run.
+
+    Returns:
+        Full run object with config, stages_completed, and ideas list.
+
+    Example response:
+        {"id": 1, "status": "completed", "domain": "AI/NLP", "current_stage": "done", "config": {}, "stages_completed": ["generation", "novelty"], "ideas": [{"id": 1, "title": "...", "novelty_score": 0.8, "feasibility_score": 7.0, "overall_score": 0.75}], "created_at": "...", "completed_at": "...", "error_message": null}
+    """
     from backend.db.crud import get_pipeline_run
     from backend.db.database import get_session
 
@@ -154,9 +233,23 @@ async def get_run(run_id: int):
         }
 
 
-@router.delete("/runs/{run_id_str}")
+@router.delete(
+    "/runs/{run_id_str}",
+    summary="Cancel a pipeline run",
+    description="Cancel a running pipeline by its run_id string.",
+)
 async def cancel_run(run_id_str: str):
-    """Cancel a running pipeline by run_id string."""
+    """Cancel a running pipeline by run_id.
+
+    Args:
+        run_id_str: The run identifier string (e.g. run_20260502_143000).
+
+    Returns:
+        {"status": "cancelling", "run_id": "..."}
+
+    Example response:
+        {"status": "cancelling", "run_id": "run_20260502_143000"}
+    """
     event = _cancel_events.get(run_id_str)
     if not event:
         raise NotFoundError("Run not found or not cancellable")
@@ -164,9 +257,24 @@ async def cancel_run(run_id_str: str):
     return {"status": "cancelling", "run_id": run_id_str}
 
 
-@router.get("/runs/{run_id_str}/progress")
+@router.get(
+    "/runs/{run_id_str}/progress",
+    summary="Stream pipeline progress",
+    description="Server-Sent Events (SSE) endpoint for streaming pipeline stage progress in real-time.",
+)
 async def run_progress(run_id_str: str):
-    """SSE endpoint for pipeline progress."""
+    """SSE endpoint for pipeline progress.
+
+    Args:
+        run_id_str: The run identifier string.
+
+    Returns:
+        text/event-stream with JSON progress events.
+
+    Example SSE events:
+        data: {"stage": "generation", "index": 1, "total": 5, "elapsed": 2.3}
+        data: {"done": true}
+    """
     queue = _progress_queues.get(run_id_str)
     if not queue:
         queue = asyncio.Queue()
@@ -190,9 +298,22 @@ async def run_progress(run_id_str: str):
     return StreamingResponse(_stream(), media_type="text/event-stream")
 
 
-@router.post("/autonomous")
+@router.post(
+    "/autonomous",
+    summary="Start autonomous cycle",
+    description="Start an autonomous research cycle that runs multiple pipeline iterations. Returns 202 immediately.",
+)
 async def start_autonomous_cycle(request: AutonomousCycleRequest):
-    """Start an autonomous research cycle. Returns 202 immediately."""
+    """Start an autonomous research cycle.
+
+    Returns 202 immediately with a cycle_id. The cycle runs asynchronously.
+
+    Example request:
+        {"domain": "AI/NLP", "max_runs": 3}
+
+    Example response:
+        {"cycle_id": "auto_20260502_143000", "status": "running", "domain": "AI/NLP", "max_runs": 3}
+    """
     from backend.pipeline.orchestrator import PipelineOrchestrator
 
     cycle_id = f"auto_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
@@ -257,9 +378,20 @@ def _get_orchestrator():
     return _scheduler_orchestrator
 
 
-@router.post("/scheduler/start")
+@router.post(
+    "/scheduler/start",
+    summary="Start scheduler",
+    description="Start the autonomous pipeline scheduler for periodic research cycles.",
+)
 async def scheduler_start():
-    """Start the autonomous scheduler."""
+    """Start the autonomous scheduler.
+
+    Returns:
+        {"status": "running"} or {"status": "not_configured", "message": "..."}
+
+    Example response:
+        {"status": "running", "interval_seconds": 3600}
+    """
     orch = _get_orchestrator()
     result = await orch.start_scheduler()
     if result is None:
@@ -267,9 +399,20 @@ async def scheduler_start():
     return result
 
 
-@router.post("/scheduler/stop")
+@router.post(
+    "/scheduler/stop",
+    summary="Stop scheduler",
+    description="Stop the autonomous pipeline scheduler.",
+)
 async def scheduler_stop():
-    """Stop the autonomous scheduler."""
+    """Stop the autonomous scheduler.
+
+    Returns:
+        {"status": "stopped"} or {"status": "not_configured"}
+
+    Example response:
+        {"status": "stopped"}
+    """
     orch = _get_orchestrator()
     result = await orch.stop_scheduler()
     if result is None:
@@ -277,9 +420,20 @@ async def scheduler_stop():
     return result
 
 
-@router.get("/scheduler/status")
+@router.get(
+    "/scheduler/status",
+    summary="Scheduler status",
+    description="Get current status of the autonomous pipeline scheduler.",
+)
 async def scheduler_status():
-    """Get current scheduler status."""
+    """Get current scheduler status.
+
+    Returns:
+        {"status": "running", ...} or {"status": "not_configured"}
+
+    Example response:
+        {"status": "running", "next_run": "2026-05-02T15:00:00Z"}
+    """
     orch = _get_orchestrator()
     result = orch.scheduler_status()
     if result is None:
@@ -294,7 +448,7 @@ def _get_session_manager():
     orch = _get_orchestrator()
     mgr = getattr(orch, "_session_manager", None)
     if mgr is None:
-        raise NotFoundError("Session management not enabled")
+        raise NotFoundError("Session management not enabled", hint="Enable sessions in platform configuration")
     return mgr
 
 
@@ -314,8 +468,20 @@ def _session_to_dict(session):
     }
 
 
-@router.post("/sessions")
+@router.post(
+    "/sessions",
+    summary="Create session",
+    description="Create a new pipeline session with budget constraints.",
+)
 async def create_session(request: SessionCreateRequest):
+    """Create a new pipeline session with budget constraints.
+
+    Example request:
+        {"name": "My Session", "max_runs": 10, "max_cost_usd": 50.0, "tags": ["test"]}
+
+    Example response:
+        {"id": "sess_abc123", "name": "My Session", "state": "active", ...}
+    """
     from backend.pipeline.session.models import SessionBudget
 
     mgr = _get_session_manager()
@@ -329,11 +495,27 @@ async def create_session(request: SessionCreateRequest):
     return _session_to_dict(session)
 
 
-@router.get("/sessions")
+@router.get(
+    "/sessions",
+    summary="List sessions",
+    description="List pipeline sessions with optional state filter and pagination.",
+)
 async def list_sessions(
     state: str | None = Query(default=None),
     limit: int = Query(default=20, ge=1, le=100),
 ):
+    """List pipeline sessions.
+
+    Args:
+        state: Optional session state filter (active, paused, ended).
+        limit: Maximum number of sessions to return.
+
+    Returns:
+        {"sessions": [...]}
+
+    Example response:
+        {"sessions": [{"id": "sess_abc", "name": "My Session", "state": "active", "run_count": 3}]}
+    """
     from backend.pipeline.session.models import SessionState
 
     mgr = _get_session_manager()
@@ -342,8 +524,23 @@ async def list_sessions(
     return {"sessions": [_session_to_dict(s) for s in sessions]}
 
 
-@router.get("/sessions/{session_id}")
+@router.get(
+    "/sessions/{session_id}",
+    summary="Get session",
+    description="Get details for a specific pipeline session.",
+)
 async def get_session(session_id: str):
+    """Get details for a specific pipeline session.
+
+    Args:
+        session_id: The unique session identifier.
+
+    Returns:
+        Session object with id, name, state, budget usage, etc.
+
+    Example response:
+        {"id": "sess_abc123", "name": "My Session", "state": "active", "run_count": 3, "total_cost": 1.25}
+    """
     mgr = _get_session_manager()
     session = mgr.get(session_id)
     if not session:
@@ -351,35 +548,110 @@ async def get_session(session_id: str):
     return _session_to_dict(session)
 
 
-@router.post("/sessions/{session_id}/activate")
+@router.post(
+    "/sessions/{session_id}/activate",
+    summary="Activate session",
+    description="Activate a paused or ended pipeline session.",
+)
 async def activate_session(session_id: str):
+    """Activate a pipeline session.
+
+    Args:
+        session_id: The unique session identifier.
+
+    Returns:
+        Updated session object.
+
+    Example response:
+        {"id": "sess_abc", "name": "My Session", "state": "active"}
+    """
     mgr = _get_session_manager()
     session = mgr.activate(session_id)
     return _session_to_dict(session)
 
 
-@router.post("/sessions/{session_id}/pause")
+@router.post(
+    "/sessions/{session_id}/pause",
+    summary="Pause session",
+    description="Pause an active pipeline session.",
+)
 async def pause_session(session_id: str):
+    """Pause a pipeline session.
+
+    Args:
+        session_id: The unique session identifier.
+
+    Returns:
+        Updated session object.
+
+    Example response:
+        {"id": "sess_abc", "name": "My Session", "state": "paused"}
+    """
     mgr = _get_session_manager()
     session = mgr.pause(session_id)
     return _session_to_dict(session)
 
 
-@router.post("/sessions/{session_id}/resume")
+@router.post(
+    "/sessions/{session_id}/resume",
+    summary="Resume session",
+    description="Resume a paused pipeline session.",
+)
 async def resume_session(session_id: str):
+    """Resume a paused pipeline session.
+
+    Args:
+        session_id: The unique session identifier.
+
+    Returns:
+        Updated session object.
+
+    Example response:
+        {"id": "sess_abc", "name": "My Session", "state": "active"}
+    """
     mgr = _get_session_manager()
     session = mgr.resume(session_id)
     return _session_to_dict(session)
 
 
-@router.post("/sessions/{session_id}/end")
+@router.post(
+    "/sessions/{session_id}/end",
+    summary="End session",
+    description="End a pipeline session permanently.",
+)
 async def end_session(session_id: str):
+    """End a pipeline session permanently.
+
+    Args:
+        session_id: The unique session identifier.
+
+    Returns:
+        Updated session object.
+
+    Example response:
+        {"id": "sess_abc", "name": "My Session", "state": "ended"}
+    """
     mgr = _get_session_manager()
     session = mgr.end(session_id)
     return _session_to_dict(session)
 
 
-@router.get("/sessions/{session_id}/budget")
+@router.get(
+    "/sessions/{session_id}/budget",
+    summary="Check session budget",
+    description="Check remaining budget for a pipeline session.",
+)
 async def session_budget(session_id: str):
+    """Check remaining budget for a pipeline session.
+
+    Args:
+        session_id: The unique session identifier.
+
+    Returns:
+        Budget usage and remaining amounts.
+
+    Example response:
+        {"used_cost_usd": 10.5, "remaining_cost_usd": 39.5, "used_tokens": 50000, "remaining_tokens": 450000}
+    """
     mgr = _get_session_manager()
     return mgr.check_budget(session_id)

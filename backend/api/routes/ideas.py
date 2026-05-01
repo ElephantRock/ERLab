@@ -10,14 +10,31 @@ from backend.api.schemas import IdeaFeedbackRequest
 router = APIRouter()
 
 
-@router.get("/")
+@router.get(
+    "/",
+    summary="List research ideas",
+    description="List research ideas with optional domain and score filters and pagination.",
+)
 async def list_ideas(
     domain: str | None = None,
     min_score: float = Query(default=0.0, ge=0.0, le=1.0),
     limit: int = Query(default=20, ge=1, le=100),
     offset: int = Query(default=0, ge=0),
 ):
-    """List research ideas with optional filters."""
+    """List research ideas with optional filters.
+
+    Args:
+        domain: Optional domain filter (e.g. "AI/NLP").
+        min_score: Minimum overall score threshold (0.0-1.0).
+        limit: Maximum number of ideas to return.
+        offset: Number of ideas to skip.
+
+    Returns:
+        {"ideas": [...], "total": 42, "score_guide": {...}}
+
+    Example response:
+        {"ideas": [{"id": 1, "title": "Novel Attention Mechanism", "domain": "AI/NLP", "novelty_score": 0.85, "feasibility_score": 7.2, "overall_score": 0.78, "pipeline_run_id": 1, "created_at": "2026-05-02T14:30:00"}], "total": 42, "score_guide": {"novelty": {"0.8-1.0": "Very High"}, "feasibility": {"6-8": "Feasible"}}}
+    """
     from backend.db.crud import count_ideas, list_ideas as db_list_ideas
     from backend.db.database import get_session
 
@@ -56,9 +73,23 @@ async def list_ideas(
         }
 
 
-@router.get("/{idea_id}")
+@router.get(
+    "/{idea_id}",
+    summary="Get idea details",
+    description="Get a specific research idea with full novelty report, feasibility report, and synthesized proposal.",
+)
 async def get_idea(idea_id: int):
-    """Get a specific idea with novelty and feasibility reports."""
+    """Get a specific idea with novelty and feasibility reports.
+
+    Args:
+        idea_id: The database primary key of the idea.
+
+    Returns:
+        {"idea": {...}} with full idea details including reports and proposals.
+
+    Example response:
+        {"idea": {"id": 1, "title": "Novel Attention Mechanism", "problem_statement": "...", "proposed_method": "...", "expected_contributions": "...", "domain": "AI/NLP", "novelty_score": 0.85, "feasibility_score": 7.2, "overall_score": 0.78, "novelty_report": {"overall_score": 0.85}, "feasibility_report": {"overall_score": 7.2}, "proposal_md": "...", "proposal_latex": "...", "created_at": "2026-05-02T14:30:00"}}
+    """
     from backend.db.crud import get_idea as db_get_idea
     from backend.db.crud import get_proposal_by_idea
     from backend.db.database import get_session
@@ -95,9 +126,24 @@ async def get_idea(idea_id: int):
         }
 
 
-@router.post("/{idea_id}/feedback")
+@router.post(
+    "/{idea_id}/feedback",
+    summary="Submit idea feedback",
+    description="Submit user feedback (rating + optional notes) for a research idea.",
+)
 async def submit_feedback(idea_id: int, request: IdeaFeedbackRequest):
-    """Submit user feedback (rating + optional notes) for an idea."""
+    """Submit user feedback for an idea.
+
+    Args:
+        idea_id: The database primary key of the idea.
+        request: Feedback with rating (1-5) and optional notes.
+
+    Example request:
+        {"rating": 4, "notes": "Strong methodology, needs more evaluation detail"}
+
+    Example response:
+        {"id": 1, "user_rating": 4, "user_notes": "Strong methodology, needs more evaluation detail"}
+    """
     from backend.db.crud import get_idea as db_get_idea
     from backend.db.crud import update_idea_feedback
     from backend.db.database import get_session
@@ -114,9 +160,23 @@ async def submit_feedback(idea_id: int, request: IdeaFeedbackRequest):
         }
 
 
-@router.post("/{idea_id}/refine")
+@router.post(
+    "/{idea_id}/refine",
+    summary="Refine an idea",
+    description="Re-run novelty checking, feasibility scoring, and proposal synthesis for a single idea.",
+)
 async def refine_idea(idea_id: int):
-    """Re-run novelty + feasibility + synthesis for a single idea."""
+    """Re-run novelty + feasibility + synthesis for a single idea.
+
+    Args:
+        idea_id: The database primary key of the idea.
+
+    Returns:
+        Updated scores and proposal title.
+
+    Example response:
+        {"id": 1, "novelty_score": 0.88, "feasibility_score": 7.5, "proposal_title": "Improved Attention via Sparse Gating"}
+    """
     from backend.db.crud import get_idea as db_get_idea
     from backend.db.crud import update_idea_scores
     from backend.db.database import get_session
@@ -182,4 +242,3 @@ async def refine_idea(idea_id: int):
             "feasibility_score": feasibility_report.overall_score,
             "proposal_title": proposal.title,
         }
-
