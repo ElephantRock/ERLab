@@ -6,7 +6,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added — AIV Batch Execution
-- **BATCH-09**: README rewrite — value proposition, 30-second quick start, architecture diagram, interface guide
+- **BATCH-10**: API documentation — all 41 endpoints annotated with summaries, descriptions, examples; error responses standardized to `{error: {code, message, hint}}` with X-Request-Id
 
 ## [0.1.0] - 2026-05-01
 
