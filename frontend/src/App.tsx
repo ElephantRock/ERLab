@@ -15,6 +15,7 @@ import CostsPage from "./pages/costs";
 import GovernancePage from "./pages/governance";
 import TracesPage from "./pages/traces";
 import SessionsPage from "./pages/sessions";
+import KnowledgeGraphPage from "./pages/knowledge-graph";
 
 export default function App() {
   return (
@@ -34,6 +35,7 @@ export default function App() {
         <Route path="/traces" element={<TracesPage />} />
         <Route path="/sessions" element={<SessionsPage />} />
         <Route path="/literature" element={<LiteraturePage />} />
+        <Route path="/knowledge-graph" element={<KnowledgeGraphPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </AppShell>
