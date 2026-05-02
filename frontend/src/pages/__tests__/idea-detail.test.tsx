@@ -21,6 +21,12 @@ vi.mock("@/components/ideas/export-button", () => ({
   ExportButton: () => <button data-testid="export-btn">Export</button>,
 }));
 
+vi.mock("@/components/export/export-dialog", () => ({
+  ExportDialog: ({ ideaId }: { ideaId: number }) => (
+    <button data-testid="export-btn">Export PDF (Idea {ideaId})</button>
+  ),
+}));
+
 vi.mock("@/components/ideas/feedback-form", () => ({
   FeedbackForm: ({ ideaId }: { ideaId: number }) => (
     <div data-testid="feedback-form">Feedback for {ideaId}</div>

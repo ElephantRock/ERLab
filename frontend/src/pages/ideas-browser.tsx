@@ -2,6 +2,7 @@ import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { listIdeas } from "@/api/ideas";
 import { IdeaCard } from "@/components/ideas/idea-card";
+import { ExportDialog } from "@/components/export/export-dialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -14,7 +15,7 @@ import {
 } from "@/components/ui/select";
 import { Slider } from "@/components/ui/slider";
 import { useNavigate } from "react-router-dom";
-import { Search, ChevronLeft, ChevronRight } from "lucide-react";
+import { Search, ChevronLeft, ChevronRight, CheckSquare, Square } from "lucide-react";
 
 const SORT_OPTIONS = [
   { value: "date", label: "Newest First" },
@@ -30,6 +31,7 @@ export default function IdeasBrowser() {
   const [sortBy, setSortBy] = useState("date");
   const [minScore, setMinScore] = useState(0);
   const [page, setPage] = useState(0);
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const limit = 20;
 
   const queryParams = useMemo(
@@ -139,13 +141,57 @@ export default function IdeasBrowser() {
           <p className="text-sm text-muted-foreground">
             {data.total} idea{data.total !== 1 ? "s" : ""} found
           </p>
+          <div className="flex items-center gap-3">
+            {selectedIds.size > 0 && (
+              <ExportDialog
+                ideaIds={Array.from(selectedIds)}
+              />
+            )}
+            {selectedIds.size > 0 && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setSelectedIds(new Set())}
+              >
+                Clear selection ({selectedIds.size})
+              </Button>
+            )}
+          </div>
           <div className="grid gap-3 md:grid-cols-2">
             {data.ideas.map((idea) => (
-              <IdeaCard
-                key={idea.id}
-                idea={idea}
-                onClick={() => navigate(`/ideas/${idea.id}`)}
-              />
+              <div key={idea.id} className="relative">
+                <div
+                  className="absolute top-3 right-3 z-10"
+                  onClick={(e) => e.stopPropagation()}
+                  data-testid={`select-idea-${idea.id}`}
+                >
+                  <button
+                    className="text-muted-foreground hover:text-primary"
+                    onClick={() => {
+                      setSelectedIds((prev) => {
+                        const next = new Set(prev);
+                        if (next.has(idea.id)) {
+                          next.delete(idea.id);
+                        } else {
+                          next.add(idea.id);
+                        }
+                        return next;
+                      });
+                    }}
+                    aria-label={`Select idea ${idea.id}`}
+                  >
+                    {selectedIds.has(idea.id) ? (
+                      <CheckSquare className="h-4 w-4 text-primary" />
+                    ) : (
+                      <Square className="h-4 w-4" />
+                    )}
+                  </button>
+                </div>
+                <IdeaCard
+                  idea={idea}
+                  onClick={() => navigate(`/ideas/${idea.id}`)}
+                />
+              </div>
             ))}
           </div>
           {data.total > limit && (

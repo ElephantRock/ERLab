@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getIdea, refineIdea } from "@/api/ideas";
 import { ScoreBadge } from "@/components/ideas/score-badge";
-import { ExportButton } from "@/components/ideas/export-button";
+import { ExportDialog } from "@/components/export/export-dialog";
 import { FeedbackForm } from "@/components/ideas/feedback-form";
 import { CommentThread } from "@/components/idea/comment-thread";
 import { ShareDialog } from "@/components/idea/share-dialog";
@@ -88,9 +88,8 @@ export default function IdeaDetail() {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <ExportButton
-            proposalMd={idea.proposal_md}
-            proposalLatex={idea.proposal_latex}
+          <ExportDialog
+            ideaId={ideaId}
             title={idea.title}
           />
           <Button
