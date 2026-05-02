@@ -1,11 +1,21 @@
 import { useState, useEffect } from "react";
-import { triggerAutonomous, getAutonomousHistory, stopAutonomousCycle } from "@/api/autonomous";
+import {
+  triggerAutonomous,
+  getAutonomousHistory,
+  stopAutonomousCycle,
+  getEvolutionStatus,
+  startScheduler,
+  stopScheduler,
+  getSchedulerStatus,
+  type EvolutionStatus,
+  type SchedulerStatus,
+} from "@/api/autonomous";
 import { ConsciousnessStateBadge } from "@/components/autonomous/consciousness-state";
 import { CycleProgress } from "@/components/autonomous/cycle-progress";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Cpu, Loader2, AlertCircle, Play, StopCircle } from "lucide-react";
+import { Cpu, Loader2, AlertCircle, Play, StopCircle, Clock, Activity } from "lucide-react";
 import type { AutonomousCycleHistoryEntry, ConsciousnessState } from "@/api/autonomous";
 
 export default function AutonomousPage() {
@@ -18,8 +28,14 @@ export default function AutonomousPage() {
   const [consciousnessState, setConsciousnessState] = useState<ConsciousnessState>("idle");
   const [stopConfirmId, setStopConfirmId] = useState<string | null>(null);
 
+  // Scheduler + evolution state
+  const [schedulerStatus, setSchedulerStatus] = useState<SchedulerStatus | null>(null);
+  const [evolutionStatus, setEvolutionStatus] = useState<EvolutionStatus | null>(null);
+  const [schedulerLoading, setSchedulerLoading] = useState(false);
+
   useEffect(() => {
     loadHistory();
+    loadSchedulerAndEvolution();
   }, []);
 
   async function loadHistory() {
@@ -30,6 +46,45 @@ export default function AutonomousPage() {
       setError(err instanceof Error ? err.message : "Failed to load history");
     } finally {
       setIsLoading(false);
+    }
+  }
+
+  async function loadSchedulerAndEvolution() {
+    try {
+      const [sched, evo] = await Promise.all([
+        getSchedulerStatus(),
+        getEvolutionStatus(),
+      ]);
+      setSchedulerStatus(sched);
+      setEvolutionStatus(evo);
+    } catch {
+      // Non-fatal
+    }
+  }
+
+  async function handleSchedulerStart() {
+    setSchedulerLoading(true);
+    setError(null);
+    try {
+      await startScheduler();
+      await loadSchedulerAndEvolution();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to start scheduler");
+    } finally {
+      setSchedulerLoading(false);
+    }
+  }
+
+  async function handleSchedulerStop() {
+    setSchedulerLoading(true);
+    setError(null);
+    try {
+      await stopScheduler();
+      await loadSchedulerAndEvolution();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to stop scheduler");
+    } finally {
+      setSchedulerLoading(false);
     }
   }
 
@@ -136,6 +191,82 @@ export default function AutonomousPage() {
               )}
               {isStarting ? "Starting..." : "Start Cycle"}
             </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Scheduler Controls */}
+      <Card data-testid="scheduler-controls">
+        <CardHeader>
+          <CardTitle className="text-lg flex items-center gap-2">
+            <Clock className="h-4 w-4" />
+            Scheduler
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center gap-2 text-sm">
+            <span className="font-medium">Status:</span>
+            <span data-testid="scheduler-status-text">
+              {schedulerStatus?.status ?? "unknown"}
+            </span>
+          </div>
+          {schedulerStatus?.status === "running" && schedulerStatus.next_run && (
+            <div className="flex items-center gap-2 text-sm">
+              <span className="font-medium">Next Run:</span>
+              <span>{new Date(schedulerStatus.next_run).toLocaleString()}</span>
+            </div>
+          )}
+          <div className="flex items-center gap-3">
+            <Button
+              onClick={handleSchedulerStart}
+              disabled={schedulerLoading || schedulerStatus?.status === "running"}
+              variant="outline"
+              data-testid="scheduler-start-btn"
+            >
+              {schedulerLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Play className="h-4 w-4 mr-2" />}
+              Start Scheduler
+            </Button>
+            <Button
+              onClick={handleSchedulerStop}
+              disabled={schedulerLoading || schedulerStatus?.status !== "running"}
+              variant="destructive"
+              data-testid="scheduler-stop-btn"
+            >
+              <StopCircle className="h-4 w-4 mr-2" />
+              Stop Scheduler
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Evolution Status */}
+      <Card data-testid="evolution-status-card">
+        <CardHeader>
+          <CardTitle className="text-lg flex items-center gap-2">
+            <Activity className="h-4 w-4" />
+            Evolution Status
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-2 text-sm">
+            <div className="flex items-center gap-2">
+              <span className="font-medium">Enabled:</span>
+              <span data-testid="evolution-enabled">
+                {evolutionStatus?.enabled ? "Yes" : "No"}
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="font-medium">Overlays:</span>
+              <span data-testid="evolution-overlays">
+                {evolutionStatus?.overlays_generated ?? 0}
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="font-medium">Recent Outcomes:</span>
+              <span data-testid="evolution-outcomes">
+                {evolutionStatus?.recent_outcomes?.length ?? 0}
+              </span>
+            </div>
           </div>
         </CardContent>
       </Card>

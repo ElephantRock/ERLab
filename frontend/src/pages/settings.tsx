@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { testConnection, getDetailedStatus, type DetailedStatus } from "@/api/client";
+import { getEvolutionStatus, type EvolutionStatus } from "@/api/autonomous";
 
 type ConnectionState = "idle" | "testing" | "connected" | "error";
 
@@ -17,12 +18,15 @@ export default function Settings() {
   // Version / detailed status
   const [detailedStatus, setDetailedStatus] = useState<DetailedStatus | null>(null);
 
+  // Evolution status (READ-ONLY per HB-01)
+  const [evolutionStatus, setEvolutionStatus] = useState<EvolutionStatus | null>(null);
+
   // Default domain
   const [defaultDomain, setDefaultDomain] = useState(() => {
     return localStorage.getItem("erock_default_domain") || "";
   });
 
-  // Fetch version on mount
+  // Fetch version + evolution status on mount
   useEffect(() => {
     let cancelled = false;
     getDetailedStatus()
@@ -31,6 +35,13 @@ export default function Settings() {
       })
       .catch(() => {
         // Version unavailable is non-fatal; just leave it null
+      });
+    getEvolutionStatus()
+      .then((data) => {
+        if (!cancelled) setEvolutionStatus(data);
+      })
+      .catch(() => {
+        // Evolution unavailable is non-fatal
       });
     return () => {
       cancelled = true;
@@ -173,6 +184,49 @@ export default function Settings() {
             />
             <p className="text-xs text-muted-foreground">
               Pre-fills the domain field in new pipeline runs. Saved in your browser.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Self-Improvement — READ-ONLY per HB-01 */}
+      <Card data-testid="self-improve-section">
+        <CardHeader>
+          <CardTitle className="text-lg">Self-Improvement</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-2 text-sm">
+            <div className="flex items-center gap-2">
+              <span className="font-medium">Evolution:</span>
+              <span data-testid="evolution-enabled-status">
+                {evolutionStatus?.enabled ? "Enabled" : "Disabled"}
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="font-medium">Overlays Generated:</span>
+              <span data-testid="evolution-overlay-count">
+                {evolutionStatus?.overlays_generated ?? "—"}
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="font-medium">Recent Outcomes:</span>
+              <span data-testid="evolution-outcome-count">
+                {evolutionStatus?.recent_outcomes?.length ?? 0}
+              </span>
+            </div>
+            {evolutionStatus?.recent_outcomes && evolutionStatus.recent_outcomes.length > 0 && (
+              <div className="mt-2 space-y-1" data-testid="evolution-outcomes-list">
+                {evolutionStatus.recent_outcomes.map((outcome, idx) => (
+                  <div key={idx} className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <span className="font-mono">{outcome.stage_name}</span>
+                    <span>score: {outcome.score.toFixed(2)}</span>
+                    <span>({outcome.run_id})</span>
+                  </div>
+                ))}
+              </div>
+            )}
+            <p className="text-xs text-muted-foreground mt-2">
+              Evolution parameters are managed by the system and cannot be edited.
             </p>
           </div>
         </CardContent>
