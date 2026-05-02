@@ -70,3 +70,59 @@ async def detailed_status():
         "provider": settings.default_provider,
         "db_status": db_status,
     }
+
+
+@router.get(
+    "/evolution",
+    summary="Evolution status",
+    description="Get self-improvement evolution engine status including overlay count and recent outcomes.",
+)
+async def evolution_status():
+    """Get evolution engine status.
+
+    Returns:
+        {"enabled": bool, "overlays_generated": int, "recent_outcomes": list}
+
+    Example response:
+        {"enabled": true, "overlays_generated": 5, "recent_outcomes": [{"stage_name": "idea_generation", "score": 0.8, "run_id": "run_1"}]}
+    """
+    settings = get_settings()
+
+    if not settings.self_improve_enabled:
+        return {
+            "enabled": False,
+            "overlays_generated": 0,
+            "recent_outcomes": [],
+        }
+
+    # Access the evolution engine from the pipeline module
+    try:
+        from backend.pipeline.self_improve.engine import EvolutionEngine
+        from backend.pipeline.self_improve.evolution import PipelineEvolver
+
+        evolver = PipelineEvolver()
+        engine = EvolutionEngine(evolver=evolver)
+
+        # Count overlays from recent outcomes
+        recent_outcomes = []
+        overlays = 0
+        for outcome in engine._outcomes[-10:]:
+            recent_outcomes.append({
+                "stage_name": outcome.stage_name,
+                "score": outcome.score,
+                "run_id": outcome.run_id,
+            })
+            if outcome.score < 0.7:
+                overlays += 1
+
+        return {
+            "enabled": True,
+            "overlays_generated": overlays,
+            "recent_outcomes": recent_outcomes,
+        }
+    except Exception:
+        return {
+            "enabled": True,
+            "overlays_generated": 0,
+            "recent_outcomes": [],
+        }
