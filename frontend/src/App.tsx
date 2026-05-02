@@ -9,6 +9,7 @@ import GapsExplorerPage from "./pages/gaps-explorer";
 import KnowledgeSearchPage from "./pages/knowledge-search";
 import SettingsPage from "./pages/settings";
 import Placeholder from "./pages/placeholder";
+import LiteraturePage from "./pages/literature";
 import MemoryBrowserPage from "./pages/memory";
 import CostsPage from "./pages/costs";
 import GovernancePage from "./pages/governance";
@@ -32,7 +33,7 @@ export default function App() {
         <Route path="/governance" element={<GovernancePage />} />
         <Route path="/traces" element={<TracesPage />} />
         <Route path="/sessions" element={<SessionsPage />} />
-        <Route path="/literature" element={<Placeholder title="Literature" />} />
+        <Route path="/literature" element={<LiteraturePage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </AppShell>
