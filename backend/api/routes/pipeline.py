@@ -390,6 +390,8 @@ async def start_autonomous_cycle(request: AutonomousCycleRequest):
     cycle_id = f"auto_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
 
     _progress_queues[cycle_id] = asyncio.Queue()
+    cancel_event = threading.Event()
+    _cancel_events[cycle_id] = cancel_event
 
     def _stage_callback(stage_name: str, index: int, total: int, elapsed: float):
         if cycle_id in _progress_queues:
@@ -417,6 +419,12 @@ async def start_autonomous_cycle(request: AutonomousCycleRequest):
                 len(results),
                 total_ideas,
             )
+            # Update history entry to completed
+            for entry in _autonomous_history:
+                if entry["cycle_id"] == cycle_id:
+                    entry["status"] = "completed"
+                    entry["runs"] = len(results)
+                    break
         except Exception as e:
             logger.error("Autonomous cycle %s failed: %s", cycle_id, e)
         finally:
@@ -428,12 +436,77 @@ async def start_autonomous_cycle(request: AutonomousCycleRequest):
     task = asyncio.create_task(_run_cycle())
     _background_tasks.add(task)
 
+    # Record in history
+    _autonomous_history.append({
+        "cycle_id": cycle_id,
+        "domain": request.domain,
+        "runs": 0,
+        "status": "running",
+    })
+
     return {
         "cycle_id": cycle_id,
         "status": "running",
         "domain": request.domain,
         "max_runs": request.max_runs,
     }
+
+
+# ── Autonomous Cycle History ────────────────────────────────────────────
+
+_autonomous_history: list[dict] = []
+
+
+@router.post(
+    "/autonomous/stop",
+    summary="Stop autonomous cycle",
+    description="Stop a running autonomous cycle. Requires cycle_id confirmation to prevent silent termination (HB-01).",
+)
+async def stop_autonomous_cycle(cycle_id: str = Query(..., max_length=200)):
+    """Stop a running autonomous cycle.
+
+    HB-01: Requires explicit cycle_id confirmation — no silent termination.
+
+    Args:
+        cycle_id: The autonomous cycle identifier to stop.
+
+    Returns:
+        {"status": "stopped", "cycle_id": "..."}
+
+    Example response:
+        {"status": "stopped", "cycle_id": "auto_20260502_143000"}
+    """
+    # Check cancel event for this cycle
+    event = _cancel_events.get(cycle_id)
+    if not event:
+        raise NotFoundError(f"Cycle {cycle_id} not found or not running")
+
+    event.set()
+
+    # Update history entry
+    for entry in _autonomous_history:
+        if entry["cycle_id"] == cycle_id:
+            entry["status"] = "stopped"
+            break
+
+    return {"status": "stopped", "cycle_id": cycle_id}
+
+
+@router.get(
+    "/autonomous/history",
+    summary="Get autonomous cycle history",
+    description="Return history of autonomous cycles with their statuses (running/completed/stopped).",
+)
+async def autonomous_history():
+    """Get history of all autonomous cycles.
+
+    Returns:
+        {"cycles": [{"cycle_id": "...", "domain": "...", "runs": N, "status": "..."}]}
+
+    Example response:
+        {"cycles": [{"cycle_id": "auto_20260502_143000", "domain": "AI/NLP", "runs": 3, "status": "completed"}]}
+    """
+    return {"cycles": list(_autonomous_history)}
 
 
 # ── Scheduler Control ──────────────────────────────────────────────────
