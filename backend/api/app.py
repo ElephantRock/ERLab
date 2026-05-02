@@ -10,7 +10,7 @@ from fastapi.responses import JSONResponse
 
 from backend.api.auth import get_current_user, verify_api_key
 from backend.api.errors import APIError
-from backend.api.routes import auth as auth_routes, collaboration, costs, exports, gaps, governance, ideas, knowledge, knowledge_graph, literature, memory, pipeline, plugins, search, status, traces
+from backend.api.routes import auth as auth_routes, collaboration, costs, experiments, exports, gaps, governance, ideas, knowledge, knowledge_graph, literature, memory, notifications, pipeline, plugins, search, status, traces
 
 app = FastAPI(
     title="Elephant Rock Research API",
@@ -181,6 +181,12 @@ app.include_router(
 )
 app.include_router(
     plugins.router, prefix="/api/v1/plugins", tags=["plugins"], dependencies=_auth
+)
+app.include_router(
+    notifications.router, prefix="/api/v1/notifications", tags=["notifications"], dependencies=_auth
+)
+app.include_router(
+    experiments.router, prefix="/api/v1/experiments", tags=["experiments"], dependencies=_auth
 )
 
 

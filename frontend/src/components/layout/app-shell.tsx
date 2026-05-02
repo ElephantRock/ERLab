@@ -4,6 +4,7 @@ import { cn } from "@/lib/utils";
 import { PanelLeftClose, PanelLeft, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { GlobalSearchDialog } from "@/components/search/global-search-dialog";
+import { NotificationBell } from "@/components/notifications/notification-bell";
 
 export function AppShell({ children }: { children: ReactNode }) {
   const [collapsed, setCollapsed] = useState(false);
@@ -59,6 +60,9 @@ export function AppShell({ children }: { children: ReactNode }) {
               ⌘K
             </kbd>
           </Button>
+          <div className="ml-auto">
+            <NotificationBell />
+          </div>
         </div>
         {children}
       </main>

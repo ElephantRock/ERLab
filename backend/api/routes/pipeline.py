@@ -97,6 +97,12 @@ async def trigger_run(request: PipelineRunRequest):
                 })
             except Exception:
                 logger.warning("Webhook failed for run %s", run_id, exc_info=True)
+            # Fire notification (BATCH-49)
+            try:
+                from backend.notifications import create_notification
+                await create_notification("pipeline.completed", "Pipeline run completed", f"Run {run_id} completed successfully")
+            except Exception:
+                logger.warning("Notification failed for run %s", run_id, exc_info=True)
         except Exception as e:
             logger.error("Pipeline run %s failed: %s", run_id, e)
             # Fire failure webhook (BATCH-32)
@@ -110,6 +116,12 @@ async def trigger_run(request: PipelineRunRequest):
                 })
             except Exception:
                 logger.warning("Webhook failed for run %s", run_id, exc_info=True)
+            # Fire notification (BATCH-49)
+            try:
+                from backend.notifications import create_notification
+                await create_notification("pipeline.failed", "Pipeline run failed", f"Run {run_id} failed")
+            except Exception:
+                logger.warning("Notification failed for run %s", run_id, exc_info=True)
         finally:
             # Signal completion to SSE listeners
             if run_id in _progress_queues:

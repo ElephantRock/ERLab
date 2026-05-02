@@ -178,6 +178,23 @@ export interface SystemStatus {
 
 // --- Global Search (BATCH-48) ---
 
+export interface Notification {
+  id: number;
+  user_id: number | null;
+  type: string;
+  title: string;
+  message: string;
+  read: boolean;
+  created_at: string;
+}
+
+export interface NotificationListResponse {
+  notifications: Notification[];
+  total: number;
+}
+
+// --- Global Search (BATCH-48) ---
+
 export interface IdeaSearchItem {
   id: number;
   title: string;

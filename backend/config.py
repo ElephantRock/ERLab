@@ -360,6 +360,11 @@ class Settings(BaseSettings):
     webhook_url: str | None = None
     webhook_secret: str | None = None
 
+    # Sandboxed Experiment Execution (BATCH-49)
+    experiment_enabled: bool = False
+    experiment_default_timeout: float = 30.0
+    experiment_max_code_size: int = 10000
+
 
 @functools.lru_cache()
 def get_settings() -> Settings:

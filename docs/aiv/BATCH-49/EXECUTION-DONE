@@ -1,0 +1,10 @@
+BATCH-49 EXECUTION DONE
+=======================
+Date: 2026-05-02
+Tasks: 2/2 complete
+
+TASK-01: Notification Center (Backend + Frontend) — ✅ DONE
+TASK-02: Sandboxed Experiment Execution — ✅ DONE
+
+Backend tests: 1475 passed, 8 skipped
+Frontend tests: 324 passed (66 files)
