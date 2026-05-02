@@ -138,6 +138,61 @@ async def list_gaps(
 
 
 @router.get(
+    "/stats",
+    summary="Gap analytics",
+    description="Aggregated gap statistics: type distribution, confidence trends, top gaps.",
+)
+async def gap_stats():
+    from sqlalchemy import func, desc as sa_desc, select
+    from backend.db.database import get_session
+    from backend.db.models import ResearchGapDB, PipelineRun
+
+    with get_session() as session:
+        # Type distribution
+        type_dist_rows = session.execute(
+            select(ResearchGapDB.gap_type, func.count(ResearchGapDB.id))
+            .group_by(ResearchGapDB.gap_type)
+        ).all()
+        type_distribution = {row[0]: row[1] for row in type_dist_rows}
+
+        # Average confidence
+        avg_conf = session.execute(
+            select(func.avg(ResearchGapDB.confidence))
+        ).scalar() or 0.0
+
+        # Total
+        total = session.execute(select(func.count(ResearchGapDB.id))).scalar() or 0
+
+        # Top recurring gaps (by content_hash frequency)
+        top_rows = session.execute(
+            select(ResearchGapDB.title, func.count(ResearchGapDB.id).label("freq"), func.avg(ResearchGapDB.confidence).label("avg_conf"))
+            .where(ResearchGapDB.content_hash.isnot(None))
+            .group_by(ResearchGapDB.content_hash, ResearchGapDB.title)
+            .order_by(sa_desc("freq"))
+            .limit(5)
+        ).all()
+        top_gaps = [{"title": r[0], "frequency": r[1], "avg_confidence": round(r[2] or 0, 3)} for r in top_rows]
+
+        # Confidence trend across runs
+        trend_rows = session.execute(
+            select(PipelineRun.id, func.avg(ResearchGapDB.confidence), func.count(ResearchGapDB.id))
+            .join(ResearchGapDB, PipelineRun.id == ResearchGapDB.pipeline_run_id)
+            .where(PipelineRun.status == "completed")
+            .group_by(PipelineRun.id)
+            .order_by(PipelineRun.id)
+        ).all()
+        confidence_trend = [{"run_id": r[0], "avg_confidence": round(r[1] or 0, 3), "gap_count": r[2]} for r in trend_rows]
+
+        return {
+            "type_distribution": type_distribution,
+            "avg_confidence": round(avg_conf, 3),
+            "total_gaps": total,
+            "top_gaps": top_gaps,
+            "confidence_trend": confidence_trend,
+        }
+
+
+@router.get(
     "/clusters",
     summary="Get cluster data",
     description="Return cluster report for a pipeline run (BATCH-43).",
