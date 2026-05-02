@@ -9,6 +9,7 @@ import type { KnowledgeSearchResponse } from "@/api/types";
 // ── Mock API (AR-03) ─────────────────────────────────────────────
 vi.mock("@/api/knowledge", () => ({
   searchKnowledge: vi.fn(),
+  getKnowledgeStats: vi.fn().mockResolvedValue({ total_documents: 0, total_chunks: 0 }),
 }));
 
 import { searchKnowledge } from "@/api/knowledge";
