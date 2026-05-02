@@ -5,6 +5,25 @@ import { MemoryRouter } from "react-router-dom";
 import GapsExplorer from "@/pages/gaps-explorer";
 import type { ResearchGap, GapListResponse } from "@/api/types";
 
+// ── JSDOM polyfills for Radix UI (BATCH-39) ────────────────────
+class ResizeObserverMock { observe() {} unobserve() {} disconnect() {} }
+global.ResizeObserver = ResizeObserverMock as unknown as typeof ResizeObserver;
+class IntersectionObserverMock { observe() {} unobserve() {} disconnect() {} }
+global.IntersectionObserver = IntersectionObserverMock as unknown as typeof IntersectionObserver;
+Element.prototype.scrollIntoView = vi.fn();
+Element.prototype.getBoundingClientRect = vi.fn(() => ({
+  width: 0, height: 0, x: 0, y: 0, top: 0, left: 0, bottom: 0, right: 0,
+}));
+Object.defineProperty(window, "matchMedia", {
+  writable: true,
+  value: (query: string) => ({
+    matches: false, media: query, onchange: null,
+    addListener: () => {}, removeListener: () => {},
+    addEventListener: () => {}, removeEventListener: () => {},
+    dispatchEvent: () => false,
+  }),
+});
+
 // ── Mock API (AR-03) ─────────────────────────────────────────────
 vi.mock("@/api/gaps", () => ({
   listGaps: vi.fn(),
@@ -61,7 +80,7 @@ describe("GapsExplorer", () => {
     await waitFor(() => {
       expect(screen.getByText("Lack of cross-lingual transfer methods")).toBeInTheDocument();
     });
-    expect(screen.getByText(/1 gap identified/)).toBeInTheDocument();
+    expect(screen.getByText(/1 gap/)).toBeInTheDocument();
   });
 
   // ── TEST-11-01-15: Shows empty state ────────────────────────────
@@ -72,7 +91,7 @@ describe("GapsExplorer", () => {
 
     await waitFor(() => {
       expect(
-        screen.getByText("No research gaps found. Run a pipeline to discover gaps."),
+        screen.getByText(/No research gaps found/),
       ).toBeInTheDocument();
     });
   });

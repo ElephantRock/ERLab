@@ -1,10 +1,38 @@
 """Gaps API routes."""
 
+import json
+
 from fastapi import APIRouter, Query
 
 from backend.api.errors import NotFoundError
 
 router = APIRouter()
+
+# AR-01 / AR-02 whitelists
+SORT_BY_WHITELIST = {"confidence", "date", "type"}
+GAP_TYPE_WHITELIST = {"methodological", "empirical", "theoretical", "cross-domain"}
+
+
+def _build_truth(gap) -> dict | None:
+    """Build truth object from a ResearchGapDB row (BATCH-38+)."""
+    return {
+        "frequency": gap.truth_frequency,
+        "confidence": gap.truth_confidence,
+        "evidence_count": gap.truth_evidence_count,
+    }
+
+
+def _build_related_clusters(gap) -> list[int] | None:
+    """Parse related_clusters JSON text into list[int] or None."""
+    if gap.related_clusters is None:
+        return None
+    try:
+        parsed = json.loads(gap.related_clusters)
+        if isinstance(parsed, list):
+            return [int(c) for c in parsed]
+    except (json.JSONDecodeError, ValueError, TypeError):
+        pass
+    return None
 
 
 @router.get(
@@ -13,27 +41,44 @@ router = APIRouter()
     description="List research gaps from a pipeline run. Uses the latest completed run if run_id is omitted.",
 )
 async def list_gaps(
-    run_id: int | None = Query(default=None, help="Pipeline run ID (latest if omitted)"),
+    run_id: int | None = Query(default=None, description="Pipeline run ID (latest if omitted)"),
     limit: int = Query(default=20, ge=1, le=100),
     offset: int = Query(default=0, ge=0),
+    search: str | None = Query(default=None, description="Case-insensitive substring match on title and description"),
+    gap_type: str | None = Query(default=None, description="Filter by gap type: methodological, empirical, theoretical, cross-domain"),
+    min_confidence: float | None = Query(default=None, ge=0.0, le=1.0, description="Minimum confidence threshold (0.0-1.0)"),
+    sort_by: str = Query(default="confidence", description="Sort column: confidence, date, type"),
+    sort_order: str = Query(default="desc", description="Sort direction: asc or desc"),
 ):
-    """List research gaps from a pipeline run.
+    """List research gaps from a pipeline run with search, filter, and sort.
 
     Args:
         run_id: Optional pipeline run ID. Defaults to the latest completed run.
         limit: Maximum number of gaps to return.
+        offset: Pagination offset.
+        search: Case-insensitive substring match on title and description.
+        gap_type: Exact match filter (validated against whitelist).
+        min_confidence: Minimum confidence threshold.
+        sort_by: Column to sort by (validated against whitelist — AR-01).
+        sort_order: Sort direction (asc/desc).
 
     Returns:
         {"gaps": [...], "total": 5, "run_id": 1}
 
     Example response:
-        {"gaps": [{"id": 1, "title": "Limited cross-domain evaluation", "description": "...", "gap_type": "methodological", "confidence": 0.85, "potential_impact": "high"}], "total": 5, "run_id": 1}
+        {"gaps": [{"id": 1, "title": "Limited cross-domain evaluation", "description": "...", "gap_type": "methodological", "confidence": 0.85, "potential_impact": "high", "truth": {"frequency": 0.5, "confidence": 0.5, "evidence_count": 0}, "related_clusters": null}], "total": 5, "run_id": 1}
     """
     from sqlalchemy import select
 
-    from backend.db.crud import count_gaps_by_run, count_ideas_for_gap, list_gaps_by_run
+    from backend.db.crud import count_ideas_for_gap, search_gaps, count_search_gaps
     from backend.db.database import get_session
     from backend.db.models import PipelineRun
+
+    # AR-01: validate sort_by against whitelist
+    validated_sort = sort_by if sort_by in SORT_BY_WHITELIST else "confidence"
+
+    # AR-02: validate gap_type against whitelist
+    validated_type = gap_type if gap_type in GAP_TYPE_WHITELIST else None
 
     with get_session() as session:
         target_run = run_id
@@ -51,8 +96,24 @@ async def list_gaps(
                 return {"gaps": [], "total": 0}
             target_run = latest.id
 
-        total = count_gaps_by_run(session, target_run)
-        gaps = list_gaps_by_run(session, target_run)[offset : offset + limit]
+        total = count_search_gaps(
+            session,
+            run_id=target_run,
+            search=search,
+            gap_type=validated_type,
+            min_confidence=min_confidence,
+        )
+        gaps = search_gaps(
+            session,
+            run_id=target_run,
+            search=search,
+            gap_type=validated_type,
+            min_confidence=min_confidence,
+            sort_by=validated_sort,
+            sort_order=sort_order,
+            limit=limit,
+            offset=offset,
+        )
         return {
             "gaps": [
                 {
@@ -63,6 +124,8 @@ async def list_gaps(
                     "confidence": g.confidence,
                     "potential_impact": g.potential_impact,
                     "idea_count": count_ideas_for_gap(session, g.title),
+                    "truth": _build_truth(g),
+                    "related_clusters": _build_related_clusters(g),
                 }
                 for g in gaps
             ],

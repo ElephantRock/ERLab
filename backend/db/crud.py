@@ -315,6 +315,94 @@ def count_gaps_by_run(session: Session, run_id: int) -> int:
     ).scalar_one()
 
 
+# --- Research Gaps: Search / Filter / Sort (BATCH-39) ---
+
+VALID_GAP_SORT_COLUMNS = {
+    "confidence": ResearchGapDB.confidence,
+    "date": ResearchGapDB.created_at,
+    "type": ResearchGapDB.gap_type,
+}
+
+VALID_GAP_TYPES = {"methodological", "empirical", "theoretical", "cross-domain"}
+
+
+def count_search_gaps(
+    session: Session,
+    run_id: int | None = None,
+    search: str | None = None,
+    gap_type: str | None = None,
+    min_confidence: float | None = None,
+) -> int:
+    """Count gaps matching filter criteria (BATCH-39)."""
+    stmt = select(func.count()).select_from(ResearchGapDB)
+    if run_id is not None:
+        stmt = stmt.where(ResearchGapDB.pipeline_run_id == run_id)
+    if search is not None:
+        stmt = stmt.where(
+            (ResearchGapDB.title.ilike(f"%{search}%"))
+            | (ResearchGapDB.description.ilike(f"%{search}%"))
+        )
+    if gap_type is not None and gap_type in VALID_GAP_TYPES:
+        stmt = stmt.where(ResearchGapDB.gap_type == gap_type)
+    if min_confidence is not None:
+        stmt = stmt.where(ResearchGapDB.confidence >= min_confidence)
+    return session.execute(stmt).scalar_one()
+
+
+def search_gaps(
+    session: Session,
+    run_id: int | None = None,
+    search: str | None = None,
+    gap_type: str | None = None,
+    min_confidence: float | None = None,
+    sort_by: str | None = None,
+    sort_order: str = "desc",
+    limit: int = 20,
+    offset: int = 0,
+) -> Sequence[ResearchGapDB]:
+    """Return gaps matching filter/sort criteria (BATCH-39).
+
+    Args:
+        session: SQLAlchemy session.
+        run_id: Optional pipeline run ID filter.
+        search: Case-insensitive substring match on title and description.
+        gap_type: Exact match filter (validated against VALID_GAP_TYPES).
+        min_confidence: Minimum confidence threshold.
+        sort_by: Column to sort by (validated against VALID_GAP_SORT_COLUMNS).
+        sort_order: "asc" or "desc" (default: "desc").
+        limit: Max results.
+        offset: Pagination offset.
+
+    Returns:
+        Sequence of matching ResearchGapDB objects.
+    """
+    stmt = select(ResearchGapDB)
+
+    # Filters
+    if run_id is not None:
+        stmt = stmt.where(ResearchGapDB.pipeline_run_id == run_id)
+    if search is not None:
+        stmt = stmt.where(
+            (ResearchGapDB.title.ilike(f"%{search}%"))
+            | (ResearchGapDB.description.ilike(f"%{search}%"))
+        )
+    if gap_type is not None and gap_type in VALID_GAP_TYPES:
+        stmt = stmt.where(ResearchGapDB.gap_type == gap_type)
+    if min_confidence is not None:
+        stmt = stmt.where(ResearchGapDB.confidence >= min_confidence)
+
+    # Sorting (AR-01: whitelist — invalid values ignored)
+    sort_col = VALID_GAP_SORT_COLUMNS.get(sort_by) if sort_by else None
+    if sort_col is not None:
+        direction = desc if sort_order == "desc" else asc
+        stmt = stmt.order_by(direction(sort_col))
+    else:
+        stmt = stmt.order_by(ResearchGapDB.confidence.desc())
+
+    stmt = stmt.limit(limit).offset(offset)
+    return session.execute(stmt).scalars().all()
+
+
 def count_ideas_for_gap(session: Session, gap_title: str) -> int:
     """Count ideas whose source_gap_ids JSON contains the given gap title.
 
