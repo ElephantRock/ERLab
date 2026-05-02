@@ -1,0 +1,8 @@
+{
+  "name": "hello-plugin",
+  "version": "1.0.0",
+  "description": "A minimal example plugin for Elephant Rock",
+  "author": "Example",
+  "hooks": ["pipeline.completed"],
+  "permissions": ["read:pipeline"]
+}
