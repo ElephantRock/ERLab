@@ -10,7 +10,7 @@ from fastapi.responses import JSONResponse
 
 from backend.api.auth import get_current_user, verify_api_key
 from backend.api.errors import APIError
-from backend.api.routes import auth as auth_routes, costs, gaps, governance, ideas, knowledge, knowledge_graph, literature, memory, pipeline, status, traces
+from backend.api.routes import auth as auth_routes, collaboration, costs, exports, gaps, governance, ideas, knowledge, knowledge_graph, literature, memory, pipeline, plugins, status, traces
 
 app = FastAPI(
     title="Elephant Rock Research API",
@@ -162,6 +162,24 @@ app.include_router(
     prefix="/api/v1/knowledge-graph",
     tags=["knowledge-graph"],
     dependencies=_auth,
+)
+app.include_router(
+    collaboration.router,
+    prefix="/api/v1/ideas",
+    tags=["collaboration"],
+    dependencies=_auth,
+)
+# Public shared-idea endpoint (no auth required)
+app.include_router(
+    collaboration.router,
+    prefix="/api/v1",
+    tags=["shared"],
+)
+app.include_router(
+    exports.router, prefix="/api/v1/export", tags=["export"], dependencies=_auth
+)
+app.include_router(
+    plugins.router, prefix="/api/v1/plugins", tags=["plugins"], dependencies=_auth
 )
 
 

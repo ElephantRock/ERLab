@@ -126,6 +126,38 @@ class PipelineRun(Base):
     completed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
 
+class Comment(Base):
+    """Comment thread on a research idea (BATCH-34)."""
+
+    __tablename__ = "comments"
+    __table_args__ = (
+        Index("ix_comments_idea_id", "idea_id"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    idea_id: Mapped[int] = mapped_column(Integer, ForeignKey("ideas.id"))
+    author: Mapped[str] = mapped_column(String(128), default="anonymous")
+    content: Mapped[str] = mapped_column(Text)
+    parent_id: Mapped[int | None] = mapped_column(
+        Integer, ForeignKey("comments.id"), nullable=True
+    )
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
+
+
+class SharedIdea(Base):
+    """Shareable link for a research idea (BATCH-34)."""
+
+    __tablename__ = "shared_ideas"
+    __table_args__ = (
+        Index("ix_shared_ideas_idea_id", "idea_id"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    idea_id: Mapped[int] = mapped_column(Integer, ForeignKey("ideas.id"))
+    token: Mapped[str] = mapped_column(String(64), unique=True, index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
+
+
 class ResearchGapDB(Base):
     __tablename__ = "research_gaps"
     __table_args__ = (
