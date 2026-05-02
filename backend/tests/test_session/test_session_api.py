@@ -16,7 +16,7 @@ def _make_app(tmp_path) -> TestClient:
 
     @app.exception_handler(APIError)
     async def api_error_handler(request, exc):
-        return JSONResponse(status_code=exc.status_code, content={"error": exc.detail})
+        return JSONResponse(status_code=exc.status_code, content={"error": exc.message})
 
     app.include_router(router, prefix="/pipeline")
 
