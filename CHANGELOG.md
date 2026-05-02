@@ -6,6 +6,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added — AIV Batch Execution
+- **BATCH-28**: JWT authentication system — User model with hashed passwords (bcrypt), JWT token generation/validation (python-jose), login/register/me/users API endpoints, auth_enabled config flag (default: False for dev compatibility), login page with register mode, AuthContext with token persistence, ProtectedRoute wrapper, role badge component (admin/user), admin-only user management section in settings
 - **BATCH-27**: Self-improvement evolution section in settings (READ-ONLY per HB-01), scheduler start/stop controls on autonomous page, GET /status/evolution endpoint, evolution status display
 - **BATCH-26**: Autonomous cycle dashboard — POST /autonomous/stop (HB-01: requires cycle_id confirmation), GET /autonomous/history with cycle statuses, CycleProgress and ConsciousnessStateBadge components, full dashboard page with start form, stop confirmation dialog, history list, consciousness state display, sidebar Cpu icon nav item
 - **BATCH-25**: Knowledge graph explorer — 4 API endpoints (stats, entities, entity detail, subgraph traversal), SVG-based graph canvas with colored nodes and edges, entity detail panel with truth values and relationships, type filter and search, sidebar BrainCircuit icon nav item (HB-01: client-side SVG, HB-02: 100 entity limit)
