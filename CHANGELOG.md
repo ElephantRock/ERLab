@@ -6,7 +6,8 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added — AIV Batch Execution
-- **BATCH-14**: Ideas browser — sortable (score/novelty/feasibility/date), filterable (min score slider), searchable (keyword); gap↔idea bidirectional traceability with `source_gap_ids` column
+- **BATCH-15**: Cancel pipeline UI — red cancel button with confirmation dialog, cancelled state with partial results display
+- **BATCH-14**: Ideas browser — sortable, filterable, searchable; gap↔idea bidirectional traceability with `source_gap_ids` column
 - **BATCH-13**: Pipeline form completion — all backend options exposed; settings enhanced with connectivity check, version display, default domain
 - **BATCH-12**: Pipeline results flow — inline results after completion, run detail page at `/runs/:id`, clickable dashboard RunCards, `GET /runs/{id}/ideas` endpoint
 
