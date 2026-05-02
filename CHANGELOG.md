@@ -6,6 +6,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added — AIV Batch Execution
+- **BATCH-24**: PDF upload via drag-and-drop — POST /knowledge/ingest endpoint with PDF magic-bytes validation (HB-01), enriched GET /knowledge/stats with total_documents/total_chunks, frontend upload zone component with drag-and-drop, stats banner on knowledge page
 - **BATCH-23**: Literature search page — multi-source academic search (Semantic Scholar, arXiv, OpenAlex), paper cards with title/authors/abstract/year, ingest into knowledge base with confirmation (HB-01)
 - **BATCH-22**: Session grouping for pipeline runs — backend `session_id` filter on GET /runs, GET /runs/sessions endpoint, frontend Sessions page with grouped run cards, optional session_id input in pipeline form
 - **BATCH-20**: Governance Queue — pending approvals page with approve/deny actions, optional amendment on denial, real-time list refresh
