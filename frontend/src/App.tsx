@@ -11,6 +11,7 @@ import SettingsPage from "./pages/settings";
 import Placeholder from "./pages/placeholder";
 import MemoryBrowserPage from "./pages/memory";
 import CostsPage from "./pages/costs";
+import GovernancePage from "./pages/governance";
 
 export default function App() {
   return (
@@ -26,7 +27,7 @@ export default function App() {
         <Route path="/settings" element={<SettingsPage />} />
         <Route path="/costs" element={<CostsPage />} />
         <Route path="/memory" element={<MemoryBrowserPage />} />
-        <Route path="/governance" element={<Placeholder title="Governance" />} />
+        <Route path="/governance" element={<GovernancePage />} />
         <Route path="/traces" element={<Placeholder title="Traces" />} />
         <Route path="/sessions" element={<Placeholder title="Sessions" />} />
         <Route path="/literature" element={<Placeholder title="Literature" />} />
