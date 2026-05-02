@@ -6,6 +6,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added — AIV Batch Execution
+- **BATCH-30**: PostgreSQL support + Docker Compose — database.py dual PostgreSQL/SQLite engine (HB-01: SQLite default), connection pooling (QueuePool with pre-ping) for PostgreSQL, multi-stage Dockerfile (builder + runtime, non-root user), docker-compose.yml (app + postgres + redis with health checks), .dockerignore, 8 tests
 - **BATCH-29**: Alembic migration system — alembic.ini and env.py with SQLite batch mode (HB-01), initial auto-generated migration for all 6 model tables, `erock db upgrade/downgrade/history/current` CLI commands, `db-migrate` Makefile target, 8 tests
 - **BATCH-28**: JWT authentication system — User model with hashed passwords (bcrypt), JWT token generation/validation (python-jose), login/register/me/users API endpoints, auth_enabled config flag (default: False for dev compatibility), login page with register mode, AuthContext with token persistence, ProtectedRoute wrapper, role badge component (admin/user), admin-only user management section in settings
 - **BATCH-27**: Self-improvement evolution section in settings (READ-ONLY per HB-01), scheduler start/stop controls on autonomous page, GET /status/evolution endpoint, evolution status display
