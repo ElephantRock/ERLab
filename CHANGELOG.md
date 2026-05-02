@@ -6,7 +6,8 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added — AIV Batch Execution
-- **BATCH-18**: Cost Dashboard — full page with cost summary, breakdown tables (provider/stage/model), budget utilization bar, per-run costs
+- **BATCH-19**: Memory Browser — search, filter by type, delete with confirmation, memory statistics
+- **BATCH-18**: Cost Dashboard — full page with cost summary, breakdown tables, budget utilization bar
 - **BATCH-16**: Navigation infrastructure — sidebar items and placeholder routes for Phase 2 pages
 - **BATCH-14**: Ideas browser — sortable, filterable, searchable; gap↔idea bidirectional traceability with `source_gap_ids` column
 - **BATCH-13**: Pipeline form completion — all backend options exposed; settings enhanced with connectivity check, version display, default domain
