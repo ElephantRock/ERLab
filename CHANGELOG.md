@@ -6,6 +6,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added — AIV Batch Execution
+- **BATCH-26**: Autonomous cycle dashboard — POST /autonomous/stop (HB-01: requires cycle_id confirmation), GET /autonomous/history with cycle statuses, CycleProgress and ConsciousnessStateBadge components, full dashboard page with start form, stop confirmation dialog, history list, consciousness state display, sidebar Cpu icon nav item
 - **BATCH-25**: Knowledge graph explorer — 4 API endpoints (stats, entities, entity detail, subgraph traversal), SVG-based graph canvas with colored nodes and edges, entity detail panel with truth values and relationships, type filter and search, sidebar BrainCircuit icon nav item (HB-01: client-side SVG, HB-02: 100 entity limit)
 - **BATCH-24**: PDF upload via drag-and-drop — POST /knowledge/ingest endpoint with PDF magic-bytes validation (HB-01), enriched GET /knowledge/stats with total_documents/total_chunks, frontend upload zone component with drag-and-drop, stats banner on knowledge page
 - **BATCH-23**: Literature search page — multi-source academic search (Semantic Scholar, arXiv, OpenAlex), paper cards with title/authors/abstract/year, ingest into knowledge base with confirmation (HB-01)
