@@ -450,3 +450,28 @@ def update_gap_status(session: Session, gap_id: int, new_status: str) -> Researc
     session.commit()
     session.refresh(gap)
     return gap
+
+
+def find_gap_by_hash(session: Session, content_hash: str) -> ResearchGapDB | None:
+    """Find a gap by content_hash for deduplication (BATCH-42)."""
+    return session.execute(
+        select(ResearchGapDB).where(ResearchGapDB.content_hash == content_hash).limit(1)
+    ).scalar_one_or_none()
+
+
+def list_canonical_gaps(session: Session, limit: int = 100) -> list[ResearchGapDB]:
+    """List deduplicated gaps (one per unique content_hash, BATCH-42)."""
+    from sqlalchemy import distinct
+    # Get unique hashes and pick the first gap for each
+    subq = (
+        select(ResearchGapDB.id, ResearchGapDB.content_hash)
+        .where(ResearchGapDB.content_hash.isnot(None))
+        .distinct(ResearchGapDB.content_hash)
+        .order_by(ResearchGapDB.content_hash, ResearchGapDB.id)
+        .subquery()
+    )
+    return session.execute(
+        select(ResearchGapDB).join(subq, ResearchGapDB.id == subq.c.id)
+        .order_by(ResearchGapDB.confidence.desc())
+        .limit(limit)
+    ).scalars().all()

@@ -138,6 +138,33 @@ async def list_gaps(
 
 
 @router.get(
+    "/canonical",
+    summary="List deduplicated gaps",
+    description="Return one entry per unique gap (deduplicated by content hash).",
+)
+async def list_canonical_gaps(limit: int = Query(default=100, ge=1, le=500)):
+    from backend.db.crud import count_ideas_for_gap, list_canonical_gaps as db_list_canonical
+    from backend.db.database import get_session
+
+    with get_session() as session:
+        gaps = db_list_canonical(session, limit=limit)
+        return {
+            "gaps": [
+                {
+                    "id": g.id,
+                    "title": g.title,
+                    "confidence": g.confidence,
+                    "gap_type": g.gap_type,
+                    "content_hash": g.content_hash,
+                    "truth": _build_truth(g),
+                }
+                for g in gaps
+            ],
+            "total": len(gaps),
+        }
+
+
+@router.get(
     "/{gap_id}",
     summary="Get gap details",
     description="Get full details for a specific research gap by its ID.",

@@ -191,5 +191,9 @@ class ResearchGapDB(Base):
     user_rating: Mapped[int | None] = mapped_column(Integer, nullable=True)
     user_notes: Mapped[str | None] = mapped_column(Text, nullable=True)
 
+    # Deduplication (BATCH-42)
+    canonical_id: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    content_hash: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
+
     pipeline_run: Mapped["PipelineRun | None"] = relationship(back_populates="gaps")
     created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))

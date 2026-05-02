@@ -1,13 +1,28 @@
 """Pipeline DB persistence operations."""
 
 import json
+import hashlib
 import logging
+import re
 from pathlib import Path
 from typing import Any
 
 logger = logging.getLogger(__name__)
 
 _CHECKPOINT_DIR = Path("./data/checkpoints")
+
+
+def normalize_title(title: str) -> str:
+    """Normalize a gap title for dedup hashing (BATCH-42, HB-02)."""
+    t = title.lower()
+    t = re.sub(r"[^\w\s]", "", t)
+    t = re.sub(r"\s+", " ", t).strip()
+    return t
+
+
+def content_hash(title: str) -> str:
+    """SHA-256 hash of normalized title (BATCH-42, HB-01)."""
+    return hashlib.sha256(normalize_title(title).encode("utf-8")).hexdigest()
 
 
 class PipelinePersistence:
@@ -64,6 +79,28 @@ class PipelinePersistence:
                     # Write related_clusters as JSON array (BATCH-38)
                     if hasattr(gap, "related_clusters") and gap.related_clusters:
                         gap_kwargs["related_clusters"] = json.dumps(gap.related_clusters)
+                    # Deduplication: check content_hash (BATCH-42)
+                    c_hash = content_hash(gap.title)
+                    existing = crud.find_gap_by_hash(session, c_hash)
+                    if existing:
+                        # Revise truth values using OpenNARS rule (HB-03)
+                        from backend.pipeline.knowledge.truth import TruthValue
+                        new_truth = TruthValue.from_observation(frequency=gap.confidence)
+                        if hasattr(gap, "truth") and gap.truth is not None:
+                            new_truth = gap.truth
+                        revised = TruthValue(
+                            frequency=existing.truth_frequency,
+                            confidence=existing.truth_confidence,
+                            evidence_count=existing.truth_evidence_count,
+                        ).revise(new_truth)
+                        existing.truth_frequency = revised.frequency
+                        existing.truth_confidence = revised.confidence
+                        existing.truth_evidence_count = revised.evidence_count
+                        session.commit()
+                        logger.info("Revised truth for duplicate gap: %s (hash=%s)", gap.title[:50], c_hash[:12])
+                        continue
+                    gap_kwargs["content_hash"] = c_hash
+                    gap_kwargs["canonical_id"] = c_hash  # First occurrence is canonical
                     crud.create_gap(session, **gap_kwargs)
         except Exception as e:
             logger.warning("Failed to persist gaps: %s", e)

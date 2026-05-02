@@ -86,9 +86,9 @@ def test_38_01_02_downgrade_removes_all_five_columns(tmp_path: Path):
     with _patch_settings(db_url):
         command.upgrade(cfg, "head")
 
-    # Then downgrade by 2 (back to initial, past both 003 and 002)
+    # Then downgrade to the initial migration (before enrichment columns)
     with _patch_settings(db_url):
-        command.downgrade(cfg, "-2")
+        command.downgrade(cfg, "29607f14fd7f")
 
     engine = sqlalchemy.create_engine(db_url)
     insp = inspect(engine)
