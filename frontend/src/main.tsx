@@ -7,6 +7,7 @@ import { AuthProvider } from "./contexts/auth-context";
 import { Toaster } from "sonner";
 import { ErrorBoundary } from "./components/error-boundary";
 import App from "./App";
+import "./i18n/config";
 import "./globals.css";
 
 const queryClient = new QueryClient({
