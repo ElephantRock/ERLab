@@ -3,6 +3,7 @@
 import json
 
 from fastapi import APIRouter, Query
+from fastapi.responses import Response
 
 from backend.api.errors import NotFoundError
 
@@ -189,6 +190,62 @@ async def gap_stats():
             "total_gaps": total,
             "top_gaps": top_gaps,
             "confidence_trend": confidence_trend,
+        }
+
+
+@router.get(
+    "/export",
+    summary="Export gaps",
+    description="Export gaps as CSV or JSON (BATCH-46).",
+)
+async def export_gaps(
+    format: str = Query(default="json", description="Export format: csv or json"),
+    run_id: int | None = Query(default=None),
+    search: str | None = Query(default=None),
+    gap_type: str | None = Query(default=None),
+    min_confidence: float | None = Query(default=None, ge=0.0, le=1.0),
+):
+    import csv
+    import io
+    from backend.db.crud import search_gaps, count_search_gaps
+    from backend.db.database import get_session
+    from backend.db.models import PipelineRun
+
+    validated_type = gap_type if gap_type in GAP_TYPE_WHITELIST else None
+
+    from sqlalchemy import select as sa_select
+    from backend.db.crud import search_gaps, count_search_gaps
+    from backend.db.database import get_session
+    from backend.db.models import PipelineRun
+
+    with get_session() as session:
+        target_run = run_id
+        if target_run is None:
+            latest = session.execute(
+                sa_select(PipelineRun).where(PipelineRun.status == "completed")
+                .order_by(PipelineRun.id.desc()).limit(1)
+            ).scalar_one_or_none()
+            target_run = latest.id if latest else None
+        if not target_run:
+            return {"gaps": [], "total": 0} if format == "json" else Response(
+                content="id,title,description,gap_type,confidence\n",
+                media_type="text/csv",
+                headers={"Content-Disposition": "attachment; filename=gaps.csv"},
+            )
+        gaps = search_gaps(session, run_id=target_run, search=search, gap_type=validated_type, min_confidence=min_confidence, sort_by="confidence", sort_order="desc", limit=1000, offset=0)
+
+    if format == "csv":
+        buf = io.StringIO()
+        buf.write("\uFEFF")  # UTF-8 BOM per HB-02
+        writer = csv.DictWriter(buf, fieldnames=["id", "title", "description", "gap_type", "confidence", "potential_impact"])
+        writer.writeheader()
+        for g in gaps:
+            writer.writerow({"id": g.id, "title": g.title, "description": g.description, "gap_type": g.gap_type, "confidence": g.confidence, "potential_impact": g.potential_impact})
+        return Response(content=buf.getvalue(), media_type="text/csv; charset=utf-8", headers={"Content-Disposition": "attachment; filename=gaps.csv"})
+    else:
+        return {
+            "gaps": [{"id": g.id, "title": g.title, "description": g.description, "gap_type": g.gap_type, "confidence": g.confidence, "potential_impact": g.potential_impact} for g in gaps],
+            "total": len(gaps),
         }
 
 
