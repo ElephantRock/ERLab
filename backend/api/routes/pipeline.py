@@ -52,15 +52,30 @@ async def trigger_run(request: PipelineRunRequest):
 
     def _stage_callback(stage_name: str, index: int, total: int, elapsed: float):
         if run_id in _progress_queues:
+            progress_data = {
+                "stage": stage_name,
+                "index": index,
+                "total": total,
+                "elapsed": round(elapsed, 2),
+            }
             with contextlib.suppress(Exception):
-                _progress_queues[run_id].put_nowait(
-                    {
-                        "stage": stage_name,
-                        "index": index,
-                        "total": total,
-                        "elapsed": round(elapsed, 2),
-                    }
-                )
+                _progress_queues[run_id].put_nowait(progress_data)
+            # Also broadcast via WebSocket if enabled (BATCH-50)
+            with contextlib.suppress(Exception):
+                import asyncio as _asyncio
+                from backend.api.ws import manager as ws_manager
+                from backend.config import get_settings as _get_settings
+                _settings = _get_settings()
+                if _settings.websocket_enabled:
+                    try:
+                        loop = asyncio.get_running_loop()
+                    except RuntimeError:
+                        loop = None
+                    if loop and loop.is_running():
+                        loop.create_task(ws_manager.broadcast(f"pipeline:{run_id}", {
+                            "type": "pipeline.progress",
+                            "data": progress_data,
+                        }))
 
     async def _run_pipeline():
         orchestrator = PipelineOrchestrator(stage_callback=_stage_callback)

@@ -59,6 +59,8 @@
   },
   "language": {
     "switchLabel": "Language",
-    "en": "English"
+    "en": "English",
+    "zh": "中文",
+    "es": "Español"
   }
 }

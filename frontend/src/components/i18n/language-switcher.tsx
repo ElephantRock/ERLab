@@ -3,6 +3,8 @@ import { Languages } from "lucide-react";
 
 const SUPPORTED_LANGUAGES = [
   { code: "en", label: "English" },
+  { code: "zh", label: "中文" },
+  { code: "es", label: "Español" },
 ] as const;
 
 export function LanguageSwitcher() {

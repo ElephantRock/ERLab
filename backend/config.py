@@ -360,6 +360,9 @@ class Settings(BaseSettings):
     webhook_url: str | None = None
     webhook_secret: str | None = None
 
+    # WebSocket (BATCH-50)
+    websocket_enabled: bool = True
+
     # Sandboxed Experiment Execution (BATCH-49)
     experiment_enabled: bool = False
     experiment_default_timeout: float = 30.0
