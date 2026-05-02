@@ -7,6 +7,7 @@ import RunDetailPage from "./pages/run-detail";
 import IdeasBrowserPage from "./pages/ideas-browser";
 import IdeaDetailPage from "./pages/idea-detail";
 import GapsExplorerPage from "./pages/gaps-explorer";
+import GapDetailPage from "./pages/gap-detail";
 import KnowledgeSearchPage from "./pages/knowledge-search";
 import SettingsPage from "./pages/settings";
 import LiteraturePage from "./pages/literature";
@@ -53,6 +54,7 @@ export default function App() {
                 <Route path="/ideas" element={<IdeasBrowserPage />} />
                 <Route path="/ideas/:id" element={<IdeaDetailPage />} />
                 <Route path="/gaps" element={<GapsExplorerPage />} />
+                <Route path="/gaps/:id" element={<GapDetailPage />} />
                 <Route path="/knowledge" element={<KnowledgeSearchPage />} />
                 <Route path="/settings" element={<SettingsPage />} />
                 <Route path="/costs" element={<CostsPage />} />

@@ -169,5 +169,7 @@ async def get_gap(gap_id: int):
                 "idea_count": count_ideas_for_gap(session, gap.title),
                 "pipeline_run_id": gap.pipeline_run_id,
                 "created_at": str(gap.created_at),
+                "truth": _build_truth(gap),
+                "related_clusters": _build_related_clusters(gap),
             },
         }

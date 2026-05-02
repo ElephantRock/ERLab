@@ -3,6 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import type { ResearchGap } from "@/api/types";
 import { cn } from "@/lib/utils";
 import { Lightbulb } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 interface GapCardProps {
   gap: ResearchGap;
@@ -17,10 +18,14 @@ function confidenceColor(confidence: number): string {
 }
 
 export function GapCard({ gap, onIdeaCountClick }: GapCardProps) {
+  const navigate = useNavigate();
   const ideaCount = gap.idea_count ?? 0;
 
   return (
-    <Card>
+    <Card
+      className="cursor-pointer hover:shadow-md transition-shadow"
+      onClick={() => navigate(`/gaps/${gap.id}`)}
+    >
       <CardContent className="p-4">
         <div className="flex items-start justify-between gap-2">
           <div className="flex-1 min-w-0">

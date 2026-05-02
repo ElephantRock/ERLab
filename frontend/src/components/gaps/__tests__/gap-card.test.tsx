@@ -1,7 +1,16 @@
 import { describe, it, expect } from "vitest";
 import { render, screen } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
 import { GapCard } from "@/components/gaps/gap-card";
 import type { ResearchGap } from "@/api/types";
+
+function renderWithRouter(ui: React.ReactElement) {
+  return render(
+    <MemoryRouter>
+      {ui}
+    </MemoryRouter>,
+  );
+}
 
 const sampleGap: ResearchGap = {
   id: 1,
@@ -15,19 +24,19 @@ const sampleGap: ResearchGap = {
 
 describe("GapCard", () => {
   it("renders gap title, description, and type badge", () => {
-    render(<GapCard gap={sampleGap} />);
+    renderWithRouter(<GapCard gap={sampleGap} />);
     expect(screen.getByText("Lack of cross-lingual transfer methods")).toBeInTheDocument();
     expect(screen.getByText(/No methods exist/)).toBeInTheDocument();
     expect(screen.getByText("methodological")).toBeInTheDocument();
   });
 
   it("shows confidence percentage", () => {
-    render(<GapCard gap={sampleGap} />);
+    renderWithRouter(<GapCard gap={sampleGap} />);
     expect(screen.getByText("75%")).toBeInTheDocument();
   });
 
   it("renders confidence bar with correct width", () => {
-    const { container } = render(<GapCard gap={sampleGap} />);
+    const { container } = renderWithRouter(<GapCard gap={sampleGap} />);
     const bar = container.querySelector('[style*="width"]');
     expect(bar).toBeTruthy();
     expect(bar?.getAttribute("style")).toContain("75%");

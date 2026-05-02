@@ -6,6 +6,7 @@
 import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { MemoryRouter } from "react-router-dom";
 
 import { IdeaCard } from "@/components/ideas/idea-card";
 import { GapCard } from "@/components/gaps/gap-card";
@@ -130,18 +131,18 @@ describe("IdeaCard proposal indicator", () => {
 
 describe("GapCard idea count badge", () => {
   it("shows '3 ideas' badge when idea_count > 0", () => {
-    render(<GapCard gap={baseGap} />);
+    render(<MemoryRouter><GapCard gap={baseGap} /></MemoryRouter>);
     expect(screen.getByText(/3 ideas/)).toBeInTheDocument();
   });
 
   it("does not show badge when idea_count is 0", () => {
-    render(<GapCard gap={gapNoIdeas} />);
+    render(<MemoryRouter><GapCard gap={gapNoIdeas} /></MemoryRouter>);
     expect(screen.queryByText(/idea/)).not.toBeInTheDocument();
   });
 
   it("shows singular 'idea' when idea_count is 1", () => {
     const singleGap = { ...baseGap, idea_count: 1 };
-    render(<GapCard gap={singleGap} />);
+    render(<MemoryRouter><GapCard gap={singleGap} /></MemoryRouter>);
     expect(screen.getByText(/1 idea$/)).toBeInTheDocument();
     expect(screen.queryByText(/1 ideas/)).not.toBeInTheDocument();
   });
@@ -152,7 +153,7 @@ describe("GapCard idea count badge", () => {
 describe("GapCard badge click navigation", () => {
   it("calls onIdeaCountClick when idea count badge is clicked", async () => {
     const handleClick = vi.fn();
-    render(<GapCard gap={baseGap} onIdeaCountClick={handleClick} />);
+    render(<MemoryRouter><GapCard gap={baseGap} onIdeaCountClick={handleClick} /></MemoryRouter>);
 
     const badge = screen.getByLabelText(/3 ideas generated/);
     expect(badge).toBeInTheDocument();
@@ -163,7 +164,7 @@ describe("GapCard badge click navigation", () => {
   });
 
   it("does not crash when onIdeaCountClick is not provided", async () => {
-    render(<GapCard gap={baseGap} />);
+    render(<MemoryRouter><GapCard gap={baseGap} /></MemoryRouter>);
     const badge = screen.getByLabelText(/3 ideas generated/);
     // Click should not throw
     await userEvent.click(badge);
