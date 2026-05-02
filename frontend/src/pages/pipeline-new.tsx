@@ -4,13 +4,13 @@ import { RunConfigForm } from "@/components/pipeline/run-config-form";
 import { AutonomousForm } from "@/components/pipeline/autonomous-form";
 import { StageProgress } from "@/components/pipeline/stage-progress";
 import { usePipelineProgress } from "@/hooks/usePipelineProgress";
-import { triggerRun, getRunIdeas } from "@/api/pipeline";
+import { triggerRun, getRunIdeas, cancelRun } from "@/api/pipeline";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import type { PipelineRunRequest, IdeaSummary } from "@/api/types";
-import { CheckCircle2, Lightbulb, AlertCircle } from "lucide-react";
+import { CheckCircle2, Lightbulb, AlertCircle, XCircle } from "lucide-react";
 
 export default function PipelineNew() {
   const navigate = useNavigate();
@@ -21,6 +21,16 @@ export default function PipelineNew() {
   const [ideasError, setIdeasError] = useState<string | null>(null);
   const [ideasLoading, setIdeasLoading] = useState(false);
   const { stages, isComplete, isConnected } = usePipelineProgress(runId);
+
+  // ── Cancel run state ──────────────────────────────────────────
+  const [isCancelling, setIsCancelling] = useState(false);
+  const [isCancelled, setIsCancelled] = useState(false);
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+  const [cancelError, setCancelError] = useState<string | null>(null);
+
+  const isRunning = !!runId && !isComplete && isConnected && !isCancelled;
+  const completedStages = stages.filter((s) => s.status === "completed");
+  const hasPartialResults = isCancelled && completedStages.length > 0;
 
   async function handleStart(config: PipelineRunRequest) {
     setIsLoading(true);
@@ -41,15 +51,10 @@ export default function PipelineNew() {
   useEffect(() => {
     if (!isComplete) return;
 
-    // runId is the string run identifier (e.g. run_20260502_143000).
-    // We need the numeric DB id to fetch ideas. Parse it from the SSE stream
-    // or fall back to listing runs and finding the latest.
     async function fetchIdeas() {
       setIdeasLoading(true);
       setIdeasError(null);
       try {
-        // The run_id string from triggerRun is not the DB id.
-        // We fetch ideas by listing recent runs and finding our match.
         const { listRuns } = await import("@/api/pipeline");
         const runsData = await listRuns({ limit: 1 });
         if (runsData.runs.length > 0) {
@@ -67,11 +72,39 @@ export default function PipelineNew() {
     fetchIdeas();
   }, [isComplete]);
 
+  // ── Cancel handlers (AR-01: explicit user confirmation) ───────
+  function handleCancelClick() {
+    setCancelError(null);
+    setShowCancelConfirm(true);
+  }
+
+  function handleCancelDismiss() {
+    setShowCancelConfirm(false);
+  }
+
+  async function handleCancelConfirm() {
+    if (!runId) return;
+    setIsCancelling(true);
+    setCancelError(null);
+    try {
+      await cancelRun(runId);
+      setIsCancelled(true);
+      setShowCancelConfirm(false);
+    } catch (err) {
+      setCancelError(err instanceof Error ? err.message : "Failed to cancel run");
+    } finally {
+      setIsCancelling(false);
+    }
+  }
+
   function handleReset() {
     setRunId(null);
     setIdeas([]);
     setIdeasError(null);
     setError(null);
+    setIsCancelled(false);
+    setCancelError(null);
+    setShowCancelConfirm(false);
   }
 
   return (
@@ -109,12 +142,27 @@ export default function PipelineNew() {
               <CardTitle className="text-lg">Pipeline Progress</CardTitle>
               <div className="flex items-center gap-2">
                 <Badge variant="outline">Run #{runId}</Badge>
-                {isComplete ? (
+                {isCancelled ? (
+                  <Badge className="bg-red-100 text-red-800" data-testid="cancelled-badge">
+                    Cancelled
+                  </Badge>
+                ) : isComplete ? (
                   <Badge className="bg-green-100 text-green-800">Complete</Badge>
                 ) : isConnected ? (
                   <Badge className="bg-blue-100 text-blue-800">Live</Badge>
                 ) : (
                   <Badge variant="secondary">Connecting...</Badge>
+                )}
+                {isRunning && (
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={handleCancelClick}
+                    disabled={isCancelling}
+                    data-testid="cancel-run-btn"
+                  >
+                    {isCancelling ? "Cancelling…" : "Cancel Run"}
+                  </Button>
                 )}
               </div>
             </div>
@@ -122,6 +170,51 @@ export default function PipelineNew() {
           <CardContent>
             <StageProgress stages={stages} currentStage={null} />
           </CardContent>
+
+          {/* Cancel confirmation dialog (AR-01) */}
+          {showCancelConfirm && (
+            <div
+              className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+              data-testid="cancel-confirm-dialog"
+            >
+              <Card className="w-full max-w-md mx-4">
+                <CardHeader>
+                  <div className="flex items-center gap-2">
+                    <AlertCircle className="h-5 w-5 text-destructive" />
+                    <CardTitle className="text-lg">Cancel Pipeline Run?</CardTitle>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <p className="text-sm text-muted-foreground">
+                    This will abort the running pipeline. Any stages that have already
+                    completed will be preserved, but no further stages will execute.
+                  </p>
+                  {cancelError && (
+                    <p className="text-sm text-destructive" data-testid="cancel-error">
+                      {cancelError}
+                    </p>
+                  )}
+                  <div className="flex justify-end gap-2">
+                    <Button
+                      variant="outline"
+                      onClick={handleCancelDismiss}
+                      data-testid="cancel-dismiss-btn"
+                    >
+                      No, Continue
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      onClick={handleCancelConfirm}
+                      disabled={isCancelling}
+                      data-testid="cancel-confirm-btn"
+                    >
+                      {isCancelling ? "Cancelling…" : "Yes, Cancel Run"}
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
 
           {isComplete && (
             <CardContent className="border-t pt-4">
@@ -131,17 +224,40 @@ export default function PipelineNew() {
               </div>
             </CardContent>
           )}
+
+          {isCancelled && (
+            <CardContent className="border-t pt-4" data-testid="cancelled-partial-results">
+              <div className="flex items-center gap-2 text-red-700">
+                <XCircle className="h-5 w-5" />
+                <span className="font-medium">Pipeline run was cancelled</span>
+              </div>
+              {hasPartialResults && (
+                <p className="text-sm text-muted-foreground mt-1">
+                  {completedStages.length} of {stages.length} stage{completedStages.length !== 1 ? "s" : ""} completed before cancellation.
+                </p>
+              )}
+            </CardContent>
+          )}
         </Card>
       )}
 
-      {isComplete && (
+      {(isComplete || isCancelled) && (
         <div className="space-y-4" data-testid="pipeline-results">
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <CheckCircle2 className="h-5 w-5 text-green-600" />
-                  <CardTitle className="text-lg">Pipeline Complete</CardTitle>
+                  {isComplete ? (
+                    <>
+                      <CheckCircle2 className="h-5 w-5 text-green-600" />
+                      <CardTitle className="text-lg">Pipeline Complete</CardTitle>
+                    </>
+                  ) : (
+                    <>
+                      <XCircle className="h-5 w-5 text-red-600" />
+                      <CardTitle className="text-lg">Pipeline Cancelled</CardTitle>
+                    </>
+                  )}
                 </div>
                 <div className="flex items-center gap-3 text-sm text-muted-foreground">
                   {ideas.length > 0 && (
@@ -166,7 +282,11 @@ export default function PipelineNew() {
               )}
 
               {!ideasLoading && !ideasError && ideas.length === 0 && (
-                <p className="text-sm text-muted-foreground">No ideas generated in this run.</p>
+                <p className="text-sm text-muted-foreground">
+                  {isCancelled
+                    ? "No ideas were generated before cancellation."
+                    : "No ideas generated in this run."}
+                </p>
               )}
 
               {!ideasLoading && ideas.length > 0 && (

@@ -54,11 +54,15 @@ vi.mock("@/hooks/usePipelineProgress", () => ({
 
 vi.mock("@/api/pipeline", () => ({
   triggerRun: vi.fn(),
+  cancelRun: vi.fn(),
+  getRunIdeas: vi.fn(),
+  listRuns: vi.fn(),
 }));
 
-import { triggerRun } from "@/api/pipeline";
+import { triggerRun, cancelRun } from "@/api/pipeline";
 
 const mockedTriggerRun = vi.mocked(triggerRun);
+const mockedCancelRun = vi.mocked(cancelRun);
 
 function renderPipelineNew() {
   return render(
@@ -90,7 +94,6 @@ describe("PipelineNew", () => {
     expect(screen.getByTestId("run-config-form")).toBeInTheDocument();
     expect(screen.getByText("Single Run")).toBeInTheDocument();
     expect(screen.getByText("Autonomous Cycle")).toBeInTheDocument();
-    // Autonomous tab content is hidden by Radix until clicked — only tab trigger is visible
   });
 
   // ── TEST-11-01-08: Handles SSE connection error ─────────────────
@@ -105,6 +108,109 @@ describe("PipelineNew", () => {
 
     await waitFor(() => {
       expect(screen.getByText("Connection refused")).toBeInTheDocument();
+    });
+  });
+});
+
+// ── BATCH-15 / TASK-01: Cancel Pipeline UI ──────────────────────
+describe("PipelineNew – Cancel Run (BATCH-15)", () => {
+  async function startRunningPipeline() {
+    const user = userEvent.setup();
+    mockedTriggerRun.mockResolvedValue({
+      run_id: "run_20260502_test",
+      status: "running",
+    });
+
+    renderPipelineNew();
+
+    const submitBtn = screen.getByTestId("submit-btn");
+    await user.click(submitBtn);
+
+    // Wait for the pipeline to be in "running" state
+    await waitFor(() => {
+      expect(screen.getByText("Live")).toBeInTheDocument();
+    });
+  }
+
+  // ── TEST-15-01-01: Cancel button renders during pipeline execution ──
+  it("TEST-15-01-01: cancel button renders during pipeline execution", async () => {
+    await startRunningPipeline();
+
+    expect(screen.getByTestId("cancel-run-btn")).toBeInTheDocument();
+    expect(screen.getByTestId("cancel-run-btn")).toHaveTextContent("Cancel Run");
+  });
+
+  // ── TEST-15-01-02: Cancel click shows confirmation dialog ──────
+  it("TEST-15-01-02: cancel click shows confirmation dialog", async () => {
+    await startRunningPipeline();
+
+    const user = userEvent.setup();
+    const cancelBtn = screen.getByTestId("cancel-run-btn");
+    await user.click(cancelBtn);
+
+    expect(screen.getByTestId("cancel-confirm-dialog")).toBeInTheDocument();
+    expect(screen.getByText("Cancel Pipeline Run?")).toBeInTheDocument();
+    expect(screen.getByTestId("cancel-confirm-btn")).toBeInTheDocument();
+    expect(screen.getByTestId("cancel-dismiss-btn")).toBeInTheDocument();
+  });
+
+  // ── TEST-15-01-03: Cancel confirm calls cancelRun() ────────────
+  it("TEST-15-01-03: cancel confirm calls cancelRun()", async () => {
+    mockedCancelRun.mockResolvedValue({
+      status: "cancelled",
+      run_id: "run_20260502_test",
+    });
+
+    await startRunningPipeline();
+
+    const user = userEvent.setup();
+    // Open confirmation dialog
+    await user.click(screen.getByTestId("cancel-run-btn"));
+    // Confirm cancellation
+    await user.click(screen.getByTestId("cancel-confirm-btn"));
+
+    await waitFor(() => {
+      expect(mockedCancelRun).toHaveBeenCalledWith("run_20260502_test");
+    });
+  });
+
+  // ── TEST-15-01-04: Cancelled state shows "Cancelled" badge ─────
+  it("TEST-15-01-04: cancelled state shows Cancelled badge", async () => {
+    mockedCancelRun.mockResolvedValue({
+      status: "cancelled",
+      run_id: "run_20260502_test",
+    });
+
+    await startRunningPipeline();
+
+    const user = userEvent.setup();
+    await user.click(screen.getByTestId("cancel-run-btn"));
+    await user.click(screen.getByTestId("cancel-confirm-btn"));
+
+    await waitFor(() => {
+      expect(screen.getByTestId("cancelled-badge")).toBeInTheDocument();
+      expect(screen.getByTestId("cancelled-badge")).toHaveTextContent("Cancelled");
+    });
+  });
+
+  // ── TEST-15-01-05: Cancelled state shows partial results ───────
+  it("TEST-15-01-05: cancelled state shows partial results if available", async () => {
+    mockedCancelRun.mockResolvedValue({
+      status: "cancelled",
+      run_id: "run_20260502_test",
+    });
+
+    await startRunningPipeline();
+
+    const user = userEvent.setup();
+    await user.click(screen.getByTestId("cancel-run-btn"));
+    await user.click(screen.getByTestId("cancel-confirm-btn"));
+
+    await waitFor(() => {
+      const partial = screen.getByTestId("cancelled-partial-results");
+      expect(partial).toBeInTheDocument();
+      // The mock has 1 completed stage ("literature_search") and 2 total stages
+      expect(partial.textContent).toContain("1 of 2 stage completed before cancellation");
     });
   });
 });
