@@ -1,10 +1,13 @@
 import { useState, useEffect, useCallback } from "react";
 import { useSettings } from "@/contexts/settings-context";
+import { useAuth } from "@/contexts/auth-context";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { testConnection, getDetailedStatus, type DetailedStatus } from "@/api/client";
 import { getEvolutionStatus, type EvolutionStatus } from "@/api/autonomous";
+import { listUsers, type AuthUser } from "@/api/auth";
+import { RoleBadge } from "@/components/auth/role-badge";
 
 type ConnectionState = "idle" | "testing" | "connected" | "error";
 
@@ -20,6 +23,21 @@ export default function Settings() {
 
   // Evolution status (READ-ONLY per HB-01)
   const [evolutionStatus, setEvolutionStatus] = useState<EvolutionStatus | null>(null);
+
+  // User management (admin only)
+  const { user: currentUser } = useAuth();
+  const [users, setUsers] = useState<AuthUser[]>([]);
+
+  // Fetch users on mount if admin
+  useEffect(() => {
+    if (currentUser?.role === "admin") {
+      listUsers()
+        .then((data) => setUsers(data))
+        .catch(() => {
+          // Non-critical
+        });
+    }
+  }, [currentUser?.role]);
 
   // Default domain
   const [defaultDomain, setDefaultDomain] = useState(() => {
@@ -231,6 +249,45 @@ export default function Settings() {
           </div>
         </CardContent>
       </Card>
+
+      {/* User Management (admin only) */}
+      {currentUser?.role === "admin" && (
+        <Card data-testid="user-management-section">
+          <CardHeader>
+            <CardTitle className="text-lg">User Management</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {users.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No users found.</p>
+              ) : (
+                <div className="rounded-md border">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b bg-muted/50">
+                        <th className="px-3 py-2 text-left font-medium">Username</th>
+                        <th className="px-3 py-2 text-left font-medium">Email</th>
+                        <th className="px-3 py-2 text-left font-medium">Role</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {users.map((u) => (
+                        <tr key={u.id} className="border-b last:border-0">
+                          <td className="px-3 py-2">{u.username}</td>
+                          <td className="px-3 py-2">{u.email}</td>
+                          <td className="px-3 py-2">
+                            <RoleBadge role={u.role} />
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Appearance */}
       <Card>
