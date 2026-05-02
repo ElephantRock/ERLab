@@ -30,11 +30,11 @@ function renderRoute(path: string) {
 
 describe("BATCH-16/TASK-01: Phase 2 Navigation", () => {
   // ── TEST-16-01-01: Sidebar renders all 12 nav items ─────────────
-  it("TEST-16-01-01: sidebar renders all 14 nav items (6 original + 6 Phase 2 + Knowledge Graph + Autonomous)", () => {
+  it("TEST-16-01-01: sidebar renders all 15 nav items", () => {
     renderSidebar();
 
     const links = screen.getAllByRole("link");
-    expect(links).toHaveLength(14);
+    expect(links).toHaveLength(15);
 
     const labels = links.map((l) => l.textContent?.trim());
     expect(labels).toEqual([
@@ -52,6 +52,7 @@ describe("BATCH-16/TASK-01: Phase 2 Navigation", () => {
       "Literature",
       "Graph",
       "Autonomous",
+      "Plugins",
     ]);
   });
 
