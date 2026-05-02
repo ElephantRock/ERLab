@@ -1,12 +1,13 @@
-import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { searchKnowledge } from "@/api/knowledge";
+import { useState, useCallback } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { searchKnowledge, getKnowledgeStats } from "@/api/knowledge";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Search, Database, AlertCircle } from "lucide-react";
+import { Search, Database, AlertCircle, FileText, Layers } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { UploadZone } from "@/components/knowledge/upload-zone";
 
 function distanceColor(distance: number): string {
   if (distance < 0.3) return "text-green-600";
@@ -23,12 +24,22 @@ function distanceLabel(distance: number): string {
 export default function KnowledgeSearch() {
   const [query, setQuery] = useState("");
   const [submittedQuery, setSubmittedQuery] = useState<string | null>(null);
+  const queryClient = useQueryClient();
 
   const { data, isLoading, isError } = useQuery({
     queryKey: ["knowledge-search", submittedQuery],
     queryFn: () => searchKnowledge(submittedQuery!),
     enabled: !!submittedQuery,
   });
+
+  const { data: stats } = useQuery({
+    queryKey: ["knowledge-stats"],
+    queryFn: getKnowledgeStats,
+  });
+
+  const handleUploadSuccess = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: ["knowledge-stats"] });
+  }, [queryClient]);
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -44,6 +55,32 @@ export default function KnowledgeSearch() {
         <h1 className="text-2xl font-bold tracking-tight">Knowledge Base</h1>
         <p className="text-muted-foreground">Search the indexed literature and papers.</p>
       </div>
+
+      {/* Stats Banner */}
+      {stats && (
+        <div data-testid="stats-banner" className="flex gap-4">
+          <Card className="flex-1">
+            <CardContent className="p-3 flex items-center gap-3">
+              <FileText className="h-5 w-5 text-muted-foreground" />
+              <div>
+                <p className="text-xs text-muted-foreground">Documents</p>
+                <p className="text-lg font-semibold" data-testid="stat-documents">{stats.total_documents}</p>
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="flex-1">
+            <CardContent className="p-3 flex items-center gap-3">
+              <Layers className="h-5 w-5 text-muted-foreground" />
+              <div>
+                <p className="text-xs text-muted-foreground">Chunks</p>
+                <p className="text-lg font-semibold" data-testid="stat-chunks">{stats.total_chunks}</p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      <UploadZone onUploadSuccess={handleUploadSuccess} />
 
       <form onSubmit={handleSubmit} className="relative">
         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />

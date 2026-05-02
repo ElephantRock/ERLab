@@ -136,6 +136,20 @@ export interface KnowledgeSearchResponse {
   results: KnowledgeSearchResult[];
 }
 
+export interface KnowledgeStats {
+  chroma_persist_dir: string;
+  embedding_provider: string;
+  embedding_model: string;
+  total_documents: number;
+  total_chunks: number;
+}
+
+export interface IngestResponse {
+  status: string;
+  filename: string;
+  chunks: number;
+}
+
 // --- Sessions ---
 
 export interface SessionGroup {
