@@ -13,6 +13,7 @@ import {
   Layers,
   BookMarked,
   BrainCircuit,
+  Cpu,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -36,6 +37,7 @@ const NAV_ITEMS: NavItem[] = [
   { to: "/sessions", icon: Layers, label: "Sessions" },
   { to: "/literature", icon: BookMarked, label: "Literature" },
   { to: "/knowledge-graph", icon: BrainCircuit, label: "Graph" },
+  { to: "/autonomous", icon: Cpu, label: "Autonomous" },
 ];
 
 export function Sidebar({ collapsed }: { collapsed: boolean }) {

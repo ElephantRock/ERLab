@@ -16,6 +16,7 @@ import GovernancePage from "./pages/governance";
 import TracesPage from "./pages/traces";
 import SessionsPage from "./pages/sessions";
 import KnowledgeGraphPage from "./pages/knowledge-graph";
+import AutonomousPage from "./pages/autonomous";
 
 export default function App() {
   return (
@@ -36,6 +37,7 @@ export default function App() {
         <Route path="/sessions" element={<SessionsPage />} />
         <Route path="/literature" element={<LiteraturePage />} />
         <Route path="/knowledge-graph" element={<KnowledgeGraphPage />} />
+        <Route path="/autonomous" element={<AutonomousPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </AppShell>
