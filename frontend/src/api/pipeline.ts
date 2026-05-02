@@ -6,6 +6,7 @@ import type {
   TriggerRunResponse,
   AutonomousCycleRequest,
   AutonomousCycleResponse,
+  IdeaSummary,
 } from "./types";
 
 export function triggerRun(req: PipelineRunRequest): Promise<TriggerRunResponse> {
@@ -32,6 +33,10 @@ export function getRunDetail(id: number): Promise<PipelineRunDetail> {
 
 export function cancelRun(runId: string): Promise<{ status: string; run_id: string }> {
   return apiFetch(`/pipeline/runs/${runId}`, { method: "DELETE" });
+}
+
+export function getRunIdeas(runId: number): Promise<{ ideas: IdeaSummary[]; total: number }> {
+  return apiFetch(`/pipeline/runs/${runId}/ideas`);
 }
 
 export function triggerAutonomous(req: AutonomousCycleRequest): Promise<AutonomousCycleResponse> {
