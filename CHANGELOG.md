@@ -6,6 +6,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added — AIV Batch Execution
+- **BATCH-13**: Pipeline form completion — all backend options exposed (generation_rounds, export_format, novelty/feasibility/synthesis toggles); settings enhanced with connectivity check, version display, default domain
 - **BATCH-12**: Pipeline results flow — inline results after completion, run detail page at `/runs/:id`, clickable dashboard RunCards, new `GET /runs/{id}/ideas` endpoint
 
 ## [0.1.0] - 2026-05-01
