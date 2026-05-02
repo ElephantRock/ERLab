@@ -6,6 +6,12 @@ import {
   GitBranch,
   Search,
   Settings,
+  DollarSign,
+  Brain,
+  Shield,
+  Activity,
+  Layers,
+  BookMarked,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -22,6 +28,12 @@ const NAV_ITEMS: NavItem[] = [
   { to: "/gaps", icon: GitBranch, label: "Gaps" },
   { to: "/knowledge", icon: Search, label: "Knowledge" },
   { to: "/settings", icon: Settings, label: "Settings" },
+  { to: "/costs", icon: DollarSign, label: "Costs" },
+  { to: "/memory", icon: Brain, label: "Memory" },
+  { to: "/governance", icon: Shield, label: "Governance" },
+  { to: "/traces", icon: Activity, label: "Traces" },
+  { to: "/sessions", icon: Layers, label: "Sessions" },
+  { to: "/literature", icon: BookMarked, label: "Literature" },
 ];
 
 export function Sidebar({ collapsed }: { collapsed: boolean }) {

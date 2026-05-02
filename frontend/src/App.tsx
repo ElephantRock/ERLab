@@ -8,6 +8,7 @@ import IdeaDetailPage from "./pages/idea-detail";
 import GapsExplorerPage from "./pages/gaps-explorer";
 import KnowledgeSearchPage from "./pages/knowledge-search";
 import SettingsPage from "./pages/settings";
+import Placeholder from "./pages/placeholder";
 
 export default function App() {
   return (
@@ -21,6 +22,12 @@ export default function App() {
         <Route path="/gaps" element={<GapsExplorerPage />} />
         <Route path="/knowledge" element={<KnowledgeSearchPage />} />
         <Route path="/settings" element={<SettingsPage />} />
+        <Route path="/costs" element={<Placeholder title="Costs" />} />
+        <Route path="/memory" element={<Placeholder title="Memory" />} />
+        <Route path="/governance" element={<Placeholder title="Governance" />} />
+        <Route path="/traces" element={<Placeholder title="Traces" />} />
+        <Route path="/sessions" element={<Placeholder title="Sessions" />} />
+        <Route path="/literature" element={<Placeholder title="Literature" />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </AppShell>
