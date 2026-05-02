@@ -141,6 +141,7 @@ export default function Settings() {
             <span
               className={`inline-block h-3 w-3 rounded-full ${dotColor}`}
               data-testid="connection-dot"
+              role="status"
               aria-label={
                 connState === "connected"
                   ? "Connected"

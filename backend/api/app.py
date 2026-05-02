@@ -233,8 +233,15 @@ async def startup():
 
     from backend.config import get_settings
     from backend.logging_config import configure_logging
+    from backend.monitoring.sentry import init_sentry
 
-    configure_logging(get_settings().debug)
+    settings = get_settings()
+    configure_logging(settings.debug)
+    init_sentry(
+        dsn=settings.sentry_dsn,
+        environment=settings.sentry_environment,
+        traces_sample_rate=settings.sentry_traces_sample_rate,
+    )
 
     _get_limiter()
 

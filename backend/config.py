@@ -360,6 +360,11 @@ class Settings(BaseSettings):
     webhook_url: str | None = None
     webhook_secret: str | None = None
 
+    # Sentry Error Monitoring (BATCH-52)
+    sentry_dsn: str = ""
+    sentry_environment: str = "production"
+    sentry_traces_sample_rate: float = 0.1
+
     # WebSocket (BATCH-50)
     websocket_enabled: bool = True
 

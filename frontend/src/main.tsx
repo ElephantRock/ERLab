@@ -6,9 +6,12 @@ import { SettingsProvider } from "./contexts/settings-context";
 import { AuthProvider } from "./contexts/auth-context";
 import { Toaster } from "sonner";
 import { ErrorBoundary } from "./components/error-boundary";
+import { initSentry } from "./lib/sentry";
 import App from "./App";
 import "./i18n/config";
 import "./globals.css";
+
+initSentry();
 
 const queryClient = new QueryClient({
   defaultOptions: {
