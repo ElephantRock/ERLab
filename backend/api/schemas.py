@@ -39,3 +39,21 @@ class SessionCreateRequest(BaseModel):
     max_duration_hours: float = Field(default=24.0, ge=0.1)
     tags: list[str] = Field(default_factory=list)
     metadata: dict = Field(default_factory=dict)
+
+
+class ExportPdfRequest(BaseModel):
+    """Request to export a single idea as PDF."""
+    idea_id: int = Field(ge=1)
+
+
+class BulkExportRequest(BaseModel):
+    """Request to bulk export ideas as ZIP."""
+    idea_ids: list[int] = Field(min_length=1, max_length=500)
+    format: str = Field(default="markdown", pattern="^(pdf|markdown)$")
+
+
+class PluginInstallRequest(BaseModel):
+    """Request to install/register a plugin."""
+    name: str = Field(min_length=1, max_length=100)
+    version: str = Field(default="0.1.0", max_length=20)
+    description: str = Field(default="", max_length=500)
