@@ -42,6 +42,36 @@ export async function apiFetch<T>(path: string, options?: RequestInit): Promise<
   return res.json();
 }
 
+/** Test backend connectivity via /health endpoint. */
+export async function testConnection(baseUrl?: string): Promise<{ ok: true; version: string } | { ok: false; error: string }> {
+  try {
+    const base = baseUrl ?? getBaseUrl();
+    const res = await fetch(`${base}/health`, {
+      method: "GET",
+      headers: { "Content-Type": "application/json" },
+    });
+    if (!res.ok) {
+      return { ok: false, error: `HTTP ${res.status}` };
+    }
+    const data = await res.json();
+    return { ok: true, version: data.version ?? "unknown" };
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : String(err) };
+  }
+}
+
+/** Detailed status response from /api/v1/status/detailed. */
+export interface DetailedStatus {
+  version: string;
+  provider: string;
+  db_status: string;
+}
+
+/** Fetch detailed status from the backend. */
+export async function getDetailedStatus(): Promise<DetailedStatus> {
+  return apiFetch<DetailedStatus>("/status/detailed");
+}
+
 export function sseUrl(path: string): string {
   const base = getBaseUrl() || window.location.origin;
   const key = getApiKey();

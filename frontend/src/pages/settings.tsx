@@ -1,10 +1,68 @@
+import { useState, useEffect, useCallback } from "react";
 import { useSettings } from "@/contexts/settings-context";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { testConnection, getDetailedStatus, type DetailedStatus } from "@/api/client";
+
+type ConnectionState = "idle" | "testing" | "connected" | "error";
 
 export default function Settings() {
   const { apiUrl, apiKey, theme, setApiUrl, setApiKey, setTheme } = useSettings();
+
+  // Connection test state
+  const [connState, setConnState] = useState<ConnectionState>("idle");
+  const [connError, setConnError] = useState<string>("");
+
+  // Version / detailed status
+  const [detailedStatus, setDetailedStatus] = useState<DetailedStatus | null>(null);
+
+  // Default domain
+  const [defaultDomain, setDefaultDomain] = useState(() => {
+    return localStorage.getItem("erock_default_domain") || "";
+  });
+
+  // Fetch version on mount
+  useEffect(() => {
+    let cancelled = false;
+    getDetailedStatus()
+      .then((data) => {
+        if (!cancelled) setDetailedStatus(data);
+      })
+      .catch(() => {
+        // Version unavailable is non-fatal; just leave it null
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const handleTestConnection = useCallback(async () => {
+    setConnState("testing");
+    setConnError("");
+    const result = await testConnection(apiUrl || undefined);
+    if (result.ok) {
+      setConnState("connected");
+    } else {
+      setConnState("error");
+      setConnError(result.error);
+    }
+  }, [apiUrl]);
+
+  const handleDefaultDomainChange = useCallback((value: string) => {
+    setDefaultDomain(value);
+    localStorage.setItem("erock_default_domain", value);
+  }, []);
+
+  /** Status dot color based on connection state. */
+  const dotColor =
+    connState === "connected"
+      ? "bg-green-500"
+      : connState === "error"
+        ? "bg-red-500"
+        : connState === "testing"
+          ? "bg-yellow-500 animate-pulse"
+          : "bg-gray-400";
 
   return (
     <div className="space-y-6">
@@ -13,6 +71,7 @@ export default function Settings() {
         <p className="text-muted-foreground">Configure your API connection and preferences.</p>
       </div>
 
+      {/* API Connection */}
       <Card>
         <CardHeader>
           <CardTitle className="text-lg">API Connection</CardTitle>
@@ -39,9 +98,87 @@ export default function Settings() {
               onChange={(e) => setApiKey(e.target.value)}
             />
           </div>
+
+          {/* Test Connection */}
+          <div className="flex items-center gap-3">
+            <Button
+              onClick={handleTestConnection}
+              disabled={connState === "testing"}
+              variant="outline"
+              data-testid="test-connection-btn"
+            >
+              {connState === "testing" ? "Testing..." : "Test Connection"}
+            </Button>
+            <span
+              className={`inline-block h-3 w-3 rounded-full ${dotColor}`}
+              data-testid="connection-dot"
+              aria-label={
+                connState === "connected"
+                  ? "Connected"
+                  : connState === "error"
+                    ? "Connection error"
+                    : "Not tested"
+              }
+            />
+            {connState === "error" && (
+              <span className="text-sm text-red-500" data-testid="connection-error">
+                {connError}
+              </span>
+            )}
+            {connState === "connected" && (
+              <span className="text-sm text-green-600" data-testid="connection-success">
+                Connected
+              </span>
+            )}
+          </div>
         </CardContent>
       </Card>
 
+      {/* Backend Info */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Backend Info</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-2 text-sm">
+            <div className="flex items-center gap-2">
+              <span className="font-medium">Version:</span>
+              <span data-testid="backend-version">
+                {detailedStatus?.version ?? "—"}
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="font-medium">Provider:</span>
+              <span data-testid="backend-provider">
+                {detailedStatus?.provider ?? "—"}
+              </span>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Default Domain */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Defaults</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Default Research Domain</label>
+            <Input
+              placeholder="e.g., AI/NLP, machine learning"
+              value={defaultDomain}
+              onChange={(e) => handleDefaultDomainChange(e.target.value)}
+              data-testid="default-domain-input"
+            />
+            <p className="text-xs text-muted-foreground">
+              Pre-fills the domain field in new pipeline runs. Saved in your browser.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Appearance */}
       <Card>
         <CardHeader>
           <CardTitle className="text-lg">Appearance</CardTitle>

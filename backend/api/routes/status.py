@@ -3,6 +3,8 @@
 from fastapi import APIRouter
 
 from backend.config import get_settings
+from backend.db.database import _get_engine
+from sqlalchemy import text
 
 router = APIRouter()
 
@@ -38,4 +40,33 @@ async def platform_status():
             "ideas_per_round": settings.ideas_per_round,
             "novelty_top_k": settings.novelty_top_k,
         },
+    }
+
+
+@router.get(
+    "/detailed",
+    summary="Detailed platform status",
+    description="Get detailed status including version, default provider, and database connectivity.",
+)
+async def detailed_status():
+    """Get detailed platform status with version, provider, and database health.
+
+    Returns:
+        {"version": "...", "provider": "...", "db_status": "ok"|"error"}
+    """
+    settings = get_settings()
+
+    # Check database connectivity
+    db_status = "ok"
+    try:
+        engine = _get_engine()
+        with engine.connect() as conn:
+            conn.execute(text("SELECT 1"))
+    except Exception:
+        db_status = "error"
+
+    return {
+        "version": "0.1.0",
+        "provider": settings.default_provider,
+        "db_status": db_status,
     }
