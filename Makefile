@@ -1,4 +1,4 @@
-.PHONY: test test-all lint format format-check check bench clean
+.PHONY: test test-all lint format format-check check bench clean db-migrate
 
 test:
 	python -m pytest -p no:asyncio -m "not slow" --cov=backend --cov-report=term-missing
@@ -19,6 +19,9 @@ check: lint format-check test
 
 bench:
 	python -m pytest -p no:asyncio -m slow backend/tests/test_benchmarks/ --benchmark-only
+
+db-migrate:
+	python -c "from alembic.config import Config; from alembic import command; cfg = Config('alembic.ini'); command.upgrade(cfg, 'head')"
 
 clean:
 	find . -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true
