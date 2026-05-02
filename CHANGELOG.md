@@ -6,7 +6,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added — AIV Batch Execution
-- **BATCH-11**: Frontend test infrastructure — 29 new tests across 11 files covering all 7 pages + charts + markdown-renderer; vitest ≥70% coverage threshold enforced
+- **BATCH-12**: Pipeline results flow — inline results after completion, run detail page at `/runs/:id`, clickable dashboard RunCards, new `GET /runs/{id}/ideas` endpoint
 
 ## [0.1.0] - 2026-05-01
 
