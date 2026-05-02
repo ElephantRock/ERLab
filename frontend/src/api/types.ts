@@ -117,6 +117,9 @@ export interface ResearchGap {
   idea_count: number;
   truth?: { frequency: number; confidence: number; evidence_count: number };
   related_clusters?: number[] | null;
+  status?: string;
+  user_rating?: number | null;
+  user_notes?: string | null;
 }
 
 export interface GapListResponse {

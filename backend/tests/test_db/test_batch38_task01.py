@@ -86,9 +86,9 @@ def test_38_01_02_downgrade_removes_all_five_columns(tmp_path: Path):
     with _patch_settings(db_url):
         command.upgrade(cfg, "head")
 
-    # Then downgrade by 1 (back to initial)
+    # Then downgrade by 2 (back to initial, past both 003 and 002)
     with _patch_settings(db_url):
-        command.downgrade(cfg, "-1")
+        command.downgrade(cfg, "-2")
 
     engine = sqlalchemy.create_engine(db_url)
     insp = inspect(engine)

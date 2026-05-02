@@ -1,10 +1,11 @@
 import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { getGap, listGaps } from "@/api/gaps";
+import { getGap, listGaps, updateGapStatus } from "@/api/gaps";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ArrowLeft, BookOpen, GitBranch, Lightbulb, BarChart3 } from "lucide-react";
+import { GapFeedbackForm } from "@/components/gaps/gap-feedback-form";
 import type { ResearchGap } from "@/api/types";
 
 /** Gap type badge color mapping. */
@@ -102,6 +103,19 @@ export default function GapDetailPage() {
               {Math.round(gap.confidence * 100)}% confidence
             </span>
           </div>
+          {/* Status dropdown (BATCH-41) */}
+          <select
+            value={gap.status || "identified"}
+            onChange={async (e) => {
+              try { await updateGapStatus(gapId, e.target.value); } catch {} 
+            }}
+            className="px-2 py-0.5 text-xs border rounded-md bg-background"
+            aria-label="Gap lifecycle status"
+          >
+            <option value="identified">Identified</option>
+            <option value="investigating">Investigating</option>
+            <option value="addressed">Addressed</option>
+          </select>
         </div>
       </div>
 
@@ -188,6 +202,15 @@ export default function GapDetailPage() {
       <div className="text-xs text-muted-foreground">
         <p>Gap ID: {gap.id}</p>
         {gap.pipeline_run_id && <p>Pipeline Run: {gap.pipeline_run_id}</p>}
+      </div>
+
+      {/* Feedback Form (BATCH-41) */}
+      <div className="bg-card border rounded-lg p-4">
+        <GapFeedbackForm
+          gapId={gap.id}
+          currentRating={gap.user_rating}
+          currentNotes={gap.user_notes}
+        />
       </div>
     </div>
   );

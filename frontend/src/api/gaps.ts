@@ -28,3 +28,13 @@ export function listGaps(params?: {
 export function getGap(id: number): Promise<{ gap: ResearchGap }> {
   return apiFetch(`/gaps/${id}`);
 }
+
+export function submitGapFeedback(gapId: number, rating: number, notes?: string): Promise<{ gap: ResearchGap }> {
+  const params = new URLSearchParams({ rating: String(rating) });
+  if (notes) params.set("notes", notes);
+  return apiFetch(`/gaps/${gapId}/feedback?${params}`, { method: "POST" });
+}
+
+export function updateGapStatus(gapId: number, status: string): Promise<{ gap: ResearchGap }> {
+  return apiFetch(`/gaps/${gapId}/status?status=${encodeURIComponent(status)}`, { method: "PATCH" });
+}

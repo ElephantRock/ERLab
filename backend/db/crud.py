@@ -416,3 +416,37 @@ def count_ideas_for_gap(session: Session, gap_title: str) -> int:
         .where(Idea.source_gap_ids.ilike(f"%{gap_title}%"))
     )
     return session.execute(stmt).scalar_one()
+
+
+def update_gap_feedback(session: Session, gap_id: int, rating: int, notes: str | None = None) -> ResearchGapDB | None:
+    """Update user rating and notes for a gap (BATCH-41)."""
+    gap = session.get(ResearchGapDB, gap_id)
+    if not gap:
+        return None
+    gap.user_rating = rating
+    if notes is not None:
+        gap.user_notes = notes
+    session.commit()
+    session.refresh(gap)
+    return gap
+
+
+def update_gap_status(session: Session, gap_id: int, new_status: str) -> ResearchGapDB | None:
+    """Update gap lifecycle status with forward-only validation (BATCH-41)."""
+    VALID_TRANSITIONS = {
+        "identified": "investigating",
+        "investigating": "addressed",
+    }
+    gap = session.get(ResearchGapDB, gap_id)
+    if not gap:
+        return None
+    current = gap.status or "identified"
+    if new_status == current:
+        return gap  # No-op
+    expected_next = VALID_TRANSITIONS.get(current)
+    if expected_next != new_status:
+        return None  # Invalid transition — caller returns 422
+    gap.status = new_status
+    session.commit()
+    session.refresh(gap)
+    return gap

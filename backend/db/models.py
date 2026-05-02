@@ -186,5 +186,10 @@ class ResearchGapDB(Base):
     # Related cluster IDs (BATCH-38)
     related_clusters: Mapped[str | None] = mapped_column(Text, nullable=True)
 
+    # Feedback & lifecycle (BATCH-41)
+    status: Mapped[str] = mapped_column(String(20), default="identified")
+    user_rating: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    user_notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+
     pipeline_run: Mapped["PipelineRun | None"] = relationship(back_populates="gaps")
     created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))

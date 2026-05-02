@@ -126,6 +126,9 @@ async def list_gaps(
                     "idea_count": count_ideas_for_gap(session, g.title),
                     "truth": _build_truth(g),
                     "related_clusters": _build_related_clusters(g),
+                    "status": getattr(g, "status", "identified"),
+                    "user_rating": getattr(g, "user_rating", None),
+                    "user_notes": getattr(g, "user_notes", None),
                 }
                 for g in gaps
             ],
@@ -171,5 +174,60 @@ async def get_gap(gap_id: int):
                 "created_at": str(gap.created_at),
                 "truth": _build_truth(gap),
                 "related_clusters": _build_related_clusters(gap),
+                "status": getattr(gap, "status", "identified"),
+                "user_rating": getattr(gap, "user_rating", None),
+                "user_notes": getattr(gap, "user_notes", None),
+            },
+        }
+
+
+# ── BATCH-41: Feedback & Lifecycle endpoints ──────────────────────
+
+VALID_STATUSES = {"identified", "investigating", "addressed"}
+
+
+@router.post(
+    "/{gap_id}/feedback",
+    summary="Submit gap feedback",
+    description="Rate a gap 1-5 stars with optional notes (BATCH-41).",
+)
+async def submit_feedback(gap_id: int, rating: int = Query(..., ge=1, le=5, description="Star rating 1-5"), notes: str | None = Query(default=None, max_length=2000)):
+    from backend.db.crud import update_gap_feedback
+    from backend.db.database import get_session
+
+    with get_session() as session:
+        gap = update_gap_feedback(session, gap_id, rating, notes)
+        if not gap:
+            raise NotFoundError("Gap not found")
+        return {
+            "gap": {
+                "id": gap.id,
+                "user_rating": gap.user_rating,
+                "user_notes": gap.user_notes,
+            },
+        }
+
+
+@router.patch(
+    "/{gap_id}/status",
+    summary="Update gap lifecycle status",
+    description="Transition gap status forward: identified → investigating → addressed (BATCH-41).",
+)
+async def update_status(gap_id: int, status: str = Query(..., description="New status: identified, investigating, addressed")):
+    from backend.db.crud import update_gap_status
+    from backend.db.database import get_session
+    from fastapi import HTTPException
+
+    if status not in VALID_STATUSES:
+        raise HTTPException(status_code=422, detail=f"Invalid status '{status}'. Must be one of: {', '.join(sorted(VALID_STATUSES))}")
+
+    with get_session() as session:
+        gap = update_gap_status(session, gap_id, status)
+        if not gap:
+            raise HTTPException(status_code=422, detail=f"Invalid transition. Forward-only: identified → investigating → addressed")
+        return {
+            "gap": {
+                "id": gap.id,
+                "status": gap.status,
             },
         }
