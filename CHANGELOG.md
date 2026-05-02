@@ -6,8 +6,8 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added — AIV Batch Execution
-- **BATCH-16**: Navigation infrastructure — sidebar items and placeholder routes for Costs, Memory, Governance, Traces, Sessions, Literature (Phase 2)
-- **BATCH-15**: Cancel pipeline UI — red cancel button with confirmation dialog, cancelled state with partial results display
+- **BATCH-18**: Cost Dashboard — full page with cost summary, breakdown tables (provider/stage/model), budget utilization bar, per-run costs
+- **BATCH-16**: Navigation infrastructure — sidebar items and placeholder routes for Phase 2 pages
 - **BATCH-14**: Ideas browser — sortable, filterable, searchable; gap↔idea bidirectional traceability with `source_gap_ids` column
 - **BATCH-13**: Pipeline form completion — all backend options exposed; settings enhanced with connectivity check, version display, default domain
 - **BATCH-12**: Pipeline results flow — inline results after completion, run detail page at `/runs/:id`, clickable dashboard RunCards, `GET /runs/{id}/ideas` endpoint
