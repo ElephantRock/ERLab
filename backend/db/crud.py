@@ -79,6 +79,26 @@ def list_ideas(
     return session.execute(stmt).scalars().all()
 
 
+def get_ideas_for_run(session: Session, run_id: int) -> Sequence[Idea]:
+    """Return all ideas linked to a pipeline run via pipeline_run_id FK."""
+    return (
+        session.execute(
+            select(Idea).where(Idea.pipeline_run_id == run_id).order_by(Idea.id.asc())
+        )
+        .scalars()
+        .all()
+    )
+
+
+def count_ideas_for_run(session: Session, run_id: int) -> int:
+    """Return the total count of ideas linked to a pipeline run."""
+    return session.execute(
+        select(func.count())
+        .select_from(Idea)
+        .where(Idea.pipeline_run_id == run_id)
+    ).scalar_one()
+
+
 def update_idea_scores(
     session: Session,
     idea_id: int,
