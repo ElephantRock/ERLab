@@ -3,6 +3,8 @@ import { getIdea, refineIdea } from "@/api/ideas";
 import { ScoreBadge } from "@/components/ideas/score-badge";
 import { ExportButton } from "@/components/ideas/export-button";
 import { FeedbackForm } from "@/components/ideas/feedback-form";
+import { CommentThread } from "@/components/idea/comment-thread";
+import { ShareDialog } from "@/components/idea/share-dialog";
 import { NoveltyReportView } from "@/components/ideas/novelty-report-view";
 import { FeasibilityReportView } from "@/components/ideas/feasibility-report-view";
 import { MarkdownRenderer } from "@/components/markdown/markdown-renderer";
@@ -194,7 +196,17 @@ export default function IdeaDetail() {
         </Tabs>
       )}
 
-      <FeedbackForm ideaId={ideaId} />
+      <div className="grid gap-6 lg:grid-cols-3">
+        <div className="lg:col-span-2">
+          <FeedbackForm ideaId={ideaId} />
+          <div className="mt-6">
+            <CommentThread ideaId={ideaId} />
+          </div>
+        </div>
+        <div className="space-y-6">
+          <ShareDialog ideaId={ideaId} />
+        </div>
+      </div>
     </div>
   );
 }
