@@ -6,6 +6,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added — AIV Batch Execution
+- **BATCH-20**: Governance Queue — pending approvals page with approve/deny actions, optional amendment on denial, real-time list refresh
 - **BATCH-19**: Memory Browser — search, filter by type, delete with confirmation, memory statistics
 - **BATCH-18**: Cost Dashboard — full page with cost summary, breakdown tables, budget utilization bar
 - **BATCH-16**: Navigation infrastructure — sidebar items and placeholder routes for Phase 2 pages
