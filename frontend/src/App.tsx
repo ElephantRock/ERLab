@@ -9,6 +9,7 @@ import GapsExplorerPage from "./pages/gaps-explorer";
 import KnowledgeSearchPage from "./pages/knowledge-search";
 import SettingsPage from "./pages/settings";
 import Placeholder from "./pages/placeholder";
+import MemoryBrowserPage from "./pages/memory";
 import CostsPage from "./pages/costs";
 
 export default function App() {
@@ -24,7 +25,7 @@ export default function App() {
         <Route path="/knowledge" element={<KnowledgeSearchPage />} />
         <Route path="/settings" element={<SettingsPage />} />
         <Route path="/costs" element={<CostsPage />} />
-        <Route path="/memory" element={<Placeholder title="Memory" />} />
+        <Route path="/memory" element={<MemoryBrowserPage />} />
         <Route path="/governance" element={<Placeholder title="Governance" />} />
         <Route path="/traces" element={<Placeholder title="Traces" />} />
         <Route path="/sessions" element={<Placeholder title="Sessions" />} />
