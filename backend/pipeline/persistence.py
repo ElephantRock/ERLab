@@ -48,15 +48,23 @@ class PipelinePersistence:
 
             with get_session() as session:
                 for gap in result.gaps:
-                    crud.create_gap(
-                        session,
-                        title=gap.title,
-                        description=gap.description,
-                        gap_type=gap.gap_type,
-                        confidence=gap.confidence,
-                        potential_impact=gap.potential_impact,
-                        pipeline_run_id=db_run_id,
-                    )
+                    gap_kwargs = {
+                        "title": gap.title,
+                        "description": gap.description,
+                        "gap_type": gap.gap_type,
+                        "confidence": gap.confidence,
+                        "potential_impact": gap.potential_impact,
+                        "pipeline_run_id": db_run_id,
+                    }
+                    # Write truth value columns when present (BATCH-38)
+                    if hasattr(gap, "truth") and gap.truth is not None:
+                        gap_kwargs["truth_frequency"] = gap.truth.frequency
+                        gap_kwargs["truth_confidence"] = gap.truth.confidence
+                        gap_kwargs["truth_evidence_count"] = gap.truth.evidence_count
+                    # Write related_clusters as JSON array (BATCH-38)
+                    if hasattr(gap, "related_clusters") and gap.related_clusters:
+                        gap_kwargs["related_clusters"] = json.dumps(gap.related_clusters)
+                    crud.create_gap(session, **gap_kwargs)
         except Exception as e:
             logger.warning("Failed to persist gaps: %s", e)
             self.warnings.append(f"persist_gaps: {e}")
@@ -182,6 +190,29 @@ class PipelinePersistence:
             logger.warning("Failed to persist proposals: %s", e)
             self.warnings.append(f"persist_proposals: {e}")
 
+    def persist_cluster_report(self, cluster_report, db_run_id: int | None) -> None:
+        """Write cluster_report_json to PipelineRun (BATCH-38)."""
+        if not db_run_id:
+            return
+        try:
+            from backend.db.database import get_session
+            from backend.db.models import PipelineRun as PipelineRunModel
+            from sqlalchemy import select
+
+            report_data = cluster_report
+            if hasattr(cluster_report, "model_dump"):
+                report_data = cluster_report.model_dump()
+            report_json = json.dumps(report_data)
+
+            with get_session() as session:
+                run = session.get(PipelineRunModel, db_run_id)
+                if run:
+                    run.cluster_report_json = report_json
+                    session.commit()
+        except Exception as e:
+            logger.warning("Failed to persist cluster report: %s", e)
+            self.warnings.append(f"persist_cluster_report: {e}")
+
     def mark_run_failed(self, db_run_id: int | None, message: str) -> None:
         if not db_run_id:
             return
@@ -258,7 +289,9 @@ class PipelinePersistence:
     def get_run_by_uuid(self, run_id: str) -> Any | None:
         """Look up a PipelineRun by its UUID string."""
         from backend.db.crud import list_pipeline_runs
-        with self._session() as session:
+        from backend.db.database import get_session
+
+        with get_session() as session:
             runs = list_pipeline_runs(session, limit=100)
             for run in runs:
                 if str(run.id) == run_id or run_id.endswith(str(run.id)):
@@ -268,30 +301,47 @@ class PipelinePersistence:
     def load_gaps(self, run_db_id: int) -> list:
         """Load ResearchGap objects from database for a pipeline run."""
         from backend.db.crud import get_pipeline_run
-        with self._session() as session:
+        from backend.db.database import get_session
+        from backend.pipeline.gap_analysis.models import ResearchGap
+        from backend.pipeline.knowledge.truth import TruthValue
+
+        with get_session() as session:
             run = get_pipeline_run(session, run_db_id)
             if not run:
                 return []
-            from backend.pipeline.gap_analysis.models import ResearchGap
             gaps = []
             for gap_db in getattr(run, "gaps", []):
+                # Reconstruct TruthValue from persisted columns (BATCH-38)
+                truth = TruthValue(
+                    frequency=getattr(gap_db, "truth_frequency", 0.5),
+                    confidence=getattr(gap_db, "truth_confidence", 0.5),
+                    evidence_count=getattr(gap_db, "truth_evidence_count", 0),
+                )
+                # Parse related_clusters from JSON string (BATCH-38)
+                related_clusters_raw = getattr(gap_db, "related_clusters", None)
+                related_clusters = json.loads(related_clusters_raw) if related_clusters_raw else []
+
                 gaps.append(ResearchGap(
                     title=gap_db.title,
                     description=gap_db.description,
                     gap_type=gap_db.gap_type,
                     confidence=gap_db.confidence,
                     potential_impact=getattr(gap_db, "potential_impact", ""),
+                    truth=truth,
+                    related_clusters=related_clusters,
                 ))
             return gaps
 
     def load_ideas(self, run_db_id: int) -> list:
         """Load ResearchIdea objects from database for a pipeline run."""
         from backend.db.crud import get_pipeline_run
-        with self._session() as session:
+        from backend.db.database import get_session
+        from backend.pipeline.generation.models import ResearchIdea
+
+        with get_session() as session:
             run = get_pipeline_run(session, run_db_id)
             if not run:
                 return []
-            from backend.pipeline.generation.models import ResearchIdea
             ideas = []
             for idea_db in getattr(run, "ideas", []):
                 ideas.append(ResearchIdea(

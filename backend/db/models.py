@@ -120,6 +120,9 @@ class PipelineRun(Base):
     current_stage: Mapped[str | None] = mapped_column(String(50), nullable=True)
     stages_completed: Mapped[str] = mapped_column(Text, default="[]")  # JSON list
 
+    # Cluster report (BATCH-38)
+    cluster_report_json: Mapped[str | None] = mapped_column(Text, nullable=True)
+
     ideas: Mapped[list["Idea"]] = relationship(back_populates="pipeline_run")
     gaps: Mapped[list["ResearchGapDB"]] = relationship(back_populates="pipeline_run")
     created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
@@ -174,6 +177,14 @@ class ResearchGapDB(Base):
     pipeline_run_id: Mapped[int | None] = mapped_column(
         Integer, ForeignKey("pipeline_runs.id"), nullable=True
     )
+
+    # Truth value fields (BATCH-38)
+    truth_frequency: Mapped[float] = mapped_column(Float, default=0.5)
+    truth_confidence: Mapped[float] = mapped_column(Float, default=0.5)
+    truth_evidence_count: Mapped[int] = mapped_column(Integer, default=0)
+
+    # Related cluster IDs (BATCH-38)
+    related_clusters: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     pipeline_run: Mapped["PipelineRun | None"] = relationship(back_populates="gaps")
     created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
