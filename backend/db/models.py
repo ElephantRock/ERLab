@@ -2,7 +2,7 @@
 
 from datetime import datetime, timezone
 
-from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Integer, String, Text
+from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Index, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from backend.db.database import Base
@@ -44,6 +44,11 @@ class Paper(Base):
 
 class Idea(Base):
     __tablename__ = "ideas"
+    __table_args__ = (
+        Index("ix_ideas_pipeline_run_id", "pipeline_run_id"),
+        Index("ix_ideas_domain", "domain"),
+        Index("ix_ideas_overall_score", "overall_score"),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     title: Mapped[str] = mapped_column(Text)
@@ -95,6 +100,10 @@ class Proposal(Base):
 
 class PipelineRun(Base):
     __tablename__ = "pipeline_runs"
+    __table_args__ = (
+        Index("ix_pipeline_runs_status", "status"),
+        Index("ix_pipeline_runs_session_id", "session_id"),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     status: Mapped[str] = mapped_column(
@@ -119,6 +128,10 @@ class PipelineRun(Base):
 
 class ResearchGapDB(Base):
     __tablename__ = "research_gaps"
+    __table_args__ = (
+        Index("ix_research_gaps_pipeline_run_id", "pipeline_run_id"),
+        Index("ix_research_gaps_confidence", "confidence"),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     title: Mapped[str] = mapped_column(Text)

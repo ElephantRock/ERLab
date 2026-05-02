@@ -355,6 +355,11 @@ class Settings(BaseSettings):
     citation_traversal_max_hops: int = 3
     embedding_novelty_enabled: bool = False
 
+    # Webhook Notifications (BATCH-32)
+    webhook_enabled: bool = False
+    webhook_url: str | None = None
+    webhook_secret: str | None = None
+
 
 @functools.lru_cache()
 def get_settings() -> Settings:
