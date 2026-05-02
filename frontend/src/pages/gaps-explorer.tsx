@@ -15,6 +15,8 @@ import {
 import { Slider } from "@/components/ui/slider";
 import { GitBranch, ChevronLeft, ChevronRight, Search } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { ClusterScatterPlot } from "@/components/gaps/cluster-scatter";
+import { apiFetch } from "@/api/client";
 import type { ResearchGap } from "@/api/types";
 
 const SORT_OPTIONS = [
@@ -38,6 +40,7 @@ export default function GapsExplorer() {
   const [sortBy, setSortBy] = useState("confidence");
   const [minConfidence, setMinConfidence] = useState(0);
   const [page, setPage] = useState(0);
+  const [activeTab, setActiveTab] = useState<"gaps" | "clusters">("gaps");
   const limit = 20;
 
   const queryParams = useMemo(
@@ -58,6 +61,12 @@ export default function GapsExplorer() {
     queryFn: () => listGaps(queryParams),
   });
 
+  const { data: clusterData } = useQuery({
+    queryKey: ["gap-clusters"],
+    queryFn: () => apiFetch("/gaps/clusters") as Promise<{ clusters: any[]; total_papers: number }>,
+    enabled: activeTab === "clusters",
+  });
+
   const handleIdeaCountClick = (gap: ResearchGap) => {
     navigate(`/ideas?search=${encodeURIComponent(gap.title)}`);
   };
@@ -75,14 +84,33 @@ export default function GapsExplorer() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Research Gaps</h1>
-        <p className="text-muted-foreground">
-          Identified gaps in the literature, sorted by confidence.
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Research Gaps</h1>
+          <p className="text-muted-foreground">
+            Identified gaps in the literature, sorted by confidence.
+          </p>
+        </div>
+        <div className="flex gap-1">
+          <Button
+            variant={activeTab === "gaps" ? "default" : "outline"}
+            size="sm"
+            onClick={() => setActiveTab("gaps")}
+          >
+            Gaps
+          </Button>
+          <Button
+            variant={activeTab === "clusters" ? "default" : "outline"}
+            size="sm"
+            onClick={() => setActiveTab("clusters")}
+          >
+            Clusters
+          </Button>
+        </div>
       </div>
 
-      {/* Search, Sort, and Filter Controls */}
+      {activeTab === "gaps" ? (
+      <>
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -225,6 +253,22 @@ export default function GapsExplorer() {
           <p>No research gaps found{searchText ? ` for "${searchText}"` : ""}.</p>
         </div>
       )}
+      </>
+      ) : (
+        <div>
+          {clusterData?.clusters?.length ? (
+            <ClusterScatterPlot clusters={clusterData.clusters} />
+          ) : (
+            <p className="text-sm text-muted-foreground py-4">No cluster data available.</p>
+          )}
+          {clusterData && (
+            <p className="text-sm text-muted-foreground mt-2">
+              {clusterData.total_papers} papers across {clusterData.clusters.length} clusters
+            </p>
+          )}
+        </div>
+      )
+      }
     </div>
   );
 }

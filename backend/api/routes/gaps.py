@@ -138,6 +138,42 @@ async def list_gaps(
 
 
 @router.get(
+    "/clusters",
+    summary="Get cluster data",
+    description="Return cluster report for a pipeline run (BATCH-43).",
+)
+async def get_clusters(run_id: int | None = Query(default=None, description="Pipeline run ID (latest if omitted)")):
+    import json as json_mod
+    from sqlalchemy import select
+    from backend.db.database import get_session
+    from backend.db.models import PipelineRun
+
+    with get_session() as session:
+        target_run = run_id
+        if target_run is None:
+            latest = session.execute(
+                select(PipelineRun)
+                .where(PipelineRun.status == "completed")
+                .order_by(PipelineRun.id.desc())
+                .limit(1)
+            ).scalar_one_or_none()
+            if not latest:
+                return {"clusters": [], "total_papers": 0}
+            target_run = latest.id
+
+        run = session.get(PipelineRun, target_run)
+        if not run or not run.cluster_report_json:
+            return {"clusters": [], "total_papers": 0, "run_id": target_run}
+
+        report = json_mod.loads(run.cluster_report_json)
+        return {
+            "clusters": report.get("clusters", []),
+            "total_papers": report.get("total_papers", 0),
+            "run_id": target_run,
+        }
+
+
+@router.get(
     "/canonical",
     summary="List deduplicated gaps",
     description="Return one entry per unique gap (deduplicated by content hash).",
