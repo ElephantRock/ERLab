@@ -6,7 +6,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added — AIV Batch Execution
-- **BATCH-10**: API documentation — all 41 endpoints annotated with summaries, descriptions, examples; error responses standardized to `{error: {code, message, hint}}` with X-Request-Id
+- **BATCH-11**: Frontend test infrastructure — 29 new tests across 11 files covering all 7 pages + charts + markdown-renderer; vitest ≥70% coverage threshold enforced
 
 ## [0.1.0] - 2026-05-01
 
