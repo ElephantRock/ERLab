@@ -68,10 +68,14 @@ class NoveltyChecker:
         provider: LLMProvider,
         store: VectorStore,
         retriever: TwoStageRetriever | None = None,
+        citation_traverser: Any | None = None,
+        embedding_scorer: Any | None = None,
     ):
         self._provider = provider
         self._store = store
         self._retriever = retriever
+        self._citation_traverser = citation_traverser
+        self._embedding_scorer = embedding_scorer
 
     async def check_novelty(
         self,
@@ -136,7 +140,7 @@ class NoveltyChecker:
                 temperature=0.2,
             )
 
-            return NoveltyReport(
+            report = NoveltyReport(
                 overall_score=min(1.0, max(0.0, result.get("overall_score", 0.5))),
                 method_novelty=min(1.0, max(0.0, result.get("method_novelty", 0.5))),
                 problem_novelty=min(1.0, max(0.0, result.get("problem_novelty", 0.5))),
@@ -155,6 +159,10 @@ class NoveltyChecker:
                     for s in similar[:5]
                 ],
             )
+
+            # Augment with citation traversal and embedding scoring
+            report = await self._augment_with_graph_novelty(idea, report)
+            return report
 
         except Exception as e:
             logger.error("Novelty check LLM call failed: %s", e)
@@ -190,3 +198,50 @@ class NoveltyChecker:
             distance = s.get("distance", 0)
             parts.append(f"{i}. **{title}** (distance: {distance:.3f})\n   {text}...")
         return "\n\n".join(parts)
+
+    async def _augment_with_graph_novelty(
+        self, idea: ResearchIdea, report: NoveltyReport,
+    ) -> NoveltyReport:
+        """Augment novelty report with citation traversal and embedding scoring."""
+        # Citation traversal
+        if self._citation_traverser:
+            try:
+                idea_id = f"idea:{idea.title[:60]}"
+                prior_art = self._citation_traverser.find_prior_art(idea_id)
+                if prior_art:
+                    # Reduce novelty score if close prior art is found
+                    exact_matches = [p for p in prior_art if p.relationship_type == "exact"]
+                    if exact_matches:
+                        report.overall_score *= 0.7
+                        report.novelty_arguments += (
+                            f" [Citation graph found {len(exact_matches)} exact prior art match(es).]"
+                        )
+                    for pa in prior_art[:3]:
+                        report.closest_matches.append({
+                            "title": pa.prior_art_ids[0] if pa.prior_art_ids else "unknown",
+                            "distance": 1.0 - pa.similarity_score,
+                            "id": pa.prior_art_ids[0] if pa.prior_art_ids else "",
+                            "abstract": f"Citation traversal (depth={pa.citation_depth}, type={pa.relationship_type})",
+                        })
+            except Exception as e:
+                logger.warning("Citation traversal augmentation failed: %s", e)
+
+        # Embedding scoring
+        if self._embedding_scorer:
+            try:
+                emb_result = await self._embedding_scorer.score_novelty(idea)
+                if emb_result.min_embedding_distance < 0.2:
+                    report.overall_score *= 0.8
+                    report.novelty_arguments += (
+                        f" [Embedding distance to closest: {emb_result.min_embedding_distance:.3f}]"
+                    )
+                report.closest_matches.append({
+                    "title": emb_result.closest_paper_id,
+                    "distance": emb_result.min_embedding_distance,
+                    "id": emb_result.closest_paper_id,
+                    "abstract": f"Embedding novelty (avg_dist={emb_result.avg_embedding_distance:.3f})",
+                })
+            except Exception as e:
+                logger.warning("Embedding novelty augmentation failed: %s", e)
+
+        return report

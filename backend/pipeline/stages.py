@@ -4,15 +4,33 @@ from __future__ import annotations
 
 import logging
 from abc import ABC, abstractmethod
+from contextlib import contextmanager
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Generator
 
 from backend.pipeline.ingestion.chunker import DocumentChunk  # noqa: F401 — re-exported by stages
 
 if TYPE_CHECKING:
+    from backend.providers.base import LLMProvider
     from backend.pipeline.result import PipelineResult
 
 logger = logging.getLogger(__name__)
+
+
+@contextmanager
+def _override_provider(
+    service: object, override: LLMProvider | None
+) -> Generator[None, None, None]:
+    """Temporarily swap a service's _provider with the override."""
+    if not override or not hasattr(service, "_provider"):
+        yield
+        return
+    saved = service._provider  # type: ignore[attr-defined]
+    try:
+        service._provider = override  # type: ignore[attr-defined]
+        yield
+    finally:
+        service._provider = saved  # type: ignore[attr-defined]
 
 
 @dataclass
@@ -146,18 +164,23 @@ class IngestionStage(PipelineStage):
 
 
 class GapAnalysisStage(PipelineStage):
-    def __init__(self, gap_analyzer, goal_manager, hooks, memory, kg=None):
+    def __init__(self, gap_analyzer, goal_manager, hooks, memory, kg=None, faithfulness_checker=None):
         self._gap_analyzer = gap_analyzer
         self._goal_manager = goal_manager
         self._hooks = hooks
         self._memory = memory
         self._kg = kg
+        self._faithfulness_checker = faithfulness_checker
 
     @property
     def name(self) -> str:
         return "gap_analysis"
 
     async def execute(self, ctx: StageContext) -> bool:
+        with _override_provider(self._gap_analyzer, ctx.provider_override):
+            return await self._execute_gap_analysis(ctx)
+
+    async def _execute_gap_analysis(self, ctx: StageContext) -> bool:
         prior_gaps = await self._recall_prior_gaps(ctx.domain)
         gaps, cluster_report = await self._gap_analyzer.analyze(
             ctx.all_papers,
@@ -191,6 +214,23 @@ class GapAnalysisStage(PipelineStage):
             self._kg.save()
             logger.info("Added %d gap entities to Knowledge Graph", len(gaps))
 
+        # Faithfulness check: verify gap claims against source papers
+        if self._faithfulness_checker and gaps:
+            try:
+                reports = await self._faithfulness_checker.check_gap_claims(
+                    gaps, ctx.all_papers,
+                )
+                unfaithful = [r for r in reports if not r.is_faithful]
+                if unfaithful:
+                    logger.warning(
+                        "Faithfulness check: %d/%d gaps have unfaithful claims",
+                        len(unfaithful), len(gaps),
+                    )
+                    for r in unfaithful:
+                        logger.warning("  Unfaithful: %s — %s", r.claim[:60], r.explanation[:100])
+            except Exception as e:
+                logger.warning("Faithfulness check failed: %s", e)
+
         if self._goal_manager and gaps:
             new_goals = self._goal_manager.create_from_gaps(gaps)
             logger.info("Created %d research goals from gaps", len(new_goals))
@@ -223,22 +263,26 @@ class GapAnalysisStage(PipelineStage):
 
 
 class IdeaGenerationStage(PipelineStage):
-    def __init__(self, agent, hooks, dag_executor=None, dag_agents=None, provider=None, kg=None):
+    def __init__(self, agent, hooks, dag_executor=None, dag_agents=None, provider=None, kg=None, forest=None, reasoning_verifier=None):
         self._agent = agent
         self._hooks = hooks
         self._dag_executor = dag_executor
         self._dag_agents = dag_agents
         self._provider = provider
         self._kg = kg
+        self._forest = forest
+        self._reasoning_verifier = reasoning_verifier
 
     @property
     def name(self) -> str:
         return "idea_generation"
 
     async def execute(self, ctx: StageContext) -> bool:
-        if self._dag_executor is not None:
-            return await self._execute_dag(ctx)
-        return await self._execute_sequential(ctx)
+        provider = ctx.provider_override or self._provider
+        with _override_provider(self._agent, provider):
+            if self._dag_executor is not None:
+                return await self._execute_dag(ctx, provider)
+            return await self._execute_sequential(ctx)
 
     async def _execute_sequential(self, ctx: StageContext) -> bool:
         logger.info("Idea Generation (%d rounds, %d ideas/round)", ctx.rounds, ctx.ideas_per)
@@ -285,6 +329,21 @@ class IdeaGenerationStage(PipelineStage):
             self._kg.save()
             logger.info("Added %d idea entities to Knowledge Graph", len(ideas))
 
+        # Reasoning verification on top ideas
+        if self._reasoning_verifier and ideas and ctx.result.gaps:
+            try:
+                for idea in ideas[:5]:
+                    gap = ctx.result.gaps[0] if ctx.result.gaps else None
+                    if gap:
+                        result = await self._reasoning_verifier.verify_idea_reasoning(idea, gap)
+                        if not result.passed:
+                            logger.warning(
+                                "Idea '%s' failed reasoning verification: %s",
+                                idea.title[:60], "; ".join(result.issues[:3]),
+                            )
+            except Exception as e:
+                logger.warning("Reasoning verification failed: %s", e)
+
         for idea in ideas:
             await self._hooks.dispatch_sync_safe(
                 "idea.generated",
@@ -295,7 +354,7 @@ class IdeaGenerationStage(PipelineStage):
             )
         return True
 
-    async def _execute_dag(self, ctx: StageContext) -> bool:
+    async def _execute_dag(self, ctx: StageContext, provider=None) -> bool:
         """Execute idea generation via the DAG executor."""
         from backend.pipeline.generation.agent_handlers import register_all_agents
         from backend.pipeline.generation.context_isolator import ContextIsolator
@@ -310,7 +369,7 @@ class IdeaGenerationStage(PipelineStage):
             registry=self._dag_executor._registry,
             agents=self._dag_agents,
             isolator=isolator,
-            provider=self._provider,
+            provider=provider or self._provider,
         )
 
         # Prepare input: one item per gap
@@ -386,12 +445,21 @@ class FeasibilityScoringStage(PipelineStage):
         return "feasibility_scoring"
 
     async def execute(self, ctx: StageContext) -> bool:
+        with _override_provider(self._feasibility, ctx.provider_override):
+            return await self._execute_feasibility(ctx)
+
+    async def _execute_feasibility(self, ctx: StageContext) -> bool:
         ideas = ctx.result.ideas
         if not ideas:
             return True
+        from backend.config import get_settings
+        settings = get_settings()
         for i, idea in enumerate(ideas):
             novelty = ctx.result.novelty_reports.get(i)
             report = await self._feasibility.score_feasibility(idea, novelty)
+            # Counterfactual analysis (Gap 14)
+            if settings.counterfactual_enabled:
+                report = await self._feasibility.run_counterfactual(report)
             ctx.result.feasibility_reports[i] = report
             logger.info(
                 "Feasibility score for '%s': %.1f/10", idea.title[:50], report.overall_score
@@ -413,6 +481,10 @@ class ProposalSynthesisStage(PipelineStage):
         return "proposal_synthesis"
 
     async def execute(self, ctx: StageContext) -> bool:
+        with _override_provider(self._synthesizer, ctx.provider_override):
+            return await self._execute_synthesis(ctx)
+
+    async def _execute_synthesis(self, ctx: StageContext) -> bool:
         ideas = ctx.result.ideas
         if not ideas:
             return True

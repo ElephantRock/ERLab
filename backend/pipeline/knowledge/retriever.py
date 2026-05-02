@@ -11,6 +11,7 @@ haystack hybrid retrieval with distribution-based normalization.
 import asyncio
 import logging
 from enum import Enum
+from typing import Any
 
 from pydantic import BaseModel
 
@@ -48,6 +49,7 @@ class TwoStageRetriever:
         embedding_service: EmbeddingService,
         reranker: Reranker | None = None,
         query_transformer: QueryTransformer | None = None,
+        quality_scorer: Any = None,
         rrf_k: int = 60,
         retrieval_mode: str = "hybrid",
     ):
@@ -56,6 +58,7 @@ class TwoStageRetriever:
         self._embedding = embedding_service
         self._reranker = reranker
         self._query_transformer = query_transformer
+        self._quality_scorer = quality_scorer
         self._default_rrf_k = rrf_k
         self._retrieval_mode = retrieval_mode
 
@@ -158,6 +161,10 @@ class TwoStageRetriever:
         # Apply minimum score filter
         if min_score > 0:
             fused = [r for r in fused if r.score >= min_score]
+
+        # Quality scoring (Gap 1)
+        if self._quality_scorer:
+            fused = self._quality_scorer.score(fused, query)
 
         # Stage 3: Optional reranking
         if self._reranker and fused:

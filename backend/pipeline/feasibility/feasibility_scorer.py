@@ -49,6 +49,9 @@ class FeasibilityReport:
         reasoning: str,
         estimated_timeline: str,
         key_risks: list[str],
+        counterfactual_analysis: dict | None = None,
+        sensitivity_scores: dict | None = None,
+        refutation_passed: bool | None = None,
     ):
         self.overall_score = overall_score
         self.data_availability = data_availability
@@ -60,6 +63,9 @@ class FeasibilityReport:
         self.reasoning = reasoning
         self.estimated_timeline = estimated_timeline
         self.key_risks = key_risks
+        self.counterfactual_analysis = counterfactual_analysis
+        self.sensitivity_scores = sensitivity_scores
+        self.refutation_passed = refutation_passed
 
 
 class FeasibilityScorer:
@@ -143,3 +149,61 @@ class FeasibilityScorer:
                 estimated_timeline="Unknown",
                 key_risks=["Scoring evaluation failed"],
             )
+
+    async def run_counterfactual(self, report: FeasibilityReport) -> FeasibilityReport:
+        """Run counterfactual analysis on a scored feasibility report.
+
+        Adds counterfactual_analysis, sensitivity_scores, and refutation_passed
+        to the report. Returns a new report with these fields populated.
+        """
+        try:
+            from backend.pipeline.feasibility.causal_dag import PipelineCausalModel
+
+            model = PipelineCausalModel()
+            scores = model.feasibility_to_dag_scores(report)
+
+            # Counterfactual for each key dimension
+            counterfactuals = {}
+            for dim in ["data_availability", "method_feasibility", "idea_novelty"]:
+                original = scores.get(dim, 5.0)
+                cf_high = model.counterfactual(scores, dim, min(10.0, original + 2.0))
+                cf_low = model.counterfactual(scores, dim, max(0.0, original - 2.0))
+                counterfactuals[dim] = {
+                    "original": original,
+                    "if_plus_2": {
+                        "predicted_impact": round(cf_high.predicted_impact, 3),
+                        "new_impact_score": round(cf_high.new_scores.get("impact_potential", original), 2),
+                    },
+                    "if_minus_2": {
+                        "predicted_impact": round(cf_low.predicted_impact, 3),
+                        "new_impact_score": round(cf_low.new_scores.get("impact_potential", original), 2),
+                    },
+                }
+
+            # Sensitivity analysis
+            sensitivity = model.sensitivity_analysis(scores)
+            sensitivity_scores = {
+                dim: score for dim, score in sensitivity.dimension_rankings
+            }
+
+            # Refutation tests
+            refutation = model.run_refutation_tests(scores)
+
+            return FeasibilityReport(
+                overall_score=report.overall_score,
+                data_availability=report.data_availability,
+                computational_requirements=report.computational_requirements,
+                methodological_complexity=report.methodological_complexity,
+                evaluation_plan=report.evaluation_plan,
+                novelty_grounding=report.novelty_grounding,
+                impact_potential=report.impact_potential,
+                reasoning=report.reasoning,
+                estimated_timeline=report.estimated_timeline,
+                key_risks=report.key_risks,
+                counterfactual_analysis=counterfactuals,
+                sensitivity_scores=sensitivity_scores,
+                refutation_passed=refutation.all_passed,
+            )
+        except Exception as e:
+            logger.warning("Counterfactual analysis failed: %s", e)
+            return report

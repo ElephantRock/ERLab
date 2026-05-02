@@ -53,8 +53,9 @@ class WorldModelChangeDetector:
     with severity classification.
     """
 
-    def __init__(self, kg: KnowledgeGraph):
+    def __init__(self, kg: KnowledgeGraph, contradiction_scanner=None):
         self._kg = kg
+        self._contradiction_scanner = contradiction_scanner
 
     def detect_changes(self, since_version: int = 0) -> ChangeSummary:
         """Produce a structured summary of all changes since a version."""
@@ -154,5 +155,17 @@ class WorldModelChangeDetector:
                     logger.info("Retracted %d conflicted goals after change detection", len(reports))
             except Exception as e:
                 logger.warning("Goal re-evaluation after change detection failed: %s", e)
+
+        # Trigger contradiction scan on HIGH-severity changes
+        if summary.severity == ChangeSeverity.HIGH and self._contradiction_scanner:
+            try:
+                contradiction_reports = await self._contradiction_scanner.scan()
+                if contradiction_reports:
+                    logger.warning(
+                        "Contradiction scan after HIGH-severity change: %d contradictions found",
+                        len(contradiction_reports),
+                    )
+            except Exception as e:
+                logger.warning("Contradiction scan after change detection failed: %s", e)
 
         return summary

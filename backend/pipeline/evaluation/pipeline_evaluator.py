@@ -15,6 +15,8 @@ from pydantic import BaseModel
 
 from backend.pipeline.evaluation.cache import EvaluationCache
 from backend.pipeline.evaluation.cost import EvaluationCostRecord, EvaluationCostTracker
+from backend.pipeline.evaluation.deepeval_adapter import DeepEvalScorer
+from backend.pipeline.evaluation.adversarial_debate import AdversarialDebate, DebateResult
 from backend.pipeline.evaluation.geval import DEFAULT_RUBRICS, GEvalScorer
 from backend.pipeline.evaluation.normalizers import (
     FeasibilityScorerAdapter,
@@ -38,6 +40,7 @@ class UnifiedEvaluationReport(BaseModel):
     dimension_scores: dict[str, ScoreResult]
     overall_score: float
     quality_gate_result: QualityGateResult | None = None
+    debate_result: DebateResult | None = None
     cost: EvaluationCostRecord | None = None
     evaluated_at: datetime = datetime.now(timezone.utc)
 
@@ -56,6 +59,8 @@ class PipelineEvaluator:
         feasibility_scorer: Any,
         quality_gate: QualityGate | None = None,
         use_geval: bool = False,
+        use_deepeval: bool = False,
+        use_debate: bool = False,
         cache: EvaluationCache | None = None,
     ) -> None:
         self._provider = provider
@@ -71,6 +76,15 @@ class PipelineEvaluator:
         if use_geval:
             for dim, rubric in DEFAULT_RUBRICS.items():
                 self._geval_scorers[dim] = GEvalScorer(provider, rubric, self._cache)
+
+        self._deepeval_scorers: dict[ScoreDimension, DeepEvalScorer] = {}
+        if use_deepeval:
+            for dim, rubric in DEFAULT_RUBRICS.items():
+                self._deepeval_scorers[dim] = DeepEvalScorer(provider, dim, rubric)
+
+        self._debate: AdversarialDebate | None = None
+        if use_debate:
+            self._debate = AdversarialDebate(provider)
 
     async def evaluate_idea(
         self,
@@ -109,6 +123,14 @@ class PipelineEvaluator:
                     dimension_scores[s.dimension.value] = s
                     overall_parts.append((s.score, 0.2))
 
+        # Optional DeepEval scoring (bias-mitigated multi-pass)
+        for dim, deval in self._deepeval_scorers.items():
+            if dim.value not in dimension_scores:
+                deval_report = await deval.score(idea, target_id)
+                for s in deval_report.scores:
+                    dimension_scores[f"{s.dimension.value}_deepeval"] = s
+                    overall_parts.append((s.score, 0.1))
+
         # Weighted composite
         total_weight = sum(w for _, w in overall_parts)
         overall = (
@@ -127,12 +149,21 @@ class PipelineEvaluator:
             )
             gate_result = self._quality_gate.evaluate(eval_report)
 
+        # Adversarial debate (only if idea passes quality gate)
+        debate_result = None
+        if self._debate and (gate_result is None or gate_result.passed):
+            try:
+                debate_result = await self._debate.debate(idea)
+            except Exception as e:
+                logger.warning("Debate failed for %s: %s", target_id, e)
+
         return UnifiedEvaluationReport(
             idea_id=target_id,
             idea_title=getattr(idea, "title", str(idea)[:80]),
             dimension_scores=dimension_scores,
             overall_score=overall,
             quality_gate_result=gate_result,
+            debate_result=debate_result,
         )
 
     async def evaluate_all(

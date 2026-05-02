@@ -10,7 +10,7 @@ from backend.tests.conftest import FakeLLMProvider
 
 class TestEvaluationRubric:
     def test_default_rubrics_exist(self):
-        assert len(DEFAULT_RUBRICS) == 5
+        assert len(DEFAULT_RUBRICS) == 7
         for dim in ScoreDimension:
             assert dim in DEFAULT_RUBRICS
 

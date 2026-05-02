@@ -33,10 +33,12 @@ class PipelineEvolver:
         frontier: ParetoFrontier,
         constraint_config: ConstraintConfig | None = None,
         git_dir: str | None = None,
+        lesson_mapper: Any = None,
     ):
         self._frontier = frontier
         self._constraints = ConstraintValidator(constraint_config) if constraint_config else None
         self._git_dir = git_dir  # None = no git tracking
+        self._lesson_mapper = lesson_mapper  # LessonExtractor for semantic mapping
 
     def propose(self) -> dict[str, float | int | str]:
         """Propose parameters for next run using Pareto frontier crossover."""
@@ -159,8 +161,29 @@ class PipelineEvolver:
     def apply_lessons(self, lessons: list[str], params: dict[str, Any]) -> dict[str, Any]:
         """Feed extracted lessons back into parameter proposals.
 
-        Analyzes lesson categories and nudges evolved params accordingly.
+        Uses semantic mapping when a lesson_mapper (LessonExtractor) is
+        available, otherwise falls back to keyword-based nudging.
         """
+        if self._lesson_mapper and hasattr(self._lesson_mapper, "map_lesson_to_params"):
+            import asyncio
+            try:
+                loop = asyncio.get_running_loop()
+                # Create a task if we're in an async context
+                import concurrent.futures
+                with concurrent.futures.ThreadPoolExecutor() as pool:
+                    future = pool.submit(
+                        asyncio.run,
+                        self._lesson_mapper.map_lesson_to_params(lessons, params, PARAM_RANGES),
+                    )
+                    return future.result(timeout=30)
+            except RuntimeError:
+                return asyncio.run(
+                    self._lesson_mapper.map_lesson_to_params(lessons, params, PARAM_RANGES)
+                )
+            except Exception:
+                pass  # Fall through to keyword matching
+
+        # Keyword-based fallback
         adjusted = dict(params)
         for lesson in lessons:
             lesson_lower = lesson.lower()

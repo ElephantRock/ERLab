@@ -26,6 +26,8 @@ class ScoreDimension(str, Enum):
     IMPACT = "impact"
     CLARITY = "clarity"
     SOUNDNESS = "soundness"
+    COHERENCE = "coherence"
+    COMPLETENESS = "completeness"
 
 
 class ScoreResult(BaseModel):

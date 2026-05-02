@@ -106,3 +106,27 @@ class ApprovalManager:
             for a in self._pending.values()
             if a.status == ApprovalStatus.PENDING
         ]
+
+    async def deny_with_resubmission(
+        self,
+        decision_id: str,
+        amendment: str,
+        stage: str,
+        reason: str = "",
+        rule_name: str = "",
+    ) -> PendingApproval | None:
+        """Deny with amendment, then auto-resubmit a new approval request.
+
+        The amendment text is carried forward into the new request so
+        the next human reviewer can see the feedback from the previous denial.
+        """
+        denied = self.deny(decision_id, amendment=amendment)
+        if not denied:
+            return None
+
+        combined_reason = f"{reason} [AMENDMENT: {amendment}]" if reason else f"Resubmitted with amendment: {amendment}"
+        return await self.request_approval(
+            stage=stage,
+            reason=combined_reason,
+            rule_name=rule_name or "resubmission",
+        )

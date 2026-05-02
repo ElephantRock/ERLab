@@ -83,6 +83,26 @@ DEFAULT_RUBRICS: dict[ScoreDimension, EvaluationRubric] = {
             "4. Score: 0=major flaws, 1=rigorous and well-grounded."
         ),
     ),
+    ScoreDimension.COHERENCE: EvaluationRubric(
+        dimension=ScoreDimension.COHERENCE,
+        criteria="How logically consistent is this research idea internally?",
+        scoring_steps=(
+            "1. Check if problem statement and proposed method align.\n"
+            "2. Verify expected contributions follow from the method.\n"
+            "3. Identify internal contradictions or gaps in logic.\n"
+            "4. Score: 0=contradictory, 1=fully coherent narrative."
+        ),
+    ),
+    ScoreDimension.COMPLETENESS: EvaluationRubric(
+        dimension=ScoreDimension.COMPLETENESS,
+        criteria="How completely does this idea address all required research components?",
+        scoring_steps=(
+            "1. Verify the idea specifies a clear problem.\n"
+            "2. Check that a method is proposed, not just a vague direction.\n"
+            "3. Confirm an evaluation plan exists.\n"
+            "4. Score: 0=major gaps, 1=all components specified."
+        ),
+    ),
 }
 
 

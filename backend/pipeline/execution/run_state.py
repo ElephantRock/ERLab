@@ -45,6 +45,9 @@ class StageCheckpoint:
     completed_at: str | None = None
     error: str | None = None
     retry_count: int = 0
+    duration_seconds: float = 0.0
+    last_error_type: str | None = None
+    _last_heartbeat: float | None = None  # monotonic timestamp, not serialized
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -54,6 +57,8 @@ class StageCheckpoint:
             "completed_at": self.completed_at,
             "error": self.error,
             "retry_count": self.retry_count,
+            "duration_seconds": self.duration_seconds,
+            "last_error_type": self.last_error_type,
         }
 
     @classmethod
@@ -65,6 +70,8 @@ class StageCheckpoint:
             completed_at=data.get("completed_at"),
             error=data.get("error"),
             retry_count=data.get("retry_count", 0),
+            duration_seconds=data.get("duration_seconds", 0.0),
+            last_error_type=data.get("last_error_type"),
         )
 
 
@@ -164,3 +171,26 @@ class RunCheckpoint:
             domain=domain,
             params=params or {},
         )
+
+    def execution_summary(self) -> dict[str, Any]:
+        """Return observability summary of pipeline execution."""
+        completed = [s for s in self.stages if s.status == StageStatus.COMPLETED]
+        failed = [s for s in self.stages if s.status == StageStatus.FAILED]
+        return {
+            "run_id": self.run_id,
+            "state": self.state.value,
+            "total_stages": len(self.stages),
+            "completed": len(completed),
+            "failed": len(failed),
+            "total_retries": sum(s.retry_count for s in self.stages),
+            "total_duration_seconds": sum(s.duration_seconds for s in self.stages),
+            "stages": {
+                s.stage_name: {
+                    "status": s.status.value,
+                    "retries": s.retry_count,
+                    "duration": s.duration_seconds,
+                    "error_type": s.last_error_type,
+                }
+                for s in self.stages
+            },
+        }

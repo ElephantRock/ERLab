@@ -36,6 +36,69 @@ class LessonExtractor:
     def __init__(self, provider: LLMProvider):
         self._provider = provider
 
+    async def map_lesson_to_params(
+        self,
+        lessons: list[str],
+        params: dict,
+        param_ranges: dict[str, tuple[float, float]],
+    ) -> dict:
+        """Use LLM to semantically map lessons to specific parameter adjustments.
+
+        More nuanced than keyword matching: the LLM understands the relationship
+        between lesson content and parameter semantics.
+        """
+        if not lessons:
+            return dict(params)
+
+        param_desc = "\n".join(
+            f"- {k}: current={params.get(k, 'N/A')}, range=[{lo}, {hi}]"
+            for k, (lo, hi) in param_ranges.items()
+        )
+        lesson_text = "\n".join(f"- {l}" for l in lessons)
+
+        try:
+            result = await self._provider.structured_output(
+                messages=[
+                    {
+                        "role": "system",
+                        "content": (
+                            "You are a pipeline optimization expert. Given lessons "
+                            "learned and current parameter values, suggest adjusted "
+                            "parameter values. Only change parameters that are "
+                            "directly relevant to the lessons."
+                        ),
+                    },
+                    {
+                        "role": "user",
+                        "content": (
+                            f"Lessons:\n{lesson_text}\n\n"
+                            f"Current parameters:\n{param_desc}\n\n"
+                            "Return adjusted parameters as JSON."
+                        ),
+                    },
+                ],
+                schema={
+                    "type": "object",
+                    "properties": {
+                        k: {"type": "number"} for k in param_ranges
+                    },
+                },
+                temperature=0.2,
+            )
+
+            adjusted = dict(params)
+            for key, (lo, hi) in param_ranges.items():
+                if key in result:
+                    try:
+                        val = float(result[key])
+                        adjusted[key] = type(params.get(key, lo))(max(lo, min(hi, val)))
+                    except (ValueError, TypeError):
+                        pass
+            return adjusted
+        except Exception as e:
+            logger.warning("Semantic lesson mapping failed: %s", e)
+            return dict(params)
+
     async def extract(
         self,
         result: PipelineResult,

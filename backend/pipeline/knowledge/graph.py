@@ -15,6 +15,7 @@ from typing import TYPE_CHECKING
 
 from backend.pipeline.knowledge.entities import EntityResolution, EntityType, KnowledgeEntity
 from backend.pipeline.knowledge.relationships import KnowledgeRelationship, RelationType
+from backend.pipeline.knowledge.truth import TruthValue
 
 if TYPE_CHECKING:
     from backend.pipeline.knowledge.activation import ActivationPipeline
@@ -132,6 +133,18 @@ class KnowledgeGraph:
 
             content_hash = ChangeRecord.compute_content_hash(rel.model_dump(mode="json"))
             self._change_buffer.record_relationship_add(source, target, content_hash)
+
+        # Truth-value revision when CONTRADICTS relation is added
+        if rel.relation_type == RelationType.CONTRADICTS:
+            src_entity = self._entities.get(source)
+            tgt_entity = self._entities.get(target)
+            for entity in (src_entity, tgt_entity):
+                if entity and hasattr(entity, 'truth') and entity.truth:
+                    entity.truth = TruthValue(
+                        frequency=entity.truth.frequency,
+                        confidence=entity.truth.confidence * 0.8,
+                        evidence_count=entity.truth.evidence_count,
+                    )
 
     def get_entity(self, entity_id: str) -> KnowledgeEntity | None:
         """Get an entity by ID (resolves to canonical)."""

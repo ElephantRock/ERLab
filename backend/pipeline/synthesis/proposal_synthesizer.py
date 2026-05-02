@@ -75,8 +75,9 @@ class ResearchProposal:
 
 
 class ProposalSynthesizer:
-    def __init__(self, provider: LLMProvider):
+    def __init__(self, provider: LLMProvider, ensemble_reviewer=None):
         self._provider = provider
+        self._ensemble_reviewer = ensemble_reviewer
         self._prompt_template = (PROMPT_DIR / "synthesis_system.md").read_text()
 
     async def synthesize(
@@ -257,6 +258,14 @@ class ProposalSynthesizer:
                         return proposal2
                 except Exception:
                     pass
+
+            # Ensemble review (Gap 6)
+            if self._ensemble_reviewer:
+                try:
+                    review_result = await self._ensemble_reviewer.review(proposal, idea)
+                    proposal.sections["ensemble_review"] = review_result
+                except Exception as e:
+                    logger.warning("Ensemble review failed: %s", e)
 
             return proposal
 

@@ -17,10 +17,39 @@ logger = logging.getLogger(__name__)
 class LiteLLMProvider(LLMProvider):
     """LLM provider backed by litellm — routes to any model."""
 
+    _configured: bool = False
+
     def __init__(self, model: str = "gpt-4o", api_key: str | None = None):
         super().__init__()
         self._model = model
         self._api_key = api_key
+        self._configure_litellm()
+
+    @classmethod
+    def _configure_litellm(cls):
+        if cls._configured:
+            return
+        try:
+            import litellm
+
+            from backend.config import get_settings
+
+            settings = get_settings()
+            litellm.num_retries = settings.litellm_num_retries
+            litellm.allowed_fails = settings.litellm_allowed_fails
+            litellm.cooldown_time = settings.litellm_cooldown_time
+            if settings.model_fallback_chain:
+                litellm.fallbacks = [settings.model_fallback_chain]
+            cls._configured = True
+            logger.info(
+                "litellm configured: retries=%d, allowed_fails=%d, cooldown=%ds, fallbacks=%s",
+                settings.litellm_num_retries,
+                settings.litellm_allowed_fails,
+                settings.litellm_cooldown_time,
+                settings.model_fallback_chain or "none",
+            )
+        except ImportError:
+            pass
 
     @property
     def provider_name(self) -> str:
