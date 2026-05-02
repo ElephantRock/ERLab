@@ -8,6 +8,7 @@ import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import Settings from "@/pages/settings";
 import { SettingsProvider } from "@/contexts/settings-context";
+import { AuthProvider } from "@/contexts/auth-context";
 
 // ── Mock API client ─────────────────────────────────────────────────
 const mockTestConnection = vi.fn();
@@ -27,9 +28,11 @@ vi.mock("@/api/autonomous", () => ({
 function renderSettings() {
   return render(
     <MemoryRouter>
-      <SettingsProvider>
-        <Settings />
-      </SettingsProvider>
+      <AuthProvider>
+        <SettingsProvider>
+          <Settings />
+        </SettingsProvider>
+      </AuthProvider>
     </MemoryRouter>,
   );
 }

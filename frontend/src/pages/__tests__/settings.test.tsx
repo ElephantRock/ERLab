@@ -4,14 +4,17 @@ import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import Settings from "@/pages/settings";
 import { SettingsProvider } from "@/contexts/settings-context";
+import { AuthProvider } from "@/contexts/auth-context";
 
 // ── Helper ────────────────────────────────────────────────────────
 function renderSettings() {
   return render(
     <MemoryRouter>
-      <SettingsProvider>
-        <Settings />
-      </SettingsProvider>
+      <AuthProvider>
+        <SettingsProvider>
+          <Settings />
+        </SettingsProvider>
+      </AuthProvider>
     </MemoryRouter>,
   );
 }

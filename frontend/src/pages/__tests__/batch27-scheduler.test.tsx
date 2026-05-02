@@ -14,6 +14,7 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { SettingsProvider } from "@/contexts/settings-context";
+import { AuthProvider } from "@/contexts/auth-context";
 import Settings from "@/pages/settings";
 import AutonomousPage from "@/pages/autonomous";
 
@@ -105,9 +106,11 @@ function setupSettingsMocks() {
 function renderSettings() {
   return render(
     <MemoryRouter>
-      <SettingsProvider>
-        <Settings />
-      </SettingsProvider>
+      <AuthProvider>
+        <SettingsProvider>
+          <Settings />
+        </SettingsProvider>
+      </AuthProvider>
     </MemoryRouter>,
   );
 }
@@ -115,9 +118,11 @@ function renderSettings() {
 function renderAutonomousPage() {
   return render(
     <MemoryRouter initialEntries={["/autonomous"]}>
-      <Routes>
-        <Route path="/autonomous" element={<AutonomousPage />} />
-      </Routes>
+      <AuthProvider>
+        <Routes>
+          <Route path="/autonomous" element={<AutonomousPage />} />
+        </Routes>
+      </AuthProvider>
     </MemoryRouter>,
   );
 }
