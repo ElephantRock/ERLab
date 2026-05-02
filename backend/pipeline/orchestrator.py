@@ -88,6 +88,7 @@ class PipelineOrchestrator:
 
         self._init_core_services(settings)
         self._init_memory(settings)
+        self._init_cross_stage_context(settings)
         self._init_self_improve(settings)
         self._init_autonomy(settings)
         self._init_governance(settings)
@@ -201,14 +202,90 @@ class PipelineOrchestrator:
             embedding_service=self._embedding,
             reranker=reranker,
             query_transformer=query_transformer,
+            quality_scorer=None,
             rrf_k=getattr(settings, "rrf_k", 60),
             retrieval_mode=getattr(settings, "retrieval_mode", "hybrid"),
         )
 
+        # Quality scorer for retrieval (Gap 1)
+        if getattr(settings, "retrieval_quality_scoring_enabled", False):
+            from backend.pipeline.knowledge.retrieval_quality import RetrievalQualityScorer
+            self._quality_scorer = RetrievalQualityScorer()
+            self._retriever._quality_scorer = self._quality_scorer
+        else:
+            self._quality_scorer = None
+
         self._gap_analyzer = GapAnalyzer(self._provider)
         self._novelty = NoveltyChecker(self._provider, self._store, self._retriever)
         self._feasibility = FeasibilityScorer(self._provider)
-        self._synthesizer = ProposalSynthesizer(self._provider)
+
+        # Citation-aware novelty augmentation (Gap 11)
+        self._citation_traverser = None
+        self._embedding_novelty_scorer = None
+        if getattr(settings, "citation_novelty_enabled", False):
+            from backend.pipeline.novelty.citation_traversal import CitationGraphTraverser
+            self._citation_traverser = CitationGraphTraverser(self._kg)
+            self._novelty._citation_traverser = self._citation_traverser
+        if getattr(settings, "embedding_novelty_enabled", False):
+            from backend.pipeline.novelty.embedding_scorer import EmbeddingNoveltyScorer
+            from backend.pipeline.knowledge.graph_embeddings import GraphEmbeddingIndex
+            graph_index = GraphEmbeddingIndex(
+                persist_dir=settings.chroma_persist_dir,
+                embedding_service=self._embedding,
+            )
+            self._embedding_novelty_scorer = EmbeddingNoveltyScorer(self._embedding, graph_index)
+            self._novelty._embedding_scorer = self._embedding_novelty_scorer
+
+        # Faithfulness checker for gap analysis (Gap 9)
+        self._faithfulness_checker = None
+        if getattr(settings, "faithfulness_check_enabled", False):
+            from backend.pipeline.knowledge.faithfulness import FaithfulnessChecker
+            self._faithfulness_checker = FaithfulnessChecker(self._provider)
+
+        # Contradiction scanner for knowledge graph (Gap 9)
+        self._contradiction_scanner = None
+        if getattr(settings, "contradiction_detection_enabled", False):
+            from backend.pipeline.knowledge.contradiction import ContradictionScanner
+            self._contradiction_scanner = ContradictionScanner(
+                kg=self._kg, provider=self._provider,
+                scan_interval=getattr(settings, "contradiction_scan_interval", 10),
+            )
+
+        # Forest-of-Thought and Reasoning Verifier (Gap 7)
+        self._forest = None
+        self._reasoning_verifier = None
+        if getattr(settings, "reasoning_verification_enabled", False):
+            from backend.pipeline.generation.verifier import ReasoningVerifier
+            self._reasoning_verifier = ReasoningVerifier(self._provider)
+
+        # Dynamic agent factory (Gap 2)
+        self._dynamic_agent_factory = None
+        self._sub_goal_generator = None
+        if getattr(settings, "dynamic_agents_enabled", False):
+            from backend.pipeline.agents.dynamic_factory import DynamicAgentFactory
+            self._dynamic_agent_factory = DynamicAgentFactory(
+                provider=self._provider,
+                registry=self._agent_registry or __import__(
+                    "backend.pipeline.agents.registry",
+                    fromlist=["AgentRegistry"],
+                ).AgentRegistry(),
+                bus=self._message_bus,
+                max_agents=getattr(settings, "dynamic_agents_max_per_run", 5),
+            )
+            if getattr(settings, "sub_goal_generation_enabled", False):
+                from backend.pipeline.agents.sub_goals import SubGoalGenerator
+                self._sub_goal_generator = SubGoalGenerator(
+                    provider=self._provider,
+                    factory=self._dynamic_agent_factory,
+                )
+
+        # Ensemble reviewer for proposal synthesis (Gap 6)
+        ensemble_reviewer = None
+        if getattr(settings, "evaluation_framework_enabled", False):
+            from backend.pipeline.evaluation.ensemble_review import EnsembleReviewer
+            ensemble_reviewer = EnsembleReviewer(self._provider)
+
+        self._synthesizer = ProposalSynthesizer(self._provider, ensemble_reviewer=ensemble_reviewer)
         self._export = ExportService()
 
         # Tool registry and plugin loader
@@ -294,9 +371,30 @@ class PipelineOrchestrator:
                 retriever=self._retriever,
             )
 
+    def _init_cross_stage_context(self, settings) -> None:
+        self._cross_stage_ctx = None
+        self._prompt_builder = None
+
+        if not getattr(settings, "cross_stage_context_enabled", True):
+            return
+        if not self._memory:
+            return
+
+        from backend.pipeline.context.cross_stage import CrossStageContext
+        from backend.pipeline.context.prompt_layers import LayeredPromptBuilder
+
+        self._cross_stage_ctx = CrossStageContext(self._memory)
+
+        if getattr(settings, "prompt_layers_enabled", True):
+            self._prompt_builder = LayeredPromptBuilder(memory=self._memory)
+
     def _init_self_improve(self, settings) -> None:
         self._evolver: PipelineEvolver | None = None
         self._lesson_extractor: LessonExtractor | None = None
+        self._evolution_engine = None
+        self._ab_test_harness = None
+        self._ratchet_loop = None
+        self._feedback_history = None
         self._skill_registry = None
         self._skill_proposer = None
         self._skill_generator = None
@@ -307,8 +405,31 @@ class PipelineOrchestrator:
 
             frontier = ParetoFrontier(f"{settings.self_improve_persist_dir}/frontier.json")
             constraint_config = ConstraintConfig(max_size=5000, max_growth_pct=0.3, allow_empty=False, min_sections=3)
-            self._evolver = PipelineEvolver(frontier, constraint_config=constraint_config)
             self._lesson_extractor = LessonExtractor(self._provider)
+            self._evolver = PipelineEvolver(
+                frontier, constraint_config=constraint_config,
+                lesson_mapper=self._lesson_extractor,
+            )
+
+            # Gap 3: Verified Self-Improvement
+            if getattr(settings, "evolution_engine_enabled", False):
+                from backend.pipeline.self_improve.engine import EvolutionEngine
+                from backend.pipeline.self_improve.ab_test import ABTestHarness
+                from backend.pipeline.self_improve.ratchet import RatchetLoop
+                from backend.pipeline.self_improve.feedback_history import FeedbackHistory
+
+                self._evolution_engine = EvolutionEngine(
+                    self._evolver, self._provider,
+                    decay_rate=getattr(settings, "evolution_engine_decay_rate", 0.95),
+                )
+                self._ab_test_harness = ABTestHarness(
+                    frontier,
+                    min_confidence=getattr(settings, "ab_testing_min_confidence", 0.6),
+                )
+                self._ratchet_loop = RatchetLoop()
+                self._feedback_history = FeedbackHistory(
+                    f"{settings.self_improve_persist_dir}/feedback_history.json"
+                )
 
         if settings.skills_enabled:
             from backend.pipeline.skills.proposer_generator import SkillGenerator, SkillProposer
@@ -712,7 +833,7 @@ class PipelineOrchestrator:
         return [
             LiteratureSearchStage(self._search, self._hooks),
             IngestionStage(self._store, self._bm25, self._embedding, kg=self._kg),
-            GapAnalysisStage(self._gap_analyzer, self._goal_manager, self._hooks, self._memory, kg=self._kg),
+            GapAnalysisStage(self._gap_analyzer, self._goal_manager, self._hooks, self._memory, kg=self._kg, faithfulness_checker=self._faithfulness_checker),
             IdeaGenerationStage(
                 self._agent,
                 self._hooks,
@@ -720,6 +841,8 @@ class PipelineOrchestrator:
                 dag_agents=self._dag_agents,
                 provider=self._provider,
                 kg=self._kg,
+                forest=self._forest,
+                reasoning_verifier=self._reasoning_verifier,
             ),
             NoveltyCheckingStage(self._novelty, self._hooks),
             FeasibilityScoringStage(self._feasibility),
@@ -793,7 +916,7 @@ class PipelineOrchestrator:
         result.params_used = params
 
         # Create DB run record
-        db_run_id = self._persistence.create_run_record(domain, params)
+        db_run_id = self._persistence.create_run_record(domain, params, session_id=session_id)
 
         # Budget: validate plan and start tracking
         if self._budget and self._plan_verifier:
@@ -915,9 +1038,29 @@ class PipelineOrchestrator:
                             continue
 
             t0 = time.time()
+            # Cross-stage context: load prior outputs
+            if self._cross_stage_ctx:
+                prior = await self._cross_stage_ctx.load_prior_context(run_id, stage.name)
+                if prior:
+                    ctx.params["prior_context"] = prior
             with create_span(SpanKind.STAGE, stage.name, run_id=run_id) as span:
                 prepared_ctx = await self._compaction.prepare_context(ctx, stage.name)
-                should_continue = await stage.execute(prepared_ctx)
+                # Heartbeat monitoring
+                heartbeat = None
+                if getattr(self._settings, "heartbeat_enabled", True):
+                    from backend.pipeline.execution.heartbeat import StageHeartbeat
+                    heartbeat = StageHeartbeat(
+                        checkpoint, self._persistence,
+                        interval_seconds=getattr(self._settings, "heartbeat_interval_seconds", 30.0),
+                    )
+                    await heartbeat.start(stage.name)
+                try:
+                    should_continue = await self._execute_stage_with_retry(
+                        stage, prepared_ctx, checkpoint
+                    )
+                finally:
+                    if heartbeat:
+                        await heartbeat.stop()
             elapsed = time.time() - t0
             self._record_stage(stage.name, t0)
             self._compaction.record_usage(stage.name)
@@ -975,9 +1118,25 @@ class PipelineOrchestrator:
                         if plateau.is_plateau:
                             logger.warning("Metacognitive plateau: %s", plateau.reason)
 
+                # Quality backloop (Gap 12): loop back if ideas are weak
+                if getattr(settings, "quality_backloop_enabled", False) and result.ideas:
+                    avg_score = sum(i.score for i in result.ideas) / len(result.ideas)
+                    min_composite = getattr(settings, "quality_backloop_min_composite", 0.4)
+                    if avg_score < min_composite:
+                        logger.info(
+                            "Quality backloop: avg score %.3f < %.3f, regenerating ideas",
+                            avg_score, min_composite,
+                        )
+                        # Mark low-scoring ideas for replacement
+                        result.ideas = [i for i in result.ideas if i.score >= min_composite]
+
             if stage.name == "proposal_synthesis":
                 self._persistence.persist_proposals(result, db_run_id)
                 self._collect_warnings(result)
+
+            # Cross-stage context: persist stage outputs
+            if self._cross_stage_ctx:
+                await self._persist_stage_context(run_id, stage.name, ctx, result)
 
             # Save checkpoint after each stage for durable execution
             checkpoint.mark_stage_completed(stage.name)
@@ -1081,7 +1240,7 @@ class PipelineOrchestrator:
             # Check for significant changes and re-evaluate goals
             if self._kg and getattr(self._settings, "versioning_enabled", True):
                 from backend.pipeline.knowledge.change_detector import WorldModelChangeDetector
-                detector = WorldModelChangeDetector(self._kg)
+                detector = WorldModelChangeDetector(self._kg, contradiction_scanner=self._contradiction_scanner)
                 summary = await detector.check_and_notify(
                     goal_manager=getattr(self, "_goal_manager", None),
                 )
@@ -1158,6 +1317,36 @@ class PipelineOrchestrator:
         result.run_id = run_id
         params = {}
         db_run_id = None
+
+        # State reconstruction: load prior outputs from database
+        db_run = self._persistence.get_run_by_uuid(run_id)
+        if db_run:
+            db_run_id = db_run.id
+            try:
+                loaded_gaps = self._persistence.load_gaps(db_run_id)
+                if loaded_gaps:
+                    result.gaps = loaded_gaps
+                    logger.info("Reconstructed %d gaps from database", len(loaded_gaps))
+            except Exception as exc:
+                logger.warning("Failed to reconstruct gaps: %s", exc)
+            try:
+                loaded_ideas = self._persistence.load_ideas(db_run_id)
+                if loaded_ideas:
+                    result.ideas = loaded_ideas
+                    logger.info("Reconstructed %d ideas from database", len(loaded_ideas))
+            except Exception as exc:
+                logger.warning("Failed to reconstruct ideas: %s", exc)
+
+        # Cross-stage context: load additional persisted outputs
+        if self._cross_stage_ctx:
+            try:
+                prior = await self._cross_stage_ctx.load_prior_context(run_id, "export")
+                if prior:
+                    ctx_params = {"reconstructed_context": prior}
+                    params.update(ctx_params)
+                    logger.info("Loaded cross-stage context with %d stages", len(prior))
+            except Exception as exc:
+                logger.warning("Failed to load cross-stage context: %s", exc)
 
         ctx = StageContext(
             result=result,
@@ -1341,6 +1530,39 @@ class PipelineOrchestrator:
 
     # ── Helpers ──────────────────────────────────────────────────────
 
+    async def _execute_stage_with_retry(
+        self, stage: PipelineStage, ctx: StageContext, checkpoint: RunCheckpoint
+    ) -> bool:
+        """Execute a stage with retry, exponential backoff, and checkpointing."""
+        import random
+
+        max_retries = getattr(self._settings, "stage_max_retries", 3)
+        base_delay = getattr(self._settings, "stage_retry_base_delay", 2.0)
+        max_delay = getattr(self._settings, "stage_retry_max_delay", 120.0)
+        jitter_frac = getattr(self._settings, "stage_retry_jitter", 0.1)
+
+        for attempt in range(max_retries + 1):
+            try:
+                result = await stage.execute(ctx)
+                return result
+            except Exception as exc:
+                checkpoint.mark_stage_failed(stage.name, str(exc))
+                self._persistence.save_checkpoint(checkpoint)
+                if attempt >= max_retries:
+                    logger.error(
+                        "Stage %s exhausted %d retries: %s", stage.name, max_retries, exc
+                    )
+                    raise
+                delay = min(base_delay * (2 ** attempt), max_delay)
+                jitter = delay * jitter_frac
+                delay += random.uniform(-jitter, jitter)
+                logger.warning(
+                    "Stage %s failed (attempt %d/%d), retrying in %.1fs: %s",
+                    stage.name, attempt + 1, max_retries + 1, delay, exc,
+                )
+                await asyncio.sleep(delay)
+        return False  # unreachable but satisfies type checker
+
     def _record_stage(self, stage_name: str, start_time: float) -> None:
         elapsed = time.time() - start_time
         if self._stage_callback:
@@ -1350,7 +1572,11 @@ class PipelineOrchestrator:
             self._stage_callback(stage_name, idx, len(self._STAGE_ORDER), elapsed)
         if self._budget:
             tokens = self._token_counter.snapshot().total_tokens
-            self._budget.record(stage_name, tokens=tokens, elapsed=elapsed)
+            cost_usd = 0.0
+            if self._cost_tracker:
+                stage_costs = self._cost_tracker.by_stage()
+                cost_usd = stage_costs.get(stage_name, {}).get("total_cost_usd", 0.0)
+            self._budget.record(stage_name, tokens=tokens, cost_usd=cost_usd, elapsed=elapsed)
         self._token_counter.reset()
 
     def _should_stop(self) -> bool:
@@ -1364,7 +1590,56 @@ class PipelineOrchestrator:
             return True
         if policy == BudgetPolicy.REPLAN:
             logger.warning("Budget REPLAN — 80%% budget used. Continuing with caution.")
+        # Also check CostTracker for hard limit
+        if self._cost_tracker:
+            summary = self._cost_tracker.summary()
+            if summary["total_cost_usd"] > self._settings.budget_max_cost_usd:
+                logger.warning(
+                    "Cost tracker STOP: $%.2f exceeds budget $%.2f",
+                    summary["total_cost_usd"],
+                    self._settings.budget_max_cost_usd,
+                )
+                return True
         return False
+
+    async def _persist_stage_context(
+        self, run_id: str, stage_name: str, ctx: StageContext, result: PipelineResult
+    ) -> None:
+        """Save stage outputs to cross-stage context for later retrieval."""
+        try:
+            if stage_name == "literature_search" and ctx.all_papers:
+                await self._cross_stage_ctx.save_stage_output(
+                    run_id, "literature_search", "papers",
+                    [{"title": p.title, "abstract": getattr(p, "abstract", "")}
+                     for p in ctx.all_papers[:50]],
+                )
+            elif stage_name == "gap_analysis" and result.gaps:
+                await self._cross_stage_ctx.save_stage_output(
+                    run_id, "gap_analysis", "gaps",
+                    [{"title": g.title, "description": g.description,
+                      "confidence": g.confidence, "gap_type": g.gap_type}
+                     for g in result.gaps],
+                )
+            elif stage_name == "idea_generation" and result.ideas:
+                await self._cross_stage_ctx.save_stage_output(
+                    run_id, "idea_generation", "ideas",
+                    [{"title": i.title, "proposed_method": getattr(i, "proposed_method", ""),
+                      "score": i.score, "domain": getattr(i, "domain", "")}
+                     for i in result.ideas],
+                )
+            elif stage_name == "feasibility_scoring" and result.feasibility_reports:
+                await self._cross_stage_ctx.save_stage_output(
+                    run_id, "feasibility_scoring", "scores",
+                    {str(k): {"overall": v.overall_score}
+                     for k, v in result.feasibility_reports.items()},
+                )
+            elif stage_name == "proposal_synthesis" and result.proposals:
+                await self._cross_stage_ctx.save_stage_output(
+                    run_id, "proposal_synthesis", "proposals",
+                    {"count": len(result.proposals)},
+                )
+        except Exception as exc:
+            logger.warning("Failed to persist cross-stage context for %s: %s", stage_name, exc)
 
     def _collect_warnings(self, result: PipelineResult) -> None:
         warnings = self._persistence.get_warnings()

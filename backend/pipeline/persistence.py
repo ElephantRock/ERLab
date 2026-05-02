@@ -19,7 +19,7 @@ class PipelinePersistence:
     def get_warnings(self) -> list[str]:
         return self.warnings.copy()
 
-    def create_run_record(self, domain: str, params: dict) -> int | None:
+    def create_run_record(self, domain: str, params: dict, session_id: str | None = None) -> int | None:
         try:
             from backend.db import crud
             from backend.db.database import get_session
@@ -31,6 +31,7 @@ class PipelinePersistence:
                     status="running",
                     current_stage="initializing",
                     config_json=json.dumps(params),
+                    session_id=session_id,
                 )
                 return db_run.id
         except Exception as e:

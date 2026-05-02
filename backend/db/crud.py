@@ -189,22 +189,54 @@ def get_proposal_by_idea(session: Session, idea_id: int) -> Proposal | None:
 # --- Pipeline Runs ---
 
 
-def count_pipeline_runs(session: Session) -> int:
-    return session.execute(select(func.count()).select_from(PipelineRun)).scalar_one()
+def count_pipeline_runs(
+    session: Session,
+    session_id: str | None = None,
+) -> int:
+    stmt = select(func.count()).select_from(PipelineRun)
+    if session_id is not None:
+        stmt = stmt.where(PipelineRun.session_id == session_id)
+    return session.execute(stmt).scalar_one()
 
 
 def list_pipeline_runs(
     session: Session,
     limit: int = 20,
     offset: int = 0,
+    session_id: str | None = None,
 ) -> Sequence[PipelineRun]:
-    return (
-        session.execute(
-            select(PipelineRun).order_by(PipelineRun.id.desc()).limit(limit).offset(offset)
+    stmt = select(PipelineRun)
+    if session_id is not None:
+        stmt = stmt.where(PipelineRun.session_id == session_id)
+    stmt = stmt.order_by(PipelineRun.id.desc()).limit(limit).offset(offset)
+    return session.execute(stmt).scalars().all()
+
+
+def list_session_ids(session: Session) -> list[dict]:
+    """Return unique session_id values with run count and latest run timestamp.
+
+    Returns list of dicts: [{session_id, run_count, latest_run_at}].
+    Only includes runs where session_id is not NULL.
+    """
+    stmt = (
+        select(
+            PipelineRun.session_id,
+            func.count().label("run_count"),
+            func.max(PipelineRun.created_at).label("latest_run_at"),
         )
-        .scalars()
-        .all()
+        .where(PipelineRun.session_id.isnot(None))
+        .group_by(PipelineRun.session_id)
+        .order_by(func.max(PipelineRun.created_at).desc())
     )
+    rows = session.execute(stmt).all()
+    return [
+        {
+            "session_id": row.session_id,
+            "run_count": row.run_count,
+            "latest_run_at": str(row.latest_run_at),
+        }
+        for row in rows
+    ]
 
 
 def create_pipeline_run(session: Session, **kwargs) -> PipelineRun:

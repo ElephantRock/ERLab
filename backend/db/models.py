@@ -91,6 +91,9 @@ class PipelineRun(Base):
     config_json: Mapped[str] = mapped_column(Text, default="{}")
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
 
+    # Session grouping (simple string field, not a FK — HB-01)
+    session_id: Mapped[str | None] = mapped_column(String(200), nullable=True)
+
     # Stage tracking
     current_stage: Mapped[str | None] = mapped_column(String(50), nullable=True)
     stages_completed: Mapped[str] = mapped_column(Text, default="[]")  # JSON list

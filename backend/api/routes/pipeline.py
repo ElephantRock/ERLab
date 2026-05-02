@@ -104,30 +104,32 @@ async def trigger_run(request: PipelineRunRequest):
 @router.get(
     "/runs",
     summary="List pipeline runs",
-    description="List all pipeline runs with pagination support.",
+    description="List all pipeline runs with pagination and optional session_id filter.",
 )
 async def list_runs(
     limit: int = Query(default=20, ge=1, le=100),
     offset: int = Query(default=0, ge=0),
+    session_id: str | None = Query(default=None, max_length=200),
 ):
     """List pipeline runs with pagination.
 
     Args:
         limit: Maximum number of runs to return (1-100).
         offset: Number of runs to skip.
+        session_id: Optional filter to return only runs for a specific session.
 
     Returns:
         {"runs": [...], "total": 42}
 
     Example response:
-        {"runs": [{"id": 1, "status": "completed", "domain": "AI/NLP", "current_stage": "done", "ideas_count": 5, "created_at": "...", "completed_at": "...", "error_message": null}], "total": 42}
+        {"runs": [{"id": 1, "status": "completed", "domain": "AI/NLP", "current_stage": "done", "ideas_count": 5, "session_id": "sess-abc", "created_at": "...", "completed_at": "...", "error_message": null}], "total": 42}
     """
     from backend.db.crud import list_pipeline_runs, count_pipeline_runs
     from backend.db.database import get_session
 
     with get_session() as session:
-        runs = list_pipeline_runs(session, limit=limit, offset=offset)
-        total = count_pipeline_runs(session)
+        runs = list_pipeline_runs(session, limit=limit, offset=offset, session_id=session_id)
+        total = count_pipeline_runs(session, session_id=session_id)
         return {
             "runs": [
                 {
@@ -136,6 +138,7 @@ async def list_runs(
                     "domain": r.domain,
                     "current_stage": r.current_stage,
                     "ideas_count": len(r.ideas),
+                    "session_id": r.session_id,
                     "created_at": str(r.created_at),
                     "completed_at": str(r.completed_at) if r.completed_at else None,
                     "error_message": r.error_message,
@@ -180,6 +183,28 @@ async def resume_pipeline(run_id: str):
         "gaps_count": len(result.gaps),
         "proposals_count": len(result.proposals),
     }
+
+
+@router.get(
+    "/runs/sessions",
+    summary="List unique sessions",
+    description="Return unique session_id values with run counts and latest run timestamps.",
+)
+async def list_sessions_for_runs():
+    """List unique session IDs with aggregated run information.
+
+    Returns:
+        {"sessions": [{"session_id": "...", "run_count": 3, "latest_run_at": "..."}]}
+
+    Example response:
+        {"sessions": [{"session_id": "sess-abc", "run_count": 3, "latest_run_at": "2026-05-02 14:30:00+00:00"}]}
+    """
+    from backend.db.crud import list_session_ids
+    from backend.db.database import get_session
+
+    with get_session() as session:
+        sessions = list_session_ids(session)
+        return {"sessions": sessions}
 
 
 # NOTE: Static paths (/runs/detail/) must be registered before dynamic
