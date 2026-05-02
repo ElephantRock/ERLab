@@ -69,6 +69,12 @@ class Settings(BaseSettings):
     # API Authentication
     api_key: str | None = None  # EROCK_API_KEY env var; empty = auth disabled
 
+    # JWT Authentication (BATCH-28)
+    auth_enabled: bool = False  # When False, no JWT auth required (dev mode)
+    jwt_secret: str = "dev-secret-change-in-production"
+    jwt_algorithm: str = "HS256"
+    jwt_expire_minutes: int = 60 * 24  # 24 hours
+
     # API Middleware
     cors_origins: list[str] = ["*"]  # EROCK_CORS_ORIGINS (JSON list)
     rate_limit_enabled: bool = True
@@ -107,7 +113,7 @@ class Settings(BaseSettings):
     cost_persist_dir: str = "./data/costs"
 
     # Provider Resilience (WP-01)
-    resilience_enabled: bool = False
+    resilience_enabled: bool = True
     circuit_breaker_failure_threshold: int = 5
     circuit_breaker_reset_timeout: float = 60.0
     retry_max_retries: int = 3
@@ -118,8 +124,8 @@ class Settings(BaseSettings):
     secrets_persist_dir: str = "./data/secrets"
 
     # Evaluation Framework (WP-02)
-    evaluation_framework_enabled: bool = False
-    evaluation_geval_enabled: bool = False
+    evaluation_framework_enabled: bool = True
+    evaluation_geval_enabled: bool = True
     evaluation_cache_max_size: int = 500
     evaluation_quality_gate_mode: str = "any"
     evaluation_composite_threshold: float = 0.4
@@ -140,7 +146,7 @@ class Settings(BaseSettings):
     sandbox_docker_image_python: str = "python:3.11-slim"
 
     # Observability (WP-04)
-    observability_enabled: bool = False
+    observability_enabled: bool = True
     observability_trace_memory: bool = True
     observability_trace_logging: bool = True
     observability_max_memory_spans: int = 10000
@@ -150,7 +156,7 @@ class Settings(BaseSettings):
     observability_metrics_enabled: bool = True
 
     # Semantic Caching (WP-05)
-    caching_enabled: bool = False
+    caching_enabled: bool = True
     caching_type: str = "memory"
     caching_max_size: int = 1000
     caching_similarity_threshold: float = 0.95
@@ -158,7 +164,7 @@ class Settings(BaseSettings):
     caching_persist_dir: str = "./data/chroma"
 
     # Cost Routing (WP-06)
-    cost_routing_enabled: bool = False
+    cost_routing_enabled: bool = True
     cost_routing_strategy: str = "cheapest"
     cost_routing_per_provider_limits: dict[str, float] = {}
     cost_routing_latency_window: int = 100
@@ -170,9 +176,17 @@ class Settings(BaseSettings):
     metacognitive_max_evals: int = 5
 
     # Model routing (P3)
-    model_routing_enabled: bool = False
+    model_routing_enabled: bool = True
     model_routing: dict[str, dict] = {}
     model_fallback_chain: list[str] = []
+
+    # Litellm native resilience
+    litellm_num_retries: int = 3
+    litellm_allowed_fails: int = 5
+    litellm_cooldown_time: int = 60
+
+    # Circuit breaker percentage-based cooldown
+    circuit_breaker_cooldown_percent: float = 0.1
 
     # Plugin verification (P3)
     plugin_verification_enabled: bool = False
@@ -282,6 +296,64 @@ class Settings(BaseSettings):
     session_default_max_duration_hours: float = 24.0
     session_gc_idle_timeout_hours: float = 48.0
     session_gc_expiry_hours: float = 168.0  # 7 days
+
+    # Cross-stage context (Gap 10)
+    cross_stage_context_enabled: bool = True
+    cross_stage_context_namespace: str = "cross_stage"
+    prompt_layers_enabled: bool = True
+
+    # Stage-level execution (Gap 13)
+    stage_max_retries: int = 3
+    stage_retry_base_delay: float = 2.0
+    stage_retry_max_delay: float = 120.0
+    stage_retry_jitter: float = 0.1
+    heartbeat_enabled: bool = True
+    heartbeat_interval_seconds: float = 30.0
+    heartbeat_timeout_seconds: float = 300.0
+
+    # Counterfactual reasoning (Gap 14)
+    counterfactual_enabled: bool = True
+    counterfactual_refutation_tests: bool = True
+
+    # Adaptive retrieval (Gap 1)
+    retrieval_quality_scoring_enabled: bool = True
+    retrieval_quality_threshold: float = 0.4
+    retrieval_adaptive_requery: bool = True
+    retrieval_max_requeries: int = 2
+
+    # Verified Self-Improvement (Gap 3)
+    evolution_engine_enabled: bool = False
+    evolution_engine_decay_rate: float = 0.95
+    ab_testing_enabled: bool = False
+    ab_testing_min_confidence: float = 0.6
+
+    # Human-Agent Iterative Refinement (Gap 12)
+    refinement_loop_enabled: bool = False
+    refinement_max_iterations: int = 3
+    quality_backloop_enabled: bool = False
+    quality_backloop_min_composite: float = 0.4
+    quality_backloop_max_retries: int = 2
+    input_guardrails_active: bool = False
+
+    # Contradiction Detection (Gap 9)
+    contradiction_detection_enabled: bool = False
+    contradiction_scan_interval: int = 10
+    faithfulness_check_enabled: bool = False
+
+    # Reasoning Verification (Gap 7)
+    forest_of_thought_enabled: bool = False
+    forest_of_thought_n_trees: int = 3
+    reasoning_verification_enabled: bool = False
+
+    # Dynamic Agent Creation (Gap 2)
+    dynamic_agents_enabled: bool = False
+    dynamic_agents_max_per_run: int = 5
+    sub_goal_generation_enabled: bool = False
+
+    # Citation-Aware Novelty (Gap 11)
+    citation_novelty_enabled: bool = False
+    citation_traversal_max_hops: int = 3
+    embedding_novelty_enabled: bool = False
 
 
 @functools.lru_cache()

@@ -8,6 +8,19 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from backend.db.database import Base
 
 
+class User(Base):
+    """User account for JWT authentication (BATCH-28)."""
+
+    __tablename__ = "users"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    username: Mapped[str] = mapped_column(String(128), unique=True, index=True)
+    email: Mapped[str] = mapped_column(String(256), unique=True, index=True)
+    hashed_password: Mapped[str] = mapped_column(String(256))
+    role: Mapped[str] = mapped_column(String(20), default="user")  # admin | user
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
+
+
 class Paper(Base):
     __tablename__ = "papers"
 

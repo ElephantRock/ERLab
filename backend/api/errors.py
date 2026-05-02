@@ -65,6 +65,20 @@ class UnauthorizedError(APIError):
         )
 
 
+class ForbiddenError(APIError):
+    """403 Forbidden."""
+
+    def __init__(self, detail: str = "Forbidden", hint: str | None = None):
+        super().__init__(status_code=403, detail=detail, code="FORBIDDEN", hint=hint)
+
+
+class ConflictError(APIError):
+    """409 Conflict."""
+
+    def __init__(self, detail: str = "Conflict", hint: str | None = None):
+        super().__init__(status_code=409, detail=detail, code="CONFLICT", hint=hint)
+
+
 class NotFoundError(APIError):
     """404 Not Found."""
 

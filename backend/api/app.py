@@ -8,9 +8,9 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from backend.api.auth import verify_api_key
+from backend.api.auth import get_current_user, verify_api_key
 from backend.api.errors import APIError
-from backend.api.routes import costs, gaps, governance, ideas, knowledge, knowledge_graph, literature, memory, pipeline, status, traces
+from backend.api.routes import auth as auth_routes, costs, gaps, governance, ideas, knowledge, knowledge_graph, literature, memory, pipeline, status, traces
 
 app = FastAPI(
     title="Elephant Rock Research API",
@@ -132,6 +132,11 @@ async def generic_error_handler(request: Request, exc: Exception):
 
 # ── Routes ─────────────────────────────────────────────────────────
 
+# Auth routes — always available (no API key dependency)
+app.include_router(
+    auth_routes.router, prefix="/api/v1/auth", tags=["auth"]
+)
+
 _auth = [Depends(verify_api_key)]
 
 app.include_router(
@@ -158,6 +163,37 @@ app.include_router(
     tags=["knowledge-graph"],
     dependencies=_auth,
 )
+
+
+# ── JWT Auth Middleware (BATCH-28) ──────────────────────────────────
+
+@app.middleware("http")
+async def jwt_auth_middleware(request: Request, call_next):
+    """When auth_enabled=True, validate JWT on all routes except auth endpoints."""
+    from backend.config import get_settings
+    from backend.api.auth import decode_access_token
+    from backend.api.errors import UnauthorizedError
+
+    settings = get_settings()
+    path = request.url.path
+
+    # Skip auth for public routes
+    if not settings.auth_enabled:
+        return await call_next(request)
+    if path.startswith("/api/v1/auth/") or path == "/health" or path.startswith("/docs") or path.startswith("/openapi"):
+        return await call_next(request)
+
+    # Validate Bearer token
+    auth_header = request.headers.get("Authorization", "")
+    if not auth_header.startswith("Bearer "):
+        raise UnauthorizedError(detail="Authentication required", hint="Provide a Bearer token")
+
+    try:
+        decode_access_token(auth_header[7:])
+    except UnauthorizedError:
+        raise
+
+    return await call_next(request)
 
 
 @app.on_event("startup")
