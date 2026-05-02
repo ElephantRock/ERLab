@@ -1,0 +1,18 @@
+{
+  "id": "ws_518c9f29",
+  "name": "elephant-rock-platform",
+  "slug": "elephant-rock-platform",
+  "defaults": {
+    "permissionMode": "safe",
+    "cyclablePermissionModes": [
+      "safe",
+      "allow-all"
+    ],
+    "enabledSourceSlugs": []
+  },
+  "localMcpServers": {
+    "enabled": true
+  },
+  "createdAt": 1777668974373,
+  "updatedAt": 1777668974375
+}

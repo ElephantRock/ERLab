@@ -1,0 +1,74 @@
+{
+  "run_id": "run_20260422_233658",
+  "state": "pending",
+  "stages": [
+    {
+      "stage_name": "literature_search",
+      "status": "completed",
+      "started_at": "2026-04-22T23:36:58.585964",
+      "completed_at": "2026-04-22T23:37:04.959094",
+      "error": null,
+      "retry_count": 0
+    },
+    {
+      "stage_name": "ingestion",
+      "status": "completed",
+      "started_at": "2026-04-22T23:37:04.959094",
+      "completed_at": "2026-04-22T23:37:05.011110",
+      "error": null,
+      "retry_count": 0
+    },
+    {
+      "stage_name": "gap_analysis",
+      "status": "completed",
+      "started_at": "2026-04-22T23:37:05.011110",
+      "completed_at": "2026-04-22T23:37:20.194785",
+      "error": null,
+      "retry_count": 0
+    },
+    {
+      "stage_name": "idea_generation",
+      "status": "completed",
+      "started_at": "2026-04-22T23:37:20.194785",
+      "completed_at": "2026-04-22T23:38:26.806349",
+      "error": null,
+      "retry_count": 0
+    },
+    {
+      "stage_name": "novelty_checking",
+      "status": "completed",
+      "started_at": "2026-04-22T23:38:26.806349",
+      "completed_at": "2026-04-22T23:38:36.552243",
+      "error": null,
+      "retry_count": 0
+    },
+    {
+      "stage_name": "feasibility_scoring",
+      "status": "completed",
+      "started_at": "2026-04-22T23:38:36.552243",
+      "completed_at": "2026-04-22T23:38:46.457952",
+      "error": null,
+      "retry_count": 0
+    },
+    {
+      "stage_name": "proposal_synthesis",
+      "status": "completed",
+      "started_at": "2026-04-22T23:38:46.457952",
+      "completed_at": "2026-04-22T23:40:02.419163",
+      "error": null,
+      "retry_count": 0
+    },
+    {
+      "stage_name": "export",
+      "status": "completed",
+      "started_at": "2026-04-22T23:40:02.419163",
+      "completed_at": "2026-04-22T23:40:02.422495",
+      "error": null,
+      "retry_count": 0
+    }
+  ],
+  "domain": "",
+  "params": {},
+  "created_at": "2026-04-22T23:36:58.585964",
+  "updated_at": "2026-04-22T23:40:02.422495"
+}

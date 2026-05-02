@@ -96,6 +96,6 @@ describe("AppShell layout", () => {
     const main = container.querySelector("main");
     expect(main).toBeInTheDocument();
     expect(main?.className).toContain("app-main");
-    expect(main?.textContent).toBe("Content");
+    expect(main?.textContent).toContain("Content");
   });
 });

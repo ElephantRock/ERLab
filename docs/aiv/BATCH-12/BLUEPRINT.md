@@ -1,0 +1,219 @@
+BATCH BLUEPRINT
+═══════════════════════════════════════════════════════════
+
+Batch ID:                 BATCH-12
+Blueprint Version:        1.0
+Cycle Mode:               STANDARD
+Lead Programmer:          Lead
+Date Issued:              2026-05-02
+Review SLA:               30 minutes
+Execution SLA per Task:   90 minutes
+Partial Sign-Off SLA:     15 minutes
+Task Sequencing:          SEQUENTIAL
+
+───────────────────────────────────────────────────────────
+BATCH GOAL
+───────────────────────────────────────────────────────────
+Connect pipeline completion to results display. After a pipeline run finishes,
+the user sees generated ideas inline on the pipeline page and can navigate
+to a dedicated Run Detail page showing full metadata, stages, and results.
+
+───────────────────────────────────────────────────────────
+SCOPE STATEMENT
+───────────────────────────────────────────────────────────
+What the code MUST do:
+  - Add GET /api/v1/pipeline/runs/{run_id}/ideas endpoint returning ideas for a run
+  - Show inline results section on pipeline-new page after completion
+  - Create a new /runs/:id route and page showing full run detail
+  - Make RunCard components on Dashboard clickable (navigate to /runs/:id)
+  - Show pipeline summary stats (ideas found, gaps identified, time elapsed)
+
+What the code MUST NOT do:
+  - Change the existing pipeline execution flow or SSE event protocol
+  - Modify the ideas table schema or ideas API endpoints
+  - Remove or replace any existing dashboard components
+
+───────────────────────────────────────────────────────────
+HARD BOUNDARIES
+───────────────────────────────────────────────────────────
+  HB-01: The existing SSE streaming protocol (event types, payload formats)
+         MUST NOT be altered. New results display consumes the existing
+         stream output, not the other way around.
+
+  HB-02: The new /runs/{id}/ideas endpoint MUST be read-only.
+         No data mutation endpoint may be introduced in this Batch.
+
+───────────────────────────────────────────────────────────
+DATA MODELS / SCHEMA
+───────────────────────────────────────────────────────────
+Existing models (backend/db/models.py — verified):
+  class PipelineRun:
+    id: int (autoincrement Integer)
+    status: str (pending/running/completed/failed)
+    domain: str
+    config_json: str (JSON)
+    error_message: str | None
+    current_stage: str | None
+    stages_completed: str (JSON list)
+    ideas: relationship → list[Idea]
+    gaps: relationship → list[ResearchGapDB]
+    created_at: datetime
+    completed_at: datetime | None
+
+  class Idea:
+    id: int (autoincrement Integer)
+    title: str
+    problem_statement: str
+    proposed_method: str
+    expected_contributions: str
+    domain: str
+    novelty_score: float | None
+    feasibility_score: float | None
+    overall_score: float | None
+    novelty_report: str | None
+    feasibility_report: str | None
+    user_rating: int | None
+    user_notes: str | None
+    pipeline_run_id: int | None (FK → pipeline_runs.id)
+    proposal: relationship → Proposal | None
+    created_at: datetime
+
+Existing backend API (backend/api/routes/pipeline.py):
+  GET /runs/detail/{id} → PipelineRunDetail (exists, unused by frontend)
+  GET /runs             → PipelineRunSummary[] (exists)
+  POST /run             → start pipeline (exists)
+
+New endpoint needed:
+  GET /api/v1/pipeline/runs/{run_id}/ideas
+  → { ideas: IdeaSummary[], total: int }
+
+  Note: pipeline_run_id (not run_id) is the FK column on Idea.
+  Query: SELECT * FROM ideas WHERE pipeline_run_id = :run_id
+
+Frontend types (frontend/src/api/types.ts):
+  PipelineRun, PipelineRunDetail, IdeaSummary — already defined
+
+Frontend API (frontend/src/api/pipeline.ts):
+  getRunDetail(id) — already defined, unused
+
+───────────────────────────────────────────────────────────
+AUTHORITY RULES
+───────────────────────────────────────────────────────────
+  AR-01: Idea data for a run is sourced from the ideas table filtered by
+         pipeline_run_id via the ORM relationship. The relational query
+         is the authority. PipelineRun has no result_json field.
+  AR-02: Run navigation is URL-based (/runs/:id). No modal or drawer.
+
+───────────────────────────────────────────────────────────
+DEPENDENCY MAP
+───────────────────────────────────────────────────────────
+  BATCH-07 (CLI setup command — needed for end-to-end testing)
+
+───────────────────────────────────────────────────────────
+TEST BASELINE
+───────────────────────────────────────────────────────────
+  Baseline at Blueprint issuance:  1,591 tests (1,506 backend + 85 frontend)
+  Expected delta (all Tasks):      +20 new tests (8 backend + 12 frontend)
+  Expected total at Batch close:   1,611
+
+───────────────────────────────────────────────────────────
+TASK LIST
+───────────────────────────────────────────────────────────
+
+TASK-01: BATCH-12/TASK-01 — Backend: Run Ideas Endpoint
+  Description:      Add a new read-only endpoint that returns all ideas
+                    generated by a specific pipeline run.
+  Files in scope:   backend/api/routes/pipeline.py (MODIFY)
+                    backend/db/crud.py (MODIFY)
+  Depends on:       None
+  Required Tests:
+    | Test ID          | Type        | Pass Criteria                                  |
+    |:-----------------|:------------|:-----------------------------------------------|
+    | TEST-12-01-01    | unit        | get_ideas_for_run returns correct ideas         |
+    | TEST-12-01-02    | unit        | get_ideas_for_run returns empty list for no ideas|
+    | TEST-12-01-03    | integration | GET /runs/{id}/ideas returns 200 with ideas     |
+    | TEST-12-01-04    | integration | GET /runs/{invalid}/ideas returns 404           |
+    | TEST-12-01-05    | unit        | Response includes total count field             |
+    | TEST-12-01-06    | unit        | Endpoint is read-only (GET only, no mutation)   |
+  Acceptance Criteria:
+    AC-01-01: GET /runs/{id}/ideas returns ideas linked to that run
+    AC-01-02: Response format is { ideas: IdeaSummary[], total: int }
+    AC-01-03: 404 returned for non-existent run IDs
+
+TASK-02: BATCH-12/TASK-02 — Frontend: Pipeline Results Display
+  Description:      Add inline results section to pipeline-new page
+                    that appears after pipeline completion showing
+                    generated ideas with navigation links.
+  Files in scope:   frontend/src/pages/pipeline-new.tsx (MODIFY)
+                    frontend/src/api/pipeline.ts (MODIFY — add getRunIdeas)
+  Depends on:       TASK-01 (needs backend endpoint)
+  Required Tests:
+    | Test ID          | Type | Pass Criteria                                          |
+    |:-----------------|:-----|:-------------------------------------------------------|
+    | TEST-12-02-01    | unit | Results section renders after pipeline completion       |
+    | TEST-12-02-02    | unit | Shows "Pipeline Complete" banner with summary stats     |
+    | TEST-12-02-03    | unit | Generated ideas appear as idea cards                   |
+    | TEST-12-02-04    | unit | "View All Ideas" button links to /ideas                 |
+    | TEST-12-02-05    | unit | "Run Another" button resets form state                  |
+    | TEST-12-02-06    | unit | Ideas fetch error shows error message                   |
+  Acceptance Criteria:
+    AC-02-01: Results appear within 2 seconds of pipeline completion
+    AC-02-02: User can click through to any idea from results section
+    AC-02-03: "Run Another" resets the form cleanly
+
+TASK-03: BATCH-12/TASK-03 — Frontend: Run Detail Page
+  Description:      Create a new Run Detail page at /runs/:id showing
+                    full run metadata, stages timeline, generated ideas,
+                    cost summary, and actions (resume/delete).
+  Files in scope:   frontend/src/pages/run-detail.tsx (NEW)
+                    frontend/src/App.tsx (MODIFY — add route)
+                    frontend/src/components/pipeline/run-card.tsx (MODIFY — add onClick)
+                    frontend/src/pages/dashboard.tsx (MODIFY — clickable RunCards)
+  Depends on:       TASK-01 (needs backend endpoint)
+  Required Tests:
+    | Test ID          | Type | Pass Criteria                                      |
+    |:-----------------|:-----|:---------------------------------------------------|
+    | TEST-12-03-01    | unit | Run detail page renders with valid run data        |
+    | TEST-12-03-02    | unit | Shows run metadata (ID, domain, status, timestamps)|
+    | TEST-12-03-03    | unit | Shows stages timeline with completion status       |
+    | TEST-12-03-04    | unit | Shows generated ideas list                         |
+    | TEST-12-03-05    | unit | Shows error message for failed runs                |
+    | TEST-12-03-06    | unit | Resume button appears only for failed runs         |
+    | TEST-12-03-07    | unit | RunCard click navigates to /runs/:id               |
+    | TEST-12-03-08    | unit | 404 run shows "Run not found" message              |
+  Acceptance Criteria:
+    AC-03-01: Clicking RunCard on Dashboard navigates to /runs/:id
+    AC-03-02: Run detail shows all metadata, stages, and ideas
+    AC-03-03: Failed runs show error message prominently
+    AC-03-04: Resume button appears only for failed/interrupted runs
+
+───────────────────────────────────────────────────────────
+BATCH-LEVEL ACCEPTANCE CRITERIA
+───────────────────────────────────────────────────────────
+  BAC-01: End-to-end: start pipeline → see results → click to run detail → see full info
+  BAC-02: No existing SSE streaming behavior is altered
+  BAC-03: CHANGELOG.md updated with BATCH-12 entry
+  BAC-04: All documents archived under /docs/aiv/BATCH-12/
+
+───────────────────────────────────────────────────────────
+LEAD RESPONSE TO REVIEW REPORT
+───────────────────────────────────────────────────────────
+[Completed by Lead after Phase I-B. Leave blank until Review Report is received.]
+
+Reviewer Report ID:       REVIEW-BATCH-12-2026-05-02
+Review Cycle:             1
+Lead Decision:            [x] ACCEPT WITH MODIFICATIONS
+
+FLAG-01 (CHK-07): Acted on — Data Models section rewritten with verified field
+  names, types, and relationships from actual backend/db/models.py.
+  Key corrections: id is int (not UUID/str), no result_json field on PipelineRun,
+  FK column is pipeline_run_id (not run_id), Idea has problem_statement/proposed_method/
+  expected_contributions (not description/source_gap_ids/proposal_text).
+FLAG-02 (CHK-13): Acted on — added TEST-12-02-06 for ideas fetch error state.
+FLAG-03 (CHK-17): Acted on — same fix as CHK-07. AR-01 updated to remove
+  reference to non-existent result_json.
+
+Blueprint Version after response: 1.1
+Lead Sign:                Lead + 2026-05-02 03:25
+
+═══════════════════════════════════════════════════════════

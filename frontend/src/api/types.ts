@@ -175,3 +175,44 @@ export interface SystemStatus {
   config: Record<string, boolean>;
   defaults: Record<string, number>;
 }
+
+// --- Global Search (BATCH-48) ---
+
+export interface IdeaSearchItem {
+  id: number;
+  title: string;
+  domain: string;
+  overall_score: number;
+}
+
+export interface GapSearchItem {
+  id: number;
+  title: string;
+  gap_type: string;
+  confidence: number;
+}
+
+export interface PaperSearchItem {
+  id: number;
+  title: string;
+  year: number;
+  venue: string;
+}
+
+export interface RunSearchItem {
+  id: number;
+  status: string;
+  domain: string;
+  created_at: string;
+}
+
+export interface GlobalSearchResponse {
+  query: string;
+  results: {
+    ideas?: { total: number; items: IdeaSearchItem[] };
+    gaps?: { total: number; items: GapSearchItem[] };
+    papers?: { total: number; items: PaperSearchItem[] };
+    runs?: { total: number; items: RunSearchItem[] };
+  };
+  total: number;
+}
