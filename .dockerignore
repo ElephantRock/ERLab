@@ -1,0 +1,49 @@
+# Version control
+.git
+.gitignore
+
+# Python cache
+__pycache__
+*.pyc
+*.pyo
+.mypy_cache
+.pytest_cache
+.ruff_cache
+
+# Virtual environments
+.venv
+venv
+env
+
+# IDE
+.vscode
+.idea
+
+# Test & coverage
+.coverage
+htmlcov
+.benchmarks
+
+# Data (mounted as volumes in compose)
+data/
+
+# Frontend (not needed in backend image)
+frontend/
+node_modules/
+
+# Docs & misc
+docs/
+*.md
+!README.md
+sessions/
+sources/
+statuses/
+skills/
+labels/
+config.json
+views.json
+events.jsonl
+.github/
+.claude-plugin/
+configs/
+scripts/
