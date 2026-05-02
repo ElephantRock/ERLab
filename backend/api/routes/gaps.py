@@ -15,6 +15,7 @@ router = APIRouter()
 async def list_gaps(
     run_id: int | None = Query(default=None, help="Pipeline run ID (latest if omitted)"),
     limit: int = Query(default=20, ge=1, le=100),
+    offset: int = Query(default=0, ge=0),
 ):
     """List research gaps from a pipeline run.
 
@@ -51,7 +52,7 @@ async def list_gaps(
             target_run = latest.id
 
         total = count_gaps_by_run(session, target_run)
-        gaps = list_gaps_by_run(session, target_run)[:limit]
+        gaps = list_gaps_by_run(session, target_run)[offset : offset + limit]
         return {
             "gaps": [
                 {

@@ -1,17 +1,21 @@
+import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { listGaps } from "@/api/gaps";
 import { GapCard } from "@/components/gaps/gap-card";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { GitBranch } from "lucide-react";
+import { GitBranch, ChevronLeft, ChevronRight } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import type { ResearchGap } from "@/api/types";
 
 export default function GapsExplorer() {
   const navigate = useNavigate();
+  const [page, setPage] = useState(0);
+  const limit = 20;
 
   const { data, isLoading } = useQuery({
-    queryKey: ["gaps"],
-    queryFn: () => listGaps({ limit: 50 }),
+    queryKey: ["gaps", { limit, offset: page * limit }],
+    queryFn: () => listGaps({ limit, offset: page * limit }),
   });
 
   const handleIdeaCountClick = (gap: ResearchGap) => {
@@ -49,6 +53,31 @@ export default function GapsExplorer() {
                 />
               ))}
           </div>
+          {data.total > limit && (
+            <div className="flex items-center justify-between pt-2">
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={page === 0}
+                onClick={() => setPage((p) => p - 1)}
+              >
+                <ChevronLeft className="mr-1 h-4 w-4" />
+                Previous
+              </Button>
+              <span className="text-sm text-muted-foreground">
+                Page {page + 1} of {Math.ceil(data.total / limit)}
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={(page + 1) * limit >= data.total}
+                onClick={() => setPage((p) => p + 1)}
+              >
+                Next
+                <ChevronRight className="ml-1 h-4 w-4" />
+              </Button>
+            </div>
+          )}
         </>
       ) : (
         <div className="text-center py-12 text-muted-foreground">

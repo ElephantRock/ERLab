@@ -261,12 +261,16 @@ describe("TEST-32-02-04: Pagination controls work (next/prev)", () => {
   it("clicking Next advances the page and Previous goes back", async () => {
     const IdeasBrowser = (await import("@/pages/ideas-browser")).default;
 
-    // 45 ideas → 3 pages of 20
-    mockedListIdeas.mockResolvedValue({
-      ideas: Array.from({ length: 20 }, (_, i) => makeIdea(i + 1)),
-      total: 45,
-      score_guide: {},
-    });
+    // 45 ideas → 3 pages of 20; dynamic mock based on offset
+    mockedListIdeas.mockImplementation((params) =>
+      Promise.resolve({
+        ideas: Array.from({ length: Math.min(20, 45 - (params?.offset ?? 0)) }, (_, i) =>
+          makeIdea(i + 1 + (params?.offset ?? 0))
+        ),
+        total: 45,
+        score_guide: {},
+      })
+    );
 
     const qc = createQueryClient();
     render(
@@ -277,7 +281,7 @@ describe("TEST-32-02-04: Pagination controls work (next/prev)", () => {
       </QueryClientProvider>,
     );
 
-    // Wait for page 1
+    // Wait for page 1 to render
     await waitFor(() => {
       expect(screen.getByText(/Page 1 of 3/)).toBeInTheDocument();
     });
@@ -286,19 +290,19 @@ describe("TEST-32-02-04: Pagination controls work (next/prev)", () => {
     const nextBtn = screen.getByText("Next");
     fireEvent.click(nextBtn);
 
-    // Mock page 2 response
-    mockedListIdeas.mockResolvedValue({
-      ideas: Array.from({ length: 20 }, (_, i) => makeIdea(i + 21)),
-      total: 45,
-      score_guide: {},
+    await waitFor(() => {
+      expect(mockedListIdeas).toHaveBeenCalledWith(
+        expect.objectContaining({ offset: 20 }),
+      );
     });
 
+    // Wait for page 2 to render before clicking Previous
     await waitFor(() => {
       expect(screen.getByText(/Page 2 of 3/)).toBeInTheDocument();
     });
 
     // Click Previous
-    const prevBtn = screen.getByText("Previous");
+    const prevBtn = screen.getByRole("button", { name: /previous/i });
     fireEvent.click(prevBtn);
 
     await waitFor(() => {
