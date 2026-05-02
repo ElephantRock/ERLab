@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from "react";
-import { Sidebar } from "./sidebar";
+import { Sidebar, MobileBottomNav } from "./sidebar";
 import { cn } from "@/lib/utils";
 import { PanelLeftClose, PanelLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -9,9 +9,10 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   return (
     <div className="flex h-screen overflow-hidden">
+      {/* Desktop sidebar — hidden on mobile via CSS */}
       <aside
         className={cn(
-          "flex-shrink-0 border-r border-border transition-all duration-200 bg-card",
+          "app-sidebar flex-shrink-0 border-r border-border transition-all duration-200 bg-card",
           collapsed ? "w-16" : "w-56",
         )}
       >
@@ -30,9 +31,11 @@ export function AppShell({ children }: { children: ReactNode }) {
         </div>
         <Sidebar collapsed={collapsed} />
       </aside>
-      <main className="flex-1 overflow-auto">
+      <main className="app-main flex-1 overflow-auto">
         {children}
       </main>
+      {/* Mobile bottom nav — shown on mobile via CSS */}
+      <MobileBottomNav />
     </div>
   );
 }

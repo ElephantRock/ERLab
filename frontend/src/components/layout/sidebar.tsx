@@ -21,12 +21,14 @@ interface NavItem {
   to: string;
   icon: React.ElementType;
   label: string;
+  /** Show in mobile bottom nav (limited space) */
+  mobile?: boolean;
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { to: "/", icon: LayoutDashboard, label: "Dashboard" },
-  { to: "/pipeline/new", icon: Play, label: "Pipeline" },
-  { to: "/ideas", icon: Lightbulb, label: "Ideas" },
+  { to: "/", icon: LayoutDashboard, label: "Dashboard", mobile: true },
+  { to: "/pipeline/new", icon: Play, label: "Pipeline", mobile: true },
+  { to: "/ideas", icon: Lightbulb, label: "Ideas", mobile: true },
   { to: "/gaps", icon: GitBranch, label: "Gaps" },
   { to: "/knowledge", icon: Search, label: "Knowledge" },
   { to: "/settings", icon: Settings, label: "Settings" },
@@ -37,7 +39,7 @@ const NAV_ITEMS: NavItem[] = [
   { to: "/sessions", icon: Layers, label: "Sessions" },
   { to: "/literature", icon: BookMarked, label: "Literature" },
   { to: "/knowledge-graph", icon: BrainCircuit, label: "Graph" },
-  { to: "/autonomous", icon: Cpu, label: "Autonomous" },
+  { to: "/autonomous", icon: Cpu, label: "Autonomous", mobile: true },
 ];
 
 export function Sidebar({ collapsed }: { collapsed: boolean }) {
@@ -59,6 +61,34 @@ export function Sidebar({ collapsed }: { collapsed: boolean }) {
         >
           <item.icon className="h-4 w-4 flex-shrink-0" />
           {!collapsed && <span className="truncate">{item.label}</span>}
+        </NavLink>
+      ))}
+    </nav>
+  );
+}
+
+/** Mobile bottom navigation — renders on small screens only. */
+export function MobileBottomNav() {
+  const mobileItems = NAV_ITEMS.filter((item) => item.mobile);
+
+  return (
+    <nav className="app-bottom-nav" aria-label="Mobile navigation">
+      {mobileItems.map((item) => (
+        <NavLink
+          key={item.to}
+          to={item.to}
+          end={item.to === "/"}
+          className={({ isActive }) =>
+            cn(
+              "flex flex-col items-center gap-0.5 text-[0.625rem] px-1 py-1 rounded-md transition-colors",
+              isActive
+                ? "text-primary"
+                : "text-muted-foreground hover:text-primary",
+            )
+          }
+        >
+          <item.icon className="h-5 w-5" />
+          <span>{item.label}</span>
         </NavLink>
       ))}
     </nav>

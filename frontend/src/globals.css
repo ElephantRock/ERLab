@@ -56,3 +56,80 @@ body {
   color: hsl(var(--foreground));
   font-family: system-ui, -apple-system, sans-serif;
 }
+
+/* ── Responsive Breakpoints (BATCH-31) ───────────────────────────── */
+
+/* Mobile: < 768px — sidebar hidden, bottom nav shown */
+@media (max-width: 767px) {
+  .app-sidebar {
+    display: none !important;
+  }
+  .app-bottom-nav {
+    display: flex !important;
+  }
+  .app-main {
+    padding-bottom: 4rem;
+  }
+  /* Dashboard grid stacks on mobile */
+  .dashboard-grid {
+    grid-template-columns: 1fr !important;
+    gap: 0.75rem !important;
+  }
+}
+
+/* Tablet: 768px–1023px — sidebar collapsed */
+@media (min-width: 768px) and (max-width: 1023px) {
+  .app-sidebar {
+    width: 4rem !important;
+  }
+  .app-bottom-nav {
+    display: none !important;
+  }
+  .dashboard-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+}
+
+/* Desktop: ≥ 1024px — full sidebar */
+@media (min-width: 1024px) {
+  .app-bottom-nav {
+    display: none !important;
+  }
+  .dashboard-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+/* Bottom nav bar */
+.app-bottom-nav {
+  display: none;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 4rem;
+  background-color: hsl(var(--card));
+  border-top: 1px solid hsl(var(--border));
+  z-index: 50;
+  align-items: center;
+  justify-content: space-around;
+  padding: 0 0.25rem;
+}
+
+.app-bottom-nav a {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.125rem;
+  font-size: 0.625rem;
+  color: hsl(var(--muted-foreground));
+  text-decoration: none;
+  padding: 0.25rem;
+  border-radius: 0.375rem;
+  transition: color 0.15s;
+}
+
+.app-bottom-nav a:hover,
+.app-bottom-nav a.active {
+  color: hsl(var(--primary));
+}

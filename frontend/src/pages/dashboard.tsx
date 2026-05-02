@@ -57,7 +57,7 @@ export default function Dashboard() {
         <p className="text-muted-foreground">Overview of your research pipeline.</p>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="dashboard-grid grid gap-4 md:grid-cols-3">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">Total Runs</CardTitle>
