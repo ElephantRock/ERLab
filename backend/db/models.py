@@ -52,6 +52,9 @@ class Idea(Base):
     user_rating: Mapped[int | None] = mapped_column(Integer, nullable=True)
     user_notes: Mapped[str | None] = mapped_column(Text, nullable=True)
 
+    # Gap→Idea traceability (JSON list of gap titles / identifiers)
+    source_gap_ids: Mapped[str | None] = mapped_column(Text, nullable=True)
+
     # Link to the pipeline run that generated this idea
     pipeline_run_id: Mapped[int | None] = mapped_column(
         Integer, ForeignKey("pipeline_runs.id"), nullable=True

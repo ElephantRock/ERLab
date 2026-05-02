@@ -3,6 +3,7 @@
 import json
 import logging
 from pathlib import Path
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -108,6 +109,7 @@ class PipelinePersistence:
                         proposed_method=idea.proposed_method,
                         expected_contributions=idea.expected_contributions,
                         domain=idea.domain,
+                        source_gap_ids=json.dumps(idea.source_gap_ids) if idea.source_gap_ids else None,
                         pipeline_run_id=db_run_id,
                     )
                     if nov or feas:
@@ -249,3 +251,53 @@ class PipelinePersistence:
             except Exception:
                 pass
         return results
+
+    # ---- State Reconstruction for Resume ----
+
+    def get_run_by_uuid(self, run_id: str) -> Any | None:
+        """Look up a PipelineRun by its UUID string."""
+        from backend.db.crud import list_pipeline_runs
+        with self._session() as session:
+            runs = list_pipeline_runs(session, limit=100)
+            for run in runs:
+                if str(run.id) == run_id or run_id.endswith(str(run.id)):
+                    return run
+        return None
+
+    def load_gaps(self, run_db_id: int) -> list:
+        """Load ResearchGap objects from database for a pipeline run."""
+        from backend.db.crud import get_pipeline_run
+        with self._session() as session:
+            run = get_pipeline_run(session, run_db_id)
+            if not run:
+                return []
+            from backend.pipeline.gap_analysis.models import ResearchGap
+            gaps = []
+            for gap_db in getattr(run, "gaps", []):
+                gaps.append(ResearchGap(
+                    title=gap_db.title,
+                    description=gap_db.description,
+                    gap_type=gap_db.gap_type,
+                    confidence=gap_db.confidence,
+                    potential_impact=getattr(gap_db, "potential_impact", ""),
+                ))
+            return gaps
+
+    def load_ideas(self, run_db_id: int) -> list:
+        """Load ResearchIdea objects from database for a pipeline run."""
+        from backend.db.crud import get_pipeline_run
+        with self._session() as session:
+            run = get_pipeline_run(session, run_db_id)
+            if not run:
+                return []
+            from backend.pipeline.generation.models import ResearchIdea
+            ideas = []
+            for idea_db in getattr(run, "ideas", []):
+                ideas.append(ResearchIdea(
+                    title=idea_db.title,
+                    problem_statement=getattr(idea_db, "problem_statement", ""),
+                    proposed_method=getattr(idea_db, "proposed_method", ""),
+                    domain=getattr(idea_db, "domain", "AI/NLP"),
+                    score=getattr(idea_db, "overall_score", 0.0) or 0.0,
+                ))
+            return ideas

@@ -3,7 +3,7 @@
 import json
 from collections.abc import Sequence
 
-from sqlalchemy import select, func
+from sqlalchemy import select, func, case, desc, asc
 from sqlalchemy.orm import Session
 
 from backend.db.models import Idea, Paper, PipelineRun, Proposal, ResearchGapDB
@@ -54,13 +54,24 @@ def count_ideas(
     session: Session,
     domain: str | None = None,
     min_score: float | None = None,
+    search: str | None = None,
 ) -> int:
     stmt = select(func.count()).select_from(Idea)
     if domain is not None:
         stmt = stmt.where(Idea.domain == domain)
     if min_score is not None:
         stmt = stmt.where(Idea.overall_score >= min_score)
+    if search is not None:
+        stmt = stmt.where(Idea.title.ilike(f"%{search}%"))
     return session.execute(stmt).scalar_one()
+
+
+VALID_SORT_COLUMNS = {
+    "score": Idea.overall_score,
+    "novelty": Idea.novelty_score,
+    "feasibility": Idea.feasibility_score,
+    "date": Idea.created_at,
+}
 
 
 def list_ideas(
@@ -69,12 +80,30 @@ def list_ideas(
     offset: int = 0,
     domain: str | None = None,
     min_score: float | None = None,
+    search: str | None = None,
+    sort_by: str | None = None,
+    sort_order: str = "desc",
 ) -> Sequence[Idea]:
-    stmt = select(Idea).order_by(Idea.id.desc())
+    stmt = select(Idea)
+
+    # Filters
     if domain is not None:
         stmt = stmt.where(Idea.domain == domain)
     if min_score is not None:
         stmt = stmt.where(Idea.overall_score >= min_score)
+    if search is not None:
+        stmt = stmt.where(Idea.title.ilike(f"%{search}%"))
+
+    # Sorting
+    sort_col = VALID_SORT_COLUMNS.get(sort_by) if sort_by else None
+    if sort_col is not None:
+        # Nulls last: use CASE to push NULLs to the end
+        nulls_last_expr = case((sort_col.is_(None), 1), else_=0)
+        direction = desc if sort_order == "desc" else asc
+        stmt = stmt.order_by(nulls_last_expr, direction(sort_col))
+    else:
+        stmt = stmt.order_by(Idea.id.desc())
+
     stmt = stmt.limit(limit).offset(offset)
     return session.execute(stmt).scalars().all()
 
@@ -252,3 +281,18 @@ def count_gaps_by_run(session: Session, run_id: int) -> int:
         .select_from(ResearchGapDB)
         .where(ResearchGapDB.pipeline_run_id == run_id)
     ).scalar_one()
+
+
+def count_ideas_for_gap(session: Session, gap_title: str) -> int:
+    """Count ideas whose source_gap_ids JSON contains the given gap title.
+
+    Uses parameterized LIKE query (HB-01) — the gap title is passed as a
+    bound parameter, never interpolated into SQL.
+    """
+    stmt = (
+        select(func.count())
+        .select_from(Idea)
+        .where(Idea.source_gap_ids.isnot(None))
+        .where(Idea.source_gap_ids.ilike(f"%{gap_title}%"))
+    )
+    return session.execute(stmt).scalar_one()

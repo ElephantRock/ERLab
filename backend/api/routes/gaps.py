@@ -30,7 +30,7 @@ async def list_gaps(
     """
     from sqlalchemy import select
 
-    from backend.db.crud import count_gaps_by_run, list_gaps_by_run
+    from backend.db.crud import count_gaps_by_run, count_ideas_for_gap, list_gaps_by_run
     from backend.db.database import get_session
     from backend.db.models import PipelineRun
 
@@ -61,6 +61,7 @@ async def list_gaps(
                     "gap_type": g.gap_type,
                     "confidence": g.confidence,
                     "potential_impact": g.potential_impact,
+                    "idea_count": count_ideas_for_gap(session, g.title),
                 }
                 for g in gaps
             ],
@@ -86,7 +87,7 @@ async def get_gap(gap_id: int):
     Example response:
         {"gap": {"id": 1, "title": "Limited cross-domain evaluation", "description": "...", "gap_type": "methodological", "confidence": 0.85, "potential_impact": "high", "pipeline_run_id": 1, "created_at": "2026-05-02T14:30:00"}}
     """
-    from backend.db.crud import get_gap as db_get_gap
+    from backend.db.crud import count_ideas_for_gap, get_gap as db_get_gap
     from backend.db.database import get_session
 
     with get_session() as session:
@@ -101,6 +102,7 @@ async def get_gap(gap_id: int):
                 "gap_type": gap.gap_type,
                 "confidence": gap.confidence,
                 "potential_impact": gap.potential_impact,
+                "idea_count": count_ideas_for_gap(session, gap.title),
                 "pipeline_run_id": gap.pipeline_run_id,
                 "created_at": str(gap.created_at),
             },

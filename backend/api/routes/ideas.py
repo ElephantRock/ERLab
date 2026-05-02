@@ -13,11 +13,18 @@ router = APIRouter()
 @router.get(
     "/",
     summary="List research ideas",
-    description="List research ideas with optional domain and score filters and pagination.",
+    description=(
+        "List research ideas with optional domain, score, search, and sort filters. "
+        "All filters are additive. search performs case-insensitive LIKE on title. "
+        "sort_by accepts score/novelty/feasibility/date. Uses parameterized queries (HB-01)."
+    ),
 )
 async def list_ideas(
     domain: str | None = None,
     min_score: float = Query(default=0.0, ge=0.0, le=1.0),
+    search: str | None = Query(default=None, description="Full-text keyword search on title (parameterized)"),
+    sort_by: str | None = Query(default=None, description="Sort field: score, novelty, feasibility, date"),
+    sort_order: str = Query(default="desc", description="Sort direction: desc or asc"),
     limit: int = Query(default=20, ge=1, le=100),
     offset: int = Query(default=0, ge=0),
 ):
@@ -26,21 +33,32 @@ async def list_ideas(
     Args:
         domain: Optional domain filter (e.g. "AI/NLP").
         min_score: Minimum overall score threshold (0.0-1.0).
+        search: Optional full-text keyword search on title (parameterized).
+        sort_by: Optional sort field (score, novelty, feasibility, date).
+        sort_order: Sort direction (desc or asc).
         limit: Maximum number of ideas to return.
         offset: Number of ideas to skip.
 
     Returns:
         {"ideas": [...], "total": 42, "score_guide": {...}}
-
-    Example response:
-        {"ideas": [{"id": 1, "title": "Novel Attention Mechanism", "domain": "AI/NLP", "novelty_score": 0.85, "feasibility_score": 7.2, "overall_score": 0.78, "pipeline_run_id": 1, "created_at": "2026-05-02T14:30:00"}], "total": 42, "score_guide": {"novelty": {"0.8-1.0": "Very High"}, "feasibility": {"6-8": "Feasible"}}}
     """
     from backend.db.crud import count_ideas, list_ideas as db_list_ideas
     from backend.db.database import get_session
 
+    effective_min_score = min_score if min_score > 0 else None
+
     with get_session() as session:
-        ideas = db_list_ideas(session, limit=limit, offset=offset, domain=domain, min_score=min_score)
-        total = count_ideas(session, domain=domain, min_score=min_score)
+        ideas = db_list_ideas(
+            session,
+            limit=limit,
+            offset=offset,
+            domain=domain,
+            min_score=effective_min_score,
+            search=search,
+            sort_by=sort_by,
+            sort_order=sort_order,
+        )
+        total = count_ideas(session, domain=domain, min_score=effective_min_score, search=search)
         return {
             "ideas": [
                 {
@@ -50,6 +68,8 @@ async def list_ideas(
                     "novelty_score": i.novelty_score,
                     "feasibility_score": i.feasibility_score,
                     "overall_score": i.overall_score,
+                    "source_gap_ids": json.loads(i.source_gap_ids) if i.source_gap_ids else None,
+                    "has_proposal": i.proposal is not None,
                     "pipeline_run_id": i.pipeline_run_id,
                     "created_at": str(i.created_at),
                 }
@@ -110,6 +130,7 @@ async def get_idea(idea_id: int):
                 "novelty_score": idea.novelty_score,
                 "feasibility_score": idea.feasibility_score,
                 "overall_score": idea.overall_score,
+                "source_gap_ids": json.loads(idea.source_gap_ids) if idea.source_gap_ids else None,
                 "novelty_report": json.loads(idea.novelty_report) if idea.novelty_report else None,
                 "feasibility_report": json.loads(idea.feasibility_report)
                 if idea.feasibility_report
