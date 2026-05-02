@@ -1,268 +1,123 @@
+---
 REVIEW REPORT
-═══════════════════════════════════════════════════════════
-
 Batch ID:            BATCH-18
 Blueprint Version:   1.0
 Cycle Mode:          STANDARD
 Reviewer:            AI Reviewer Instance
-Timestamp:           2026-05-02T12:30:00Z
+Timestamp:           2026-05-02T12:00:00Z
 Review Cycle:        1
 Report ID:           REVIEW-BATCH-18-2026-05-02
 
-───────────────────────────────────────────────────────────
 CHECKLIST RESULTS
-───────────────────────────────────────────────────────────
 
-  CHK-00  CYCLE MODE:           PASS
-         The batch declares STANDARD cycle with 3 Tasks, which
-         is correct. TASK-03 modifies an existing source file
-         (App.tsx is MODIFIED), which disqualifies it from
-         SIMPLIFIED per §3.2 condition 2. Multiple Tasks
-         (conditions 1 fails) and Hard Boundaries present
-         (condition 3 fails). STANDARD is the correct
-         declaration.
+  CHK-00  CYCLE MODE:           PASS — BATCH-18 has 3 Tasks, modifies an existing source file
+                                (frontend/src/App.tsx in TASK-03), and declares STANDARD cycle mode.
+                                This is consistent with the Standard Cycle requirements (§1.2).
 
-  CHK-01  BATCH ID:             PASS
-         Batch ID "BATCH-18" is present and correctly formatted
-         per the BATCH-NN convention.
+  CHK-01  BATCH ID:             PASS — Batch ID "BATCH-18" is present and correctly formatted
+                                (BATCH-[NN] format).
 
-  CHK-02  SLA FIELDS:           PASS
-         Review SLA (30 minutes), Execution SLA per Task
-         (90 minutes), and Partial Sign-Off SLA (15 minutes)
-         are all defined with numeric values.
+  CHK-02  SLA FIELDS:           PASS — Review SLA: 30 minutes, Execution SLA per Task: 90 minutes,
+                                Partial Sign-Off SLA: 15 minutes. All are defined with numeric values.
 
-  CHK-03  BATCH GOAL:           PASS
-         "Deliver a Cost Dashboard page showing total spend,
-         cost breakdowns by provider/stage/model, per-run
-         costs, and budget utilization" is a single, clear,
-         deployable outcome.
+  CHK-03  BATCH GOAL:           PASS — "Deliver a Cost Dashboard page showing total spend, cost
+                                breakdowns by provider/stage/model, per-run costs, and budget
+                                utilization." Single, clear, deployable outcome.
 
-  CHK-04  SCOPE COMPLETENESS:   PASS
-         Scope Statement contains six MUST items (replace
-         placeholder, create API client, show total spend,
-         cost tables by provider/stage/model, per-run
-         breakdown, budget utilization bar) and three MUST
-         NOT items (no backend endpoint modifications, no
-         new backend endpoints, no frontend cost data
-         storage).
+  CHK-04  SCOPE COMPLETENESS:   PASS — Scope Statement has 6 MUST-DO items and 3 MUST-NOT-DO items.
+                                Both sides are present and specific.
 
-  CHK-05  BATCH ACCEPTANCE:     PASS
-         BAC-01 covers complete cost breakdown. BAC-02
-         covers CHANGELOG.md update. BAC-03 covers document
-         archiving. Together they cover the full Batch Goal.
+  CHK-05  BATCH ACCEPTANCE:     PASS — Three batch-level acceptance criteria (BAC-01 through BAC-03)
+                                cover the full dashboard functionality, CHANGELOG update, and
+                                document archival.
 
-  CHK-06  HARD BOUNDARIES:      PASS
-         HB-01: "No backend modifications. All cost endpoints
-         already exist: [5 endpoints listed]." — Falsifiable:
-         can verify no backend files were modified by checking
-         git diff against backend/ tree. The boundary is
-         properly falsifiable per §3.4.
+  CHK-06  HARD BOUNDARIES:      PASS — HB-01 is a single, falsifiable boundary: "No backend
+                                modifications. All cost endpoints already exist." This can be
+                                verified by checking that no backend files are touched during
+                                execution.
 
-  CHK-07  DATA MODELS:          FLAG
-         The Data Models section contains significant
-         inaccuracies relative to the actual backend code
-         (backend/api/routes/costs.py):
+  CHK-07  DATA MODELS:          FLAG — Data models reference backend endpoints (backend/api/routes/
+                                costs.py) and include response shapes with field names (total_cost_usd,
+                                total_tokens, total_requests, provider, model, stage, run_id), but
+                                the response schemas are shown with ellipsis ("...") rather than
+                                complete field lists. The Assistant will need to inspect the actual
+                                endpoint responses at implementation time, which will likely produce
+                                Adaptations. The references appear plausible but cannot be confirmed
+                                as verified against the codebase from the Blueprint alone.
 
-         (1) Summary endpoint: Blueprint says the response
-         contains `total_requests`; actual code returns
-         `event_count`. The field name is wrong.
+  CHK-08  AUTHORITY RULES:       PASS — AR-01 is present ("Cost data is read-only from the frontend
+                                perspective") and does not contradict HB-01. One rule is sufficient
+                                for this scope.
 
-         (2) By-provider endpoint: Blueprint describes the
-         response as `[{provider, total_cost_usd, ...}]`
-         (an array of objects with a "provider" key). Actual
-         code returns a dict keyed by provider name:
-         `{"openai": {"cost_usd": ..., "input_tokens": ...,
-         "output_tokens": ..., "calls": ...}}`. The response
-         structure is fundamentally different (dict vs array),
-         and the cost field is named `cost_usd`, not
-         `total_cost_usd`.
+  CHK-09  DEPENDENCY MAP:       PASS — Dependency on BATCH-16 is declared and noted as APPROVED
+                                and closed. No unresolved dependencies.
 
-         (3) By-stage endpoint: Same issue — Blueprint says
-         array `[{stage, total_cost_usd}]`; actual returns
-         dict keyed by stage name with `cost_usd` field.
+  CHK-10  TASK COMPLETENESS:    PASS — All three Tasks (TASK-01, TASK-02, TASK-03) have descriptions,
+                                files in scope, test IDs in tabular format, and acceptance criteria.
 
-         (4) By-model endpoint: Blueprint says array
-         `[{provider, model, total_cost_usd}]`; actual
-         returns dict keyed by "provider/model" string
-         (e.g., `"openai/gpt-4"`).
+  CHK-11  TASK COHERENCE:       PASS — TASK-01 (API client), TASK-02 (components), TASK-03 (page
+                                assembly) each address one clear concern and are logically separated
+                                by architectural layer.
 
-         (5) The Blueprint uses `total_cost_usd` as a field
-         name throughout the data model; the actual backend
-         uses `cost_usd` for breakdown endpoints and
-         `total_cost_usd` only in the summary.
+  CHK-12  TEST COVERAGE:        PASS — Every test has an ID (TEST-18-XX-YY format), a type (all
+                                unit), and specific pass criteria. TASK-01: 5 tests, TASK-02: 3 tests,
+                                TASK-03: 6 tests. Total: 14 tests.
 
-         The file path (backend/api/routes/costs.py) and
-         the five endpoint paths are verified correct. The
-         run/{id} response shape is a reasonable match.
-         However, the response structures for four of five
-         endpoints are materially incorrect, which will cause
-         Adaptations or type mismatches during TASK-01
-         implementation.
+  CHK-13  TEST SUFFICIENCY:     FLAG — TASK-01 has no error-path test (e.g., what happens when an
+                                API call returns a 500 or network error). TASK-02 has no test for
+                                invalid/missing data rendering beyond the implicit "empty states" in
+                                AC-02-02. TASK-03 includes TEST-18-03-06 for API error handling,
+                                which partially covers this gap at the page level, but the lower-
+                                level error propagation from the API client through components is
+                                not explicitly tested. This is a LOW-severity gap.
 
-  CHK-08  AUTHORITY RULES:      PASS
-         AR-01 is present: "Cost data is read-only from the
-         frontend perspective. No cost manipulation endpoints
-         are called." This does not contradict HB-01; both
-         reinforce the read-only constraint on backend
-         endpoints.
+  CHK-14  TEST BASELINE:        PASS — Baseline of 1,659 tests (1,519 backend + 140 frontend) is
+                                stated with expected delta of +14 new frontend tests for a total
+                                of 1,673. The split between backend/frontend is specific and the
+                                arithmetic is correct (1,659 + 14 = 1,673).
 
-  CHK-09  DEPENDENCY MAP:       PASS
-         Dependency on BATCH-16 is declared. BATCH-16
-         Sign-Off Certificate confirms APPROVED and closed
-         status. The /costs placeholder route is verified
-         present in App.tsx (line 25). No unresolved
-         dependencies.
+  CHK-15  TASK DEPENDENCIES:    PASS — TASK-01 depends on nothing. TASK-02 depends on TASK-01.
+                                TASK-03 depends on TASK-02. Linear, non-circular chain consistent
+                                with SEQUENTIAL task sequencing declared in the header.
 
-  CHK-10  TASK COMPLETENESS:    PASS
-         TASK-01: Description (API client module), files in
-         scope (frontend/src/api/costs.ts NEW), 5 named
-         tests (TEST-18-01-01 through 05), 1 acceptance
-         criterion (AC-01-01). Complete.
-         TASK-02: Description (chart/table components), files
-         in scope (3 NEW component files), 3 named tests
-         (TEST-18-02-01 through 03), 2 acceptance criteria
-         (AC-02-01, AC-02-02). Complete.
-         TASK-03: Description (Cost Dashboard page), files in
-         scope (costs.tsx NEW, App.tsx MODIFY), 6 named tests
-         (TEST-18-03-01 through 06), 3 acceptance criteria
-         (AC-03-01 through 03). Complete.
+  CHK-16  SCOPE COVERAGE:       FLAG — The Scope Statement mentions "Budget utilization bar (current
+                                vs configured limit)" but no test explicitly verifies that the
+                                budget limit value is fetched from a specific endpoint or config.
+                                The Blueprint references the budget bar in AC-02-03 and AC-03-03,
+                                but the Data Models section does not include a dedicated endpoint
+                                or data shape for "configured budget limit." It is unclear whether
+                                the budget limit comes from one of the existing 5 endpoints (not
+                                specified which) or from a frontend configuration. This gap could
+                                produce an Adaptation during TASK-02 or TASK-03.
 
-  CHK-11  TASK COHERENCE:       PASS
-         TASK-01: Single concern — API client abstraction
-         layer. Coherent.
-         TASK-02: Single concern — UI visualization components
-         for cost data. Coherent.
-         TASK-03: Single concern — page assembly and route
-         wiring. Coherent.
+  CHK-17  INTERNAL CONSISTENCY: FLAG — The Data Models section lists 5 endpoints and states the
+                                router prefix is /api/v1/costs, but the endpoint paths shown in
+                                the "Existing backend endpoints" subsection use shorthand paths
+                                (e.g., "GET /costs/summary") without the /api/v1/costs prefix,
+                                while the Hard Boundaries section lists them with the full prefix
+                                (e.g., "GET /api/v1/costs/summary"). This is a minor inconsistency
+                                in path notation — not a functional issue, but could confuse the
+                                Assistant if taken literally.
 
-  CHK-12  TEST COVERAGE:        FLAG
-         TASK-02 — AC-02-02 states "Components show
-         appropriate empty states" but no test explicitly
-         verifies empty-state rendering. All three tests
-         (TEST-18-02-01, 02, 03) test rendering with data
-         present. An acceptance criterion with no
-         corresponding test creates an unverified claim.
-
-  CHK-13  TEST SUFFICIENCY:     FLAG
-         TASK-01: No error-path test for the API client.
-         The getRunCostBreakdown(id) function calls an
-         endpoint that returns 404 for unknown run IDs, but
-         TEST-18-01-05 only verifies the correct endpoint
-         is called — it does not test error handling (e.g.,
-         network failure, 404 response).
-
-         TASK-02: As noted in CHK-12, empty-state behavior
-         is claimed in AC-02-02 but untested.
-
-         TASK-03: TEST-18-03-06 covers API error handling
-         at the page level, which partially compensates.
-         However, the per-run cost list has no dedicated
-         test for when no runs exist.
-
-  CHK-14  TEST BASELINE:        FLAG
-         Baseline claims 1,659 tests (1,519 backend + 140
-         frontend). Current codebase shows approximately
-         1,360 backend test functions and ~1,111 frontend
-         test blocks, totaling ~2,471. Even accounting for
-         test-function vs test-file counting differences
-         and tests added by intermediate batches, the
-         frontend count (140 claimed vs ~1,111 actual)
-         represents a significant discrepancy that cannot
-         be explained by minor inter-batch drift alone.
-         The baseline may be stale or may have been copied
-         from an earlier batch without recalculation.
-         The expected delta (+14) and expected total (1,673)
-         are internally consistent with the stated baseline,
-         but the baseline itself appears materially
-         understated for the frontend component.
-
-  CHK-15  TASK DEPENDENCIES:    PASS
-         TASK-01: No dependencies. TASK-02: Depends on
-         TASK-01. TASK-03: Depends on TASK-02. Linear
-         SEQUENTIAL chain with no circular dependencies.
-         Consistent with declared Task Sequencing: SEQUENTIAL.
-
-  CHK-16  SCOPE COVERAGE:       FLAG
-         The Scope Statement requires "Per-run cost
-         breakdown" functionality. TASK-02's files in scope
-         (cost-summary-card, cost-breakdown-table, budget-bar)
-         include no component dedicated to the per-run cost
-         list. TASK-03's files in scope (costs.tsx, App.tsx)
-         also declare no component file for per-run costs.
-         Either TASK-02 should declare a per-run cost list
-         component, or TASK-03's files in scope should include
-         a new component file. As written, the per-run cost
-         breakdown has no declared home, creating a scope gap
-         between the Batch Scope and the Task definitions.
-
-  CHK-17  INTERNAL CONSISTENCY: PASS
-         No internal contradictions within the Blueprint.
-         Cross-referencing:
-         - Batch Goal lists cost features matching Scope and
-           Task definitions (modulo the per-run gap noted in
-           CHK-16).
-         - Test count (+14) matches 5 + 3 + 6 named tests.
-         - Expected total (1,673) equals baseline (1,659) + 14.
-         - Task dependencies align with SEQUENTIAL sequencing.
-         - HB-01, AR-01, and Scope MUST NOT items are
-           mutually reinforcing.
-         Note: The data model inaccuracies flagged in CHK-07
-         are a codebase-mismatch issue, not an internal
-         contradiction — the Blueprint is internally
-         self-consistent in its descriptions.
-
-───────────────────────────────────────────────────────────
 SUMMARY
-───────────────────────────────────────────────────────────
 
-  Total Flags:      4
-  Severity:         MEDIUM
+  Total Flags:      3
+  Severity:         LOW
   Recommendation:   PROCEED WITH CAUTION
 
-  The Blueprint is well-structured, correctly declares STANDARD
-  cycle, has proper task decomposition, and verified dependencies.
-  All codebase file paths verified to exist (backend/api/routes/
-  costs.py confirmed; frontend/src/App.tsx /costs placeholder
-  confirmed at line 25). The dependency on BATCH-16 is confirmed
-  resolved (Sign-Off Certificate APPROVED).
+  Flag Summary:
+    CHK-07 (DATA MODELS):     Response schemas use ellipsis; likely to produce Adaptations.
+                              Low risk — the Assistant will inspect actual endpoints at execution time.
+    CHK-13 (TEST SUFFICIENCY): No explicit error-path test at the API client layer (TASK-01).
+                               Partially mitigated by TEST-18-03-06 at the page level.
+    CHK-16 (SCOPE COVERAGE):  Budget limit data source is unspecified. The "configured limit"
+                              mentioned in the Scope is not mapped to a specific endpoint or
+                              data source in the Data Models section.
+    CHK-17 (INTERNAL CONSISTENCY): Endpoint paths use inconsistent notation between the Data
+                              Models section (shorthand) and Hard Boundaries section (full path).
 
-  FLAG-01 (CHK-07): Data model response shapes are materially
-  inaccurate for 4 of 5 endpoints. The Blueprint describes array
-  responses where the backend returns dicts, and field names
-  differ (total_cost_usd vs cost_usd, total_requests vs
-  event_count). This is the highest-severity flag because TASK-01
-  (API client) will need TypeScript interfaces that match the
-  actual backend, creating guaranteed Adaptations and potential
-  type errors if the Assistant follows the Blueprint literally.
-  Severity: MEDIUM — the endpoints and file paths are correct,
-  but the response shapes will require field-level Adaptations
-  in every API client function.
+  None of the flags block execution. All are advisory. The Lead may choose to address
+  CHK-16 (budget limit data source) before execution to prevent an Adaptation, or may
+  accept that the Assistant will resolve it at implementation time and log an Adaptation.
 
-  FLAG-02 (CHK-12): AC-02-02 (empty states) has no corresponding
-  test in TASK-02. An acceptance criterion without test evidence
-  is an unverified claim. Severity: LOW — the functionality can
-  be verified visually, but it weakens the test-evidence chain.
-
-  FLAG-03 (CHK-13): No error-path test for TASK-01 API client,
-  and no empty-state test for TASK-02. TASK-03 partially
-  compensates with TEST-18-03-06. Severity: LOW — error handling
-  at the page level provides some coverage, but the API client
-  layer itself has no error test.
-
-  FLAG-04 (CHK-14): Test baseline appears materially understated
-  for the frontend component (140 claimed vs ~1,111 actual test
-  blocks). The backend count is also lower than claimed (1,360
-  vs 1,519 functions). This may indicate the baseline was not
-  recalculated before Blueprint issuance. Severity: LOW — the
-  delta (+14) and expected total (1,673) are internally
-  consistent, but the baseline is inaccurate for tracking
-  purposes.
-
-  ADVISORY NOTE (not a flag): The per-run cost list has no
-  declared component file in any Task's files-in-scope
-  (CHK-16). This is flagged separately above. If the Lead
-  intends for TASK-03 to create the per-run list inline in
-  costs.tsx, the Task's files-in-scope and test plan should
-  reflect this explicitly to avoid ambiguity during execution.
-
-═══════════════════════════════════════════════════════════
+---

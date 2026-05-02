@@ -151,12 +151,15 @@ def test_05_migration_includes_all_models():
     cfg = _make_alembic_cfg("sqlite:///dummy.db")
     script = ScriptDirectory.from_config(cfg)
 
-    # Get the head revision
+    # Find the initial migration (down_revision is None)
     head = script.get_current_head()
     assert head is not None, "No migration revisions found — generate the initial migration first"
 
-    # Read the migration source
+    # Walk down to find the base revision (down_revision=None)
     rev = script.get_revision(head)
+    while rev.down_revision is not None:
+        rev = script.get_revision(rev.down_revision)
+
     migration_path = Path(rev.path)
     assert migration_path.exists(), f"Migration file not found: {migration_path}"
 
