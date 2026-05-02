@@ -1,7 +1,7 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { ScoreBadge } from "@/components/ideas/score-badge";
 import type { IdeaSummary } from "@/api/types";
-import { Lightbulb } from "lucide-react";
+import { Lightbulb, FileText } from "lucide-react";
 
 interface IdeaCardProps {
   idea: IdeaSummary;
@@ -17,9 +17,22 @@ export function IdeaCard({ idea, onClick }: IdeaCardProps) {
             <Lightbulb className="h-5 w-5 text-amber-500" />
           </div>
           <div className="flex-1 min-w-0">
-            <h3 className="text-sm font-medium leading-tight line-clamp-2">{idea.title}</h3>
+            <div className="flex items-start gap-2">
+              <h3 className="text-sm font-medium leading-tight line-clamp-2 flex-1">{idea.title}</h3>
+              {idea.has_proposal && (
+                <FileText
+                  className="h-4 w-4 text-blue-500 flex-shrink-0 mt-0.5"
+                  aria-label="Has proposal"
+                />
+              )}
+            </div>
             <p className="text-xs text-muted-foreground mt-1">{idea.domain}</p>
             <div className="flex flex-wrap gap-2 mt-2">
+              {idea.overall_score != null && (
+                <span className="inline-flex items-center rounded-full bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary">
+                  Score: {idea.overall_score.toFixed(2)}
+                </span>
+              )}
               {idea.novelty_score != null && (
                 <ScoreBadge score={idea.novelty_score} scale="novelty" />
               )}

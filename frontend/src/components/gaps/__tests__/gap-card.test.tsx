@@ -10,6 +10,7 @@ const sampleGap: ResearchGap = {
   gap_type: "methodological",
   confidence: 0.75,
   potential_impact: "High",
+  idea_count: 0,
 };
 
 describe("GapCard", () => {

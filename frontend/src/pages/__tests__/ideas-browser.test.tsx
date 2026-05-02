@@ -5,6 +5,35 @@ import { MemoryRouter } from "react-router-dom";
 import IdeasBrowser from "@/pages/ideas-browser";
 import type { IdeaSummary, IdeaListResponse } from "@/api/types";
 
+// ── JSDOM polyfills for Radix UI ─────────────────────────────────
+class ResizeObserverMock {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+}
+global.ResizeObserver = ResizeObserverMock as unknown as typeof ResizeObserver;
+
+class IntersectionObserverMock {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+}
+global.IntersectionObserver = IntersectionObserverMock as unknown as typeof IntersectionObserver;
+
+Object.defineProperty(window, "matchMedia", {
+  writable: true,
+  value: (query: string) => ({
+    matches: false,
+    media: query,
+    onchange: null,
+    addListener: () => {},
+    removeListener: () => {},
+    addEventListener: () => {},
+    removeEventListener: () => {},
+    dispatchEvent: () => false,
+  }),
+});
+
 // ── Mock API (AR-03) ─────────────────────────────────────────────
 vi.mock("@/api/ideas", () => ({
   listIdeas: vi.fn(),
@@ -44,6 +73,8 @@ const sampleIdea: IdeaSummary = {
   novelty_score: 0.75,
   feasibility_score: null,
   overall_score: null,
+  source_gap_ids: null,
+  has_proposal: false,
   pipeline_run_id: null,
   created_at: "2026-05-01T00:00:00Z",
 };

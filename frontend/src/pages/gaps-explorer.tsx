@@ -3,12 +3,20 @@ import { listGaps } from "@/api/gaps";
 import { GapCard } from "@/components/gaps/gap-card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { GitBranch } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import type { ResearchGap } from "@/api/types";
 
 export default function GapsExplorer() {
+  const navigate = useNavigate();
+
   const { data, isLoading } = useQuery({
     queryKey: ["gaps"],
     queryFn: () => listGaps({ limit: 50 }),
   });
+
+  const handleIdeaCountClick = (gap: ResearchGap) => {
+    navigate(`/ideas?search=${encodeURIComponent(gap.title)}`);
+  };
 
   return (
     <div className="space-y-6">
@@ -34,7 +42,11 @@ export default function GapsExplorer() {
             {data.gaps
               .sort((a, b) => b.confidence - a.confidence)
               .map((gap) => (
-                <GapCard key={gap.id} gap={gap} />
+                <GapCard
+                  key={gap.id}
+                  gap={gap}
+                  onIdeaCountClick={handleIdeaCountClick}
+                />
               ))}
           </div>
         </>

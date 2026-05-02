@@ -2,9 +2,11 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import type { ResearchGap } from "@/api/types";
 import { cn } from "@/lib/utils";
+import { Lightbulb } from "lucide-react";
 
 interface GapCardProps {
   gap: ResearchGap;
+  onIdeaCountClick?: (gap: ResearchGap) => void;
 }
 
 function confidenceColor(confidence: number): string {
@@ -14,7 +16,9 @@ function confidenceColor(confidence: number): string {
   return "bg-red-500";
 }
 
-export function GapCard({ gap }: GapCardProps) {
+export function GapCard({ gap, onIdeaCountClick }: GapCardProps) {
+  const ideaCount = gap.idea_count ?? 0;
+
   return (
     <Card>
       <CardContent className="p-4">
@@ -28,6 +32,20 @@ export function GapCard({ gap }: GapCardProps) {
               </Badge>
               {gap.potential_impact && (
                 <span className="text-xs text-muted-foreground">{gap.potential_impact}</span>
+              )}
+              {ideaCount > 0 && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onIdeaCountClick?.(gap);
+                  }}
+                  className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800 hover:bg-amber-200 transition-colors cursor-pointer"
+                  aria-label={`${ideaCount} idea${ideaCount !== 1 ? "s" : ""} generated`}
+                >
+                  <Lightbulb className="h-3 w-3" />
+                  {ideaCount} idea{ideaCount !== 1 ? "s" : ""}
+                </button>
               )}
             </div>
           </div>

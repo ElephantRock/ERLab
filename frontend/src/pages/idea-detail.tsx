@@ -12,7 +12,7 @@ import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, RefreshCw, Loader2 } from "lucide-react";
+import { ArrowLeft, RefreshCw, Loader2, GitBranch } from "lucide-react";
 import { toast } from "sonner";
 
 export default function IdeaDetail() {
@@ -135,6 +135,27 @@ export default function IdeaDetail() {
           <MarkdownRenderer content={idea.expected_contributions} />
         </CardContent>
       </Card>
+
+      {idea.source_gap_ids && idea.source_gap_ids.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg flex items-center gap-2">
+              <GitBranch className="h-4 w-4" />
+              Source Research Gaps
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ul className="space-y-2">
+              {idea.source_gap_ids.map((gapId, idx) => (
+                <li key={idx} className="flex items-center gap-2 text-sm">
+                  <span className="inline-block h-2 w-2 rounded-full bg-amber-500 flex-shrink-0" />
+                  {gapId}
+                </li>
+              ))}
+            </ul>
+          </CardContent>
+        </Card>
+      )}
 
       {(idea.proposal_md || idea.novelty_report || idea.feasibility_report) && (
         <Tabs defaultValue={idea.proposal_md ? "proposal" : idea.novelty_report ? "novelty" : "feasibility"}>

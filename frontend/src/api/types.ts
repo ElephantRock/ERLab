@@ -74,6 +74,8 @@ export interface IdeaSummary {
   novelty_score: number | null;
   feasibility_score: number | null;
   overall_score: number | null;
+  source_gap_ids: string[] | null;
+  has_proposal: boolean;
   pipeline_run_id: number | null;
   created_at: string;
 }
@@ -82,6 +84,7 @@ export interface IdeaDetail extends IdeaSummary {
   problem_statement: string;
   proposed_method: string;
   expected_contributions: string;
+  source_gap_ids: string[] | null;
   novelty_report: Record<string, unknown> | null;
   feasibility_report: Record<string, unknown> | null;
   proposal_md: string | null;
@@ -109,6 +112,7 @@ export interface ResearchGap {
   gap_type: string;
   confidence: number;
   potential_impact: string;
+  idea_count: number;
 }
 
 export interface GapListResponse {
