@@ -72,10 +72,57 @@ export async function getDetailedStatus(): Promise<DetailedStatus> {
   return apiFetch<DetailedStatus>("/status/detailed");
 }
 
-export function sseUrl(path: string): string {
-  const base = getBaseUrl() || window.location.origin;
+/** Fetch-based SSE connection with Authorization header (BATCH-31, HB-01).
+ *  Replaces the legacy sseUrl() which put API keys in query params.
+ */
+export function sseFetch(
+  path: string,
+  callbacks: {
+    onEvent: (data: string) => void;
+    onOpen?: () => void;
+    onError?: (error: Error) => void;
+  },
+): AbortController {
+  const controller = new AbortController();
+  const headers: Record<string, string> = {};
   const key = getApiKey();
-  const separator = path.includes("?") ? "&" : "?";
-  const auth = key ? `${separator}api_key=${encodeURIComponent(key)}` : "";
-  return `${base}${API_PREFIX}${path}${auth}`;
+  if (key) {
+    headers["X-API-Key"] = key;
+  }
+  const base = getBaseUrl() || window.location.origin;
+  const url = `${base}${API_PREFIX}${path}`;
+
+  (async () => {
+    try {
+      const response = await fetch(url, { headers, signal: controller.signal });
+      if (!response.ok) {
+        throw new Error(`SSE connection failed: HTTP ${response.status}`);
+      }
+      callbacks.onOpen?.();
+      const reader = response.body!.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        // SSE events are separated by blank lines (\n\n)
+        const parts = buffer.split("\n\n");
+        buffer = parts.pop() || "";
+        for (const part of parts) {
+          for (const line of part.split("\n")) {
+            if (line.startsWith("data: ")) {
+              callbacks.onEvent(line.slice(6));
+            }
+          }
+        }
+      }
+    } catch (err) {
+      if ((err as Error).name !== "AbortError" && callbacks.onError) {
+        callbacks.onError(err instanceof Error ? err : new Error(String(err)));
+      }
+    }
+  })();
+
+  return controller;
 }

@@ -7,10 +7,11 @@ import logging
 import threading
 from datetime import datetime
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Query, Request, Depends
 from fastapi.responses import StreamingResponse
 
-from backend.api.errors import NotFoundError
+from backend.api.auth import verify_api_key
+from backend.api.errors import NotFoundError, UnauthorizedError
 from backend.api.schemas import AutonomousCycleRequest, PipelineRunRequest, SessionCreateRequest
 
 router = APIRouter()
@@ -331,10 +332,14 @@ async def cancel_run(run_id_str: str):
 @router.get(
     "/runs/{run_id_str}/progress",
     summary="Stream pipeline progress",
-    description="Server-Sent Events (SSE) endpoint for streaming pipeline stage progress in real-time.",
+    description="Server-Sent Events (SSE) endpoint for streaming pipeline stage progress in real-time. Requires auth header (HB-01: no API keys in URLs).",
 )
-async def run_progress(run_id_str: str):
+async def run_progress(run_id_str: str, request: Request):
     """SSE endpoint for pipeline progress.
+
+    HB-01: Auth is validated via headers only — no API keys in URLs.
+    The router-level dependency (verify_api_key) and JWT middleware
+    handle auth, but we also validate explicitly for defence-in-depth.
 
     Args:
         run_id_str: The run identifier string.
@@ -346,6 +351,24 @@ async def run_progress(run_id_str: str):
         data: {"stage": "generation", "index": 1, "total": 5, "elapsed": 2.3}
         data: {"done": true}
     """
+    # HB-01: Defence-in-depth auth check — ensure credentials come via headers
+    from backend.config import get_settings
+    settings = get_settings()
+    if settings.api_key:
+        api_key = request.headers.get("X-API-Key", "")
+        if not api_key or api_key != settings.api_key:
+            raise UnauthorizedError(
+                detail="SSE endpoint requires valid X-API-Key header",
+                hint="Pass the API key via the X-API-Key header, not in the URL",
+            )
+    if settings.auth_enabled:
+        auth_header = request.headers.get("Authorization", "")
+        if not auth_header.startswith("Bearer "):
+            raise UnauthorizedError(
+                detail="SSE endpoint requires Authorization header",
+                hint="Pass a Bearer token via the Authorization header",
+            )
+
     queue = _progress_queues.get(run_id_str)
     if not queue:
         queue = asyncio.Queue()

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { sseUrl } from "@/api/client";
+import { sseFetch } from "@/api/client";
 
 interface UseSSEOptions<T> {
   onEvent: (data: T) => void;
@@ -17,47 +17,44 @@ export function useSSE<T>(path: string, options: UseSSEOptions<T>) {
   useEffect(() => {
     if (!enabled) return;
 
-    const url = sseUrl(path);
     let retries = 0;
     const maxRetries = 5;
-    let es: EventSource | null = null;
+    let controller: AbortController | null = null;
+    let retryTimer: ReturnType<typeof setTimeout> | null = null;
 
     function connect() {
-      es = new EventSource(url);
-
-      es.onopen = () => {
-        retries = 0;
-        setIsConnected(true);
-        setError(null);
-      };
-
-      es.onmessage = (event) => {
-        try {
-          const data = JSON.parse(event.data) as T;
-          onEventRef.current(data);
-        } catch {
-          // ignore parse errors
-        }
-      };
-
-      es.onerror = () => {
-        setIsConnected(false);
-        es?.close();
-
-        if (retries < maxRetries) {
-          retries++;
-          const delay = Math.min(1000 * Math.pow(2, retries), 30_000);
-          setTimeout(connect, delay);
-        } else {
-          setError(new Error("SSE connection failed after max retries"));
-        }
-      };
+      controller = sseFetch(path, {
+        onOpen: () => {
+          retries = 0;
+          setIsConnected(true);
+          setError(null);
+        },
+        onEvent: (raw) => {
+          try {
+            const data = JSON.parse(raw) as T;
+            onEventRef.current(data);
+          } catch {
+            // ignore parse errors
+          }
+        },
+        onError: (err) => {
+          setIsConnected(false);
+          if (retries < maxRetries) {
+            retries++;
+            const delay = Math.min(1000 * Math.pow(2, retries), 30_000);
+            retryTimer = setTimeout(connect, delay);
+          } else {
+            setError(new Error("SSE connection failed after max retries: " + err.message));
+          }
+        },
+      });
     }
 
     connect();
 
     return () => {
-      es?.close();
+      controller?.abort();
+      if (retryTimer) clearTimeout(retryTimer);
       setIsConnected(false);
     };
   }, [path, enabled]);
