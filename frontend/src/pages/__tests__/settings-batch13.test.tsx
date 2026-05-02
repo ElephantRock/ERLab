@@ -16,6 +16,11 @@ const mockGetDetailedStatus = vi.fn();
 vi.mock("@/api/client", () => ({
   testConnection: (...args: unknown[]) => mockTestConnection(...args),
   getDetailedStatus: (...args: unknown[]) => mockGetDetailedStatus(...args),
+  apiFetch: vi.fn(),
+}));
+
+vi.mock("@/api/autonomous", () => ({
+  getEvolutionStatus: vi.fn().mockResolvedValue({ enabled: false, overlays_generated: 0, recent_outcomes: [] }),
 }));
 
 // ── Helper ────────────────────────────────────────────────────────
