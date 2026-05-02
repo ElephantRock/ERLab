@@ -10,6 +10,7 @@ export interface PipelineRunRequest {
   run_feasibility?: boolean;
   run_synthesis?: boolean;
   export_format?: string;
+  session_id?: string | null;
 }
 
 export interface PipelineRunSummary {
@@ -18,6 +19,7 @@ export interface PipelineRunSummary {
   domain: string;
   current_stage: string | null;
   ideas_count: number;
+  session_id: string | null;
   created_at: string;
   completed_at: string | null;
   error_message: string | null;
@@ -132,6 +134,18 @@ export interface KnowledgeSearchResult {
 export interface KnowledgeSearchResponse {
   query: string;
   results: KnowledgeSearchResult[];
+}
+
+// --- Sessions ---
+
+export interface SessionGroup {
+  session_id: string;
+  run_count: number;
+  latest_run_at: string;
+}
+
+export interface SessionListResponse {
+  sessions: SessionGroup[];
 }
 
 // --- Status ---

@@ -19,10 +19,12 @@ export function triggerRun(req: PipelineRunRequest): Promise<TriggerRunResponse>
 export function listRuns(params?: {
   limit?: number;
   offset?: number;
+  session_id?: string;
 }): Promise<{ runs: PipelineRunSummary[]; total: number }> {
   const search = new URLSearchParams();
   if (params?.limit) search.set("limit", String(params.limit));
   if (params?.offset) search.set("offset", String(params.offset));
+  if (params?.session_id) search.set("session_id", params.session_id);
   const qs = search.toString();
   return apiFetch(`/pipeline/runs${qs ? `?${qs}` : ""}`);
 }

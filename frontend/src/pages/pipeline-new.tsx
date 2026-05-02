@@ -20,6 +20,7 @@ export default function PipelineNew() {
   const [ideas, setIdeas] = useState<IdeaSummary[]>([]);
   const [ideasError, setIdeasError] = useState<string | null>(null);
   const [ideasLoading, setIdeasLoading] = useState(false);
+  const [sessionId, setSessionId] = useState<string>("");
   const { stages, isComplete, isConnected } = usePipelineProgress(runId);
 
   // ── Cancel run state ──────────────────────────────────────────
@@ -38,7 +39,11 @@ export default function PipelineNew() {
     setIdeas([]);
     setIdeasError(null);
     try {
-      const res = await triggerRun(config);
+      const configWithSession = {
+        ...config,
+        session_id: sessionId || undefined,
+      };
+      const res = await triggerRun(configWithSession);
       setRunId(res.run_id);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to start pipeline");
@@ -115,18 +120,42 @@ export default function PipelineNew() {
       </div>
 
       {!runId && (
-        <Tabs defaultValue="single">
-          <TabsList>
-            <TabsTrigger value="single">Single Run</TabsTrigger>
-            <TabsTrigger value="autonomous">Autonomous Cycle</TabsTrigger>
-          </TabsList>
-          <TabsContent value="single">
-            <RunConfigForm onSubmit={handleStart} isLoading={isLoading} />
-          </TabsContent>
-          <TabsContent value="autonomous">
-            <AutonomousForm onCycleStarted={setRunId} />
-          </TabsContent>
-        </Tabs>
+        <>
+          <Card>
+            <CardContent className="p-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium" htmlFor="session-id-input">
+                  Session ID (optional)
+                </label>
+                <input
+                  id="session-id-input"
+                  type="text"
+                  placeholder="e.g., my-session-name"
+                  value={sessionId}
+                  onChange={(e) => setSessionId(e.target.value)}
+                  data-testid="session-id-input"
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  maxLength={200}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Group multiple runs under the same session for easy tracking.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+          <Tabs defaultValue="single">
+            <TabsList>
+              <TabsTrigger value="single">Single Run</TabsTrigger>
+              <TabsTrigger value="autonomous">Autonomous Cycle</TabsTrigger>
+            </TabsList>
+            <TabsContent value="single">
+              <RunConfigForm onSubmit={handleStart} isLoading={isLoading} />
+            </TabsContent>
+            <TabsContent value="autonomous">
+              <AutonomousForm onCycleStarted={setRunId} />
+            </TabsContent>
+          </Tabs>
+        </>
       )}
 
       {error && (

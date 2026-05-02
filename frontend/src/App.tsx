@@ -13,6 +13,7 @@ import MemoryBrowserPage from "./pages/memory";
 import CostsPage from "./pages/costs";
 import GovernancePage from "./pages/governance";
 import TracesPage from "./pages/traces";
+import SessionsPage from "./pages/sessions";
 
 export default function App() {
   return (
@@ -30,7 +31,7 @@ export default function App() {
         <Route path="/memory" element={<MemoryBrowserPage />} />
         <Route path="/governance" element={<GovernancePage />} />
         <Route path="/traces" element={<TracesPage />} />
-        <Route path="/sessions" element={<Placeholder title="Sessions" />} />
+        <Route path="/sessions" element={<SessionsPage />} />
         <Route path="/literature" element={<Placeholder title="Literature" />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
