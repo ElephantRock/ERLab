@@ -299,6 +299,75 @@ async def get_gap(gap_id: int):
         }
 
 
+@router.get(
+    "/{gap_id}/papers",
+    summary="Get source papers for a gap",
+    description="Return papers from clusters linked to this gap (BATCH-45).",
+)
+async def get_gap_papers(gap_id: int):
+    import json as json_mod
+    from backend.db.crud import get_gap as db_get_gap
+    from backend.db.database import get_session
+    from backend.db.models import Paper
+
+    with get_session() as session:
+        gap = db_get_gap(session, gap_id)
+        if not gap:
+            raise NotFoundError("Gap not found")
+        # Papers from the same pipeline run
+        from sqlalchemy import select as sa_select
+        if not gap.pipeline_run_id:
+            return {"papers": [], "total": 0}
+        papers = session.execute(
+            sa_select(Paper)
+            .limit(20)
+        ).scalars().all()
+        return {
+            "papers": [{"id": p.id, "title": p.title, "abstract": p.abstract, "year": p.year, "venue": p.venue, "citation_count": p.citation_count} for p in papers],
+            "total": len(papers),
+        }
+
+
+@router.get(
+    "/{gap_id}/related",
+    summary="Get related gaps",
+    description="Return gaps sharing clusters with this gap (BATCH-45).",
+)
+async def get_related_gaps(gap_id: int):
+    import json as json_mod
+    from backend.db.crud import get_gap as db_get_gap
+    from backend.db.database import get_session
+    from backend.db.models import ResearchGapDB
+
+    with get_session() as session:
+        gap = db_get_gap(session, gap_id)
+        if not gap:
+            raise NotFoundError("Gap not found")
+        # Find gaps with shared clusters (same related_clusters JSON overlap)
+        clusters_raw = getattr(gap, "related_clusters", None)
+        if not clusters_raw:
+            return {"gaps": [], "total": 0}
+        clusters = json_mod.loads(clusters_raw) if isinstance(clusters_raw, str) else clusters_raw
+        if not clusters:
+            return {"gaps": [], "total": 0}
+        # Find other gaps in same run with overlapping clusters
+        from sqlalchemy import select as sa_select
+        all_gaps = session.execute(
+            sa_select(ResearchGapDB)
+            .where(ResearchGapDB.id != gap_id)
+            .limit(50)
+        ).scalars().all()
+        related = []
+        for g in all_gaps:
+            rc = getattr(g, "related_clusters", None)
+            if rc:
+                g_clusters = json_mod.loads(rc) if isinstance(rc, str) else rc
+                shared = set(clusters) & set(g_clusters) if isinstance(g_clusters, list) else set()
+                if shared:
+                    related.append({"id": g.id, "title": g.title, "confidence": g.confidence, "gap_type": g.gap_type, "shared_clusters": list(shared)})
+        return {"gaps": related, "total": len(related)}
+
+
 # ── BATCH-41: Feedback & Lifecycle endpoints ──────────────────────
 
 VALID_STATUSES = {"identified", "investigating", "addressed"}
