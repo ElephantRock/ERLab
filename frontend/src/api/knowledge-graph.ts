@@ -53,6 +53,15 @@ export interface Subgraph {
   relationships: GraphRelationship[];
 }
 
+export interface WorldModel {
+  total_entities: number;
+  total_relationships: number;
+  entity_type_distribution: Record<string, number>;
+  relationship_type_distribution: Record<string, number>;
+  top_entities: GraphEntity[];
+  strongest_relationships: GraphRelationship[];
+}
+
 // ── API Functions ─────────────────────────────────────────────────
 
 /** GET /knowledge-graph/stats → graph statistics */
@@ -84,4 +93,9 @@ export function getSubgraph(id: string, depth = 2): Promise<Subgraph> {
   return apiFetch<Subgraph>(
     `/knowledge-graph/subgraph/${encodeURIComponent(id)}?depth=${depth}`,
   );
+}
+
+/** GET /knowledge-graph/world-model → high-level world model summary */
+export function getWorldModel(): Promise<WorldModel> {
+  return apiFetch<WorldModel>("/knowledge-graph/world-model");
 }

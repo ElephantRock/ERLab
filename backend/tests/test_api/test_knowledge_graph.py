@@ -203,3 +203,42 @@ class TestEntityNotFound:
             response = client.get("/api/v1/knowledge-graph/subgraph/nonexistent:123")
 
         assert response.status_code == 404
+
+
+class TestWorldModel:
+    """TEST-37-01-01: GET /world-model returns model data."""
+
+    def test_world_model_returns_summary(self, client):
+        e1 = _make_entity("paper:1", "Paper One", EntityType.PAPER)
+        e2 = _make_entity("author:1", "Author A", EntityType.AUTHOR)
+        e3 = _make_entity("concept:1", "Concept X", EntityType.CONCEPT)
+        r1 = _make_relationship("paper:1", "author:1")
+        r2 = KnowledgeRelationship(
+            source_id="paper:1",
+            target_id="concept:1",
+            relation_type=RelationType.PROPOSES_METHOD,
+            weight=1.8,
+            evidence=[],
+            truth=TruthValue(frequency=0.8, confidence=0.9, evidence_count=2),
+        )
+        graph = _build_graph(entities=[e1, e2, e3], relationships=[r1, r2])
+
+        with patch(
+            "backend.api.routes.knowledge_graph._get_graph", return_value=graph
+        ):
+            response = client.get("/api/v1/knowledge-graph/world-model")
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["total_entities"] == 3
+        assert data["total_relationships"] == 2
+        assert data["entity_type_distribution"]["paper"] == 1
+        assert data["entity_type_distribution"]["author"] == 1
+        assert data["entity_type_distribution"]["concept"] == 1
+        assert data["relationship_type_distribution"]["cites"] == 1
+        assert data["relationship_type_distribution"]["proposes_method"] == 1
+        assert len(data["top_entities"]) == 3
+        assert len(data["strongest_relationships"]) == 2
+        # Strongest rel should be the proposes_method (weight 1.8 > 1.0)
+        assert data["strongest_relationships"][0]["relation_type"] == "proposes_method"
+        assert data["strongest_relationships"][0]["weight"] == 1.8

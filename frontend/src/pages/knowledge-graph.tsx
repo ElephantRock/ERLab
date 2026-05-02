@@ -8,10 +8,11 @@
 import { useCallback, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { BrainCircuit, Search, Filter, Loader2 } from "lucide-react";
-import { getGraphStats, getEntities, getEntity } from "@/api/knowledge-graph";
-import type { GraphStats, GraphEntity, EntityDetail } from "@/api/knowledge-graph";
+import { getGraphStats, getEntities, getEntity, getWorldModel } from "@/api/knowledge-graph";
+import type { GraphStats, GraphEntity, EntityDetail, WorldModel } from "@/api/knowledge-graph";
 import { GraphCanvas } from "@/components/knowledge-graph/graph-canvas";
 import { EntityDetail as EntityDetailPanel } from "@/components/knowledge-graph/entity-detail";
+import { WorldModelPanel } from "@/components/knowledge-graph/world-model-panel";
 
 const ENTITY_TYPES = ["paper", "author", "method", "dataset", "concept"];
 
@@ -20,6 +21,12 @@ export default function KnowledgeGraphPage() {
   const [typeFilter, setTypeFilter] = useState<string>("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [detailData, setDetailData] = useState<EntityDetail | null>(null);
+
+  // ── World model query ────────────────────────────────────────
+  const { data: worldModel } = useQuery({
+    queryKey: ["knowledge-graph-world-model"],
+    queryFn: () => getWorldModel(),
+  });
 
   // ── Stats query ───────────────────────────────────────────────
   const { data: stats, isLoading: statsLoading } = useQuery({
@@ -100,6 +107,11 @@ export default function KnowledgeGraphPage() {
               ),
           )}
         </div>
+      )}
+
+      {/* World Model Panel */}
+      {worldModel && (
+        <WorldModelPanel model={worldModel} />
       )}
 
       {/* Filters */}

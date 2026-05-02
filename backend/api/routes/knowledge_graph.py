@@ -65,6 +65,48 @@ def _serialize_relationship(rel: KnowledgeRelationship) -> dict:
 
 
 @router.get(
+    "/world-model",
+    summary="World model summary",
+    description="Returns a high-level world model summary with top entities, strongest relationships, and type distribution.",
+)
+async def world_model():
+    """GET /api/v1/knowledge-graph/world-model → world model summary."""
+    graph = _get_graph()
+
+    entities = list(graph._entities.values())
+    relationships = list(graph._relationships)
+
+    # Top entities by truth confidence
+    top_entities = sorted(
+        entities, key=lambda e: e.truth.confidence, reverse=True
+    )[:10]
+
+    # Strongest relationships by weight
+    strongest_rels = sorted(
+        relationships, key=lambda r: r.weight, reverse=True
+    )[:10]
+
+    # Entity type distribution
+    type_dist: dict[str, int] = {}
+    for e in entities:
+        type_dist[e.entity_type.value] = type_dist.get(e.entity_type.value, 0) + 1
+
+    # Relation type distribution
+    rel_dist: dict[str, int] = {}
+    for r in relationships:
+        rel_dist[r.relation_type.value] = rel_dist.get(r.relation_type.value, 0) + 1
+
+    return {
+        "total_entities": len(entities),
+        "total_relationships": len(relationships),
+        "entity_type_distribution": type_dist,
+        "relationship_type_distribution": rel_dist,
+        "top_entities": [_serialize_entity(e) for e in top_entities],
+        "strongest_relationships": [_serialize_relationship(r) for r in strongest_rels],
+    }
+
+
+@router.get(
     "/stats",
     summary="Knowledge graph statistics",
     description="Returns entity count, relationship count, and breakdowns by type.",
