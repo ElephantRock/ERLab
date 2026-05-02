@@ -25,7 +25,7 @@ describe("RunConfigForm", () => {
     expect(onSubmit).toHaveBeenCalledOnce();
     const config = onSubmit.mock.calls[0][0] as PipelineRunRequest;
     expect(config.domain).toBe("NLP");
-    expect(config.max_gaps).toBe(10);
+    expect(config.max_gaps).toBe(5);
     expect(config.ideas_per_round).toBe(5);
   });
 
@@ -43,7 +43,7 @@ describe("RunConfigForm", () => {
     expect(getByText("Starting...")).toBeInTheDocument();
   });
 
-  it("defaults max gaps to 10 and ideas per round to 5", () => {
+  it("defaults max gaps to 5 and ideas per round to 5", () => {
     const { getByPlaceholderText } = renderWithProviders(
       <RunConfigForm onSubmit={vi.fn()} />,
     );
