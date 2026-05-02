@@ -17,6 +17,7 @@ import TracesPage from "./pages/traces";
 import SessionsPage from "./pages/sessions";
 import KnowledgeGraphPage from "./pages/knowledge-graph";
 import AutonomousPage from "./pages/autonomous";
+import PluginsPage from "./pages/plugins";
 import LoginPage from "./pages/login";
 import type { ReactNode } from "react";
 
@@ -62,6 +63,7 @@ export default function App() {
                 <Route path="/literature" element={<LiteraturePage />} />
                 <Route path="/knowledge-graph" element={<KnowledgeGraphPage />} />
                 <Route path="/autonomous" element={<AutonomousPage />} />
+                <Route path="/plugins" element={<PluginsPage />} />
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>
             </AppShell>

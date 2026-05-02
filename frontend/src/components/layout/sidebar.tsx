@@ -14,6 +14,7 @@ import {
   BookMarked,
   BrainCircuit,
   Cpu,
+  Puzzle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -40,6 +41,7 @@ const NAV_ITEMS: NavItem[] = [
   { to: "/literature", icon: BookMarked, label: "Literature" },
   { to: "/knowledge-graph", icon: BrainCircuit, label: "Graph" },
   { to: "/autonomous", icon: Cpu, label: "Autonomous", mobile: true },
+  { to: "/plugins", icon: Puzzle, label: "Plugins" },
 ];
 
 export function Sidebar({ collapsed }: { collapsed: boolean }) {
