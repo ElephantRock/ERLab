@@ -2,6 +2,7 @@ import { Routes, Route, Navigate } from "react-router-dom";
 import { AppShell } from "./components/layout/app-shell";
 import DashboardPage from "./pages/dashboard";
 import PipelineNewPage from "./pages/pipeline-new";
+import RunDetailPage from "./pages/run-detail";
 import IdeasBrowserPage from "./pages/ideas-browser";
 import IdeaDetailPage from "./pages/idea-detail";
 import GapsExplorerPage from "./pages/gaps-explorer";
@@ -14,6 +15,7 @@ export default function App() {
       <Routes>
         <Route path="/" element={<DashboardPage />} />
         <Route path="/pipeline/new" element={<PipelineNewPage />} />
+        <Route path="/runs/:id" element={<RunDetailPage />} />
         <Route path="/ideas" element={<IdeasBrowserPage />} />
         <Route path="/ideas/:id" element={<IdeaDetailPage />} />
         <Route path="/gaps" element={<GapsExplorerPage />} />

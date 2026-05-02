@@ -156,7 +156,9 @@ export default function Dashboard() {
               ))}
             </div>
           ) : runsData?.runs.length ? (
-            runsData.runs.map((run) => <RunCard key={run.id} run={run} />)
+            runsData.runs.map((run) => (
+                <RunCard key={run.id} run={run} onClick={() => navigate(`/runs/${run.id}`)} />
+              ))
           ) : (
             <Card>
               <CardContent className="p-8 text-center text-muted-foreground">
