@@ -1,3 +1,4 @@
+import { useMemo, useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate, useParams } from "react-router-dom";
 import { getRunDetail, getRunIdeas } from "@/api/pipeline";
@@ -30,6 +31,7 @@ export default function RunDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const runId = Number(id);
+  const [now, setNow] = useState(Date.now());
 
   const {
     data: run,
@@ -46,6 +48,21 @@ export default function RunDetail() {
     queryFn: () => getRunIdeas(runId),
     enabled: !isNaN(runId) && !!run,
   });
+
+  // Stale run detector (BATCH-55): re-check every 30 seconds
+  const isStale = useMemo(() => {
+    if (!run || run.status !== "running") return false;
+    const created = new Date(run.created_at).getTime();
+    return Date.now() - created > 5 * 60 * 1000; // 5 minutes
+  }, [run, now]);
+
+  useEffect(() => {
+    if (!run || run.status !== "running") return;
+    const interval = setInterval(() => {
+      setNow(Date.now());
+    }, 30000);
+    return () => clearInterval(interval);
+  }, [run]);
 
   if (runError) {
     return (
@@ -114,6 +131,19 @@ export default function RunDetail() {
           {run.status}
         </Badge>
       </div>
+
+      {/* Stale Run Warning (BATCH-55) */}
+      {isStale && (
+        <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4 mb-4" data-testid="stale-run-warning">
+          <div className="flex items-center gap-2 text-yellow-800 dark:text-yellow-200">
+            <AlertTriangle className="h-5 w-5" />
+            <p className="text-sm">
+              This run has been running for over 5 minutes. It may have encountered an issue.
+              You can try refreshing or starting a new run.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Metadata */}
       <Card data-testid="run-metadata">

@@ -5,7 +5,7 @@ import contextlib
 import json
 import logging
 import threading
-from datetime import datetime
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, Query, Request, Depends
 from fastapi.responses import StreamingResponse
@@ -120,6 +120,27 @@ async def trigger_run(request: PipelineRunRequest):
                 logger.warning("Notification failed for run %s", run_id, exc_info=True)
         except Exception as e:
             logger.error("Pipeline run %s failed: %s", run_id, e)
+            # Mark the DB record as failed if it exists and is still "running" (BATCH-55)
+            try:
+                from backend.db.database import get_session as _get_session_ctx
+                from backend.db.models import PipelineRun as _PipelineRun
+                from sqlalchemy import select as _sa_select
+                with _get_session_ctx() as sess:
+                    stmt = (
+                        _sa_select(_PipelineRun)
+                        .where(_PipelineRun.status == "running")
+                        .order_by(_PipelineRun.id.desc())
+                        .limit(1)
+                    )
+                    run_record = sess.execute(stmt).scalar_one_or_none()
+                    if run_record:
+                        run_record.status = "failed"
+                        run_record.error_message = str(e)[:500]
+                        run_record.completed_at = datetime.now(timezone.utc)
+                        sess.commit()
+                        logger.info("Marked run record %d as failed", run_record.id)
+            except Exception as db_err:
+                logger.warning("Failed to update run status in DB: %s", db_err)
             # Fire failure webhook (BATCH-32)
             try:
                 from backend.notifications import fire_webhook

@@ -205,7 +205,8 @@ def list_pipeline_runs(
     offset: int = 0,
     session_id: str | None = None,
 ) -> Sequence[PipelineRun]:
-    stmt = select(PipelineRun)
+    from sqlalchemy.orm import selectinload
+    stmt = select(PipelineRun).options(selectinload(PipelineRun.ideas))
     if session_id is not None:
         stmt = stmt.where(PipelineRun.session_id == session_id)
     stmt = stmt.order_by(PipelineRun.id.desc()).limit(limit).offset(offset)
@@ -273,7 +274,7 @@ def update_pipeline_run(
         run.error_message = error_message
     from datetime import datetime, timezone
 
-    if status == "completed":
+    if status in ("completed", "failed"):
         run.completed_at = datetime.now(timezone.utc)
     session.commit()
     session.refresh(run)
