@@ -250,6 +250,25 @@ class PipelinePersistence:
             logger.warning("Failed to persist cluster report: %s", e)
             self.warnings.append(f"persist_cluster_report: {e}")
 
+    def advance_stage(self, run_id: int, stage_name: str) -> None:
+        """Update the current stage and append to stages_completed."""
+        try:
+            from backend.db.database import get_session
+            from backend.db.models import PipelineRun
+
+            with get_session() as session:
+                run = session.query(PipelineRun).filter(PipelineRun.id == run_id).first()
+                if run:
+                    run.current_stage = stage_name
+                    stages = json.loads(run.stages_completed) if run.stages_completed else []
+                    if stage_name not in stages:
+                        stages.append(stage_name)
+                    run.stages_completed = json.dumps(stages)
+                    session.commit()
+        except Exception as e:
+            logger.warning("Failed to advance stage: %s", e)
+            self.warnings.append(f"advance_stage: {e}")
+
     def mark_run_failed(self, db_run_id: int | None, message: str) -> None:
         if not db_run_id:
             return
@@ -258,7 +277,12 @@ class PipelinePersistence:
             from backend.db.database import get_session
 
             with get_session() as session:
-                crud.update_pipeline_run(session, db_run_id, status="failed", error_message=message)
+                crud.update_pipeline_run(
+                    session, db_run_id,
+                    status="failed",
+                    current_stage="failed",
+                    error_message=message,
+                )
         except Exception as e:
             logger.warning("Failed to mark DB run as failed: %s", e)
             self.warnings.append(f"mark_run_failed: {e}")
@@ -271,7 +295,11 @@ class PipelinePersistence:
             from backend.db.database import get_session
 
             with get_session() as session:
-                crud.update_pipeline_run(session, db_run_id, status="completed")
+                crud.update_pipeline_run(
+                    session, db_run_id,
+                    status="completed",
+                    current_stage="completed",
+                )
         except Exception as e:
             logger.warning("Failed to mark DB run as completed: %s", e)
             self.warnings.append(f"mark_run_completed: {e}")

@@ -978,6 +978,10 @@ class PipelineOrchestrator:
 
             logger.info("=== %s ===", stage.name.replace("_", " ").title())
 
+            # Advance stage tracking in DB before execution
+            if db_run_id:
+                self._persistence.advance_stage(db_run_id, stage.name)
+
             # Per-stage model routing
             if self._task_router:
                 ctx.provider_override = self._task_router.get_provider(stage.name, run_id)
@@ -1119,9 +1123,9 @@ class PipelineOrchestrator:
                             logger.warning("Metacognitive plateau: %s", plateau.reason)
 
                 # Quality backloop (Gap 12): loop back if ideas are weak
-                if getattr(settings, "quality_backloop_enabled", False) and result.ideas:
+                if getattr(self._settings, "quality_backloop_enabled", False) and result.ideas:
                     avg_score = sum(i.score for i in result.ideas) / len(result.ideas)
-                    min_composite = getattr(settings, "quality_backloop_min_composite", 0.4)
+                    min_composite = getattr(self._settings, "quality_backloop_min_composite", 0.4)
                     if avg_score < min_composite:
                         logger.info(
                             "Quality backloop: avg score %.3f < %.3f, regenerating ideas",

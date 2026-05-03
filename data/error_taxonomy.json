@@ -1,13 +1,12 @@
 {
   "counts": {
-    "feasibility": 29,
-    "methodological": 76,
-    "scope": 20,
-    "novelty": 4
+    "feasibility": 30,
+    "methodological": 83,
+    "scope": 21,
+    "novelty": 5
   },
   "descriptions": {
     "feasibility": [
-      "Conflation of tasks: Using cross-lingual routing (e.g., English vs. French) to encode bits drastically lowers the hiding capacity (e.g., 1 bit per image) and assumes the sender and receiver have pre-aligned language expectations, which is operationally impractical for high-capacity steganography.",
       "The 'self-correcting error correction code (ECC) layer utilizing a soft-attention mechanism' to reconstruct original token distributions from paraphrased text is vaguely defined and likely infeasible. Paraphrasing fundamentally alters token distributions and sequence lengths, which standard ECCs cannot bridge without massive, lossless semantic mapping.",
       "The threat model is poorly defined. It is unclear whether the attacker has access to the VLM architecture/weights (white-box) or only input/output capabilities (black-box), which drastically changes the feasibility of the proposed exfiltration attack.",
       "Fundamental methodological contradiction: The core premise of 'reversible' steganography requires exact bit-perfect recovery of the original cover text. However, if the stego-text is subjected to character-level typos, token deletions, or adversarial synonym swaps, the original text is structurally lost. Reconstructing the exact original cover text from a heavily perturbed semantic neighborhood is mathematically and practically infeasible without embedding massive, capacity-consuming redundancy.",
@@ -16,22 +15,22 @@
       "Scope and feasibility issue: Aligning and augmenting text from highly disparate domains (healthcare social media, software repositories) and translating them into low-resource languages to create a unified semantic similarity benchmark is an immense, high-risk undertaking. The resulting dataset risks being artificial or noisy.",
       "The Contrastive Domain Adaptation (CDA) objective using Knowledge Graph (KG) alignments is introduced without sufficient theoretical grounding. KGs are notoriously sparse for low-resource languages and specialized software engineering jargon, making this approach highly prone to failure.",
       "The concept of 'semantic anchors' is vaguely defined. It is unclear how the model would identify stable regions of the semantic space that are simultaneously immune to paraphrasing/synonym substitution while still possessing the entropy required for high-capacity data hiding.",
-      "The steganography component feels disjointed. Reversible text steganography is typically used to hide data within a cover text, whereas detecting output tampering post-generation is fundamentally a provenance/authentication problem better suited for cryptographic signatures or LLM watermarking techniques."
+      "The steganography component feels disjointed. Reversible text steganography is typically used to hide data within a cover text, whereas detecting output tampering post-generation is fundamentally a provenance/authentication problem better suited for cryptographic signatures or LLM watermarking techniques.",
+      "The use of a 'Bloom-filter-inspired sparse attention mask' is a probabilistic data structure used for set membership testing; applying this to 'ignore topologically distant vertices' ignores the false-positive rate inherent to Bloom filters, which could randomly drop important brain features."
     ],
     "methodological": [
-      "Methodological contradiction: The proposal claims to harden reversible steganography without error correction codes (ECC), but relies on distributing bits across 'redundant token probabilities'. This is functionally equivalent to repetition codes (a form of ECC), making the claimed distinction misleading.",
-      "Fundamental methodological contradiction: The proposal claims 'strict reversibility' (exact cover text restoration) while relying on continuous semantic spaces and Error-Correcting Codes (ECC). If the stego-text is perturbed, the semantic anchor might be recovered, but the exact original cover text is mathematically lost, breaking the 'reversible' guarantee.",
-      "Capacity is likely to be critically compromised. Mapping secret bits to high-dimensional semantic anchors and requiring them to survive perturbations (Lipschitz continuity) will drastically reduce the payload bandwidth compared to exact-token methods, possibly rendering the channel impractical.",
-      "Methodological ambiguity in the adversarial module: The proposal suggests generating worst-case perturbations against the 'cover text', but steganography attacks usually happen on the stego-text. The threat model needs clarification on whether the attacker knows the hiding algorithm and how they interact with the already embedded payload.",
-      "The claim of 'guaranteeing payload survivability' is methodologically overstated. Adversarial attacks are constantly evolving, and robustness against TextFooler does not guarantee robustness against future semantic attacks.",
-      "Methodological contradiction: Reversible data hiding fundamentally requires exact bit-level recovery of the hidden payload. However, the proposal suggests using error-correcting codes (ECC) and 'semantic similarity metrics' to survive paraphrasing. Paraphrasing destroys the original token sequence, making true mathematical reversibility impossible regardless of ECC, which is designed for minor bit flips, not semantic rewrites.",
-      "The concept of 'pivot tokens that maximize the semantic distance to nearest-neighbor substitutions' is methodologically vague. If the text is paraphrased or subjected to back-translation, the pivot tokens themselves will likely be deleted or completely replaced, severing the payload extraction mechanism.",
       "Methodological scope creep: The proposal attempts to tackle three massive problems simultaneously\u2014cross-modal attacks, a novel defense mechanism, and output watermarking via steganography. This risks diluting the depth and quality of the research across all three areas.",
       "Methodological soundness issue: The claim of 'fully reversible' extraction is highly problematic. If the receiver must deterministically re-evaluate the model to extract the payload, any minor discrepancy in model weights, floating-point precision, or tokenization between sender and receiver will cause irreversible data loss.",
-      "Methodological soundness issue: Forcing the model to attend to specific visual features based on payload bits assumes a one-to-one mapping between attention regions and vocabulary choices. This is an oversimplification of transformer attention distributions, which are distributed and contextual, making deterministic encoding extremely difficult."
+      "Methodological soundness issue: Forcing the model to attend to specific visual features based on payload bits assumes a one-to-one mapping between attention regions and vocabulary choices. This is an oversimplification of transformer attention distributions, which are distributed and contextual, making deterministic encoding extremely difficult.",
+      "Methodological soundness is questionable: Formulating a Bayesian filter over high-dimensional attention maps at inference time is computationally expensive and mathematically ambiguous without strong distributional assumptions.",
+      "Severe methodological flaw: Forcing 1D sequential text into a 'sparse spatiotemporal graph' ignores the fundamental, sequential semantic dependencies of language, likely crippling language performance.",
+      "Scalability bottleneck: Computing relative geometric distance in a shared high-dimensional latent space for cross-modal attention (e.g., every LiDAR point attending to every text token) will likely result in quadratic or worse computational complexity.",
+      "The proposal to use 'kernelized attention' to manage complexity is vague. Existing kernel methods usually approximate softmax for efficiency, but here they are expected to handle arbitrary geometric density, which is mathematically undefined.",
+      "Methodological ambiguity: The term 'regime-explicit operator semantics' is vague and lacks mathematical formulation. It is unclear how the four geometric dimensions are dynamically weighted or how the affine parameters are learned without causing training instabilities.",
+      "Methodological confusion: The proposal throws multiple disparate mechanisms at the wall\u2014affine scaling, Bloom-filter-inspired masks, and supervised token attribution\u2014without explaining how they interact cohesively within a single transformer block.",
+      "The claim of 'more biologically plausible' is strong and requires significant neuroscientific backing that is currently absent from the methodology description."
     ],
     "scope": [
-      "Scope creep: The proposal attempts to tackle KG construction from EHRs, architectural modification of transformers, and low-resource cross-cultural alignment simultaneously, making the research overly broad.",
       "Scope creep: The proposal attempts to tackle cross-modal adversarial attacks, reversible data hiding, adversarial training, and defense against NLP pipeline perturbations (paraphrasing) simultaneously, making the research trajectory unmanageably broad.",
       "Scope creep: Trying to optimize for caption quality, high steganographic capacity, imperceptibility, and adversarial robustness simultaneously will likely result in severe optimization trade-offs, causing the model to fail at one or more tasks.",
       "The scope is overly ambitious. Simultaneously introducing a new multimodal steganographic paradigm, a cross-modal error-correction scheme, and an adversarial defense mechanism makes it difficult to isolate the contribution of each component.",
@@ -40,13 +39,15 @@
       "Scope creep: Attempting to defend against character-level perturbations, synonym substitutions, and full sentence-level paraphrasing/translation within a single framework requires vastly different defense mechanisms, potentially diluting the effectiveness of the research.",
       "Scope ambiguity: The proposal tries to tackle clinical NLP and assembly code analysis simultaneously. These domains have fundamentally different ontology structures (semantic vs. syntactic/control-flow), making a unified architecture highly complex to design and tune.",
       "The threat model is vaguely defined and potentially unrealistic. It assumes an adversary can embed hidden textual payloads into images (via typography or adversarial noise) that force the VLM to generate specific, predictable text, which contradicts how diffusion or attention-based captioning models typically process visual inputs.",
-      "Scope issue: Simultaneously introducing a novel steganographic method, a new attention masking mechanism, and a cross-lingual framework is overly ambitious. Cross-lingual generation adds immense complexity, especially for typologically diverse languages like Arabic and Chinese, which have different tokenization and generation challenges."
+      "Scope issue: Simultaneously introducing a novel steganographic method, a new attention masking mechanism, and a cross-lingual framework is overly ambitious. Cross-lingual generation adds immense complexity, especially for typologically diverse languages like Arabic and Chinese, which have different tokenization and generation challenges.",
+      "Theoretical claims are overblown: Proposing a 'theoretical analysis of how non-unit sum normalization affects spatial feature aggregation' is a massive undertaking that likely exceeds the scope of a standard empirical systems paper."
     ],
     "novelty": [
       "The scope is overly ambitious. Simultaneously solving cross-modal steganography, introducing a novel multi-objective contrastive loss, and defending against state-of-the-art adversarial attacks is likely too much for a single research endeavor, risking none of the objectives being achieved satisfactorily.",
       "The novelty of the defense mechanism is somewhat overstated; 'payload-invariant adversarial training' is structurally identical to standard data augmentation or adversarial training, just using a specific distribution of steganographic noise.",
       "The capacity of the hidden data will likely be severely bottlenecked. The dual constraints of maintaining strict visual alignment (cosine similarity > \u03c4) and relying on visually-grounded synonyms will drastically reduce the candidate pool for token substitution, leading to very low bits-per-word ratios.",
-      "Potential capacity degradation: Adding error-correcting codes (ECC) and restricting perturbation spaces to specific MLM prediction bins will likely drastically reduce the already limited hiding capacity of the text, potentially making the channel impractical."
+      "Potential capacity degradation: Adding error-correcting codes (ECC) and restricting perturbation spaces to specific MLM prediction bins will likely drastically reduce the already limited hiding capacity of the text, potentially making the channel impractical.",
+      "The proposal conflates several distinct techniques (Bayesian filtering, affine-scaled masking, gating) without clearly defining their mathematical integration or how the 'prior context' is explicitly computed and updated."
     ]
   }
 }

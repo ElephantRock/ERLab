@@ -1,0 +1,19 @@
+BATCH-57 EXECUTION COMPLETE
+Date: 2026-05-03
+Framework: AIV v5.2
+
+TASK-01: Fix DB Schema Sync — ✅ COMPLETE
+  - ensure_schema_sync() added to database.py
+  - Called from init_db() after create_all()
+  - Tests: 2/2 passed
+
+TASK-02: Fix Pipeline Completion Metadata — ✅ COMPLETE
+  - advance_stage() method added to persistence.py
+  - mark_run_completed() now sets current_stage="completed"
+  - mark_run_failed() now sets current_stage="failed"
+  - Orchestrator calls advance_stage() before each stage
+  - Run 16 cleaned up (status → failed)
+  - Tests: 2/2 passed
+
+Backend: 1494 passed, 0 failed
+Frontend: 339 passed, 0 failed

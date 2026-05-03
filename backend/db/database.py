@@ -5,6 +5,10 @@ PostgreSQL URLs (postgresql:// or postgresql+psycopg2://) get connection pooling
 with pre-ping; SQLite uses the default StaticPool-less mode.
 """
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 from contextlib import contextmanager
 from typing import Any
 
@@ -72,8 +76,39 @@ def create_session_factory():
 
 
 def init_db():
-    """Create all tables."""
-    Base.metadata.create_all(_get_engine())
+    """Create all tables and sync schema for any missing columns."""
+    engine = _get_engine()
+    Base.metadata.create_all(bind=engine)
+    ensure_schema_sync(engine)
+
+
+def ensure_schema_sync(engine) -> None:
+    """Add any missing columns from models to the database tables.
+
+    This handles the case where models evolve faster than Alembic migrations
+    are applied, which is common during development with create_all().
+    """
+    from sqlalchemy import inspect, text
+
+    inspector = inspect(engine)
+
+    for table_name, table in Base.metadata.tables.items():
+        if not inspector.has_table(table_name):
+            continue
+
+        existing_cols = {c['name'] for c in inspector.get_columns(table_name)}
+
+        for column in table.columns:
+            if column.name not in existing_cols:
+                col_type = column.type.compile(dialect=engine.dialect)
+                nullable = "" if column.nullable else " NOT NULL"
+                default = f" DEFAULT {column.server_default.arg}" if column.server_default else ""
+
+                sql = f"ALTER TABLE {table_name} ADD COLUMN {column.name} {col_type}{nullable}{default}"
+                logger.info("Schema sync: %s", sql)
+                with engine.connect() as conn:
+                    conn.execute(text(sql))
+                    conn.commit()
 
 
 @contextmanager
