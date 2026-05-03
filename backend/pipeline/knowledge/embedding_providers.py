@@ -176,6 +176,28 @@ class FallbackEmbeddingProvider(EmbeddingProvider):
         return f"fallback({self._primary.provider_name}+{self._fallback.provider_name})"
 
 
+class DummyEmbeddingProvider(EmbeddingProvider):
+    """No-op embedding provider for testing / environments without API access.
+
+    Returns deterministic zero vectors of the configured dimension.
+    Useful when the LLM provider (e.g. z.ai) does not offer an embedding endpoint.
+    """
+
+    def __init__(self, dimension: int = 1536):
+        self._dimension = dimension
+
+    async def embed(self, texts: list[str]) -> list[list[float]]:
+        return [[0.0] * self._dimension for _ in texts]
+
+    @property
+    def dimension(self) -> int:
+        return self._dimension
+
+    @property
+    def provider_name(self) -> str:
+        return f"dummy:{self._dimension}d"
+
+
 class CachedEmbeddingProvider(EmbeddingProvider):
     """Caching wrapper — stores text_hash → embedding in memory.
 
@@ -248,7 +270,9 @@ def create_embedding_provider(
     """
     name = provider_name.lower().strip()
 
-    if name == "openai":
+    if name in ("dummy", "noop", "test"):
+        return DummyEmbeddingProvider(dimension=dimension or 1536)
+    elif name == "openai":
         provider = OpenAIEmbeddingProvider(
             model=model or "text-embedding-3-small",
             api_key=api_key,
