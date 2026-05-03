@@ -118,6 +118,14 @@ def login(body: LoginRequest):
 @router.get("/me", response_model=UserResponse)
 def get_me(current_user: TokenData = Depends(get_current_user)):
     """Return the current authenticated user's info."""
+    # Dev mode — return synthetic dev user when auth_enabled=False
+    if current_user.user_id == 0:
+        return UserResponse(
+            id=0,
+            username="dev",
+            email="dev@localhost",
+            role="admin",
+        )
     with get_session() as session:
         user = session.query(User).filter(User.id == current_user.user_id).first()
         if not user:
