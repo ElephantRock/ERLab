@@ -15,6 +15,7 @@ class IdeaCandidate(BaseModel):
     expected_contributions: str = ""
     novelty_rationale: str = ""
     evaluation_approach: str = ""
+    overall_score: float = 0.0
     parent_idea_ids: list[str] | None = None
 
 
