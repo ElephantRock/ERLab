@@ -3,11 +3,12 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 from abc import ABC, abstractmethod
 from contextlib import contextmanager
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Generator
+from typing import TYPE_CHECKING, Any, Generator
 
 from backend.pipeline.ingestion.chunker import DocumentChunk  # noqa: F401 — re-exported by stages
 from backend.pipeline.synthesis.proposal_synthesizer import ResearchProposal  # noqa: F401 — used by ProposalSynthesisStage
@@ -591,6 +592,150 @@ class ProposalSynthesisStage(PipelineStage):
                             len(refs),
                         )
         return True
+
+
+class TreeSearchStage(PipelineStage):
+    """Pipeline stage that uses TreeSearchEngine for beam-search idea generation.
+
+    Replaces IdeaGenerationStage when tree_of_thought_enabled=True (HB-01).
+    The stage name is "idea_generation" so it occupies the same slot in
+    STAGE_ORDER — all downstream persistence/checkpoint logic works unchanged.
+    """
+
+    # HB-03: Maximum serialized tree_data size in bytes (500KB)
+    MAX_TREE_DATA_BYTES = 500 * 1024
+
+    def __init__(
+        self,
+        engine: "TreeSearchEngine",
+        hooks,
+        provider=None,
+        kg=None,
+    ) -> None:
+        self._engine = engine
+        self._hooks = hooks
+        self._provider = provider
+        self._kg = kg
+
+    @property
+    def name(self) -> str:
+        return "idea_generation"
+
+    async def execute(self, ctx: StageContext) -> bool:
+        logger.info(
+            "TreeSearchStage: beam search (depth=%d, beam_width=%d)",
+            self._engine.config.max_depth,
+            self._engine.config.beam_width,
+        )
+
+        # Run beam search
+        ideas = await self._engine.search(
+            gaps=ctx.result.gaps,
+            context_papers=ctx.all_papers[:30],
+        )
+        ctx.result.ideas = ideas
+        logger.info("TreeSearchStage: generated %d ideas via tree search", len(ideas))
+
+        # Serialize tree structure into tree_data for frontend (AC-01-03)
+        tree_data = self._build_tree_data(ideas)
+        ctx.result.tree_data = self._enforce_size_limit(tree_data)  # HB-03
+
+        # Write ideas to Knowledge Graph (same as IdeaGenerationStage)
+        if self._kg and ideas:
+            from backend.pipeline.knowledge.entities import EntityType, KnowledgeEntity
+            from backend.pipeline.knowledge.relationships import KnowledgeRelationship, RelationType
+            from backend.pipeline.knowledge.truth import TruthValue
+
+            for idea in ideas:
+                idea_entity = KnowledgeEntity(
+                    id=f"idea:{idea.title[:60]}",
+                    entity_type=EntityType.CONCEPT,
+                    name=idea.title,
+                    properties={
+                        "proposed_method": idea.proposed_method[:200],
+                    },
+                    truth=TruthValue(frequency=getattr(idea, 'overall_score', 0.5), confidence=0.5),
+                )
+                self._kg.add_entity(idea_entity)
+
+                for gap_id in getattr(idea, 'source_gap_ids', []):
+                    gap_eid = f"gap:{gap_id[:60]}"
+                    if gap_eid in self._kg._entities:
+                        self._kg.add_relationship(KnowledgeRelationship(
+                            source_id=gap_eid,
+                            target_id=f"idea:{idea.title[:60]}",
+                            relation_type=RelationType.PROPOSES_METHOD,
+                            truth=TruthValue.from_observation(frequency=getattr(idea, 'overall_score', 0.5)),
+                        ))
+
+            self._kg.save()
+            logger.info("Added %d idea entities to Knowledge Graph (tree search)", len(ideas))
+
+        # Dispatch hooks
+        for idea in ideas:
+            await self._hooks.dispatch_sync_safe(
+                "idea.generated",
+                {
+                    "title": idea.title,
+                    "score": getattr(idea, 'overall_score', 0.0),
+                },
+            )
+        return True
+
+    def _build_tree_data(self, ideas: list) -> dict:
+        """Build a serializable tree structure from generated ideas.
+
+        The tree is reconstructed from the ideas' parent_idea_ids lineage
+        fields, producing a flat node list with parent references that the
+        frontend can render as an SVG tree.
+        """
+        nodes: list[dict] = []
+        for idea in ideas:
+            nodes.append({
+                "id": idea.id,
+                "title": idea.title,
+                "score": getattr(idea, 'overall_score', 0.0),
+                "proposed_method": idea.proposed_method[:200],
+                "parent_ids": idea.parent_idea_ids or [],
+            })
+
+        return {
+            "engine": "tree_search",
+            "config": {
+                "beam_width": self._engine.config.beam_width,
+                "max_depth": self._engine.config.max_depth,
+                "ideas_per_node": self._engine.config.ideas_per_node,
+            },
+            "nodes": nodes,
+        }
+
+    @classmethod
+    def _enforce_size_limit(cls, tree_data: dict) -> dict | None:
+        """Enforce 500KB limit on tree_data (HB-03).
+
+        If serialized JSON exceeds the limit, truncate nodes to fit.
+        Returns None if even an empty tree would exceed the limit (shouldn't happen).
+        """
+        serialized = json.dumps(tree_data, default=str)
+        if len(serialized.encode("utf-8")) <= cls.MAX_TREE_DATA_BYTES:
+            return tree_data
+
+        # Try progressive truncation of nodes list
+        nodes = tree_data.get("nodes", [])
+        if isinstance(nodes, list):
+            for trim_size in [len(nodes) // 2, len(nodes) // 4, 0]:
+                tree_data_copy = dict(tree_data)
+                tree_data_copy["nodes"] = nodes[:trim_size]
+                serialized = json.dumps(tree_data_copy, default=str)
+                if len(serialized.encode("utf-8")) <= cls.MAX_TREE_DATA_BYTES:
+                    logger.warning(
+                        "TreeSearchStage: tree_data truncated to %d nodes (HB-03: 500KB limit)",
+                        trim_size,
+                    )
+                    return tree_data_copy
+
+        logger.error("TreeSearchStage: tree_data exceeds 500KB even when empty — returning None")
+        return None
 
 
 class ExportStage(PipelineStage):

@@ -33,3 +33,4 @@ class PipelineResult:
     run_id: str = ""
     params_used: dict = field(default_factory=dict)
     persistence_warnings: list[str] = field(default_factory=list)
+    tree_data: dict | None = None  # Serialized tree structure for frontend (HB-03: max 500KB)

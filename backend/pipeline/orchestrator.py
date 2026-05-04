@@ -36,6 +36,7 @@ from backend.pipeline.stages import (
     PipelineStage,
     ProposalSynthesisStage,
     StageContext,
+    TreeSearchStage,
 )
 from backend.pipeline.synthesis.proposal_synthesizer import ProposalSynthesizer
 from backend.pipeline.synthesis.reference_validator import ReferenceValidator
@@ -837,11 +838,33 @@ class PipelineOrchestrator:
 
     def _build_stages(self) -> list[PipelineStage]:
         ref_validator = ReferenceValidator(store=self._store)
-        return [
-            LiteratureSearchStage(self._search, self._hooks),
-            IngestionStage(self._store, self._bm25, self._embedding, kg=self._kg),
-            GapAnalysisStage(self._gap_analyzer, self._goal_manager, self._hooks, self._memory, kg=self._kg, faithfulness_checker=self._faithfulness_checker),
-            IdeaGenerationStage(
+
+        # Build the idea generation stage based on tree_of_thought_enabled flag (HB-01)
+        idea_stage: PipelineStage
+        if getattr(self._settings, "tree_of_thought_enabled", False):
+            from backend.pipeline.generation.tree_search import TreeSearchConfig, TreeSearchEngine
+
+            tree_config = TreeSearchConfig(
+                beam_width=getattr(self._settings, "tree_of_thought_beam_width", 2),
+                max_depth=getattr(self._settings, "tree_of_thought_max_depth", 3),
+            )
+            # Use the existing ideator agent (implements the Ideator protocol)
+            tree_engine = TreeSearchEngine(
+                ideator=self._agent,  # IdeatorAgent implements the Ideator protocol
+                config=tree_config,
+            )
+            idea_stage = TreeSearchStage(
+                engine=tree_engine,
+                hooks=self._hooks,
+                provider=self._provider,
+                kg=self._kg,
+            )
+            logger.info(
+                "TreeSearchStage enabled (beam_width=%d, max_depth=%d)",
+                tree_config.beam_width, tree_config.max_depth,
+            )
+        else:
+            idea_stage = IdeaGenerationStage(
                 self._agent,
                 self._hooks,
                 dag_executor=self._dag_executor,
@@ -850,7 +873,13 @@ class PipelineOrchestrator:
                 kg=self._kg,
                 forest=self._forest,
                 reasoning_verifier=self._reasoning_verifier,
-            ),
+            )
+
+        return [
+            LiteratureSearchStage(self._search, self._hooks),
+            IngestionStage(self._store, self._bm25, self._embedding, kg=self._kg),
+            GapAnalysisStage(self._gap_analyzer, self._goal_manager, self._hooks, self._memory, kg=self._kg, faithfulness_checker=self._faithfulness_checker),
+            idea_stage,
             NoveltyCheckingStage(self._novelty, self._hooks),
             FeasibilityScoringStage(self._feasibility),
             ProposalSynthesisStage(
