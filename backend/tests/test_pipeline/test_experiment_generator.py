@@ -11,9 +11,10 @@ import ast
 
 import pytest
 
-from backend.pipeline.experiment.experiment_generator import ExperimentGenerator
+from backend.pipeline.experiment.experiment_generator import (
+    ExperimentGenerator,
+)
 from backend.pipeline.generation.models import IdeaCandidate
-
 
 # ── Fixtures ────────────────────────────────────────────────────────
 
@@ -108,7 +109,7 @@ async def test_code_includes_hypothesis_and_baseline(
     assert "f1" in code.lower(), "Generated code must compute F1 score"
 
     # Must output results as JSON
-    assert "json.dumps" in code or "json.dumps" in code, (
+    assert "json.dumps" in code, (
         "Generated code must output results as JSON"
     )
 
@@ -130,9 +131,8 @@ async def test_code_uses_standard_libraries_only(
         if isinstance(node, ast.Import):
             for alias in node.names:
                 imported_modules.add(alias.name.split(".")[0])
-        elif isinstance(node, ast.ImportFrom):
-            if node.module:
-                imported_modules.add(node.module.split(".")[0])
+        elif isinstance(node, ast.ImportFrom) and node.module:
+            imported_modules.add(node.module.split(".")[0])
 
     # Allowed standard-library modules
     allowed = {"json", "random", "statistics", "time", "__future__", "typing"}

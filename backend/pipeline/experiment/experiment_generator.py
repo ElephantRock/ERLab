@@ -134,7 +134,11 @@ class ExperimentGenerator:
                 accuracy = (tp + tn) / len(labels) if labels else 0.0
                 precision = tp / (tp + fp) if (tp + fp) else 0.0
                 recall = tp / (tp + fn) if (tp + fn) else 0.0
-                f1 = (2 * precision * recall / (precision + recall)) if (precision + recall) else 0.0
+                f1 = (
+                    (2 * precision * recall / (precision + recall))
+                    if (precision + recall)
+                    else 0.0
+                )
 
                 return {{
                     "accuracy": round(accuracy, 4),
@@ -180,10 +184,18 @@ class ExperimentGenerator:
                 print()
                 print("BASELINE COMPARISON")
                 print("-" * 40)
-                print(f"  Random baseline:   accuracy={{random_metrics['accuracy']}}  "
-                      f"f1={{random_metrics['f1']}}  time={{random_time:.4f}}s")
-                print(f"  Heuristic baseline: accuracy={{heuristic_metrics['accuracy']}}  "
-                      f"f1={{heuristic_metrics['f1']}}  time={{heuristic_time:.4f}}s")
+                print(
+                    f"  Random baseline:   "
+                    f"accuracy={{random_metrics['accuracy']}}  "
+                    f"f1={{random_metrics['f1']}}  "
+                    f"time={{random_time:.4f}}s"
+                )
+                print(
+                    f"  Heuristic baseline: "
+                    f"accuracy={{heuristic_metrics['accuracy']}}  "
+                    f"f1={{heuristic_metrics['f1']}}  "
+                    f"time={{heuristic_time:.4f}}s"
+                )
                 print()
 
                 improvement = heuristic_metrics["accuracy"] - random_metrics["accuracy"]
