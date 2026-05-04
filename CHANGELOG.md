@@ -3,6 +3,16 @@
 All notable changes to the Elephant Rock Research Platform are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [BATCH-62] - 2026-05-04
+
+### Added
+- `TreeSearchEngine` with beam search over idea space (beam_width=3, max_depth=3, ideas_per_node=5)
+- Idea recombination operator (`IdeaRecombinator`) — synthesizes child from two parent ideas with lineage tracking
+- `IdeaCandidate.id` (auto UUID) and `parent_idea_ids` fields for lineage tracking
+- `IdeaCandidate.overall_score` field (default 0.0)
+- 13 new tests (6 tree search + 3 recombination + 4 edge/boundary)
+- Beam width hard cap at 10 (HB-03)
+
 ## [BATCH-61] - 2026-05-04
 
 ### Added
