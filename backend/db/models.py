@@ -222,3 +222,19 @@ class ResearchGapDB(Base):
 
     pipeline_run: Mapped["PipelineRun | None"] = relationship(back_populates="gaps")
     created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
+
+
+class ExperimentResult(Base):
+    """Stores experiment execution results for ideas (BATCH-66)."""
+    __tablename__ = "experiment_results"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    idea_id: Mapped[int] = mapped_column(Integer, ForeignKey("ideas.id"), nullable=False)
+    code_md: Mapped[str] = mapped_column(Text, nullable=False)
+    stdout: Mapped[str] = mapped_column(Text, default="")
+    stderr: Mapped[str] = mapped_column(Text, default="")
+    exit_code: Mapped[int] = mapped_column(Integer, default=0)
+    success: Mapped[bool] = mapped_column(Boolean, default=False)
+    execution_time_seconds: Mapped[float] = mapped_column(Float, default=0.0)
+    error: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))

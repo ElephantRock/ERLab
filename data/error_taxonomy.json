@@ -1,8 +1,8 @@
 {
   "counts": {
     "feasibility": 58,
-    "methodological": 144,
-    "scope": 33,
+    "methodological": 145,
+    "scope": 34,
     "novelty": 18
   },
   "descriptions": {
@@ -19,7 +19,6 @@
       "Scope and scalability: The contrastive learning objective relies on domain-specific bilingual dictionaries, which are exceptionally rare or non-existent for truly low-resource languages in specialized domains like clinical healthcare."
     ],
     "methodological": [
-      "Methodological limitation: Synthetic abstracts may lack the complex rhetorical structures of real papers, making the LLM's reaction to them ecologically invalid.",
       "Evaluating LLMs generating reviews of synthetic abstracts tests bias in a vacuum, ignoring how LLMs might weigh actual methodological quality.",
       "Methodological soundness: Defining the 'true' causal graph for a complex medical imaging pipeline is practically impossible and relies on strong, often untestable assumptions.",
       "Methodological limitation: Static analysis struggles with dynamic code execution, reflection, or complex data manipulations common in PyTorch/TensorFlow.",
@@ -28,10 +27,10 @@
       "Major methodological flaw: Generative models output molecular structures; they do not output demographic efficacy. The model would need a highly accurate, population-specific binding predictor to compute the loss, which likely doesn't exist.",
       "Methodological bottleneck: Defining a 'semantically meaningful input space' via parameterized templates severely restricts the natural language input space, potentially making findings ecologically invalid.",
       "Methodological gap: Applying DP-SGD exclusively to soft prompts might be insufficient to prevent data leakage. Research has shown that the frozen backbone can still memorize and leak sensitive data, meaning the proposed 'formal mathematical privacy bounds' might only apply to the prompts, not the entire inference pipeline.",
-      "Evaluation methodology flaw: Creating a benchmark by simply translating English datasets (like MEDSTS) into Hausa often results in unnatural, translationese artifacts. This does not truly evaluate semantic similarity in a low-resource cultural and linguistic context."
+      "Evaluation methodology flaw: Creating a benchmark by simply translating English datasets (like MEDSTS) into Hausa often results in unnatural, translationese artifacts. This does not truly evaluate semantic similarity in a low-resource cultural and linguistic context.",
+      "Methodological soundness is questionable regarding the 'Cultural Orthogonality Constraint'; defining and mathematically isolating 'cultural nuances' from 'universal medical semantics' in a latent space is highly subjective and notoriously difficult to operationalize rigorously."
     ],
     "scope": [
-      "Scope: Deriving new threshold conditions for a completely unified CV-DV framework is a massive theoretical undertaking that might lack the rigor needed if attempted alongside numerical simulations.",
       "Scope: The 'discarded' states from magic state distillation are highly entangled multi-qubit states (e.g., the output of a failed distillation factory). Modeling this as a single density matrix coupled to a three-level system ignores the massive overhead of entanglement distribution and routing required to interface the thermal machine with the failed states.",
       "LLMs are known to suffer from 'sycophancy' and mode collapse; self-play in an unconstrained social environment might lead to degenerate or highly unrealistic emergent behaviors rather than realistic societal simulations.",
       "Scope creep: The idea tries to solve interpretability, unsupervised concept discovery, and RAG hallucination simultaneously. This makes the research trajectory scattered.",
@@ -40,7 +39,8 @@
       "Methodological scope is overly ambitious and conflates multiple distinct research directions (uncertainty quantification, multi-task learning, domain adaptation, adversarial robustness) into a single system, risking a lack of depth in any one area.",
       "The proposal conflates several distinct research directions (causal representation learning, uncertainty quantification, and multimodal alignment) without clearly explaining how they interact mathematically or how the joint loss function is balanced.",
       "Scope is narrowly focused on formal domains (math, logic, code); it doesn't address reasoning in unstructured domains like law or humanities.",
-      "Optimizing for low variance across populations might result in generating only 'safe', broadly ineffective molecules."
+      "Optimizing for low variance across populations might result in generating only 'safe', broadly ineffective molecules.",
+      "Severe scope creep: attempting to validate theoretical Riemannian geometry, cross-cultural empathy, adversarial robustness, and multimodal clinical diagnostics in a single study is overly ambitious."
     ],
     "novelty": [
       "Novelty: The idea of 'soft' or 'analog' decoding of GKP codes exists in the literature (e.g., using analog information from GKP homodyne measurements to improve surface code decoding). This proposal might be overlapping with the concept of 'analog surface codes' or 'soft-decision decoding' of GKP codes.",

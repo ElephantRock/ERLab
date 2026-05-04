@@ -3,6 +3,7 @@
 import json
 
 from fastapi import APIRouter, Query
+from sqlalchemy import select
 
 from backend.api.errors import NotFoundError
 from backend.api.schemas import IdeaFeedbackRequest
@@ -120,6 +121,24 @@ async def get_idea(idea_id: int):
             raise NotFoundError("Idea not found")
         proposal = get_proposal_by_idea(session, idea.id)
 
+        # Get experiment results (BATCH-66)
+        from backend.db.models import ExperimentResult as ExperimentResultDB
+        exp_results = session.execute(
+            select(ExperimentResultDB).where(ExperimentResultDB.idea_id == idea.id)
+        ).scalars().all()
+        experiment_results = [
+            {
+                "id": r.id,
+                "success": r.success,
+                "exit_code": r.exit_code,
+                "execution_time_seconds": r.execution_time_seconds,
+                "stdout": r.stdout[:500] if r.stdout else None,
+                "error": r.error,
+                "created_at": str(r.created_at),
+            }
+            for r in exp_results
+        ]
+
         # Extract mechanical_metrics from novelty_report JSON (BATCH-64)
         novelty_report_raw = json.loads(idea.novelty_report) if idea.novelty_report else None
         mechanical_metrics = None
@@ -150,6 +169,7 @@ async def get_idea(idea_id: int):
                     if proposal and proposal.sections_json
                     else None
                 ),
+                "experiment_results": experiment_results if experiment_results else None,
                 "created_at": str(idea.created_at),
             },
         }
