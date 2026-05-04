@@ -17,8 +17,10 @@ import {
   Play,
   Lightbulb,
   Clock,
+  GitBranch,
 } from "lucide-react";
-import type { PipelineRunDetail, IdeaSummary } from "@/api/types";
+import type { IdeaSummary } from "@/api/types";
+import { TreeVisualization } from "@/components/pipeline/tree-visualization";
 
 const statusColors: Record<string, string> = {
   pending: "bg-yellow-100 text-yellow-800",
@@ -233,6 +235,24 @@ export default function RunDetail() {
           <Play className="h-4 w-4 mr-2" />
           Resume Pipeline
         </Button>
+      )}
+
+      {/* Tree Search Visualization (BATCH-63/TASK-02, AC-02-02) */}
+      {run.tree_data && (
+        <Card data-testid="tree-search-tab">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-sm font-medium">Tree Search</CardTitle>
+              <span className="text-sm text-muted-foreground flex items-center gap-1">
+                <GitBranch className="h-4 w-4" />
+                {run.tree_data.nodes.length} node{run.tree_data.nodes.length !== 1 ? "s" : ""}
+              </span>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <TreeVisualization tree_data={run.tree_data} />
+          </CardContent>
+        </Card>
       )}
 
       {/* Generated Ideas */}

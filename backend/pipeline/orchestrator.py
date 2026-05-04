@@ -1148,6 +1148,11 @@ class PipelineOrchestrator:
                 self._persistence.persist_ideas(result, db_run_id)
                 self._collect_warnings(result)
 
+                # Persist tree visualization data (BATCH-63/TASK-02)
+                if getattr(result, 'tree_data', None):
+                    self._persistence.persist_tree_data(result.tree_data, db_run_id)
+                    self._collect_warnings(result)
+
             if stage.name == "feasibility_scoring":
                 self._persistence.persist_ideas(result, db_run_id)
                 self._collect_warnings(result)

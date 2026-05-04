@@ -73,6 +73,9 @@ class Idea(Base):
     # Gap→Idea traceability (JSON list of gap titles / identifiers)
     source_gap_ids: Mapped[str | None] = mapped_column(Text, nullable=True)
 
+    # Tree-of-thought parent references (BATCH-63)
+    parent_idea_ids: Mapped[str | None] = mapped_column(Text, nullable=True)
+
     # Link to the pipeline run that generated this idea
     pipeline_run_id: Mapped[int | None] = mapped_column(
         Integer, ForeignKey("pipeline_runs.id"), nullable=True
@@ -122,6 +125,9 @@ class PipelineRun(Base):
 
     # Cluster report (BATCH-38)
     cluster_report_json: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    # Tree search visualization data (BATCH-63)
+    tree_data_json: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     ideas: Mapped[list["Idea"]] = relationship(back_populates="pipeline_run")
     gaps: Mapped[list["ResearchGapDB"]] = relationship(back_populates="pipeline_run")

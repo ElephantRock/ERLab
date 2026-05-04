@@ -319,9 +319,11 @@ async def get_run(run_id: int):
                     "novelty_score": i.novelty_score,
                     "feasibility_score": i.feasibility_score,
                     "overall_score": i.overall_score,
+                    "parent_idea_ids": json.loads(i.parent_idea_ids) if i.parent_idea_ids else None,
                 }
                 for i in run.ideas
             ],
+            "tree_data": json.loads(run.tree_data_json) if run.tree_data_json else None,
             "created_at": str(run.created_at),
             "completed_at": str(run.completed_at) if run.completed_at else None,
             "error_message": run.error_message,

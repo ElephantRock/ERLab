@@ -250,6 +250,25 @@ class PipelinePersistence:
             logger.warning("Failed to persist cluster report: %s", e)
             self.warnings.append(f"persist_cluster_report: {e}")
 
+    def persist_tree_data(self, tree_data: dict | None, db_run_id: int | None) -> None:
+        """Write tree_data_json to PipelineRun (BATCH-63)."""
+        if not db_run_id or not tree_data:
+            return
+        try:
+            from backend.db.database import get_session
+            from backend.db.models import PipelineRun as PipelineRunModel
+
+            report_json = json.dumps(tree_data, default=str)
+
+            with get_session() as session:
+                run = session.get(PipelineRunModel, db_run_id)
+                if run:
+                    run.tree_data_json = report_json
+                    session.commit()
+        except Exception as e:
+            logger.warning("Failed to persist tree data: %s", e)
+            self.warnings.append(f"persist_tree_data: {e}")
+
     def advance_stage(self, run_id: int, stage_name: str) -> None:
         """Update the current stage and append to stages_completed."""
         try:

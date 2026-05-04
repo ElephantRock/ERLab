@@ -25,10 +25,29 @@ export interface PipelineRunSummary {
   error_message: string | null;
 }
 
+export interface TreeNode {
+  id: string;
+  title: string;
+  score: number;
+  proposed_method: string;
+  parent_ids: string[];
+}
+
+export interface TreeData {
+  engine: string;
+  config: {
+    beam_width: number;
+    max_depth: number;
+    ideas_per_node: number;
+  };
+  nodes: TreeNode[];
+}
+
 export interface PipelineRunDetail extends PipelineRunSummary {
   config: Record<string, unknown>;
   stages_completed: string[];
   ideas: IdeaSummary[];
+  tree_data: TreeData | null;
 }
 
 export interface TriggerRunResponse {
