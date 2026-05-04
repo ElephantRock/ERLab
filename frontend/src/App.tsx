@@ -2,6 +2,7 @@ import { Suspense, lazy } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import { useAuth } from "@/contexts/auth-context";
 import { AppShell } from "./components/layout/app-shell";
+import { useRTL } from "./hooks/useRTL";
 import LoginPage from "./pages/login";
 import type { ReactNode } from "react";
 
@@ -50,6 +51,7 @@ function ProtectedRoute({ children }: { children: ReactNode }) {
 }
 
 export default function App() {
+  useRTL();
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />

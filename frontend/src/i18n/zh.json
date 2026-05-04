@@ -61,6 +61,12 @@
     "switchLabel": "语言",
     "en": "English",
     "zh": "中文",
-    "es": "Español"
+    "es": "Español",
+    "fr": "Français",
+    "de": "Deutsch",
+    "ja": "日本語",
+    "ko": "한국어",
+    "pt": "Português",
+    "ar": "العربية"
   }
 }
