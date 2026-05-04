@@ -10,7 +10,7 @@ from fastapi.responses import JSONResponse
 
 from backend.api.auth import get_current_user, verify_api_key
 from backend.api.errors import APIError
-from backend.api.routes import auth as auth_routes, collaboration, costs, experiments, exports, gaps, governance, ideas, knowledge, knowledge_graph, literature, memory, notifications, pipeline, plugins, search, status, traces
+from backend.api.routes import auth as auth_routes, collaboration, costs, experiments, exports, gaps, governance, ideas, knowledge, knowledge_graph, literature, memory, notifications, pipeline, plugins, recombination, search, status, traces
 from backend.api import ws as ws_module
 
 app = FastAPI(
@@ -188,6 +188,12 @@ app.include_router(
 )
 app.include_router(
     experiments.router, prefix="/api/v1/experiments", tags=["experiments"], dependencies=_auth
+)
+app.include_router(
+    recombination.router,
+    prefix="/api/v1/recombination",
+    tags=["recombination"],
+    dependencies=_auth,
 )
 
 # WebSocket — no auth dependency; auth happens inside the handler
