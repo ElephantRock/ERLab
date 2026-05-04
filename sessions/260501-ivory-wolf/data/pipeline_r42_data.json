@@ -1,0 +1,101 @@
+{
+  "ideas": [
+    {
+      "title": "PeerAudit: A Causal and Empirical Auditing Framework for Bias in LLM-Based Peer Review",
+      "problem": "AI is increasingly used to generate meta-reviews and screen submissions in academic publishing. However, there is a significant risk that these LLMs systematically penalize non-native English writing styles or favor prominent institutions, thereby automating existing biases.",
+      "method": "We introduce PeerAudit, a pipeline for empirically auditing LLMs in peer review. We create a dataset of synthetically generated abstracts with controlled perturbations (native vs. non-native phrasing, elite vs. non-elite institutions) augmented with real, historically accepted/rejected abstracts. We use causal mediation analysis to isolate the impact of demographic markers. We also test open-weight models to correlate specific pre-training corpora with geographical biases, and analyze how LLMs weigh 'weaker' arguments from elite institutions against 'stronger' ones from non-elite contexts.",
+      "contributions": "A comprehensive causal audit of bias in LLM-based peer review; a benchmark dataset combining synthetic and real historical data; and actionable recommendations for prompt engineering and fine-tuning to mitigate systemic bias.",
+      "score": 0.848
+    },
+    {
+      "title": "EquiDrug: Constrained Fairness-Aware Generative AI for Pharmacogenomically Unbiased Drug Discovery",
+      "problem": "Generative AI models for drug discovery are trained on datasets skewed towards populations of European descent, potentially accelerating inequitable pharmacological outcomes. However, optimizing for demographic fairness requires accurate population-specific binding predictors that currently do not exist.",
+      "method": "We propose EquiDrug, a constrained optimization framework for drug design. Rather than using a soft loss function dependent on non-existent predictors, we focus on specific, well-documented pharmacogenomic markers (e.g., CYP450 variations) and use a constrained generation approach to guarantee a minimum efficacy threshold across populations. The model outputs candidate molecules optimized for both target affinity and cross-population equity.",
+      "contributions": "A constrained optimization methodology for fairness-aware molecular generation; a benchmark linking molecular structure to specific pharmacogenomic marker interactions; and a methodological framework for integrating equity into AI-driven pharmacology.",
+      "score": 0.8325
+    },
+    {
+      "title": "EvoBench: A Symbolically Grounded, Procedurally Generated Evaluation Framework for LLM Reasoning",
+      "problem": "Static LLM benchmarks quickly become contaminated through memorization, rendering them obsolete. There is a critical need for dynamic evaluation frameworks that assess true reasoning rather than recall, but current dynamic benchmarks rely on human curation which does not scale, or LLM generation which caps complexity at the generator's own ability.",
+      "method": "EvoBench is a dynamic framework utilizing purely symbolic engines (e.g., SymPy, Z3 solver) to procedurally generate an infinite supply of verified, novel problem-solution pairs, decoupling generation from LLM limitations. An evolutionary algorithm introduces progressively harder problem variants based on the LLM's failure modes. We define a strict 'novelty metric' to ensure generated problems are not mere isomorphic transformations of existing training data.",
+      "contributions": "An open-source, procedurally generated evaluation suite immune to data contamination; a methodology for automated difficulty calibration; a rigorous metric for problem novelty; and a longitudinal mapping of LLM reasoning limitations.",
+      "score": 0.8087500000000001
+    },
+    {
+      "title": "LLM-Sensitivity: Surrogate-Assisted Global Sensitivity Analysis for Interpreting LLM Uncertainty Boundaries",
+      "problem": "Large Language Models are highly opaque, and it is difficult to understand the internal uncertainty and robustness of their responses. Traditional local perturbation methods miss global interactions, but applying Global Sensitivity Analysis (GSA) to LLMs is computationally infeasible and struggles to map embedding variance to semantic failure.",
+      "method": "We propose translating Sobol indices to LLM architectures using surrogate models to approximate the LLM's behavior, drastically reducing computational load. To ensure ecological validity, we start with a highly constrained domain (e.g., specific medical QA tasks) where the input space is parameterized semantically. We explicitly map how variance in the surrogate's output correlates with actual task performance (accuracy) to validate the metric.",
+      "contributions": "A mathematically rigorous, computationally feasible framework for quantifying LLM robustness using GSA; identification of high-sensitivity input features that trigger hallucinations; and best practices for robust prompt engineering based on global sensitivity metrics.",
+      "score": 0.8087500000000001
+    },
+    {
+      "title": "CCE-DRL: Causal Concept Grounding for Deep Reinforcement Learning with Measured Trade-offs in Autonomous Healthcare",
+      "problem": "Deep Reinforcement Learning (DRL) shows promise for sequential decision-making in ICUs, but the lack of explainability prevents clinical trust. Forcing DRL representations to align with human concepts risks degrading the agent's ability to discover novel treatment strategies, creating a tension between interpretability and efficacy.",
+      "method": "We propose Causal Concept Embedding for DRL (CCE-DRL). The agent's latent representations are regularized to align with a clinical knowledge graph that explicitly allows for 'unknown' causal links, preventing over-constraint by medical dogma. We rigorously measure the 'cost of interpretability' by explicitly tracking the drop in reward when concept constraints are applied. The framework uses offline RL evaluation metrics (like Fitted Q Evaluation) to test policies safely before any user study.",
+      "contributions": "A novel architecture for intrinsically interpretable DRL; a quantitative analysis of the trade-off between interpretability and policy optimality; and a framework for evaluating the causal validity of AI-generated explanations in healthcare.",
+      "score": 0.7875
+    }
+  ],
+  "gaps": [
+    {
+      "description": "While there is growing recognition of AI hallucination and authenticity challenges in generated content, there is a significant lack of standardized, validated frameworks and benchmarks specifically designed to detect AI-generated text, data, or methodologies within academic submissions and distinguish them from human-authored work.",
+      "confidence": 0.95,
+      "type": "methodological",
+      "title": "Standardized Frameworks for Detecting AI-Generated Content in Academic Research"
+    },
+    {
+      "description": "Current evaluation methods for LLMs rely on static benchmarks that are quickly memorized or become obsolete. There is a critical need for dynamic, evolving evaluation frameworks that can accurately assess LLM capabilities, reasoning, and hallucination rates in real-time without suffering from data contamination.",
+      "confidence": 0.93,
+      "type": "methodological",
+      "title": "Dynamic Evaluation Benchmarks for Rapidly Evolving Large Language Models"
+    },
+    {
+      "description": "Current research explores the potential of generative AI and digital tools for mental health surveillance and support. However, there is a distinct lack of long-term, empirical clinical trials evaluating the sustained efficacy, safety, and psychological impacts of using LLM-based conversational agents for mental health treatment compared to standard care.",
+      "confidence": 0.92,
+      "type": "empirical",
+      "title": "Longitudinal Efficacy of Generative AI in Digital Mental Health Interventions"
+    },
+    {
+      "description": "As AI is increasingly used to support publishing and peer review, there is a lack of empirical studies systematically auditing these LLM-based systems for biases, such as favoring certain writing styles, penalizing non-native English speakers, or exhibiting geographical/institutional biases in evaluating research quality.",
+      "confidence": 0.91,
+      "type": "empirical",
+      "title": "Bias and Fairness Auditing in LLM-based Peer Review Systems"
+    },
+    {
+      "description": "Machine learning models in healthcare (such as those for medical imaging or ADHD prediction) are often trained on static datasets. There is a significant gap in developing and validating adaptive algorithms capable of detecting and adjusting to 'concept drift'—where the statistical properties of patient data, disease presentation, or medical imaging technologies change over time.",
+      "confidence": 0.9,
+      "type": "methodological",
+      "title": "Mitigation of Concept Drift in Medical AI Diagnostic Models"
+    },
+    {
+      "description": "Despite recent awareness of the reproducibility crisis and data leakage in machine learning, there are few automated, standardized tools integrated into the peer review process to systematically detect data snooping, leakage, or methodological flaws in submitted ML-based scientific studies.",
+      "confidence": 0.88,
+      "type": "methodological",
+      "title": "Automated Detection of Data Leakage and Methodological Flaws in ML Research"
+    },
+    {
+      "description": "Deep reinforcement learning has shown high performance in complex tasks, but its application in high-stakes domains like healthcare or autonomous systems is limited by a lack of interpretable models. Research is missing on how to rigorously quantify and ensure the trustworthiness and explainability of DRL agent decisions in unpredictable, real-world environments.",
+      "confidence": 0.87,
+      "type": "theoretical",
+      "title": "Explainability and Trustworthiness in Deep Reinforcement Learning for High-Stakes Domains"
+    },
+    {
+      "description": "While the adoption of Generative AI in software engineering is recognized, there is a lack of comprehensive empirical research on how these tools alter cognitive load, team dynamics, long-term code maintainability, and the deskilling of software developers over time.",
+      "confidence": 0.86,
+      "type": "empirical",
+      "title": "Socio-Technical Impacts of Generative AI on Software Engineering Workflows"
+    },
+    {
+      "description": "While generative AI is rapidly being adopted for drug discovery and development, there is an underexplored area concerning the comprehensive ethical, legal, and safety implications of AI-designed molecular structures, including liability for adverse effects and bias in drug efficacy across diverse genetic populations.",
+      "confidence": 0.85,
+      "type": "theoretical",
+      "title": "Unified Ethical Guidelines for AI-Assisted Drug Discovery"
+    },
+    {
+      "description": "Sensitivity analysis is a mature field for traditional mathematical and policy modeling, but its principles have not been adequately translated or adapted to understand the internal uncertainty and robustness of large, opaque AI architectures like LLMs and multi-modal generative models.",
+      "confidence": 0.82,
+      "type": "cross-domain",
+      "title": "Integration of Sensitivity Analysis in Complex AI and LLM Architectures"
+    }
+  ]
+}
