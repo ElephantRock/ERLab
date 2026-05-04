@@ -16,6 +16,8 @@ class ClusterInfo(BaseModel):
 class ClusterReport(BaseModel):
     clusters: list[ClusterInfo] = Field(default_factory=list)
     total_papers: int = 0
+    silhouette_score: float | None = None
+    davies_bouldin_index: float | None = None
 
 
 class ResearchGap(BaseModel):

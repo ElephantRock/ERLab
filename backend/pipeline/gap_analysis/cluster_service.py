@@ -41,7 +41,37 @@ class ClusterService:
         return ClusterReport(
             clusters=cluster_infos,
             total_papers=len(papers),
+            silhouette_score=self._compute_silhouette(reduced, labels),
+            davies_bouldin_index=self._compute_dbi(reduced, labels),
         )
+
+    @staticmethod
+    def _compute_silhouette(X: np.ndarray, labels: np.ndarray) -> float | None:
+        """Compute silhouette score if valid."""
+        try:
+            unique = set(labels)
+            if -1 in unique:
+                unique.discard(-1)
+            if len(unique) < 2 or len(X) < 3:
+                return None
+            from sklearn.metrics import silhouette_score
+            return float(silhouette_score(X, labels))
+        except Exception:
+            return None
+
+    @staticmethod
+    def _compute_dbi(X: np.ndarray, labels: np.ndarray) -> float | None:
+        """Compute Davies-Bouldin index if valid."""
+        try:
+            unique = set(labels)
+            if -1 in unique:
+                unique.discard(-1)
+            if len(unique) < 2 or len(X) < 3:
+                return None
+            from sklearn.metrics import davies_bouldin_score
+            return float(davies_bouldin_score(X, labels))
+        except Exception:
+            return None
 
     def _get_embeddings(self, papers: list[Paper]) -> np.ndarray:
         """Extract embeddings or build TF-IDF from abstracts."""
