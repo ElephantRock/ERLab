@@ -3,6 +3,17 @@
 All notable changes to the Elephant Rock Research Platform are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [BATCH-63] - 2026-05-04
+
+### Added
+- `TreeSearchStage` — replaces `IdeaGenerationStage` when `tree_of_thought_enabled=True`
+- `tree_data` field on `PipelineResult` for frontend tree visualization
+- `tree_data_json` column on PipelineRun DB model (nullable)
+- `parent_idea_ids` column on Idea DB model (nullable)
+- `TreeVisualization` React component — interactive SVG with colored nodes, edges, tooltips
+- Tree Search tab on Run Detail page (shown when tree_data exists)
+- 4 backend + 4 frontend tests
+
 ## [BATCH-62] - 2026-05-04
 
 ### Added
