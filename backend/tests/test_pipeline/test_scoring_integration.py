@@ -16,7 +16,7 @@ from sqlalchemy.orm import sessionmaker
 from backend.api.errors import APIError
 from backend.api.routes.ideas import router
 from backend.db.database import Base
-import backend.db.models  # ensure models register with Base.metadata
+import backend.db.models  # noqa: F401 — ensure models register with Base.metadata
 
 
 # ── Test app / DB setup ────────────────────────────────────────
@@ -212,7 +212,21 @@ class TestMechanicalMetricsStage:
         stage = MechanicalMetricsStage()
         assert stage.name == "mechanical_metrics"
 
-        asyncio.get_event_loop().run_until_complete(stage.execute(ctx))
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            loop = None
+
+        if loop and loop.is_running():
+            # Already in async context (full suite) — use nest_asyncio or run in thread
+            import concurrent.futures
+            with concurrent.futures.ThreadPoolExecutor() as pool:
+                future = pool.submit(asyncio.run, stage.execute(ctx))
+                success = future.result(timeout=10)
+        else:
+            success = asyncio.run(stage.execute(ctx))
+
+        assert success is True
         assert 0 in result.mechanical_metrics
         metrics = result.mechanical_metrics[0]
         assert "reference_uniqueness" in metrics
