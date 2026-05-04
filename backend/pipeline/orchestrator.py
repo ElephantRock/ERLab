@@ -877,8 +877,14 @@ class PipelineOrchestrator:
         export_format: str | None = "markdown",
         run_id: str | None = None,
         session_id: str | None = None,
+        skip_stages: set[str] | None = None,
     ) -> PipelineResult:
-        """Execute the full pipeline from literature search to export."""
+        """Execute the full pipeline from literature search to export.
+
+        Args:
+            skip_stages: Set of stage names to skip (used by --resume to avoid
+                re-running already-completed stages).
+        """
         result = PipelineResult()
         rounds = generation_rounds or self._settings.generation_rounds
         ideas_per = ideas_per_round or self._settings.ideas_per_round
@@ -981,6 +987,11 @@ class PipelineOrchestrator:
             if isinstance(stage, FeasibilityScoringStage) and not run_feasibility:
                 continue
             if isinstance(stage, ProposalSynthesisStage) and not run_synthesis:
+                continue
+
+            # Resume support: skip stages already completed in a prior run
+            if skip_stages and stage.name in skip_stages:
+                logger.info("Skipping completed stage (resume): %s", stage.name)
                 continue
 
             logger.info("=== %s ===", stage.name.replace("_", " ").title())
@@ -1100,6 +1111,12 @@ class PipelineOrchestrator:
 
             if stage.name == "gap_analysis":
                 self._persistence.persist_gaps(result, db_run_id)
+                self._collect_warnings(result)
+
+            if stage.name == "idea_generation":
+                # Intermediate save: persist ideas immediately so they survive a crash
+                # before proposal synthesis (AC-02-01).
+                self._persistence.persist_ideas(result, db_run_id)
                 self._collect_warnings(result)
 
             if stage.name == "feasibility_scoring":

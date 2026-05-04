@@ -190,6 +190,9 @@ def generate_ideas(
     export: str | None = typer.Option(
         "markdown", "--export", "-e", help="Export format (markdown/latex)"
     ),
+    resume: str | None = typer.Option(
+        None, "--resume", help="Resume a prior run by its run ID (e.g. 42)"
+    ),
 ):
     """Run the full research idea generation pipeline."""
     from backend.pipeline.orchestrator import PipelineOrchestrator
@@ -201,7 +204,8 @@ def generate_ideas(
             f"[bold]Elephant Rock Research Pipeline[/bold]\n"
             f"Domain: {domain}\n"
             f"Gaps: {gaps} | Rounds: {rounds} | Ideas/round: {ideas}\n"
-            f"Novelty: {novelty} | Feasibility: {feasibility} | Export: {export}",
+            f"Novelty: {novelty} | Feasibility: {feasibility} | Export: {export}"
+            + (f"\n[bold yellow]Resuming run: {resume}[/bold yellow]" if resume else ""),
             title="Starting Pipeline",
         )
     )
@@ -219,11 +223,73 @@ def generate_ideas(
         "export": "Export",
     }
 
+    _STAGE_ORDER = [
+        "literature_search",
+        "ingestion",
+        "gap_analysis",
+        "idea_generation",
+        "novelty_checking",
+        "feasibility_scoring",
+        "proposal_synthesis",
+        "export",
+    ]
+
     status = Status("Initializing...", console=console)
 
     def on_stage(stage_name, idx, total, elapsed):
         label = _STAGE_DISPLAY.get(stage_name, stage_name)
         status.update(f"[bold]Stage {idx}/{total}:[/bold] {label} ({elapsed:.0f}s)")
+
+    # Resume: load run state from DB and compute skip_stages (HB-02)
+    skip_stages: set[str] | None = None
+    if resume:
+        from sqlalchemy import select
+        from backend.db.database import get_session
+        from backend.db.models import PipelineRun
+
+        import json
+
+        with get_session() as session:
+            try:
+                run_id_int = int(resume)
+            except ValueError:
+                console.print(
+                    Panel(
+                        f"[red]Invalid RUN_ID:[/red] '{resume}' is not a valid integer ID.\n"
+                        f"Use [bold]erock runs[/bold] to see available run IDs.",
+                        title="[red]Resume Error[/red]",
+                    )
+                )
+                raise typer.Exit(1) from None
+
+            db_run = session.get(PipelineRun, run_id_int)
+            if not db_run:
+                console.print(
+                    Panel(
+                        f"[red]RUN_ID {resume} not found in database.[/red]\n"
+                        f"Use [bold]erock runs[/bold] to see available run IDs.",
+                        title="[red]Resume Error[/red]",
+                    )
+                )
+                raise typer.Exit(1) from None
+
+            if db_run.status in ("completed", "failed"):
+                console.print(
+                    Panel(
+                        f"[red]Cannot resume run {resume}: status is '{db_run.status}'.[/red]\n"
+                        f"Only runs with status 'running' can be resumed.",
+                        title="[red]Resume Error[/red]",
+                    )
+                )
+                raise typer.Exit(1) from None
+
+            # Determine completed stages from DB (HB-02)
+            completed = json.loads(db_run.stages_completed or "[]")
+            skip_stages = set(completed)
+            console.print(
+                f"[yellow]Resuming from stage '{db_run.current_stage}' "
+                f"({len(completed)} stages already completed)[/yellow]"
+            )
 
     async def _run():
         orchestrator = PipelineOrchestrator(stage_callback=on_stage)
@@ -237,6 +303,7 @@ def generate_ideas(
             run_feasibility=feasibility,
             run_synthesis=True,
             export_format=export,
+            skip_stages=skip_stages,
         )
 
     with status:
