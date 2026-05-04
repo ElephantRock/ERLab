@@ -3,6 +3,16 @@
 All notable changes to the Elephant Rock Research Platform are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [BATCH-61] - 2026-05-04
+
+### Added
+- Per-proposal timeout with `asyncio.wait_for()` (default 120s, cap 300s) — individual slow proposals no longer kill entire pipeline run
+- Placeholder proposal on timeout — remaining proposals still synthesized
+- `per_proposal_timeout: float = 120.0` config setting
+- Intermediate idea persistence after `idea_generation` stage (ideas queryable before proposals)
+- CLI `--resume RUN_ID` flag — skips already-completed stages via DB `current_stage` check
+- 9 new tests (proposal timeout + resume logic)
+
 ## [BATCH-60] - 2026-05-04
 
 ### Fixed
