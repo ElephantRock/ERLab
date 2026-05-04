@@ -99,17 +99,16 @@ class TestProposalSynthesizer:
 
     def test_synthesize_llm_failure(self, sample_ideas):
         provider = SchemaAwareFakeProvider()
-        provider.structured_output = MagicMock(side_effect=Exception("LLM down"))
 
-        async def _fake_structured_output(*args, **kwargs):
+        async def _fake_complete(*args, **kwargs):
             raise Exception("LLM down")
 
-        provider.structured_output = _fake_structured_output
+        provider.complete = _fake_complete
 
         synthesizer = ProposalSynthesizer(provider)
         proposal = asyncio.run(synthesizer.synthesize(sample_ideas[0]))
         assert isinstance(proposal, ResearchProposal)
-        assert proposal.sections.get("introduction") == "Synthesis failed. Manual writing required."
+        assert proposal.sections.get("introduction") == "Synthesis failed due to an error. Please retry."
 
     def test_synthesize_with_supporting_papers(self, sample_ideas, sample_papers):
         provider = SchemaAwareFakeProvider()
@@ -118,4 +117,6 @@ class TestProposalSynthesizer:
             synthesizer.synthesize(sample_ideas[0], supporting_papers=sample_papers)
         )
         assert isinstance(proposal, ResearchProposal)
-        assert len(provider._call_log) == 1
+        # At least one complete() call was made
+        assert len(provider._call_log) >= 1
+        assert provider._call_log[0]["method"] == "complete"

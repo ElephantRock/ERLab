@@ -25,9 +25,9 @@ class _MessageLoggingProvider(SchemaAwareFakeProvider):
         super().__init__()
         self.logged_messages: list[list[dict]] = []
 
-    async def structured_output(self, messages, schema, temperature=0.3) -> dict:
+    async def complete(self, messages, temperature=0.7, max_tokens=4096) -> str:
         self.logged_messages.append(messages)
-        return await super().structured_output(messages, schema, temperature)
+        return await super().complete(messages, temperature, max_tokens)
 
 
 def _make_idea():

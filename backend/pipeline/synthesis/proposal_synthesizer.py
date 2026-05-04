@@ -1,6 +1,7 @@
-"""Proposal synthesis — generate structured research proposals."""
+"""Proposal synthesis — generate full-length research proposals via free-text LLM generation."""
 
 import logging
+import re
 from pathlib import Path
 
 from jinja2 import Template
@@ -14,6 +15,32 @@ from backend.providers.base import LLMProvider
 logger = logging.getLogger(__name__)
 
 PROMPT_DIR = Path(__file__).parent / "prompts"
+
+# Section markers the LLM must produce — used for parsing free-text output
+REQUIRED_SECTIONS = [
+    "Title",
+    "Abstract",
+    "Introduction",
+    "Related Work",
+    "Proposed Method",
+    "Expected Contributions",
+    "Evaluation Plan",
+    "Timeline",
+    "References",
+    "Risk Mitigation",
+]
+
+# Minimum word counts per section — enforced on generation
+MIN_WORDS = {
+    "abstract": 150,
+    "introduction": 400,
+    "related_work": 300,
+    "proposed_method": 500,
+    "expected_contributions": 150,
+    "evaluation_plan": 300,
+    "timeline": 100,
+    "risk_mitigation": 150,
+}
 
 
 class ResearchProposal:
@@ -35,24 +62,28 @@ class ResearchProposal:
         for key, value in self.sections.items():
             if key == "references":
                 md_parts.append("## References\n")
-                for i, ref in enumerate(value if isinstance(value, list) else [value], 1):
-                    if isinstance(ref, dict):
-                        authors = ref.get("authors", "Unknown")
-                        year = ref.get("year", "n.d.")
-                        title = ref.get("title", "Untitled")
-                        venue = ref.get("venue", "")
-                        doi = ref.get("doi", "")
-                        url = ref.get("url", "")
-                        line = f"[{i}] {authors} ({year}). {title}."
-                        if venue:
-                            line += f" {venue}."
-                        if doi:
-                            line += f" DOI: {doi}"
-                        elif url:
-                            line += f" URL: {url}"
-                        md_parts.append(line)
-                    else:
-                        md_parts.append(f"- {ref}")
+                if isinstance(value, list):
+                    for i, ref in enumerate(value, 1):
+                        if isinstance(ref, dict):
+                            authors = ref.get("authors", "Unknown")
+                            year = ref.get("year", "n.d.")
+                            title = ref.get("title", "Untitled")
+                            venue = ref.get("venue", "")
+                            doi = ref.get("doi", "")
+                            url = ref.get("url", "")
+                            line = f"[{i}] {authors} ({year}). {title}."
+                            if venue:
+                                line += f" {venue}."
+                            if doi:
+                                line += f" DOI: {doi}"
+                            elif url:
+                                line += f" URL: {url}"
+                            md_parts.append(line)
+                        else:
+                            md_parts.append(f"- {ref}")
+                elif isinstance(value, str):
+                    # Free-text references — emit as-is
+                    md_parts.append(value)
             elif key == "evaluation_plan" and isinstance(value, dict):
                 header = key.replace("_", " ").title()
                 md_parts.append(f"## {header}\n")
@@ -73,6 +104,22 @@ class ResearchProposal:
                     md_parts.append(f"**{sub_header}**: {sub_val}")
         return "\n\n".join(md_parts)
 
+    def word_count(self) -> int:
+        """Total word count across all sections."""
+        total = 0
+        for v in self.sections.values():
+            if isinstance(v, str):
+                total += len(v.split())
+            elif isinstance(v, list):
+                for item in v:
+                    if isinstance(item, str):
+                        total += len(item.split())
+                    elif isinstance(item, dict):
+                        total += sum(len(str(x).split()) for x in item.values())
+            elif isinstance(v, dict):
+                total += sum(len(str(x).split()) for x in v.values())
+        return total
+
 
 class ProposalSynthesizer:
     def __init__(self, provider: LLMProvider, ensemble_reviewer=None):
@@ -88,7 +135,7 @@ class ProposalSynthesizer:
         supporting_papers: list[Paper] | None = None,
         gaps: list | None = None,
     ) -> ResearchProposal:
-        """Generate a structured research proposal."""
+        """Generate a full-length research proposal via free-text LLM generation."""
         literature = self._format_literature(supporting_papers or [])
         key_risks = feasibility_report.key_risks if feasibility_report else []
 
@@ -147,119 +194,48 @@ class ProposalSynthesizer:
         )
 
         try:
-            result = await self._provider.structured_output(
+            # ── Pass 1: Free-text generation ──────────────────────────
+            raw_text = await self._provider.complete(
                 messages=[
                     {
                         "role": "system",
-                        "content": "You are an expert AI/NLP research proposal writer.",
+                        "content": (
+                            "You are a senior researcher writing a full research proposal for a "
+                            "competitive conference (ACL, EMNLP, NeurIPS, or similar). You MUST "
+                            "produce ALL sections with substantial content. Do NOT write stubs, "
+                            "summaries, or placeholder text. Each section must be detailed and "
+                            "technically precise.\n\n"
+                            "OUTPUT FORMAT: Write each section with a markdown header like:\n"
+                            "## Title\n...\n## Abstract\n...\n## Introduction\n...\n"
+                            "## Related Work\n...\n## Proposed Method\n...\n"
+                            "## Expected Contributions\n...\n## Evaluation Plan\n...\n"
+                            "## Timeline\n...\n## References\n...\n## Risk Mitigation\n...\n\n"
+                            "You MUST include ALL 10 sections. Each prose section must be at least "
+                            "200 words. The Proposed Method must be at least 500 words with "
+                            "mathematical notation ($...$). The Introduction must be at least 400 words."
+                        ),
                     },
                     {"role": "user", "content": prompt},
                 ],
-                schema={
-                    "type": "object",
-                    "properties": {
-                        "title": {"type": "string"},
-                        "abstract": {"type": "string"},
-                        "introduction": {"type": "string"},
-                        "related_work": {"type": "string"},
-                        "proposed_method": {"type": "string"},
-                        "expected_contributions": {"type": "string"},
-                        "evaluation_plan": {
-                            "type": "object",
-                            "properties": {
-                                "datasets": {"type": "array", "items": {"type": "string"}},
-                                "baselines": {"type": "array", "items": {"type": "string"}},
-                                "metrics": {"type": "array", "items": {"type": "string"}},
-                                "ablation_design": {"type": "string"},
-                                "summary": {"type": "string"},
-                            },
-                        },
-                        "timeline": {"type": "string"},
-                        "references": {
-                            "type": "array",
-                            "items": {
-                                "type": "object",
-                                "properties": {
-                                    "authors": {"type": "string"},
-                                    "year": {"type": "integer"},
-                                    "title": {"type": "string"},
-                                    "venue": {"type": "string"},
-                                    "doi": {"type": "string"},
-                                    "url": {"type": "string"},
-                                },
-                            },
-                        },
-                        "risk_mitigation": {"type": "string"},
-                    },
-                    "required": ["title", "abstract", "introduction", "proposed_method"],
-                },
                 temperature=0.4,
+                max_tokens=8192,
             )
-            proposal = ResearchProposal(**result)
 
-            # Quality gate — retry once if sections are too short
-            if not self._check_quality(proposal)[0]:
-                augmented_prompt = prompt + (
-                    "\n\nIMPORTANT: Your previous attempt had sections that were too short. "
-                    "Ensure abstract is at least 150 words, introduction at least 100 words, "
-                    "and proposed_method at least 100 words."
+            proposal = self._parse_sections(raw_text, idea_id=None)
+
+            # ── Quality check: expand short sections ──────────────────
+            short_sections = self._find_short_sections(proposal)
+            if short_sections:
+                logger.info(
+                    "Expanding %d short sections: %s",
+                    len(short_sections),
+                    ", ".join(short_sections),
                 )
-                try:
-                    result2 = await self._provider.structured_output(
-                        messages=[
-                            {
-                                "role": "system",
-                                "content": "You are an expert AI/NLP research proposal writer.",
-                            },
-                            {"role": "user", "content": augmented_prompt},
-                        ],
-                        schema={
-                            "type": "object",
-                            "properties": {
-                                "title": {"type": "string"},
-                                "abstract": {"type": "string"},
-                                "introduction": {"type": "string"},
-                                "related_work": {"type": "string"},
-                                "proposed_method": {"type": "string"},
-                                "expected_contributions": {"type": "string"},
-                                "evaluation_plan": {
-                                    "type": "object",
-                                    "properties": {
-                                        "datasets": {"type": "array", "items": {"type": "string"}},
-                                        "baselines": {"type": "array", "items": {"type": "string"}},
-                                        "metrics": {"type": "array", "items": {"type": "string"}},
-                                        "ablation_design": {"type": "string"},
-                                        "summary": {"type": "string"},
-                                    },
-                                },
-                                "timeline": {"type": "string"},
-                                "references": {
-                                    "type": "array",
-                                    "items": {
-                                        "type": "object",
-                                        "properties": {
-                                            "authors": {"type": "string"},
-                                            "year": {"type": "integer"},
-                                            "title": {"type": "string"},
-                                            "venue": {"type": "string"},
-                                            "doi": {"type": "string"},
-                                            "url": {"type": "string"},
-                                        },
-                                    },
-                                },
-                                "risk_mitigation": {"type": "string"},
-                            },
-                            "required": ["title", "abstract", "introduction", "proposed_method"],
-                        },
-                        temperature=0.4,
-                    )
-                    proposal2 = ResearchProposal(**result2)
-                    if self._check_quality(proposal2)[0]:
-                        return proposal2
-                except Exception:
-                    pass
+                proposal = await self._expand_sections(
+                    proposal, short_sections, idea
+                )
 
-            # Ensemble review (Gap 6)
+            # ── Ensemble review ───────────────────────────────────────
             if self._ensemble_reviewer:
                 try:
                     review_result = await self._ensemble_reviewer.review(proposal, idea)
@@ -274,9 +250,121 @@ class ProposalSynthesizer:
             return ResearchProposal(
                 title=idea.title,
                 abstract=idea.problem_statement,
-                introduction="Synthesis failed. Manual writing required.",
+                introduction="Synthesis failed due to an error. Please retry.",
                 proposed_method=idea.proposed_method,
             )
+
+    @staticmethod
+    def _parse_sections(raw_text: str, idea_id: int | None = None) -> ResearchProposal:
+        """Parse free-text markdown output into a ResearchProposal with keyed sections."""
+        sections: dict[str, str | list] = {}
+
+        # Split on ## headers
+        pattern = r"##\s+(" + "|".join(REQUIRED_SECTIONS) + r")\s*\n"
+        parts = re.split(pattern, raw_text)
+
+        # parts alternates: [preamble, section_name, content, section_name, content, ...]
+        i = 1
+        while i < len(parts) - 1:
+            section_name = parts[i].strip()
+            content = parts[i + 1].strip()
+            key = section_name.lower().replace(" ", "_")
+
+            # Try to parse references as list
+            if key == "references":
+                sections[key] = ProposalSynthesizer._parse_references(content)
+            else:
+                sections[key] = content
+
+            i += 2
+
+        # If there's preamble text before first ## header, check for title
+        if parts[0].strip() and "title" not in sections:
+            first_line = parts[0].strip().split("\n")[0]
+            if first_line and not first_line.startswith("#"):
+                sections["title"] = first_line
+
+        return ResearchProposal(idea_id=idea_id, **sections)
+
+    @staticmethod
+    def _parse_references(text: str) -> str | list[dict]:
+        """Try to parse references into structured dicts; fall back to raw text."""
+        refs = []
+        # Match patterns like [1] Author (Year). Title. Venue.
+        for m in re.finditer(
+            r"\[\d+\]\s*(.+?)(?:\n|$)",
+            text,
+        ):
+            line = m.group(1).strip()
+            refs.append({"raw": line})
+
+        if refs:
+            return refs
+        return text  # Return raw text if parsing fails
+
+    @staticmethod
+    def _find_short_sections(proposal: ResearchProposal) -> list[str]:
+        """Return list of section keys that don't meet minimum word counts."""
+        short = []
+        for key, minimum in MIN_WORDS.items():
+            content = proposal.sections.get(key, "")
+            if isinstance(content, str) and len(content.split()) < minimum:
+                short.append(key)
+        return short
+
+    async def _expand_sections(
+        self,
+        proposal: ResearchProposal,
+        short_sections: list[str],
+        idea: ResearchIdea,
+    ) -> ResearchProposal:
+        """Expand sections that are too short via a follow-up LLM call."""
+        expand_prompt = (
+            f"The following research proposal has sections that are too short. "
+            f"Expand ONLY these sections: {', '.join(short_sections)}.\n\n"
+            f"Research idea: {idea.title}\n"
+            f"Problem: {idea.problem_statement}\n"
+            f"Method: {idea.proposed_method}\n\n"
+        )
+        for key in short_sections:
+            current = proposal.sections.get(key, "")
+            if isinstance(current, str):
+                expand_prompt += f"## {key.replace('_', ' ').title()}\n{current}\n\n"
+
+        expand_prompt += (
+            "\nRewrite ONLY the sections above. Each must be detailed and technically precise. "
+            "Use markdown ## headers. The Introduction must be 400+ words. "
+            "The Proposed Method must be 500+ words with math notation. "
+            "Related Work must be 300+ words citing specific papers."
+        )
+
+        try:
+            expansion = await self._provider.complete(
+                messages=[
+                    {
+                        "role": "system",
+                        "content": "You are a senior researcher expanding thin sections of a research proposal. Produce full-length, publication-quality prose.",
+                    },
+                    {"role": "user", "content": expand_prompt},
+                ],
+                temperature=0.4,
+                max_tokens=6144,
+            )
+
+            expanded = self._parse_sections(expansion, idea_id=proposal.idea_id)
+            # Merge expanded sections back in
+            for key in short_sections:
+                if key in expanded.sections:
+                    new_content = expanded.sections[key]
+                    if isinstance(new_content, str) and len(new_content.split()) > len(
+                        str(proposal.sections.get(key, "")).split()
+                    ):
+                        proposal.sections[key] = new_content
+
+        except Exception as e:
+            logger.warning("Section expansion failed: %s", e)
+
+        return proposal
 
     @staticmethod
     def _format_literature(papers: list[Paper]) -> str:
@@ -298,14 +386,3 @@ class ProposalSynthesizer:
                 line += f"\n  Abstract: {p.abstract[:200]}"
             lines.append(line)
         return "\n".join(lines)
-
-    @staticmethod
-    def _check_quality(proposal: ResearchProposal) -> tuple[bool, list[str]]:
-        """Validate proposal section lengths. Returns (pass, issues)."""
-        issues = []
-        min_words = {"abstract": 50, "introduction": 100, "proposed_method": 100}
-        for section, threshold in min_words.items():
-            text = proposal.sections.get(section, "")
-            if len(text.split()) < threshold:
-                issues.append(f"{section} has fewer than {threshold} words")
-        return len(issues) == 0, issues

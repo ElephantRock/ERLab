@@ -163,7 +163,7 @@ class TestFeasibilityRisksInSynthesis:
             )
         )
         # Verify the call was made — key_risks would be rendered into prompt
-        assert len(provider._call_log) == 1
+        assert len(provider._call_log) >= 1
 
     def test_no_feasibility_report_no_risks(self, sample_ideas):
         provider = SchemaAwareFakeProvider()
