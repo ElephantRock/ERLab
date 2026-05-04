@@ -1,6 +1,8 @@
 """Semantic Scholar API client."""
 
+import asyncio
 import logging
+import random
 
 import httpx
 
@@ -32,19 +34,53 @@ class SemanticScholarSource(AcademicSearchSource):
         limit: int = 20,
         year_from: int | None = None,
         year_to: int | None = None,
+        *,
+        retry_max_retries: int = 5,
+        retry_base_delay: float = 2.0,
+        retry_max_delay: float = 30.0,
     ) -> list[SearchResult]:
         params = {"query": query, "limit": min(limit, 100), "fields": SEARCH_FIELDS}
         if year_from or year_to:
             year_range = f"{year_from or ''}-{year_to or ''}"
             params["year"] = year_range
 
-        try:
-            response = await self._client.get("/paper/search", params=params)  # type: ignore[arg-type]
-            response.raise_for_status()
-            data = response.json()
-        except (httpx.HTTPError, KeyError) as e:
-            logger.warning("Semantic Scholar search failed: %s", e)
-            return []
+        total_backoff = 0.0
+        for attempt in range(retry_max_retries + 1):
+            try:
+                response = await self._client.get(
+                    "/paper/search", params=params
+                )  # type: ignore[arg-type]
+                response.raise_for_status()
+                data = response.json()
+                break
+            except httpx.HTTPStatusError as e:
+                if e.response.status_code != 429 or attempt >= retry_max_retries:
+                    logger.warning("Semantic Scholar search failed: %s", e)
+                    return []
+                delay = min(
+                    retry_base_delay * (2 ** attempt)
+                    + random.uniform(0, 1),
+                    retry_max_delay,
+                )
+                total_backoff += delay
+                if total_backoff > 120.0:
+                    logger.warning(
+                        "Semantic Scholar total backoff cap exceeded:"
+                        " %.1fs",
+                        total_backoff,
+                    )
+                    return []
+                logger.warning(
+                    "Semantic Scholar rate-limited (429),"
+                    " retry %d/%d in %.1fs",
+                    attempt + 1,
+                    retry_max_retries,
+                    delay,
+                )
+                await asyncio.sleep(delay)
+            except (httpx.HTTPError, KeyError) as e:
+                logger.warning("Semantic Scholar search failed: %s", e)
+                return []
 
         results = []
         for item in data.get("data", []):
