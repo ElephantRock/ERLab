@@ -3,6 +3,17 @@
 All notable changes to the Elephant Rock Research Platform are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [BATCH-60] - 2026-05-04
+
+### Fixed
+- Mocked @sentry/react in Vitest test environment — all 339 frontend tests now pass (was 71 failing)
+- Increased Vitest testTimeout to 15000ms to resolve 5 pre-existing jsdom rendering timeouts
+- Added exponential backoff with jitter for Semantic Scholar API 429 responses (up to 5 retries, 120s cap)
+
+### Added
+- `frontend/src/test/setup.ts` — Sentry mock for test environment
+- `backend/tests/test_pipeline/test_s2_retry.py` — 4 unit tests for S2 retry logic
+
 ## [Unreleased]
 
 ### Added — AIV Batch Execution
