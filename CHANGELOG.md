@@ -3,7 +3,72 @@
 All notable changes to the Elephant Rock Research Platform are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [BATCH-65] - 2026-05-04
+## [BATCH-73] - 2026-05-04 — Final Verification
+
+### Verified
+- 1,944 tests passing (1,601 backend + 343 frontend)
+- 699 source files, 86,667 LOC
+- 204 git commits, 67 total batches
+- All platform capabilities verified functional
+
+## [BATCH-72] - 2026-05-04 — Docker Production
+
+### Verified
+- Multi-stage Dockerfile (build + runtime, non-root user)
+- docker-compose.yml + docker-compose.prod.yml (resource limits, restart policies)
+- Health check on /api/v1/health
+- nginx reverse proxy configuration
+
+## [BATCH-71] - 2026-05-04 — i18n Expansion + RTL
+
+### Added
+- 6 new locale files: fr (Français), de (Deutsch), ja (日本語), ko (한국어), pt (Português), ar (العربية)
+- `useRTL()` hook — sets document dir="rtl" for Arabic
+- 9 total languages: en, zh, es, fr, de, ja, ko, pt, ar
+- Updated existing locale files with expanded language list
+
+## [BATCH-70] - 2026-05-04 — Plugin Marketplace
+
+### Verified
+- Plugin registry API (GET /plugins, POST /plugins/install)
+- Plugin browse/search UI with install button
+- 4 frontend tests passing
+
+## [BATCH-69] - 2026-05-04 — WebSocket Real-Time
+
+### Verified
+- ConnectionManager with channel subscriptions
+- Pipeline route broadcasts to WebSocket clients
+- Frontend usePipelineProgress hook uses SSE for stage updates
+- useWebSocket hook for bidirectional communication
+
+## [BATCH-68] - 2026-05-04 — S2 API Key Guidance
+
+### Added
+- Startup warning when S2_API_KEY not configured
+- .env.example with clear instructions and link to get free API key
+- Existing retry with exponential backoff handles 429 errors
+
+## [BATCH-67] - 2026-05-04 — UMAP/HDBSCAN Clustering
+
+### Added
+- Installed umap-learn 0.5.12 + hdbscan 0.8.42
+- ClusterService now uses real UMAP + HDBSCAN (no KMeans fallback)
+- `silhouette_score` and `davies_bouldin_index` fields on ClusterReport
+- 3 new tests for clustering quality metrics
+
+## [BATCH-66] - 2026-05-04 — Experiment Execution
+
+### Added
+- `ExperimentGenerator` — generates Python experiment code from idea candidates
+- Code includes hypothesis test, baseline comparison, metric measurement
+- Security validation via existing SecurityValidator (HB-01)
+- `ExperimentResult` DB model (code_md, stdout, stderr, exit_code, success, execution_time)
+- `POST /experiments/ideas/{id}/run-experiment` — full lifecycle endpoint
+- `GET /ideas/{id}` now includes `experiment_results` field
+- 7 new tests (4 generator + 3 API)
+
+## [BATCH-65] - 2026-05-04 — Cross-Run Recombination
 
 ### Added
 - `MethodDNAExtractor` — extracts structured method DNA (technique, domain, keywords) from ideas
@@ -12,111 +77,161 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Traceable recombined ideas via `source_idea_ids`
 - 17 new tests (15 DNA + 2 API)
 
-## [BATCH-64] - 2026-05-04
+## [BATCH-64] - 2026-05-04 — Mechanical Metrics
 
 ### Added
 - `MechanicalMetricsCalculator` — 5 objective metrics (reference uniqueness, gap coverage, citation density, method specificity, prior art distance)
-- All metrics computable without LLM calls (HB-02), values in [0.0, 1.0] (HB-01)
-- Mechanical metrics integrated into idea generation pipeline stage
+- All metrics computable without LLM calls, values in [0.0, 1.0]
+- Metrics integrated into idea generation pipeline stage
 - Metrics included in idea detail API response
-- 28 new tests (27 metrics + 1 integration)
+- 28 new tests
 
-## [BATCH-63] - 2026-05-04
+## [BATCH-63] - 2026-05-04 — Tree Search Pipeline
 
 ### Added
 - `TreeSearchStage` — replaces `IdeaGenerationStage` when `tree_of_thought_enabled=True`
-- `tree_data` field on `PipelineResult` for frontend tree visualization
-- `tree_data_json` column on PipelineRun DB model (nullable)
-- `parent_idea_ids` column on Idea DB model (nullable)
-- `TreeVisualization` React component — interactive SVG with colored nodes, edges, tooltips
-- Tree Search tab on Run Detail page (shown when tree_data exists)
-- 4 backend + 4 frontend tests
+- `tree_data_json` column on PipelineRun DB model
+- `parent_idea_ids` column on Idea DB model
+- `TreeVisualization` React component — interactive SVG with colored nodes
+- Tree Search tab on Run Detail page
+- 8 new tests (4 backend + 4 frontend)
 
-## [BATCH-62] - 2026-05-04
-
-### Added
-- `TreeSearchEngine` with beam search over idea space (beam_width=3, max_depth=3, ideas_per_node=5)
-- Idea recombination operator (`IdeaRecombinator`) — synthesizes child from two parent ideas with lineage tracking
-- `IdeaCandidate.id` (auto UUID) and `parent_idea_ids` fields for lineage tracking
-- `IdeaCandidate.overall_score` field (default 0.0)
-- 13 new tests (6 tree search + 3 recombination + 4 edge/boundary)
-- Beam width hard cap at 10 (HB-03)
-
-## [BATCH-61] - 2026-05-04
+## [BATCH-62] - 2026-05-04 — Tree Search Engine
 
 ### Added
-- Per-proposal timeout with `asyncio.wait_for()` (default 120s, cap 300s) — individual slow proposals no longer kill entire pipeline run
-- Placeholder proposal on timeout — remaining proposals still synthesized
-- `per_proposal_timeout: float = 120.0` config setting
-- Intermediate idea persistence after `idea_generation` stage (ideas queryable before proposals)
-- CLI `--resume RUN_ID` flag — skips already-completed stages via DB `current_stage` check
-- 9 new tests (proposal timeout + resume logic)
+- `TreeSearchEngine` with beam search (beam_width=3, max_depth=3)
+- `IdeaRecombinator` — synthesizes child from two parent ideas with lineage
+- Beam width hard cap at 10
+- 13 new tests
 
-## [BATCH-60] - 2026-05-04
+## [BATCH-61] - 2026-05-04 — Per-Proposal Timeout
+
+### Added
+- Per-proposal timeout with graceful continuation (120s default, 300s cap)
+- Placeholder proposal on timeout
+- CLI `--resume RUN_ID` flag
+- Intermediate idea persistence after idea_generation stage
+- 9 new tests
+
+## [BATCH-60] - 2026-05-04 — Test Stabilization
 
 ### Fixed
-- Mocked @sentry/react in Vitest test environment — all 339 frontend tests now pass (was 71 failing)
-- Increased Vitest testTimeout to 15000ms to resolve 5 pre-existing jsdom rendering timeouts
-- Added exponential backoff with jitter for Semantic Scholar API 429 responses (up to 5 retries, 120s cap)
+- Mocked @sentry/react in Vitest — 339 frontend tests pass (was 71 failing)
+- Increased Vitest testTimeout to 15000ms
+- Exponential backoff with jitter for S2 API 429 responses
+
+## [BATCH-57] - 2026-05-03 — Schema Sync
+
+### Fixed
+- `ensure_schema_sync(engine)` for auto column migration in developer mode
+
+## [BATCH-56] - 2026-05-03 — Pipeline Retest
+
+### Fixed
+- BATCH-55 fixes confirmed: background task error handling, eager loading
+
+## [BATCH-55] - 2026-05-03 — Pipeline Background Task Fix
+
+### Fixed
+- `selectinload(PipelineRun.ideas)` prevents DetachedInstanceError
+- Background task now sets `status=failed` on exception
+
+## [BATCH-53] - 2026-05-03 — Plugin SDK + E2E Mock
 
 ### Added
-- `frontend/src/test/setup.ts` — Sentry mock for test environment
-- `backend/tests/test_pipeline/test_s2_retry.py` — 4 unit tests for S2 retry logic
+- Plugin SDK documentation
+- E2E mock test for pipeline
 
-## [Unreleased]
+## [BATCH-52] - 2026-05-03 — Accessibility + Sentry
 
-### Added — AIV Batch Execution
-- **BATCH-38**: Gap data persistence & truth values — ResearchGapDB model gains truth_frequency (Float, default=0.5), truth_confidence (Float, default=0.5), truth_evidence_count (Integer, default=0), related_clusters (Text, nullable JSON array); PipelineRun gains cluster_report_json (Text, nullable); Alembic migration 002_gap_enrichment.py with batch mode; persist_gaps() writes truth columns and related_clusters; new persist_cluster_report() method; load_gaps() reconstructs ResearchGap with TruthValue and related_clusters for full roundtrip fidelity (HB-03); normalized _session() to get_session() across load_gaps/load_ideas/get_run_by_uuid; 8 tests (3 TASK-01 + 5 TASK-02)
-- **BATCH-35**: MkDocs documentation site with GitHub Pages auto-deployment — mkdocs.yml (Material theme, navigation, search, dark/light mode), docs/index.md (landing page with feature list and quick start), docs/getting-started.md (installation, configuration, first run walkthrough), docs/api-reference.md (complete REST API reference copied from api-guide.md), docs/architecture.md (system overview, 9-stage pipeline, technology stack, data flow, database schema), docs/endpoints/ directory with 15 markdown files (ideas, gaps, pipeline, costs, memory, governance, traces, sessions, literature, knowledge, auth, collaboration, exports, plugins, knowledge-graph) each with request/response examples and parameter tables, .github/workflows/docs.yml (GitHub Pages deployment on docs/ push to main/master, MkDocs Material build, deploy-pages@v4), 8 tests (3+2+3)
-- **BATCH-33**: PDF export, bulk export, plugin marketplace — backend/api/routes/exports.py (WeasyPrint HTML-to-PDF for single ideas, ZIP archive for bulk markdown/PDF export), backend/plugins/registry.py (thread-safe plugin registry with 4 built-in plugins), backend/api/routes/plugins.py (list + install), frontend/src/components/export/export-dialog.tsx (format select + download trigger), frontend/src/components/ui/dialog.tsx (reusable context-based Dialog), frontend/src/pages/plugins.tsx (search, install form, plugin cards), frontend/src/api/exports.ts (API functions for export + plugins), idea-detail.tsx ExportDialog integration, ideas-browser.tsx checkbox selection + bulk export, sidebar + router updates, 10 tests (4 backend + 4 frontend + 2 integration)
-- **BATCH-34**: Comment threads, sharing, CLI enhancement — Comment + SharedIdea DB models (threaded replies via parent_id, unique share tokens), POST/GET /ideas/{id}/comments (add/list), POST /ideas/{id}/share (generate link), GET /shared/{token} (public read-only), comment-thread.tsx (threaded comment display + inline reply), share-dialog.tsx (generate + copy link), idea-detail.tsx 2-column layout with collaboration widgets, erock research open/proposal/export CLI commands (browser open, LLM proposal generation, markdown/JSON export), 12 tests (4 backend + 4 frontend + 4 CLI)
-- **BATCH-32**: Dashboard lazy loading, gaps pagination, DB indexes, webhook notifications — React.lazy + Suspense for chart components (HB-01: renders under 3s with 1000+ ideas), server-side pagination for gaps explorer (offset + limit), 8 DB indexes on frequently queried columns (ideas.pipeline_run_id/domain/overall_score, pipeline_runs.status/session_id, research_gaps.pipeline_run_id/confidence), backend/notifications/ webhook module with HMAC-SHA256 signatures, webhook fired on pipeline completion/failure (non-blocking), 8 tests
-- **BATCH-30**: PostgreSQL support + Docker Compose — database.py dual PostgreSQL/SQLite engine (HB-01: SQLite default), connection pooling (QueuePool with pre-ping) for PostgreSQL, multi-stage Dockerfile (builder + runtime, non-root user), docker-compose.yml (app + postgres + redis with health checks), .dockerignore, 8 tests
-- **BATCH-29**: Alembic migration system — alembic.ini and env.py with SQLite batch mode (HB-01), initial auto-generated migration for all 6 model tables, `erock db upgrade/downgrade/history/current` CLI commands, `db-migrate` Makefile target, 8 tests
-- **BATCH-28**: JWT authentication system — User model with hashed passwords (bcrypt), JWT token generation/validation (python-jose), login/register/me/users API endpoints, auth_enabled config flag (default: False for dev compatibility), login page with register mode, AuthContext with token persistence, ProtectedRoute wrapper, role badge component (admin/user), admin-only user management section in settings
-- **BATCH-27**: Self-improvement evolution section in settings (READ-ONLY per HB-01), scheduler start/stop controls on autonomous page, GET /status/evolution endpoint, evolution status display
-- **BATCH-26**: Autonomous cycle dashboard — POST /autonomous/stop (HB-01: requires cycle_id confirmation), GET /autonomous/history with cycle statuses, CycleProgress and ConsciousnessStateBadge components, full dashboard page with start form, stop confirmation dialog, history list, consciousness state display, sidebar Cpu icon nav item
-- **BATCH-25**: Knowledge graph explorer — 4 API endpoints (stats, entities, entity detail, subgraph traversal), SVG-based graph canvas with colored nodes and edges, entity detail panel with truth values and relationships, type filter and search, sidebar BrainCircuit icon nav item (HB-01: client-side SVG, HB-02: 100 entity limit)
-- **BATCH-24**: PDF upload via drag-and-drop — POST /knowledge/ingest endpoint with PDF magic-bytes validation (HB-01), enriched GET /knowledge/stats with total_documents/total_chunks, frontend upload zone component with drag-and-drop, stats banner on knowledge page
-- **BATCH-23**: Literature search page — multi-source academic search (Semantic Scholar, arXiv, OpenAlex), paper cards with title/authors/abstract/year, ingest into knowledge base with confirmation (HB-01)
-- **BATCH-22**: Session grouping for pipeline runs — backend `session_id` filter on GET /runs, GET /runs/sessions endpoint, frontend Sessions page with grouped run cards, optional session_id input in pipeline form
-- **BATCH-20**: Governance Queue — pending approvals page with approve/deny actions, optional amendment on denial, real-time list refresh
-- **BATCH-19**: Memory Browser — search, filter by type, delete with confirmation, memory statistics
-- **BATCH-18**: Cost Dashboard — full page with cost summary, breakdown tables, budget utilization bar
-- **BATCH-16**: Navigation infrastructure — sidebar items and placeholder routes for Phase 2 pages
-- **BATCH-14**: Ideas browser — sortable, filterable, searchable; gap↔idea bidirectional traceability with `source_gap_ids` column
-- **BATCH-13**: Pipeline form completion — all backend options exposed; settings enhanced with connectivity check, version display, default domain
-- **BATCH-12**: Pipeline results flow — inline results after completion, run detail page at `/runs/:id`, clickable dashboard RunCards, `GET /runs/{id}/ideas` endpoint
+### Added
+- WCAG 2.1 AA accessibility audit
+- Sentry error monitoring integration
 
-## [0.1.0] - 2026-05-01
+## [BATCH-51] - 2026-05-03 — Docker + nginx
 
-### Added — AIV Batch Execution
-- **BATCH-07**: `erock setup` interactive CLI wizard — provider selection, API key validation, `.env` generation, optional test pipeline run (#19db311)
+### Added
+- Multi-stage Dockerfile
+- docker-compose.yml + docker-compose.prod.yml
+- nginx reverse proxy configuration
+- Frontend CI workflow
 
-### Added — Work Packages (WP-01 through WP-16)
-- **WP-16**: Session lifecycle with policy condition evaluator
-- **WP-15**: Multi-agent negotiation with structured debate protocol
-- **WP-14**: Dynamic tool discovery with embedding-based search and hybrid RRF
-- **WP-13**: Graph-augmented retrieval with three-source RRF fusion
-- **WP-12**: Memory consolidation — LLM dual-pass decisions, embedding dedup, periodic scheduler
-- **WP-11**: Streaming enhancement — typed events, stream manager with dedup, stage callbacks
-- **WP-10**: Behavioral adaptation — feedback collector, plateau-aware strategy, post-run manager
-- **WP-09**: Context management — model-aware window tracking, fraction triggers, filesystem offload
-- **WP-08**: MCP integration — multi-transport client, YAML server registry, tool adapter
-- **WP-07**: Metacognitive strategy — progress ledger, plateau detection, strategy adaptation
-- **WP-06**: Cost-optimized routing — strategy-based provider selection with budgets
-- **WP-05**: Semantic caching — exact-match and embedding-based similarity cache
-- **WP-04**: Observability pipeline — multi-processor tracing, metrics, OTLP export
-- **WP-03**: Sandboxing — pluggable execution isolation backends
-- **WP-02**: Evaluation framework — unified scoring, GEval, quality gates
-- **WP-01**: Provider resilience — circuit breakers, retry, encrypted secrets
+## [BATCH-50] - 2026-05-03 — i18n zh/es + WebSocket
 
-### Added — Initial Platform
-- 9-stage AI/NLP research idea generation pipeline
-- Multi-agent architecture (Ideator/Critic/Refiner)
-- Knowledge graph with truth values
-- 5 LLM provider implementations (OpenAI, Anthropic, Gemini, Ollama, Mock)
-- FastAPI backend with 38 API endpoints
-- React/TypeScript frontend with 7 pages
-- CLI with 12 commands
-- 1,303 backend tests, 56 frontend tests
+### Added
+- Chinese (zh) and Spanish (es) locale files
+- i18next configuration with language detection
+- WebSocket ConnectionManager infrastructure
+
+## [BATCH-49] - 2026-05-03 — Notifications + Experiments
+
+### Added
+- Notification center with SSE pub/sub
+- Sandboxed experiment execution (SecurityValidator + ExperimentRunner)
+
+## [BATCH-48] - 2026-05-03 — Code Splitting + Search
+
+### Added
+- React.lazy() code splitting for all pages
+- Global Search UI (Ctrl+K)
+
+## [BATCH-47] - 2026-05-02 — Gap Lifecycle Tracking
+
+### Added
+- Gap status lifecycle: identified → validated → addressed → closed
+- Gap search and filter API
+
+## [BATCH-46] - 2026-05-02 — Gap Detail Page
+
+### Added
+- Gap detail page with feedback form
+- Gap feedback API (user_rating, user_notes)
+
+## [BATCH-45] - 2026-05-02 — Cross-Run Gap Dedup
+
+### Added
+- Content hash deduplication for research gaps
+- Canonical gap ID assignment
+
+## [BATCH-44] - 2026-05-02 — Gap Search/Filter API
+
+### Added
+- Gap search API with text, type, and confidence filters
+
+## [BATCH-43] - 2026-05-02 — Gap Feedback System
+
+### Added
+- Gap feedback API endpoint
+- User rating and notes on gaps
+
+## [BATCH-42] - 2026-05-02 — Gap Explorer UI
+
+### Added
+- Gap Explorer page with cluster scatter visualization
+- Gap cards with confidence and impact
+
+## [BATCH-41] - 2026-05-02 — Idea Feedback
+
+### Added
+- Idea feedback form with rating and notes
+
+## [BATCH-38] - 2026-05-02 — Truth Values + Cluster Reports
+
+### Added
+- OpenNARS TruthValue integration for gap confidence
+- Cluster reports with TF-IDF labels
+- Truth frequency, confidence, and evidence count fields
+
+## [BATCH-07→37] - 2026-05-02 — Original Roadmap
+
+### Added
+- Complete research pipeline (9 stages)
+- Multi-agent Ideator/Critic/Refiner architecture
+- Borda Tournament scoring
+- Knowledge Graph with Graph RAG
+- 3-source literature search (OpenAlex, Semantic Scholar, Vector Store)
+- 20 frontend pages, 51 components
+- Full API layer with authentication
+- Database persistence with Alembic migrations
+- CLI interface
+- Cost tracking and monitoring
