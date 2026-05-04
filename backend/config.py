@@ -230,7 +230,7 @@ class Settings(BaseSettings):
     reactive_streams_enabled: bool = True
 
     # Tree-of-Thought reasoning (P4)
-    tree_of_thought_enabled: bool = False
+    tree_of_thought_enabled: bool = True  # BATCH-66: enabled by default
     tree_of_thought_max_depth: int = 3
     tree_of_thought_beam_width: int = 2
 

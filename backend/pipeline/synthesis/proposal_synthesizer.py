@@ -135,10 +135,130 @@ class ProposalSynthesizer:
         supporting_papers: list[Paper] | None = None,
         gaps: list | None = None,
     ) -> ResearchProposal:
-        """Generate a full-length research proposal via free-text LLM generation."""
+        """Generate a full-length research proposal section by section."""
         literature = self._format_literature(supporting_papers or [])
-        key_risks = feasibility_report.key_risks if feasibility_report else []
+        context = self._build_context(idea, novelty_report, feasibility_report, literature, gaps)
 
+        sections: dict[str, str | list] = {}
+
+        # Pass 1: Generate all sections in one call (efficient)
+        try:
+            raw_text = await self._provider.complete(
+                messages=[
+                    {
+                        "role": "system",
+                        "content": (
+                            "You are a senior researcher writing a full research proposal for a "
+                            "competitive conference (ACL, EMNLP, NeurIPS). You MUST "
+                            "produce ALL sections with substantial content. Do NOT write stubs, "
+                            "summaries, or placeholder text. Each section must be detailed and "
+                            "technically precise.\n\n"
+                            "OUTPUT FORMAT: Write each section with a markdown header like:\n"
+                            "## Title\n...\n## Abstract\n...\n## Introduction\n...\n"
+                            "## Related Work\n...\n## Proposed Method\n...\n"
+                            "## Expected Contributions\n...\n## Evaluation Plan\n...\n"
+                            "## Timeline\n...\n## References\n...\n## Risk Mitigation\n...\n\n"
+                            "You MUST include ALL 10 sections. Each prose section must be at least "
+                            "200 words. The Proposed Method must be at least 500 words with "
+                            "mathematical notation ($...$). The Introduction must be at least 400 words."
+                        ),
+                    },
+                    {"role": "user", "content": context},
+                ],
+                temperature=0.4,
+                max_tokens=8192,
+            )
+            parsed = self._parse_sections(raw_text)
+            sections = dict(parsed.sections)
+        except Exception as e:
+            logger.error("Full generation failed: %s — falling back to section-by-section", e)
+            sections = {}
+
+        # Pass 2: Fill in any missing or short sections individually
+        for section_name in REQUIRED_SECTIONS:
+            key = section_name.lower().replace(" ", "_")
+            content = sections.get(key, "")
+            if not content or (isinstance(content, str) and len(content.split()) < MIN_WORDS.get(key, 50)):
+                try:
+                    section_text = await self._generate_single_section(
+                        section_name, idea, novelty_report, feasibility_report, literature, gaps
+                    )
+                    if section_text and len(section_text.split()) > len(content.split() if isinstance(content, str) else ""):
+                        sections[key] = section_text
+                except Exception as se:
+                    logger.warning("Section %s generation failed: %s", section_name, se)
+                    if key not in sections:
+                        sections[key] = ""
+
+        proposal = ResearchProposal(idea_id=None, **sections)
+
+        # Ensemble review
+        if self._ensemble_reviewer:
+            try:
+                review_result = await self._ensemble_reviewer.review(proposal, idea)
+                proposal.sections["ensemble_review"] = review_result
+            except Exception as e:
+                logger.warning("Ensemble review failed: %s", e)
+
+        return proposal
+
+    async def _generate_single_section(
+        self,
+        section_name: str,
+        idea: ResearchIdea,
+        novelty_report: NoveltyReport | None,
+        feasibility_report: FeasibilityReport | None,
+        literature: str,
+        gaps: list | None,
+    ) -> str:
+        """Generate a single section independently."""
+        min_words = MIN_WORDS.get(section_name.lower().replace(" ", "_"), 100)
+        tips = {
+            "Abstract": "150-250 words. State problem, approach, expected result. No first person.",
+            "Introduction": "400+ words. 3-4 paragraphs: context, limitations, approach, contributions.",
+            "Related Work": "300+ words. Organized by themes, not chronologically. Cite specific papers.",
+            "Proposed Method": "500+ words. Formal problem definition, algorithmic steps, math notation.",
+            "Expected Contributions": "3-5 numbered contributions, each stating WHAT and WHY.",
+            "Evaluation Plan": "300+ words. Datasets, baselines, metrics, ablation design.",
+            "Timeline": "100+ words. 12-week breakdown in 4 phases.",
+            "References": "List all cited works with author-year-title-venue.",
+            "Risk Mitigation": "Top 3 risks with mitigation strategies.",
+            "Title": "Concise title under 15 words.",
+        }
+        tip = tips.get(section_name, "Write a detailed, technically precise section.")
+
+        prompt = (
+            f"Research Idea: {idea.title}\n"
+            f"Problem: {idea.problem_statement}\n"
+            f"Method: {idea.proposed_method}\n"
+            f"Contributions: {idea.expected_contributions}\n\n"
+            f"Write ONLY the \"{section_name}\" section.\n"
+            f"Tips: {tip}\n"
+            f"Minimum {min_words} words.\n"
+        )
+        if novelty_report:
+            prompt += f"\nNovelty arguments: {novelty_report.novelty_arguments[:300]}\n"
+        if feasibility_report:
+            prompt += f"\nFeasibility: {feasibility_report.reasoning[:300]}\n"
+
+        return await self._provider.complete(
+            messages=[
+                {"role": "system", "content": f"You are writing the {section_name} section of a research proposal. Produce full-length, publication-quality prose."},
+                {"role": "user", "content": prompt},
+            ],
+            temperature=0.4,
+            max_tokens=4096,
+        )
+
+    def _build_context(
+        self,
+        idea: ResearchIdea,
+        novelty_report: NoveltyReport | None,
+        feasibility_report: FeasibilityReport | None,
+        literature: str,
+        gaps: list | None,
+    ) -> str:
+        """Build the full context string for the LLM prompt."""
         gap_descriptions = ""
         if gaps:
             gap_lines = []
@@ -163,6 +283,7 @@ class ProposalSynthesizer:
             closest_matches = "\n".join(match_lines)
 
         feasibility_reasoning = ""
+        key_risks = feasibility_report.key_risks if feasibility_report else []
         if feasibility_report:
             feasibility_reasoning = (
                 f"Overall feasibility: {feasibility_report.overall_score:.1f}/10\n"
@@ -175,7 +296,7 @@ class ProposalSynthesizer:
                 f"impact={feasibility_report.impact_potential:.1f}"
             )
 
-        prompt = Template(self._prompt_template).render(
+        return Template(self._prompt_template).render(
             title=idea.title,
             problem=idea.problem_statement,
             method=idea.proposed_method,
@@ -192,67 +313,6 @@ class ProposalSynthesizer:
             closest_matches=closest_matches,
             feasibility_reasoning=feasibility_reasoning,
         )
-
-        try:
-            # ── Pass 1: Free-text generation ──────────────────────────
-            raw_text = await self._provider.complete(
-                messages=[
-                    {
-                        "role": "system",
-                        "content": (
-                            "You are a senior researcher writing a full research proposal for a "
-                            "competitive conference (ACL, EMNLP, NeurIPS, or similar). You MUST "
-                            "produce ALL sections with substantial content. Do NOT write stubs, "
-                            "summaries, or placeholder text. Each section must be detailed and "
-                            "technically precise.\n\n"
-                            "OUTPUT FORMAT: Write each section with a markdown header like:\n"
-                            "## Title\n...\n## Abstract\n...\n## Introduction\n...\n"
-                            "## Related Work\n...\n## Proposed Method\n...\n"
-                            "## Expected Contributions\n...\n## Evaluation Plan\n...\n"
-                            "## Timeline\n...\n## References\n...\n## Risk Mitigation\n...\n\n"
-                            "You MUST include ALL 10 sections. Each prose section must be at least "
-                            "200 words. The Proposed Method must be at least 500 words with "
-                            "mathematical notation ($...$). The Introduction must be at least 400 words."
-                        ),
-                    },
-                    {"role": "user", "content": prompt},
-                ],
-                temperature=0.4,
-                max_tokens=8192,
-            )
-
-            proposal = self._parse_sections(raw_text, idea_id=None)
-
-            # ── Quality check: expand short sections ──────────────────
-            short_sections = self._find_short_sections(proposal)
-            if short_sections:
-                logger.info(
-                    "Expanding %d short sections: %s",
-                    len(short_sections),
-                    ", ".join(short_sections),
-                )
-                proposal = await self._expand_sections(
-                    proposal, short_sections, idea
-                )
-
-            # ── Ensemble review ───────────────────────────────────────
-            if self._ensemble_reviewer:
-                try:
-                    review_result = await self._ensemble_reviewer.review(proposal, idea)
-                    proposal.sections["ensemble_review"] = review_result
-                except Exception as e:
-                    logger.warning("Ensemble review failed: %s", e)
-
-            return proposal
-
-        except Exception as e:
-            logger.error("Proposal synthesis failed: %s", e)
-            return ResearchProposal(
-                title=idea.title,
-                abstract=idea.problem_statement,
-                introduction="Synthesis failed due to an error. Please retry.",
-                proposed_method=idea.proposed_method,
-            )
 
     @staticmethod
     def _parse_sections(raw_text: str, idea_id: int | None = None) -> ResearchProposal:

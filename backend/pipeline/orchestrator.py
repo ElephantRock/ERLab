@@ -410,6 +410,9 @@ class PipelineOrchestrator:
         self._skill_generator = None
 
         if settings.self_improve_enabled:
+            from pathlib import Path
+            Path(settings.self_improve_persist_dir).mkdir(parents=True, exist_ok=True)
+
             from backend.pipeline.self_improve.constraints import ConstraintConfig
             from backend.pipeline.self_improve.fitness import FitnessScore
 

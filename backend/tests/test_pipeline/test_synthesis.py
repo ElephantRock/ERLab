@@ -108,7 +108,8 @@ class TestProposalSynthesizer:
         synthesizer = ProposalSynthesizer(provider)
         proposal = asyncio.run(synthesizer.synthesize(sample_ideas[0]))
         assert isinstance(proposal, ResearchProposal)
-        assert proposal.sections.get("introduction") == "Synthesis failed due to an error. Please retry."
+        # All sections are empty strings when everything fails
+        assert proposal.sections.get("introduction", "") == ""
 
     def test_synthesize_with_supporting_papers(self, sample_ideas, sample_papers):
         provider = SchemaAwareFakeProvider()

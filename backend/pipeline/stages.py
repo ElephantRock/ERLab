@@ -88,20 +88,23 @@ class LiteratureSearchStage(PipelineStage):
             all_papers.extend(papers)
             logger.info("Found %d papers for query: %s", len(papers), query)
 
-        # Deduplicate by paper ID (same paper can appear across multiple queries)
+        # Deduplicate papers — cross-source duplicates have different IDs
         seen = set()
         unique = []
         for p in all_papers:
-            if p.id not in seen:
-                seen.add(p.id)
+            # Use DOI if available, otherwise normalized title
+            key = p.doi if getattr(p, 'doi', None) else p.title.lower().strip()
+            if key not in seen:
+                seen.add(key)
                 unique.append(p)
         ctx.all_papers = unique
         ctx.result.papers_found = len(unique)
         logger.info("Total unique papers: %d (from %d total)", len(unique), len(all_papers))
 
         if not all_papers:
-            logger.warning("No papers found. Pipeline cannot continue.")
-            return False
+            logger.warning("No papers found. Proceeding with domain knowledge only.")
+            # Don't halt — gap analysis can work from domain alone
+            return True
         return True
 
 
@@ -769,6 +772,10 @@ class MechanicalMetricsStage(PipelineStage):
                 # Build supporting_papers for this idea
                 cited_ids = set(getattr(idea, "supporting_papers", []) or [])
                 supporting = [p for p in ctx.all_papers if getattr(p, "id", None) in cited_ids]
+
+                # Fallback: if no explicit supporting_papers, use all papers
+                if not supporting:
+                    supporting = ctx.all_papers[:10]
 
                 metrics = self._calculator.compute_all(
                     idea=idea,

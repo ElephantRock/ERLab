@@ -26,6 +26,24 @@ class VectorStore:
             metadata={"hnsw:space": "cosine"},
         )
 
+        # Validate collection dimension matches current embedding dimension
+        if self._collection.count() > 0:
+            sample = self._collection.get(limit=1, include=["embeddings"])
+            if sample["embeddings"]:
+                stored_dim = len(sample["embeddings"][0])
+                expected_dim = self._embedding_service.dimension
+                if stored_dim != expected_dim:
+                    logger.warning(
+                        "Collection dimension (%d) != embedding dimension (%d). "
+                        "Recreating collection to fix mismatch.",
+                        stored_dim, expected_dim,
+                    )
+                    self._client.delete_collection(COLLECTION_NAME)
+                    self._collection = self._client.get_or_create_collection(
+                        name=COLLECTION_NAME,
+                        metadata={"hnsw:space": "cosine"},
+                    )
+
     async def add_papers(
         self,
         papers: list[Paper],

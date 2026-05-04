@@ -11,7 +11,14 @@ router = APIRouter()
 
 
 def _tracker():
-    return get_registry().cost_tracker
+    tracker = get_registry().cost_tracker
+    if tracker is None:
+        from backend.api.errors import ServiceUnavailableError
+        raise ServiceUnavailableError(
+            "Cost tracking not available",
+            hint="Run a pipeline first to initialize cost tracking",
+        )
+    return tracker
 
 
 @router.get(
