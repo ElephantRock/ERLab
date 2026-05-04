@@ -3,6 +3,15 @@
 All notable changes to the Elephant Rock Research Platform are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [BATCH-65] - 2026-05-04
+
+### Added
+- `MethodDNAExtractor` — extracts structured method DNA (technique, domain, keywords) from ideas
+- `POST /recombination/propose` — cross-run idea recombination endpoint
+- Method DNA keyword extraction with stopword filtering
+- Traceable recombined ideas via `source_idea_ids`
+- 17 new tests (15 DNA + 2 API)
+
 ## [BATCH-64] - 2026-05-04
 
 ### Added
