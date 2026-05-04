@@ -63,15 +63,25 @@ class VectorStore:
                 )
 
         if all_ids:
-            # ChromaDB add is synchronous
-            self._collection.add(
-                ids=all_ids,
-                documents=all_texts,
-                embeddings=all_embeddings,
-                metadatas=all_metadata,
-            )
+            # Deduplicate by ID — same paper can appear across multiple queries
+            seen = {}
+            for idx, cid in enumerate(all_ids):
+                if cid not in seen:
+                    seen[cid] = idx
+            deduped_ids = list(seen.keys())
+            deduped_texts = [all_texts[i] for i in seen.values()]
+            deduped_embeddings = [all_embeddings[i] for i in seen.values()]
+            deduped_metadata = [all_metadata[i] for i in seen.values()]
 
-        return len(all_ids)
+            self._collection.upsert(
+                ids=deduped_ids,
+                documents=deduped_texts,
+                embeddings=deduped_embeddings,
+                metadatas=deduped_metadata,
+            )
+            logger.info("Vector store: upserted %d chunks (deduped from %d)", len(deduped_ids), len(all_ids))
+
+        return len(seen) if all_ids else 0
 
     async def query(
         self,

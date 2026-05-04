@@ -85,9 +85,16 @@ class LiteratureSearchStage(PipelineStage):
             all_papers.extend(papers)
             logger.info("Found %d papers for query: %s", len(papers), query)
 
-        ctx.all_papers = all_papers
-        ctx.result.papers_found = len(all_papers)
-        logger.info("Total unique papers: %d", len(all_papers))
+        # Deduplicate by paper ID (same paper can appear across multiple queries)
+        seen = set()
+        unique = []
+        for p in all_papers:
+            if p.id not in seen:
+                seen.add(p.id)
+                unique.append(p)
+        ctx.all_papers = unique
+        ctx.result.papers_found = len(unique)
+        logger.info("Total unique papers: %d (from %d total)", len(unique), len(all_papers))
 
         if not all_papers:
             logger.warning("No papers found. Pipeline cannot continue.")
@@ -107,6 +114,16 @@ class IngestionStage(PipelineStage):
         return "ingestion"
 
     async def execute(self, ctx: StageContext) -> bool:
+        # Deduplicate papers by ID — same paper can appear across multiple queries
+        seen_ids = set()
+        unique_papers = []
+        for paper in ctx.all_papers:
+            if paper.id not in seen_ids:
+                seen_ids.add(paper.id)
+                unique_papers.append(paper)
+        ctx.all_papers = unique_papers
+        logger.info("Ingestion: %d unique papers (from %d total)", len(unique_papers), len(ctx.all_papers))
+
         chunks = []
         for paper in ctx.all_papers:
             text = f"{paper.title}\n\n{paper.abstract or ''}"
