@@ -114,8 +114,8 @@ class Settings(BaseSettings):
 
     # Provider Resilience (WP-01)
     resilience_enabled: bool = True
-    circuit_breaker_failure_threshold: int = 5
-    circuit_breaker_reset_timeout: float = 60.0
+    circuit_breaker_failure_threshold: int = 15
+    circuit_breaker_reset_timeout: float = 30.0
     retry_max_retries: int = 3
     retry_base_delay: float = 1.0
     retry_max_delay: float = 60.0

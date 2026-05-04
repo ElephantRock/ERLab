@@ -235,7 +235,54 @@ class AnthropicProvider(LLMProvider):
             text = text.rsplit("```", 1)[0]
         text = text.strip()
 
-        return json.loads(text)
+        try:
+            return json.loads(text)
+        except json.JSONDecodeError:
+            # Attempt basic JSON repair
+            return self._repair_json(text)
+
+    @staticmethod
+    def _repair_json(text: str) -> dict:
+        """Attempt to repair common JSON errors from LLM output."""
+        import json
+        import re
+
+        # Fix unterminated strings — find last complete key-value pair
+        # Strategy: truncate at last valid closing brace/bracket
+        for i in range(len(text) - 1, -1, -1):
+            if text[i] in ('}', ']'):
+                candidate = text[:i + 1]
+                try:
+                    return json.loads(candidate)
+                except json.JSONDecodeError:
+                    continue
+
+        # Fix trailing commas before closing braces
+        text_fixed = re.sub(r',\s*([}\]])', r'\1', text)
+        try:
+            return json.loads(text_fixed)
+        except json.JSONDecodeError:
+            pass
+
+        # Fix single quotes → double quotes
+        text_fixed = text.replace("'", '"')
+        try:
+            return json.loads(text_fixed)
+        except json.JSONDecodeError:
+            pass
+
+        # Last resort: extract first {...} block with regex
+        m = re.search(r'\{.*\}', text, re.DOTALL)
+        if m:
+            try:
+                return json.loads(m.group())
+            except json.JSONDecodeError:
+                pass
+
+        raise json.JSONDecodeError(
+            f"Could not repair JSON from LLM output (first 200 chars): {text[:200]}",
+            text, 0,
+        )
 
     @staticmethod
     def _extract_system(messages: list[dict]) -> tuple[str | None, list[dict]]:

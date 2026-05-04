@@ -1,0 +1,90 @@
+{
+  "run_id": "run_20260504_132347",
+  "state": "pending",
+  "stages": [
+    {
+      "stage_name": "literature_search",
+      "status": "completed",
+      "started_at": "2026-05-04T13:23:47.883353",
+      "completed_at": "2026-05-04T13:23:54.234491",
+      "error": null,
+      "retry_count": 0,
+      "duration_seconds": 0.0,
+      "last_error_type": null
+    },
+    {
+      "stage_name": "ingestion",
+      "status": "completed",
+      "started_at": "2026-05-04T13:23:54.234491",
+      "completed_at": "2026-05-04T13:23:54.277472",
+      "error": null,
+      "retry_count": 0,
+      "duration_seconds": 0.0,
+      "last_error_type": null
+    },
+    {
+      "stage_name": "gap_analysis",
+      "status": "completed",
+      "started_at": "2026-05-04T13:23:54.277472",
+      "completed_at": "2026-05-04T13:24:07.725420",
+      "error": null,
+      "retry_count": 0,
+      "duration_seconds": 0.0,
+      "last_error_type": null
+    },
+    {
+      "stage_name": "idea_generation",
+      "status": "running",
+      "started_at": "2026-05-04T13:24:07.725420",
+      "completed_at": null,
+      "error": null,
+      "retry_count": 0,
+      "duration_seconds": 0.0,
+      "last_error_type": null
+    },
+    {
+      "stage_name": "novelty_checking",
+      "status": "pending",
+      "started_at": null,
+      "completed_at": null,
+      "error": null,
+      "retry_count": 0,
+      "duration_seconds": 0.0,
+      "last_error_type": null
+    },
+    {
+      "stage_name": "feasibility_scoring",
+      "status": "pending",
+      "started_at": null,
+      "completed_at": null,
+      "error": null,
+      "retry_count": 0,
+      "duration_seconds": 0.0,
+      "last_error_type": null
+    },
+    {
+      "stage_name": "proposal_synthesis",
+      "status": "pending",
+      "started_at": null,
+      "completed_at": null,
+      "error": null,
+      "retry_count": 0,
+      "duration_seconds": 0.0,
+      "last_error_type": null
+    },
+    {
+      "stage_name": "export",
+      "status": "pending",
+      "started_at": null,
+      "completed_at": null,
+      "error": null,
+      "retry_count": 0,
+      "duration_seconds": 0.0,
+      "last_error_type": null
+    }
+  ],
+  "domain": "",
+  "params": {},
+  "created_at": "2026-05-04T13:23:47.882829",
+  "updated_at": "2026-05-04T13:24:07.725420"
+}
