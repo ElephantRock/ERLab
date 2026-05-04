@@ -14,7 +14,7 @@ import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, RefreshCw, Loader2, GitBranch } from "lucide-react";
+import { ArrowLeft, RefreshCw, Loader2, GitBranch, CheckCircle2, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 
 export default function IdeaDetail() {
@@ -158,20 +158,119 @@ export default function IdeaDetail() {
         </Card>
       )}
 
-      {(idea.proposal_md || idea.novelty_report || idea.feasibility_report) && (
-        <Tabs defaultValue={idea.proposal_md ? "proposal" : idea.novelty_report ? "novelty" : "feasibility"}>
+      {(idea.proposal_md || idea.novelty_report || idea.feasibility_report || idea.mechanical_metrics) && (
+        <Tabs defaultValue={idea.proposal_md ? "proposal" : idea.novelty_report ? "novelty" : idea.feasibility_report ? "feasibility" : "metrics"}>
           <TabsList>
             {idea.proposal_md && <TabsTrigger value="proposal">Proposal</TabsTrigger>}
             {idea.novelty_report && <TabsTrigger value="novelty">Novelty Report</TabsTrigger>}
             {idea.feasibility_report && <TabsTrigger value="feasibility">Feasibility Report</TabsTrigger>}
+            {idea.mechanical_metrics && <TabsTrigger value="metrics">Mechanical Metrics</TabsTrigger>}
+            {idea.experiment_results && idea.experiment_results.length > 0 && (
+              <TabsTrigger value="experiments">Experiments ({idea.experiment_results.length})</TabsTrigger>
+            )}
           </TabsList>
           {idea.proposal_md && (
             <TabsContent value="proposal">
-              <Card>
-                <CardContent className="pt-6">
-                  <MarkdownRenderer content={idea.proposal_md} />
-                </CardContent>
-              </Card>
+              <div className="grid gap-6 lg:grid-cols-4">
+                {/* Table of Contents sidebar */}
+                {idea.proposal_sections && typeof idea.proposal_sections === "object" && (
+                  <Card className="lg:col-span-1">
+                    <CardHeader>
+                      <CardTitle className="text-sm">Contents</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <nav className="space-y-1">
+                        {Object.keys(idea.proposal_sections).map((key) => (
+                          <a
+                            key={key}
+                            href={`#section-${key}`}
+                            className="block text-sm text-muted-foreground hover:text-foreground truncate"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              document.getElementById(`section-${key}`)?.scrollIntoView({ behavior: "smooth" });
+                            }}
+                          >
+                            {key.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}
+                          </a>
+                        ))}
+                      </nav>
+                      <Separator className="my-3" />
+                      <p className="text-xs text-muted-foreground">
+                        {idea.proposal_md.split(/\s+/).length.toLocaleString()} words
+                      </p>
+                    </CardContent>
+                  </Card>
+                )}
+                {/* Main proposal content */}
+                <Card className={idea.proposal_sections ? "lg:col-span-3" : "lg:col-span-4"}>
+                  <CardContent className="pt-6">
+                    {idea.proposal_sections && typeof idea.proposal_sections === "object" ? (
+                      /* Structured section rendering */
+                      <div className="space-y-8">
+                        {Object.entries(idea.proposal_sections).map(([key, value]) => (
+                          <div key={key} id={`section-${key}`}>
+                            <h3 className="text-lg font-semibold mb-3">
+                              {key.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}
+                            </h3>
+                            {typeof value === "string" ? (
+                              <MarkdownRenderer content={value} />
+                            ) : Array.isArray(value) ? (
+                              <div className="space-y-2">
+                                {value.map((item: unknown, idx: number) => (
+                                  <div key={idx} className="text-sm">
+                                    {typeof item === "string" ? (
+                                      <MarkdownRenderer content={item} />
+                                    ) : typeof item === "object" && item !== null ? (
+                                      <div className="text-muted-foreground">
+                                        {Object.entries(item as Record<string, unknown>).map(
+                                          ([k, v]) => (
+                                            <span key={k} className="mr-3">
+                                              <span className="font-medium">{k}:</span>{" "}
+                                              {String(v)}
+                                            </span>
+                                          )
+                                        )}
+                                      </div>
+                                    ) : (
+                                      String(item)
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
+                            ) : typeof value === "object" && value !== null ? (
+                              <div className="space-y-2">
+                                {Object.entries(value as Record<string, unknown>).map(
+                                  ([subKey, subVal]) => (
+                                    <div key={subKey}>
+                                      <span className="font-medium text-sm">
+                                        {subKey.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}:
+                                      </span>{" "}
+                                      {Array.isArray(subVal) ? (
+                                        <span className="text-sm text-muted-foreground">
+                                          {subVal.join(", ")}
+                                        </span>
+                                      ) : (
+                                        <span className="text-sm text-muted-foreground">
+                                          {String(subVal)}
+                                        </span>
+                                      )}
+                                    </div>
+                                  )
+                                )}
+                              </div>
+                            ) : (
+                              <p className="text-sm text-muted-foreground">{String(value)}</p>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      /* Fallback: raw markdown blob */
+                      <MarkdownRenderer content={idea.proposal_md} />
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
             </TabsContent>
           )}
           {idea.novelty_report && (
@@ -190,6 +289,66 @@ export default function IdeaDetail() {
                   <FeasibilityReportView report={idea.feasibility_report} />
                 </CardContent>
               </Card>
+            </TabsContent>
+          )}
+          {idea.mechanical_metrics && (
+            <TabsContent value="metrics">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-sm">Mechanical Metrics (zero LLM)</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                    {Object.entries(idea.mechanical_metrics).map(([key, value]) => (
+                      <div key={key} className="rounded-lg border p-3">
+                        <p className="text-xs text-muted-foreground">
+                          {key.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}
+                        </p>
+                        <p className="text-2xl font-bold">
+                          {typeof value === "number" ? value.toFixed(3) : String(value)}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+          )}
+          {idea.experiment_results && idea.experiment_results.length > 0 && (
+            <TabsContent value="experiments">
+              <div className="space-y-4">
+                {idea.experiment_results.map((exp: { id: number; success: boolean; exit_code: number; execution_time_seconds: number; stdout?: string | null; error?: string | null; created_at: string }) => (
+                  <Card key={exp.id}>
+                    <CardContent className="pt-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                          {exp.success ? (
+                            <CheckCircle2 className="h-4 w-4 text-green-500" />
+                          ) : (
+                            <AlertTriangle className="h-4 w-4 text-destructive" />
+                          )}
+                          <span className="text-sm font-medium">
+                            Experiment #{exp.id}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                          <span>Exit: {exp.exit_code}</span>
+                          <span>{exp.execution_time_seconds.toFixed(1)}s</span>
+                          <span>{new Date(exp.created_at).toLocaleString()}</span>
+                        </div>
+                      </div>
+                      {exp.stdout && (
+                        <pre className="text-xs bg-muted p-3 rounded overflow-x-auto max-h-48 mb-2">
+                          {exp.stdout.slice(0, 2000)}
+                        </pre>
+                      )}
+                      {exp.error && (
+                        <p className="text-xs text-destructive">{exp.error}</p>
+                      )}
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
             </TabsContent>
           )}
         </Tabs>

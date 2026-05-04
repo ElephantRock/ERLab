@@ -111,6 +111,16 @@ export interface IdeaDetail extends IdeaSummary {
   proposal_md: string | null;
   proposal_latex: string | null;
   proposal_sections: Record<string, unknown> | null;
+  mechanical_metrics: Record<string, number> | null;
+  experiment_results: {
+    id: number;
+    success: boolean;
+    exit_code: number;
+    execution_time_seconds: number;
+    stdout: string | null;
+    error: string | null;
+    created_at: string;
+  } | null;
 }
 
 export interface IdeaListResponse {
