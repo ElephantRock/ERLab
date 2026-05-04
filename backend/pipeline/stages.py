@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 from abc import ABC, abstractmethod
 from contextlib import contextmanager
@@ -9,6 +10,7 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Generator
 
 from backend.pipeline.ingestion.chunker import DocumentChunk  # noqa: F401 — re-exported by stages
+from backend.pipeline.synthesis.proposal_synthesizer import ResearchProposal  # noqa: F401 — used by ProposalSynthesisStage
 
 if TYPE_CHECKING:
     from backend.providers.base import LLMProvider
@@ -505,16 +507,40 @@ class ProposalSynthesisStage(PipelineStage):
         ideas = ctx.result.ideas
         if not ideas:
             return True
+
+        # Per-proposal timeout from settings (capped at 300s by HB-01)
+        from backend.config import get_settings
+
+        timeout = min(
+            getattr(get_settings(), "per_proposal_timeout", 120.0),
+            300.0,
+        )
+
         for i, idea in enumerate(ideas):
             novelty = ctx.result.novelty_reports.get(i)
             feasibility = ctx.result.feasibility_reports.get(i)
-            proposal = await self._synthesizer.synthesize(
-                idea=idea,
-                novelty_report=novelty,
-                feasibility_report=feasibility,
-                supporting_papers=ctx.all_papers[:10],
-                gaps=ctx.result.gaps,
-            )
+            try:
+                proposal = await asyncio.wait_for(
+                    self._synthesizer.synthesize(
+                        idea=idea,
+                        novelty_report=novelty,
+                        feasibility_report=feasibility,
+                        supporting_papers=ctx.all_papers[:10],
+                        gaps=ctx.result.gaps,
+                    ),
+                    timeout=timeout,
+                )
+            except asyncio.TimeoutError:
+                logger.warning(
+                    "Proposal synthesis timed out after %.1fs for idea %d: %s",
+                    timeout, i + 1, idea.title[:50],
+                )
+                proposal = ResearchProposal(
+                    title=idea.title,
+                    abstract=f"Synthesis timed out after {timeout:.0f}s",
+                    introduction="Timed out",
+                    proposed_method=idea.proposed_method,
+                )
 
             if self._governance_validator:
                 proposal_md = proposal.to_markdown()
