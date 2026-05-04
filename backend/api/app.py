@@ -249,6 +249,14 @@ async def startup():
         traces_sample_rate=settings.sentry_traces_sample_rate,
     )
 
+    # Warn about missing Semantic Scholar API key (BATCH-68)
+    import logging
+    if not settings.semantic_scholar_api_key:
+        logging.getLogger(__name__).warning(
+            "S2_API_KEY not set. Semantic Scholar API will be rate-limited (429 errors). "
+            "Get a key at https://www.semanticscholar.org/product/api#api-key"
+        )
+
     _get_limiter()
 
 
