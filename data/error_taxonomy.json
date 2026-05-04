@@ -1,37 +1,36 @@
 {
   "counts": {
-    "feasibility": 48,
-    "methodological": 112,
-    "scope": 27,
-    "novelty": 14
+    "feasibility": 52,
+    "methodological": 124,
+    "scope": 28,
+    "novelty": 17
   },
   "descriptions": {
     "feasibility": [
-      "Feasibility: The proposal requires the noise to be perfectly transverse (X-noise) to the signal (Z-field). In realistic solid-state sensors (e.g., NV centers), noise is often longitudinal (dephasing), which would couple directly to the signal, breaking the operator symmetry assumption.",
-      "Feasibility: The proposal assumes 'reconfigurable optical interconnects' in 3D space. The latency model of these interconnects is abstracted away. If the interconnects are photonic (e.g., fiber delays or switch reconfiguration times), the latency might dominate the routing algorithm's efficiency, rendering the deadlock-free scheduling less critical than the raw physical latency.",
-      "Scope: While abstracting away full simulation is a strength, evaluating this solely on 'standard quantum circuits (e.g., addition, QFT)' might miss the dynamic data dependencies present in algorithms like QAOA or VQE, which have irregular, data-dependent communication patterns.",
-      "Feasibility: The 'parity projection interface' likely requires highly complex, non-local interactions (e.g., a multi-mode bosonic operator entangled with a multi-qubit Pauli string). Engineering such an interaction Hamiltonian in a physical system (e.g., superconducting cavities + transmons) is extremely difficult, potentially more resource-intensive than the digitalization overhead it aims to save.",
       "Evaluating 'fidelity' to historical qualitative data is extremely subjective and difficult to quantify rigorously.",
       "Ethical and scope concerns: Deploying an RL agent to deliver mental health interventions based on noisy, multimodal student data carries massive ethical risks if the model hallucinates or misinterprets a behavioral shift.",
       "The proposal lacks detail on how the continuous-time RNN handles the irregular, sparse, and messy nature of real-world longitudinal student data.",
       "Scalability of human-anchored coding: The reliance on human experts to code a 'seed set' and verify codes for the contrastive reward model may still require an impractically large amount of human labor to cover the variance in a large interview corpus.",
       "Scalability and dimensionality curse: Mapping qualitative codes (which can easily number in the hundreds in grounded theory) as individual kernel parameters in a Gaussian Process will likely lead to severe computational bottlenecks and kernel degeneration.",
-      "Extreme scope and feasibility issues: Formalizing complex historical events (like the Rio Earth Summit) into exact, deterministic mathematical reward functions requires encoding decades of geopolitical nuance into rigid code, which is practically impossible and inherently subjective."
+      "Extreme scope and feasibility issues: Formalizing complex historical events (like the Rio Earth Summit) into exact, deterministic mathematical reward functions requires encoding decades of geopolitical nuance into rigid code, which is practically impossible and inherently subjective.",
+      "The framework attempts to solve too many distinct problems simultaneously (multimodality, non-IID data, communication limits, multitask learning), risking severe scope creep.",
+      "The premise that architecture topology is a primary 'vector for bias' is a strong claim that is likely false or negligible compared to the overwhelming bias introduced by the training data and loss function.",
+      "The feasibility score based on 'physical/chemical laws' is highly ambitious. LLMs struggle with formal physical reasoning and often fail to identify violations of complex constraints that aren't explicitly stated in their training data.",
+      "The core premise might be flawed: fairness is overwhelmingly driven by data distribution and optimization dynamics, not structural topology. The variance observed across NAS-Bench-201 architectures might be statistically insignificant, leading to a null-result paper."
     ],
     "methodological": [
-      "Evaluation plan lacks a crucial baseline: How does this compare to a standard RAG-chatbot fine-tuned to output structured JSON with citations? The architectural bottleneck may hurt accuracy without providing significantly more transparency than a well-prompted LLM.",
-      "Methodological soundness of the RL formulation: Framing this as an RL problem might be overkill. If the agent proposes top-k variants and humans score them, this is essentially Bayesian Optimization or a simple active learning loop over a generative model. The RL formulation adds unnecessary complexity.",
-      "Methodological gap in shift detection: How is 'significant divergence' between the base and adaptive model mathematically defined? This threshold is critical; too sensitive and it triggers false alarms, too rigid and it misses crises.",
-      "Severe methodological disconnect: Syntactic tree manipulations are notoriously unreliable for altering 'semantic polarity' without drastically changing the meaning or grammaticality of the text, making the automated contrastive pair generation highly prone to noise.",
-      "Conceptual leap: Deductively/inductively coding an interview transcript results in sparse, high-level categorical labels. It is methodologically unclear how a structural concept graph of these sparse labels translates mathematically into a dense, continuous reward signal for token-level or sentence-level text generation.",
-      "Evaluation bottleneck: Relying on 'human historians' to evaluate logical consistency and counterfactual plausibility is expensive, subjective, and difficult to standardize into a rigorous, reproducible metric.",
-      "Methodological fragility in clustering: Applying a Dirichlet Process to LLM embedding spaces often results in semantically overlapping or nonsensical clusters. Without strong semantic constraints, 'emergent concepts' will likely just be artifacts of linguistic noise or outliers.",
-      "Methodological mismatch: Bayesian Optimization (BO) is typically used for continuous or discrete low-dimensional hyperparameter tuning. Survey localization involves complex, high-dimensional, discrete combinatorial generation (phrasing, grammar, cultural idioms). Using a GP surrogate model over LLM-generated text embeddings is highly non-trivial and likely to fail without massive structural assumptions.",
-      "The evaluation metric 'correlation with expert human rankings' is standard but does not capture the psychometric validity of the adapted survey (e.g., does it actually measure the same underlying construct across cultures?).",
-      "Methodological dissonance: The Page-Hinkley test is traditionally designed for univariate, stationary data streams. Applying it to the high-dimensional, non-stationary hidden states of a Neural CDE requires significant adaptation and theoretical justification to control false alarm rates."
+      "Severe methodological gap: LLMs are discrete, auto-regressive text generators, whereas predictive coding relies on continuous, differentiable error signals. The proposal does not explain how the LLM generates 'continuous predictions' of neighbor states.",
+      "Major methodological flaw: NAS operates on a discrete, constrained search space of predefined blocks. An LLM generating 'counterfactual perturbations' will frequently output invalid architectures that cannot be compiled or trained, breaking the evaluation pipeline.",
+      "Critical methodological gap: The proposal assumes a 'lightweight, differentiable surrogate model' can accurately map discrete prompt embeddings to continuous performance metrics. However, the loss landscape of prompts is famously steep, noisy, and unpredictable, making it highly unlikely a simple surrogate can capture it accurately enough to guarantee convergence.",
+      "Soft-prompt tuning (Prefix-tuning) is listed as a baseline, but it is fundamentally different (continuous, requires backprop access) and will likely outperform this method, making the discrete evolutionary approach look weaker.",
+      "Severe methodological circularity: Using LLMs to evaluate LLMs for high-stakes scientific validity is highly susceptible to hallucination, sycophancy, and superficial reasoning. An LLM 'peer reviewer' cannot actually verify complex mathematical proofs or chemical stability.",
+      "Methodological bottleneck: Continuously maintaining and updating a global SVD projection matrix based on historical updates from thousands of edge devices introduces massive computational and communication overhead, defeating the purpose of lightweight PEFT.",
+      "Evaluating solely on NLI datasets (SNLI/MNLI) is insufficient for LLMs. The evaluation should test generative capabilities (e.g., summarization, dialogue) where catastrophic forgetting of global knowledge is more apparent.",
+      "Methodological circularity: Using an LLM to generate perturbation prompts and score the responses to detect an LLM creates a fragile arms race where the 'attacker' LLM just needs to be robust to the 'detector' LLM's prompts.",
+      "Using an LLM to 'analyze structural reports' is a black box explaining a black box. The LLM will likely identify spurious correlations between architectural features and fairness metrics without providing true causal explanations.",
+      "Methodological limitation: Dimensionality reduction techniques like t-SNE and UMAP are notorious for creating misleading visualizations. Basing an analysis of 'smooth' vs. 'rugged' landscapes on these 2D projections is scientifically unreliable."
     ],
     "scope": [
-      "Scope ambiguity: The proposal tries to tackle clinical NLP and assembly code analysis simultaneously. These domains have fundamentally different ontology structures (semantic vs. syntactic/control-flow), making a unified architecture highly complex to design and tune.",
       "The threat model is vaguely defined and potentially unrealistic. It assumes an adversary can embed hidden textual payloads into images (via typography or adversarial noise) that force the VLM to generate specific, predictable text, which contradicts how diffusion or attention-based captioning models typically process visual inputs.",
       "Scope issue: Simultaneously introducing a novel steganographic method, a new attention masking mechanism, and a cross-lingual framework is overly ambitious. Cross-lingual generation adds immense complexity, especially for typologically diverse languages like Arabic and Chinese, which have different tokenization and generation challenges.",
       "Theoretical claims are overblown: Proposing a 'theoretical analysis of how non-unit sum normalization affects spatial feature aggregation' is a massive undertaking that likely exceeds the scope of a standard empirical systems paper.",
@@ -40,19 +39,20 @@
       "Scope: Deriving new threshold conditions for a completely unified CV-DV framework is a massive theoretical undertaking that might lack the rigor needed if attempted alongside numerical simulations.",
       "Scope: The 'discarded' states from magic state distillation are highly entangled multi-qubit states (e.g., the output of a failed distillation factory). Modeling this as a single density matrix coupled to a three-level system ignores the massive overhead of entanglement distribution and routing required to interface the thermal machine with the failed states.",
       "LLMs are known to suffer from 'sycophancy' and mode collapse; self-play in an unconstrained social environment might lead to degenerate or highly unrealistic emergent behaviors rather than realistic societal simulations.",
-      "Scope creep: The idea tries to solve interpretability, unsupervised concept discovery, and RAG hallucination simultaneously. This makes the research trajectory scattered."
+      "Scope creep: The idea tries to solve interpretability, unsupervised concept discovery, and RAG hallucination simultaneously. This makes the research trajectory scattered.",
+      "The target correlation of >0.85 with human experts is unrealistically high for complex scientific domains, given the current limitations of LLM reasoning."
     ],
     "novelty": [
-      "The proposal conflates several distinct techniques (Bayesian filtering, affine-scaled masking, gating) without clearly defining their mathematical integration or how the 'prior context' is explicitly computed and updated.",
-      "Scope: The claim that this is a 'completely unexplored, isolated domain' ignores existing work on quantum metrology with error-correcting codes (e.g., approximate quantum error correction for sensing).",
-      "Novelty: The concatenation of bosonic codes (like cat or GKP) with surface codes is already a well-established concept. The proposal needs to clearly differentiate its 'unified framework' from standard concatenation.",
       "Novelty: The concept of using QEC codes to protect against specific noise while allowing a signal to accumulate is the core principle behind 'Quantum Error Correction for Metrology' (e.g., spin-squeezing with QEC, or sensing with bosonic codes). The specific contribution here (surface codes for transverse fields) might be a straightforward application of existing OQEC sensing theorems.",
       "Novelty: The idea of 'soft' or 'analog' decoding of GKP codes exists in the literature (e.g., using analog information from GKP homodyne measurements to improve surface code decoding). This proposal might be overlapping with the concept of 'analog surface codes' or 'soft-decision decoding' of GKP codes.",
       "Constraining the explanation space to specific theories might limit the model's ability to pick up on novel or atypical indicators of student distress.",
       "Overfitting to a single historical trajectory: Maximizing reward for aligning with the 'actual historical trajectory' assumes the historical outcome was optimal. The model might penalize novel, potentially better counterfactual outcomes simply because they didn't happen.",
       "Concept Bottleneck Models require discrete, human-interpretable concepts, but psychological distress often manifests in continuous, overlapping, and highly contextual ways. Forcing text into predefined concepts (e.g., 'hopelessness') may lose critical nuance.",
       "Novelty concerns: The individual components\u2014Neural CDEs for irregular time series, dual-model architectures for drift detection, and RAG for summarization\u2014are all established techniques. The proposal is primarily an integration effort.",
-      "Lack of architectural novelty: Simply inserting a standard temporal attention mechanism into a Neural CDE is an incremental, straightforward engineering step. The proposal does not detail how the attention specifically interacts with the CDE's integral paths."
+      "Lack of architectural novelty: Simply inserting a standard temporal attention mechanism into a Neural CDE is an incremental, straightforward engineering step. The proposal does not detail how the attention specifically interacts with the CDE's integral paths.",
+      "The 'Novelty Score' calculated via embedding distance is a flawed proxy for scientific novelty. Truly novel ideas are often semantically distant from existing literature but still incorrect; conversely, incremental work might just use novel vocabulary.",
+      "The SCS relies on the assumption that LLMs lack pragmatic grounding, but advanced models (GPT-4, Claude 3) are increasingly role-playing consistently. The SCS might easily yield false negatives against state-of-the-art models or false positives against humans using AI-writing assistants.",
+      "Methodological limitation: The 'Incrementality Score' relies on the critic LLM's ability to synthesize and compare complex scientific concepts from retrieved papers. LLMs are notoriously poor at deep logical deduction and identifying subtle mathematical overlaps between distinct papers."
     ]
   }
 }
