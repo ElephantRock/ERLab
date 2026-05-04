@@ -3,6 +3,15 @@
 All notable changes to the Elephant Rock Research Platform are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [BATCH-64] - 2026-05-04
+
+### Added
+- `MechanicalMetricsCalculator` — 5 objective metrics (reference uniqueness, gap coverage, citation density, method specificity, prior art distance)
+- All metrics computable without LLM calls (HB-02), values in [0.0, 1.0] (HB-01)
+- Mechanical metrics integrated into idea generation pipeline stage
+- Metrics included in idea detail API response
+- 28 new tests (27 metrics + 1 integration)
+
 ## [BATCH-63] - 2026-05-04
 
 ### Added

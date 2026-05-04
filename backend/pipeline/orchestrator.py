@@ -32,6 +32,7 @@ from backend.pipeline.stages import (
     IdeaGenerationStage,
     IngestionStage,
     LiteratureSearchStage,
+    MechanicalMetricsStage,
     NoveltyCheckingStage,
     PipelineStage,
     ProposalSynthesisStage,
@@ -58,6 +59,7 @@ class PipelineOrchestrator:
         "idea_generation",
         "novelty_checking",
         "feasibility_scoring",
+        "mechanical_metrics",
         "proposal_synthesis",
         "export",
     ]
@@ -882,6 +884,7 @@ class PipelineOrchestrator:
             idea_stage,
             NoveltyCheckingStage(self._novelty, self._hooks),
             FeasibilityScoringStage(self._feasibility),
+            MechanicalMetricsStage(),
             ProposalSynthesisStage(
                 self._synthesizer,
                 self._governance_validator,

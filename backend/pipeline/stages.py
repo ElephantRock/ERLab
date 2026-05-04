@@ -738,6 +738,65 @@ class TreeSearchStage(PipelineStage):
         return None
 
 
+class MechanicalMetricsStage(PipelineStage):
+    """Compute objective mechanical metrics for each idea (BATCH-64).
+
+    Runs after feasibility scoring so that all prior data (ideas, papers,
+    gaps, novelty/feasibility reports) is available.  Metrics are stored
+    on ``ctx.result.mechanical_metrics`` and merged into the novelty_report
+    JSON during persistence — no schema change required.
+    """
+
+    def __init__(self):
+        self._calculator = None
+
+    @property
+    def name(self) -> str:
+        return "mechanical_metrics"
+
+    async def execute(self, ctx: StageContext) -> bool:
+        ideas = ctx.result.ideas
+        if not ideas:
+            return True
+
+        from backend.pipeline.evaluation.mechanical_metrics import MechanicalMetricsCalculator
+
+        if self._calculator is None:
+            self._calculator = MechanicalMetricsCalculator()
+
+        for i, idea in enumerate(ideas):
+            try:
+                # Build supporting_papers for this idea
+                cited_ids = set(getattr(idea, "supporting_papers", []) or [])
+                supporting = [p for p in ctx.all_papers if getattr(p, "id", None) in cited_ids]
+
+                metrics = self._calculator.compute_all(
+                    idea=idea,
+                    gaps=ctx.result.gaps,
+                    supporting_papers=supporting,
+                    all_domain_papers=ctx.all_papers,
+                )
+                ctx.result.mechanical_metrics[i] = metrics
+
+                # Compute and log composite score (informational)
+                novelty = ctx.result.novelty_reports.get(i)
+                feasibility = ctx.result.feasibility_reports.get(i)
+                llm_score = getattr(idea, "score", 0.0)
+                nov_score = novelty.overall_score if novelty else 0.0
+                feas_score = (feasibility.overall_score / 10.0) if feasibility else 0.0
+                mech_avg = sum(metrics.values()) / len(metrics) if metrics else 0.0
+                composite = 0.4 * llm_score + 0.3 * mech_avg + 0.3 * (nov_score + feas_score) / 2
+                logger.info(
+                    "Mechanical metrics for '%s': composite=%.3f, metrics=%s",
+                    idea.title[:50], composite, metrics,
+                )
+            except Exception as e:
+                logger.warning(
+                    "Failed to compute mechanical metrics for idea %d: %s", i, e,
+                )
+        return True
+
+
 class ExportStage(PipelineStage):
     def __init__(self, export_service):
         self._export = export_service

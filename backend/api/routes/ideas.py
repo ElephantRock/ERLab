@@ -119,6 +119,13 @@ async def get_idea(idea_id: int):
         if not idea:
             raise NotFoundError("Idea not found")
         proposal = get_proposal_by_idea(session, idea.id)
+
+        # Extract mechanical_metrics from novelty_report JSON (BATCH-64)
+        novelty_report_raw = json.loads(idea.novelty_report) if idea.novelty_report else None
+        mechanical_metrics = None
+        if isinstance(novelty_report_raw, dict):
+            mechanical_metrics = novelty_report_raw.pop("mechanical_metrics", None)
+
         return {
             "idea": {
                 "id": idea.id,
@@ -131,10 +138,11 @@ async def get_idea(idea_id: int):
                 "feasibility_score": idea.feasibility_score,
                 "overall_score": idea.overall_score,
                 "source_gap_ids": json.loads(idea.source_gap_ids) if idea.source_gap_ids else None,
-                "novelty_report": json.loads(idea.novelty_report) if idea.novelty_report else None,
+                "novelty_report": novelty_report_raw,
                 "feasibility_report": json.loads(idea.feasibility_report)
                 if idea.feasibility_report
                 else None,
+                "mechanical_metrics": mechanical_metrics,
                 "proposal_md": proposal.content_md if proposal else None,
                 "proposal_latex": proposal.content_latex if proposal else None,
                 "proposal_sections": (

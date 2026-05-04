@@ -159,34 +159,41 @@ class PipelinePersistence:
                         pipeline_run_id=db_run_id,
                     )
                     if nov or feas:
+                        # Build novelty report dict
+                        nov_dict = None
+                        if nov:
+                            nov_dict = {
+                                "method_novelty": nov.method_novelty,
+                                "problem_novelty": nov.problem_novelty,
+                                "domain_transfer": nov.domain_transfer,
+                                "combination_novelty": nov.combination_novelty,
+                                "novelty_arguments": nov.novelty_arguments,
+                            }
+                        # Merge mechanical metrics into novelty report (BATCH-64)
+                        mech = result.mechanical_metrics.get(i)
+                        if mech and nov_dict is not None:
+                            nov_dict["mechanical_metrics"] = mech
+                        elif mech and nov_dict is None:
+                            nov_dict = {"mechanical_metrics": mech, "overall_score": None}
+
+                        feas_dict = None
+                        if feas:
+                            feas_dict = {
+                                "data_availability": feas.data_availability,
+                                "computational_requirements": feas.computational_requirements,
+                                "methodological_complexity": feas.methodological_complexity,
+                                "evaluation_plan": feas.evaluation_plan,
+                                "reasoning": feas.reasoning,
+                                "estimated_timeline": feas.estimated_timeline,
+                            }
+
                         crud.update_idea_scores(
                             session,
                             db_idea.id,
                             novelty_score=nov.overall_score if nov else None,
                             feasibility_score=feas.overall_score if feas else None,
-                            novelty_report=json.dumps(
-                                {
-                                    "method_novelty": nov.method_novelty,
-                                    "problem_novelty": nov.problem_novelty,
-                                    "domain_transfer": nov.domain_transfer,
-                                    "combination_novelty": nov.combination_novelty,
-                                    "novelty_arguments": nov.novelty_arguments,
-                                }
-                            )
-                            if nov
-                            else None,
-                            feasibility_report=json.dumps(
-                                {
-                                    "data_availability": feas.data_availability,
-                                    "computational_requirements": feas.computational_requirements,
-                                    "methodological_complexity": feas.methodological_complexity,
-                                    "evaluation_plan": feas.evaluation_plan,
-                                    "reasoning": feas.reasoning,
-                                    "estimated_timeline": feas.estimated_timeline,
-                                }
-                            )
-                            if feas
-                            else None,
+                            novelty_report=json.dumps(nov_dict) if nov_dict else None,
+                            feasibility_report=json.dumps(feas_dict) if feas_dict else None,
                         )
         except Exception as e:
             logger.warning("Failed to persist ideas: %s", e)

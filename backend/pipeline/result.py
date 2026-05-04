@@ -30,6 +30,7 @@ class PipelineResult:
     critique_history: dict[int, list] = field(default_factory=dict)
     refinement_history: dict[int, list[dict]] = field(default_factory=dict)
     evaluation_reports: dict[int, UnifiedEvaluationReport] = field(default_factory=dict)
+    mechanical_metrics: dict[int, dict[str, float]] = field(default_factory=dict)  # BATCH-64
     run_id: str = ""
     params_used: dict = field(default_factory=dict)
     persistence_warnings: list[str] = field(default_factory=list)
