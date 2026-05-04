@@ -109,7 +109,7 @@ class OpenAlexSource(AcademicSearchSource):
                 Author(name=a.get("author", {}).get("display_name", "Unknown")) for a in authorships
             ],
             year=data.get("publication_year"),
-            venue=(data.get("primary_location") or {}).get("source", {}).get("display_name"),
+            venue=((data.get("primary_location") or {}).get("source") or {}).get("display_name"),
             citation_count=data.get("cited_by_count"),
             url=data.get("id"),
             doi=doi_url.replace("https://doi.org/", "") if doi_url else None,

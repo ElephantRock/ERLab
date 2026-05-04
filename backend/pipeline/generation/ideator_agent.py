@@ -58,6 +58,12 @@ class IdeatorAgent:
         )
 
         try:
+            if not hasattr(self._provider, 'structured_output'):
+                logger.error(
+                    "IdeatorAgent._provider is %s (type: %s), not an LLMProvider!",
+                    self._provider, type(self._provider).__name__,
+                )
+                return []
             result = await self._provider.structured_output(
                 messages=[
                     {
@@ -105,7 +111,7 @@ class IdeatorAgent:
             return ideas
 
         except Exception as e:
-            logger.error("IdeatorAgent failed: %s", e)
+            logger.error("IdeatorAgent failed: %s", e, exc_info=True)
             return []
 
     @staticmethod

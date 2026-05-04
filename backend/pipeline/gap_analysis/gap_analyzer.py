@@ -76,6 +76,12 @@ class GapAnalyzer:
         )
 
         try:
+            if not hasattr(self._provider, 'structured_output'):
+                logger.error(
+                    "GapAnalyzer._provider is %s (type: %s), not an LLMProvider!",
+                    self._provider, type(self._provider).__name__,
+                )
+                return [], cluster_report
             result = await self._provider.structured_output(
                 messages=[
                     {"role": "system", "content": f"You are a {domain} research analyst."},
@@ -168,7 +174,7 @@ class GapAnalyzer:
             return sorted(gaps, key=lambda g: g.confidence, reverse=True), cluster_report
 
         except Exception as e:
-            logger.error("Gap analysis LLM call failed: %s", e)
+            logger.error("Gap analysis LLM call failed: %s", e, exc_info=True)
             return [], cluster_report
 
     @staticmethod

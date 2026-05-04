@@ -1,15 +1,15 @@
-# From Self-Play to Self-Critique: A Survey of Seven Self-Improvement Architectures for AI Agents and a Research Agenda for What Comes Next
+# From Self-Play to Self-Critique: A Survey of Self-Improvement Architectures for AI Agents — Including the Karpathy Loop — and a Research Agenda for What Comes Next
 
-**Elephant Rock Research Platform — Survey & Position Paper**  
+**Elephant Rock Research Platform — Survey & Position Paper, v2**  
 **Date:** May 2026  
 
 ---
 
 ## Abstract
 
-The capacity for self-improvement is widely regarded as a prerequisite for artificial general intelligence, yet the landscape of self-improving AI systems remains fragmented across disconnected research traditions. This paper surveys seven prominent architectures for AI agent self-improvement — R-Zero (GRPO-based self-play), ADAS (automated agent design search), TextGrad (textual gradient descent), FUNSearch (evolutionary program search in function space), EvoPrompt (evolutionary prompt optimization), Self-Refine (iterative self-feedback), and Reflexion (verbal reinforcement learning) — and synthesizes findings from an automated analysis of 382 research papers conducted by the Elephant Rock multi-agent research platform. We identify ten significant research gaps spanning theoretical foundations, evaluation methodology, and cross-system integration, and propose five high-priority research directions derived from multi-agent ideation with Borda tournament ranking. Our analysis reveals that while evolutionary and gradient-inspired approaches (EvoPrompt, TextGrad, Reflexion) show the most immediate promise for practical self-improvement, two systems — R-Zero and ADAS — were previously triaged as low-priority. We critically assess whether this triage was warranted and argue that the field urgently needs unified evaluation benchmarks, architectural auditing frameworks for self-modifying systems, and theoretical foundations connecting discrete prompt optimization to continuous optimization theory.
+The capacity for self-improvement is widely regarded as a prerequisite for artificial general intelligence, yet the landscape of self-improving AI systems remains fragmented across disconnected research traditions. This paper surveys eight architectures for AI agent self-improvement — the seven systems previously analyzed by the Elephant Rock platform (R-Zero, ADAS, TextGrad, FUNSearch, EvoPrompt, Self-Refine, Reflexion) and the Karpathy autoresearch loop, which we argue constitutes a distinct and underappreciated self-improvement paradigm operating at the code level. We also identify systems the initial survey missed: STaR/Quiet-STaR (self-taught reasoning via rationale generation), SPIN (self-play fine-tuning), and the broader connection between self-play and multi-agent coordination. Our analysis is grounded in an automated examination of 382 research papers conducted by the Elephant Rock multi-agent research platform, supplemented by a critical external review. We identify ten research gaps spanning theoretical foundations, evaluation methodology, and cross-system integration, and propose six high-priority research directions. Our central argument has evolved: the field's most urgent bottleneck is not ideation but *evaluation infrastructure*, and the most underexplored opportunity is not any single system but the *composition* of self-improvement mechanisms across levels — from code to prompts to architectures to behaviors.
 
-**Keywords:** self-improving AI agents, automated research, evolutionary optimization, neural architecture search, multi-agent systems, prompt optimization, verbal reinforcement learning
+**Keywords:** self-improving AI agents, autoresearch loop, self-play, evolutionary optimization, neural architecture search, multi-agent systems, prompt optimization, verbal reinforcement learning, automated research
 
 ---
 
@@ -17,9 +17,11 @@ The capacity for self-improvement is widely regarded as a prerequisite for artif
 
 The dream of AI systems that improve themselves — without explicit human reprogramming — is as old as the field of artificial intelligence itself. From Arthur Samuel's checker-playing program (1959) to contemporary large language models (LLMs) that critique and revise their own outputs, self-improvement has been a persistent theme. Yet the modern resurgence of interest in self-improving AI agents is qualitatively different from earlier work. The scale of foundation models, the sophistication of multi-agent orchestration, and the emergence of automated research pipelines have created a landscape in which self-improvement is no longer a curiosity but an engineering imperative.
 
+In March 2026, Andrej Karpathy released *autoresearch* — a deceptively simple system in which an AI agent autonomously modifies a GPT training script, runs it for 5 minutes, checks whether performance improved, and keeps or discards the change. In two days, a single agent ran 700 experiments, discovered 20 optimizations, and achieved an 11% speedup on already-optimized code. The repository reached 26,000 GitHub stars in under a week. Karpathy's autoresearch is important not because of what it optimizes (a single training script) but because of the *pattern* it demonstrates: **Modify → Verify → Keep/Discard → Repeat**, with constraint as enabler, mechanical metrics as arbiter, and git as memory.
+
 This paper addresses a specific question: *What are the most promising architectural approaches for building AI agents that improve their own performance, and where are the critical gaps that the research community should prioritize?*
 
-To answer this, we survey seven systems that represent the current frontier of AI agent self-improvement:
+To answer this, we survey eight systems that represent the current frontier of AI agent self-improvement:
 
 1. **R-Zero** — DeepMind's GRPO-based self-play system for mathematical reasoning
 2. **ADAS** — Automated Design of Agentic Systems, which uses meta-search over agent architectures
@@ -28,122 +30,165 @@ To answer this, we survey seven systems that represent the current frontier of A
 5. **EvoPrompt** — Evolutionary algorithms applied to discrete prompt optimization
 6. **Self-Refine** — Iterative self-feedback loops where an LLM critiques and revises its own outputs
 7. **Reflexion** — Verbal reinforcement learning where agents maintain reflective memory traces
+8. **The Karpathy Loop (Autoresearch)** — Code-level self-improvement through autonomous experimentation with mechanical verification
 
-These seven systems span a wide design space: from continuous optimization metaphors (TextGrad) to evolutionary search (FUNSearch, EvoPrompt), from self-play (R-Zero) to self-critique (Self-Refine, Reflexion), and from prompt-level optimization to full architectural search (ADAS).
+We also discuss systems that were absent from the initial survey but are critical to the full picture: STaR and Quiet-STaR (self-taught reasoning), SPIN (self-play fine-tuning), and Constitutional AI's self-play dynamics.
 
-Our analysis is grounded in empirical findings generated by the Elephant Rock research platform — a multi-agent system that autonomously discovers research gaps in academic literature, generates novel research ideas through structured Ideator-Critic-Refiner debate, and evaluates them through novelty checking and feasibility scoring. This platform analyzed 382 papers, identified 10 research gaps, and produced 10 ranked research ideas. We synthesize these findings into a coherent survey and position statement.
+Our analysis is grounded in empirical findings generated by the Elephant Rock research platform and has been critically revised in response to external review (see Methodology, Section 3). This revision addresses several blind spots in the initial analysis: an underappreciation of self-play as a general meta-learning paradigm, missing systems, the need for cost-effectiveness metrics, and the overlooked connection between ADAS and the AutoML literature.
 
 The contributions of this paper are:
 
-- A concise survey of seven self-improvement architectures, situating them in a unified design space (Section 2)
-- A transparent description of the automated methodology used to generate our findings (Section 3)
+- A survey of eight self-improvement architectures situated in a unified design space, including cost-effectiveness analysis (Section 2)
+- A transparent description of the automated methodology and its limitations (Section 3)
 - A thematic analysis of 10 research gaps with confidence-weighted assessment (Section 4)
-- Five prioritized research directions derived from multi-agent ranking (Section 5)
+- Six prioritized research directions incorporating critical feedback (Section 5)
 - Architecture recommendations for future self-improving agent systems (Section 6)
-- A critical reassessment of the triage decisions regarding R-Zero and ADAS (Section 7)
+- A reassessment of the triage decisions regarding R-Zero and ADAS, now with a more nuanced position (Section 7)
 
 ---
 
-## 2. Background: Seven Systems for Self-Improvement
+## 2. Background: Eight Systems for Self-Improvement
 
-The seven systems examined in this survey represent distinct points in the design space of self-improving AI. We organize them along two axes: **what is being optimized** (prompts, outputs, programs, or architectures) and **how optimization occurs** (gradient-inspired, evolutionary, self-critique, or self-play).
+The eight systems examined in this survey represent distinct points in the design space of self-improving AI. We organize them along three axes: **what is being optimized** (code, prompts, outputs, programs, architectures, or behaviors), **how optimization occurs** (evolutionary, gradient-inspired, self-critique, self-play, or autonomous experimentation), and **cost-effectiveness** (improvement per unit of computation).
 
 ### 2.1 R-Zero: GRPO Self-Play for Mathematical Reasoning
 
 R-Zero, introduced by DeepMind, applies Group Relative Policy Optimization (GRPO) — a variant of reinforcement learning from AI feedback (RLAIF) — to enable an LLM to improve its mathematical reasoning through self-play. The model generates multiple solution attempts for a given problem, groups them by relative quality, and uses the group structure as a reward signal to update its policy without external human annotation.
 
-**What is optimized:** The model's internal policy for chain-of-thought reasoning.
-**How:** Self-play with group-relative reward signals (GRPO).
-**Strengths:** Eliminates the need for human-annotated reasoning traces; demonstrates that pure self-play can drive substantial improvements in mathematical reasoning benchmarks.
-**Limitations:** Highly domain-specific (mathematical reasoning with verifiable answers); requires expensive compute for self-play rollouts; unclear how well GRPO transfers to domains without clean verifiability.
+**What is optimized:** The model's internal policy for chain-of-thought reasoning.  
+**How:** Self-play with group-relative reward signals (GRPO).  
 
-R-Zero represents the most ambitious form of self-improvement — modifying the model's own parameters through self-generated training signals. However, this ambition comes at a cost: it is resource-intensive and narrowly applicable.
+R-Zero represents the most ambitious form of self-improvement — modifying the model's own parameters through self-generated training signals. The self-play paradigm it embodies is far more general than its current application to mathematical reasoning suggests. As we argue in Section 7, self-play dynamics appear in SPIN (where the model's previous iteration serves as opponent), Constitutional AI (where reward models are bootstrapped from self-judgments), and multi-agent environments like XLand. The connection between self-play and the highest-confidence gap in our analysis — multi-agent coordination (0.95) — is stronger than the initial survey acknowledged.
 
 ### 2.2 ADAS: Automated Design of Agentic Systems
 
-ADAS approaches self-improvement at the architectural level. Rather than optimizing prompts or outputs, ADAS searches over the space of possible agent architectures — the composition of modules, control flow, and tool use — to discover novel agent designs. The system uses meta-search (often with LLM-generated candidates) to explore the combinatorial space of agent topologies.
+ADAS approaches self-improvement at the architectural level. Rather than optimizing prompts or outputs, ADAS searches over the space of possible agent architectures — the composition of modules, control flow, and tool use — to discover novel agent designs.
 
-**What is optimized:** The agent's architecture itself (module composition, control flow).
-**How:** Meta-search over architectural candidates, evaluated on task performance.
-**Strengths:** Can discover non-obvious architectural innovations that human designers might miss; directly addresses the question of *which self-improvement architecture is best*.
-**Limitations:** The search space is vast and poorly characterized; evaluation is expensive and noisy; discovered architectures can be brittle or difficult to interpret.
+**What is optimized:** The agent's architecture itself (module composition, control flow).  
+**How:** Meta-search over architectural candidates, evaluated on task performance.  
 
-ADAS is conceptually important because it asks whether the *architecture of self-improvement itself* can be automated. However, the practical challenges are substantial.
+ADAS raises the most important long-term question in self-improvement research: *can the architecture of self-improvement itself be automated?* However, it faces a vast, poorly characterized search space with expensive and noisy evaluation. As noted in the DeepSeek critique of our initial analysis, the connection between ADAS and the broader AutoML literature — particularly differentiable architecture search (DARTS) and weight-sharing methods — was underexplored. These techniques could potentially reduce the search cost of ADAS-type systems by applying continuous relaxation to architectural spaces, a direction that might rehabilitate ADAS sooner than our initial triage suggested.
 
 ### 2.3 TextGrad: Textual Gradient Descent
 
-TextGrad treats LLM outputs as points in a "textual" space and applies an optimization procedure inspired by gradient descent. The system generates a "textual gradient" — a natural-language characterization of how an output should change to improve its quality — and uses this signal to revise the output iteratively. The "gradient" is computed by a separate LLM call that evaluates the output against a loss function.
+TextGrad treats LLM outputs as points in a "textual" space and applies an optimization procedure inspired by gradient descent. The system generates a "textual gradient" — a natural-language characterization of how an output should change to improve its quality — and uses this signal to revise the output iteratively.
 
-**What is optimized:** Textual outputs (code, answers, explanations).
-**How:** Gradient-inspired descent in text space, using LLM-generated "textual gradients."
-**Strengths:** Conceptually elegant; generalizes across tasks; no retraining required; composes naturally with existing LLM pipelines.
-**Limitations:** The metaphor of "gradients" in discrete text space is informal — there is no formal convergence theory; the quality of textual gradients depends heavily on the evaluator LLM; can be expensive in terms of token consumption.
+**What is optimized:** Textual outputs (code, answers, explanations).  
+**How:** Gradient-inspired descent in text space, using LLM-generated "textual gradients."  
 
-TextGrad is notable for bridging the vocabulary of continuous optimization with the discrete reality of language. It has been applied to code optimization, question answering, and scientific hypothesis refinement.
+TextGrad is notable for bridging the vocabulary of continuous optimization with the discrete reality of language. However, the metaphor of "gradients" in discrete text space is informal — there is no formal convergence theory, and the quality of textual gradients depends heavily on the evaluator LLM.
 
 ### 2.4 FUNSearch: Evolutionary Program Search in Function Space
 
-FUNSearch, also from DeepMind, applies evolutionary search to the space of computer programs. Given a problem specification, FUNSearch maintains a population of candidate programs, evaluates them on the target task, and evolves better solutions through mutation and selection. Critically, it operates on *programs written in code* rather than natural-language prompts, enabling precise evaluation and compositional search.
+FUNSearch, also from DeepMind, applies evolutionary search to the space of computer programs. Given a problem specification, FUNSearch maintains a population of candidate programs, evaluates them on the target task, and evolves better solutions through mutation and selection.
 
-**What is optimized:** Computer programs (code) that solve specified tasks.
-**How:** Evolutionary search with LLM-guided mutation and program-level selection.
-**Strengths:** Produces executable, verifiable programs; has discovered novel mathematical constructions (e.g., new cap set bounds); bridges LLM creativity with formal verification.
-**Limitations:** Requires well-defined problem specifications with automated evaluation; evolutionary search can be slow and compute-intensive; discovered programs may be difficult to interpret.
+**What is optimized:** Computer programs (code) that solve specified tasks.  
+**How:** Evolutionary search with LLM-guided mutation and program-level selection.  
 
-FUNSearch represents perhaps the most concrete achievement of self-improvement systems to date, having produced results that constitute genuine mathematical discoveries.
+FUNSearch represents perhaps the most concrete achievement of self-improvement systems to date, having produced results that constitute genuine mathematical discoveries (new cap set bounds). It demonstrates that self-improvement can yield verifiable, peer-reviewable scientific contributions.
 
 ### 2.5 EvoPrompt: Evolutionary Prompt Optimization
 
-EvoPrompt applies evolutionary algorithms — genetic algorithms and differential evolution — to the discrete space of LLM prompts. A population of candidate prompts is maintained, and prompts are evolved through crossover and mutation operators that operate on text. Fitness is evaluated by running prompts against target tasks and measuring performance.
+EvoPrompt applies evolutionary algorithms — genetic algorithms and differential evolution — to the discrete space of LLM prompts. A population of candidate prompts is evolved through crossover and mutation operators that operate on text, with fitness evaluated by running prompts against target tasks.
 
-**What is optimized:** Discrete text prompts for LLMs.
-**How:** Evolutionary algorithms (genetic algorithms, differential evolution) with text-aware operators.
-**Strengths:** Does not require gradient access; works with any LLM via API; can discover non-obvious prompt formulations; theoretically grounded in evolutionary computation.
-**Limitations:** The discrete nature of text makes the loss landscape rugged and poorly understood; sample efficiency is low compared to gradient-based methods; no formal convergence guarantees.
+**What is optimized:** Discrete text prompts for LLMs.  
+**How:** Evolutionary algorithms with text-aware crossover and mutation operators.  
 
-EvoPrompt occupies an important niche: it is one of the few self-improvement methods that works with any LLM without requiring parameter access, making it widely accessible. However, as our gap analysis reveals (Section 4), the theoretical foundations of discrete prompt optimization remain severely underdeveloped.
+EvoPrompt is one of the few self-improvement methods that works with any LLM without requiring parameter access, making it widely accessible. However, the discrete nature of text makes the loss landscape rugged, and sample efficiency is low compared to gradient-based methods.
 
 ### 2.6 Self-Refine: Iterative Self-Feedback
 
-Self-Refine is perhaps the simplest self-improvement architecture conceptually: an LLM generates an output, critiques it, and then revises it based on the critique. This loop can be repeated for multiple rounds. The key insight is that the same model serves as generator, critic, and refiner — no external feedback signal is required.
+Self-Refine is conceptually the simplest self-improvement architecture: an LLM generates an output, critiques it, and then revises it based on the critique, with the loop repeated for multiple rounds. The same model serves as generator, critic, and refiner.
 
-**What is optimized:** Output quality through iterative revision.
-**How:** Self-generated feedback followed by self-revision in a multi-round loop.
-**Strengths:** Extremely simple to implement; requires no external tools, training, or architecture changes; works with any instruction-following LLM.
-**Limitations:** Performance gains are typically modest and saturate quickly; the model's ability to critique its own outputs is bounded by its own capabilities; can degenerate into repetitive refinements.
+**What is optimized:** Output quality through iterative revision.  
+**How:** Self-generated feedback followed by self-revision in a multi-round loop.  
 
-Self-Refine is widely used as a component in larger systems but rarely serves as the sole self-improvement mechanism. Its simplicity is both its strength and its limitation.
+Self-Refine is widely used as a component in larger systems but rarely serves as the sole self-improvement mechanism. Its simplicity is both its strength and its limitation — improvement saturates quickly because the model's ability to critique its own outputs is bounded by its own capabilities.
 
 ### 2.7 Reflexion: Verbal Reinforcement Learning
 
-Reflexion extends the self-critique paradigm by maintaining a persistent memory of past experiences in natural language. After attempting a task, the agent generates a verbal reflection — a natural-language summary of what went wrong and how to improve. These reflections are stored and retrieved in future episodes, allowing the agent to learn from its mistakes over time.
+Reflexion extends the self-critique paradigm by maintaining a persistent memory of past experiences in natural language. After attempting a task, the agent generates a verbal reflection — a natural-language summary of what went wrong and how to improve. These reflections are stored and retrieved in future episodes.
 
-**What is optimized:** Agent behavior through accumulated verbal experience.
-**How:** Natural-language reflections stored in episodic memory and retrieved as context for future decisions.
-**Strengths:** Requires no parameter updates; creates interpretable learning trajectories; can accumulate knowledge across episodes; naturally composable with tool use and planning.
-**Limitations:** Memory can become noisy and unbounded; retrieval of relevant reflections is a non-trivial problem; performance depends on the quality of verbal reflections, which can degrade in complex tasks.
+**What is optimized:** Agent behavior through accumulated verbal experience.  
+**How:** Natural-language reflections stored in episodic memory and retrieved as context for future decisions.  
 
-Reflexion is arguably the most practically deployed self-improvement architecture in agentic systems. Its integration of memory, reflection, and action makes it a natural foundation for autonomous research agents, coding assistants, and multi-step reasoning systems.
+Reflexion is arguably the most practically deployed self-improvement architecture in agentic systems. Its integration of memory, reflection, and action makes it a natural foundation for autonomous research agents and multi-step reasoning systems.
 
-### 2.8 Design Space Summary
+### 2.8 The Karpathy Loop: Code-Level Self-Improvement
 
-| System | Optimization Target | Mechanism | Requires Parameter Access | Requires External Reward | Scalability |
-|:---|:---|:---|:---|:---|:---|
-| R-Zero | Internal policy | GRPO self-play | Yes | No (self-supervised) | Low (compute-heavy) |
-| ADAS | Agent architecture | Meta-search | Varies | Yes (task performance) | Low (search space) |
-| TextGrad | Textual outputs | Textual gradient descent | No | Yes (loss function) | Medium |
-| FUNSearch | Programs (code) | Evolutionary search | No | Yes (program evaluation) | Medium |
-| EvoPrompt | Discrete prompts | Evolutionary algorithms | No | Yes (task evaluation) | Medium-High |
-| Self-Refine | Output quality | Self-critique + revision | No | No (self-supervised) | High |
-| Reflexion | Agent behavior | Verbal memory + reflection | No | Yes (task feedback) | High |
+In March 2026, Andrej Karpathy released *autoresearch* — a system that embodies a self-improvement paradigm fundamentally different from the seven systems above. Rather than optimizing prompts, outputs, or architectures through LLM-based reasoning, the Karpathy loop optimizes *code itself* through autonomous experimentation with mechanical verification.
 
-The table reveals a clear trade-off: systems that require parameter access (R-Zero, partially ADAS) tend to be more powerful but less scalable, while systems that operate purely at the prompt/output level (Self-Refine, Reflexion, EvoPrompt) are more accessible but may have weaker improvement ceilings.
+The core loop is elegantly simple:
+
+```
+LOOP FOREVER:
+  1. Read current code state + experiment history
+  2. Hypothesize an improvement
+  3. Modify the code (one atomic change)
+  4. Commit to git
+  5. Run training for 5 minutes
+  6. Evaluate: val_bpb improved?
+  7. If yes → keep. If no → git revert.
+  8. Log results. Repeat.
+```
+
+**What is optimized:** The training code itself (architecture, hyperparameters, optimizer, training loop).  
+**How:** Autonomous experimentation with mechanical verification and automatic rollback.  
+
+The Karpathy loop rests on seven universal principles, generalized by Udit Goenka's Claude Autoresearch into a domain-agnostic framework:
+
+| # | Principle | Karpathy Expression | Generalized |
+|---|---|---|---|
+| 1 | Constraint = Enabler | 630-line file, 5-min budget, one metric | Bounded scope that fits agent context |
+| 2 | Strategy ≠ Tactics | Human writes program.md, agent codes train.py | Human sets Goal/Metric, agent iterates |
+| 3 | Mechanical Metrics | val_bpb — unambiguous scalar | Any command that outputs a number |
+| 4 | Fast Verification | 5-min training cycle (~12 experiments/hour) | Seconds-level verify commands |
+| 5 | Iteration Cost → Behavior | 5-min cost enables bold exploration | <30s cost enables even bolder exploration |
+| 6 | Git as Memory | Experimental branches, date-tagged commits | `experiment:` prefix commits, `git revert` preserves history |
+| 7 | Honest Limitations | Cannot change tokenizer or evaluation | Explicitly states constraints at setup |
+
+**Why this matters for self-improvement research:** The Karpathy loop is not merely a tool for ML training optimization. It is a *meta-self-improvement system* — a system that improves the code that defines how other systems improve. Its key innovation is not technical but philosophical: it demonstrates that the most effective form of self-improvement may not involve sophisticated reasoning about *how* to improve, but rather disciplined, high-velocity experimentation with *mechanical* feedback. The agent does not need to understand *why* a change works — only that it does.
+
+The Claude Autoresearch extension generalizes this into 10 subcommands (plan, debug, fix, security, ship, scenario, predict, learn, reason, and the core loop) that apply the same principles to any domain with a measurable metric. The `/autoresearch:reason` command is particularly relevant: it implements adversarial refinement with blind judge panels for subjective domains — essentially a Borda tournament for domains where no objective metric exists, directly paralleling the Elephant Rock platform's own convergence mechanism.
+
+**Relationship to other systems:** The Karpathy loop operates at a different level than the other seven systems. While R-Zero modifies model parameters, EvoPrompt optimizes prompts, and Reflexion accumulates behavioral memory, the Karpathy loop modifies the *code* that implements these systems. It is, in effect, a self-improvement system for self-improvement systems — a meta-layer that could be applied to optimize the implementation of any of the other seven architectures.
+
+### 2.9 Missing Systems: STaR, Quiet-STaR, SPIN, and Constitutional AI
+
+The initial survey omitted a family of self-improvement methods that bridge self-play and self-critique:
+
+**STaR (Self-Taught Reasoner):** Generates reasoning rationales for training examples, filters correct rationales, and uses them to fine-tune the model. The model bootstraps its own reasoning ability without external rationale annotations — a form of self-improvement through self-generated training data.
+
+**Quiet-STaR:** Extends STaR by training the model to generate internal rationales at *every token*, not just at question-answer boundaries. This produces continuous, implicit self-improvement during inference — a hybrid of self-play and self-critique that operates at the token level.
+
+**SPIN (Self-Play Fine-Tuning):** Uses the model's own previous iteration as an opponent in a self-play framework. The current model generates responses, the previous version provides the "baseline," and the model learns to distinguish its own outputs from human-written text. This is self-play applied to language modeling without external rewards.
+
+**Constitutional AI:** Anthropic's approach uses the model's own judgments to generate training data for a reward model, which is then used to improve the model. The self-play dynamics emerge from the model critiquing its own outputs against constitutional principles, then training on the self-generated preferences.
+
+These systems challenge the initial survey's framing of R-Zero as narrowly applicable. Self-play with learned reward signals is a *general meta-learning paradigm* that appears in multiple forms across the self-improvement landscape. The distinction between "self-play" (R-Zero, SPIN) and "self-critique" (Self-Refine, Reflexion) may be less fundamental than the initial survey suggested — both involve the model generating its own improvement signal, differing primarily in whether that signal modifies parameters or context.
+
+### 2.10 Design Space Summary
+
+| System | Optimization Target | Mechanism | Param Access? | External Reward? | Scalability | Improvement Ceiling | Cost per Unit Improvement |
+|:---|:---|:---|:---|:---|:---|:---|:---|
+| R-Zero | Internal policy | GRPO self-play | Yes | No (self-supervised) | Low | High (unbounded) | Very high (compute-heavy) |
+| ADAS | Agent architecture | Meta-search | Varies | Yes | Low | Very high (architectural) | Very high |
+| TextGrad | Textual outputs | Textual gradient descent | No | Yes (loss function) | Medium | Medium (bounded by critic) | Medium |
+| FUNSearch | Programs (code) | Evolutionary search | No | Yes (evaluation) | Medium | High (discoveries possible) | Medium-High |
+| EvoPrompt | Discrete prompts | Evolutionary algorithms | No | Yes (task eval) | Medium-High | Medium (landscape-dependent) | High (sample-inefficient) |
+| Self-Refine | Output quality | Self-critique + revision | No | No (self-supervised) | High | Low (bounded by model capability) | Low |
+| Reflexion | Agent behavior | Verbal memory + reflection | No | Yes (task feedback) | High | Medium (accumulates over episodes) | Low-Medium |
+| Karpathy Loop | Code | Autonomous experimentation | No | Yes (mechanical verify) | High | High (unbounded if metric exists) | Low (5-min cycles) |
+
+This expanded table reveals an important nuance absent from the initial survey: **scalability and improvement ceiling are not the same thing.** Self-Refine and Reflexion are highly scalable (no parameter access required) but have low-to-medium improvement ceilings because they are bounded by the model's own capabilities. The Karpathy loop is both scalable and has a high improvement ceiling because it operates on code (which can express arbitrarily complex optimizations) with mechanical verification (which provides unambiguous feedback). R-Zero and ADAS have the highest ceilings but the lowest scalability due to compute and search-space constraints.
+
+A cost-effectiveness metric — *improvement per unit of computation* — would further refine this analysis but requires standardized benchmarks that do not yet exist (see Section 4, Gap 4).
 
 ---
 
 ## 3. Methodology
 
-The findings in this paper were generated using the Elephant Rock research platform — a multi-agent AI system designed to automate the research ideation pipeline. This section describes the methodology transparently to enable assessment of the reliability and limitations of our findings.
+The findings in this paper were generated using the Elephant Rock research platform — a multi-agent AI system designed to automate the research ideation pipeline — and then critically revised based on external review. This section describes the methodology transparently to enable assessment of reliability and limitations.
 
 ### 3.1 Automated Literature Search
 
@@ -163,32 +208,33 @@ Research ideas were generated through a structured multi-agent debate loop:
 2. **CriticAgent**: Evaluates ideas using metacognitive strategy selection, producing structured critiques with strengths, weaknesses, prior art concerns, and feasibility concerns.
 3. **RefinerAgent**: Strengthens ideas based on critiques, producing refined proposals with scores and domain assignments.
 
-This loop runs for multiple rounds with impasse detection (duplicate ideas, identical critiques, score plateaus, low diversity) and automated resolution (constraint injection, perspective shifts, temperature adjustments). Convergence is detected via **Borda tournament** — an approach inspired by ICLR 2026 patterns where blind judge agents rank competing proposals and an incumbent competes as an equal option to prevent scope creep.
+This loop runs for multiple rounds with impasse detection (duplicate ideas, identical critiques, score plateaus, low diversity) and automated resolution (constraint injection, perspective shifts, temperature adjustments). Convergence is detected via **Borda tournament** — where blind judge agents rank competing proposals and an incumbent competes as an equal option to prevent scope creep. This mechanism parallels the `/autoresearch:reason` command's adversarial refinement protocol with blind judge panels.
 
-### 3.4 Novelty Checking
+### 3.4 Novelty Checking and Feasibility Scoring
 
-Each generated idea undergoes semantic novelty checking against the indexed literature. A novelty report assesses method novelty, problem novelty, domain transfer potential, and combination novelty on 0–1 scales, with written arguments defending the assessment. Ideas scoring below a novelty threshold are filtered.
+Each generated idea undergoes semantic novelty checking against the indexed literature, with novelty reports assessing method novelty, problem novelty, domain transfer potential, and combination novelty on 0–1 scales. Feasibility is scored across data availability, computational requirements, methodological complexity, evaluation plan quality, and estimated timeline.
 
-### 3.5 Feasibility Scoring
+### 3.5 Critical Revisions Based on External Review
 
-Ideas are scored for feasibility across five dimensions:
+The initial version of this paper was subjected to critical external review, which identified several blind spots that this revision addresses:
 
-- **Data availability** (1–10): Are necessary datasets publicly accessible?
-- **Computational requirements** (1–10): Can the research be conducted with reasonable compute?
-- **Methodological complexity** (1–10): Can the methodology be implemented within a realistic timeframe?
-- **Evaluation plan** (1–10): Is there a clear, rigorous evaluation strategy?
-- **Estimated timeline**: Realistic time to completion.
+1. **Echo chamber risk:** The Ideator-Critic-Refiner loop may converge to ideas that are plausible-sounding within the retrieved literature but miss paradigm-shifting insights, because novelty is assessed relative to an existing corpus. Truly disruptive ideas often have low surface similarity to past work. We have added this as a known limitation and recommend human-in-the-loop sanity checks on top-ranked ideas.
 
-An overall score (0–1) is computed as a weighted combination of novelty and feasibility.
+2. **Confidence score calibration:** The gap confidence values (0.82–0.95) are generated by an LLM. Without calibration against human expert ratings, these numbers should be treated as ordinal indicators (ranking), not true probabilities. We have clarified this throughout the paper.
 
-### 3.6 Limitations of the Methodology
+3. **Missing systems:** STaR, Quiet-STaR, SPIN, and Constitutional AI were absent from the initial survey, as was the Karpathy autoresearch loop. All are now included.
 
-We acknowledge several limitations:
+4. **Underdeveloped connections:** The links between R-Zero and multi-agent coordination, and between ADAS and AutoML/DARTS, were insufficiently explored. Both are now addressed.
 
-1. **Automated gap detection may miss nuances** that expert human researchers would identify. The confidence scores reflect the LLM's assessment, not ground truth.
-2. **Novelty checking is limited by the indexed literature.** If relevant papers were not retrieved during the search phase, novelty may be overestimated.
+### 3.6 Limitations
+
+We acknowledge the following limitations:
+
+1. **Automated gap detection may miss nuances** that expert human researchers would identify. The confidence scores are ordinal indicators, not calibrated probabilities.
+2. **Novelty checking is limited by the indexed literature.** If relevant papers were not retrieved, novelty may be overestimated.
 3. **Feasibility scores are approximations.** The actual difficulty of implementing novel research ideas is inherently uncertain.
-4. **The multi-agent debate process, while sophisticated, is still generating ideas within the distribution of its training data.** Truly paradigm-shifting ideas may not emerge from this process.
+4. **The multi-agent debate process may exhibit echo chamber effects,** converging on ideas that are plausible within the retrieved literature but not truly paradigm-shifting.
+5. **The Karpathy loop was not included in the original automated analysis** (382 papers). Our discussion of it is based on direct study of the autoresearch codebase and documentation.
 
 Despite these limitations, the methodology provides a systematic, reproducible, and transparent approach to research landscape analysis that complements — rather than replaces — human expert assessment.
 
@@ -204,9 +250,9 @@ The Elephant Rock platform identified 10 research gaps from the 382-paper corpus
 
 The highest-confidence gap identified (0.95) highlights a striking imbalance in the literature: the rich history of multi-agent reinforcement learning (MARL) has developed largely independently from the explosive growth of single-agent LLM capabilities. There is a fundamental disconnect between systems like R-Zero (which optimize single-agent reasoning) and the multi-agent coordination frameworks that would be needed to deploy self-improving agents in complex, decentralized environments.
 
-This gap is significant because most real-world applications of self-improving AI — from autonomous research assistants to distributed coding agents — will require multi-agent coordination. The seven systems surveyed in this paper are overwhelmingly single-agent in their design. Reflexion comes closest to addressing multi-agent settings through its verbal memory traces, but it was designed for single-agent episodic learning, not inter-agent coordination.
+This gap is more significant than the initial survey suggested. Self-play — the mechanism underlying R-Zero, SPIN, and Constitutional AI — is inherently a multi-agent dynamic. Understanding how self-play scales from single-agent self-improvement (R-Zero) to multi-agent coordination (the gap at 0.95) may be the most important theoretical question in the field. DeepMind's XLand and adA experiments demonstrate that multi-agent self-play in open-ended environments can produce diverse, emergent capabilities that no single-agent system achieves alone.
 
-The gap suggests that the field needs frameworks that allow LLM-based agents to communicate, coordinate, and collectively improve in decentralized settings without centralized orchestration.
+The seven systems surveyed (plus the Karpathy loop) are overwhelmingly single-agent in their design. Reflexion comes closest to multi-agent settings through its verbal memory traces, but it was designed for single-agent episodic learning. The Karpathy loop could theoretically be distributed (multiple agents optimizing different aspects of a shared codebase), but this has not been explored.
 
 ### 4.2 Theme 2: Evaluation, Benchmarking, and Safety of Self-Improving Systems
 
@@ -214,53 +260,49 @@ Three gaps cluster around the theme of evaluation and safety:
 
 **Gap: Standardized Evaluation Metrics for LLM-Driven Scientific Discovery** (Confidence: 0.92, Type: Methodological)
 
-Despite demonstrations like Coscientist (autonomous chemical research) and FUNSearch (discovering new mathematical constructions), there are no standardized benchmarks for evaluating the validity, novelty, and safety of AI-generated scientific outputs. This gap is particularly acute for self-improving systems: if an agent is modifying its own behavior, how do we rigorously evaluate whether the modifications are beneficial, harmful, or neutral?
+Despite demonstrations like Coscientist (autonomous chemical research) and FUNSearch (discovering new mathematical constructions), there are no standardized benchmarks for evaluating the validity, novelty, and safety of AI-generated scientific outputs. This is the *instrumentation gap* — the single most important bottleneck for the field. Without standardized evaluation, claims of self-improvement are difficult to verify, compare, or trust. Every other research direction depends on the ability to measure progress.
 
 **Gap: Explainability and Safety in Automated Architecture Search** (Confidence: 0.88, Type: Theoretical)
 
-As ADAS and related systems automatically discover new agent architectures, there is a critical gap in understanding *why* these architectures work and whether they encode harmful biases or vulnerabilities. This is the self-improvement equivalent of the alignment problem: a system that modifies its own architecture must be understood well enough to ensure safety.
+As ADAS and related systems automatically discover new agent architectures, there is a critical gap in understanding *why* these architectures work and whether they encode harmful biases or vulnerabilities. This is the self-improvement equivalent of the alignment problem.
 
 **Gap: AI-Specific Reporting Guidelines for Clinical and Educational Trials** (Confidence: 0.91, Type: Cross-domain)
 
-As LLM-based self-improving agents are deployed in high-stakes domains (medicine, education), there are no standardized reporting guidelines for evaluating these systems in human-subject research. This gap reflects the broader challenge of translating self-improvement research from benchmarks to real-world deployment.
+As LLM-based self-improving agents are deployed in high-stakes domains, there are no standardized reporting guidelines for evaluating these systems in human-subject research.
 
-**Theme assessment:** The aggregate confidence for this theme is high (0.92 average), reflecting a widely recognized need. The absence of standardized evaluation is arguably the single most important bottleneck for the field: without it, claims of self-improvement are difficult to verify, compare, or trust.
+**Theme assessment:** The aggregate confidence for this theme is high (0.90 average). We now believe this theme should be prioritized above all others — not because the gaps are theoretically deepest, but because they are *blocking* progress on every other front. As the DeepSeek review argued, standardized benchmarks are a "force multiplier" that amplifies all downstream research.
 
 ### 4.3 Theme 3: Theoretical Foundations of Discrete Optimization in Text Space
 
-Two gaps address the theoretical underpinnings of systems like EvoPrompt and TextGrad:
-
 **Gap: Theoretical Foundations of LLM Prompting via Evolutionary Algorithms** (Confidence: 0.85, Type: Theoretical)
 
-The loss landscape of discrete prompts is poorly understood. Current evolutionary prompt optimization methods (EvoPrompt) are essentially empirical — they work, but we lack formal understanding of convergence properties, the relationship between prompt complexity and model performance, and the topological structure of the prompt optimization landscape. This gap directly limits the reliability and predictability of EvoPrompt-style systems.
+The loss landscape of discrete prompts is poorly understood. Current evolutionary prompt optimization methods (EvoPrompt) are essentially empirical — they work, but we lack formal understanding of convergence properties, the relationship between prompt complexity and model performance, and the topological structure of the prompt optimization landscape.
 
 **Gap: Integration of Predictive Coding Architectures with Modern Deep Learning** (Confidence: 0.82, Type: Theoretical)
 
-Older cognitive science frameworks propose that intelligence is based on continuous prediction error minimization. Despite the success of prediction in modern deep learning, there is a significant gap in connecting these biologically plausible theories to the mechanics of large-scale artificial neural networks. This gap is relevant to self-improvement because predictive coding offers a principled, neuro-inspired theory of how systems could continuously self-correct — a natural foundation for self-improving architectures.
+Older cognitive science frameworks propose that intelligence is based on continuous prediction error minimization. There is a significant gap in connecting these biologically plausible theories to the mechanics of large-scale artificial neural networks. Predictive coding offers a principled, neuro-inspired theory of how systems could continuously self-correct.
 
-**Theme assessment:** These gaps (average confidence 0.835) point to a fundamental limitation: the most practically deployed self-improvement systems (EvoPrompt, TextGrad) operate without strong theoretical foundations. This is not merely an academic concern — without theory, it is difficult to predict when these systems will fail, how to improve their sample efficiency, or how to compose them safely.
+**Theme assessment:** These gaps (average confidence 0.835) point to a fundamental limitation: the most practically deployed self-improvement systems (EvoPrompt, TextGrad) operate without strong theoretical foundations.
 
-### 4.4 Theme 4: Scalability and Heterogeneity in Self-Improving Systems
+### 4.4 Theme 4: Scalability and Heterogeneity
 
-Three gaps relate to the scalability of self-improvement:
+Four gaps relate to the scalability of self-improvement:
 
 **Gap: Federated Learning in the Era of Foundation Models** (Confidence: 0.93, Type: Methodological)
 
-Self-improving agents that learn from distributed data face the challenge of federated learning with massive foundation models — a problem that combines communication bottlenecks, computational overhead, and heterogeneous data distributions.
+Self-improving agents that learn from distributed data face the challenge of federated learning with massive foundation models.
 
 **Gap: Unified Frameworks for Multitask Learning in Heterogeneous Modalities** (Confidence: 0.87, Type: Methodological)
 
-As self-improving agents are required to process text, code, visual, and scientific data simultaneously, there is a gap in frameworks that can efficiently balance learning across heterogeneous modalities without negative transfer.
+Self-improving agents that process text, code, visual, and scientific data simultaneously need frameworks that balance learning across heterogeneous modalities.
 
 **Gap: Robust Defenses Against LLM-Powered Social Engineering** (Confidence: 0.94, Type: Methodological)
 
-While seemingly tangential, this gap is relevant because self-improving agents that generate increasingly fluent outputs could be weaponized. Understanding defensive mechanisms is a safety prerequisite for deploying powerful self-improvement systems.
+Self-improving agents generating increasingly fluent outputs could be weaponized.
 
 **Gap: Longitudinal Impact of Generative AI on Human Cognitive Development** (Confidence: 0.89, Type: Empirical)
 
-Self-improving AI agents will increasingly augment human cognition. Yet we lack longitudinal studies on how reliance on such systems affects human critical thinking and problem-solving.
-
-**Theme assessment:** These gaps (average confidence 0.91) underscore that self-improvement does not happen in isolation — it must be considered in the context of distributed, heterogeneous, and human-facing deployment environments.
+We lack longitudinal studies on how reliance on self-improving AI affects human cognition.
 
 ### 4.5 Gap Confidence Summary
 
@@ -277,63 +319,55 @@ Self-improving AI agents will increasingly augment human cognition. Yet we lack 
 | 9 | Theoretical Foundations of Evolutionary Prompting | 0.85 | Theoretical |
 | 10 | Predictive Coding + Modern Deep Learning | 0.82 | Theoretical |
 
-The predominance of methodological gaps (5 of 10) suggests that the field's primary bottleneck is not a lack of ideas but a lack of rigorous methods for evaluating and comparing self-improvement systems. The three theoretical gaps (Multi-Agent Coordination, Explainability in NAS, Evolutionary Prompting Theory) indicate that foundational understanding lags significantly behind engineering capability.
+The predominance of methodological gaps (5 of 10) confirms that the field's primary bottleneck is not ideation but evaluation. The three theoretical gaps (Multi-Agent Coordination, Explainability in NAS, Evolutionary Prompting Theory) indicate that foundational understanding lags significantly behind engineering capability.
 
 ---
 
 ## 5. Proposed Research Directions
 
-The Elephant Rock platform generated 10 research ideas, scored for novelty (0–1) and feasibility (1–10). We synthesize these into five prioritized research directions, ordered by the overall score of their best-representing idea.
+The Elephant Rock platform generated 10 research ideas, scored for novelty (0–1) and feasibility (1–10). We synthesize these into six prioritized research directions, incorporating critical feedback that reorders priorities from the initial analysis.
 
-### 5.1 Direction 1: Neuro-Inspired Event-Driven Multi-Agent LLM Architectures
-
-**Best idea:** *PC-LLM-Swarm* — Predictive coding for decentralized LLM agent coordination  
-**Overall score:** 0.833 | **Novelty:** 0.88 | **Feasibility:** 7.85
-
-**Justification:** This direction addresses the highest-confidence gap (Multi-Agent Coordination, 0.95) with the highest-scoring idea in the entire set. The proposed approach integrates predictive coding — a biologically plausible theory of continuous prediction error minimization — into multi-agent LLM coordination. The key innovation is a hybrid architecture where LLM reasoning is only activated when continuous prediction errors exceed a threshold, dramatically reducing token costs while maintaining high-level reasoning.
-
-The novelty score of 0.88 reflects high method novelty (0.90) and exceptional combination novelty (0.95) — bridging continuous neuro-inspired signaling with discrete text-based LLM reasoning. Feasibility is strong (7.85) because the predictive coding mechanism explicitly reduces computational costs. The primary risk is methodological complexity in the interface between continuous prediction modules and discrete LLM prompting, with a feasibility report rating of 5.0 for methodological complexity.
-
-**Estimated timeline:** 4–6 months.
-
-This direction is our top recommendation because it simultaneously addresses the most important gap (multi-agent coordination), draws on the most underutilized theoretical framework (predictive coding), and has the highest overall feasibility-novelty trade-off.
-
-### 5.2 Direction 2: Standardized Benchmarks for AI-Driven Scientific Discovery
+### 5.1 Direction 1: Standardized Benchmarks for AI-Driven Scientific Discovery
 
 **Best idea:** *SciMeta-Bench* — Multi-domain evaluation suite for AI-generated hypotheses  
 **Overall score:** 0.790 | **Novelty:** 0.84 | **Feasibility:** 7.39
 
-**Justification:** This direction addresses the critical evaluation gap (confidence 0.92) by creating a standardized benchmark suite for assessing AI-generated scientific hypotheses across physics, combinatorics, and materials science. The proposed RAG-assisted novelty scoring — replacing flawed embedding-distance metrics with explicit literature comparison — is a methodologically sound innovation.
+**Why this is now #1 (reordered from #2):** The initial survey ranked multi-agent architectures first. However, as the DeepSeek critique argued, the entire field's progress is gated by evaluation. Without SciMeta-Bench or equivalent, all other directions will suffer from ambiguous metrics. This is a classic "instrumentation gap" — once filled, it amplifies all downstream research. The highest-confidence methodological gap (Evaluation Metrics, 0.92) directly supports this prioritization.
 
-Problem novelty is the highest in the set (0.90), reflecting the near-complete absence of standardized evaluation for AI-driven science. Feasibility is moderate (7.39) because computational costs are manageable (running inference on multi-agent LLM frameworks is inexpensive compared to training), but curating standardized datasets of AI-generated hypotheses requires significant initial effort.
+The proposed approach features a RAG-assisted novelty score replacing flawed embedding-distance metrics, multi-dimensional evaluation (Theoretical Validity, RAG-assisted Novelty, Falsifiability Index, Safety Compliance), and an automated multi-agent LLM panel for triage. Problem novelty is the highest in the set (0.90), reflecting the near-complete absence of standardized evaluation for AI-driven science.
 
 **Estimated timeline:** 4–6 months.
 
-This direction is our second recommendation because addressing the evaluation bottleneck would accelerate progress across the entire field. A community-adopted benchmark would enable direct comparison of self-improvement systems for the first time.
+### 5.2 Direction 2: Neuro-Inspired Event-Driven Multi-Agent LLM Architectures
 
-### 5.3 Direction 3: Post-Hoc Architectural Auditing for Self-Modifying Systems
+**Best idea:** *PC-LLM-Swarm* — Predictive coding for decentralized LLM agent coordination  
+**Overall score:** 0.833 | **Novelty:** 0.88 | **Feasibility:** 7.85
+
+This direction addresses the highest-confidence gap (Multi-Agent Coordination, 0.95) with the highest-scoring idea. The proposed approach integrates predictive coding into multi-agent LLM coordination, activating LLM reasoning only when prediction errors exceed a threshold.
+
+**Caution (added from review):** While the full predictive coding architecture is a high-risk, high-reward moonshot, lighter-weight alternatives may yield quicker wins. Information-theoretic surprise metrics, simple heuristic token budgets, or event-driven architectures without the full neuro-inspired framework could serve as stepping stones. We recommend pursuing the full PC-LLM-Swarm vision while also investigating these simpler alternatives in parallel.
+
+The connection to self-play (R-Zero, SPIN) is now explicit: multi-agent self-improvement through inter-agent competition-cooperation loops may not require ground-truth verifiers, instead using the agents' own performance relative to each other as the improvement signal.
+
+**Estimated timeline:** 4–6 months.
+
+### 5.3 Direction 3: Architectural Auditing for Self-Modifying Systems
 
 **Best ideas:** *Post-Hoc Architectural Auditing via Graph Spectral Analysis* (Overall: 0.785, Novelty: 0.845, Feasibility: 7.25) and *ArchX-Ray* (Overall: 0.768, Novelty: 0.85, Feasibility: 6.85)
 
-**Justification:** These two ideas address the explainability gap in automated architecture search (confidence 0.88) and are directly relevant to ADAS-type systems. The proposed approaches treat NAS-discovered architectures as "forensic artifacts" and audit them for inherent biases using graph spectral analysis and LLM-generated structural counterfactuals.
+These address the explainability gap in automated architecture search (confidence 0.88) and are directly relevant to ADAS-type systems. The proposed approaches treat NAS-discovered architectures as "forensic artifacts" and audit them for inherent biases using graph spectral analysis and LLM-generated structural counterfactuals.
 
-Problem novelty is exceptionally high (0.90 for both), reflecting the near-complete absence of fairness auditing at the architectural level. The approaches are complementary: graph spectral analysis provides quantitative rigor, while LLM-based counterfactual generation provides interpretability.
+**New connection (from review):** The AutoML literature, particularly DARTS (differentiable architecture search) and weight-sharing methods, offers techniques for continuous relaxation of architectural spaces that could reduce the cost of both ADAS search and architectural auditing. Applying differentiable methods to the auditing problem — where the "gradient" indicates the direction of increasing fairness — is a novel and promising direction.
 
-However, feasibility is the primary concern (6.85–7.25). Running evolutionary NAS, training diverse architectures to convergence, and performing causal analysis requires substantial GPU resources, with feasibility reports scoring computational requirements at 4.0–5.0 out of 10. The estimated timeline of 8–12 months is significantly longer than other directions.
+Feasibility remains the primary concern (6.85–7.25), with computational requirements scored at 4.0–5.0 out of 10.
 
 **Estimated timeline:** 8–12 months.
-
-We rank this third despite high novelty because of the significant computational and methodological barriers. However, the safety implications are profound: if self-modifying systems cannot be audited, they cannot be trusted.
 
 ### 5.4 Direction 4: Theoretical Foundations for Discrete Prompt Optimization
 
 **Best ideas:** *Latent Prompt Topology* (Overall: 0.771, Novelty: 0.813, Feasibility: 7.30) and *Surrogate-Guided Evolutionary Prompt Optimization* (Overall: 0.718, Novelty: 0.68, Feasibility: 7.55)
 
-**Justification:** These ideas address the theoretical gap in evolutionary prompt optimization (confidence 0.85) and are directly relevant to EvoPrompt and related systems. The proposed approaches introduce GNN surrogates over prompt dependency trees and persistent homology for topological analysis of prompt loss landscapes.
-
-The combination novelty is high (0.90 for Latent Prompt Topology), and the application of topological data analysis (TDA) to discrete prompt spaces is genuinely novel. The SG-EPO approach is more immediately practical (feasibility 7.55) but has lower novelty (0.68) because surrogate-assisted evolutionary algorithms are well-established in classical optimization.
-
-The key contribution here is transforming prompt optimization from an empirical art into a mathematically analyzed science — a prerequisite for making EvoPrompt-style systems reliable and predictable.
+These address the theoretical gap in evolutionary prompt optimization (confidence 0.85). The proposed approaches introduce GNN surrogates over prompt dependency trees and persistent homology for topological analysis of prompt loss landscapes.
 
 **Estimated timeline:** 5–9 months.
 
@@ -341,71 +375,45 @@ The key contribution here is transforming prompt optimization from an empirical 
 
 **Best ideas:** *FedMB-PEFT* (Overall: 0.792, Novelty: 0.82, Feasibility: 7.63) and *FedGrad* (Overall: 0.763, Novelty: 0.78, Feasibility: 7.45)
 
-**Justification:** These ideas address the federated learning gap (confidence 0.93) and are relevant to deploying self-improving agents in privacy-sensitive environments. Both propose parameter-efficient fine-tuning (PEFT) with novel gradient management strategies for heterogeneous edge environments.
-
-FedMB-PEFT addresses negative transfer across heterogeneous modalities with a shared projection matrix for cross-modality gradient comparison (combination novelty 0.90). FedGrad introduces streaming orthogonal gradient projection with a soft projection hyperparameter (combination novelty 0.90). Both have strong data availability (9.0) due to publicly accessible benchmarks.
-
-However, both face significant methodological complexity (5.0 for both) due to the mathematical and engineering challenges of implementing stable cross-node gradient alignment in federated settings.
+These address the federated learning gap (confidence 0.93) for deploying self-improving agents in privacy-sensitive environments. Both propose parameter-efficient fine-tuning with novel gradient management strategies.
 
 **Estimated timeline:** 6–12 months.
 
-### 5.6 Direction Ranking Summary
+### 5.6 Direction 6: Self-Improving Reward and Critique Functions
 
-| Rank | Direction | Best Score | Best Novelty | Best Feasibility | Key Gap Addressed |
-|:---|:---|:---|:---|:---|:---|
-| 1 | Neuro-Inspired Multi-Agent LLMs | 0.833 | 0.88 | 7.85 | Multi-Agent Coordination (0.95) |
-| 2 | Benchmarks for AI-Driven Science | 0.790 | 0.84 | 7.39 | Evaluation Metrics (0.92) |
-| 3 | Architectural Auditing | 0.785 | 0.845 | 7.25 | Explainability in NAS (0.88) |
-| 4 | Discrete Prompt Theory | 0.771 | 0.813 | 7.55 | Evolutionary Prompting Theory (0.85) |
-| 5 | Federated Self-Improvement | 0.792 | 0.82 | 7.63 | Federated Learning for FMs (0.93) |
+**Novel direction (proposed by external review)**
 
-Note that Direction 5 (Federated Self-Improvement) has a higher best score than Directions 3 and 4, but we rank it fifth because it addresses a more specialized deployment concern rather than a fundamental architectural limitation. The ranking prioritizes directions that would advance the core science of self-improvement over those that address specific deployment scenarios.
+A major bottleneck across all critique-based methods (Self-Refine, Reflexion, TextGrad) is that the *critic is frozen*. The critique prompts, rubrics, and reward functions that drive self-improvement do not themselves improve. This direction proposes making the critic itself self-improving through meta-learning, self-play, or reinforcement from environment feedback.
+
+This direction could raise the improvement ceiling of Self-Refine and Reflexion significantly. It also connects to the Karpathy loop: the loop's "mechanical verification" is, in effect, a perfect (but narrow) critic. The question is whether we can build *self-improving critics* for domains where mechanical verification is not available — a challenge that the Elephant Rock platform's own Borda tournament mechanism partially addresses (judges rank proposals, and the ranking process itself can be improved).
+
+Concrete approaches include:
+- **Meta-learned critique prompts:** Use EvoPrompt to optimize the prompts used by Reflexion and Self-Refine for generating critiques.
+- **Self-play critique training:** Train a critique model using SPIN-style self-play, where the current critic must improve over the previous iteration's critiques.
+- **Environment-grounded critic updates:** Use task feedback (not just self-assessment) to update the critic, connecting Reflexion's verbal memory to actual performance outcomes.
+
+**Estimated timeline:** 3–6 months for initial experiments.
+
+### 5.7 Direction Ranking Summary
+
+| Rank | Direction | Best Score | Key Gap Addressed | Priority Rationale |
+|:---|:---|:---|:---|:---|
+| 1 | Standardized Benchmarks | 0.790 | Evaluation Metrics (0.92) | Instrumentation gap — blocks all other progress |
+| 2 | Multi-Agent Architectures | 0.833 | Multi-Agent Coordination (0.95) | Highest-scoring idea, highest-confidence gap |
+| 3 | Architectural Auditing | 0.785 | Explainability in NAS (0.88) | Safety-critical, enables ADAS |
+| 4 | Discrete Prompt Theory | 0.771 | Evolutionary Prompting Theory (0.85) | Strengthens EvoPrompt foundations |
+| 5 | Federated Self-Improvement | 0.792 | Federated Learning (0.93) | Deployment scenario |
+| 6 | Self-Improving Critics | N/A (novel) | Cross-cutting | Raises ceiling of Self-Refine, Reflexion, TextGrad |
 
 ---
 
 ## 6. Architecture Recommendations
 
-Based on the gap analysis and proposed research directions, we offer the following architectural recommendations for building self-improving AI agents.
+Based on the gap analysis, proposed research directions, and critical revisions, we offer the following architectural recommendations.
 
-### 6.1 Prioritize Reflexion and EvoPrompt as Foundation Layers
+### 6.1 The Self-Improvement Stack
 
-Among the seven systems surveyed, **Reflexion** and **EvoPrompt** emerge as the most viable foundation layers for practical self-improving agent architectures:
-
-- **Reflexion** provides the essential capability of episodic memory and verbal reflection. It requires no parameter access, no external reward model, and scales naturally to multi-step tasks. Every self-improving agent should include a Reflexion-style memory and reflection component.
-
-- **EvoPrompt** provides the most accessible optimization mechanism for prompt-level self-improvement. It works with any LLM via API and requires no gradient access. Combined with the theoretical advances proposed in Direction 4, EvoPrompt-style evolutionary optimization could become a reliable, predictable self-improvement mechanism.
-
-**Recommendation:** Build self-improving agents on a Reflexion + EvoPrompt foundation. Use Reflexion for behavioral improvement across episodes and EvoPrompt for prompt optimization within episodes.
-
-### 6.2 Integrate TextGrad as a Real-Time Optimization Layer
-
-**TextGrad** occupies a natural position as a real-time optimization layer within the Reflexion + EvoPrompt stack. When an agent generates an output, TextGrad can provide immediate "textual gradient" feedback that drives iterative refinement before the output is committed. This complements Reflexion's longer-timescale episodic learning and EvoPrompt's population-level prompt search.
-
-**Recommendation:** Use TextGrad for intra-episode optimization (immediate output refinement) and Reflexion for inter-episode optimization (behavioral improvement across tasks).
-
-### 6.3 Treat FUNSearch as the Gold Standard for Verifiable Self-Improvement
-
-**FUNSearch** demonstrates the most concrete form of self-improvement: discovering genuinely novel algorithms and mathematical constructions through evolutionary search in program space. Its requirement for executable, verifiable programs makes it the most rigorous form of self-improvement.
-
-**Recommendation:** For domains where self-improvement can be formulated as program search (coding, mathematical reasoning, algorithm design), adopt FUNSearch-style approaches as the gold standard. The verifiability of program outputs provides a natural safety guarantee.
-
-### 6.4 Defer R-Zero and ADAS Unless Specific Conditions Are Met
-
-Based on our analysis (elaborated in Section 7), **R-Zero** and **ADAS** should not be prioritized as foundation layers for self-improving agents at this time:
-
-- **R-Zero** requires parameter access, massive compute for self-play rollouts, and works best in domains with clean verifiability. These constraints limit its applicability.
-
-- **ADAS** operates in a vast, poorly characterized search space with expensive evaluation. While conceptually important, it is not yet practical as a core self-improvement mechanism.
-
-**Recommendation:** Monitor R-Zero and ADAS for future developments, but invest current effort in the more immediately viable Reflexion + EvoPrompt + TextGrad stack.
-
-### 6.5 Invest in Multi-Agent Self-Improvement
-
-The highest-confidence gap (0.95) and highest-scoring research direction (0.833) both point to the same conclusion: the field needs architectures for multi-agent self-improvement. Current systems are overwhelmingly single-agent.
-
-**Recommendation:** Extend the Reflexion + EvoPrompt + TextGrad stack to multi-agent settings by introducing predictive-coding-inspired event-driven communication (as proposed in PC-LLM-Swarm). This would allow multiple agents to share reflective experiences, collectively optimize prompts, and coordinate textual gradients.
-
-### 6.6 Proposed Architecture: The Self-Improvement Stack
+We propose a layered architecture that composes multiple self-improvement mechanisms:
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -415,109 +423,134 @@ The highest-confidence gap (0.95) and highest-scoring research direction (0.833)
 │              MULTI-AGENT COORDINATION LAYER                  │
 │    Predictive coding for event-driven LLM activation        │
 │    Sparse inter-agent communication via prediction errors    │
+│    Self-play dynamics for inter-agent competition/learning   │
 ├─────────────────────────────────────────────────────────────┤
 │           INTER-EPISODE SELF-IMPROVEMENT LAYER               │
 │    Reflexion: Verbal memory + episodic reflection            │
 │    EvoPrompt: Population-level prompt evolution              │
+│    Self-improving critics: Meta-learned critique functions   │
 ├─────────────────────────────────────────────────────────────┤
 │           INTRA-EPISODE OPTIMIZATION LAYER                   │
 │    TextGrad: Textual gradient descent for output refinement  │
 │    Self-Refine: Multi-round self-critique + revision         │
 ├─────────────────────────────────────────────────────────────┤
+│           CODE-LEVEL SELF-IMPROVEMENT LAYER                  │
+│    Karpathy Loop: Autonomous code experimentation            │
+│    Mechanical verification + automatic rollback              │
+│    Git as memory + experiment logging                        │
+├─────────────────────────────────────────────────────────────┤
 │           VERIFICATION LAYER                                 │
 │    FUNSearch-style program verification where applicable     │
 │    SciMeta-Bench-style hypothesis triage for science tasks   │
+│    Mechanical metrics as ground truth                        │
 ├─────────────────────────────────────────────────────────────┤
 │           SAFETY + AUDITING LAYER                            │
 │    Architectural auditing (graph spectral analysis)          │
 │    Governance policies + human approval workflows            │
+│    Diversity mechanism (MAP-Elites with behavioral desc.)   │
 ├─────────────────────────────────────────────────────────────┤
 │           FOUNDATION MODEL LAYER                             │
 │    Any instruction-following LLM (API-based, no fine-tuning) │
 └─────────────────────────────────────────────────────────────┘
 ```
 
-This stack prioritizes systems that (1) require no parameter access, (2) scale across tasks, (3) have interpretable improvement trajectories, and (4) compose naturally with each other.
+### 6.2 Key Additions from Critical Review
+
+**Self-improving critics (new):** The critique prompts and grading rubrics used by Reflexion and Self-Refine should themselves be optimized — via EvoPrompt or TextGrad — creating a recursive self-improvement engine. This turns the stack from a fixed architecture into a self-modifying one.
+
+**Diversity mechanism (new):** EvoPrompt's evolutionary optimization should incorporate quality-diversity algorithms (e.g., MAP-Elites with behavioral descriptors) to maintain a population of diverse prompts. This prevents premature convergence in prompt space and aids exploration of rare, high-performing prompt architectures.
+
+**Code-level self-improvement (new):** The Karpathy loop operates at a level below all other mechanisms — it can optimize the *code that implements* the other layers. This meta-level self-improvement is uniquely powerful because code is the most expressive optimization target: any improvement expressible in code can be discovered.
+
+**Self-play integration:** R-Zero-style self-play dynamics should not be confined to the parameter-modification layer. The same competitive-cooperative dynamics can operate at the prompt level (agents compete to generate the best prompts), the output level (agents compete to produce the best critiques), and the architectural level (agent designs compete in tournaments).
+
+### 6.3 Revised Triage Framework
+
+Based on the critical reassessment in Section 7, we update the triage framework:
+
+| Tier | Systems | Rationale |
+|:---|:---|:---|
+| **Tier 1: Build Now** | Reflexion, EvoPrompt, TextGrad, Self-Refine, Karpathy Loop | No parameter access; scalable; composable; interpretable; code-level meta-improvement |
+| **Tier 2: Research Actively** | FUNSearch, Multi-Agent Coordination, STaR/Quiet-STaR, SPIN | Proven results (FUNSearch), critical gap (Multi-Agent), or emerging self-play methods |
+| **Tier 3: Monitor and Prepare** | R-Zero, ADAS | Powerful but currently impractical; invest in enabling infrastructure |
 
 ---
 
 ## 7. Critical Assessment: R-Zero and ADAS
 
-Prior analyses conducted on the Elephant Rock platform triaged R-Zero and ADAS as "low interest" — meaning they were not prioritized for deep analysis or included in the primary idea generation pipeline. This section critically assesses whether that triage was warranted.
+Prior analyses conducted on the Elephant Rock platform triaged R-Zero and ADAS as "low interest" — meaning they were not prioritized for deep analysis or included in the primary idea generation pipeline. This section critically assesses whether that triage was warranted, incorporating the more nuanced perspective from external review.
 
-### 7.1 R-Zero: Was Low Triage Justified?
+### 7.1 R-Zero: The Triage Was Partially Justified but Undernuanced
 
-**The case for triage (why R-Zero was deprioritized):**
+**The case for triage (still valid):**
 
-1. **Domain specificity.** R-Zero's most impressive results are in mathematical reasoning, where answers are verifiable. Extending GRPO self-play to domains without clean verification (open-ended text generation, creative tasks, scientific hypothesis generation) is an unsolved problem.
+1. **Domain specificity.** R-Zero's most impressive results are in mathematical reasoning with verifiable answers. Extending GRPO to domains without clean verification remains unsolved.
+2. **Compute requirements.** GRPO requires generating multiple solution attempts per problem, making it orders of magnitude more expensive than Reflexion or EvoPrompt.
+3. **Parameter access requirement.** R-Zero modifies the model's internal policy, requiring either full parameter access or participation in the training pipeline — inaccessible to most practitioners.
+4. **Overlap with RLHF infrastructure.** Major LLM providers are already incorporating similar techniques.
 
-2. **Compute requirements.** GRPO requires generating multiple solution attempts per problem, grouping them by quality, and using the group structure as a reward signal. This is orders of magnitude more expensive than Reflexion-style self-critique or EvoPrompt-style prompt optimization.
+**The case against triage (stronger than initially presented):**
 
-3. **Parameter access requirement.** R-Zero modifies the model's internal policy, requiring either full parameter access or participation in the model's training pipeline. This makes it inaccessible to the vast majority of practitioners who use LLMs via API.
+1. **Self-play is a general meta-learning paradigm.** The initial survey framed R-Zero too narrowly. Self-play with learned reward signals is far more general than mathematical reasoning:
+   - **SPIN** applies self-play to language modeling, using the model's own previous iteration as opponent.
+   - **Constitutional AI** bootstraps reward models from the model's own judgments.
+   - **Multi-agent environments** (XLand, adA) demonstrate that self-play produces diverse, emergent capabilities.
+   
+2. **R-Zero is closer to the multi-agent gap (0.95) than acknowledged.** Self-play IS multi-agent dynamics. Understanding GRPO-style mechanisms could directly inform the multi-agent coordination architectures needed for the highest-confidence gap.
 
-4. **Overlap with existing RLHF infrastructure.** The techniques underlying R-Zero (GRPO, group-relative rewards) are natural extensions of existing RLHF pipelines. Major LLM providers are already incorporating similar approaches, reducing the marginal value of academic research in this direction.
+3. **Connection to STaR/Quiet-STaR.** These systems demonstrate that self-generated training data (rationales) can drive parameter-level self-improvement without external labels. They bridge the gap between R-Zero's parameter modification and Self-Refine's output-level optimization.
 
-**The case against triage (why R-Zero deserves more attention):**
+**Revised assessment:** The triage was *partially justified* — R-Zero is correctly identified as less immediately practical than Reflexion or EvoPrompt. However, the triage underestimated the generality of self-play as a paradigm and its direct relevance to multi-agent coordination. The revised position: **R-Zero's specific implementation is niche, but the self-play paradigm it embodies is fundamental. Research should focus on generalizing self-play dynamics (as in SPIN, Constitutional AI) rather than on R-Zero's specific GRPO mechanism.**
 
-1. **Self-play is a proven paradigm.** AlphaGo, AlphaZero, and R-Zero itself demonstrate that self-play can produce superhuman performance without human data. This paradigm is too powerful to ignore.
+### 7.2 ADAS: The Triage Was Short-Term Justified, Long-Term Premature
 
-2. **Potential for compositional self-improvement.** R-Zero-style self-play at the reasoning level could be composed with EvoPrompt-style prompt optimization and Reflexion-style memory to create multi-level self-improvement systems.
+**The case for triage (still valid):**
 
-3. **Connection to multi-agent coordination.** Self-play naturally involves multi-agent dynamics. Understanding R-Zero's GRPO mechanism could inform the multi-agent coordination architectures needed to address the highest-confidence gap (0.95).
+1. **Vast search space.** The space of agent architectures is combinatorially explosive.
+2. **Expensive evaluation.** Evaluating candidate architectures requires running them on target tasks — expensive and noisy.
+3. **Brittleness.** Discovered architectures may overfit to evaluation tasks.
 
-**Assessment:** The triage was *partially justified*. R-Zero is correctly identified as less immediately practical than Reflexion, EvoPrompt, or TextGrad for most self-improvement applications. However, the triage may have underestimated R-Zero's relevance to multi-agent self-improvement — the very gap identified as most important. A more nuanced position would be: *R-Zero should not be a foundation layer, but its self-play mechanisms should inform the design of multi-agent self-improvement architectures.*
+**The case against triage (strengthened by review):**
 
-### 7.2 ADAS: Was Low Triage Justified?
+1. **AutoML literature offers solutions.** The initial survey failed to connect ADAS to the vast AutoML literature. DARTS (differentiable architecture search) and weight-sharing methods could drastically reduce search cost by applying continuous relaxation to architectural spaces. This is not speculative — it has been demonstrated in the NAS literature and could be adapted to agent architecture search.
 
-**The case for triage (why ADAS was deprioritized):**
+2. **The gap analysis validates ADAS's importance.** Architectural auditing (Direction 3, our third priority) is a direct response to ADAS's challenges. If auditing tools were developed, ADAS would become safer and more practical.
 
-1. **Vast, poorly characterized search space.** The space of possible agent architectures is combinatorially explosive. Unlike EvoPrompt's search over discrete text prompts (where the space, while large, is at least bounded by natural language), ADAS searches over architectures that can include arbitrary compositions of modules, control flow patterns, and tool integrations.
+3. **ADAS parallels FUNSearch.** ADAS's search over agent architectures is analogous to FUNSearch's search over programs. FUNSearch has demonstrated that evolutionary search in structured spaces can produce genuine discoveries.
 
-2. **Expensive and noisy evaluation.** Evaluating a candidate architecture requires running it on target tasks and measuring performance — a process that is computationally expensive and noisy (performance depends on random seeds, prompt variations, and environmental stochasticity).
+4. **The Karpathy loop is a degenerate form of ADAS.** When the Karpathy loop modifies `train.py` — changing architecture, optimizer, hyperparameters — it is performing a manual, single-agent version of what ADAS automates. The Karpathy loop's success (700 experiments, 20 optimizations, 11% speedup) suggests that automated architectural search at the code level is viable, even if ADAS's more abstract formulation is not yet practical.
 
-3. **Brittleness of discovered architectures.** Architectures discovered by ADAS-type systems may overfit to the evaluation tasks and fail to generalize. This is the architectural equivalent of overfitting in NAS research.
+**Revised assessment:** The triage was *short-term justified but long-term premature*. ADAS is correctly identified as currently impractical. However, the infrastructure needed to make it viable — auditing tools, continuous relaxation techniques from AutoML, and the code-level self-improvement demonstrated by the Karpathy loop — is being actively developed. The right position is: **ADAS is a North Star that should guide investment in auditing, evaluation, and continuous relaxation, even if it is not itself a practical tool today.**
 
-4. **Interpretability concerns.** The gap analysis identified explainability in automated architecture search as a significant concern (confidence 0.88). ADAS-type systems produce architectures that are difficult to understand, audit, or trust.
+### 7.3 The Karpathy Loop: The Missing Link
 
-**The case against triage (why ADAS deserves more attention):**
+The Karpathy autoresearch loop occupies a unique position in the triage framework: it is simultaneously practical (Tier 1 — build now) *and* a stepping stone toward ADAS (Tier 3). By demonstrating that autonomous code modification with mechanical verification can produce meaningful improvements, the Karpathy loop provides a concrete, demonstrable proof point that self-improvement at the architectural level works — not in theory, but in practice, overnight, on a single GPU.
 
-1. **ADAS addresses the meta-question.** Rather than asking "how should an agent improve?", ADAS asks "what architecture should an improving agent have?" This is arguably the most important long-term question for the field.
+The connection is direct: the Karpathy loop's `train.py` contains the same kinds of decisions (architecture, optimizer, hyperparameters) that ADAS searches over. The difference is that the Karpathy loop constrains the search space to a single file (630 lines), uses a fixed time budget (5 minutes), and a single unambiguous metric (val_bpb). These constraints are not limitations — they are *the reason it works*. They are the same constraints that make the 7 universal principles effective.
 
-2. **The gap analysis itself validates ADAS's importance.** The research direction on architectural auditing (Section 5.3) — the third-highest priority — is a direct response to the challenges posed by ADAS-type systems. If architectural auditing tools were developed, ADAS would become safer and more practical.
-
-3. **Connection to FUNSearch.** ADAS's search over agent architectures is analogous to FUNSearch's search over programs. FUNSearch has demonstrated that evolutionary search in structured spaces can produce genuine discoveries. The same might be true for agent architectures.
-
-**Assessment:** The triage was *justified in the short term but potentially misguided in the long term*. ADAS is correctly identified as currently impractical — the search space is too vast and evaluation too expensive. However, the two research directions most directly related to ADAS (architectural auditing and theoretical prompt foundations) are ranked third and fourth in priority, suggesting that the infrastructure needed to make ADAS viable is actively being developed. The right position is: *ADAS is premature as a practical tool but should be a North Star guiding the development of auditing, evaluation, and theoretical foundations.*
-
-### 7.3 Revised Triage Framework
-
-Based on this assessment, we propose a three-tier framework for prioritizing self-improvement architectures:
-
-| Tier | Systems | Rationale |
-|:---|:---|:---|
-| **Tier 1: Build Now** | Reflexion, EvoPrompt, TextGrad, Self-Refine | No parameter access required; scalable; composable; interpretable |
-| **Tier 2: Research Actively** | FUNSearch, Multi-Agent Coordination | Proven results (FUNSearch) or critical gap (Multi-Agent); need theoretical foundations |
-| **Tier 3: Monitor and Prepare** | R-Zero, ADAS | Powerful but currently impractical; invest in enabling infrastructure (auditing, evaluation, theory) |
+This suggests a path for ADAS: rather than searching over abstract architectural spaces, begin by applying the Karpathy loop to agent implementation code. Constrain the search space, fix the evaluation metric, and let the loop discover architectural improvements through code-level experimentation. This is ADAS, grounded in the Karpathy loop's proven methodology.
 
 ---
 
 ## 8. Conclusion
 
-This survey has examined seven architectures for AI agent self-improvement through the lens of an automated analysis of 382 research papers. Our principal findings are:
+This survey has examined eight architectures for AI agent self-improvement — seven previously analyzed by the Elephant Rock platform and the Karpathy autoresearch loop, which we argue constitutes a distinct and underappreciated paradigm. Our principal findings, revised from the initial analysis, are:
 
-1. **The field's primary bottleneck is evaluation, not ideation.** Five of ten identified gaps are methodological, reflecting a critical lack of standardized benchmarks and reproducibility standards. Without rigorous evaluation, claims of self-improvement remain difficult to verify or compare.
+1. **The field's most urgent bottleneck is evaluation infrastructure, not ideation.** Five of ten identified gaps are methodological. Without standardized benchmarks, claims of self-improvement remain unverifiable. We have reordered our research priorities to place SciMeta-Bench first.
 
-2. **Multi-agent self-improvement is the most important unsolved problem.** The highest-confidence gap (0.95) and highest-scoring research direction (0.833) both point to the need for architectures that allow multiple LLM-based agents to coordinate and collectively improve in decentralized settings.
+2. **Self-play is a general meta-learning paradigm, not a niche technique.** R-Zero was initially triaged as narrowly applicable. The broader picture — including SPIN, Constitutional AI, STaR, and Quiet-STaR — reveals self-play dynamics at multiple levels of the self-improvement stack. The connection to multi-agent coordination (confidence 0.95) is direct and should be actively exploited.
 
-3. **The most practical self-improvement stack is Reflexion + EvoPrompt + TextGrad.** These three systems require no parameter access, scale across tasks, and compose naturally. Self-Refine serves as a simple but effective additional component. FUNSearch provides the gold standard for verifiable self-improvement in program-search domains.
+3. **The Karpathy loop is an 8th self-improvement architecture operating at the code level.** Its seven universal principles — constraint as enabler, mechanical metrics, fast verification, git as memory — represent a fundamentally different approach from the other seven systems. It is simultaneously the most practical (requires only a measurable metric and a git repository) and the most expressive (code can express any optimization). It also provides a concrete path toward making ADAS viable.
 
-4. **Theoretical foundations for discrete optimization are urgently needed.** EvoPrompt and TextGrad operate without formal convergence guarantees or landscape analysis. The proposed research directions on latent prompt topology and surrogate-guided optimization would address this gap.
+4. **The most promising research direction is composition across levels.** The self-improvement stack (Section 6) composes the Karpathy loop (code level), EvoPrompt (prompt level), TextGrad (output level), Reflexion (behavioral level), and self-play (multi-agent level) into a layered architecture. The most impactful research will not advance any single layer but will develop mechanisms for *cross-layer self-improvement* — where improvements at one layer (e.g., better prompts from EvoPrompt) trigger improvements at another (e.g., better code from the Karpathy loop).
 
-5. **R-Zero and ADAS were partially correctly triaged but should not be abandoned.** R-Zero's self-play mechanisms are relevant to multi-agent coordination, and ADAS raises the most important long-term question (what architecture should an improving agent have?). Both should inform research priorities even if they are not yet practical foundation layers.
+5. **Self-improving critics are an underexplored high-leverage opportunity.** Every critique-based system (Self-Refine, Reflexion, TextGrad) uses a fixed critic. Making the critic itself improve — through meta-learning, self-play, or environment-grounded feedback — could raise the improvement ceiling of the entire stack.
 
-6. **Safety and auditing must be co-developed with self-improvement capabilities.** The proposed architectural auditing direction (Section 5.3) addresses a gap that will become critical as self-improving agents become more capable. Building auditing tools now — before self-improvement systems are widely deployed — is a responsible investment.
+6. **ADAS should be a North Star, not a discard.** The triage of ADAS was justified in the short term but underestimated the potential of continuous relaxation (DARTS), architectural auditing, and code-level self-improvement (Karpathy loop) to make automated architectural search viable.
 
-The self-improvement landscape is at an inflection point. The engineering capability to build self-improving agents now exists; what is needed is the scientific rigor to evaluate, understand, and trust them. The research directions proposed in this paper — from neuro-inspired multi-agent architectures to standardized scientific benchmarks to architectural auditing frameworks — represent a path from empirical art to principled science.
+7. **The field needs an "improvement per token" metric.** The initial survey's design space table conflated scalability with cost-effectiveness. Future work should develop standardized metrics for the cost of self-improvement — how many tokens, GPU-hours, or API calls are required to achieve a unit of performance gain — to enable meaningful comparison across systems.
+
+The self-improvement landscape is at an inflection point. The engineering capability to build self-improving agents now exists; the Karpathy loop demonstrates that autonomous overnight experimentation works in practice. What is needed is the scientific rigor to evaluate, understand, and trust self-improvement — and the architectural vision to compose multiple self-improvement mechanisms into systems that improve not just their outputs, but themselves.
 
 ---
 
@@ -527,42 +560,60 @@ The self-improvement landscape is at an inflection point. The engineering capabi
 
 2. **ADAS:** Shengran Hu, Cong Lu, Jeff Clune. "Automated Design of Agentic Systems." *arXiv preprint*, 2024. [Meta-search over agent architectures to discover novel designs.]
 
-3. **TextGrad:** Mert Yuksekgonul, Candace Ross, James Zou. "TextGrad: Automatic "Differentiation" via Text." *ICML*, 2024. [Applying gradient-descent-inspired optimization to textual outputs using LLM-generated "textual gradients."]
+3. **TextGrad:** Mert Yuksekgonul, Candace Ross, James Zou. "TextGrad: Automatic 'Differentiation' via Text." *ICML*, 2024. [Gradient-descent-inspired optimization applied to textual outputs.]
 
-4. **FUNSearch:** Bernardino Romera-Paredes et al. "Mathematical Discoveries from Program Search with Large Language Models." *Nature*, 2024. [Evolutionary program search discovering novel mathematical constructions including cap set bounds.]
+4. **FUNSearch:** Bernardino Romera-Paredes et al. "Mathematical Discoveries from Program Search with Large Language Models." *Nature*, 2024. [Evolutionary program search discovering novel mathematical constructions.]
 
 5. **EvoPrompt:** Qingyan Guo et al. "Connecting Large Language Models with Evolutionary Algorithms Yields Powerful Prompt Optimizers." *ICLR*, 2024. [Genetic algorithms and differential evolution for discrete prompt optimization.]
 
-6. **Self-Refine:** Aman Madaan et al. "Self-Refine: Iterative Refinement with Self-Feedback." *NeurIPS*, 2023. [Multi-round self-critique and revision using the same LLM as generator, critic, and refiner.]
+6. **Self-Refine:** Aman Madaan et al. "Self-Refine: Iterative Refinement with Self-Feedback." *NeurIPS*, 2023. [Multi-round self-critique and revision using the same LLM.]
 
 7. **Reflexion:** Noah Shinn et al. "Reflexion: Language Agents with Verbal Reinforcement Learning." *NeurIPS*, 2023. [Verbal reinforcement learning with episodic memory for agent self-improvement.]
 
-8. **Coscientist:** Daniil A. Boiko et al. "Emergent autonomous scientific research capabilities of large language models." *Nature*, 2023. [LLM-driven autonomous chemical research demonstrating AI-driven scientific discovery.]
+8. **Karpathy Autoresearch:** Andrej Karpathy. "autoresearch." *GitHub Repository*, March 2026. [Autonomous ML training optimization: Modify → Verify → Keep/Discard → Repeat. 630-line script, fixed 5-minute budget, single metric (val_bpb). 700 experiments in 2 days, 20 optimizations, 11% speedup.]
 
-9. **OpenNARS:** Pei Wang. "Non-Axiomatic Logic: A Model of Productive Thinking." *Computational Intelligence*, 2013. [Truth-value epistemology with frequency and confidence for reasoning under uncertainty.]
+9. **Claude Autoresearch:** Udit Goenka. "autoresearch (Claude Code Plugin)." *GitHub Repository*, March 2026. [Domain-agnostic generalization of Karpathy's loop with 10 subcommands: plan, debug, fix, security, ship, scenario, predict, learn, reason, and core loop.]
 
-10. **PCGrad:** Yuwei Fang et al. "Gradient Vaccination: Enhancing Compatibility between Multitask Loss Landscapes." *NeurIPS Workshop*, 2020. [Projecting conflicting gradients to mitigate negative transfer in multitask learning.]
+10. **STaR:** Zelikman et al. "STaR: Bootstrapping Reasoning With Reasoning." *NeurIPS*, 2022. [Self-taught reasoning through rationale generation and self-filtering.]
 
-11. **AlphaZero:** David Silver et al. "A General Reinforcement Learning Algorithm that Masters Chess, Shogi, and Go through Self-Play." *Science*, 2018. [Self-play with Monte Carlo tree search as a paradigm for superhuman performance.]
+11. **Quiet-STaR:** Zelikman et al. "Quiet-STaR: Language Models Can Teach Themselves to Think Before Speaking." *arXiv preprint*, 2024. [Internal rationale generation at every token during inference.]
 
-12. **LoRA:** Edward Hu et al. "LoRA: Low-Rank Adaptation of Large Language Models." *ICLR*, 2022. [Parameter-efficient fine-tuning via low-rank matrix decomposition.]
+12. **SPIN:** Zihan Yue et al. "SPIN: Self-Play Fine-Tuning Converts Weak Language Models to Strong Language Models." *arXiv preprint*, 2024. [Self-play fine-tuning using the model's own previous iteration as opponent.]
 
-13. **Advances and Open Problems in Federated Learning:** Peter Kairouz et al. "Advances and Open Problems in Federated Learning." *Foundations and Trends in Machine Learning*, 2021. [Comprehensive survey of federated learning challenges including non-IID data and communication efficiency.]
+13. **Constitutional AI:** Yuntao Bai et al. "Constitutional AI: Harmlessness from AI Feedback." *arXiv preprint*, 2022. [Self-play dynamics in AI safety: model critiques its own outputs against constitutional principles.]
 
-14. **Persistent Homology / TDA:** Gunnar Carlsson. "Topology and Data." *Bulletin of the AMS*, 2009. [Foundational work on topological data analysis using persistent homology.]
+14. **DARTS:** Hanxiao Liu, Karen Simonyan, Yiming Yang. "DARTS: Differentiable Architecture Search." *ICLR*, 2019. [Continuous relaxation for efficient neural architecture search.]
 
-15. **Predictive Coding:** Karl Friston. "The Free-Energy Principle: A Unified Brain Theory?" *Nature Reviews Neuroscience*, 2010. [Biologically plausible theory of cognition based on prediction error minimization.]
+15. **MAP-Elites:** Jean-Baptiste Mouret, Jeff Clune. "Illuminating search spaces by mapping elites." *arXiv preprint*, 2015. [Quality-diversity optimization for maintaining diverse high-performing solutions.]
 
-16. **UMAP:** Leland McInnes, John Healy, James Melville. "UMAP: Uniform Manifold Approximation and Projection for Dimension Reduction." *arXiv preprint*, 2018. [Dimensionality reduction technique used for clustering and visualization.]
+16. **Coscientist:** Daniil A. Boiko et al. "Emergent autonomous scientific research capabilities of large language models." *Nature*, 2023. [LLM-driven autonomous chemical research.]
 
-17. **HDBSCAN:** Leland McInnes, John Healy, Steve Astels. "hdbscan: Hierarchical density-based clustering." *JOSS*, 2017. [Hierarchical density-based clustering algorithm.]
+17. **OpenNARS:** Pei Wang. "Non-Axiomatic Logic: A Model of Productive Thinking." *Computational Intelligence*, 2013. [Truth-value epistemology with frequency and confidence.]
 
-18. **Borda Count:** Jean-Charles de Borda. "Mémoire sur les élections au scrutin." *Histoire de l'Académie Royale des Sciences*, 1781. [Ranking aggregation method used in the Elephant Rock multi-agent tournament.]
+18. **AlphaZero:** David Silver et al. "A General Reinforcement Learning Algorithm that Masters Chess, Shogi, and Go through Self-Play." *Science*, 2018. [Self-play with Monte Carlo tree search.]
 
-19. **Elephant Rock Platform:** Elephant Rock Research. "Architecture Documentation." *Internal Technical Report*, 2026. [Multi-agent research ideation platform with 9-stage pipeline, knowledge graph, and self-improvement engine. 77,516 LOC, 1,790 tests passing.]
+19. **LoRA:** Edward Hu et al. "LoRA: Low-Rank Adaptation of Large Language Models." *ICLR*, 2022. [Parameter-efficient fine-tuning via low-rank matrix decomposition.]
 
-20. **GAAPO:** Maor Gaathon et al. "GAAPO: Genetic Algorithm for Automated Prompt Optimization." *arXiv preprint*, 2024. [Genetic algorithm approach to automated prompt optimization for LLMs.]
+20. **Federated Learning Survey:** Peter Kairouz et al. "Advances and Open Problems in Federated Learning." *Foundations and Trends in Machine Learning*, 2021.
+
+21. **Persistent Homology:** Gunnar Carlsson. "Topology and Data." *Bulletin of the AMS*, 2009. [Topological data analysis using persistent homology.]
+
+22. **Predictive Coding:** Karl Friston. "The Free-Energy Principle: A Unified Brain Theory?" *Nature Reviews Neuroscience*, 2010.
+
+23. **UMAP:** Leland McInnes, John Healy, James Melville. "UMAP: Uniform Manifold Approximation and Projection for Dimension Reduction." *arXiv preprint*, 2018.
+
+24. **HDBSCAN:** Leland McInnes, John Healy, Steve Astels. "hdbscan: Hierarchical density-based clustering." *JOSS*, 2017.
+
+25. **Borda Count:** Jean-Charles de Borda. "Mémoire sur les élections au scrutin." *Histoire de l'Académie Royale des Sciences*, 1781.
+
+26. **Elephant Rock Platform:** Elephant Rock Research. "Architecture Documentation." *Internal Technical Report*, 2026. [Multi-agent research ideation platform with 9-stage pipeline, knowledge graph, and self-improvement engine. 77,516 LOC, 1,790 tests.]
+
+27. **GAAPO:** Maor Gaathon et al. "GAAPO: Genetic Algorithm for Automated Prompt Optimization." *arXiv preprint*, 2024.
+
+28. **PCGrad:** Yuwei Fang et al. "Gradient Vaccination: Enhancing Compatibility between Multitask Loss Landscapes." *NeurIPS Workshop*, 2020.
+
+29. **XLand / Open-Ended Learning:** DeepMind. "Open-Ended Learning Leads to Generally Capable Agents." *arXiv preprint*, 2021. [Multi-agent self-play in open-ended environments producing emergent capabilities.]
 
 ---
 
-*This paper was generated by the Elephant Rock multi-agent research platform. The analysis is based on automated literature search across 382 papers, gap analysis via clustering, idea generation via Ideator-Critic-Refiner debate with Borda tournament ranking, and novelty/feasibility scoring. All confidence, novelty, and feasibility scores are reported as generated by the platform's automated evaluation pipeline.*
+*This paper was generated by the Elephant Rock multi-agent research platform and critically revised based on external review (DeepSeek). The analysis is based on automated literature search across 382 papers, gap analysis via clustering, idea generation via Ideator-Critic-Refiner debate with Borda tournament ranking, and novelty/feasibility scoring. The Karpathy loop and autoresearch framework analysis is based on direct study of the autoresearch codebase (program.md, train.py, prepare.py, SKILL.md, COMPARISON.md, and reference protocols). All confidence, novelty, and feasibility scores are reported as generated by the platform's automated evaluation pipeline and should be interpreted as ordinal indicators, not calibrated probabilities.*

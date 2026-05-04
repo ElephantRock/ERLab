@@ -61,9 +61,16 @@ class PipelineOrchestrator:
         "export",
     ]
 
-    def __init__(self, provider: LLMProvider | None = None, stage_callback=None):
-        settings = get_settings()
+    def __init__(self, provider: LLMProvider | None = None, stage_callback=None, settings: "Settings | None" = None):
+        settings = settings or get_settings()
         self._registry = get_registry()
+        # Guard against Settings being passed as provider (positional arg confusion)
+        if provider is not None and not hasattr(provider, "structured_output"):
+            logger.warning(
+                "PipelineOrchestrator received %s as 'provider'; ignoring and creating default",
+                type(provider).__name__,
+            )
+            provider = None
         self._provider = provider or self._registry.create(settings=settings)
         self._cost_tracker = self._registry.cost_tracker
         self._stage_callback = stage_callback
