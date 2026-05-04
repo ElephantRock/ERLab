@@ -1,17 +1,21 @@
 """Data models for idea generation."""
 
+import uuid
+
 from pydantic import BaseModel, Field
 
 
 class IdeaCandidate(BaseModel):
     """A raw research idea from the IdeatorAgent."""
 
+    id: str = Field(default_factory=lambda: uuid.uuid4().hex)
     title: str
     problem_statement: str
     proposed_method: str
     expected_contributions: str = ""
     novelty_rationale: str = ""
     evaluation_approach: str = ""
+    parent_idea_ids: list[str] | None = None
 
 
 class Critique(BaseModel):
