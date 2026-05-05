@@ -94,12 +94,29 @@ class SearchService:
 
     @staticmethod
     def _default_sources() -> list[AcademicSearchSource]:
-        """Create default sources from settings."""
+        """Create default sources from settings.
+
+        When no Semantic Scholar API key is set, OpenAlex is placed first
+        to avoid severe rate limiting (Fix #11b).
+        """
         from backend.pipeline.literature.arxiv_source import ArxivSource
         from backend.pipeline.literature.openalex_source import OpenAlexSource
         from backend.pipeline.literature.semantic_scholar import SemanticScholarSource
 
         settings = get_settings()
+
+        if not settings.semantic_scholar_api_key:
+            logger.info(
+                "No S2 API key set — using OpenAlex as primary source "
+                "(free, unlimited). Get a free S2 key: "
+                "https://www.semanticscholar.org/product/api#api-key"
+            )
+            return [
+                OpenAlexSource(email=settings.openalex_email),
+                ArxivSource(),
+                SemanticScholarSource(api_key=None),
+            ]
+
         return [
             SemanticScholarSource(api_key=settings.semantic_scholar_api_key),
             ArxivSource(),

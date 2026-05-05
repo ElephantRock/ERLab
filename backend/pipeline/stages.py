@@ -109,11 +109,12 @@ class LiteratureSearchStage(PipelineStage):
 
 
 class IngestionStage(PipelineStage):
-    def __init__(self, store, bm25, embedding, kg=None):
+    def __init__(self, store, bm25, embedding, kg=None, provider=None):
         self._store = store
         self._bm25 = bm25
         self._embedding = embedding
         self._kg = kg
+        self._provider = provider
 
     @property
     def name(self) -> str:
@@ -182,6 +183,18 @@ class IngestionStage(PipelineStage):
                 self._kg.add_entity(entity)
             self._kg.save()
             logger.info("Added %d paper entities to Knowledge Graph", len(ctx.all_papers))
+
+            # Extract relationships between papers (Fix #4)
+            try:
+                from backend.pipeline.knowledge.relationship_extractor import extract_relationships
+                rels = await extract_relationships(ctx.all_papers, ctx.provider_override or self._provider)
+                for rel in rels:
+                    self._kg.add_relationship(rel)
+                if rels:
+                    self._kg.save()
+                    logger.info("Added %d paper relationships to Knowledge Graph", len(rels))
+            except Exception as e:
+                logger.warning("Relationship extraction failed (non-fatal): %s", e)
 
         return True
 
@@ -348,6 +361,22 @@ class IdeaGenerationStage(PipelineStage):
                             relation_type=RelationType.PROPOSES_METHOD,
                             truth=TruthValue.from_observation(frequency=idea.score),
                         ))
+
+                        # Fix #5: Revise gap truth upward when an idea addresses it
+                        gap_entity = self._kg._entities[gap_eid]
+                        if hasattr(gap_entity, 'truth') and gap_entity.truth:
+                            revised = gap_entity.truth.revise(
+                                TruthValue.from_observation(frequency=0.8)
+                            )
+                            gap_entity.truth = revised
+                            logger.debug(
+                                "Revised gap truth for '%s': confidence %.3f → %.3f, evidence %d → %d",
+                                gap_entity.name[:40],
+                                gap_entity.truth.confidence if hasattr(gap_entity, '_prev_conf') else 0.5,
+                                revised.confidence,
+                                gap_entity.truth.evidence_count if hasattr(gap_entity, '_prev_ev') else 1,
+                                revised.evidence_count,
+                            )
 
             self._kg.save()
             logger.info("Added %d idea entities to Knowledge Graph", len(ideas))
@@ -670,6 +699,14 @@ class TreeSearchStage(PipelineStage):
                             relation_type=RelationType.PROPOSES_METHOD,
                             truth=TruthValue.from_observation(frequency=getattr(idea, 'overall_score', 0.5)),
                         ))
+
+                        # Fix #5: Revise gap truth upward when an idea addresses it
+                        gap_entity = self._kg._entities[gap_eid]
+                        if hasattr(gap_entity, 'truth') and gap_entity.truth:
+                            revised = gap_entity.truth.revise(
+                                TruthValue.from_observation(frequency=0.8)
+                            )
+                            gap_entity.truth = revised
 
             self._kg.save()
             logger.info("Added %d idea entities to Knowledge Graph (tree search)", len(ideas))

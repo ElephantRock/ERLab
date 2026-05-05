@@ -4,6 +4,7 @@ import json
 import hashlib
 import logging
 import re
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
@@ -277,7 +278,7 @@ class PipelinePersistence:
             self.warnings.append(f"persist_tree_data: {e}")
 
     def advance_stage(self, run_id: int, stage_name: str) -> None:
-        """Update the current stage and append to stages_completed."""
+        """Update the current stage, append to stages_completed, and update updated_at."""
         try:
             from backend.db.database import get_session
             from backend.db.models import PipelineRun
@@ -290,6 +291,7 @@ class PipelinePersistence:
                     if stage_name not in stages:
                         stages.append(stage_name)
                     run.stages_completed = json.dumps(stages)
+                    run.updated_at = datetime.now(timezone.utc)
                     session.commit()
         except Exception as e:
             logger.warning("Failed to advance stage: %s", e)
@@ -329,6 +331,51 @@ class PipelinePersistence:
         except Exception as e:
             logger.warning("Failed to mark DB run as completed: %s", e)
             self.warnings.append(f"mark_run_completed: {e}")
+
+    def find_stale_runs(self, max_age: timedelta) -> list:
+        """Find runs stuck in 'running' longer than max_age.
+
+        Args:
+            max_age: Maximum time a run should be in 'running' state.
+
+        Returns:
+            List of PipelineRun objects that are stale.
+        """
+        try:
+            from backend.db.database import get_session
+            from backend.db.models import PipelineRun
+
+            cutoff = datetime.now(timezone.utc) - max_age
+            with get_session() as session:
+                # Check updated_at first (heartbeat-updated), fall back to created_at
+                stale = session.query(PipelineRun).filter(
+                    PipelineRun.status == "running",
+                ).all()
+                result = []
+                for run in stale:
+                    last_active = run.updated_at or run.created_at
+                    if last_active and last_active < cutoff:
+                        result.append(run)
+                return result
+        except Exception as e:
+            logger.warning("Failed to find stale runs: %s", e)
+            return []
+
+    def mark_stale_run_failed(self, db_run_id: int, message: str) -> None:
+        """Mark a single stale run as failed with a watchdog message."""
+        try:
+            from backend.db import crud
+            from backend.db.database import get_session
+
+            with get_session() as session:
+                crud.update_pipeline_run(
+                    session, db_run_id,
+                    status="failed",
+                    current_stage="failed",
+                    error_message=message,
+                )
+        except Exception as e:
+            logger.warning("Failed to mark stale run as failed: %s", e)
 
     # ── Checkpoint persistence (durable execution) ─────────────────
 

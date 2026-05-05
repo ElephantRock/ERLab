@@ -882,7 +882,7 @@ class PipelineOrchestrator:
 
         return [
             LiteratureSearchStage(self._search, self._hooks),
-            IngestionStage(self._store, self._bm25, self._embedding, kg=self._kg),
+            IngestionStage(self._store, self._bm25, self._embedding, kg=self._kg, provider=self._provider),
             GapAnalysisStage(self._gap_analyzer, self._goal_manager, self._hooks, self._memory, kg=self._kg, faithfulness_checker=self._faithfulness_checker),
             idea_stage,
             NoveltyCheckingStage(self._novelty, self._hooks),

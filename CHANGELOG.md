@@ -3,6 +3,48 @@
 All notable changes to the Elephant Rock Research Platform are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [BATCH-74] - 2026-05-05 — Remaining Pipeline Fixes (Reference-Repo Study)
+
+### Fixed
+- **Fix #4**: Knowledge graph relationship extraction — new `relationship_extractor.py`
+  extracts CITES, USES_METHOD, EXTENDS, CONTRADICTS, BUILDS_ON, APPLIED_TO between papers
+  during ingestion. O(n) comparisons (max 3 per paper).
+- **Fix #5**: Truth value revision — gap truth values now revised upward when ideas
+  reference them via `TruthValue.revise()`. Confidence increases from 0.5 toward 0.99.
+- **Fix #9**: Pipeline run watchdog — new `watchdog.py` + `updated_at` column on
+  `pipeline_runs` + `POST /api/v1/pipeline/watchdog` endpoint. Detects runs stuck
+  in 'running' beyond configurable timeout (default 30 min).
+- **Fix #10**: Integration test skeleton — 6 integration tests exercising real
+  (non-mocked) code paths under `backend/tests/integration/`.
+- **Fix #11b**: Source reordering — OpenAlex placed first when no Semantic Scholar
+  API key is configured, avoiding 429 rate limiting.
+- **Previous (BATCH-73)**: Vector store dim mismatch, proposal synthesizer rewrite,
+  pipeline halt-on-empty, tree search enabled, mechanical metrics fallback,
+  self-improve dir creation, cross-source dedup, API null checks.
+
+### New Files
+- `backend/pipeline/knowledge/relationship_extractor.py`
+- `backend/pipeline/execution/watchdog.py`
+- `backend/tests/integration/test_pipeline_smoke.py`
+- `backend/tests/test_pipeline/test_relationship_extraction.py`
+- `backend/tests/test_pipeline/test_truth_revision.py`
+- `backend/tests/test_pipeline/test_watchdog.py`
+- `backend/tests/test_pipeline/test_source_reordering.py`
+- `alembic/versions/006_watchdog_updated_at.py`
+
+### Modified Files
+- `backend/pipeline/stages.py` — relationship extraction in IngestionStage, truth
+  revision in IdeaGenerationStage + TreeSearchStage
+- `backend/pipeline/orchestrator.py` — provider passed to IngestionStage
+- `backend/pipeline/persistence.py` — find_stale_runs, advance_stage updated_at
+- `backend/pipeline/literature/search_service.py` — source reordering
+- `backend/db/models.py` — PipelineRun.updated_at column
+- `backend/api/routes/pipeline.py` — watchdog endpoint
+
+### Stats
+- 1,631 backend tests passing (+36 new from baseline 1,595)
+- 195 pre-existing trio-mode failures (unchanged)
+
 ## [BATCH-73] - 2026-05-04 — Final Verification
 
 ### Verified

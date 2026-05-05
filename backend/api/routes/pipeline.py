@@ -893,3 +893,41 @@ async def session_budget(session_id: str):
     """
     mgr = _get_session_manager()
     return mgr.check_budget(session_id)
+
+
+@router.post(
+    "/watchdog",
+    summary="Run pipeline watchdog",
+    description="Detect and mark stale pipeline runs that have been in 'running' status beyond the timeout.",
+)
+async def run_watchdog(
+    timeout_minutes: int = Query(default=30, ge=1, le=1440, description="Timeout in minutes"),
+):
+    """Detect and mark stale pipeline runs.
+
+    Scans for pipeline runs stuck in 'running' status for longer than the
+    specified timeout and marks them as 'failed'.
+
+    Args:
+        timeout_minutes: Maximum minutes a run should be in 'running' state.
+
+    Returns:
+        Count of runs marked as failed.
+
+    Example response:
+        {"checked": true, "stale_found": 3, "marked_failed": 3, "timeout_minutes": 30}
+    """
+    from datetime import timedelta
+    from backend.pipeline.execution.watchdog import PipelineWatchdog
+    from backend.pipeline.persistence import PipelinePersistence
+
+    persistence = PipelinePersistence()
+    watchdog = PipelineWatchdog(persistence, timeout=timedelta(minutes=timeout_minutes))
+    marked = await watchdog.check_and_mark_stale_runs()
+
+    return {
+        "checked": True,
+        "stale_found": marked,
+        "marked_failed": marked,
+        "timeout_minutes": timeout_minutes,
+    }

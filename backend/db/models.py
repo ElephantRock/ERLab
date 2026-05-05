@@ -133,6 +133,7 @@ class PipelineRun(Base):
     gaps: Mapped[list["ResearchGapDB"]] = relationship(back_populates="pipeline_run")
     created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
     completed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    updated_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)  # BATCH-74: watchdog tracking
 
 
 class Comment(Base):
