@@ -97,6 +97,28 @@ class LiteratureSearchStage(PipelineStage):
             if key not in seen:
                 seen.add(key)
                 unique.append(p)
+
+        # G6: Fuzzy dedup for near-duplicate titles
+        from difflib import SequenceMatcher
+        fuzzy_unique = []
+        for paper in unique:
+            is_dup = any(
+                SequenceMatcher(
+                    None,
+                    paper.title.lower().strip(),
+                    existing.title.lower().strip(),
+                ).ratio() > 0.85
+                for existing in fuzzy_unique
+            )
+            if not is_dup:
+                fuzzy_unique.append(paper)
+        if len(fuzzy_unique) < len(unique):
+            logger.info(
+                "Fuzzy dedup removed %d near-duplicates (%d → %d)",
+                len(unique) - len(fuzzy_unique), len(unique), len(fuzzy_unique),
+            )
+        unique = fuzzy_unique
+
         ctx.all_papers = unique
         ctx.result.papers_found = len(unique)
         logger.info("Total unique papers: %d (from %d total)", len(unique), len(all_papers))
@@ -249,6 +271,35 @@ class GapAnalysisStage(PipelineStage):
                 self._kg.add_entity(gap_entity)
             self._kg.save()
             logger.info("Added %d gap entities to Knowledge Graph", len(gaps))
+
+            # G3: Revise gap truth based on paper overlap
+            if ctx.all_papers:
+                for gap in gaps:
+                    gap_eid = f"gap:{gap.title[:60]}"
+                    # Count papers whose title/abstract overlap with gap description
+                    overlap_count = 0
+                    gap_words = set(gap.description.lower().split()[:20])
+                    for paper in ctx.all_papers:
+                        paper_text = f"{paper.title} {paper.abstract or ''}".lower()
+                        if sum(1 for w in gap_words if w in paper_text) >= 3:
+                            overlap_count += 1
+                    if overlap_count > 0:
+                        entity = self._kg._entities.get(gap_eid)
+                        if entity and hasattr(entity, 'truth'):
+                            from backend.pipeline.knowledge.truth import TruthValue
+                            revised = entity.truth.revise(
+                                TruthValue(
+                                    frequency=min(0.95, 0.5 + overlap_count * 0.05),
+                                    confidence=0.6,
+                                    evidence_count=overlap_count,
+                                )
+                            )
+                            entity.truth = revised
+                            logger.debug(
+                                "Revised gap truth for '%s': %d overlapping papers → confidence %.3f",
+                                gap.title[:40], overlap_count, revised.confidence,
+                            )
+                self._kg.save()
 
         # Faithfulness check: verify gap claims against source papers
         if self._faithfulness_checker and gaps:

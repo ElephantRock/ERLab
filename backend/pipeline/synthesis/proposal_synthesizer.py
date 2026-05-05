@@ -42,6 +42,24 @@ MIN_WORDS = {
     "risk_mitigation": 150,
 }
 
+# Per-section quality checklist — each check is a (pattern, description) tuple.
+# A section FAILS a check if the pattern is NOT found. The refinement pass
+# re-generates sections that fail any check, plus the word-count check.
+SECTION_CHECKLIST: dict[str, list[tuple[str, str]]] = {
+    "proposed_method": [
+        (r"\$.*\$", "mathematical notation ($...$)"),
+    ],
+    "related_work": [
+        (r"\[\d+\]|\(\w+,\s*\d{4}\)", "citation markers ([1] or Author, Year)"),
+    ],
+    "introduction": [
+        (r"contribut|novelt|our ", "contributions statement"),
+    ],
+    "evaluation_plan": [
+        (r"baseline|metric|dataset|benchmark", "evaluation specifics (baseline/metric/dataset)"),
+    ],
+}
+
 
 class ResearchProposal:
     def __init__(self, idea_id: int | None = None, **sections):
@@ -192,6 +210,11 @@ class ProposalSynthesizer:
 
         proposal = ResearchProposal(idea_id=None, **sections)
 
+        # Pass 3: Refinement — check each section against quality checklist
+        proposal = await self._refine_sections(
+            proposal, idea, novelty_report, feasibility_report, literature, gaps
+        )
+
         # Ensemble review
         if self._ensemble_reviewer:
             try:
@@ -249,6 +272,115 @@ class ProposalSynthesizer:
             temperature=0.4,
             max_tokens=4096,
         )
+
+    async def _refine_sections(
+        self,
+        proposal: ResearchProposal,
+        idea: ResearchIdea,
+        novelty_report: NoveltyReport | None = None,
+        feasibility_report: FeasibilityReport | None = None,
+        literature: str = "",
+        gaps: list | None = None,
+    ) -> ResearchProposal:
+        """Check each section against a quality checklist and re-generate failures.
+
+        For each section, two types of checks run:
+          1. Word-count check: does the section meet its MIN_WORDS threshold?
+          2. Pattern check: does the section contain required patterns from SECTION_CHECKLIST?
+
+        Sections that fail any check are re-generated via `_generate_single_section`.
+        The re-generated version replaces the original only if it passes the same checks
+        or is at least longer than the original.
+
+        Returns the proposal with refined sections.
+        """
+        sections_to_refine: list[tuple[str, str, list[str]]] = []  # (key, section_name, failures)
+
+        for section_name in REQUIRED_SECTIONS:
+            key = section_name.lower().replace(" ", "_")
+            content = proposal.sections.get(key, "")
+            if not isinstance(content, str) or not content:
+                continue
+
+            failures: list[str] = []
+
+            # Check 1: word count
+            min_words = MIN_WORDS.get(key, 50)
+            word_count = len(content.split())
+            if word_count < min_words:
+                failures.append(f"word count {word_count} < {min_words}")
+
+            # Check 2: pattern checklist
+            checklist = SECTION_CHECKLIST.get(key, [])
+            for pattern, description in checklist:
+                if not re.search(pattern, content, re.IGNORECASE):
+                    failures.append(f"missing {description}")
+
+            if failures:
+                sections_to_refine.append((key, section_name, failures))
+
+        if not sections_to_refine:
+            logger.info("Refinement pass: all sections passed quality checks")
+            return proposal
+
+        logger.info(
+            "Refinement pass: %d sections need re-generation: %s",
+            len(sections_to_refine),
+            ", ".join(f"{name} ({'; '.join(fails)})" for _, name, fails in sections_to_refine),
+        )
+
+        for key, section_name, failures in sections_to_refine:
+            try:
+                old_content = proposal.sections.get(key, "")
+                old_word_count = len(old_content.split()) if isinstance(old_content, str) else 0
+
+                new_content = await self._generate_single_section(
+                    section_name, idea, novelty_report, feasibility_report, literature, gaps
+                )
+
+                if not new_content:
+                    logger.warning("Refinement of %s produced empty output — keeping original", section_name)
+                    continue
+
+                # Verify the replacement is an improvement
+                new_word_count = len(new_content.split())
+                new_failures = self._check_section(key, new_content)
+
+                if new_word_count >= old_word_count and len(new_failures) <= len(failures):
+                    # Accept: same or fewer failures, same or longer
+                    proposal.sections[key] = new_content
+                    logger.info(
+                        "Refined %s: %d→%d words, %d→%d failures",
+                        section_name, old_word_count, new_word_count,
+                        len(failures), len(new_failures),
+                    )
+                elif new_word_count > old_word_count:
+                    # Accept: longer even if failures remain — at least more content
+                    proposal.sections[key] = new_content
+                    logger.info(
+                        "Refined %s: %d→%d words (accepted despite %d remaining failures)",
+                        section_name, old_word_count, new_word_count, len(new_failures),
+                    )
+                else:
+                    logger.warning(
+                        "Refinement of %s did not improve — keeping original", section_name
+                    )
+            except Exception as e:
+                logger.warning("Refinement of %s failed: %s", section_name, e)
+
+        return proposal
+
+    @staticmethod
+    def _check_section(key: str, content: str) -> list[str]:
+        """Run the quality checklist on a section. Returns list of failure descriptions."""
+        failures: list[str] = []
+        min_words = MIN_WORDS.get(key, 50)
+        if len(content.split()) < min_words:
+            failures.append(f"word count {len(content.split())} < {min_words}")
+        for pattern, description in SECTION_CHECKLIST.get(key, []):
+            if not re.search(pattern, content, re.IGNORECASE):
+                failures.append(f"missing {description}")
+        return failures
 
     def _build_context(
         self,

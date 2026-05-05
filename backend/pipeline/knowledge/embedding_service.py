@@ -63,6 +63,29 @@ class EmbeddingService:
             return self._provider.dimension
         return 1536
 
+    async def validate_startup(self) -> bool:
+        """Test-embed a string to confirm the provider returns non-zero vectors.
+
+        Returns True if the embedding is real, False if it's all zeros.
+        Call this once after constructing EmbeddingService. If it returns
+        False, novelty checking will produce garbage and should be skipped.
+        """
+        test = await self.embed_single("test")
+        if not test:
+            logger.error("Embedding provider returned empty vector — novelty will be fake")
+            return False
+        if all(v == 0.0 for v in test):
+            logger.error(
+                "Embedding provider returned all-zero vector (%d-dim). "
+                "Novelty checking will produce meaningless scores. "
+                "Switch to a real embedding provider (openai, gemini, ollama) "
+                "or accept that novelty scores are unreliable.",
+                len(test),
+            )
+            return False
+        logger.info("Embedding provider validated: %d-dim, non-zero vectors", len(test))
+        return True
+
     def validate_dimension(self, expected: int) -> bool:
         """Warn if embedding dimension doesn't match expected. Returns True if match."""
         actual = self.dimension

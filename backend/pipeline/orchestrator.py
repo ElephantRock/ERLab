@@ -183,6 +183,9 @@ class PipelineOrchestrator:
         )
         self._store = VectorStore(settings.chroma_persist_dir, self._embedding)
 
+        # G1: Validate embedding provider produces real vectors
+        self._embedding_valid = False  # Will be checked lazily on first run
+
         from backend.pipeline.knowledge.bm25_index import BM25Index
         from backend.pipeline.knowledge.retriever import TwoStageRetriever
 
@@ -926,6 +929,27 @@ class PipelineOrchestrator:
 
         run_id = run_id or datetime.now().strftime("run_%Y%m%d_%H%M%S")
         result.run_id = run_id
+
+        # G1: Lazy validation — check embedding provider on first run
+        if not self._embedding_valid:
+            self._embedding_valid = await self._embedding.validate_startup()
+            if not self._embedding_valid and run_novelty:
+                logger.warning(
+                    "Embedding provider returns zero vectors — disabling novelty checking. "
+                    "Novelty scores will be skipped, not faked."
+                )
+                run_novelty = False
+
+        # G5: Run watchdog before starting — clean up stale runs from prior crashes
+        try:
+            from backend.pipeline.execution.watchdog import PipelineWatchdog
+            from datetime import timedelta as _td
+            watchdog = PipelineWatchdog(self._persistence, timeout=_td(minutes=30))
+            stale_count = watchdog.check_sync()
+            if stale_count > 0:
+                logger.info("Watchdog: marked %d stale runs as failed before starting new run", stale_count)
+        except Exception as e:
+            logger.debug("Watchdog check failed (non-fatal): %s", e)
 
         # Session: register run and check budget
         if session_id and self._session_manager:
