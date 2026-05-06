@@ -22,7 +22,20 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Stage execution loop checks strategy config before existing gate logic.
 
 ### Fixed
-- Reviewer flag CHK-17: Stage names corrected to match actual `_STAGE_ORDER`.## [BATCH-75] - 2026-05-06 — Post-Real-Run Pipeline Hardening (AIV v5.3)
+- Reviewer flag CHK-17: Stage names corrected to match actual `_STAGE_ORDER`.
+
+## [0.77.0-prealpha] — 2026-05-06
+
+### Added
+- **Fast Scan Pipeline Strategy** (BATCH-77): FastProposalSynthesizer produces
+  abbreviated 3-section proposals (Abstract, Key Idea, Method Sketch) in < 5 min.
+- `backend/pipeline/synthesis/fast_synthesizer.py` with timeout-aware LLM calls.
+- `backend/pipeline/synthesis/prompts/fast_synthesis_system.md` prompt template.
+- Orchestrator `_build_synthesis_stage()` selects fast/full synthesizer based on strategy.
+- 13 new tests for fast_scan strategy.
+
+### Changed
+- fast_scan strategy uses FastProposalSynthesizer instead of full ProposalSynthesizer.## [BATCH-75] - 2026-05-06 — Post-Real-Run Pipeline Hardening (AIV v5.3)
 
 ### Fixed
 - **D1**: TreeSearchStage now converts IdeaCandidate → ResearchIdea before assigning

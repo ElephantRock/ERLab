@@ -857,6 +857,25 @@ class PipelineOrchestrator:
         """Return the name of the active pipeline strategy."""
         return self._strategy_name
 
+    def _build_synthesis_stage(self, ref_validator) -> PipelineStage:
+        """Build the proposal synthesis stage, selecting synthesizer based on strategy."""
+        if self._strategy_name == "fast_scan":
+            from backend.pipeline.synthesis.fast_synthesizer import FastProposalSynthesizer
+            fast_synth = FastProposalSynthesizer(provider=self._provider)
+            return ProposalSynthesisStage(
+                fast_synth,
+                self._governance_validator,
+                self._governance_audit,
+                ref_validator=ref_validator,
+            )
+        # Default: full proposal synthesizer
+        return ProposalSynthesisStage(
+            self._synthesizer,
+            self._governance_validator,
+            self._governance_audit,
+            ref_validator=ref_validator,
+        )
+
     def _build_stages(self) -> list[PipelineStage]:
         ref_validator = ReferenceValidator(store=self._store)
 
@@ -904,12 +923,7 @@ class PipelineOrchestrator:
             NoveltyCheckingStage(self._novelty, self._hooks),
             FeasibilityScoringStage(self._feasibility),
             MechanicalMetricsStage(),
-            ProposalSynthesisStage(
-                self._synthesizer,
-                self._governance_validator,
-                self._governance_audit,
-                ref_validator=ref_validator,
-            ),
+            self._build_synthesis_stage(ref_validator),
             ExportStage(self._export),
         ]
 
