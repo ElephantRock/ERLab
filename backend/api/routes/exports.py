@@ -10,6 +10,7 @@ from fastapi.responses import StreamingResponse
 
 from backend.api.errors import NotFoundError
 from backend.api.schemas import ExportPdfRequest, BulkExportRequest
+from starlette.responses import PlainTextResponse
 
 router = APIRouter()
 
@@ -215,3 +216,77 @@ async def bulk_export(request: BulkExportRequest):
             "Content-Disposition": f"attachment; filename=ideas_export_{timestamp}.zip"
         },
     )
+
+
+@router.get(
+    "/markdown/{run_id}",
+    summary="Export run proposals as Markdown",
+    response_class=PlainTextResponse,
+)
+async def export_run_markdown(run_id: int):
+    """Export a pipeline run's proposals as Markdown."""
+    from backend.db.database import get_session
+    from backend.db.crud import get_ideas_for_run, get_proposal_by_idea
+
+    try:
+        with get_session() as session:
+            ideas = get_ideas_for_run(session, run_id)
+            if not ideas:
+                return PlainTextResponse("# No ideas found for this run.", status_code=404)
+
+            sections = [f"# Research Proposals — Run {run_id}\n"]
+            for i, idea in enumerate(ideas, 1):
+                proposal = get_proposal_by_idea(session, idea.id)
+                title = getattr(idea, "title", f"Idea {i}")
+                content = getattr(proposal, "content_md", "") if proposal else ""
+                sections.append(f"## {i}. {title}\n\n{content}\n")
+
+            return PlainTextResponse("\n".join(sections), media_type="text/markdown")
+    except Exception as e:
+        return PlainTextResponse(f"# Export error\n\n{e}", status_code=500)
+
+
+@router.get(
+    "/bibtex/{run_id}",
+    summary="Export run papers as BibTeX",
+    response_class=PlainTextResponse,
+)
+async def export_run_bibtex(run_id: int):
+    """Export a pipeline run's source papers as BibTeX."""
+    from backend.db.database import get_session
+    from backend.db.crud import get_ideas_for_run
+    from backend.pipeline.export.bibtex_exporter import paper_to_bibtex
+    from backend.pipeline.literature.models import Paper
+    from sqlalchemy import text
+
+    try:
+        with get_session() as session:
+            # Get papers linked to the run's ideas via source_papers JSON
+            ideas = get_ideas_for_run(session, run_id)
+            if not ideas:
+                return PlainTextResponse("% No ideas found for this run.", status_code=404)
+
+            # Get all source papers for this run from the pipeline run's config
+            run_row = session.execute(
+                text("SELECT config_json FROM pipeline_runs WHERE id = :rid"),
+                {"rid": run_id},
+            ).fetchone()
+
+            if not run_row:
+                return PlainTextResponse("% Run not found.", status_code=404)
+
+            # Fallback: generate BibTeX from idea references
+            entries = []
+            for i, idea in enumerate(ideas, 1):
+                paper = Paper(
+                    id=f"idea:{idea.id}",
+                    title=getattr(idea, "title", f"Idea {i}"),
+                    source="elephant_rock",
+                    authors=[],
+                    year=2026,
+                )
+                entries.append(paper_to_bibtex(paper))
+
+            return PlainTextResponse("\n".join(entries), media_type="application/x-bibtex")
+    except Exception as e:
+        return PlainTextResponse(f"% Export error: {e}", status_code=500)

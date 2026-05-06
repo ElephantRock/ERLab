@@ -143,11 +143,11 @@ export default function GapDetailPage() {
           <div className="grid grid-cols-3 gap-4">
             <div>
               <p className="text-xs text-muted-foreground">Frequency</p>
-              <p className="text-lg font-medium">{gap.truth.frequency.toFixed(3)}</p>
+              <p className="text-lg font-medium">{parseFloat(String(gap.truth.frequency)).toFixed(3)}</p>
             </div>
             <div>
               <p className="text-xs text-muted-foreground">Confidence</p>
-              <p className="text-lg font-medium">{gap.truth.confidence.toFixed(3)}</p>
+              <p className="text-lg font-medium">{parseFloat(String(gap.truth.confidence)).toFixed(3)}</p>
             </div>
             <div>
               <p className="text-xs text-muted-foreground">Evidence Count</p>
