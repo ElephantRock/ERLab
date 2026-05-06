@@ -307,7 +307,7 @@ class Settings(BaseSettings):
     stage_retry_base_delay: float = 2.0
     stage_retry_max_delay: float = 120.0
     stage_retry_jitter: float = 0.1
-    per_proposal_timeout: float = 120.0  # seconds; capped at 300 by HB-01
+    per_proposal_timeout: float = 300.0  # seconds; capped at 300 by HB-01
     heartbeat_enabled: bool = True
     heartbeat_interval_seconds: float = 30.0
     heartbeat_timeout_seconds: float = 300.0

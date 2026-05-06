@@ -218,17 +218,30 @@ class PipelinePersistence:
                             select(Idea).where(
                                 Idea.title == idea.title,
                                 Idea.pipeline_run_id == db_run_id,
-                            )
+                            ).limit(1)
                         ).scalar_one_or_none()
                         if db_idea_row:
-                            sections_to_store = {
-                                k: v for k, v in proposal.sections.items() if k != "validated_text"
-                            }
+                            # Filter out non-serializable values (e.g., EnsembleReviewResult)
+                            sections_to_store = {}
+                            for k, v in proposal.sections.items():
+                                if k == "validated_text":
+                                    continue
+                                if isinstance(v, (str, list, dict, int, float, bool, type(None))):
+                                    sections_to_store[k] = v
+                                elif hasattr(v, "model_dump"):
+                                    sections_to_store[k] = v.model_dump()
+                                elif hasattr(v, "__dict__"):
+                                    sections_to_store[k] = str(v)
+
+                            refs = proposal.sections.get("references", [])
+                            if not isinstance(refs, (list, dict, str)):
+                                refs = str(refs)
+
                             crud.create_proposal(
                                 session,
                                 idea_id=db_idea_row.id,
                                 content_md=proposal.to_markdown(),
-                                references_json=json.dumps(proposal.sections.get("references", [])),
+                                references_json=json.dumps(refs),
                                 sections_json=json.dumps(sections_to_store),
                             )
         except Exception as e:
