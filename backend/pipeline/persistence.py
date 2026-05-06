@@ -142,21 +142,44 @@ class PipelinePersistence:
         if not db_run_id or not result.ideas:
             return
         try:
+            from sqlalchemy import select
+
             from backend.db import crud
             from backend.db.database import get_session
+            from backend.db.models import Idea as IdeaModel
 
             with get_session() as session:
                 for i, idea in enumerate(result.ideas):
+                    # Dedup check: skip if idea with same (title, pipeline_run_id) already exists (BATCH-75, HB-03)
+                    existing = session.execute(
+                        select(IdeaModel).where(
+                            IdeaModel.title == idea.title,
+                            IdeaModel.pipeline_run_id == db_run_id,
+                        ).limit(1)
+                    ).scalar_one_or_none()
+                    if existing:
+                        logger.info(
+                            "Skipping duplicate idea: '%s' (run_id=%s)",
+                            idea.title[:50], db_run_id,
+                        )
+                        continue
+
                     nov = result.novelty_reports.get(i)
                     feas = result.feasibility_reports.get(i)
+
+                    # getattr guards for IdeaCandidate compatibility (BATCH-75, HB-02)
+                    source_gap_ids_raw = getattr(idea, 'source_gap_ids', None)
+                    # novelty_rationale is guarded via getattr even though not persisted yet
+                    getattr(idea, 'novelty_rationale', '')
+
                     db_idea = crud.create_idea(
                         session,
                         title=idea.title,
                         problem_statement=idea.problem_statement,
                         proposed_method=idea.proposed_method,
-                        expected_contributions=idea.expected_contributions,
-                        domain=idea.domain,
-                        source_gap_ids=json.dumps(idea.source_gap_ids) if idea.source_gap_ids else None,
+                        expected_contributions=getattr(idea, 'expected_contributions', ''),
+                        domain=getattr(idea, 'domain', 'AI/NLP'),
+                        source_gap_ids=json.dumps(source_gap_ids_raw) if source_gap_ids_raw else None,
                         pipeline_run_id=db_run_id,
                     )
                     if nov or feas:
