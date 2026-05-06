@@ -75,7 +75,17 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   Novelty, Feasibility, Completeness, Rigor, Clarity (0-1 each with justification).
 - `backend/pipeline/evaluation/proposal_evaluator.py` with ProposalEvaluator.
 - `frontend/src/components/ideas/evaluation-card.tsx` with visual score bars.
-- 14 new tests.## [BATCH-75] - 2026-05-06 — Post-Real-Run Pipeline Hardening (AIV v5.3)
+- 14 new tests.
+
+## [0.82.0-prealpha] — 2026-05-06
+
+### Added
+- **Knowledge Library** (BATCH-82): Persistent research memory. Papers, gaps,
+  and ideas from completed runs are indexed in SQLite. Future runs query
+  existing knowledge first. Dedup by title hash.
+- `backend/pipeline/knowledge/library.py` with KnowledgeLibrary class.
+- `backend/pipeline/knowledge/library_indexer.py` with LibraryIndexer.
+- 12 new tests.## [BATCH-75] - 2026-05-06 — Post-Real-Run Pipeline Hardening (AIV v5.3)
 
 ### Fixed
 - **D1**: TreeSearchStage now converts IdeaCandidate → ResearchIdea before assigning
