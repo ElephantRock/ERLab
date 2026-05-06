@@ -142,6 +142,15 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - `backend/pipeline/safety/anti_fabrication.py` with AntiFabricationGuard.
 - 10 new tests.
 
+## [0.90.0-prealpha] — 2026-05-07
+
+### Added
+- **Markdown-to-LaTeX Converter** (BATCH-90): Converts arbitrary markdown
+  proposals to LaTeX source. Handles headings, bold, italic, code blocks,
+  lists, tables, links. Graceful on malformed input. No external LaTeX needed.
+- `backend/pipeline/export/md_to_latex.py` with MarkdownToLatexConverter.
+- 8 new tests.
+
 ### Added
 - **Multi-Dimensional Proposal Evaluation** (BATCH-81): Score proposals on
   Novelty, Feasibility, Completeness, Rigor, Clarity (0-1 each with justification).

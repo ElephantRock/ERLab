@@ -138,8 +138,8 @@ ADAPTATION LOG (ROLLING — LAST 10 BATCHES)
 TEST BASELINE
 ───────────────────────────────────────────────────────────
 
-  Last verified count: 2,073
-  Verified in:         BATCH-89 (2026-05-06)
+  Last verified count: 2,081
+  Verified in:         BATCH-90 (2026-05-07)
   Breakdown:           ~1,677 unit/integration passing + 44 new from BATCH-76/77,
                        ~198 trio-mode pre-existing failures
 
