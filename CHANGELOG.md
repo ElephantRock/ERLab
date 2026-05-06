@@ -80,6 +80,16 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - `backend/pipeline/knowledge/error_store.py` with ErrorKnowledgeStore.
 - 10 new tests.
 
+## [0.84.0-prealpha] — 2026-05-06
+
+### Added
+- **Research Journal** (BATCH-84): Every pipeline run generates notes.md
+  (detailed stage log) and README.md (clean summary) in data/runs/{run_id}/.
+  Inspired by simonw/research methodology.
+- `backend/pipeline/journal/` module with JournalWriter.
+  Sensitive data scrubbed from journal entries.
+- 8 new tests.
+
 ### Added
 - **Multi-Dimensional Proposal Evaluation** (BATCH-81): Score proposals on
   Novelty, Feasibility, Completeness, Rigor, Clarity (0-1 each with justification).
