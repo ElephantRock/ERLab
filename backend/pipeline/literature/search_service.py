@@ -14,10 +14,11 @@ logger = logging.getLogger(__name__)
 class SearchService:
     """Search across multiple academic sources with deduplication."""
 
-    def __init__(self, sources: list[AcademicSearchSource] | None = None):
+    def __init__(self, sources: list[AcademicSearchSource] | None = None, search_depth: int = 1):
         if sources is None:
             sources = self._default_sources()
         self._sources: dict[str, AcademicSearchSource] = {s.source_name: s for s in sources}
+        self._search_depth = max(1, search_depth)
 
     async def search_all(
         self,
@@ -61,6 +62,62 @@ class SearchService:
         if not source:
             return []
         return await source.get_citations(paper.id, limit=limit)
+
+    async def search_recursive(
+        self,
+        query: str,
+        max_depth: int | None = None,
+        limit_per_source: int = 20,
+        year_from: int | None = None,
+        year_to: int | None = None,
+    ) -> list[Paper]:
+        """Recursive search: use initial results to generate follow-up queries.
+
+        At each depth level, extracts key terms from found papers and
+        uses them as additional search queries.
+        """
+        depth = max_depth or self._search_depth
+        all_papers = await self.search_all(
+            query, limit_per_source=limit_per_source,
+            year_from=year_from, year_to=year_to,
+        )
+
+        if depth <= 1 or not all_papers:
+            return all_papers
+
+        # Extract key terms from top papers for follow-up queries
+        seen_titles = {p.title.lower().strip() for p in all_papers}
+
+        for level in range(1, depth):
+            followup_queries = self._extract_followup_queries(all_papers, query)
+            for fq in followup_queries[:3]:  # Max 3 follow-up queries per level
+                new_papers = await self.search_all(
+                    fq, limit_per_source=min(limit_per_source, 10),
+                    year_from=year_from, year_to=year_to,
+                )
+                for p in new_papers:
+                    if p.title.lower().strip() not in seen_titles:
+                        all_papers.append(p)
+                        seen_titles.add(p.title.lower().strip())
+
+        logger.info(
+            "Recursive search (depth=%d): %d total papers",
+            depth, len(all_papers),
+        )
+        return all_papers
+
+    @staticmethod
+    def _extract_followup_queries(papers: list[Paper], original_query: str) -> list[str]:
+        """Extract follow-up search queries from paper titles and venues."""
+        queries = []
+        for p in papers[:5]:
+            if p.title and len(p.title) > 20:
+                # Use first half of title as a follow-up query
+                words = p.title.split()
+                if len(words) > 4:
+                    subquery = " ".join(words[:len(words)//2])
+                    queries.append(subquery)
+        return queries
 
     async def get_references(self, paper: Paper, limit: int = 50) -> list[Paper]:
         """Get references from the paper's source."""

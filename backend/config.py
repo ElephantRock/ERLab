@@ -66,6 +66,7 @@ class Settings(BaseSettings):
     generation_model: str = ""  # empty = same as default provider
     thinking_model_max_tokens: int = 2048
     generation_model_max_tokens: int = 8192
+    search_depth: int = 1  # 1=single pass, 2=recursive with follow-up queries
 
     # Pipeline Defaults
     generation_rounds: int = 2

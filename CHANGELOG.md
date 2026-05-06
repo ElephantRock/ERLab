@@ -111,6 +111,18 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - `backend/pipeline/literature/relevance_filter.py` with RelevanceFilter.
 - 8 new tests.
 
+## [0.87.0-prealpha] — 2026-05-06
+
+### Added
+- **SKILL.md Platform Manifest** (BATCH-87): Machine-readable YAML+Markdown
+  defining capabilities, constraints, integrations, and pipeline stages.
+- **Recursive Search** (BATCH-87): search_depth config in Settings.
+  search_recursive() method uses follow-up queries from paper titles.
+- `SKILL.md` at project root.
+- `backend/config.py` — search_depth field.
+- `backend/pipeline/literature/search_service.py` — search_recursive method.
+- 6 new tests.
+
 ### Added
 - **Multi-Dimensional Proposal Evaluation** (BATCH-81): Score proposals on
   Novelty, Feasibility, Completeness, Rigor, Clarity (0-1 each with justification).
