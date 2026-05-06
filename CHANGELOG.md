@@ -170,6 +170,15 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - `backend/pipeline/concurrency.py` with ConcurrencyManager, StageConcurrency.
 - 8 new tests.
 
+## [0.93.0-prealpha] — 2026-05-07
+
+### Added
+- **MCP Tool Registry** (BATCH-93): Standardized tool calling for pipeline
+  stages. MCPToolRegistry with register/call/list. Built-in tools:
+  search, code_exec, file_read. Timeout enforcement (HB-01).
+- `backend/pipeline/tools/tool_registry.py` with MCPToolRegistry.
+- 8 new tests.
+
 ### Added
 - **Multi-Dimensional Proposal Evaluation** (BATCH-81): Score proposals on
   Novelty, Feasibility, Completeness, Rigor, Clarity (0-1 each with justification).
