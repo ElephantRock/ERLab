@@ -35,6 +35,7 @@ export function RunConfigForm({ onSubmit, isLoading }: RunConfigFormProps) {
   const [runSynthesis, setRunSynthesis] = useState(true);
   const [searchQueries, setSearchQueries] = useState("");
   const [advancedOpen, setAdvancedOpen] = useState(false);
+  const [strategy, setStrategy] = useState<string>("deep_research");
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -50,6 +51,7 @@ export function RunConfigForm({ onSubmit, isLoading }: RunConfigFormProps) {
       run_feasibility: runFeasibility,
       run_synthesis: runSynthesis,
       export_format: exportFormat,
+      strategy,
     };
     onSubmit(config);
   }
@@ -70,6 +72,28 @@ export function RunConfigForm({ onSubmit, isLoading }: RunConfigFormProps) {
               onChange={(e) => setDomain(e.target.value)}
               maxLength={VALIDATION.domain.maxLength}
             />
+          </div>
+
+          {/* Strategy Selection */}
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Pipeline Strategy</label>
+            <select
+              value={strategy}
+              onChange={(e) => setStrategy(e.target.value)}
+              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              data-testid="strategy-select"
+            >
+              <option value="fast_scan">Quick Scan (~2-5 min)</option>
+              <option value="deep_research">Deep Research (~25 min)</option>
+              <option value="academic_proposal">Academic Proposal (~45 min)</option>
+              <option value="literature_review">Literature Review (~10 min)</option>
+            </select>
+            <p className="text-xs text-muted-foreground">
+              {strategy === "fast_scan" && "Fast scan skips tree search and metrics for rapid results."}
+              {strategy === "deep_research" && "Full pipeline with tree search, novelty checking, and proposal synthesis."}
+              {strategy === "academic_proposal" && "Stricter thresholds and longer timeouts for academic-grade proposals."}
+              {strategy === "literature_review" && "Literature search and gap analysis only, no proposal generation."}
+            </p>
           </div>
 
           {/* Core numeric fields */}

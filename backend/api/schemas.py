@@ -14,6 +14,7 @@ class PipelineRunRequest(BaseModel):
     run_synthesis: bool = Field(default=True)
     export_format: str = Field(default="markdown")
     session_id: str | None = None
+    strategy: str = Field(default="deep_research", pattern="^(fast_scan|deep_research|academic_proposal|literature_review)$")
 
 
 class SearchRequest(BaseModel):

@@ -163,6 +163,12 @@ export default function RunDetail() {
               <dd className="font-medium">{run.domain}</dd>
             </div>
             <div>
+              <dt className="text-muted-foreground">Strategy</dt>
+              <dd className="font-medium capitalize" data-testid="run-strategy">
+                {run.strategy ? run.strategy.replace(/_/g, " ") : "deep research"}
+              </dd>
+            </div>
+            <div>
               <dt className="text-muted-foreground">Created</dt>
               <dd className="font-medium" data-testid="run-created-at">
                 {new Date(run.created_at).toLocaleString()}

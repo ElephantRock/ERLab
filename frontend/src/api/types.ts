@@ -11,6 +11,7 @@ export interface PipelineRunRequest {
   run_synthesis?: boolean;
   export_format?: string;
   session_id?: string | null;
+  strategy?: string;
 }
 
 export interface PipelineRunSummary {
@@ -23,6 +24,7 @@ export interface PipelineRunSummary {
   created_at: string;
   completed_at: string | null;
   error_message: string | null;
+  strategy?: string;
 }
 
 export interface TreeNode {

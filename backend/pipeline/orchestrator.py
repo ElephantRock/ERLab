@@ -64,7 +64,7 @@ class PipelineOrchestrator:
         "export",
     ]
 
-    def __init__(self, provider: LLMProvider | None = None, stage_callback=None, settings: "Settings | None" = None):
+    def __init__(self, provider: LLMProvider | None = None, stage_callback=None, settings: "Settings | None" = None, strategy: str | None = None):
         settings = settings or get_settings()
         self._registry = get_registry()
         # Guard against Settings being passed as provider (positional arg confusion)
@@ -78,6 +78,14 @@ class PipelineOrchestrator:
         self._cost_tracker = self._registry.cost_tracker
         self._stage_callback = stage_callback
         self._settings = settings
+
+        # Strategy: resolve config, default to deep_research (HB-02)
+        from backend.pipeline.strategies import StrategyRegistry, register_presets
+        self._strategy_registry = StrategyRegistry()
+        register_presets(self._strategy_registry)
+        self._strategy_name = strategy or "deep_research"
+        self._strategy_config = self._strategy_registry.get(self._strategy_name)
+        logger.info("Pipeline strategy: %s", self._strategy_name)
 
         # Task routing (optional per-stage model selection)
         self._task_router = None
@@ -844,6 +852,11 @@ class PipelineOrchestrator:
         self._session_manager = SessionManager(data_dir=data_dir, hooks=self._hooks)
         logger.info("Session management enabled (data_dir=%s)", data_dir)
 
+    @property
+    def strategy_name(self) -> str:
+        """Return the name of the active pipeline strategy."""
+        return self._strategy_name
+
     def _build_stages(self) -> list[PipelineStage]:
         ref_validator = ReferenceValidator(store=self._store)
 
@@ -1040,6 +1053,12 @@ class PipelineOrchestrator:
 
         # Execute stages
         for stage in self._stages:
+            # Strategy: skip stages disabled in the current strategy config
+            strategy_stage = self._strategy_config.stages.get(stage.name)
+            if strategy_stage is not None and not strategy_stage.enabled:
+                logger.info("Strategy '%s' skips stage: %s", self._strategy_name, stage.name)
+                continue
+
             # Gate optional stages
             if isinstance(stage, NoveltyCheckingStage) and not run_novelty:
                 continue

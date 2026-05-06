@@ -78,7 +78,7 @@ async def trigger_run(request: PipelineRunRequest):
                         }))
 
     async def _run_pipeline():
-        orchestrator = PipelineOrchestrator(stage_callback=_stage_callback)
+        orchestrator = PipelineOrchestrator(stage_callback=_stage_callback, strategy=request.strategy)
         original_should_stop = orchestrator._should_stop
 
         def _should_stop_with_cancel():
@@ -500,7 +500,7 @@ async def start_autonomous_cycle(request: AutonomousCycleRequest):
                 )
 
     async def _run_cycle():
-        orchestrator = PipelineOrchestrator(stage_callback=_stage_callback)
+        orchestrator = PipelineOrchestrator(stage_callback=_stage_callback, strategy="deep_research")
         try:
             results = await orchestrator.autonomous_cycle(
                 domain=request.domain,

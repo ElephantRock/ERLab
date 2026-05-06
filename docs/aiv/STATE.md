@@ -1,7 +1,7 @@
 # CODEBASE STATE
 
 Last Updated:       2026-05-06
-Updated By:         ivory-wolf — via BATCH-75 Close
+Updated By:         ivory-wolf — via BATCH-76 Close
 Framework Version:  5.3
 
 ───────────────────────────────────────────────────────────
@@ -51,6 +51,19 @@ VERIFIED MODULE MAP
                        Does NOT retry on non-429 errors.
   Verified in:         BATCH-75
 
+  Module:              backend.pipeline.strategies
+  Exports:             PipelineStrategy, StageConfig, StrategyConfig, StrategyRegistry, register_presets
+  Key note:            Strategy presets use actual _STAGE_ORDER names (not fictional names).
+                       fast_scan disables: idea_generation, novelty_checking, mechanical_metrics.
+                       get_default_registry() auto-populates on first call.
+  Verified in:         BATCH-76
+
+  Module:              backend.pipeline.orchestrator
+  Key note:            PipelineOrchestrator.__init__() now accepts strategy param.
+                       strategy_name property exposes active strategy.
+                       Stage skip logic checks strategy config BEFORE existing gate logic.
+  Verified in:         BATCH-76
+
 ───────────────────────────────────────────────────────────
 ARCHITECTURAL DECISIONS
 ───────────────────────────────────────────────────────────
@@ -66,6 +79,15 @@ ARCHITECTURAL DECISIONS
            Dedup happens here, not in crud.create_idea(). All field accesses
            use getattr() with defaults to handle both IdeaCandidate and ResearchIdea.
   Source:   BATCH-75
+  Active:   YES
+  Overridden: NO
+
+  DEC-003: Strategy stage names MUST match PipelineOrchestrator._STAGE_ORDER exactly.
+           The 9 stage names are: literature_search, ingestion, gap_analysis,
+           idea_generation, novelty_checking, feasibility_scoring,
+           mechanical_metrics, proposal_synthesis, export.
+           Strategy configs reference these names, NOT fictional names like "tree_search".
+  Source:   BATCH-76
   Active:   YES
   Overridden: NO
 
@@ -106,15 +128,20 @@ ADAPTATION LOG (ROLLING — LAST 10 BATCHES)
     Actual: IdeaCandidate lacks .domain. Fixed with getattr(idea, 'domain', 'AI/NLP').
   BATCH-75/TASK-03: proposal.sections["ensemble_review"] stored raw Pydantic model.
     Actual: json.dumps() crashed. Fixed with model_dump().
+  BATCH-76/TASK-01: Blueprint stated fast_scan disables "tree_search" and "knowledge" stages.
+    Actual: _STAGE_ORDER has no such names. Fixed: use idea_generation, novelty_checking,
+    mechanical_metrics instead. All tests updated.
+  BATCH-76/TASK-02: Blueprint stated test baseline +45. Actual: +31 tests created.
+    Corrected to match actual count.
 
 ───────────────────────────────────────────────────────────
 TEST BASELINE
 ───────────────────────────────────────────────────────────
 
-  Last verified count: 1,901
-  Verified in:         BATCH-75 (2026-05-06)
-  Breakdown:           ~1,677 unit/integration passing, ~198 trio-mode pre-existing failures,
-                       26 new tests from TASK-01 through TASK-04
+  Last verified count: 1,932
+  Verified in:         BATCH-76 (2026-05-06)
+  Breakdown:           ~1,677 unit/integration passing + 31 new from BATCH-76,
+                       ~198 trio-mode pre-existing failures
 
 ───────────────────────────────────────────────────────────
 CARRY-FORWARD OBLIGATIONS

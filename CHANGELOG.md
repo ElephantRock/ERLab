@@ -3,7 +3,26 @@
 All notable changes to the Elephant Rock Research Platform are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [BATCH-75] - 2026-05-06 — Post-Real-Run Pipeline Hardening (AIV v5.3)
+## [0.76.0-prealpha] — 2026-05-06
+
+### Added
+- **Pipeline Strategy Architecture** (BATCH-76): Pluggable strategy system allowing
+  the pipeline to run in 4 modes: `fast_scan` (2-5 min), `deep_research` (25 min),
+  `academic_proposal` (45 min), `literature_review` (10 min).
+- `backend/pipeline/strategies/` module with `PipelineStrategy` enum, `StageConfig`,
+  `StrategyConfig` dataclasses, and `StrategyRegistry` singleton.
+- Strategy selector dropdown in frontend pipeline configuration form.
+- Strategy display in run detail page.
+- `PipelineRunRequest.strategy` field with Pydantic regex validation.
+- Orchestrator `strategy` parameter with stage skip logic for disabled stages.
+- 31 new tests across 3 test files.
+
+### Changed
+- `PipelineOrchestrator.__init__()` accepts optional `strategy` parameter (default: "deep_research").
+- Stage execution loop checks strategy config before existing gate logic.
+
+### Fixed
+- Reviewer flag CHK-17: Stage names corrected to match actual `_STAGE_ORDER`.## [BATCH-75] - 2026-05-06 — Post-Real-Run Pipeline Hardening (AIV v5.3)
 
 ### Fixed
 - **D1**: TreeSearchStage now converts IdeaCandidate → ResearchIdea before assigning
