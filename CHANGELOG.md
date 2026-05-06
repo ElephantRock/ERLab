@@ -179,6 +179,15 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - `backend/pipeline/tools/tool_registry.py` with MCPToolRegistry.
 - 8 new tests.
 
+## [0.94.0-prealpha] — 2026-05-07
+
+### Added
+- **Planning Agent** (BATCH-94): Pre-execution planner that creates
+  ExecutionPlan with time/token estimates per stage, blocker identification,
+  and strategy-aware adjustments.
+- `backend/pipeline/planning/agent.py` with PlanningAgent, ExecutionPlan.
+- 8 new tests.
+
 ### Added
 - **Multi-Dimensional Proposal Evaluation** (BATCH-81): Score proposals on
   Novelty, Feasibility, Completeness, Rigor, Clarity (0-1 each with justification).
