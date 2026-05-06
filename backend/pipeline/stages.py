@@ -10,6 +10,7 @@ from contextlib import contextmanager
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, Generator
 
+from backend.pipeline.generation.models import ResearchIdea
 from backend.pipeline.ingestion.chunker import DocumentChunk  # noqa: F401 — re-exported by stages
 from backend.pipeline.synthesis.proposal_synthesizer import ResearchProposal  # noqa: F401 — used by ProposalSynthesisStage
 
@@ -712,10 +713,17 @@ class TreeSearchStage(PipelineStage):
         )
 
         # Run beam search
-        ideas = await self._engine.search(
+        raw_ideas = await self._engine.search(
             gaps=ctx.result.gaps,
             context_papers=ctx.all_papers[:30],
         )
+
+        # BATCH-75/TASK-01: Convert IdeaCandidate → ResearchIdea (HB-01)
+        ideas = self._convert_to_research_ideas(raw_ideas)
+        assert all(isinstance(i, ResearchIdea) for i in ideas), (
+            "HB-01 violation: TreeSearchStage must assign only ResearchIdea to ctx.result.ideas"
+        )
+
         ctx.result.ideas = ideas
         logger.info("TreeSearchStage: generated %d ideas via tree search", len(ideas))
 
@@ -768,10 +776,50 @@ class TreeSearchStage(PipelineStage):
                 "idea.generated",
                 {
                     "title": idea.title,
-                    "score": getattr(idea, 'overall_score', 0.0),
+                    "score": getattr(idea, 'score', getattr(idea, 'overall_score', 0.0)),
                 },
             )
         return True
+
+    # ── BATCH-75/TASK-01: IdeaCandidate → ResearchIdea conversion ──────
+
+    @staticmethod
+    def _convert_to_research_ideas(candidates: list) -> list[ResearchIdea]:
+        """Convert IdeaCandidate objects to ResearchIdea with safe defaults.
+
+        Handles field mapping for fields that IdeaCandidate lacks
+        (domain, round_generated, supporting_papers, source_gap_ids).
+
+        Conversion map:
+            title                     → title
+            problem_statement         → problem_statement
+            proposed_method            → proposed_method
+            expected_contributions    → expected_contributions (default "")
+            novelty_rationale         → novelty_rationale (default "")
+            evaluation_approach       → evaluation_approach (default "")
+            overall_score             → score
+            parent_idea_ids           → source_gap_ids (best-effort; default [])
+            (no equivalent)           → domain = "AI/NLP"
+            (no equivalent)           → round_generated = 1
+            (no equivalent)           → supporting_papers = []
+        """
+        results: list[ResearchIdea] = []
+        for c in candidates:
+            research_idea = ResearchIdea(
+                title=c.title,
+                problem_statement=c.problem_statement,
+                proposed_method=c.proposed_method,
+                expected_contributions=getattr(c, "expected_contributions", "") or "",
+                novelty_rationale=getattr(c, "novelty_rationale", "") or "",
+                evaluation_approach=getattr(c, "evaluation_approach", "") or "",
+                domain="AI/NLP",
+                round_generated=1,
+                score=getattr(c, "overall_score", 0.0),
+                supporting_papers=[],
+                source_gap_ids=getattr(c, "parent_idea_ids", []) or [],
+            )
+            results.append(research_idea)
+        return results
 
     def _build_tree_data(self, ideas: list) -> dict:
         """Build a serializable tree structure from generated ideas.
@@ -782,12 +830,19 @@ class TreeSearchStage(PipelineStage):
         """
         nodes: list[dict] = []
         for idea in ideas:
+            # BATCH-75/TASK-01: getattr guards — ResearchIdea lacks .id
+            # and .parent_idea_ids (CHK-16/CHK-17)
+            idea_id = getattr(idea, 'id', idea.title[:60])
+            parent_ids = getattr(
+                idea, 'parent_idea_ids',
+                getattr(idea, 'source_gap_ids', [])
+            )
             nodes.append({
-                "id": idea.id,
+                "id": idea_id,
                 "title": idea.title,
-                "score": getattr(idea, 'overall_score', 0.0),
+                "score": getattr(idea, 'overall_score', getattr(idea, 'score', 0.0)),
                 "proposed_method": idea.proposed_method[:200],
-                "parent_ids": idea.parent_idea_ids or [],
+                "parent_ids": parent_ids or [],
             })
 
         return {
