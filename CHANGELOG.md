@@ -132,6 +132,16 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - `backend/pipeline/knowledge/gap_queue.py` with GapQueue and QueuedGap.
 - 7 new tests.
 
+## [0.89.0-prealpha] — 2026-05-06
+
+### Added
+- **Anti-Fabrication Guard** (BATCH-89): Heuristic-based content checker
+  for proposals. Detects suspicious DOIs, unsupported statistics (≥95%),
+  fabricated author names, generic claims. Fail-open (HB-01).
+  Annotate-only — never modifies content (HB-02).
+- `backend/pipeline/safety/anti_fabrication.py` with AntiFabricationGuard.
+- 10 new tests.
+
 ### Added
 - **Multi-Dimensional Proposal Evaluation** (BATCH-81): Score proposals on
   Novelty, Feasibility, Completeness, Rigor, Clarity (0-1 each with justification).
