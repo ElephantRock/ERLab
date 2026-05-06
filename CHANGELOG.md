@@ -47,7 +47,16 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - 15 new tests.
 
 ### Changed
-- `Settings` has 4 new fields: thinking_model, generation_model, thinking_model_max_tokens, generation_model_max_tokens.## [BATCH-75] - 2026-05-06 — Post-Real-Run Pipeline Hardening (AIV v5.3)
+- `Settings` has 4 new fields: thinking_model, generation_model, thinking_model_max_tokens, generation_model_max_tokens.
+
+## [0.79.0-prealpha] — 2026-05-06
+
+### Added
+- **Live Pipeline Progress** (BATCH-79): Granular SSE progress events with
+  human-readable messages ("Searching arXiv for 'sparse attention'...").
+- `backend/pipeline/streaming/progress_reporter.py` with ProgressReporter class.
+- `frontend/src/components/pipeline/activity-log.tsx` scrollable activity log.
+- 12 new tests.## [BATCH-75] - 2026-05-06 — Post-Real-Run Pipeline Hardening (AIV v5.3)
 
 ### Fixed
 - **D1**: TreeSearchStage now converts IdeaCandidate → ResearchIdea before assigning
