@@ -68,7 +68,17 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Prompt templates for gap and idea evaluation.
 - 12 new tests.
 
-## [0.81.0-prealpha] — 2026-05-06
+## [0.83.0-prealpha] — 2026-05-06
+
+### Added
+- **SOUL.md Research Philosophy** (BATCH-83): Defines Elephant Rock's values:
+  intellectual honesty, depth over breadth, rigor, constructive criticism, clarity.
+  SoulLoader injects philosophy into all LLM system prompts.
+- **Error Knowledge Store**: Append-only failure log. Records stage, reason,
+  and suggestion for each quality failure. Future runs query to avoid mistakes.
+- `SOUL.md` (2.7KB, 11 sections) + `backend/pipeline/soul_loader.py`.
+- `backend/pipeline/knowledge/error_store.py` with ErrorKnowledgeStore.
+- 10 new tests.
 
 ### Added
 - **Multi-Dimensional Proposal Evaluation** (BATCH-81): Score proposals on
