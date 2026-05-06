@@ -66,7 +66,16 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   Max 3 iterations. Disabled for fast_scan strategy.
 - `backend/pipeline/reflection/` module with ReflectionStage and ReflectionResult.
 - Prompt templates for gap and idea evaluation.
-- 12 new tests.## [BATCH-75] - 2026-05-06 — Post-Real-Run Pipeline Hardening (AIV v5.3)
+- 12 new tests.
+
+## [0.81.0-prealpha] — 2026-05-06
+
+### Added
+- **Multi-Dimensional Proposal Evaluation** (BATCH-81): Score proposals on
+  Novelty, Feasibility, Completeness, Rigor, Clarity (0-1 each with justification).
+- `backend/pipeline/evaluation/proposal_evaluator.py` with ProposalEvaluator.
+- `frontend/src/components/ideas/evaluation-card.tsx` with visual score bars.
+- 14 new tests.## [BATCH-75] - 2026-05-06 — Post-Real-Run Pipeline Hardening (AIV v5.3)
 
 ### Fixed
 - **D1**: TreeSearchStage now converts IdeaCandidate → ResearchIdea before assigning
