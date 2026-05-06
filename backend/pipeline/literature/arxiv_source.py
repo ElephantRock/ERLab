@@ -17,6 +17,9 @@ ARXIV_NS = "{http://arxiv.org/schemas/atom}"
 
 
 class ArxivSource(AcademicSearchSource):
+    BACKOFF_DELAYS: list[float] = [5, 15, 30]
+    MAX_RETRIES: int = 3
+
     def __init__(self):
         self._client = httpx.AsyncClient(timeout=30.0)
 
@@ -48,13 +51,23 @@ class ArxivSource(AcademicSearchSource):
         try:
             # arXiv asks for 1 req / 3 seconds
             await asyncio.sleep(3)
-            response = await self._client.get(ARXIV_API, params=params)
-            response.raise_for_status()
+            for attempt in range(self.MAX_RETRIES + 1):
+                response = await self._client.get(ARXIV_API, params=params)
+                if response.status_code == 429:
+                    if attempt < self.MAX_RETRIES:
+                        await asyncio.sleep(self.BACKOFF_DELAYS[attempt])
+                        continue
+                    logger.warning(
+                        "arXiv rate-limited after %d retries", self.MAX_RETRIES
+                    )
+                    return []
+                response.raise_for_status()
+                return self._parse_feed(response.text)
         except httpx.HTTPError as e:
             logger.warning("arXiv search failed: %s", e)
             return []
 
-        return self._parse_feed(response.text)
+        return []
 
     async def get_paper(self, paper_id: str) -> Paper | None:
         try:
