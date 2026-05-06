@@ -77,6 +77,31 @@ class AgentOrchestrator:
         """Set hook dispatcher for impasse events."""
         self._hooks = hooks
 
+    async def generate_ideas(
+        self,
+        gaps: list[ResearchGap],
+        context_papers: list[Paper],
+        num_ideas: int = 3,
+        n_ideas: int | None = None,
+        prior_critiques: list[str] | None = None,
+        prior_critique: str | None = None,
+    ) -> list[ResearchIdea]:
+        """Generate ideas by delegating to the IdeatorAgent.
+
+        Supports multiple parameter names for compatibility with
+        TreeSearchEngine (n_ideas, prior_critique) and other callers.
+        """
+        count = n_ideas if n_ideas is not None else num_ideas
+        critiques = prior_critiques or []
+        if prior_critique:
+            critiques.append(prior_critique)
+        return await self._ideator.generate_ideas(
+            gaps=gaps,
+            context_papers=context_papers,
+            n_ideas=count,
+            prior_critique=critiques if critiques else None,
+        )
+
     async def run(
         self,
         gaps: list[ResearchGap],

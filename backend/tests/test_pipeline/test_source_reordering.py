@@ -18,7 +18,7 @@ class TestSourceReordering:
 
             assert sources[0].__class__.__name__ == "OpenAlexSource"
             assert sources[1].__class__.__name__ == "ArxivSource"
-            assert sources[2].__class__.__name__ == "SemanticScholarSource"
+            assert len(sources) == 2  # OpenAlex + arXiv only (no S2)
 
     def test_s2_first_when_api_key_present(self):
         """TEST-74-04-05: S2 is first when API key is present."""

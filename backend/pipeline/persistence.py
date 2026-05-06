@@ -354,8 +354,12 @@ class PipelinePersistence:
                 result = []
                 for run in stale:
                     last_active = run.updated_at or run.created_at
-                    if last_active and last_active < cutoff:
-                        result.append(run)
+                    if last_active:
+                        # Handle both tz-aware and tz-naive datetimes
+                        if last_active.tzinfo is None:
+                            last_active = last_active.replace(tzinfo=timezone.utc)
+                        if last_active < cutoff:
+                            result.append(run)
                 return result
         except Exception as e:
             logger.warning("Failed to find stale runs: %s", e)

@@ -107,14 +107,13 @@ class SearchService:
 
         if not settings.semantic_scholar_api_key:
             logger.info(
-                "No S2 API key set — using OpenAlex as primary source "
-                "(free, unlimited). Get a free S2 key: "
+                "No S2 API key set — using OpenAlex + arXiv only. "
+                "S2 excluded to avoid 429 rate limiting. Get a free key: "
                 "https://www.semanticscholar.org/product/api#api-key"
             )
             return [
                 OpenAlexSource(email=settings.openalex_email),
                 ArxivSource(),
-                SemanticScholarSource(api_key=None),
             ]
 
         return [

@@ -29,7 +29,8 @@ class VectorStore:
         # Validate collection dimension matches current embedding dimension
         if self._collection.count() > 0:
             sample = self._collection.get(limit=1, include=["embeddings"])
-            if sample["embeddings"]:
+            embeddings = sample.get("embeddings")
+            if embeddings is not None and len(embeddings) > 0:
                 stored_dim = len(sample["embeddings"][0])
                 expected_dim = self._embedding_service.dimension
                 if stored_dim != expected_dim:
