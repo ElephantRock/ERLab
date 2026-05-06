@@ -219,7 +219,8 @@ class ProposalSynthesizer:
         if self._ensemble_reviewer:
             try:
                 review_result = await self._ensemble_reviewer.review(proposal, idea)
-                proposal.sections["ensemble_review"] = review_result
+                if review_result is not None:
+                    proposal.sections["ensemble_review"] = review_result.model_dump()
             except Exception as e:
                 logger.warning("Ensemble review failed: %s", e)
 

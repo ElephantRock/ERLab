@@ -1,8 +1,13 @@
 """Unit tests for proposal synthesis stage."""
 
 import asyncio
+import json
 from unittest.mock import MagicMock
 
+from backend.pipeline.evaluation.ensemble_review import (
+    EnsembleReviewResult,
+    PerspectiveReview,
+)
 from backend.pipeline.literature.models import Author, Paper
 from backend.pipeline.synthesis.proposal_synthesizer import (
     ProposalSynthesizer,
@@ -121,3 +126,94 @@ class TestProposalSynthesizer:
         # At least one complete() call was made
         assert len(provider._call_log) >= 1
         assert provider._call_log[0]["method"] == "complete"
+
+
+class TestEnsembleReviewSerialization:
+    """BATCH-75/TASK-03: EnsembleReviewResult must be stored as dict, not Pydantic model."""
+
+    @staticmethod
+    def _make_reviewer(return_value):
+        """Create a mock ensemble reviewer whose review() returns *return_value*."""
+        reviewer = MagicMock()
+
+        async def _review(proposal, idea=None):
+            return return_value
+
+        reviewer.review = _review
+        return reviewer
+
+    @staticmethod
+    def _sample_review_result() -> EnsembleReviewResult:
+        return EnsembleReviewResult(
+            overall_score=0.78,
+            methodology=PerspectiveReview(
+                perspective="methodology", score=0.8, strengths=["Rigorous design"]
+            ),
+            novelty=PerspectiveReview(
+                perspective="novelty", score=0.75, weaknesses=["Incremental"]
+            ),
+            clarity=PerspectiveReview(
+                perspective="clarity", score=0.8, suggestions=["Add diagram"]
+            ),
+            consensus_strengths=["Strong evaluation plan"],
+            critical_weaknesses=["Limited datasets"],
+            actionable_suggestions=["Add ablation study"],
+            summary="Solid proposal with minor gaps in evaluation breadth.",
+        )
+
+    # TEST-75-03-01
+    def test_ensemble_review_is_dict(self, sample_ideas):
+        """proposal.sections['ensemble_review'] is a dict after synthesis."""
+        provider = SchemaAwareFakeProvider()
+        reviewer = self._make_reviewer(self._sample_review_result())
+        synthesizer = ProposalSynthesizer(provider, ensemble_reviewer=reviewer)
+
+        proposal = asyncio.run(synthesizer.synthesize(sample_ideas[0]))
+
+        assert isinstance(proposal.sections["ensemble_review"], dict)
+
+    # TEST-75-03-02
+    def test_ensemble_review_contains_expected_fields(self, sample_ideas):
+        """Dict contains all EnsembleReviewResult fields (overall_score, summary, etc.)."""
+        provider = SchemaAwareFakeProvider()
+        reviewer = self._make_reviewer(self._sample_review_result())
+        synthesizer = ProposalSynthesizer(provider, ensemble_reviewer=reviewer)
+
+        proposal = asyncio.run(synthesizer.synthesize(sample_ideas[0]))
+        review = proposal.sections["ensemble_review"]
+
+        assert "overall_score" in review
+        assert "summary" in review
+        assert "methodology" in review
+        assert "novelty" in review
+        assert "clarity" in review
+        assert "consensus_strengths" in review
+        assert "critical_weaknesses" in review
+        assert "actionable_suggestions" in review
+        assert review["overall_score"] == 0.78
+
+    # TEST-75-03-03
+    def test_json_dumps_succeeds_on_all_sections(self, sample_ideas):
+        """json.dumps(proposal.sections) succeeds without custom encoder."""
+        provider = SchemaAwareFakeProvider()
+        reviewer = self._make_reviewer(self._sample_review_result())
+        synthesizer = ProposalSynthesizer(provider, ensemble_reviewer=reviewer)
+
+        proposal = asyncio.run(synthesizer.synthesize(sample_ideas[0]))
+
+        # Must not raise TypeError
+        serialized = json.dumps(proposal.sections)
+        assert isinstance(serialized, str)
+        assert "ensemble_review" in serialized
+
+    # TEST-75-03-04
+    def test_handles_reviewer_returning_none(self, sample_ideas):
+        """proposal.sections gracefully handles ensemble_reviewer returning None."""
+        provider = SchemaAwareFakeProvider()
+        reviewer = self._make_reviewer(None)
+        synthesizer = ProposalSynthesizer(provider, ensemble_reviewer=reviewer)
+
+        proposal = asyncio.run(synthesizer.synthesize(sample_ideas[0]))
+
+        # Should not contain ensemble_review key when reviewer returns None
+        assert "ensemble_review" not in proposal.sections
