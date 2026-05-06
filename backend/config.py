@@ -61,6 +61,12 @@ class Settings(BaseSettings):
     litellm_fallback_enabled: bool = True
     litellm_model: str = "gpt-4o"
 
+    # Model Split (BATCH-78)
+    thinking_model: str = ""  # empty = same as default provider
+    generation_model: str = ""  # empty = same as default provider
+    thinking_model_max_tokens: int = 2048
+    generation_model_max_tokens: int = 8192
+
     # Pipeline Defaults
     generation_rounds: int = 2
     ideas_per_round: int = 3

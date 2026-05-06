@@ -214,6 +214,39 @@ def create_provider(name: str | None = None) -> LLMProvider:
     return _get_registry().create(name)
 
 
+def get_thinking_provider(settings: Any = None) -> LLMProvider:
+    """Get the provider configured for thinking tasks (classification, extraction).
+
+    If thinking_model is not configured, returns the default provider (HB-01).
+    Falls back to generation provider on error (HB-02).
+    """
+    settings = settings or get_settings()
+    model_name = getattr(settings, "thinking_model", "")
+    if not model_name:
+        return _get_registry().create(settings=settings)
+    try:
+        return _get_registry().create(name=model_name, settings=settings)
+    except Exception as e:
+        logger.warning("Thinking model '%s' unavailable, falling back to default: %s", model_name, e)
+        return _get_registry().create(settings=settings)
+
+
+def get_generation_provider(settings: Any = None) -> LLMProvider:
+    """Get the provider configured for generation tasks (writing, synthesis).
+
+    If generation_model is not configured, returns the default provider (HB-01).
+    """
+    settings = settings or get_settings()
+    model_name = getattr(settings, "generation_model", "")
+    if not model_name:
+        return _get_registry().create(settings=settings)
+    try:
+        return _get_registry().create(name=model_name, settings=settings)
+    except Exception as e:
+        logger.warning("Generation model '%s' unavailable, falling back to default: %s", model_name, e)
+        return _get_registry().create(settings=settings)
+
+
 def _validate_api_key(provider_name: str, settings: Any) -> None:
     """Backward-compatible module-level alias."""
     ProviderRegistry._validate_api_key(provider_name, settings)

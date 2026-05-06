@@ -35,7 +35,19 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - 13 new tests for fast_scan strategy.
 
 ### Changed
-- fast_scan strategy uses FastProposalSynthesizer instead of full ProposalSynthesizer.## [BATCH-75] - 2026-05-06 — Post-Real-Run Pipeline Hardening (AIV v5.3)
+- fast_scan strategy uses FastProposalSynthesizer instead of full ProposalSynthesizer.
+
+## [0.78.0-prealpha] — 2026-05-06
+
+### Added
+- **Thinking/Generation Model Split** (BATCH-78): Configurable `thinking_model` and
+  `generation_model` settings for cost optimization (50-70% savings).
+- `backend/pipeline/model_selection.py` with `ModelSelector` class.
+- `get_thinking_provider()` and `get_generation_provider()` in provider_factory.
+- 15 new tests.
+
+### Changed
+- `Settings` has 4 new fields: thinking_model, generation_model, thinking_model_max_tokens, generation_model_max_tokens.## [BATCH-75] - 2026-05-06 — Post-Real-Run Pipeline Hardening (AIV v5.3)
 
 ### Fixed
 - **D1**: TreeSearchStage now converts IdeaCandidate → ResearchIdea before assigning
