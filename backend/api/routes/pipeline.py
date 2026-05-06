@@ -931,3 +931,47 @@ async def run_watchdog(
         "marked_failed": marked,
         "timeout_minutes": timeout_minutes,
     }
+
+
+@router.get("/runs/stats", response_model=dict)
+async def run_stats():
+    """Get aggregate statistics across all pipeline runs.
+
+    Returns counts by status, average duration, total ideas/gaps generated.
+    """
+    from backend.pipeline.persistence import PipelinePersistence
+
+    persistence = PipelinePersistence()
+    try:
+        runs = persistence.list_runs(limit=1000)
+
+        total = len(runs)
+        by_status: dict[str, int] = {}
+        total_duration = 0.0
+        total_ideas = 0
+        total_gaps = 0
+
+        for run in runs:
+            status = getattr(run, 'status', 'unknown')
+            by_status[status] = by_status.get(status, 0) + 1
+            duration = getattr(run, 'duration_seconds', 0) or 0
+            total_duration += duration
+            total_ideas += getattr(run, 'idea_count', 0) or 0
+            total_gaps += getattr(run, 'gap_count', 0) or 0
+
+        return {
+            "total_runs": total,
+            "by_status": by_status,
+            "avg_duration_s": round(total_duration / total, 1) if total else 0,
+            "total_ideas": total_ideas,
+            "total_gaps": total_gaps,
+        }
+    except Exception as e:
+        return {
+            "total_runs": 0,
+            "by_status": {},
+            "avg_duration_s": 0,
+            "total_ideas": 0,
+            "total_gaps": 0,
+            "error": str(e),
+        }

@@ -188,6 +188,16 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - `backend/pipeline/planning/agent.py` with PlanningAgent, ExecutionPlan.
 - 8 new tests.
 
+## [0.95.0-prealpha] — 2026-05-07
+
+### Added
+- **Run Stats Dashboard** (BATCH-95): /api/pipeline/runs/stats endpoint
+  returns aggregate statistics (total runs, by status, avg duration, ideas, gaps).
+  Frontend RunStats component with 5 stat cards.
+- `backend/api/routes/pipeline.py` — run_stats endpoint.
+- `frontend/src/components/pipeline/run-stats.tsx` — RunStats component.
+- 4 new tests.
+
 ### Added
 - **Multi-Dimensional Proposal Evaluation** (BATCH-81): Score proposals on
   Novelty, Feasibility, Completeness, Rigor, Clarity (0-1 each with justification).
