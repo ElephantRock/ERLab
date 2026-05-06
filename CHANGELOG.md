@@ -151,6 +151,15 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - `backend/pipeline/export/md_to_latex.py` with MarkdownToLatexConverter.
 - 8 new tests.
 
+## [0.91.0-prealpha] — 2026-05-07
+
+### Added
+- **3-Tier Context Management** (BATCH-91): ContextManager with SYSTEM,
+  DOMAIN, and TASK tiers. Token budget enforcement. Domain truncated
+  before task. System never truncated (HB-02).
+- `backend/pipeline/context/manager.py` with ContextManager, ContextBudget.
+- 9 new tests.
+
 ### Added
 - **Multi-Dimensional Proposal Evaluation** (BATCH-81): Score proposals on
   Novelty, Feasibility, Completeness, Rigor, Clarity (0-1 each with justification).
