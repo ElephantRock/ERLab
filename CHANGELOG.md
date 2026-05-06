@@ -123,6 +123,15 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - `backend/pipeline/literature/search_service.py` — search_recursive method.
 - 6 new tests.
 
+## [0.88.0-prealpha] — 2026-05-06
+
+### Added
+- **Gap Queue** (BATCH-88): Persistent SQLite-backed queue for research gaps.
+  Gaps from previous runs can be queued with priority (HIGH/MEDIUM/LOW)
+  for deeper investigation in future runs. Domain-filtered dequeue.
+- `backend/pipeline/knowledge/gap_queue.py` with GapQueue and QueuedGap.
+- 7 new tests.
+
 ### Added
 - **Multi-Dimensional Proposal Evaluation** (BATCH-81): Score proposals on
   Novelty, Feasibility, Completeness, Rigor, Clarity (0-1 each with justification).
