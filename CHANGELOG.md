@@ -198,6 +198,15 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - `frontend/src/components/pipeline/run-stats.tsx` — RunStats component.
 - 4 new tests.
 
+## [0.96.0-prealpha] — 2026-05-07
+
+### Added
+- **Health Monitoring** (BATCH-96): HealthMonitor checks all pipeline subsystems
+  (database, embedding, LLM, search). Returns structured HealthReport
+  with HEALTHY/DEGRADED/UNHEALTHY status per component.
+- `backend/pipeline/monitoring/health.py` with HealthMonitor, HealthReport.
+- 8 new tests.
+
 ### Added
 - **Multi-Dimensional Proposal Evaluation** (BATCH-81): Score proposals on
   Novelty, Feasibility, Completeness, Rigor, Clarity (0-1 each with justification).
