@@ -56,6 +56,16 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   human-readable messages ("Searching arXiv for 'sparse attention'...").
 - `backend/pipeline/streaming/progress_reporter.py` with ProgressReporter class.
 - `frontend/src/components/pipeline/activity-log.tsx` scrollable activity log.
+- 12 new tests.
+
+## [0.80.0-prealpha] — 2026-05-06
+
+### Added
+- **Iterative Reflection Loop** (BATCH-80): LLM evaluates gap/idea quality after
+  gap analysis and ideation. If score < threshold, regenerates with feedback.
+  Max 3 iterations. Disabled for fast_scan strategy.
+- `backend/pipeline/reflection/` module with ReflectionStage and ReflectionResult.
+- Prompt templates for gap and idea evaluation.
 - 12 new tests.## [BATCH-75] - 2026-05-06 — Post-Real-Run Pipeline Hardening (AIV v5.3)
 
 ### Fixed
