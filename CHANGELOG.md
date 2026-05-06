@@ -160,6 +160,16 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - `backend/pipeline/context/manager.py` with ContextManager, ContextBudget.
 - 9 new tests.
 
+## [0.92.0-prealpha] — 2026-05-07
+
+### Added
+- **Concurrency Safety Flags** (BATCH-92): StageConcurrency declares whether
+  each pipeline stage is EXCLUSIVE, SAFE_TO_PARALLEL, or READ_ONLY.
+  ConcurrencyManager resolves parallel execution waves.
+  All 9 stages have default declarations.
+- `backend/pipeline/concurrency.py` with ConcurrencyManager, StageConcurrency.
+- 8 new tests.
+
 ### Added
 - **Multi-Dimensional Proposal Evaluation** (BATCH-81): Score proposals on
   Novelty, Feasibility, Completeness, Rigor, Clarity (0-1 each with justification).
