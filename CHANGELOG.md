@@ -3,6 +3,38 @@
 All notable changes to the Elephant Rock Research Platform are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [BATCH-75] - 2026-05-06 — Post-Real-Run Pipeline Hardening (AIV v5.3)
+
+### Fixed
+- **D1**: TreeSearchStage now converts IdeaCandidate → ResearchIdea before assigning
+  to PipelineResult.ideas (HB-01 assertion added). `_build_tree_data()` uses getattr()
+  guards for compatibility with both types.
+- **D2**: `persist_ideas()` uses getattr() guards for all field accesses (domain,
+  source_gap_ids, expected_contributions, novelty_rationale) — works with both
+  IdeaCandidate and ResearchIdea objects.
+- **D3**: `persist_ideas()` now checks for existing ideas with same (title, pipeline_run_id)
+  before inserting — prevents duplicate rows from failed/retried runs.
+- **D4**: `proposal_synthesizer.py` now stores `EnsembleReviewResult.model_dump()` instead
+  of the raw Pydantic model in `proposal.sections["ensemble_review"]` — fixes JSON
+  serialization error.
+- **D5**: `arxiv_source.py` now retries on HTTP 429 with exponential backoff (5→15→30s),
+  max 3 retries. Non-429 errors fail immediately.
+- **D6**: Tree search re-enabled by default (no env var workaround needed).
+
+### Verified
+- Full pipeline run with tree search enabled: 25m 59s, 40 papers, 5 gaps, 2 ideas,
+  2 proposals (35K+ chars each), real Ollama 768-dim embeddings, real z.ai LLM calls.
+
+### Added
+- `backend/tests/test_pipeline/test_tree_search_types.py` — 7 tests (IdeaCandidate→ResearchIdea conversion)
+- `backend/tests/test_pipeline/test_persistence_hardening.py` — 12 tests (getattr guards + dedup)
+- `backend/tests/test_pipeline/test_synthesis.py` extended — 4 tests (EnsembleReviewSerialization)
+- `backend/tests/test_pipeline/test_arxiv_retry.py` — 4 tests (429 retry with backoff)
+- `docs/aiv/STATE.md` — first codebase state file under AIV v5.3
+
+### Test Delta
+- Baseline: 1,869 → Final: 1,901 (+32 new tests, 0 unexpected failures)
+
 ## [BATCH-74] - 2026-05-05 — Remaining Pipeline Fixes (Reference-Repo Study)
 
 ### Fixed
