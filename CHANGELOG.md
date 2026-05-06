@@ -90,6 +90,18 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   Sensitive data scrubbed from journal entries.
 - 8 new tests.
 
+## [0.85.0-prealpha] — 2026-05-06
+
+### Added
+- **More Literature Sources** (BATCH-85): PubMed (NCBI E-utilities),
+  CrossRef (DOI metadata), and MultiSourceSearcher.
+  No API keys required. Each source fails independently.
+  Results merged and deduplicated by DOI + title.
+- `backend/pipeline/literature/pubmed_source.py` — PubMedSource.
+- `backend/pipeline/literature/crossref_source.py` — CrossRefSource.
+- `backend/pipeline/literature/multi_source.py` — MultiSourceSearcher.
+- 14 new tests.
+
 ### Added
 - **Multi-Dimensional Proposal Evaluation** (BATCH-81): Score proposals on
   Novelty, Feasibility, Completeness, Rigor, Clarity (0-1 each with justification).
