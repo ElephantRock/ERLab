@@ -23,7 +23,7 @@ if "google.generativeai" not in sys.modules:
 
 from backend.config import Settings
 from backend.pipeline.gap_analysis.models import ResearchGap
-from backend.pipeline.generation.models import IdeaCandidate
+from backend.pipeline.generation.models import IdeaCandidate, ResearchIdea
 from backend.pipeline.literature.models import Author, Paper
 from backend.pipeline.result import PipelineResult
 from backend.pipeline.stages import (
@@ -123,9 +123,16 @@ async def test_tree_search_stage_activates_when_enabled():
     assert call_args.kwargs["gaps"] == ctx.result.gaps
     assert call_args.kwargs["context_papers"] == ctx.all_papers[:30]
 
-    # Ideas were stored in result
-    assert ctx.result.ideas == ideas
+    # BATCH-75/TASK-05: Ideas are now converted to ResearchIdea (was IdeaCandidate)
     assert len(ctx.result.ideas) == 2
+    assert all(isinstance(i, ResearchIdea) for i in ctx.result.ideas), (
+        "HB-01: TreeSearchStage must assign only ResearchIdea to ctx.result.ideas"
+    )
+    # Verify field mapping is preserved
+    assert ctx.result.ideas[0].title == "Idea A"
+    assert ctx.result.ideas[0].score == 0.9
+    assert ctx.result.ideas[1].title == "Idea B"
+    assert ctx.result.ideas[1].score == 0.7
 
 
 # ── TEST-63-01-02: IdeaGenerationStage used when flag is False ─────
