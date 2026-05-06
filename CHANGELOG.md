@@ -102,6 +102,15 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - `backend/pipeline/literature/multi_source.py` — MultiSourceSearcher.
 - 14 new tests.
 
+## [0.86.0-prealpha] — 2026-05-06
+
+### Added
+- **Relevance Filter** (BATCH-86): Filters search results by embedding cosine
+  similarity to the domain query. Configurable threshold (default 0.3).
+  Guarantees minimum 5 papers (HB-01). Fail-open (HB-02).
+- `backend/pipeline/literature/relevance_filter.py` with RelevanceFilter.
+- 8 new tests.
+
 ### Added
 - **Multi-Dimensional Proposal Evaluation** (BATCH-81): Score proposals on
   Novelty, Feasibility, Completeness, Rigor, Clarity (0-1 each with justification).
