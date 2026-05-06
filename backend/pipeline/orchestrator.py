@@ -133,6 +133,9 @@ class PipelineOrchestrator:
             from backend.pipeline.memory.sharing import SharedMemoryBridge
             self._shared_memory_bridge = SharedMemoryBridge(self._shared_kb, self._message_bus)
 
+        # Phase 7 integration: Soul + Journal + Context
+        self._integration = None  # Initialized per-run with run_id/domain
+
         self._persistence = PipelinePersistence()
         self._token_counter = TokenCounter()
         self._compaction = CompactionMiddleware(
@@ -957,6 +960,18 @@ class PipelineOrchestrator:
         run_id = run_id or datetime.now().strftime("run_%Y%m%d_%H%M%S")
         result.run_id = run_id
 
+        # Phase 7: Initialize integration service (Soul + Journal + Context)
+        try:
+            from backend.pipeline.integration_service import PipelineIntegrationService
+            self._integration = PipelineIntegrationService(
+                run_id=run_id, domain=domain,
+                token_budget=getattr(self._settings, 'thinking_model_max_tokens', 8192),
+            )
+            self._integration.journal_note("pipeline", f"Pipeline started for domain: {domain}")
+        except Exception as e:
+            logger.warning("Integration service init failed (non-fatal): %s", e)
+            self._integration = None
+
         # G1: Lazy validation — check embedding provider on first run
         if not self._embedding_valid:
             self._embedding_valid = await self._embedding.validate_startup()
@@ -1270,6 +1285,14 @@ class PipelineOrchestrator:
                 checkpoint.mark_stage_running(self._stages[next_idx].name)
             self._persistence.save_checkpoint(checkpoint)
 
+            # Phase 7: Journal stage completion
+            if self._integration:
+                self._integration.journal_note(
+                    stage.name,
+                    f"Stage completed",
+                    {"elapsed_s": f"{elapsed:.1f}"} if 'elapsed' in dir() else {},
+                )
+
             if not should_continue or self._should_stop():
                 return result
 
@@ -1403,6 +1426,16 @@ class PipelineOrchestrator:
             tokens = self._cost_tracker.total_tokens if self._cost_tracker else 0
             cost = self._cost_tracker.total_cost if self._cost_tracker else 0.0
             self._session_manager.complete_run(session_id, run_id, tokens_used=tokens, cost_usd=cost)
+
+        # Phase 7: Write journal at pipeline end
+        if self._integration:
+            self._integration.journal_note(
+                "pipeline", "Pipeline completed",
+                {"ideas": len(result.ideas), "gaps": len(result.gaps)},
+            )
+            notes_path, readme_path = self._integration.journal_write()
+            if notes_path:
+                logger.info("Research journal written to %s", notes_path)
 
         return result
 
