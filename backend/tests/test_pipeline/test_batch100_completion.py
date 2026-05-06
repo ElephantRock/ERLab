@@ -55,7 +55,7 @@ def test_100_02_manifest_files_exist():
 def test_100_02_state_md_exists():
     """STATE.md exists and is current."""
     state = (PROJECT_ROOT / "docs/aiv/STATE.md").read_text(encoding="utf-8")
-    assert "2,152" in state or "2,148" in state or "2,140" in state  # Flexible on last count
+    assert "2,232" in state or "2,152" in state or "2,148" in state  # Flexible on last count
 
 
 def test_100_02_all_batch_dirs_exist():
