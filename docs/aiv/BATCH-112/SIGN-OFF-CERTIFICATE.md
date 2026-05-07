@@ -1,39 +1,82 @@
-# BATCH-112 SIGN-OFF CERTIFICATE
+```
+BATCH SIGN-OFF CERTIFICATE
+═══════════════════════════════════════════════════════════
 
-**Batch ID:** BATCH-112  
-**Cycle Mode:** STANDARD  
-**Lead Programmer:** ivory-wolf  
-**Date Closed:** 2026-05-07  
+Certificate ID:          CERT-BATCH-112-2026-05-07
+Batch ID:                BATCH-112
+Cycle Mode:              STANDARD
+Blueprint Version:       1.0
+Review Timestamp:        2026-05-07T12:30:00Z
 
-## Summary
+Partial Sign-Offs confirmed:
+  [x] PARTIAL-BATCH-112-TASK-01-2026-05-07
 
-ReferenceVerifier wired into PipelineOrchestrator as post-synthesis verification step.
+───────────────────────────────────────────────────────────
+BATCH-LEVEL ACCEPTANCE CRITERIA
+───────────────────────────────────────────────────────────
 
-## Deliverables
+  BAC-01: [✓ Met] Reference verification wired into orchestrator
+  BAC-02: [✓ Met] All 8 tests pass
+  BAC-03: [✓ Met] CHANGELOG.md updated
+  BAC-04: [✓ Met] All documents archived under /docs/aiv/BATCH-112/
 
-| Deliverable | Status |
-|:------------|:-------|
-| Blueprint | ✅ docs/aiv/BATCH-112/BLUEPRINT.md |
-| Review Report | ✅ docs/aiv/BATCH-112/REVIEW-REPORT.md |
-| Task Report (TASK-01) | ✅ docs/aiv/BATCH-112/REPORT-TASK-01-2026-05-07.md |
-| Partial Sign-Off (TASK-01) | ✅ docs/aiv/BATCH-112/PARTIAL-TASK-01-2026-05-07.md |
-| Sign-Off Certificate | ✅ docs/aiv/BATCH-112/SIGN-OFF-CERTIFICATE.md |
-| Test file | ✅ backend/tests/test_pipeline/test_batch112_reference_verification.py |
-| Source modification | ✅ backend/pipeline/orchestrator.py |
+───────────────────────────────────────────────────────────
+COHERENCE CHECK
+───────────────────────────────────────────────────────────
 
-## Batch Acceptance Criteria
+  [x] All Tasks together fully deliver the Batch Goal
+  [x] No Hard Boundary gaps exist between Tasks
+  [x] No unresolved Deviations from any Task Report affect the Batch Goal
+  [x] Documentation set is complete
 
-- [x] BAC-01: Reference verification wired into orchestrator
-- [x] BAC-02: All 8 tests pass
-- [x] BAC-03: CHANGELOG.md updated with BATCH-112 entry
-- [x] BAC-04: All documents archived under /docs/aiv/BATCH-112/
+───────────────────────────────────────────────────────────
+STATE.md UPDATE
+───────────────────────────────────────────────────────────
 
-## Test Count
+  [ ] Will be updated at Phase 8 close (BATCH-120)
 
-- Tests added: 8
-- Tests passing: 8
-- Cumulative baseline: 2,252
+───────────────────────────────────────────────────────────
+TEST INTEGRITY VERIFICATION
+───────────────────────────────────────────────────────────
 
-## Lead Signature
+  [x] All tests satisfy T1 (falsifiable)
+  [x] Happy-path + error-path coverage present (T2)
+  [x] Traceability maps every AC to tests and vice versa (T5)
+  [x] T6 falsification described for Critical Task (Falsified By column)
 
-**ivory-wolf** — 2026-05-07
+  T1 violations:     0
+  T2 violations:     0
+  T5 coverage gaps:  0
+  T6 unresolved:     0
+
+───────────────────────────────────────────────────────────
+DEFERRED TESTS SUMMARY
+───────────────────────────────────────────────────────────
+  None.
+
+───────────────────────────────────────────────────────────
+NOTES
+───────────────────────────────────────────────────────────
+  Reviewer fallback used: YES — session 260507-grand-topaz produced non-compliant
+  output; Lead wrote Review Report per §4.5. Reviewer later produced substantive
+  CHK-07/CHK-19 flag about ResearchProposal interface — acknowledged as ADAPT-01.
+  Lead Override: Not invoked — Assistant session successfully verified existing
+  implementation and produced Task Report.
+  ADAPT-01: ResearchProposal interface (sections dict) differs from Blueprint
+  description (content_md). Carried forward for future Blueprint accuracy.
+
+───────────────────────────────────────────────────────────
+VERDICT
+───────────────────────────────────────────────────────────
+
+  [x] APPROVED — Batch is closed.
+
+───────────────────────────────────────────────────────────
+LEAD PROGRAMMER SIGN
+───────────────────────────────────────────────────────────
+
+  Lead Name:   ivory-wolf
+  Timestamp:   2026-05-07T12:45:00Z
+
+═══════════════════════════════════════════════════════════
+```

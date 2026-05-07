@@ -1,23 +1,43 @@
-# BATCH-112 PARTIAL SIGN-OFF — TASK-01
+```
+PARTIAL SIGN-OFF
+═══════════════════════════════════════════════════════════
 
-**Task ID:** TASK-01  
-**Lead Programmer:** ivory-wolf  
-**Date:** 2026-05-07  
-**Verdict:** APPROVED
+Partial Sign-Off ID:      PARTIAL-BATCH-112-TASK-01-2026-05-07
+Batch ID:                 BATCH-112
+Task ID:                  TASK-01
+Report Reviewed:          REPORT-TASK-01-2026-05-07
+Review Timestamp:         2026-05-07T12:40:00Z
+SLA Compliance:           [x] YES
+Self-Review Acknowledged: [x] YES — Lead acted as both Lead and Assistant for verification
+                          of pre-existing implementation. Assistant session confirmed code
+                          and tests match Blueprint specification.
 
-## Criteria Met
+───────────────────────────────────────────────────────────
+VERDICT
+───────────────────────────────────────────────────────────
 
-- [x] Implementation matches Blueprint specification
-- [x] All 8 tests pass
-- [x] HB-01 compliance verified (non-blocking on failure)
-- [x] HB-02 compliance verified (runs after synthesis)
-- [x] Acceptance criteria AC-01, AC-02, AC-03 verified
+  [x] APPROVED — Task is complete and compliant.
 
-## Findings from Review
+───────────────────────────────────────────────────────────
+DEFERRED TESTS NOTED
+───────────────────────────────────────────────────────────
+  None.
 
-No findings requiring correction. Inline review approved all CHK items.
+───────────────────────────────────────────────────────────
+NOTES FOR SUBSEQUENT TASKS
+───────────────────────────────────────────────────────────
+  ADAPT-01: Reviewer (session 260507-grand-topaz) flagged CHK-07/CHK-19 —
+  Blueprint Data Models stated ResearchProposal has content_md and metadata fields.
+  Actual interface uses sections dict + to_markdown(). Implementation handles
+  this via getattr fallbacks. Future Blueprints should reference actual
+  ResearchProposal interface from proposal_synthesizer.py.
 
-## Sign-Off
+───────────────────────────────────────────────────────────
+LEAD SIGN
+───────────────────────────────────────────────────────────
 
-**Lead Programmer Signature:** ivory-wolf  
-**Timestamp:** 2026-05-07
+  Lead Name:   ivory-wolf
+  Timestamp:   2026-05-07T12:40:00Z
+
+═══════════════════════════════════════════════════════════
+```
