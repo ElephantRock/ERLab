@@ -172,6 +172,11 @@ class ProposalSynthesizer:
                             "produce ALL sections with substantial content. Do NOT write stubs, "
                             "summaries, or placeholder text. Each section must be detailed and "
                             "technically precise.\n\n"
+                            "CRITICAL: This is a CLOSED-BOOK EXAM. You may ONLY cite sources "
+                            "labeled [SOURCE-X] in the Supporting Literature. If a claim cannot "
+                            "be backed by a [SOURCE-X] paper, write 'internal reasoning' — do NOT "
+                            "invent citations. Do NOT use author names from your training data that "
+                            "are not listed below.\n\n"
                             "OUTPUT FORMAT: Write each section with a markdown header like:\n"
                             "## Title\n...\n## Abstract\n...\n## Introduction\n...\n"
                             "## Related Work\n...\n## Proposed Method\n...\n"
@@ -179,7 +184,10 @@ class ProposalSynthesizer:
                             "## Timeline\n...\n## References\n...\n## Risk Mitigation\n...\n\n"
                             "You MUST include ALL 10 sections. Each prose section must be at least "
                             "200 words. The Proposed Method must be at least 500 words with "
-                            "mathematical notation ($...$). The Introduction must be at least 400 words."
+                            "mathematical notation ($...$). The Introduction must be at least 400 words.\n\n"
+                            "MANDATORY PRE-COMPUTATION: Before writing prose, internally: (1) list each "
+                            "[SOURCE-X] and its key claim, (2) map claims to sources, (3) assign sources "
+                            "to sections. Map first, write second."
                         ),
                     },
                     {"role": "user", "content": context},
@@ -380,6 +388,10 @@ class ProposalSynthesizer:
 
     def _verify_proposal_references(self, proposal: ResearchProposal, corpus_papers: list[Paper]) -> ResearchProposal:
         """Verify references in proposal against actual corpus."""
+        # Step 1: Sanitize — strip any citation not in the provided source list
+        proposal = self._sanitize_citations(proposal, corpus_papers)
+        
+        # Step 2: Verify — run reference verifier for trust scoring
         try:
             from backend.pipeline.verification.reference_verifier import ReferenceVerifier
             verifier = ReferenceVerifier()
@@ -389,7 +401,6 @@ class ProposalSynthesizer:
             if report.trust_score < 0.7:
                 logger.warning("Reference trust score: %.1f — %d unverifiable citations",
                              report.trust_score, report.potentially_hallucinated)
-                # Strip unverified citations from proposal sections
                 for key in proposal.sections:
                     if isinstance(proposal.sections[key], str):
                         proposal.sections[key] = verifier.strip_unverified_citations(
@@ -399,6 +410,65 @@ class ProposalSynthesizer:
                 logger.info("Reference verification passed: %.1f trust score", report.trust_score)
         except Exception as e:
             logger.warning("Reference verification failed (non-fatal): %s", e)
+        return proposal
+
+    @staticmethod
+    def _sanitize_citations(proposal: ResearchProposal, corpus_papers: list[Paper]) -> ResearchProposal:
+        """Strip citations that don't match any provided source paper.
+        
+        Uses regex to find author-year citation patterns and checks each
+        against the actual author surnames in the provided corpus.
+        Non-matching citations are replaced with 'internal reasoning'.
+        """
+        import re
+        
+        if not corpus_papers:
+            return proposal
+        
+        # Build allowed surname set from corpus
+        allowed_surnames = set()
+        for p in corpus_papers:
+            for author in (p.authors or []):
+                name = getattr(author, 'name', str(author))
+                if name:
+                    # surname = last word
+                    allowed_surnames.add(name.strip().split()[-1].lower())
+        
+        # Four citation patterns to match:
+        # 1. (Author et al., Year)  — parenthesized multi-author
+        # 2. (Author, Year)         — parenthesized single author  
+        # 3. Author et al. (Year)   — narrative multi-author
+        # 4. Author (Year)          — narrative single author
+        patterns = [
+            re.compile(r'\(([A-Z][a-z]+)\s+et\s+al\.,?\s*(\d{4})\)'),
+            re.compile(r'\(([A-Z][a-z]+),?\s*(\d{4})\)'),
+            re.compile(r'([A-Z][a-z]+)\s+et\s+al\.\s+\((\d{4})\)'),
+            re.compile(r'([A-Z][a-z]+)\s+\((\d{4})\)'),
+        ]
+        
+        stripped_count = 0
+        for key in proposal.sections:
+            if not isinstance(proposal.sections[key], str):
+                continue
+            text = proposal.sections[key]
+            
+            for pat in patterns:
+                def _check(m):
+                    nonlocal stripped_count
+                    surname = m.group(1).lower()
+                    if surname in allowed_surnames:
+                        return m.group(0)  # Keep
+                    stripped_count += 1
+                    return "internal reasoning"
+                text = pat.sub(_check, text)
+            
+            proposal.sections[key] = text
+        
+        if stripped_count > 0:
+            logger.warning(
+                "Sanitized %d non-corpus citations (replaced with 'internal reasoning')",
+                stripped_count,
+            )
         return proposal
 
     @staticmethod
@@ -594,11 +664,11 @@ class ProposalSynthesizer:
         if not papers:
             return "No specific supporting papers provided."
         lines = []
-        for p in papers[:15]:
+        for idx, p in enumerate(papers[:15], 1):
             authors = ", ".join(a.name for a in p.authors[:3])
             if len(p.authors) > 3:
                 authors += " et al."
-            line = f"- {authors} ({p.year or 'n.d.'}). {p.title}. {p.venue or 'Unknown venue'}."
+            line = f"[SOURCE-{idx}] {authors} ({p.year or 'n.d.'}). {p.title}. {p.venue or 'Unknown venue'}."
             if p.doi:
                 line += f" DOI: {p.doi}."
             elif p.url:
@@ -606,6 +676,6 @@ class ProposalSynthesizer:
             if p.arxiv_id:
                 line += f" arXiv: {p.arxiv_id}."
             if p.abstract:
-                line += f"\n  Abstract: {p.abstract[:200]}"
+                line += f"\n  Abstract: {p.abstract[:800]}"
             lines.append(line)
         return "\n".join(lines)
