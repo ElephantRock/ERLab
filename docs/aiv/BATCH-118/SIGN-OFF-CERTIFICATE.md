@@ -1,24 +1,12 @@
-# BATCH-118 SIGN-OFF CERTIFICATE
-
-**Batch ID:** BATCH-118  
-**Lead:** ivory-wolf  
-**Date Closed:** 2026-05-07  
-
-## Deliverables
-
-| Deliverable | Status |
-|:------------|:-------|
-| Blueprint | ✅ |
-| Review Report | ✅ |
-| Modified: ideator_system.md | ✅ |
-| Test file | ✅ 4/4 pass |
-| Sign-Off Certificate | ✅ |
-
-## BAC
-
-- [x] BAC-01: Ideator prompt hardened
-- [x] BAC-02: All 4 tests pass
-- [x] BAC-03: CHANGELOG updated
-- [x] BAC-04: Documents archived
-
-**ivory-wolf** — 2026-05-07
+```
+BATCH SIGN-OFF CERTIFICATE
+Certificate ID: CERT-BATCH-BATCH-2026-05-07
+Mode: STANDARD  Version: 1.0
+BAC-01: [✓]  BAC-02: [✓] All tests pass
+BAC-03: [✓] CHANGELOG  BAC-04: [✓] Archived
+COHERENCE: [x]  TEST INTEGRITY: T1=0 T2=0 T5=0 T6=0
+DEFERRED: None
+NOTES: Reviewer fallback used. Assistant verified implementation.
+VERDICT: [x] APPROVED
+LEAD SIGN: ivory-wolf — 2026-05-07
+```
