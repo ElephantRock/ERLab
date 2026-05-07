@@ -1,9 +1,9 @@
 # CODEBASE STATE
 
 Last Updated:       2026-05-07
-Updated By:         ivory-wolf — via BATCH-110 Close
+Updated By:         ivory-wolf — via BATCH-120 Close
 Framework Version:  5.3
-Phase:              PHASE 7 COMPLETE (B101–B110)
+Phase:              PHASE 8 COMPLETE (B112–B120)
 
 ───────────────────────────────────────────────────────────
 VERIFIED MODULE MAP
@@ -29,125 +29,137 @@ VERIFIED MODULE MAP
   Verified in:         BATCH-75
 
   Module:              backend.pipeline.stages
-  Exports:             TreeSearchStage (with _convert_to_research_ideas, _build_tree_data)
-  Key note:            _build_tree_data() uses getattr() guards for idea.id and
-                       idea.parent_idea_ids — works with both IdeaCandidate and ResearchIdea.
-  Verified in:         BATCH-75
-
-  Module:              backend.pipeline.persistence
-  Exports:             PipelinePersistence (persist_ideas, persist_proposals)
-  Key note:            persist_ideas() uses getattr() guards for all field accesses.
-                       Dedup check on (title, pipeline_run_id) before insert.
-  Verified in:         BATCH-75
-
-  Module:              backend.pipeline.synthesis.proposal_synthesizer
-  Exports:             ProposalSynthesizer, ResearchProposal
-  Key note:            ensemble_review stored as model_dump() dict, not raw Pydantic.
-                       ResearchProposal is a plain class (not Pydantic), uses **sections.
-  Verified in:         BATCH-75
-
-  Module:              backend.pipeline.literature.arxiv_source
-  Exports:             ArxivSource
-  Key note:            Retries on HTTP 429 with backoff (5→15→30s), max 3 retries.
-                       Does NOT retry on non-429 errors.
-  Verified in:         BATCH-75
-
-  Module:              backend.pipeline.strategies
-  Exports:             PipelineStrategy, StageConfig, StrategyConfig, StrategyRegistry, register_presets
-  Key note:            Strategy presets use actual _STAGE_ORDER names (not fictional names).
-                       fast_scan disables: idea_generation, novelty_checking, mechanical_metrics.
-                       get_default_registry() auto-populates on first call.
-  Verified in:         BATCH-76
+  Exports:             PipelineStage, StageContext, ProposalDeepeningStage (Phase 8), ...
+  Key note:            ProposalDeepeningStage added in B114. Runs after synthesis.
+                       Template mode enriches proposals with architecture, toy example,
+                       failure modes, success criteria. Stored in proposal.metadata JSON.
+  Verified in:         BATCH-114
 
   Module:              backend.pipeline.orchestrator
-  Key note:            PipelineOrchestrator.__init__() now accepts strategy param.
-                       strategy_name property exposes active strategy.
-                       Stage skip logic checks strategy config BEFORE existing gate logic.
-  Verified in:         BATCH-76
+  Exports:             PipelineOrchestrator
+  Key note:            _STAGE_ORDER now has 10 entries (added proposal_deepening).
+                       _verify_references() runs after synthesis (B112).
+                       _evaluate_pipeline() runs after all stages (B116).
+                       Both are non-blocking (HB-01).
+  Verified in:         BATCH-116
+
+  Module:              backend.pipeline.verification.reference_verifier
+  Exports:             ReferenceVerifier, VerificationReport, CitationCheck
+  Key note:            Extracts author-year citations from proposals, cross-references
+                       against corpus. Strips unverifiable citations with [Citation needed].
+  Verified in:         BATCH-112
+
+  Module:              backend.pipeline.verification.proposal_deepener
+  Exports:             ProposalDeepener, DeepenedProposal
+  Key note:            Template mode produces architecture, toy example, failure modes,
+                       success criteria. LLM mode available with provider.
+  Verified in:         BATCH-114
+
+  Module:              backend.pipeline.verification.pipeline_evaluator
+  Exports:             PipelineEvaluator, PipelineEvaluationReport, GapEvaluation
+  Key note:            Computes gap recall, precision, idea novelty rate, quality score.
+                       Uses keyword overlap for gap matching.
+  Verified in:         BATCH-116
+
+  Module:              backend.pipeline.verification.gold_standards
+  Exports:             GOLD_STANDARD_GAPS, get_gold_gaps
+  Key note:            4 domains (AI/NLP, AI/Reasoning, Biomedical, CS), 8 gaps each.
+                       get_gold_gaps() has prefix matching + AI/NLP fallback.
+  Verified in:         BATCH-116
+
+  Module:              backend.pipeline.gap_analysis.deduplicator
+  Exports:             GapDeduplicator, MergedGap
+  Key note:            Word-overlap similarity with 0.6 threshold. Tracks source_run_ids
+                       and occurrence_count. Single-run and multi-run modes.
+  Verified in:         BATCH-117
+
+  Module:              backend.pipeline.evaluation.plan_generator
+  Exports:             EvaluationPlanGenerator, EvaluationPlan, DatasetRecommendation,
+                       BaselineMethod, MetricTarget, AblationExperiment
+  Key note:            Template mode produces 3 datasets, 3 baselines, 4 metrics, 3 ablations.
+  Verified in:         BATCH-115
+
+  Module:              backend.pipeline.result
+  Exports:             PipelineResult
+  Key note:            Now includes quality_report: dict | None field (Phase 8).
+  Verified in:         BATCH-116
+
+  Module:              backend.pipeline.gap_analysis.gap_analyzer
+  Key note:            GAP_ANALYSIS_PROMPT now includes CITATION INTEGRITY (MANDATORY)
+                       section. _format_paper_summaries includes author names.
+  Verified in:         BATCH-113
+
+  Module:              backend.pipeline.generation.prompts.ideator_system.md
+  Key note:            Now includes CITATION INTEGRITY, CONCRETE ARCHITECTURE REQUIREMENTS,
+                       FAILURE MODE ANALYSIS, MEASURABLE SUCCESS CRITERIA sections.
+  Verified in:         BATCH-118
 
 ───────────────────────────────────────────────────────────
 ARCHITECTURAL DECISIONS
 ───────────────────────────────────────────────────────────
 
   DEC-001: TreeSearchStage is the SOLE conversion point between IdeaCandidate
-           and ResearchIdea. No other stage performs this conversion. The
-           conversion happens in execute() before ctx.result.ideas assignment.
+           and ResearchIdea.
   Source:   BATCH-75
   Active:   YES
-  Overridden: NO
 
   DEC-002: persist_ideas() is the SOLE point where ideas are written to the DB.
-           Dedup happens here, not in crud.create_idea(). All field accesses
-           use getattr() with defaults to handle both IdeaCandidate and ResearchIdea.
+           Dedup happens here, not in crud.create_idea().
   Source:   BATCH-75
   Active:   YES
-  Overridden: NO
 
   DEC-003: Strategy stage names MUST match PipelineOrchestrator._STAGE_ORDER exactly.
-           The 9 stage names are: literature_search, ingestion, gap_analysis,
+           The 10 stage names are: literature_search, ingestion, gap_analysis,
            idea_generation, novelty_checking, feasibility_scoring,
-           mechanical_metrics, proposal_synthesis, export.
-           Strategy configs reference these names, NOT fictional names like "tree_search".
-  Source:   BATCH-76
+           mechanical_metrics, proposal_synthesis, proposal_deepening, export.
+  Source:   BATCH-76 (updated B114)
   Active:   YES
-  Overridden: NO
+
+  DEC-004: _STAGE_ORDER has 10 entries (proposal_deepening added in B114).
+           All strategy presets must be updated to account for this stage.
+  Source:   BATCH-114
+  Active:   YES
+
+  DEC-005: Quality evaluation (_evaluate_pipeline) runs after ALL stages complete,
+           before self-improvement. Stores result in PipelineResult.quality_report.
+  Source:   BATCH-116
+  Active:   YES
+
+  DEC-006: Reference verification (_verify_references) runs inside the
+           proposal_synthesis persistence block, after proposals are saved.
+           Non-blocking per HB-01.
+  Source:   BATCH-112
+  Active:   YES
 
 ───────────────────────────────────────────────────────────
 KNOWN GOTCHAS
 ───────────────────────────────────────────────────────────
 
   GOTCHA-001: 196+ trio-mode tests fail because `trio` is not installed.
-               These are pre-existing and do not indicate code bugs.
-               Run with `-p no:asyncio` or ignore trio failures.
-  Discovered:  BATCH-73 era
+               Pre-existing. Run with `-p no:asyncio`.
   Status:      OPEN
 
-  GOTCHA-002: Tree search expansion produces non-fatal warnings:
-               "sequence item 0: expected str instance, list found"
-               in prior_critique construction. Ideas are still generated.
-  Discovered:  BATCH-75 (TASK-06 verification)
+  GOTCHA-002: Tree search expansion produces non-fatal warnings.
   Status:      OPEN — cosmetic, non-blocking
 
-  GOTCHA-003: The pipeline takes 10-26 minutes for a real run depending on
-               ChromaDB state and LLM response times. Tree search adds ~5 min.
-  Discovered:  BATCH-75 (TASK-06 verification)
-  Status:      MITIGATED — expected behavior with real API calls
+  GOTCHA-003: Pipeline takes 10-26 min for real runs.
+  Status:      MITIGATED — expected behavior
 
-  GOTCHA-004: ChromaDB can accumulate stale zero-vector data from old DummyEmbeddingProvider
-               runs. validate_startup() detects this but old data persists until collection
-               is manually deleted.
-  Discovered:  BATCH-73 era
-  Status:      MITIGATED — validate_startup() warns, manual cleanup required
-
-───────────────────────────────────────────────────────────
-ADAPTATION LOG (ROLLING — LAST 10 BATCHES)
-───────────────────────────────────────────────────────────
-
-  BATCH-75/TASK-01: Blueprint stated TreeSearchStage._build_tree_data() accesses
-    idea.id. Confirmed. Added getattr() guards per Reviewer CHK-16/CHK-17.
-  BATCH-75/TASK-02: persist_ideas() used direct idea.domain access.
-    Actual: IdeaCandidate lacks .domain. Fixed with getattr(idea, 'domain', 'AI/NLP').
-  BATCH-75/TASK-03: proposal.sections["ensemble_review"] stored raw Pydantic model.
-    Actual: json.dumps() crashed. Fixed with model_dump().
-  BATCH-76/TASK-01: Blueprint stated fast_scan disables "tree_search" and "knowledge" stages.
-    Actual: _STAGE_ORDER has no such names. Fixed: use idea_generation, novelty_checking,
-    mechanical_metrics instead. All tests updated.
-  BATCH-76/TASK-02: Blueprint stated test baseline +45. Actual: +31 tests created.
-    Corrected to match actual count.
+  GOTCHA-004: ChromaDB stale zero-vector data from old runs.
+  Status:      MITIGATED — validate_startup() warns
 
 ───────────────────────────────────────────────────────────
 TEST BASELINE
 ───────────────────────────────────────────────────────────
 
-  Last verified count: 2,244
-  Verified in:         BATCH-111 (2026-05-07)
-  Breakdown:           ~1,677 unit/integration passing + 44 new from BATCH-76/77,
-                       ~198 trio-mode pre-existing failures
+  Last verified count: 2,292
+  Verified in:         BATCH-120 (2026-05-07)
+  Phase 8 delta:       +48 tests (B112: 8, B113: 8, B114: 7, B115: 7, B116: 7, B117: 7, B118: 4)
 
 ───────────────────────────────────────────────────────────
 CARRY-FORWARD OBLIGATIONS
 ───────────────────────────────────────────────────────────
 
-  (none — all tests in this Batch passed or are pre-existing trio-mode failures)
+  (none — all Phase 8 tests pass)
 
 ═══════════════════════════════════════════════════════════
