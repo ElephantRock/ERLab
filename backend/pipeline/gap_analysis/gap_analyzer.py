@@ -128,7 +128,9 @@ class GapAnalyzer:
             )
 
             gaps = []
-            for g in result.get("gaps", []):
+            # Handle both dict and list returns from different providers
+            raw_gaps = result.get("gaps", []) if isinstance(result, dict) else (result if isinstance(result, list) else [])
+            for g in raw_gaps:
                 new_gap = ResearchGap(
                     title=g.get("title", "Untitled Gap"),
                     description=g.get("description", ""),
