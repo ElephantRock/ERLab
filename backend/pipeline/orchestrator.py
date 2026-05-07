@@ -41,6 +41,7 @@ from backend.pipeline.stages import (
 )
 from backend.pipeline.synthesis.proposal_synthesizer import ProposalSynthesizer
 from backend.pipeline.synthesis.reference_validator import ReferenceValidator
+from backend.pipeline.verification.reference_verifier import ReferenceVerifier
 from backend.providers.base import LLMProvider
 from backend.providers.provider_factory import get_registry
 from backend.providers.token_counter import TokenCounter
@@ -135,6 +136,9 @@ class PipelineOrchestrator:
 
         # Phase 7 integration: Soul + Journal + Context
         self._integration = None  # Initialized per-run with run_id/domain
+
+        # Phase 8: Reference verification
+        self._reference_verifier = ReferenceVerifier()
 
         self._persistence = PipelinePersistence()
         self._token_counter = TokenCounter()
@@ -1273,6 +1277,8 @@ class PipelineOrchestrator:
             if stage.name == "proposal_synthesis":
                 self._persistence.persist_proposals(result, db_run_id)
                 self._collect_warnings(result)
+                # Phase 8: Run reference verification after synthesis (HB-02)
+                self._verify_references(result, ctx)
 
             # Cross-stage context: persist stage outputs
             if self._cross_stage_ctx:
@@ -1736,6 +1742,105 @@ class PipelineOrchestrator:
                 cost_usd = stage_costs.get(stage_name, {}).get("total_cost_usd", 0.0)
             self._budget.record(stage_name, tokens=tokens, cost_usd=cost_usd, elapsed=elapsed)
         self._token_counter.reset()
+
+    # ── Reference Verification (Phase 8) ───────────────────────────
+
+    def _verify_references(self, result: PipelineResult, ctx: StageContext) -> None:
+        """Run reference verification on all generated proposals.
+
+        Verifies citations against the corpus papers. If trust score is below
+        0.7, strips unverifiable citations with [Citation needed] markers.
+
+        HB-01: This method MUST NOT raise exceptions that propagate to the
+        pipeline executor. All errors are caught and logged.
+        """
+        try:
+            if not result.proposals:
+                logger.debug("No proposals to verify — skipping reference verification")
+                return
+
+            # Build corpus paper dicts from all_papers in context
+            corpus_dicts: list[dict] = []
+            for paper in getattr(ctx, 'all_papers', []) or []:
+                try:
+                    corpus_dicts.append({
+                        "title": getattr(paper, 'title', ''),
+                        "authors": getattr(paper, 'authors', []),
+                        "year": getattr(paper, 'year', ''),
+                    })
+                except Exception:
+                    continue
+
+            total_verified = 0
+            total_unverifiable = 0
+
+            for proposal in result.proposals:
+                text = getattr(proposal, 'content_md', '') or getattr(proposal, 'content', '') or ''
+                if not text:
+                    continue
+
+                report = self._reference_verifier.verify(text, corpus_dicts)
+                trust = report.trust_score
+
+                logger.info(
+                    "Reference verification for proposal '%s': "
+                    "trust=%.2f, verified=%d, unverifiable=%d, hallucinated=%d",
+                    getattr(proposal, 'title', 'untitled')[:60],
+                    trust,
+                    report.verified,
+                    report.unverifiable,
+                    report.potentially_hallucinated,
+                )
+
+                if trust < 0.7:
+                    logger.warning(
+                        "Low reference trust score (%.2f) — stripping unverifiable citations",
+                        trust,
+                    )
+                    cleaned = self._reference_verifier.strip_unverified_citations(text, report)
+                    # Update the proposal text
+                    if hasattr(proposal, 'content_md'):
+                        proposal.content_md = cleaned
+                    elif hasattr(proposal, 'content'):
+                        proposal.content = cleaned
+
+                    # Store verification metadata
+                    metadata = {}
+                    if hasattr(proposal, 'metadata') and proposal.metadata:
+                        try:
+                            import json
+                            metadata = json.loads(proposal.metadata) if isinstance(proposal.metadata, str) else proposal.metadata
+                        except (json.JSONDecodeError, TypeError):
+                            metadata = {}
+                    metadata["reference_verification"] = {
+                        "trust_score": trust,
+                        "verified": report.verified,
+                        "unverifiable": report.unverifiable,
+                        "hallucinated": report.potentially_hallucinated,
+                        "stripped": True,
+                    }
+                    if hasattr(proposal, 'metadata'):
+                        import json
+                        proposal.metadata = json.dumps(metadata) if not isinstance(metadata, str) else metadata
+
+                total_verified += report.verified
+                total_unverifiable += report.unverifiable
+
+            logger.info(
+                "Reference verification complete: %d verified, %d unverifiable across %d proposals",
+                total_verified, total_unverifiable, len(result.proposals),
+            )
+
+            # Phase 7: Journal reference verification results
+            if self._integration:
+                self._integration.journal_note(
+                    "reference_verification",
+                    f"Verified {total_verified} citations, {total_unverifiable} unverifiable",
+                )
+
+        except Exception as e:
+            # HB-01: Never crash the pipeline over verification
+            logger.warning("Reference verification failed (non-fatal, HB-01): %s", e)
 
     def _should_stop(self) -> bool:
         if not self._budget:
