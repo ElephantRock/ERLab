@@ -1,10 +1,10 @@
-# BATCH-119 BLUEPRINT — Phase 8 Quality Validation
+# BATCH-120 BLUEPRINT — Phase 8 Close + STATE.md Update
 
 ```
 BATCH BLUEPRINT
 ═══════════════════════════════════════════════════════════
 
-Batch ID:                 BATCH-119
+Batch ID:                 BATCH-120
 Blueprint Version:        1.0
 Cycle Mode:               SIMPLIFIED
 Lead Programmer:          ivory-wolf
@@ -12,39 +12,41 @@ Date Issued:              2026-05-07
 
 SIMPLIFIED CYCLE ELIGIBILITY:
   [x] Exactly 1 Task
-  [x] No existing source files modified (validation only)
+  [x] No existing source files modified (STATE.md + report only)
   [x] No Hard Boundaries required
-  [x] Single deliverable: validation report
+  [x] Single deliverable: completion report + STATE.md
 
 ───────────────────────────────────────────────────────────
 BATCH GOAL
 ───────────────────────────────────────────────────────────
-Run all Phase 8 tests, verify all modules importable, write quality report.
+Close Phase 8. Write completion report. Update STATE.md.
 
 ───────────────────────────────────────────────────────────
 TASK DEFINITION
 ───────────────────────────────────────────────────────────
-  Description: Run test suite for B112-B118 (48 tests), verify module imports,
-               verify _STAGE_ORDER. Write report to sessions data folder.
-  Files in scope: sessions/260501-ivory-wolf/data/batch119_quality_report.md (NEW)
+  Description: Write phase8_completion_report.md. Update STATE.md.
+               Verify test count matches expected baseline.
+  Files in scope:
+    - sessions/260501-ivory-wolf/data/phase8_completion_report.md (WRITE)
+    - docs/aiv/STATE.md (UPDATE)
   Priority: Medium
-  Required Tests: NONE — validation batch
+  Required Tests: NONE — documentation only
   Acceptance Criteria:
-    AC-01: All 48 Phase 8 tests pass
-    AC-02: Quality report exists on disk
-    AC-03: All new modules importable
+    AC-01: Completion report covers all 9 batches (B112-B120)
+    AC-02: STATE.md updated with Phase 8 modules
+    AC-03: Test count verified (2,292)
 
 ───────────────────────────────────────────────────────────
 BATCH-LEVEL ACCEPTANCE CRITERIA
 ───────────────────────────────────────────────────────────
-  BAC-01: 48/48 tests pass
-  BAC-02: Quality report exists
-  BAC-03: Documents archived under /docs/aiv/BATCH-119/
+  BAC-01: Phase 8 completion report written
+  BAC-02: STATE.md reflects all new modules
+  BAC-03: Documents archived under /docs/aiv/BATCH-120/
 
 ───────────────────────────────────────────────────────────
 LEAD RESPONSE TO REVIEW REPORT
 ───────────────────────────────────────────────────────────
-Reviewer Report ID: REVIEW-BATCH-119-2026-05-07
+Reviewer Report ID: REVIEW-BATCH-120-2026-05-07
 Review Cycle: 1
 Lead Decision: [x] ACCEPT
 0 flags. PROCEED.

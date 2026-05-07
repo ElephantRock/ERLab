@@ -1,22 +1,20 @@
-# BATCH-119 SIGN-OFF CERTIFICATE
+```
+BATCH SIGN-OFF CERTIFICATE (SIMPLIFIED)
+Certificate ID: CERT-BATCH-119-2026-05-07
+Batch: BATCH-119  Mode: SIMPLIFIED
 
-**Batch ID:** BATCH-119  
-**Cycle Mode:** SIMPLIFIED  
-**Lead:** ivory-wolf  
-**Date Closed:** 2026-05-07  
+Deliverable: sessions/260501-ivory-wolf/data/batch119_quality_report.md
+Exists on disk: [x] YES
+Tests: 48/48 PASS (B112:8, B113:8, B114:7, B115:7, B116:7, B117:7, B118:4)
+All modules importable: [x] YES
+_STAGE_ORDER verified: [x] YES
 
-## Deliverables
+BAC-01: [✓] 48/48 Phase 8 tests pass
+BAC-02: [✓] Quality report exists
+BAC-03: [✓] Documents archived
 
-| Deliverable | Status |
-|:------------|:-------|
-| Blueprint | ✅ |
-| Quality report | ✅ batch119_quality_report.md |
-| Sign-Off Certificate | ✅ |
-
-## BAC
-
-- [x] BAC-01: All 48 Phase 8 tests pass
-- [x] BAC-02: Quality report exists on disk
-- [x] BAC-03: All modules importable and wired
-
-**ivory-wolf** — 2026-05-07
+NOTES: Reviewer fallback used. SIMPLIFIED cycle — no Partial Sign-Off.
+VERDICT: [x] APPROVED
+LEAD SIGN: ivory-wolf — 2026-05-07T15:10:00Z
+═══════════════════════════════════════════════════════════
+```
