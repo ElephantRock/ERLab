@@ -1305,6 +1305,9 @@ class PipelineOrchestrator:
             if not should_continue or self._should_stop():
                 return result
 
+        # Phase 8: Pipeline quality evaluation
+        self._evaluate_pipeline(result, ctx)
+
         # Post-pipeline: Self-improvement evaluation
         if self._evolver and result.ideas:
             avg_score = sum(i.score for i in result.ideas) / len(result.ideas)
@@ -1844,6 +1847,70 @@ class PipelineOrchestrator:
         except Exception as e:
             # HB-01: Never crash the pipeline over verification
             logger.warning("Reference verification failed (non-fatal, HB-01): %s", e)
+
+    # ── Pipeline Quality Evaluation (Phase 8) ────────────────────────
+
+    def _evaluate_pipeline(self, result: PipelineResult, ctx: StageContext) -> None:
+        """Run pipeline quality evaluation after all stages complete.
+
+        Compares detected gaps against gold-standard lists and computes
+        precision, recall, novelty rate, and overall quality score.
+
+        HB-01: Non-blocking — catches all exceptions.
+        """
+        try:
+            from backend.pipeline.verification.pipeline_evaluator import PipelineEvaluator as PE
+            from backend.pipeline.verification.gold_standards import get_gold_gaps
+
+            domain = ctx.domain or "AI/NLP"
+            gold_gaps = get_gold_gaps(domain)
+
+            evaluator = PE(known_gaps=gold_gaps)
+
+            detected = [
+                {"title": g.title, "description": getattr(g, 'description', ''),
+                 "gap_type": getattr(g, 'gap_type', 'unknown')}
+                for g in result.gaps
+            ]
+            ideas = [
+                {"title": getattr(i, 'title', ''), "novelty_score": getattr(i, 'score', 0.5)}
+                for i in result.ideas
+            ]
+
+            report = evaluator.evaluate(detected, ideas)
+
+            logger.info(
+                "Pipeline quality: score=%.2f, gap_recall=%.1f%%, gap_precision=%.1f%%, "
+                "idea_novelty=%.1f%%",
+                report.pipeline_quality_score,
+                report.gap_recall * 100,
+                report.gap_precision * 100,
+                report.idea_novelty_rate * 100,
+            )
+
+            # Store in result metadata
+            if not hasattr(result, 'quality_report') or result.quality_report is None:
+                result.quality_report = {}
+            result.quality_report = {
+                "pipeline_quality_score": report.pipeline_quality_score,
+                "gap_recall": report.gap_recall,
+                "gap_precision": report.gap_precision,
+                "idea_novelty_rate": report.idea_novelty_rate,
+                "gaps_detected": report.gaps_detected,
+                "gaps_novel": report.gaps_novel,
+                "ideas_generated": report.ideas_generated,
+                "ideas_novel": report.ideas_novel,
+            }
+
+            # Journal
+            if self._integration:
+                self._integration.journal_note(
+                    "pipeline_evaluation",
+                    f"Quality score: {report.pipeline_quality_score:.2f}",
+                )
+
+        except Exception as e:
+            logger.warning("Pipeline evaluation failed (non-fatal): %s", e)
 
     def _should_stop(self) -> bool:
         if not self._budget:

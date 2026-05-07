@@ -35,3 +35,4 @@ class PipelineResult:
     params_used: dict = field(default_factory=dict)
     persistence_warnings: list[str] = field(default_factory=list)
     tree_data: dict | None = None  # Serialized tree structure for frontend (HB-03: max 500KB)
+    quality_report: dict | None = None  # Phase 8: Pipeline quality evaluation results
