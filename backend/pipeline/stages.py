@@ -991,8 +991,8 @@ class ProposalDeepeningStage(PipelineStage):
                     idea_dict = {
                         "id": idx,
                         "title": getattr(proposal, 'title', f'Idea {idx}'),
-                        "problem_statement": getattr(proposal, 'problem_statement', ''),
-                        "proposed_method": getattr(proposal, 'proposed_method', ''),
+                        "problem_statement": proposal.sections.get('introduction', '')[:500] if hasattr(proposal, 'sections') and isinstance(proposal.sections, dict) else '',
+                        "proposed_method": proposal.sections.get('proposed_method', '')[:500] if hasattr(proposal, 'sections') and isinstance(proposal.sections, dict) else '',
                     }
                     deepened = await self._deepener.deepen(idea_dict)
 
