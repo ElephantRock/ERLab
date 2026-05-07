@@ -962,3 +962,69 @@ class ExportStage(PipelineStage):
                 ctx.result.export_paths[i] = path
                 logger.info("Exported proposal to: %s", path)
         return True
+
+
+class ProposalDeepeningStage(PipelineStage):
+    """Enriches proposals with architecture, toy examples, failure modes, and criteria."""
+
+    def __init__(self, deepener=None):
+        from backend.pipeline.verification.proposal_deepener import ProposalDeepener
+        self._deepener = deepener or ProposalDeepener()
+
+    @property
+    def name(self) -> str:
+        return "proposal_deepening"
+
+    async def execute(self, ctx: StageContext) -> bool:
+        """Deepen each proposal in template mode (no LLM needed).
+
+        HB-01: All exceptions caught and logged. Pipeline continues.
+        HB-02: Original proposal text is never overwritten.
+        """
+        try:
+            if not ctx.result.proposals:
+                logger.debug("No proposals to deepen — skipping")
+                return True
+
+            for idx, proposal in ctx.result.proposals.items():
+                try:
+                    idea_dict = {
+                        "id": idx,
+                        "title": getattr(proposal, 'title', f'Idea {idx}'),
+                        "problem_statement": getattr(proposal, 'problem_statement', ''),
+                        "proposed_method": getattr(proposal, 'proposed_method', ''),
+                    }
+                    deepened = await self._deepener.deepen(idea_dict)
+
+                    # Store deepened content in proposal metadata (HB-02: don't overwrite text)
+                    metadata = {}
+                    if hasattr(proposal, 'metadata') and proposal.metadata:
+                        try:
+                            metadata = json.loads(proposal.metadata) if isinstance(proposal.metadata, str) else proposal.metadata
+                        except (json.JSONDecodeError, TypeError):
+                            metadata = {}
+
+                    metadata["deepened"] = {
+                        "architecture": deepened.architecture,
+                        "toy_example": deepened.toy_example,
+                        "failure_modes": deepened.failure_modes,
+                        "success_criteria": deepened.success_criteria,
+                    }
+
+                    if hasattr(proposal, 'metadata'):
+                        proposal.metadata = json.dumps(metadata) if not isinstance(metadata, str) else metadata
+
+                    logger.info(
+                        "Deepened proposal %d: '%s'",
+                        idx,
+                        getattr(proposal, 'title', 'untitled')[:60],
+                    )
+                except Exception as e:
+                    # HB-01: Per-proposal failure is non-fatal
+                    logger.warning("Failed to deepen proposal %d (non-fatal): %s", idx, e)
+
+        except Exception as e:
+            # HB-01: Overall stage failure is non-fatal
+            logger.warning("Proposal deepening stage failed (non-fatal, HB-01): %s", e)
+
+        return True

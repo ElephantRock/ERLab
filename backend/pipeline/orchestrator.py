@@ -35,6 +35,7 @@ from backend.pipeline.stages import (
     MechanicalMetricsStage,
     NoveltyCheckingStage,
     PipelineStage,
+    ProposalDeepeningStage,
     ProposalSynthesisStage,
     StageContext,
     TreeSearchStage,
@@ -62,6 +63,7 @@ class PipelineOrchestrator:
         "feasibility_scoring",
         "mechanical_metrics",
         "proposal_synthesis",
+        "proposal_deepening",
         "export",
     ]
 
@@ -931,6 +933,7 @@ class PipelineOrchestrator:
             FeasibilityScoringStage(self._feasibility),
             MechanicalMetricsStage(),
             self._build_synthesis_stage(ref_validator),
+            ProposalDeepeningStage(),
             ExportStage(self._export),
         ]
 
