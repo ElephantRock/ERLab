@@ -19,25 +19,43 @@ logger = logging.getLogger(__name__)
 
 _DEEPENING_PROMPT = """\
 You are a senior research architect. Given a research proposal, you must add
-concrete technical detail. For each proposal, produce:
+concrete technical detail. This is a CLOSED-BOOK task — only use information
+from the proposal itself. Do NOT invent citations, datasets, or benchmarks
+that are not mentioned in the proposal.
+
+For each proposal, produce:
 
 ## Preliminary Architecture
 Describe the system architecture in concrete terms: modules, data flow,
 interfaces. Name specific components. Use a formal notation where appropriate.
+Be precise: name specific layers, specific algorithms, specific data structures.
+Example: "Module A applies a cross-attention layer (d=512, h=8) over the
+structured representation before passing to Module B."
 
 ## Minimal Working Example
 Give a concrete, worked toy example showing how the system would process
 a specific input. Use real-looking (but synthetic) data. Show the transformation
-at each step.
+at each step. Include actual numbers, actual function names, actual intermediate
+representations.
+Example:
+  Input: {"premises": ["A→B", "B→C"], "query": "Does A→C?"}
+  Step 1 (Parser): Graph(edges=[(A,B), (B,C)])
+  Step 2 (Engine): BFS from A reaches C via B → path=[A,B,C]
+  Output: {"result": true, "confidence": 0.95, "trace": ["A→B", "B→C"]}
 
 ## Expected Failure Modes
 List 3-5 specific ways the proposed system could fail, with concrete scenarios.
 For each failure mode, describe: (a) the symptom, (b) the root cause, (c) a
-potential mitigation.
+potential mitigation. Be specific — not generic ML failure modes.
+Example: "On inputs with >500 reasoning steps, the graph search exceeds memory
+because the adjacency list grows O(n²). Mitigation: switch to sparse adjacency
+with frontier pruning at depth 50."
 
 ## Success Criteria
 Define 3-5 measurable criteria that would constitute a successful implementation.
 Each criterion must include: metric name, target value, and comparison baseline.
+Use a table format:
+| # | Metric | Target | Baseline | Measurement Method |
 
 Proposal to deepen:
 

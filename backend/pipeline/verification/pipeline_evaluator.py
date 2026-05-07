@@ -30,6 +30,44 @@ class GapEvaluation:
 
 
 @dataclass
+class GapMatchDetail:
+    """Detail of how a known gap matched against pipeline output."""
+    known_gap: str
+    matched_by: str  # title of pipeline-detected gap
+    overlap_score: float
+    match_type: str  # 'keyword', 'semantic', 'none'
+
+
+@dataclass
+class InterAnnotatorAgreement:
+    """Cohen's Kappa-style agreement between pipeline and expert annotations.
+    
+    Treats each known gap as a binary annotation: expert says it exists,
+    pipeline either detects it (agree) or doesn't (disagree).
+    """
+    n_known_gaps: int = 0
+    n_detected_by_pipeline: int = 0
+    n_detected_by_expert: int = 0  # always = n_known_gaps
+    n_both_agree: int = 0  # pipeline found + expert says exists
+    observed_agreement: float = 0.0  # P(A)
+    expected_agreement: float = 0.0  # P(E)
+    cohens_kappa: float = 0.0
+    match_details: list[GapMatchDetail] = field(default_factory=list)
+
+    def __str__(self) -> str:
+        return (
+            f"Inter-Annotator Agreement\n"
+            f"════════════════════════\n"
+            f"Known gaps (expert):    {self.n_known_gaps}\n"
+            f"Pipeline detected:      {self.n_detected_by_pipeline}\n"
+            f"Both agree:             {self.n_both_agree}\n"
+            f"Observed agreement P(A): {self.observed_agreement:.1%}\n"
+            f"Expected agreement P(E): {self.expected_agreement:.1%}\n"
+            f"Cohen's Kappa:          {self.cohens_kappa:.3f}\n"
+        )
+
+
+@dataclass
 class PipelineEvaluationReport:
     """Full pipeline evaluation report."""
     # Gap detection metrics
@@ -46,6 +84,9 @@ class PipelineEvaluationReport:
 
     # Detail per item
     gap_evaluations: list[GapEvaluation] = field(default_factory=list)
+
+    # Inter-annotator agreement
+    inter_annotator: InterAnnotatorAgreement | None = None
 
     # Overall
     pipeline_quality_score: float = 0.0  # Weighted combination
@@ -165,6 +206,11 @@ class PipelineEvaluator:
             0.3 * report.idea_novelty_rate
         )
 
+        # Inter-annotator agreement (Cohen's Kappa)
+        report.inter_annotator = self._compute_kappa(
+            detected_gaps, self._known_gaps, semantic_overlap_fn
+        )
+
         return report
 
     def _keyword_overlap(self, title: str, known: str) -> float:
@@ -175,3 +221,85 @@ class PipelineEvaluator:
             return 0.0
         overlap = len(title_words & known_words)
         return overlap / len(known_words)
+
+    def _compute_kappa(
+        self,
+        detected_gaps: list[dict],
+        known_gaps: list[str],
+        semantic_fn: Any = None,
+    ) -> InterAnnotatorAgreement:
+        """Compute Cohen's Kappa between pipeline and expert annotations.
+        
+        Each known gap is a binary variable:
+        - Expert annotator: always 1 (they defined it as a gap)
+        - Pipeline annotator: 1 if detected, 0 if not
+        
+        Kappa = (P(A) - P(E)) / (1 - P(E))
+        where P(A) = observed agreement, P(E) = expected by chance.
+        """
+        n = len(known_gaps)
+        detected_titles = [g.get("title", "").lower() for g in detected_gaps]
+        
+        match_details: list[GapMatchDetail] = []
+        n_detected = 0
+        
+        for known in known_gaps:
+            best_score = 0.0
+            best_match = ""
+            for dt in detected_titles:
+                if semantic_fn:
+                    score = semantic_fn(dt, known)
+                else:
+                    score = self._keyword_overlap(dt, known)
+                if score > best_score:
+                    best_score = score
+                    best_match = dt
+            
+            detected = best_score >= 0.3
+            if detected:
+                n_detected += 1
+            
+            match_details.append(GapMatchDetail(
+                known_gap=known,
+                matched_by=best_match if detected else "(none)",
+                overlap_score=best_score,
+                match_type="keyword" if not semantic_fn else "semantic",
+            ))
+        
+        # Binary contingency table:
+        # Expert says YES for all n known gaps
+        # Pipeline says YES for n_detected, NO for n - n_detected
+        # Both agree YES: n_detected (true positives)
+        # Both agree NO: impossible (expert always says YES)
+        # Disagree: n - n_detected (expert YES, pipeline NO)
+        
+        n_yes_yes = n_detected  # both say gap exists
+        n_no_no = 0              # both say no gap (impossible here)
+        n_yes_no = n - n_detected  # expert yes, pipeline no
+        n_no_yes = 0              # expert no, pipeline yes (not in known list)
+        total_annotations = n      # each known gap = one annotation pair
+        
+        # P(A) = observed agreement
+        p_a = n_yes_yes / max(total_annotations, 1)
+        
+        # P(E) = expected agreement by chance
+        # p_expert_yes = 1.0, p_pipeline_yes = n_detected / n
+        p_pipeline_yes = n_detected / max(total_annotations, 1)
+        p_pipeline_no = 1 - p_pipeline_yes
+        p_expert_yes = 1.0
+        p_expert_no = 0.0
+        p_e = (p_expert_yes * p_pipeline_yes) + (p_expert_no * p_pipeline_no)
+        
+        # Cohen's Kappa
+        kappa = (p_a - p_e) / max(1 - p_e, 1e-10)
+        
+        return InterAnnotatorAgreement(
+            n_known_gaps=n,
+            n_detected_by_pipeline=n_detected,
+            n_detected_by_expert=n,
+            n_both_agree=n_yes_yes,
+            observed_agreement=p_a,
+            expected_agreement=p_e,
+            cohens_kappa=kappa,
+            match_details=match_details,
+        )

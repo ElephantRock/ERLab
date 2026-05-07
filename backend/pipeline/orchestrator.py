@@ -20,6 +20,7 @@ from backend.pipeline.literature.search_service import SearchService
 from backend.pipeline.memory.extraction import extract_from_pipeline_result
 from backend.pipeline.memory.service import MemoryService
 from backend.pipeline.novelty.novelty_checker import NoveltyChecker
+from backend.pipeline.verification.proposal_deepener import ProposalDeepener
 from backend.pipeline.persistence import PipelinePersistence
 from backend.pipeline.result import PipelineResult
 from backend.pipeline.self_improve.evolution import PipelineEvolver
@@ -933,7 +934,7 @@ class PipelineOrchestrator:
             FeasibilityScoringStage(self._feasibility),
             MechanicalMetricsStage(),
             self._build_synthesis_stage(ref_validator),
-            ProposalDeepeningStage(),
+            ProposalDeepeningStage(deepener=ProposalDeepener(provider=self._provider)),
             ExportStage(self._export),
         ]
 

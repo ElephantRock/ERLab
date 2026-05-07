@@ -69,13 +69,16 @@ class TestFormatLiterature:
         result = ProposalSynthesizer._format_literature([])
         assert result == "No specific supporting papers provided."
 
-    def test_limits_to_15(self):
+    def test_limits_to_30(self):
         papers = [
             Paper(id=f"p{i}", source="test", title=f"Paper {i}", year=2024)
-            for i in range(20)
+            for i in range(40)
         ]
         result = ProposalSynthesizer._format_literature(papers)
-        assert result.count("\n") + 1 == 15
+        assert result.count("\n") + 1 == 30
+        # Also verify [SOURCE-X] indexing
+        assert "[SOURCE-30]" in result
+        assert "[SOURCE-31]" not in result
 
 
 class TestProposalSynthesizer:

@@ -610,7 +610,7 @@ class ProposalSynthesisStage(PipelineStage):
                         idea=idea,
                         novelty_report=novelty,
                         feasibility_report=feasibility,
-                        supporting_papers=ctx.all_papers[:10],
+                        supporting_papers=ctx.all_papers[:30],
                         gaps=ctx.result.gaps,
                     ),
                     timeout=timeout,
@@ -918,7 +918,7 @@ class MechanicalMetricsStage(PipelineStage):
 
                 # Fallback: if no explicit supporting_papers, use all papers
                 if not supporting:
-                    supporting = ctx.all_papers[:10]
+                    supporting = ctx.all_papers[:30]
 
                 metrics = self._calculator.compute_all(
                     idea=idea,
@@ -1013,6 +1013,17 @@ class ProposalDeepeningStage(PipelineStage):
 
                     if hasattr(proposal, 'metadata'):
                         proposal.metadata = json.dumps(metadata) if not isinstance(metadata, str) else metadata
+
+                    # Also append deepened content as actual proposal sections (for export)
+                    if hasattr(proposal, 'sections') and isinstance(proposal.sections, dict):
+                        if deepened.architecture:
+                            proposal.sections["preliminary_architecture"] = deepened.architecture
+                        if deepened.toy_example:
+                            proposal.sections["minimal_working_example"] = deepened.toy_example
+                        if deepened.failure_modes:
+                            proposal.sections["failure_modes"] = deepened.failure_modes
+                        if deepened.success_criteria:
+                            proposal.sections["success_criteria"] = deepened.success_criteria
 
                     logger.info(
                         "Deepened proposal %d: '%s'",

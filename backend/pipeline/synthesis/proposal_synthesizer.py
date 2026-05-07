@@ -664,7 +664,7 @@ class ProposalSynthesizer:
         if not papers:
             return "No specific supporting papers provided."
         lines = []
-        for idx, p in enumerate(papers[:15], 1):
+        for idx, p in enumerate(papers[:30], 1):
             authors = ", ".join(a.name for a in p.authors[:3])
             if len(p.authors) > 3:
                 authors += " et al."
