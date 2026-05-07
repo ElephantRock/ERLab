@@ -19,6 +19,13 @@ and identify {max_gaps} significant research gaps.
 ## Sample Papers:
 {paper_summaries}
 
+## CITATION INTEGRITY (MANDATORY)
+You MUST only reference papers that are listed in the Sample Papers section above.
+Do NOT invent, fabricate, or hallucinate any paper titles, authors, or years.
+If you mention a paper, it MUST appear in the Sample Papers list.
+If you are unsure whether a paper exists in the provided list, do not cite it.
+Instead, describe the gap in general terms without naming a specific paper.
+
 For each gap, provide:
 1. A concise title
 2. A detailed description of what's missing or underexplored
@@ -26,6 +33,7 @@ For each gap, provide:
 4. Which clusters it relates to
 5. The potential impact if addressed
 6. Your confidence in this being a genuine gap (0.0 to 1.0)
+7. Specific paper references from the Sample Papers list that support this gap (use only papers listed above)
 
 Respond with a JSON array of objects with keys: title, description, gap_type, related_clusters, potential_impact, confidence"""
 
@@ -194,5 +202,22 @@ class GapAnalyzer:
         lines = []
         for i, p in enumerate(papers[:30], 1):
             abstract = (p.abstract or "")[:200]
-            lines.append(f"{i}. [{p.year or 'N/A'}] {p.title}\n   {abstract}...")
-        return "\n".join(lines)
+            # Include authors and year for citation grounding
+            authors_str = ""
+            if hasattr(p, 'authors') and p.authors:
+                if isinstance(p.authors, list):
+                    names = []
+                    for a in p.authors[:3]:
+                        if hasattr(a, 'name'):
+                            names.append(a.name)
+                        else:
+                            names.append(str(a))
+                    authors_str = ", ".join(names)
+                    if len(p.authors) > 3:
+                        authors_str += " et al."
+                else:
+                    authors_str = str(p.authors)
+            year_str = str(p.year) if p.year else "N/A"
+            author_line = f" Authors: {authors_str}" if authors_str else ""
+            lines.append(f"{i}. [{year_str}] {p.title}{author_line}\n   {abstract}...")
+        return "\n".join(lines) if lines else "(No papers provided)"
