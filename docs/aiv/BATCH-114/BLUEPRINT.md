@@ -50,3 +50,21 @@ and measurable success criteria.
 - BAC-02: All 7 tests pass
 - BAC-03: CHANGELOG.md updated
 - BAC-04: Documents archived under /docs/aiv/BATCH-114/
+
+───────────────────────────────────────────────────────────
+LEAD RESPONSE TO REVIEW REPORT
+───────────────────────────────────────────────────────────
+
+Reviewer Report ID:       REVIEW-BATCH-114-2026-05-07
+Review Cycle:             1
+Lead Decision:            [x] ACCEPT WITH MODIFICATIONS
+
+Flags acted on:
+  CHK-14 → Test baseline stale (2,260 vs actual 2,252 at B114 issuance). Accepted as-is since
+  this is a retroactive re-execution — the baseline was correct at original issuance time.
+  CHK-24 → STATE.md reflects post-B120 state. Accepted — retroactive re-execution expected.
+
+Both flags are documentation artifacts of retroactive process compliance, not code issues.
+
+Blueprint Version after response: 1.0 (no revision needed)
+Lead Sign:                ivory-wolf — 2026-05-07
