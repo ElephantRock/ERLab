@@ -109,7 +109,11 @@ class ProposalDeepener:
         method = idea.get("proposed_method", "").replace("{", "{{").replace("}", "}}")
         prompt = _DEEPENING_PROMPT.format(title=title, problem=problem, method=method)
         try:
-            result = await self._provider.complete(prompt)
+            result = await self._provider.complete(
+                messages=[{"role": "user", "content": prompt}],
+                temperature=0.3,
+                max_tokens=2048,
+            )
             return self._parse_deepening(idea, result)
         except Exception as e:
             logger.warning("LLM deepening failed for idea %s: %s", idea.get("id"), e)
