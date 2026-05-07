@@ -38,10 +38,10 @@ a specific input. Use real-looking (but synthetic) data. Show the transformation
 at each step. Include actual numbers, actual function names, actual intermediate
 representations.
 Example:
-  Input: {"premises": ["A→B", "B→C"], "query": "Does A→C?"}
+  Input: {{"premises": ["A->B", "B->C"], "query": "Does A->C?"}}
   Step 1 (Parser): Graph(edges=[(A,B), (B,C)])
-  Step 2 (Engine): BFS from A reaches C via B → path=[A,B,C]
-  Output: {"result": true, "confidence": 0.95, "trace": ["A→B", "B→C"]}
+  Step 2 (Engine): BFS from A reaches C via B -> path=[A,B,C]
+  Output: {{"result": true, "confidence": 0.95, "trace": ["A->B", "B->C"]}}
 
 ## Expected Failure Modes
 List 3-5 specific ways the proposed system could fail, with concrete scenarios.
@@ -103,11 +103,11 @@ class ProposalDeepener:
 
     async def _deepen_with_llm(self, idea: dict) -> DeepenedProposal:
         """Use LLM to generate deepening content."""
-        prompt = _DEEPENING_PROMPT.format(
-            title=idea.get("title", ""),
-            problem=idea.get("problem_statement", ""),
-            method=idea.get("proposed_method", ""),
-        )
+        # Escape any braces in user content to avoid .format() errors
+        title = idea.get("title", "").replace("{", "{{").replace("}", "}}")
+        problem = idea.get("problem_statement", "").replace("{", "{{").replace("}", "}}")
+        method = idea.get("proposed_method", "").replace("{", "{{").replace("}", "}}")
+        prompt = _DEEPENING_PROMPT.format(title=title, problem=problem, method=method)
         try:
             result = await self._provider.complete(prompt)
             return self._parse_deepening(idea, result)
