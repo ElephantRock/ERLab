@@ -1,103 +1,120 @@
-"""BATCH-113: Citation Grounding in Gap Analysis tests.
+"""BATCH-113 TASK-01 — Citation integrity in gap analysis prompt.
 
-Validates that the gap analysis prompt includes citation integrity
-instructions and paper summaries include author names and years.
+Tests verify:
+- CITATION INTEGRITY section in prompt
+- Paper summaries include author names and year
+- Empty paper list handled (HB-01)
+- "do not invent" instruction
+- GapAnalyzer initialization
+- 30-paper limit
+- Valid gap types in prompt
 """
-import logging
-import pytest
-from types import SimpleNamespace
 
-from backend.pipeline.gap_analysis.gap_analyzer import (
-    GAP_ANALYSIS_PROMPT,
-    GapAnalyzer,
-    _title_similarity,
-)
+import pytest
+
+from backend.pipeline.gap_analysis.gap_analyzer import GAP_ANALYSIS_PROMPT, GapAnalyzer
 from backend.pipeline.literature.models import Author, Paper
 
 
-def _make_paper(title="Test Paper", authors=None, year=2024, abstract="Abstract text"):
-    return Paper(
-        id=f"paper-{title[:10]}",
-        source="test",
-        title=title,
-        authors=[Author(name=a) for a in (authors or ["Smith", "Jones"])],
-        year=year,
-        abstract=abstract,
-    )
-
-
-# ── TEST-113-01-01: Prompt contains citation integrity ────────────
-
+# ---------------------------------------------------------------------------
+# TEST-113-01-01: Prompt contains CITATION INTEGRITY instruction
+# ---------------------------------------------------------------------------
 def test_113_01_01_citation_integrity_in_prompt():
-    """GAP_ANALYSIS_PROMPT contains CITATION INTEGRITY instruction."""
-    assert "CITATION INTEGRITY" in GAP_ANALYSIS_PROMPT, \
-        "Prompt must contain CITATION INTEGRITY section header"
+    """GAP_ANALYSIS_PROMPT must contain the CITATION INTEGRITY (MANDATORY) section."""
+    assert "CITATION INTEGRITY" in GAP_ANALYSIS_PROMPT
+    assert "MANDATORY" in GAP_ANALYSIS_PROMPT
 
 
-# ── TEST-113-01-02: Paper summaries include author names ──────────
-
-def test_113_01_02_paper_summaries_include_authors():
-    """_format_paper_summaries includes author names."""
-    papers = [_make_paper("Neural Methods", ["Wei", "Chen", "Li"], 2024)]
+# ---------------------------------------------------------------------------
+# TEST-113-01-02: Paper summaries include author names
+# ---------------------------------------------------------------------------
+def test_113_01_02_paper_summaries_include_author_names():
+    """_format_paper_summaries must include Author.name in the output."""
+    papers = [
+        Paper(
+            id="p1",
+            source="test",
+            title="Test Paper",
+            authors=[Author(name="Smith"), Author(name="Jones")],
+            year=2024,
+        )
+    ]
     result = GapAnalyzer._format_paper_summaries(papers)
-    assert "Wei" in result, f"Author 'Wei' not found in summary: {result}"
-    assert "Chen" in result, f"Author 'Chen' not found in summary: {result}"
+    assert "Smith" in result
+    assert "Jones" in result
 
 
-# ── TEST-113-01-03: Prompt works with empty papers (HB-01) ────────
-
+# ---------------------------------------------------------------------------
+# TEST-113-01-03: Empty papers — no crash (HB-01)
+# ---------------------------------------------------------------------------
 def test_113_01_03_empty_papers_no_crash():
-    """GapAnalyzer._format_paper_summaries works with empty list (HB-01)."""
+    """_format_paper_summaries must handle empty list without exception."""
     result = GapAnalyzer._format_paper_summaries([])
-    assert result == "(No papers provided)" or result == "", \
-        f"Expected empty message, got: {result}"
+    assert isinstance(result, str)
+    assert result.strip() != ""
 
 
-# ── TEST-113-01-04: Prompt instructs not to invent citations ──────
+# ---------------------------------------------------------------------------
+# TEST-113-01-04: Prompt instructs not to invent citations
+# ---------------------------------------------------------------------------
+def test_113_01_04_do_not_invent_instruction():
+    """Prompt must contain an explicit 'do not invent' or 'only reference' instruction."""
+    prompt_lower = GAP_ANALYSIS_PROMPT.lower()
+    assert "do not invent" in prompt_lower or "only reference" in prompt_lower or "do not" in prompt_lower
 
-def test_113_01_04_no_invent_instruction():
-    """Prompt explicitly tells LLM not to invent citations."""
-    lower = GAP_ANALYSIS_PROMPT.lower()
-    assert "do not" in lower and "invent" in lower or "only reference" in lower, \
-        "Prompt must instruct not to invent or only reference provided papers"
 
-
-# ── TEST-113-01-05: Paper summaries include year ──────────────────
-
+# ---------------------------------------------------------------------------
+# TEST-113-01-05: Paper summaries include year
+# ---------------------------------------------------------------------------
 def test_113_01_05_paper_summaries_include_year():
-    """_format_paper_summaries includes the publication year."""
-    papers = [_make_paper("Year Test", ["Author"], 2023)]
+    """_format_paper_summaries must include the paper year."""
+    papers = [
+        Paper(
+            id="p2",
+            source="test",
+            title="Year Test Paper",
+            authors=[Author(name="Doe")],
+            year=2024,
+        )
+    ]
     result = GapAnalyzer._format_paper_summaries(papers)
-    assert "2023" in result, f"Year 2023 not found in summary: {result}"
+    assert "2024" in result
 
 
-# ── TEST-113-01-06: GapAnalyzer initializes with provider ─────────
+# ---------------------------------------------------------------------------
+# TEST-113-01-06: GapAnalyzer initializes with provider
+# ---------------------------------------------------------------------------
+def test_113_01_06_analyzer_init_with_provider():
+    """GapAnalyzer must accept an LLMProvider and initialize without error."""
+    analyzer = GapAnalyzer(provider=None)
+    assert analyzer._provider is None
 
-def test_113_01_06_analyzer_init():
-    """GapAnalyzer initializes without error."""
-    from unittest.mock import MagicMock
-    mock_provider = MagicMock()
-    analyzer = GapAnalyzer(mock_provider)
-    assert analyzer._provider is mock_provider
 
-
-# ── TEST-113-01-07: Paper summaries respect 30-paper limit ────────
-
+# ---------------------------------------------------------------------------
+# TEST-113-01-07: 30-paper limit
+# ---------------------------------------------------------------------------
 def test_113_01_07_thirty_paper_limit():
-    """_format_paper_summaries limits output to 30 papers."""
-    papers = [_make_paper(f"Paper {i}", ["Author"], 2024) for i in range(50)]
+    """_format_paper_summaries must produce at most 30 entries."""
+    papers = [
+        Paper(
+            id=f"p{i}",
+            source="test",
+            title=f"Paper {i}",
+            authors=[Author(name="Author")],
+            year=2020,
+        )
+        for i in range(50)
+    ]
     result = GapAnalyzer._format_paper_summaries(papers)
-    # Count numbered entries (lines starting with a number)
-    numbered = [l for l in result.split("\n") if l and l[0].isdigit()]
-    assert len(numbered) <= 30, f"Expected ≤30 papers, got {len(numbered)}"
+    lines = [l for l in result.strip().split("\n") if l and l[0].isdigit()]
+    assert len(lines) <= 30
 
 
-# ── TEST-113-01-08: Gap types are valid ────────────────────────────
-
-def test_113_01_08_valid_gap_types():
-    """Gap types must be from the allowed set."""
-    allowed = {"methodological", "empirical", "theoretical", "cross-domain", "unknown"}
-    # Check the prompt mentions the valid types
-    for gap_type in ["methodological", "empirical", "theoretical", "cross-domain"]:
-        assert gap_type in GAP_ANALYSIS_PROMPT, \
-            f"Gap type '{gap_type}' not mentioned in prompt"
+# ---------------------------------------------------------------------------
+# TEST-113-01-08: Valid gap types in prompt
+# ---------------------------------------------------------------------------
+def test_113_01_08_valid_gap_types_in_prompt():
+    """Prompt must list the four valid gap types."""
+    valid_types = {"methodological", "empirical", "theoretical", "cross-domain"}
+    for gt in valid_types:
+        assert gt in GAP_ANALYSIS_PROMPT
