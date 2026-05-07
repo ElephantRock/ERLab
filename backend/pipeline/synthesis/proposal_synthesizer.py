@@ -213,7 +213,8 @@ class ProposalSynthesizer:
 
         # Pass 3: Refinement — check each section against quality checklist
         proposal = await self._refine_sections(
-            proposal, idea, novelty_report, feasibility_report, literature, gaps
+            proposal, idea, novelty_report, feasibility_report, literature, gaps,
+            supporting_papers=supporting_papers,
         )
 
         # Ensemble review
@@ -283,6 +284,7 @@ class ProposalSynthesizer:
         feasibility_report: FeasibilityReport | None = None,
         literature: str = "",
         gaps: list | None = None,
+        supporting_papers: list | None = None,
     ) -> ResearchProposal:
         """Check each section against a quality checklist and re-generate failures.
 
