@@ -40,6 +40,8 @@ class ProviderRegistry:
             ("gemini", "backend.providers.gemini_provider", "GeminiProvider"),
             ("ollama", "backend.providers.ollama_provider", "OllamaProvider"),
             ("litellm", "backend.providers.litellm_provider", "LiteLLMProvider"),
+            # LM Studio reuses AnthropicProvider (supports custom base_url)
+            ("lmstudio", "backend.providers.anthropic_provider", "AnthropicProvider"),
         ]
         for name, module_path, cls_name in _BUILTIN_IMPORTS:
             try:
@@ -161,6 +163,14 @@ class ProviderRegistry:
             return cls(
                 model=settings.litellm_model,
                 api_key=settings.openai_api_key,
+            )
+        elif name == "lmstudio":
+            # LM Studio — Anthropic SDK pointed at local server
+            return cls(
+                api_key="lmstudio",
+                model=settings.lmstudio_model,
+                embedding_model=settings.embedding_model,
+                base_url=getattr(settings, "lmstudio_base_url", "http://100.64.0.1:1234"),
             )
         else:
             return cls()

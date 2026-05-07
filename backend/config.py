@@ -68,6 +68,13 @@ class Settings(BaseSettings):
     generation_model_max_tokens: int = 8192
     search_depth: int = 1  # 1=single pass, 2=recursive with follow-up queries
 
+    # LM Studio (local hybrid model)
+    lmstudio_base_url: str = "http://100.64.0.1:1234/v1"
+    lmstudio_model: str = "qwen/qwen3-4b-2507"
+    lmstudio_enabled: bool = False  # Set True to use for thinking tasks
+    lmstudio_max_tokens: int = 2048
+    lmstudio_temperature: float = 0.1
+
     # Pipeline Defaults
     generation_rounds: int = 2
     ideas_per_round: int = 3

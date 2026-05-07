@@ -83,6 +83,22 @@ class PipelineOrchestrator:
         self._stage_callback = stage_callback
         self._settings = settings
 
+        # Hybrid model routing: local for thinking tasks, cloud for generation
+        self._model_selector = None
+        self._thinking_provider = None
+        if getattr(settings, 'lmstudio_enabled', False) or getattr(settings, 'thinking_model', ''):
+            try:
+                from backend.pipeline.model_selection import ModelSelector
+                self._model_selector = ModelSelector(settings)
+                self._thinking_provider = self._model_selector.resolve('classify')
+                logger.info(
+                    "Hybrid model routing enabled: thinking=%s, generation=%s",
+                    getattr(self._thinking_provider, 'provider_name', 'local'),
+                    self._provider.provider_name if hasattr(self._provider, 'provider_name') else 'cloud',
+                )
+            except Exception as e:
+                logger.warning("Model selector init failed, using single provider: %s", e)
+
         # Strategy: resolve config, default to deep_research (HB-02)
         from backend.pipeline.strategies import StrategyRegistry, register_presets
         self._strategy_registry = StrategyRegistry()
@@ -246,9 +262,10 @@ class PipelineOrchestrator:
         else:
             self._quality_scorer = None
 
-        self._gap_analyzer = GapAnalyzer(self._provider)
-        self._novelty = NoveltyChecker(self._provider, self._store, self._retriever)
-        self._feasibility = FeasibilityScorer(self._provider)
+        thinking = self._thinking_provider or self._provider
+        self._gap_analyzer = GapAnalyzer(thinking)
+        self._novelty = NoveltyChecker(thinking, self._store, self._retriever)
+        self._feasibility = FeasibilityScorer(thinking)
 
         # Citation-aware novelty augmentation (Gap 11)
         self._citation_traverser = None
@@ -271,7 +288,7 @@ class PipelineOrchestrator:
         self._faithfulness_checker = None
         if getattr(settings, "faithfulness_check_enabled", False):
             from backend.pipeline.knowledge.faithfulness import FaithfulnessChecker
-            self._faithfulness_checker = FaithfulnessChecker(self._provider)
+            self._faithfulness_checker = FaithfulnessChecker(thinking)
 
         # Contradiction scanner for knowledge graph (Gap 9)
         self._contradiction_scanner = None
@@ -287,7 +304,7 @@ class PipelineOrchestrator:
         self._reasoning_verifier = None
         if getattr(settings, "reasoning_verification_enabled", False):
             from backend.pipeline.generation.verifier import ReasoningVerifier
-            self._reasoning_verifier = ReasoningVerifier(self._provider)
+            self._reasoning_verifier = ReasoningVerifier(thinking)
 
         # Dynamic agent factory (Gap 2)
         self._dynamic_agent_factory = None
@@ -314,7 +331,7 @@ class PipelineOrchestrator:
         ensemble_reviewer = None
         if getattr(settings, "evaluation_framework_enabled", False):
             from backend.pipeline.evaluation.ensemble_review import EnsembleReviewer
-            ensemble_reviewer = EnsembleReviewer(self._provider)
+            ensemble_reviewer = EnsembleReviewer(thinking)
 
         self._synthesizer = ProposalSynthesizer(self._provider, ensemble_reviewer=ensemble_reviewer)
         self._export = ExportService()
