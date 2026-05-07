@@ -10,6 +10,10 @@ use as a starting point for real work.
 3. Do NOT write "Synthesis failed." If you cannot complete a section, write your best effort.
 4. Every prose section must be SUBSTANTIAL — see minimum word counts below.
 5. Use markdown ## headers for each section name exactly as specified.
+6. **CITATION INTEGRITY**: Only cite papers listed in the Supporting Literature section below. 
+   Do NOT invent, fabricate, or hallucinate any author names, paper titles, years, or venues.
+   If you need a citation and no matching paper exists in the literature provided, write 
+   "[Citation needed]" instead of fabricating one. Fabricated references destroy credibility.
 
 ## MINIMUM WORD COUNTS (ENFORCED)
 
@@ -82,7 +86,7 @@ A concise, descriptive title (under 15 words).
 400+ words across 3-4 paragraphs: (a) problem context and real-world motivation, (b) limitations of existing approaches with citations, (c) the proposed approach at a high level with key innovation highlighted, (d) summary of expected contributions and paper structure.
 
 ## Related Work
-300+ words organized by themes (NOT chronologically). For each related work, state what it does AND its limitation relative to the proposed approach. Cite papers from the supporting literature using author-year format: (Author, Year). Cover at least 3 distinct research directions.
+300+ words organized by themes (NOT chronologically). For each related work, state what it does AND its limitation relative to the proposed approach. **IMPORTANT: Only cite papers that appear in the Supporting Literature section above.** Use author-year format: (Author, Year). If you wish to discuss a concept but have no supporting paper for it, describe the concept without a citation rather than inventing one. Cover at least 3 distinct research directions.
 
 ## Proposed Method
 500+ words. This is the core section. Include:

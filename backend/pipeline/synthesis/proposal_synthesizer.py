@@ -140,9 +140,10 @@ class ResearchProposal:
 
 
 class ProposalSynthesizer:
-    def __init__(self, provider: LLMProvider, ensemble_reviewer=None):
+    def __init__(self, provider: LLMProvider, ensemble_reviewer=None, verify_references: bool = True):
         self._provider = provider
         self._ensemble_reviewer = ensemble_reviewer
+        self._verify_references = verify_references
         self._prompt_template = (PROMPT_DIR / "synthesis_system.md").read_text()
 
     async def synthesize(
@@ -369,6 +370,33 @@ class ProposalSynthesizer:
             except Exception as e:
                 logger.warning("Refinement of %s failed: %s", section_name, e)
 
+        # Reference verification pass
+        if self._verify_references:
+            proposal = self._verify_proposal_references(proposal, supporting_papers or [])
+
+        return proposal
+
+    def _verify_proposal_references(self, proposal: ResearchProposal, corpus_papers: list[Paper]) -> ResearchProposal:
+        """Verify references in proposal against actual corpus."""
+        try:
+            from backend.pipeline.verification.reference_verifier import ReferenceVerifier
+            verifier = ReferenceVerifier()
+            full_text = "\n".join(str(v) for v in proposal.sections.values())
+            corpus_dicts = [{"title": p.title, "authors": p.authors or [], "year": str(p.year) if p.year else ""} for p in corpus_papers]
+            report = verifier.verify(full_text, corpus_dicts)
+            if report.trust_score < 0.7:
+                logger.warning("Reference trust score: %.1f — %d unverifiable citations",
+                             report.trust_score, report.potentially_hallucinated)
+                # Strip unverified citations from proposal sections
+                for key in proposal.sections:
+                    if isinstance(proposal.sections[key], str):
+                        proposal.sections[key] = verifier.strip_unverified_citations(
+                            proposal.sections[key], report
+                        )
+            else:
+                logger.info("Reference verification passed: %.1f trust score", report.trust_score)
+        except Exception as e:
+            logger.warning("Reference verification failed (non-fatal): %s", e)
         return proposal
 
     @staticmethod
