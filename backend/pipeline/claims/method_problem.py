@@ -1,54 +1,79 @@
-"""Method-problem gap detection."""
+"""Method-Problem Gap Detection — LLM-grounded applicability scoring.
+
+AIV v5.3 — BATCH-126 (original) → BATCH-133 (LLM deepening)
+Returns differentiated scores (0.1-0.9) instead of hardcoded 0.5.
+"""
 
 from __future__ import annotations
 
+import json
+import logging
 from dataclasses import dataclass
+from pathlib import Path
 
 from backend.pipeline.claims.models import Claim, ClaimType
+
+logger = logging.getLogger(__name__)
+
+_PROMPT_PATH = Path(__file__).parent / "prompts" / "applicability_scoring.md"
 
 
 @dataclass
 class MethodProblemGap:
-    """A gap where a method has not been applied to a dataset/problem."""
     method_name: str
     method_paper_id: str
     problem_dataset: str
-    applicability_score: float  # 0-1
+    applicability_score: float
     reasoning: str = ""
 
 
 class MethodProblemDetector:
-    """Find unexplored method-dataset combinations from claims."""
+    """Find unexplored method-dataset combinations from claims.
+
+    Uses LLM-based applicability scoring when provider is available.
+    Falls back to uniform 0.5 on LLM failure.
+    """
+
+    def __init__(self, provider=None) -> None:
+        self._provider = provider
+        self._prompt_template = self._load_prompt()
+
+    @staticmethod
+    def _load_prompt() -> str:
+        if _PROMPT_PATH.exists():
+            return _PROMPT_PATH.read_text(encoding="utf-8")
+        return "Score applicability of {method_name} to {dataset_name}. Return JSON: {\"applicability_score\": float, \"reasoning\": str, \"estimated_improvement\": str}"
 
     def find_gaps(self, claims: list[Claim]) -> list[MethodProblemGap]:
-        """Identify method-dataset pairs that haven't been explored.
-
-        Returns [] on empty input (HB-01). Only uses METHOD + RESULT claims (HB-02).
-        """
         if not claims:
-            return []  # HB-01
+            return []
 
-        methods: list[tuple[str, str]] = []  # (method_name, paper_id)
+        methods: list[tuple[str, str]] = []
         datasets: set[str] = set()
-        known_pairs: set[tuple[str, str]] = set()  # (method, dataset)
+        known_pairs: set[tuple[str, str]] = set()
 
         for claim in claims:
             if claim.claim_type == ClaimType.METHOD and claim.method_name:
                 methods.append((claim.method_name, claim.source_paper_id))
             elif claim.claim_type == ClaimType.RESULT and claim.dataset:
                 datasets.add(claim.dataset)
-                if claim.method_name:  # Some RESULT claims reference the method
+                if claim.method_name:
                     known_pairs.add((claim.method_name.lower(), claim.dataset.lower()))
 
         if not methods or not datasets:
             return []
 
         gaps: list[MethodProblemGap] = []
+        import asyncio
+
         for method_name, paper_id in methods:
             for dataset in datasets:
                 pair = (method_name.lower(), dataset.lower())
                 if pair not in known_pairs:
-                    score = self._score_gap(method_name, dataset)
+                    if self._provider is not None:
+                        score = asyncio.run(self._score_gap_llm(method_name, dataset))
+                    else:
+                        score = 0.5
                     if score > 0:
                         gaps.append(MethodProblemGap(
                             method_name=method_name,
@@ -60,12 +85,23 @@ class MethodProblemDetector:
 
         return sorted(gaps, key=lambda g: g.applicability_score, reverse=True)
 
-    @staticmethod
-    def _score_gap(method_name: str, dataset: str) -> float:
-        """Heuristic applicability score.
+    async def _score_gap_llm(self, method_name: str, dataset: str) -> float:
+        """Use LLM to score applicability. Returns 0.5 on failure."""
+        try:
+            prompt = self._prompt_template.replace("{method_name}", method_name).replace("{dataset_name}", dataset)
+            messages = [{"role": "user", "content": prompt}]
+            response = await self._provider.complete(messages, temperature=0.1, max_tokens=256)
 
-        Higher score for methods and datasets from related domains.
-        Simple keyword overlap for now.
-        """
-        # Base score for any novel combination
-        return 0.5
+            response_text = response.strip()
+            if "```json" in response_text:
+                response_text = response_text.split("```json")[1].split("```")[0].strip()
+            elif "```" in response_text:
+                response_text = response_text.split("```")[1].split("```")[0].strip()
+
+            result = json.loads(response_text)
+            score = float(result.get("applicability_score", 0.5))
+            return max(0.0, min(1.0, score))
+
+        except Exception as e:
+            logger.warning("LLM applicability scoring failed: %s", e)
+            return 0.5
