@@ -225,6 +225,46 @@ class ResearchGapDB(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
 
 
+class ResearchClaim(Base):
+    """Structured claim extracted from research papers (BATCH-122)."""
+    __tablename__ = "research_claims"
+    __table_args__ = (
+        Index("ix_research_claims_paper_id", "source_paper_id"),
+        Index("ix_research_claims_type", "claim_type"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    claim_id: Mapped[str] = mapped_column(String(36), unique=True, nullable=False)
+    claim_type: Mapped[str] = mapped_column(String(20), nullable=False)
+    title: Mapped[str] = mapped_column(String(500), nullable=False)
+    description: Mapped[str] = mapped_column(Text, nullable=False)
+    source_paper_id: Mapped[str] = mapped_column(String(256), nullable=False)
+    source_section: Mapped[str] = mapped_column(String(50), default="abstract")
+    confidence: Mapped[float] = mapped_column(Float, default=0.5)
+
+    # METHOD-specific
+    method_name: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    method_category: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    # RESULT-specific
+    dataset: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    metric: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    value: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    baseline_method: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    baseline_value: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    # LIMITATION-specific
+    limitation_category: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    acknowledged: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
+    # FUTURE_WORK-specific
+    feasibility: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    potential_impact: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    # COMPARISON-specific
+    compared_to: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    relationship: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    # Extra JSON (constraints, etc.)
+    extra_json: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
+
+
 class ExperimentResult(Base):
     """Stores experiment execution results for ideas (BATCH-66)."""
     __tablename__ = "experiment_results"
