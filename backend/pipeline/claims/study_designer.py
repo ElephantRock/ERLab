@@ -1,21 +1,23 @@
-"""StudyDesigner — full study proposals with MVP experiments and go/no-go criteria.
+"""StudyDesigner — LLM-grounded study design generation.
 
-AIV v5.3 — BATCH-127
-Builds on EvaluationPlanGenerator (B115) but adds hypothesis, MVP experiment,
-go/no-go criteria, risk assessment, and publication strategy.
+AIV v5.3 — BATCH-127 (original) → BATCH-134 (LLM deepening)
+Falls back to template generation on LLM failure.
 """
 
 from __future__ import annotations
 
+import json
 import logging
 from dataclasses import dataclass, field
+from pathlib import Path
 
 logger = logging.getLogger(__name__)
+
+_PROMPT_PATH = Path(__file__).parent / "prompts" / "study_design.md"
 
 
 @dataclass
 class MVPExperiment:
-    """Minimum viable experiment to validate a hypothesis."""
     name: str
     hypothesis_tested: str
     pseudocode: str
@@ -27,16 +29,14 @@ class MVPExperiment:
 
 @dataclass
 class GoNoGoCriteria:
-    """Explicit criteria for deciding whether to proceed."""
     metric: str
     threshold: str
-    action_if_pass: str = "Proceed to full experiment"
-    action_if_fail: str = "Revise hypothesis or method"
+    action_if_pass: str = "Proceed"
+    action_if_fail: str = "Revise"
 
 
 @dataclass
 class StudyDesign:
-    """A complete study design with MVP experiment and go/no-go criteria."""
     idea_title: str = ""
     hypothesis_main: str = ""
     hypothesis_null: str = ""
@@ -49,54 +49,108 @@ class StudyDesign:
 
 
 class StudyDesigner:
-    """Generate full study designs from research ideas/gaps."""
+    """Generate full study designs from research ideas using LLM."""
+
+    def __init__(self, provider=None) -> None:
+        self._provider = provider
+        self._prompt_template = self._load_prompt()
+
+    @staticmethod
+    def _load_prompt() -> str:
+        if _PROMPT_PATH.exists():
+            return _PROMPT_PATH.read_text(encoding="utf-8")
+        return "Generate a study design for this idea:\n\nTitle: {title}\nProblem: {problem_statement}\nMethod: {proposed_method}"
 
     def design_from_idea(self, idea: dict) -> StudyDesign:
-        """Create a StudyDesign from an idea dict.
-
-        Args:
-            idea: Dict with title, problem_statement, proposed_method keys.
-
-        Returns:
-            StudyDesign with MVP experiment and go/no-go criteria.
-        """
+        """Create a StudyDesign from an idea dict."""
         title = idea.get("title", "Untitled")
         problem = idea.get("problem_statement", "")
         method = idea.get("proposed_method", "")
 
+        if self._provider is not None:
+            import asyncio
+            try:
+                return asyncio.run(self._design_with_llm(title, problem, method))
+            except Exception as e:
+                logger.warning("LLM study design failed, falling back to template: %s", e)
+                return self._design_template(title, problem, method)
+        else:
+            return self._design_template(title, problem, method)
+
+    async def _design_with_llm(self, title: str, problem: str, method: str) -> StudyDesign:
+        """Use LLM to generate a grounded study design."""
+        prompt = self._prompt_template
+        prompt = prompt.replace("{title}", title)
+        prompt = prompt.replace("{problem_statement}", problem)
+        prompt = prompt.replace("{proposed_method}", method)
+
+        messages = [{"role": "user", "content": prompt}]
+        response = await self._provider.complete(messages, temperature=0.3, max_tokens=1024)
+
+        # Parse JSON from response
+        response_text = response.strip()
+        if "```json" in response_text:
+            response_text = response_text.split("```json")[1].split("```")[0].strip()
+        elif "```" in response_text:
+            response_text = response_text.split("```")[1].split("```")[0].strip()
+
+        result = json.loads(response_text)
+
+        mvp_data = result.get("mvp_experiment", {})
+        mvp = MVPExperiment(
+            name=mvp_data.get("name", f"MVP: {method}"),
+            hypothesis_tested=mvp_data.get("hypothesis_tested", ""),
+            pseudocode=mvp_data.get("pseudocode", ""),
+            expected_runtime=mvp_data.get("expected_runtime", "< 1 hour"),
+            required_resources=mvp_data.get("required_resources", "Single GPU"),
+            success_criteria=mvp_data.get("success_criteria", ""),
+            failure_criteria=mvp_data.get("failure_criteria", ""),
+        )
+
+        go_no_go = [
+            GoNoGoCriteria(
+                metric=g.get("metric", ""),
+                threshold=g.get("threshold", ""),
+                action_if_pass=g.get("action_if_pass", "Proceed"),
+                action_if_fail=g.get("action_if_fail", "Revise"),
+            )
+            for g in result.get("go_no_go", [])
+        ]
+
+        return StudyDesign(
+            idea_title=title,
+            hypothesis_main=result.get("hypothesis_main", ""),
+            hypothesis_null=result.get("hypothesis_null", ""),
+            mechanistic_rationale=result.get("mechanistic_rationale", ""),
+            mvp_experiment=mvp,
+            go_no_go=go_no_go,
+            risk_assessment=result.get("risk_assessment", []),
+            publication_strategy=result.get("publication_strategy", ""),
+            timeline_weeks=result.get("timeline_weeks", 8),
+        )
+
+    @staticmethod
+    def _design_template(title: str, problem: str, method: str) -> StudyDesign:
+        """Fallback template generation."""
         return StudyDesign(
             idea_title=title,
             hypothesis_main=f"Applying {method} to {problem} will yield statistically significant improvement over baseline approaches.",
-            hypothesis_null=f"Applying {method} to {problem} will yield no significant improvement over baseline approaches.",
-            mechanistic_rationale=f"{method} addresses {problem} by introducing novel mechanisms that should improve performance based on theoretical grounds.",
+            hypothesis_null=f"Applying {method} to {problem} will yield no significant improvement.",
+            mechanistic_rationale=f"{method} addresses {problem} by introducing novel mechanisms.",
             mvp_experiment=MVPExperiment(
                 name=f"MVP: {method} on small-scale benchmark",
-                hypothesis_tested=f"Does {method} show any signal on a reduced dataset?",
-                pseudocode=f"# Load small dataset\n# Initialize {method}\n# Train for 100 steps\n# Evaluate on held-out set\n# Compare to random baseline",
-                expected_runtime="< 30 minutes",
-                required_resources="Single GPU / CPU",
+                hypothesis_tested=f"Does {method} show signal on reduced data?",
+                pseudocode=f"# Load small dataset\n# Initialize {method}\n# Train for 100 steps\n# Evaluate",
                 success_criteria="Performance > random baseline (p < 0.05)",
                 failure_criteria="Performance <= random baseline",
             ),
-            go_no_go=[
-                GoNoGoCriteria(
-                    metric="Accuracy / Loss",
-                    threshold="Statistically better than random (p < 0.05)",
-                    action_if_pass="Scale up to full dataset",
-                    action_if_fail="Revise method or try different hyperparameters",
-                ),
-            ],
-            risk_assessment=[
-                "Method may not generalize to full-scale data",
-                "Computational cost may exceed budget",
-                "Baseline methods may already be optimized for this problem",
-            ],
-            publication_strategy="If MVP succeeds, target workshop paper → conference submission",
+            go_no_go=[GoNoGoCriteria(metric="Accuracy", threshold="p < 0.05")],
+            risk_assessment=["Method may not generalize", "Compute cost may exceed budget"],
+            publication_strategy="Workshop paper → conference",
             timeline_weeks=8,
         )
 
     def design_from_gap(self, gap: dict) -> StudyDesign:
-        """Create a StudyDesign from a research gap dict."""
         return self.design_from_idea({
             "title": gap.get("title", "Gap Study"),
             "problem_statement": gap.get("description", ""),
