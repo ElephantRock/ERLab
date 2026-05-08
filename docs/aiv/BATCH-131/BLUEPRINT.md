@@ -119,8 +119,8 @@ STATE.md STATUS
 TEST BASELINE
 ───────────────────────────────────────────────────────────
   Baseline at Blueprint issuance:  2,361
-  Expected delta:                  +8
-  Expected total at Batch close:   2,369
+  Expected delta:                  +9
+  Expected total at Batch close:   2,370
 
 ───────────────────────────────────────────────────────────
 TASK LIST
