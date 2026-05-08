@@ -1,0 +1,1910 @@
+Here's a comprehensive, end-to-end roadmap from raw arXiv PDF to published research paper, built on the full architecture we've discussed, now including the gap analysis → study → paper pipeline.
+
+---
+
+# Complete Roadmap: PDF → Published Paper
+
+## PHASE 0: Foundation Setup (Weeks 1-2)
+
+### Infrastructure
+```
+├── local-postgres-db/          # PostgreSQL + pgvector
+│   ├── papers table
+│   ├── wiki_entries table
+│   ├── claims table            
+│   ├── gaps table              
+│   ├── studies table           
+│   ├── experiments table       
+│   └── embeddings (HNSW index)
+│
+├── local-object-storage/       # /data/papers/{paper_id}/
+│   ├── raw.pdf
+│   ├── extracted.md
+│   └── figures/
+│
+├── backend/                     # FastAPI server
+│   ├── api/
+│   │   ├── curation.py
+│   │   ├── ingestion.py
+│   │   ├── wiki.py
+│   │   ├── artifacts.py
+│   │   ├── gaps.py
+│   │   ├── studies.py
+│   │   ├── experiments.py
+│   │   └── papers.py
+│   ├── agents/
+│   │   ├── orchestrator.py
+│   │   ├── extractors/         # Claim, method, result extractors
+│   │   ├── detectors/          # Gap detection modules
+│   │   ├── generators/         # Study, experiment, paper generators
+│   │   └── verifiers/          # Quality checkers
+│   ├── services/
+│   │   ├── arxiv_service.py
+│   │   ├── pdf_service.py
+│   │   ├── llm_service.py
+│   │   └── vector_service.py
+│   └── workers/
+│       ├── curation_worker.py
+│       ├── ingestion_worker.py
+│       └── gap_worker.py
+│
+├── electron-app/                # Desktop UI
+│   ├── main.js                  # Electron main process
+│   ├── preload.js
+│   └── renderer/
+│       ├── App.jsx
+│       ├── views/
+│       │   ├── FeedView.jsx
+│       │   ├── ArtifactView.jsx
+│       │   ├── GapDashboard.jsx
+│       │   ├── StudyView.jsx
+│       │   └── PaperStudio.jsx
+│       └── components/
+│           ├── WikiRenderer.jsx
+│           ├── ExperimentRunner.jsx
+│           ├── GapCard.jsx
+│           └── PaperEditor.jsx
+│
+├── experiment-sandbox/          # Docker-based execution
+│   ├── Dockerfile
+│   ├── runner.py
+│   └── templates/
+│
+├── docker-compose.yml
+└── requirements.txt
+```
+
+---
+
+## PHASE 1: Paper Ingestion Pipeline (Weeks 2-3)
+
+### Step 1.1: PDF Acquisition
+
+```python
+# backend/services/arxiv_service.py
+
+class ArxivService:
+    def fetch_daily_papers(self, categories=['cs.AI', 'cs.CL', 'cs.LG', 'cs.CV']):
+        """Fetch new papers from arXiv API"""
+        base_url = "http://export.arxiv.org/api/query"
+        yesterday = (datetime.now() - timedelta(days=1)).strftime("%Y%m%d")
+        
+        papers = []
+        for category in categories:
+            query = f"cat:{category} AND submittedDate:[{yesterday}0000 TO {yesterday}2359]"
+            response = requests.get(base_url, params={
+                'search_query': query,
+                'start': 0,
+                'max_results': 2000,
+                'sortBy': 'submittedDate',
+                'sortOrder': 'descending'
+            })
+            feed = feedparser.parse(response.text)
+            papers.extend(self._parse_entries(feed.entries))
+        
+        return papers
+    
+    def download_pdf(self, paper_id, save_path):
+        """Download PDF from arXiv"""
+        url = f"https://arxiv.org/pdf/{paper_id}.pdf"
+        response = requests.get(url, stream=True)
+        with open(save_path, 'wb') as f:
+            for chunk in response.iter_content(chunk_size=8192):
+                f.write(chunk)
+        return save_path
+```
+
+### Step 1.2: PDF to Structured Text
+
+```python
+# backend/services/pdf_service.py
+
+class PDFService:
+    def extract_text_and_structure(self, pdf_path):
+        """Convert PDF to structured markdown with metadata"""
+        
+        # Use marker for high-quality extraction
+        import marker
+        
+        full_text = marker.convert(pdf_path)
+        
+        # Extract sections
+        sections = self._parse_sections(full_text)
+        
+        # Extract figures with captions
+        figures = self._extract_figures(pdf_path)
+        
+        # Extract tables
+        tables = self._extract_tables(full_text)
+        
+        # Extract references
+        references = self._extract_references(full_text)
+        
+        return {
+            "full_text": full_text,
+            "sections": sections,
+            "figures": figures,
+            "tables": tables,
+            "references": references,
+            "metadata": self._extract_metadata(full_text)
+        }
+    
+    def chunk_for_embedding(self, structured_text):
+        """Create semantic chunks for vector embedding"""
+        chunks = []
+        
+        # Chunk by section with overlap
+        for section in structured_text['sections']:
+            section_text = section['content']
+            
+            # Split long sections into smaller chunks
+            if len(section_text) > 2000:
+                sub_chunks = self._semantic_split(section_text, 
+                                                   chunk_size=1000, 
+                                                   overlap=200)
+                for i, chunk in enumerate(sub_chunks):
+                    chunks.append({
+                        'text': chunk,
+                        'metadata': {
+                            'section': section['title'],
+                            'chunk_index': i,
+                            'paper_id': structured_text['metadata']['paper_id']
+                        }
+                    })
+            else:
+                chunks.append({
+                    'text': section_text,
+                    'metadata': {
+                        'section': section['title'],
+                        'paper_id': structured_text['metadata']['paper_id']
+                    }
+                })
+        
+        return chunks
+```
+
+### Step 1.3: Embedding and Indexing
+
+```python
+# backend/services/vector_service.py
+
+class VectorService:
+    def embed_and_store(self, text_chunks, model="text-embedding-3-large"):
+        """Embed chunks and store in pgvector"""
+        
+        texts = [chunk['text'] for chunk in text_chunks]
+        
+        # Batch embed
+        embeddings = openai_client.embeddings.create(
+            model=model,
+            input=texts
+        )
+        
+        # Store in database
+        with db.session() as session:
+            for i, embedding in enumerate(embeddings.data):
+                session.execute(
+                    text("""
+                        INSERT INTO paper_chunks 
+                        (paper_id, chunk_text, embedding, chunk_metadata)
+                        VALUES (:paper_id, :text, :embedding, :metadata)
+                    """),
+                    {
+                        'paper_id': text_chunks[i]['metadata']['paper_id'],
+                        'text': text_chunks[i]['text'],
+                        'embedding': embedding.embedding,
+                        'metadata': json.dumps(text_chunks[i]['metadata'])
+                    }
+                )
+        session.commit()
+```
+
+---
+
+## PHASE 2: Curation & Filtering (Weeks 2-3, parallel)
+
+### Step 2.1: Rule Engine
+
+```python
+# backend/services/curation_service.py
+
+class CurationService:
+    def __init__(self):
+        self.rules = self.load_user_rules()
+        self.interest_embeddings = self.load_interest_embeddings()
+        self.research_statement = self.load_research_statement()
+    
+    def load_user_rules(self):
+        """Load user-defined filtering rules from database/config"""
+        return {
+            "must_include": [
+                {"field": "author", "value": ["Geoff Hinton", "Yann LeCun"]},
+                {"field": "keyword", "value": ["mechanistic interpretability"]}
+            ],
+            "must_exclude": [
+                {"field": "keyword", "value": ["federated learning"]}
+            ],
+            "semantic_threshold": 0.75,  # Minimum cosine similarity
+            "min_relevance_score": 6.0,   # LLM-based relevance score
+            "max_papers_per_day": 20
+        }
+    
+    def filter_and_rank(self, papers):
+        """Apply all filtering rules and return ranked list"""
+        scored_papers = []
+        
+        for paper in papers:
+            score = 0
+            reasons = []
+            
+            # 1. Explicit rule matching
+            if self._matches_include_rules(paper):
+                score += 30
+                reasons.append("Include rule match")
+            
+            if self._matches_exclude_rules(paper):
+                continue
+            
+            # 2. Semantic similarity to interest vectors
+            similarity = self._calculate_interest_similarity(paper.abstract)
+            if similarity > self.rules['semantic_threshold']:
+                score += similarity * 20
+                reasons.append(f"Interest similarity: {similarity:.2f}")
+            
+            # 3. Author/venue prestige (optional)
+            if paper.has_influential_authors():
+                score += 10
+                reasons.append("Influential author")
+            
+            # 4. Citation velocity (if available)
+            velocity = self._get_citation_velocity(paper.id)
+            if velocity > threshold:
+                score += velocity * 5
+                reasons.append(f"Citation velocity: {velocity}")
+            
+            paper.curation_score = score
+            paper.curation_reasons = reasons
+            scored_papers.append(paper)
+        
+        # Sort by score and limit
+        scored_papers.sort(key=lambda p: p.curation_score, reverse=True)
+        return scored_papers[:self.rules['max_papers_per_day']]
+```
+
+### Step 2.2: LLM Relevance Scorer
+
+```python
+def score_relevance_with_llm(paper, research_statement):
+    """Use LLM to judge paper relevance to your research agenda"""
+    
+    prompt = f"""
+    You are evaluating papers for a researcher with the following interests:
+    
+    RESEARCH STATEMENT:
+    {research_statement}
+    
+    PAPER DETAILS:
+    Title: {paper.title}
+    Abstract: {paper.abstract}
+    
+    Rate this paper's relevance on a 0-10 scale and explain why.
+    Consider:
+    - Direct applicability to stated research goals
+    - Methodological novelty that could be adapted
+    - Dataset or benchmark relevance
+    - Potential for synergistic combination with existing work
+    
+    Output as JSON: {{"score": X.X, "reasoning": "...", "takeaways": ["..."]}}
+    """
+    
+    response = openai_client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[{"role": "user", "content": prompt}],
+        response_format={"type": "json_object"}
+    )
+    
+    return json.loads(response.choices[0].message.content)
+```
+
+---
+
+## PHASE 3: LLM Wiki Generation (Weeks 3-4)
+
+### Step 3.1: Comprehensive Wiki Prompt
+
+```python
+# backend/agents/extractors/wiki_extractor.py
+
+WIKI_GENERATION_PROMPT = """
+You are an expert research synthesizer. Convert this academic paper into a 
+comprehensive, structured wiki entry. Be precise, extract exact details, 
+and maintain technical accuracy.
+
+PAPER TEXT:
+{full_text}
+
+Generate a structured wiki following this EXACT JSON schema. Include ALL fields:
+
+{{
+  "paper_id": "...",
+  "one_line_summary": "Single sentence capturing the core contribution",
+  
+  "problem_statement": {{
+    "what": "What problem does this paper address?",
+    "why": "Why is it important?",
+    "current_limitations": ["What existing approaches fail to do"]
+  }},
+  
+  "method": {{
+    "name": "Name of the proposed method",
+    "type": "architecture|training|loss_function|data|evaluation|theory",
+    "high_level_description": "2-3 sentence intuitive explanation",
+    "technical_details": {{
+      "architecture": "Architecture details if applicable",
+      "training_procedure": "Training details, hyperparameters",
+      "loss_function": "Mathematical formulation of the loss",
+      "key_equations": ["List of critical equations with explanations"],
+      "pseudocode": "Step-by-step pseudocode if applicable"
+    }},
+    "assumptions": ["Underlying assumptions made by the method"],
+    "requirements": {{
+      "compute": "Hardware requirements if stated",
+      "data": "Data requirements",
+      "dependencies": ["Software dependencies"]
+    }}
+  }},
+  
+  "key_insights": [
+    {{
+      "insight": "One specific, non-obvious insight",
+      "supporting_evidence": "Where in the paper this is supported",
+      "importance": "Why this matters for the field"
+    }}
+  ],
+  
+  "experiments": {{
+    "datasets": ["List of datasets used"],
+    "baselines": ["Methods compared against"],
+    "metrics": ["Evaluation metrics used"],
+    "key_results": [
+      {{
+        "claim": "Specific result claim",
+        "dataset": "On what dataset",
+        "metric": "What metric",
+        "value": "Numerical value if available",
+        "baseline_comparison": "How much better/worse than baseline",
+        "statistical_significance": "Was significance testing done?"
+      }}
+    ],
+    "scaling_data": [
+      {{
+        "scale_variable": "model_size|data_size|compute",
+        "values": [{{"scale": ..., "performance": ...}}]
+      }}
+    ]
+  }},
+  
+  "limitations": [
+    {{
+      "limitation": "Specific limitation",
+      "type": "scale|generalization|compute|data|theoretical|methodological",
+      "acknowledged_by_authors": true/false,
+      "severity": "minor|moderate|major"
+    }}
+  ],
+  
+  "future_work": [
+    {{
+      "direction": "Specific future research direction",
+      "suggested_by": "authors|inferred",
+      "feasibility": "high|medium|low",
+      "potential_impact": "high|medium|low"
+    }}
+  ],
+  
+  "connections_to_other_work": {{
+    "builds_on": ["Foundational papers this work extends"],
+    "contradicts": ["Papers whose claims this challenges"],
+    "complementary_to": ["Orthogonal approaches that could be combined"]
+  }},
+  
+  "code_and_resources": {{
+    "official_code": "URL if available",
+    "datasets": ["Dataset URLs"],
+    "checkpoints": ["Model weight URLs if available"],
+    "reproducibility_score": "high|medium|low (subjective assessment)"
+  }},
+  
+  "tags": ["5-10 relevant topic tags"],
+  "reading_priority": "must_read|read_soon|skim|optional",
+  "novelty_assessment": {{
+    "score": "0-10 novelty score",
+    "breakdown": {{
+      "method_novelty": "0-10",
+      "empirical_novelty": "0-10",
+      "theoretical_novelty": "0-10"
+    }}
+  }}
+}}
+
+IMPORTANT: 
+- Extract NUMERICAL VALUES wherever possible
+- Note when the paper does NOT report something important
+- Be specific about hardware/dependencies for reproducibility
+- Flag any claims that seem overstated or undersupported
+"""
+```
+
+### Step 3.2: Quality Verification
+
+```python
+# backend/agents/verifiers/wiki_verifier.py
+
+class WikiVerifier:
+    def verify_wiki_accuracy(self, wiki_entry, full_text):
+        """Verify that wiki claims are supported by the paper text"""
+        
+        # Extract factual claims from wiki
+        claims = self._extract_factual_claims(wiki_entry)
+        
+        # Verify each claim against the source text
+        verification_results = []
+        for claim in claims:
+            is_supported = self._verify_claim_against_text(claim, full_text)
+            verification_results.append({
+                'claim': claim,
+                'supported': is_supported,
+                'confidence': 'high' if is_supported else 'low'
+            })
+        
+        # Flag if too many unsupported claims
+        unsupported_ratio = sum(1 for r in verification_results 
+                               if not r['supported']) / len(verification_results)
+        
+        if unsupported_ratio > 0.2:
+            wiki_entry['needs_human_review'] = True
+            wiki_entry['verification_notes'] = f"{unsupported_ratio:.0%} claims unsupported"
+        
+        return wiki_entry
+```
+
+---
+
+## PHASE 4: Claim Extraction (Week 4)
+
+### Step 4.1: Structured Claim Extraction
+
+```python
+# backend/agents/extractors/claim_extractor.py
+
+CLAIM_EXTRACTION_PROMPT = """
+Extract structured claims from this paper's wiki and full text. 
+Categorize each claim and extract exact details.
+
+PAPER WIKI:
+{wiki_json}
+
+FULL TEXT EXCERPTS:
+{relevant_excerpts}
+
+Extract ALL claims in the following categories:
+
+1. METHOD CLAIMS: Claims about a proposed method
+   {{
+     "type": "method",
+     "name": "Method name",
+     "category": "architecture|training|loss|data|inference",
+     "description": "What the method does",
+     "modality": ["text", "image", "video", "audio", "tabular", "graph"],
+     "constraints": {{
+       "max_sequence_length": null or number,
+       "parameter_count": null or number,
+       "training_time": null or string,
+       "gpu_memory": null or string
+     }},
+     "claimed_advantages": ["List of claimed benefits"],
+     "theoretical_guarantees": ["Any theoretical guarantees provided"]
+   }}
+
+2. RESULT CLAIMS: Empirical results reported
+   {{
+     "type": "result",
+     "claim": "Specific result statement",
+     "method_name": "Method being evaluated",
+     "dataset": "Dataset name",
+     "metric": "Metric name",
+     "value": numeric or string,
+     "baseline_method": "What it's compared to",
+     "baseline_value": numeric,
+     "improvement": "absolute|relative|percentage",
+     "statistical_test": "test used or null",
+     "confidence_interval": null or [lower, upper],
+     "sample_size": null or number,
+     "reported_in": "Table X | Figure Y | Section Z"
+   }}
+
+3. LIMITATION CLAIMS: Acknowledged or identified limitations
+   {{
+     "type": "limitation",
+     "claim": "The limitation statement",
+     "category": "scale|generalization|robustness|compute|data|fairness|theoretical",
+     "acknowledged_by_authors": boolean,
+     "specific_example": "Concrete example of the limitation if provided"
+   }}
+
+4. FUTURE WORK CLAIMS: Suggested directions
+   {{
+     "type": "future_work",
+     "description": "The suggested direction",
+     "suggested_by": "authors|inferred",
+     "specificity": "high|medium|low",
+     "estimated_difficulty": "easy|moderate|hard|unknown"
+   }}
+
+5. COMPARATIVE CLAIMS: How it relates to other work
+   {{
+     "type": "comparison",
+     "compared_to": "Paper or method being compared to",
+     "relationship": "improves_on|different_approach|contradicts|complements",
+     "specific_difference": "What exactly is different",
+     "citation_key": "BibTeX key if available"
+   }}
+
+Output as a JSON array of all extracted claims.
+"""
+```
+
+---
+
+## PHASE 5: Artifact Generation (Weeks 4-5)
+
+### Step 5.1: Base Artifact Creation
+
+```python
+# backend/api/artifacts.py
+
+class ArtifactGenerator:
+    def create_base_artifact(self, paper_id, wiki_entry, extracted_claims):
+        """Create the initial artifact document"""
+        
+        artifact = {
+            "artifact_id": f"artifact_{paper_id}",
+            "paper_id": paper_id,
+            "version": 1,
+            "created_at": datetime.now().isoformat(),
+            "last_modified": datetime.now().isoformat(),
+            
+            "sections": {
+                "summary": self._render_summary_section(wiki_entry),
+                "method": self._render_method_section(wiki_entry),
+                "results": self._render_results_section(wiki_entry),
+                "insights": self._render_insights_section(wiki_entry),
+                "limitations": self._render_limitations_section(wiki_entry),
+                "future_work": self._render_future_work_section(wiki_entry),
+                "connections": [],  # Filled by connection agent
+                "experiments": [],  # Filled by experiment agent
+                "related_papers": [], # Filled by related papers agent
+                "notes": [],
+                "agent_log": []
+            },
+            
+            "injected_components": [],  # Dynamic components added by agents
+            "metadata": {
+                "extracted_claims": extracted_claims,
+                "tags": wiki_entry.get("tags", []),
+                "reading_priority": wiki_entry.get("reading_priority", "skim")
+            },
+            
+            "status": "base_complete",
+            "needs_review": False
+        }
+        
+        # Store in database
+        self._store_artifact(artifact)
+        
+        # Queue enrichment agents
+        self._queue_enrichment_tasks(artifact['artifact_id'])
+        
+        return artifact
+    
+    def _queue_enrichment_tasks(self, artifact_id):
+        """Queue background agents to enrich the artifact"""
+        tasks = [
+            ('connection_agent', {'artifact_id': artifact_id}),
+            ('experiment_suggester', {'artifact_id': artifact_id}),
+            ('related_papers_finder', {'artifact_id': artifact_id}),
+            ('insight_analyzer', {'artifact_id': artifact_id}),
+        ]
+        for agent_name, params in tasks:
+            task_queue.enqueue(agent_name, params)
+```
+
+### Step 5.2: Agent Injections
+
+```python
+# backend/agents/generators/connection_agent.py
+
+class ConnectionAgent:
+    def find_connections(self, artifact):
+        """Find connections between this paper and your library"""
+        
+        paper_claims = artifact['metadata']['extracted_claims']
+        wiki = artifact['sections']
+        
+        # Search for semantically similar papers
+        similar_papers = self._vector_search_similar_papers(
+            paper_claims, top_k=10
+        )
+        
+        connections = []
+        for similar_paper in similar_papers:
+            connection_type = self._classify_connection(
+                paper_claims, similar_paper.claims
+            )
+            
+            if connection_type:
+                connections.append({
+                    "type": "connection",
+                    "connection_type": connection_type,
+                    "connected_paper_id": similar_paper.id,
+                    "connected_paper_title": similar_paper.title,
+                    "explanation": self._generate_connection_explanation(
+                        connection_type, paper_claims, similar_paper.claims
+                    ),
+                    "potential_synthesis": self._suggest_synthesis(
+                        connection_type, paper_claims, similar_paper.claims
+                    )
+                })
+        
+        # Inject into artifact
+        self._inject_component(artifact['artifact_id'], {
+            "section": "connections",
+            "component_type": "connection_list",
+            "connections": connections
+        })
+```
+
+---
+
+## PHASE 6: Gap Detection System (Weeks 5-7)
+
+### Step 6.1: Gap Detector Base Class
+
+```python
+# backend/agents/detectors/base_detector.py
+
+class BaseGapDetector:
+    def __init__(self, db_session, llm_client):
+        self.db = db_session
+        self.llm = llm_client
+    
+    def detect(self) -> List[Gap]:
+        """Override in subclasses"""
+        raise NotImplementedError
+    
+    def score_gap(self, gap) -> float:
+        """Score a gap's potential using LLM"""
+        prompt = self._build_scoring_prompt(gap)
+        response = self.llm.chat.completions.create(
+            model="gpt-4o",
+            messages=[{"role": "user", "content": prompt}],
+            response_format={"type": "json_object"}
+        )
+        scores = json.loads(response.choices[0].message.content)
+        return scores
+    
+    def _build_scoring_prompt(self, gap) -> str:
+        """Build scoring rubric prompt"""
+        return f"""
+        Score this research gap on these dimensions (0-10 each):
+        
+        GAP: {json.dumps(gap, indent=2)}
+        
+        Dimensions:
+        1. scientific_merit: Would filling this gap advance the field?
+        2. feasibility: Could this be done with reasonable resources?
+        3. novelty: How novel would the contribution be?
+        4. timeliness: Is this the right time to tackle this?
+        5. publishability: How publishable would the results be?
+        6. competitive_risk: How likely is someone else to do this soon?
+        
+        For each dimension, provide a score and 1-2 sentence justification.
+        Output as JSON.
+        """
+    
+    def generate_gap_title(self, gap) -> str:
+        """Generate a human-readable title for the gap"""
+        prompt = f"Generate a compelling one-line title for this research gap: {json.dumps(gap)}"
+        response = self.llm.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[{"role": "user", "content": prompt}]
+        )
+        return response.choices[0].message.content.strip()
+```
+
+### Step 6.2: Method-Problem Gap Detector
+
+```python
+# backend/agents/detectors/method_problem_detector.py
+
+class MethodProblemGapDetector(BaseGapDetector):
+    def detect(self):
+        # Get all methods from claims
+        methods = self.db.query("""
+            SELECT DISTINCT 
+                c.content->>'name' as method_name,
+                c.content->>'category' as category,
+                c.content->'constraints' as constraints,
+                c.content as full_claim,
+                p.paper_id,
+                w.wiki_content
+            FROM claims c
+            JOIN wiki_entries w ON c.paper_id = w.paper_id
+            JOIN papers p ON c.paper_id = p.id
+            WHERE c.claim_type = 'method'
+        """).fetchall()
+        
+        # Get all problems/datasets
+        problems = self.db.query("""
+            SELECT DISTINCT
+                jsonb_array_elements_text(c.content->'datasets') as dataset,
+                c.content as full_claim,
+                p.paper_id,
+                w.wiki_content
+            FROM claims c
+            JOIN wiki_entries w ON c.paper_id = w.paper_id
+            JOIN papers p ON c.paper_id = p.id
+            WHERE c.claim_type = 'method'
+        """).fetchall()
+        
+        # Build existing pairs matrix
+        existing_pairs = set()
+        for claim in self.db.query("SELECT content FROM claims WHERE claim_type='result'").fetchall():
+            method = claim['content'].get('method_name')
+            dataset = claim['content'].get('dataset')
+            if method and dataset:
+                existing_pairs.add((method, dataset))
+        
+        # Find gaps
+        gaps = []
+        for method in methods:
+            method_datasets = self._infer_applicable_datasets(method)
+            
+            for problem in problems:
+                if (method['method_name'], problem['dataset']) not in existing_pairs:
+                    # Check if method is applicable to this problem type
+                    applicability = self._assess_applicability(method, problem)
+                    
+                    if applicability['score'] > 0.5:  # Threshold
+                        gap = {
+                            "gap_type": "method_problem",
+                            "method": {
+                                "name": method['method_name'],
+                                "category": method['category'],
+                                "source_paper": method['paper_id'],
+                                "constraints": method['constraints']
+                            },
+                            "problem": {
+                                "dataset": problem['dataset'],
+                                "source_paper": problem['paper_id']
+                            },
+                            "applicability_score": applicability['score'],
+                            "applicability_rationale": applicability['rationale'],
+                            "potential_adaptations_needed": applicability['adaptations'],
+                            "estimated_difficulty": applicability['difficulty']
+                        }
+                        
+                        scores = self.score_gap(gap)
+                        gap.update(scores)
+                        gap['title'] = self.generate_gap_title(gap)
+                        
+                        gaps.append(gap)
+        
+        return sorted(gaps, key=lambda g: g.get('total_score', 0), reverse=True)
+    
+    def _assess_applicability(self, method, problem):
+        """Use LLM to assess if method could be applied to problem"""
+        prompt = f"""
+        Assess whether method "{method['method_name']}" could be applied 
+        to problem/dataset "{problem['dataset']}".
+        
+        Method details: {json.dumps(method['full_claim'], indent=2)}
+        Problem context: {json.dumps(problem['full_claim'], indent=2)}
+        
+        Respond with JSON:
+        {{
+            "score": 0.0-1.0,
+            "rationale": "Brief explanation",
+            "adaptations": ["Needed modifications to the method"],
+            "difficulty": "easy|moderate|hard"
+        }}
+        """
+        response = self.llm.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[{"role": "user", "content": prompt}],
+            response_format={"type": "json_object"}
+        )
+        return json.loads(response.choices[0].message.content)
+```
+
+### Step 6.3: Contradiction Detector
+
+```python
+# backend/agents/detectors/contradiction_detector.py
+
+class ContradictionDetector(BaseGapDetector):
+    def detect(self):
+        # Find papers that make claims about the same metric on the same dataset
+        similar_claims = self.db.query("""
+            SELECT 
+                c1.content as claim1,
+                c2.content as claim2,
+                c1.paper_id as paper1_id,
+                c2.paper_id as paper2_id,
+                p1.title as paper1_title,
+                p2.title as paper2_title
+            FROM claims c1
+            JOIN claims c2 ON 
+                c1.claim_type = 'result' 
+                AND c2.claim_type = 'result'
+                AND c1.content->>'metric' = c2.content->>'metric'
+                AND c1.content->>'dataset' = c2.content->>'dataset'
+                AND c1.content->>'method_name' = c2.content->>'method_name'
+                AND c1.paper_id < c2.paper_id  -- avoid duplicates
+            JOIN papers p1 ON c1.paper_id = p1.id
+            JOIN papers p2 ON c2.paper_id = p2.id
+            WHERE c1.content->>'value' != c2.content->>'value'
+        """).fetchall()
+        
+        contradictions = []
+        for pair in similar_claims:
+            # Use LLM to verify if this is a genuine contradiction
+            analysis = self._analyze_contradiction(pair)
+            
+            if analysis['is_genuine_contradiction']:
+                # Check if any paper has reconciled this
+                reconciliation = self._find_reconciliation(
+                    pair['paper1_id'], 
+                    pair['paper2_id']
+                )
+                
+                if not reconciliation:
+                    gap = {
+                        "gap_type": "contradiction",
+                        "claim_a": {
+                            "paper_id": pair['paper1_id'],
+                            "paper_title": pair['paper1_title'],
+                            "claim": pair['claim1']
+                        },
+                        "claim_b": {
+                            "paper_id": pair['paper2_id'],
+                            "paper_title": pair['paper2_title'],
+                            "claim": pair['claim2']
+                        },
+                        "contradiction_analysis": analysis,
+                        "reconciliation_exists": False,
+                        "hypothesized_explanations": analysis['possible_explanations']
+                    }
+                    
+                    scores = self.score_gap(gap)
+                    gap.update(scores)
+                    gap['title'] = self.generate_gap_title(gap)
+                    
+                    contradictions.append(gap)
+        
+        return sorted(contradictions, 
+                     key=lambda g: g.get('total_score', 0), reverse=True)
+```
+
+### Step 6.4: Scale Gap Detector
+
+```python
+# backend/agents/detectors/scale_gap_detector.py
+
+class ScaleGapDetector(BaseGapDetector):
+    def detect(self):
+        # Find methods with scaling data
+        methods_with_scaling = self.db.query("""
+            SELECT 
+                content->>'method_name' as method_name,
+                jsonb_agg(jsonb_build_object(
+                    'scale', content->>'scale_variable',
+                    'value', content->>'value',
+                    'dataset', content->>'dataset'
+                )) as scaling_data,
+                MAX((content->>'value')::float) as max_scale_tested
+            FROM claims
+            WHERE claim_type = 'result' 
+            AND content->>'scale_variable' IS NOT NULL
+            GROUP BY content->>'method_name'
+            HAVING COUNT(*) >= 3
+        """).fetchall()
+        
+        # Find largest datasets available
+        largest_datasets = self.db.query("""
+            SELECT 
+                content->>'dataset' as dataset,
+                MAX((content->>'sample_size')::int) as max_samples
+            FROM claims
+            WHERE claim_type = 'result'
+            AND content->>'sample_size' IS NOT NULL
+            GROUP BY content->>'dataset'
+            ORDER BY max_samples DESC
+        """).fetchall()
+        
+        gaps = []
+        for method in methods_with_scaling:
+            for dataset_info in largest_datasets:
+                # Check if this method has been tested at this scale
+                max_tested = max(
+                    (d['value'] for d in method['scaling_data'] 
+                     if d['dataset'] == dataset_info['dataset']),
+                    default=0
+                )
+                
+                scale_ratio = dataset_info['max_samples'] / max_tested if max_tested > 0 else float('inf')
+                
+                if scale_ratio > 10:  # Method tested on <10% of available scale
+                    # Fit scaling law
+                    scaling_points = [
+                        (d['value'], d.get('performance', 0)) 
+                        for d in method['scaling_data']
+                    ]
+                    projected_performance = self._extrapolate_performance(
+                        scaling_points, dataset_info['max_samples']
+                    )
+                    
+                    gap = {
+                        "gap_type": "scale",
+                        "method": method['method_name'],
+                        "dataset": dataset_info['dataset'],
+                        "max_scale_tested": max_tested,
+                        "max_scale_available": dataset_info['max_samples'],
+                        "scale_ratio": scale_ratio,
+                        "scaling_points": scaling_points,
+                        "projected_performance": projected_performance,
+                        "extrapolation_uncertainty": "high" if scale_ratio > 100 else "medium"
+                    }
+                    
+                    scores = self.score_gap(gap)
+                    gap.update(scores)
+                    gap['title'] = self.generate_gap_title(gap)
+                    
+                    gaps.append(gap)
+        
+        return sorted(gaps, key=lambda g: g.get('total_score', 0), reverse=True)
+    
+    def _extrapolate_performance(self, points, target_scale):
+        """Fit power law and extrapolate"""
+        import numpy as np
+        from scipy.optimize import curve_fit
+        
+        if len(points) < 3:
+            return None
+        
+        x = np.array([p[0] for p in points])
+        y = np.array([p[1] for p in points])
+        
+        def power_law(x, a, b, c):
+            return a * x ** (-b) + c
+        
+        try:
+            params, _ = curve_fit(power_law, x, y, maxfev=5000)
+            projected = power_law(target_scale, *params)
+            return {
+                'value': float(projected),
+                'params': {'a': float(params[0]), 'b': float(params[1]), 'c': float(params[2])},
+                'r_squared': self._r_squared(y, power_law(x, *params))
+            }
+        except:
+            return None
+```
+
+---
+
+## PHASE 7: Study Generation (Weeks 7-8)
+
+### Step 7.1: From Gap to Study Proposal
+
+```python
+# backend/agents/generators/study_generator.py
+
+STUDY_GENERATION_PROMPT = """
+You are a senior research advisor helping a capable researcher design a study 
+to fill a specific research gap. Be rigorous, specific, and actionable.
+
+RESEARCH GAP:
+{gap_json}
+
+Design a complete study with these components:
+
+{{
+  "study_id": "study_{gap_type}_{timestamp}",
+  "title": "Proposed study title suitable for a paper",
+  
+  "research_question": "Precise, testable research question",
+  
+  "hypothesis": {{
+    "main_hypothesis": "What do you predict and why?",
+    "null_hypothesis": "What would falsify your prediction?",
+    "mechanistic_rationale": "Why should this be true, mechanistically?",
+    "confidence": "high|medium|low",
+    "alternative_hypotheses": ["Other possible outcomes and their implications"]
+  }},
+  
+  "experimental_design": {{
+    "independent_variables": ["What you'll manipulate"],
+    "dependent_variables": ["What you'll measure"],
+    "control_variables": ["What you'll hold constant"],
+    "design_type": "within-subjects|between-subjects|ablation|causal|correlational",
+    "sample_size_rationale": "How much data/compute is needed and why",
+    "number_of_experiments": "How many separate experiments",
+    "experiment_list": [
+      {{
+        "name": "Experiment 1: ...",
+        "purpose": "What this experiment tests",
+        "setup": "Specific setup details",
+        "baselines": ["What to compare against"],
+        "metrics": ["What to measure"],
+        "expected_outcome": "What you predict",
+        "interpretation_if_success": "What positive result means",
+        "interpretation_if_failure": "What negative result means",
+        "estimated_runtime": "Hours/days of compute"
+      }}
+    ]
+  }},
+  
+  "resources_required": {{
+    "compute": "GPU hours needed, hardware type",
+    "data": "Datasets needed, any collection required",
+    "code": "What needs to be implemented from scratch vs reused",
+    "estimated_cost": "Approximate dollar cost if any",
+    "time_to_completion": "Estimated person-weeks"
+  }},
+  
+  "minimum_viable_experiment": {{
+    "description": "Smallest experiment to test core hypothesis",
+    "setup": "Minimal setup",
+    "code_skeleton": "Pseudocode or starter code",
+    "go/no_go_criteria": "What result would make you abandon vs continue"
+  }},
+  
+  "risk_assessment": {{
+    "technical_risks": ["What could go wrong technically"],
+    "result_risks": ["Ways results could be inconclusive"],
+    "mitigation_strategies": ["How to handle each risk"],
+    "overall_risk_level": "low|medium|high"
+  }},
+  
+  "publication_strategy": {{
+    "target_venues": ["Conferences or journals"],
+    "contribution_type": "new_method|new_insight|benchmark|reproduction|theory",
+    "likely_contribution": "What the main finding would contribute",
+    "potential_impact": "high|medium|low with justification",
+    "reviewer_concerns": ["Anticipated reviewer objections"],
+    "responses_to_concerns": ["How to address them preemptively"]
+  }},
+  
+  "related_work_positioning": {{
+    "closest_prior_work": ["Papers this would build on directly"],
+    "differentiation": "How this differs from closest work",
+    "how_to_cite": "Papers that should be cited and why"
+  }},
+  
+  "timeline": {{
+    "phase_1_mvp": "Days 1-X: Run minimum viable experiment",
+    "phase_2_full": "Days X-Y: Full experiments",
+    "phase_3_analysis": "Days Y-Z: Analysis and writing",
+    "total_estimated_days": "Total person-days"
+  }},
+  
+  "action_items": [
+    {{
+      "action": "Specific next action",
+      "type": "implement|run_experiment|read|write|setup",
+      "priority": "urgent|high|medium|low",
+      "estimated_hours": "Hours needed"
+    }}
+  ]
+}}
+
+Be specific with numbers, methods, and expected values. 
+Don't hedge with 'may' or 'could' - make concrete predictions.
+"""
+```
+
+### Step 7.2: Study Artifact Creation
+
+```python
+class StudyGenerator:
+    def create_study_artifact(self, gap, gap_scores):
+        """Convert a gap into a full study artifact"""
+        
+        # Generate full study proposal
+        study_content = self._generate_study_content(gap)
+        
+        # Create the study artifact
+        study_artifact = {
+            "artifact_id": f"study_{uuid.uuid4().hex[:8]}",
+            "artifact_type": "study",
+            "source_gap_id": gap['gap_type'] + "_" + str(hash(json.dumps(gap))),
+            "source_gap": gap,
+            "gap_scores": gap_scores,
+            "status": "proposed",
+            "version": 1,
+            "created_at": datetime.now().isoformat(),
+            "last_modified": datetime.now().isoformat(),
+            
+            "content": study_content,
+            
+            "experiments": [
+                {
+                    "experiment_id": f"exp_{i}",
+                    "name": exp['name'],
+                    "setup": exp['setup'],
+                    "code": exp.get('code_skeleton', ''),
+                    "status": "not_started",
+                    "results": None,
+                    "artifacts": []
+                }
+                for i, exp in enumerate(study_content['experimental_design']['experiment_list'])
+            ],
+            
+            "mvp_experiment": {
+                "status": "not_started",
+                "code": study_content['minimum_viable_experiment'].get('code_skeleton', ''),
+                "go_no_go_result": None
+            },
+            
+            "paper_draft": None,  # Will be initialized later
+            
+            "timeline": study_content['timeline'],
+            "action_items": study_content['action_items'],
+            
+            "notes": [],
+            "agent_log": [{
+                "timestamp": datetime.now().isoformat(),
+                "agent": "study_generator",
+                "action": "created_study",
+                "details": f"Generated study proposal for gap: {gap.get('title', 'Unknown')}"
+            }]
+        }
+        
+        self._store_artifact(study_artifact)
+        
+        return study_artifact
+```
+
+---
+
+## PHASE 8: Experiment Execution (Weeks 8-10)
+
+### Step 8.1: MVP Experiment Runner
+
+```python
+# experiment-sandbox/runner.py
+
+class ExperimentRunner:
+    def __init__(self, sandbox_path="/sandbox"):
+        self.sandbox_path = sandbox_path
+        self.docker_client = docker.from_env()
+    
+    def run_experiment(self, experiment_config):
+        """Run an experiment in an isolated Docker container"""
+        
+        # Prepare experiment directory
+        exp_dir = Path(self.sandbox_path) / experiment_config['experiment_id']
+        exp_dir.mkdir(parents=True, exist_ok=True)
+        
+        # Write code to file
+        code_file = exp_dir / "experiment.py"
+        code_file.write_text(experiment_config['code'])
+        
+        # Write requirements if provided
+        if experiment_config.get('requirements'):
+            req_file = exp_dir / "requirements.txt"
+            req_file.write_text(experiment_config['requirements'])
+        
+        # Write any data files
+        if experiment_config.get('data_files'):
+            for data_file in experiment_config['data_files']:
+                dest = exp_dir / data_file['name']
+                dest.write_text(data_file['content'])
+        
+        # Build Docker command
+        container = self.docker_client.containers.run(
+            image="experiment-sandbox:latest",
+            command=f"python /sandbox/experiment.py",
+            volumes={
+                str(exp_dir): {'bind': '/sandbox', 'mode': 'rw'}
+            },
+            environment=experiment_config.get('env_vars', {}),
+            detach=True,
+            mem_limit=experiment_config.get('memory_limit', '8g'),
+            nano_cpus=int(experiment_config.get('cpu_limit', 4)) * 1e9,
+            device_requests=[
+                docker.types.DeviceRequest(
+                    device_ids=experiment_config.get('gpu_ids', ['0']),
+                    capabilities=[['gpu']]
+                )
+            ] if experiment_config.get('use_gpu') else None
+        )
+        
+        # Monitor and collect results
+        result = container.wait()
+        logs = container.logs().decode('utf-8')
+        container.remove()
+        
+        # Parse outputs
+        outputs = self._collect_outputs(exp_dir)
+        
+        return {
+            'exit_code': result['StatusCode'],
+            'logs': logs,
+            'outputs': outputs,
+            'artifacts': self._collect_artifacts(exp_dir)
+        }
+    
+    def _collect_outputs(self, exp_dir):
+        """Collect structured outputs from experiment"""
+        outputs = {}
+        
+        # Look for results.json
+        results_file = exp_dir / "results.json"
+        if results_file.exists():
+            outputs['results'] = json.loads(results_file.read_text())
+        
+        # Look for figures
+        figures_dir = exp_dir / "figures"
+        if figures_dir.exists():
+            outputs['figures'] = []
+            for fig_file in figures_dir.glob("*.png"):
+                outputs['figures'].append({
+                    'filename': fig_file.name,
+                    'base64': base64.b64encode(fig_file.read_bytes()).decode()
+                })
+        
+        return outputs
+```
+
+### Step 8.2: Experiment Status Tracking
+
+```python
+# backend/api/experiments.py
+
+class ExperimentManager:
+    def execute_and_track(self, artifact_id, experiment_id, code, config):
+        """Execute experiment and update artifact with results"""
+        
+        # Update artifact status
+        self._update_experiment_status(artifact_id, experiment_id, "running")
+        
+        # Submit to executor
+        task = task_queue.enqueue(
+            'execute_experiment',
+            {
+                'experiment_id': experiment_id,
+                'code': code,
+                'config': config
+            }
+        )
+        
+        # Poll for results (or use callback)
+        while not task.is_finished:
+            time.sleep(2)
+        
+        result = task.result
+        
+        # Inject results into artifact
+        self._inject_experiment_results(artifact_id, experiment_id, result)
+        
+        # If this was an MVP, ask for go/no-go analysis
+        if self._is_mvp_experiment(artifact_id, experiment_id):
+            analysis = self._analyze_mvp_results(result, artifact_id)
+            self._inject_mvp_analysis(artifact_id, analysis)
+        
+        return result
+    
+    def _analyze_mvp_results(self, result, artifact_id):
+        """Have an agent analyze MVP results and recommend go/no-go"""
+        study = self._get_study_artifact(artifact_id)
+        criteria = study['content']['minimum_viable_experiment']['go_no_go_criteria']
+        
+        prompt = f"""
+        Analyze these MVP experiment results against the go/no-go criteria.
+        
+        MVP CRITERIA:
+        {criteria}
+        
+        EXPERIMENT RESULTS:
+        Logs summary: {result['logs'][:2000]}
+        Structured outputs: {json.dumps(result.get('outputs', {}), indent=2)}
+        
+        Provide:
+        {{
+            "meets_criteria": true/false,
+            "analysis": "Detailed analysis of results vs criteria",
+            "recommendation": "go|no_go|needs_modification",
+            "next_steps": ["What to do next based on this result"],
+            "confidence": "high|medium|low"
+        }}
+        """
+        
+        response = self.llm.chat.completions.create(
+            model="gpt-4o",
+            messages=[{"role": "user", "content": prompt}],
+            response_format={"type": "json_object"}
+        )
+        
+        return json.loads(response.choices[0].message.content)
+```
+
+---
+
+## PHASE 9: Paper Generation (Weeks 10-12)
+
+### Step 9.1: Paper Draft Initialization
+
+```python
+# backend/agents/generators/paper_generator.py
+
+PAPER_INITIALIZATION_PROMPT = """
+You are an experienced research paper writer. Given a completed study with 
+experimental results, draft a complete academic paper.
+
+STUDY ARTIFACT:
+{study_json}
+
+ALL EXPERIMENT RESULTS:
+{experiment_results_json}
+
+Write a complete paper draft with these sections. This will be the basis for 
+a real paper submission. Be rigorous, cite appropriately, use precise language.
+
+{{
+  "paper_draft": {{
+    "title": "Compelling, descriptive title that states the contribution",
+    
+    "abstract": "Structured abstract (200-300 words): Context, Problem, Method, Results, Impact",
+    
+    "introduction": {{
+      "paragraphs": [
+        {{
+          "content": "Paragraph text",
+          "citations_needed": ["Papers to cite here"],
+          "claims_made": ["Factual claims requiring support"]
+        }}
+      ],
+      "contribution_list": ["Explicit numbered contributions"],
+      "paper_structure": "Brief overview of sections"
+    }},
+    
+    "related_work": {{
+      "sections": [
+        {{
+          "area": "Name of research area",
+          "papers_discussed": [
+            {{
+              "citation_key": "author2024paper",
+              "description": "What they did",
+              "relationship": "How this paper relates to ours",
+              "limitations": "What they didn't do that we do"
+            }}
+          ]
+        }}
+      ]
+    }},
+    
+    "problem_formulation": {{
+      "content": "Formal problem statement with mathematical notation",
+      "notation_table": [
+        {{"symbol": "x", "meaning": "input data", "domain": "R^{n×d}"}}
+      ]
+    }},
+    
+    "method": {{
+      "overview": "High-level description of approach",
+      "components": [
+        {{
+          "name": "Component name",
+          "description": "Detailed description",
+          "pseudocode": "Algorithm environment pseudocode",
+          "rationale": "Why this design choice",
+          "alternatives_considered": ["Other approaches and why rejected"]
+        }}
+      ],
+      "implementation_details": {{
+        "hyperparameters": {{"param_name": "value and rationale"}},
+        "hardware": "Training hardware",
+        "code_release": "Link placeholder"
+      }}
+    }},
+    
+    "experiments": {{
+      "setup": {{
+        "datasets": ["Dataset descriptions and statistics"],
+        "baselines": ["Baseline methods with citations"],
+        "metrics": ["Metrics with definitions and formulas"],
+        "implementation": "Implementation details for reproducibility"
+      }},
+      "results": [
+        {{
+          "experiment_name": "Experiment name",
+          "purpose": "What this experiment shows",
+          "results": "Quantitative results in narrative form",
+          "tables": [
+            {{
+              "caption": "Table caption",
+              "data": [["Header"], ["Row data"]]
+            }}
+          ],
+          "figures": [
+            {{
+              "caption": "Figure caption",
+              "description": "What to plot"
+            }}
+          ],
+          "analysis": "Interpretation of results",
+          "significance": "Statistical significance discussion"
+        }}
+      ]
+    }},
+    
+    "discussion": {{
+      "summary": "Brief summary of findings",
+      "implications": "What these results mean for the field",
+      "limitations": [
+        {{
+          "limitation": "Honest admission of limitation",
+          "impact": "How this affects interpretation",
+          "future_work": "How to address"
+        }}
+      ],
+      "broader_impact": "Potential positive and negative societal impacts"
+    }},
+    
+    "conclusion": "Concise conclusion restating contribution and future directions",
+    
+    "references": [
+      {{
+        "citation_key": "author2024paper",
+        "authors": "Author names",
+        "title": "Paper title",
+        "venue": "Venue and year",
+        "url": "arxiv URL if applicable"
+      }}
+    ],
+    
+    "checklist": {{
+      "claims_verified": false,
+      "all_equations_checked": false,
+      "results_reproduced": false,
+      "references_checked": false,
+      "ready_for_human_review": false
+    }}
+  }}
+}}
+
+IMPORTANT GUIDELINES:
+- Extract EXACT numbers from experimental results - don't approximate
+- Generate actual LaTeX table structures from result data
+- Tables should have proper formatting with standard deviations
+- Include specific statistical test results when available
+- Generate figure descriptions detailed enough for someone to create them
+- All equations should be properly formatted LaTeX
+- Make sure every factual claim is traceable to either:
+  a) An experiment result in the provided data
+  b) A cited paper (indicated with citation key)
+  c) Standard knowledge in the field (flagged for verification)
+- Flag any claims that need additional verification
+"""
+```
+
+### Step 9.2: Incremental Paper Refinement
+
+```python
+class PaperRefinementAgent:
+    def refine_section(self, study_artifact, section_name, feedback=None):
+        """Refine a specific paper section based on new results or feedback"""
+        
+        paper = study_artifact['paper_draft']
+        section_content = paper[section_name]
+        
+        prompt = f"""
+        Refine the following paper section based on the feedback or new results.
+        
+        CURRENT SECTION ({section_name}):
+        {json.dumps(section_content, indent=2)}
+        
+        FEEDBACK OR NEW INFORMATION:
+        {feedback if feedback else "General polish and improvement"}
+        
+        FULL STUDY CONTEXT:
+        {json.dumps(study_artifact['content'], indent=2)}
+        
+        Return the refined section in the same JSON structure, maintaining 
+        all the original fields but improving the content.
+        """
+        
+        response = self.llm.chat.completions.create(
+            model="gpt-4o",
+            messages=[{"role": "user", "content": prompt}],
+            response_format={"type": "json_object"}
+        )
+        
+        refined = json.loads(response.choices[0].message.content)
+        
+        # Update the artifact
+        study_artifact['paper_draft'][section_name] = refined
+        study_artifact['version'] += 1
+        study_artifact['last_modified'] = datetime.now().isoformat()
+        
+        self._update_artifact(study_artifact)
+        
+        return study_artifact
+    
+    def update_with_new_experiment(self, study_artifact, experiment_result):
+        """When a new experiment completes, update the relevant paper sections"""
+        
+        # Determine which sections need updating
+        sections_to_update = self._identify_affected_sections(
+            study_artifact, experiment_result
+        )
+        
+        for section in sections_to_update:
+            # Extract relevant part of experiment result
+            relevant_data = self._extract_relevant_data(
+                experiment_result, section
+            )
+            
+            # Refine that section
+            self.refine_section(
+                study_artifact, 
+                section, 
+                f"New experimental data available: {json.dumps(relevant_data)}"
+            )
+        
+        # Update checklist
+        self._update_checklist(study_artifact)
+        
+        return study_artifact
+    
+    def generate_latex(self, study_artifact):
+        """Convert the paper JSON into a compilable LaTeX document"""
+        
+        paper = study_artifact['paper_draft']
+        
+        latex_content = f"""
+\\documentclass[11pt]{{article}}
+\\usepackage[utf8]{{inputenc}}
+\\usepackage{{amsmath,amssymb,amsthm}}
+\\usepackage{{graphicx}}
+\\usepackage{{booktabs}}
+\\usepackage{{hyperref}}
+
+\\title{{{paper['title']}}}
+
+\\author{{[Author Names]}}
+
+\\begin{{document}}
+
+\\maketitle
+
+\\begin{{abstract}}
+{paper['abstract']}
+\\end{{abstract}}
+
+% Introduction
+\\section{{Introduction}}
+{self._format_paragraphs(paper['introduction']['paragraphs'])}
+
+% Related Work
+\\section{{Related Work}}
+{self._format_related_work(paper['related_work'])}
+
+% Problem Formulation
+\\section{{Problem Formulation}}
+{paper['problem_formulation']['content']}
+
+% Method
+\\section{{Method}}
+{self._format_method(paper['method'])}
+
+% Experiments
+\\section{{Experiments}}
+{self._format_experiments(paper['experiments'])}
+
+% Discussion
+\\section{{Discussion}}
+{self._format_discussion(paper['discussion'])}
+
+% Conclusion
+\\section{{Conclusion}}
+{paper['conclusion']}
+
+\\bibliographystyle{{plain}}
+\\bibliography{{references}}
+
+\\end{{document}}
+"""
+        return latex_content
+```
+
+---
+
+## PHASE 10: The Full Orchestration Flow
+
+### Step 10.1: Main Pipeline Orchestrator
+
+```python
+# backend/agents/orchestrator.py
+
+class ResearchPipelineOrchestrator:
+    """Coordinates the entire PDF→Paper pipeline"""
+    
+    def __init__(self):
+        self.db = Database()
+        self.arxiv = ArxivService()
+        self.pdf = PDFService()
+        self.curation = CurationService()
+        self.llm = LLMService()
+        self.vector = VectorService()
+        
+        self.wiki_extractor = WikiExtractor(self.llm)
+        self.claim_extractor = ClaimExtractor(self.llm)
+        self.artifact_generator = ArtifactGenerator(self.db)
+        
+        self.gap_detectors = [
+            MethodProblemGapDetector(self.db, self.llm),
+            ContradictionDetector(self.db, self.llm),
+            ScaleGapDetector(self.db, self.llm),
+        ]
+        
+        self.study_generator = StudyGenerator(self.llm, self.db)
+        self.experiment_manager = ExperimentManager()
+        self.paper_generator = PaperGenerator(self.llm)
+        self.paper_refiner = PaperRefinementAgent(self.llm)
+    
+    def daily_pipeline(self):
+        """Run the full daily ingestion pipeline"""
+        logger.info("Starting daily pipeline")
+        
+        # 1. Fetch new papers from arXiv
+        papers = self.arxiv.fetch_daily_papers()
+        logger.info(f"Fetched {len(papers)} papers")
+        
+        # 2. Curate and filter
+        curated = self.curation.filter_and_rank(papers)
+        logger.info(f"Curated {len(curated)} papers")
+        
+        # 3. Process each curated paper
+        for paper in curated:
+            self.process_paper(paper)
+        
+        logger.info("Daily pipeline complete")
+    
+    def process_paper(self, paper):
+        """Process a single paper through the full pipeline"""
+        logger.info(f"Processing: {paper.title}")
+        
+        # Download PDF
+        pdf_path = self.arxiv.download_pdf(paper.id, f"/data/papers/{paper.id}/raw.pdf")
+        
+        # Extract text
+        structured_text = self.pdf.extract_text_and_structure(pdf_path)
+        
+        # Chunk and embed
+        chunks = self.pdf.chunk_for_embedding(structured_text)
+        self.vector.embed_and_store(chunks)
+        
+        # Generate wiki
+        wiki = self.wiki_extractor.generate(structured_text['full_text'])
+        self._store_wiki(paper.id, wiki)
+        
+        # Extract claims
+        claims = self.claim_extractor.extract(structured_text['full_text'], wiki)
+        self._store_claims(paper.id, claims)
+        
+        # Create base artifact
+        artifact = self.artifact_generator.create_base_artifact(
+            paper.id, wiki, claims
+        )
+        
+        logger.info(f"Completed processing: {paper.title}")
+        return artifact
+    
+    def gap_analysis_pipeline(self):
+        """Run gap detection across all papers"""
+        logger.info("Starting gap analysis pipeline")
+        
+        all_gaps = []
+        
+        # Run each detector
+        for detector in self.gap_detectors:
+            gaps = detector.detect()
+            all_gaps.extend(gaps)
+            logger.info(f"{detector.__class__.__name__}: found {len(gaps)} gaps")
+        
+        # Deduplicate and rank
+        all_gaps = self._deduplicate_gaps(all_gaps)
+        all_gaps.sort(key=lambda g: g.get('total_score', 0), reverse=True)
+        
+        # Store gaps
+        self._store_gaps(all_gaps)
+        
+        # Generate studies for top gaps
+        top_gaps = all_gaps[:10]  # Top 10 gaps
+        studies = []
+        for gap in top_gaps:
+            study = self.study_generator.create_study_artifact(gap, gap.get('scores', {}))
+            studies.append(study)
+        
+        logger.info(f"Generated {len(studies)} studies from top gaps")
+        
+        return {
+            'total_gaps_found': len(all_gaps),
+            'studies_generated': len(studies),
+            'top_gaps': top_gaps[:5],
+            'top_studies': [s['artifact_id'] for s in studies]
+        }
+    
+    def study_to_paper_pipeline(self, study_artifact_id):
+        """Convert a completed study into a paper draft"""
+        logger.info(f"Generating paper for study: {study_artifact_id}")
+        
+        # Get study with all experiment results
+        study = self.db.get_artifact(study_artifact_id)
+        
+        # Verify all experiments complete
+        incomplete = [e for e in study['experiments'] if e['status'] != 'completed']
+        if incomplete:
+            raise ValueError(f"Study has {len(incomplete)} incomplete experiments")
+        
+        # Generate paper draft
+        paper_draft = self.paper_generator.generate_draft(study)
+        
+        # Update study artifact with paper draft
+        study['paper_draft'] = paper_draft
+        study['status'] = 'paper_drafted'
+        study['version'] += 1
+        
+        self.db.update_artifact(study)
+        
+        # Generate LaTeX
+        latex = self.paper_refiner.generate_latex(study)
+        self._store_latex(study_artifact_id, latex)
+        
+        logger.info(f"Paper draft generated for study: {study_artifact_id}")
+        
+        return study
+```
+
+### Step 10.2: User Interaction Flow
+
+```python
+# electron-app/renderer/PaperStudio.jsx
+
+function PaperStudio() {
+    const [activeStudy, setActiveStudy] = useState(null);
+    const [paperDraft, setPaperDraft] = useState(null);
+    const [editingSection, setEditingSection] = useState(null);
+    
+    const handleRunMVP = async (experiment) => {
+        setExperimentStatus('running');
+        const result = await api.executeExperiment(
+            activeStudy.artifact_id, 
+            experiment.experiment_id,
+            experiment.code
+        );
+        
+        // Update local state
+        setExperimentResult(result);
+        
+        // If MVP, show go/no-go analysis
+        if (experiment.is_mvp) {
+            showMVPAlert(result.go_no_go_analysis);
+        }
+    };
+    
+    const handleGeneratePaper = async () => {
+        setPaperStatus('generating');
+        const updatedStudy = await api.generatePaper(activeStudy.artifact_id);
+        setPaperDraft(updatedStudy.paper_draft);
+        setPaperStatus('draft_ready');
+    };
+    
+    const handleRefineSection = async (sectionName, feedback) => {
+        const updatedStudy = await api.refinePaperSection(
+            activeStudy.artifact_id,
+            sectionName,
+            feedback
+        );
+        setPaperDraft(updatedStudy.paper_draft);
+    };
+    
+    const handleExportLatex = async () => {
+        const latex = await api.getLatex(activeStudy.artifact_id);
+        // Save to file
+        window.electronAPI.saveFile('paper.tex', latex);
+    };
+    
+    return (
+        <div className="paper-studio">
+            <PaperStudioHeader study={activeStudy} />
+            
+            <div className="studio-layout">
+                <PaperStudioSidebar 
+                    paperDraft={paperDraft}
+                    onSelectSection={setEditingSection}
+                    studyProgress={activeStudy?.timeline}
+                />
+                
+                <PaperStudioMain>
+                    {editingSection ? (
+                        <SectionEditor
+                            section={editingSection}
+                            content={paperDraft?.[editingSection]}
+                            onSave={(content) => handleRefineSection(editingSection, content)}
+                            onRequestAIRefinement={(feedback) => handleRefineSection(editingSection, feedback)}
+                        />
+                    ) : (
+                        <PaperPreview paperDraft={paperDraft} />
+                    )}
+                </PaperStudioMain>
+                
+                <PaperStudioActions>
+                    <ExperimentPanel
+                        experiments={activeStudy?.experiments}
+                        onRunExperiment={handleRunMVP}
+                    />
+                    <ActionPanel
+                        onGeneratePaper={handleGeneratePaper}
+                        onExportLatex={handleExportLatex}
+                        paperStatus={paperStatus}
+                    />
+                </PaperStudioActions>
+            </div>
+        </div>
+    );
+}
+```
+
+---
+
+## Complete Timeline Summary
+
+| Phase | Weeks | Deliverable | Key Milestone |
+|-------|-------|-------------|---------------|
+| **0: Foundation** | 1-2 | Database, API, Electron shell | Infrastructure ready |
+| **1: Ingestion** | 2-3 | PDF→Text→Embeddings pipeline | Papers indexed and searchable |
+| **2: Curation** | 2-3 | Personalized feed with rules | Daily curated digest running |
+| **3: Wiki Gen** | 3-4 | Structured wiki entries | All papers have rich wikis |
+| **4: Claims** | 4 | Extracted claims database | Machine-readable paper knowledge |
+| **5: Artifacts** | 4-5 | Interactive artifacts with agents | Agent-enriched artifacts live |
+| **6: Gap Detection** | 5-7 | Multi-strategy gap finder | Gap dashboard populated |
+| **7: Study Gen** | 7-8 | Study proposals from gaps | Top gaps have actionable studies |
+| **8: Experiments** | 8-10 | Sandboxed experiment execution | MVP experiments runnable |
+| **9: Paper Gen** | 10-12 | Paper drafts from studies | First complete paper draft |
+| **10: Polish** | 12+ | Iteration, LaTeX, submission | LaTeX-ready paper |
+
+---
