@@ -147,8 +147,8 @@ STATE.md STATUS
 TEST BASELINE
 ───────────────────────────────────────────────────────────
   Baseline at Blueprint issuance:  2,292
-  Expected delta:                  +8
-  Expected total at Batch close:   2,300
+  Expected delta:                  +11
+  Expected total at Batch close:   2,303
 
 ───────────────────────────────────────────────────────────
 TASK LIST
@@ -201,6 +201,7 @@ TASK-02: ClaimExtractor with LLM Structured Output
     | TEST-121-02-03   | unit | extract() returns [] on LLM failure (HB-01) | Exception propagates          | Mock LLM raises Exception             | No exception, returns [], warning logged |
     | TEST-121-02-04   | unit | extract() returns [] on invalid JSON (HB-01) | JSONDecodeError propagates   | Mock LLM returns "not json"           | No exception, returns [], warning logged |
     | TEST-121-02-05   | unit | All claims have source_paper_id (HB-02)    | Missing source_paper_id      | Extract from text without paper_id    | All claims have non-None source_paper_id |
+    | TEST-121-02-06   | unit | Prompt template exists with closed-book     | Missing file or instruction   | Delete prompt file                    | assert Path(prompt_path).exists() and "closed-book" in Path(prompt_path).read_text() |
   Acceptance Criteria:
     AC-01: ClaimExtractor.extract() returns list[Claim] from valid paper text
     AC-02: On LLM failure or invalid JSON, returns [] without crashing (HB-01)
@@ -238,7 +239,7 @@ TASK-03: Gold-Standard Validation
 ───────────────────────────────────────────────────────────
 BATCH-LEVEL ACCEPTANCE CRITERIA
 ───────────────────────────────────────────────────────────
-  BAC-01: All 8 new tests pass
+  BAC-01: All 11 new tests pass
   BAC-02: backend/pipeline/claims/ package exists with __init__.py, models.py, extractor.py
   BAC-03: ClaimExtractor.extract() works with mock and real LLM providers
   BAC-04: No modifications to orchestrator.py or stages.py (HB-03)
@@ -247,6 +248,19 @@ BATCH-LEVEL ACCEPTANCE CRITERIA
 ───────────────────────────────────────────────────────────
 LEAD RESPONSE TO REVIEW REPORT
 ───────────────────────────────────────────────────────────
-[To be completed after Review Report]
+Reviewer Report ID: REVIEW-BATCH-121-2026-05-09
+Review Cycle: 1
+Reviewer: 260509-focal-ruby
+
+FLAGS RESOLVED:
+  CHK-11 (MAJOR): Added TEST-121-02-06 to TASK-02 test table.
+    Prompt template file existence + closed-book instruction verified.
+  CHK-12 (MAJOR): Reconciled test count.
+    TASK-01: 3 tests, TASK-02: 6 tests, TASK-03: 3 tests = 11 total.
+    Updated: delta +8→+11, expected total 2,300→2,303, BAC-01 8→11.
+
+Lead Decision: [x] ACCEPT
+Blueprint v1.1 corrections applied. 2 flags resolved. PROCEED.
+Lead Sign: ivory-wolf — 2026-05-09
 ═══════════════════════════════════════════════════════════
 ```
