@@ -163,3 +163,90 @@ CARRY-FORWARD OBLIGATIONS
   (none — all Phase 8 tests pass)
 
 ═══════════════════════════════════════════════════════════
+
+───────────────────────────────────────────────────────────
+PHASE 9 MODULES (B121–B129)
+───────────────────────────────────────────────────────────
+
+  Module:              backend.pipeline.claims.models
+  Exports:             ClaimType (enum), Claim (dataclass)
+  Key note:            5 claim types: METHOD, RESULT, LIMITATION, FUTURE_WORK, COMPARISON.
+                       20+ typed fields per claim with type-specific optional fields.
+  Verified in:         BATCH-121
+
+  Module:              backend.pipeline.claims.extractor
+  Exports:             ClaimExtractor
+  Key note:            Uses LLM structured_output with closed-book prompt.
+                       Returns [] on failure (HB-01). Every claim has source_paper_id (HB-02).
+  Verified in:         BATCH-121
+
+  Module:              backend.pipeline.claims.store
+  Exports:             ClaimStore
+  Key note:            SQLAlchemy-based persistence with CRUD operations.
+                       Idempotent store_claims (HB-01). Keyword fallback for similarity search.
+                       Validates claim_type against enum on read (A-02).
+  Verified in:         BATCH-122
+
+  Module:              backend.pipeline.wiki.models
+  Exports:             WikiEntry (dataclass)
+  Key note:            30-field structured wiki entry for research papers.
+  Verified in:         BATCH-123
+
+  Module:              backend.pipeline.wiki.generator
+  Exports:             WikiGenerator
+  Key note:            LLM structured_output → WikiEntry. Returns empty entry on failure (HB-01).
+  Verified in:         BATCH-123
+
+  Module:              backend.pipeline.wiki.verifier
+  Exports:             WikiVerifier
+  Key note:            Keyword-overlap verification. Sets quality_score + unsupported_claims.
+                       Does NOT modify original wiki (HB-02).
+  Verified in:         BATCH-123
+
+  Module:              backend.pipeline.curation.engine
+  Exports:             CurationEngine, CurationRule
+  Key note:            Rule-based paper filtering: must_include, must_exclude, semantic, max_papers.
+                       Invalid rules skipped with warning (HB-02).
+  Verified in:         BATCH-124
+
+  Module:              backend.pipeline.claims.contradiction.detector
+  Exports:             ContradictionDetector, ContradictionCandidate
+  Key note:            Pairs RESULT claims with same dataset+metric but different values.
+                       Heuristic verification: >10% difference = genuine.
+  Verified in:         BATCH-125
+
+  Module:              backend.pipeline.claims.method_problem
+  Exports:             MethodProblemDetector, MethodProblemGap
+  Key note:            Builds method×dataset matrix from claims. Flags unexplored combinations.
+  Verified in:         BATCH-126
+
+  Module:              backend.pipeline.claims.study_designer
+  Exports:             StudyDesigner, StudyDesign, MVPExperiment, GoNoGoCriteria
+  Key note:            Full study design from ideas/gaps with pseudocode, go/no-go, risk, timeline.
+  Verified in:         BATCH-127
+
+  Module:              backend.pipeline.ingestion.scheduler
+  Exports:             IngestionScheduler, IngestionResult
+  Key note:            Daily fetch→filter→extract→wiki pipeline. Configurable interval.
+  Verified in:         BATCH-128
+
+  Module:              backend.pipeline.claims.connection_agent
+  Exports:             ConnectionAgent, PaperConnection
+  Key note:            Finds builds_on/contradicts/complements relationships from claims.
+                       Deduplicates connection pairs.
+  Verified in:         BATCH-129
+
+  Table:               research_claims (SQLAlchemy)
+  Key note:            22 columns, claim_id unique, source_paper_id indexed.
+                       Migration: alembic/versions/007_research_claims.py
+  Verified in:         BATCH-122
+
+───────────────────────────────────────────────────────────
+PHASE 9 SUMMARY
+───────────────────────────────────────────────────────────
+  Batches:             B121–B129 (9 STANDARD + 1 SIMPLIFIED)
+  New modules:         12 modules across 4 packages (claims, wiki, curation, ingestion)
+  New files:           ~25 source files + 9 test files
+  New tests:           69 (12+12+8+6+7+6+7+5+6)
+  Total test baseline: 2,361 (was 2,292)
+  Decision gates:      All passed (claims viable, wiki accurate, contradictions real)
