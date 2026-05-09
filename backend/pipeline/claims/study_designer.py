@@ -25,6 +25,10 @@ class MVPExperiment:
     required_resources: str = "Single GPU"
     success_criteria: str = ""
     failure_criteria: str = ""
+    interpretation_if_success: str = ""  # Pre-registered: what success means
+    interpretation_if_failure: str = ""  # Pre-registered: what failure means
+    next_step_if_success: str = ""   # Action on success
+    next_step_if_failure: str = ""   # Action on failure
 
 
 @dataclass
@@ -113,6 +117,10 @@ class StudyDesigner:
             required_resources=mvp_data.get("required_resources", "Single GPU"),
             success_criteria=mvp_data.get("success_criteria", ""),
             failure_criteria=mvp_data.get("failure_criteria", ""),
+            interpretation_if_success=mvp_data.get("interpretation_if_success", ""),
+            interpretation_if_failure=mvp_data.get("interpretation_if_failure", ""),
+            next_step_if_success=mvp_data.get("next_step_if_success", ""),
+            next_step_if_failure=mvp_data.get("next_step_if_failure", ""),
         )
 
         go_no_go = [
@@ -151,6 +159,10 @@ class StudyDesigner:
                 pseudocode=f"# Load small dataset\n# Initialize {method}\n# Train for 100 steps\n# Evaluate",
                 success_criteria="Performance > random baseline (p < 0.05)",
                 failure_criteria="Performance <= random baseline",
+                interpretation_if_success=f"{method} shows promise on {problem} — proceed to full-scale experiment",
+                interpretation_if_failure=f"{method} does not show signal on {problem} — revisit approach or hyperparameters",
+                next_step_if_success="Scale to full dataset with hyperparameter search",
+                next_step_if_failure="Debug implementation, try different hyperparameters",
             ),
             go_no_go=[GoNoGoCriteria(metric="Accuracy", threshold="p < 0.05")],
             risk_assessment=["Method may not generalize", "Compute cost may exceed budget"],

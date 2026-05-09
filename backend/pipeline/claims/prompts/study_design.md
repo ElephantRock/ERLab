@@ -19,7 +19,11 @@ and problem described in the idea.
        "expected_runtime": "Estimated runtime",
        "required_resources": "What's needed",
        "success_criteria": "Specific, measurable criterion",
-       "failure_criteria": "What counts as failure"
+       "failure_criteria": "What counts as failure",
+       "interpretation_if_success": "What a positive result would mean for the field and what to do next",
+       "interpretation_if_failure": "What a negative result would mean and what to do next",
+       "next_step_if_success": "Concrete next action if experiment succeeds",
+       "next_step_if_failure": "Concrete next action if experiment fails"
      }
    - "go_no_go": [{"metric": "name", "threshold": "value", "action_if_pass": "what to do", "action_if_fail": "what to do"}]
    - "risk_assessment": ["risk1", "risk2", "risk3"]

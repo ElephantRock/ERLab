@@ -1,0 +1,500 @@
+# Local LLM Strategy for Research on RTX 3080 Ti (12GB VRAM)
+
+Your 3080 Ti is actually a **solid card for local research LLMs** — 12GB VRAM opens up a lot of possibilities. Here's exactly how I'd set it up for the agents in your system.
+
+---
+
+## Quick Answer: What Works Well
+
+| Model | Size | Quantization | VRAM Used | Quality | Best For |
+|:------|:-----|:-------------|:----------|:--------|:---------|
+| **Qwen2.5-14B-Instruct** | 14B | Q4_K_M (GGUF) | ~9.5GB | ⭐⭐⭐⭐⭐ | Complex reasoning, study design, paper generation |
+| **Qwen2.5-7B-Instruct** | 7B | Q6_K (GGUF) | ~7GB | ⭐⭐⭐⭐ | Fast iteration, extraction, verification |
+| **DeepSeek-Coder-V2-Lite** | 16B MoE | Q4_K_M | ~8GB active | ⭐⭐⭐⭐⭐ | Code generation, pseudocode, experiments |
+| **Llama-3.1-8B-Instruct** | 8B | Q6_K | ~7.5GB | ⭐⭐⭐⭐ | General purpose, good instruction following |
+| **Mistral-7B-Instruct-v0.3** | 7B | Q6_K | ~7GB | ⭐⭐⭐½ | Fast, reliable, good for classification |
+
+---
+
+## Recommended Setup for Your Research Agents
+
+### Tier 1: Primary Workhorse
+```
+Model: Qwen2.5-14B-Instruct-Q4_K_M.gguf
+VRAM: ~9.5GB (leaves 2.5GB for context)
+Context: 8192 tokens (fits in remaining VRAM)
+Use: Complex reasoning, study design, paper drafting
+```
+
+### Tier 2: Fast Agent (runs alongside other processes)
+```
+Model: Qwen2.5-7B-Instruct-Q6_K.gguf
+VRAM: ~7GB
+Context: 4096 tokens
+Use: Wiki verification, claim extraction, classification
+```
+
+### Tier 3: Code Specialist
+```
+Model: DeepSeek-Coder-V2-Lite-IQ4_XS.gguf
+VRAM: ~7GB (MoE, only 2.4B active params)
+Context: 8192 tokens
+Use: Experiment pseudocode, implementation, LaTeX generation
+```
+
+---
+
+## Implementation: llama.cpp Server
+
+### 1. Installation
+
+```bash
+# Clone and build llama.cpp
+git clone https://github.com/ggerganov/llama.cpp
+cd llama.cpp
+make -j8  # or cmake build
+
+# Install Python bindings
+pip install llama-cpp-python[server]
+```
+
+### 2. Model Download
+
+```bash
+mkdir -p ~/models/research
+
+# Qwen2.5-14B (primary workhorse)
+wget https://huggingface.co/bartowski/Qwen2.5-14B-Instruct-GGUF/resolve/main/Qwen2.5-14B-Instruct-Q4_K_M.gguf \
+  -O ~/models/research/qwen2.5-14b-q4km.gguf
+
+# Qwen2.5-7B (fast agent)
+wget https://huggingface.co/bartowski/Qwen2.5-7B-Instruct-GGUF/resolve/main/Qwen2.5-7B-Instruct-Q6_K.gguf \
+  -O ~/models/research/qwen2.5-7b-q6.gguf
+
+# DeepSeek-Coder-V2-Lite (code specialist)
+wget https://huggingface.co/bartowski/DeepSeek-Coder-V2-Lite-Instruct-GGUF/resolve/main/DeepSeek-Coder-V2-Lite-Instruct-IQ4_XS.gguf \
+  -O ~/models/research/deepseek-coder-v2-lite-iq4xs.gguf
+```
+
+### 3. Server Config — Start Both Models
+
+```bash
+#!/bin/bash
+# start-llm-servers.sh
+
+# Primary server: Qwen2.5-14B on port 8080
+llama-server \
+  -m ~/models/research/qwen2.5-14b-q4km.gguf \
+  --host 127.0.0.1 \
+  --port 8080 \
+  --ctx-size 8192 \
+  --n-gpu-layers 99 \
+  --batch-size 512 \
+  --threads 8 \
+  --cont-batching \
+  --mlock \
+  --no-mmap \
+  --chat-template chatml &
+
+# Fast agent server: Qwen2.5-7B on port 8081
+llama-server \
+  -m ~/models/research/qwen2.5-7b-q6.gguf \
+  --host 127.0.0.1 \
+  --port 8081 \
+  --ctx-size 4096 \
+  --n-gpu-layers 99 \
+  --batch-size 512 \
+  --threads 4 \
+  --cont-batching \
+  --mlock &
+
+# Code specialist: DeepSeek-Coder on port 8082
+llama-server \
+  -m ~/models/research/deepseek-coder-v2-lite-iq4xs.gguf \
+  --host 127.0.0.1 \
+  --port 8082 \
+  --ctx-size 8192 \
+  --n-gpu-layers 99 \
+  --batch-size 256 \
+  --threads 4 \
+  --cont-batching \
+  --mlock &
+```
+
+---
+
+## LocalLLMProvider Implementation
+
+Here's the provider that replaces OpenAI API calls with your local models:
+
+```python
+# backend/services/local_llm_service.py
+
+import json
+import logging
+from typing import Optional, Dict, Any
+import requests
+from dataclasses import dataclass
+from enum import Enum
+
+logger = logging.getLogger(__name__)
+
+class ModelTier(Enum):
+    PRIMARY = "primary"       # Qwen2.5-14B - complex reasoning
+    FAST = "fast"             # Qwen2.5-7B - extraction, verification
+    CODE = "code"             # DeepSeek-Coder - code generation
+    JSON = "json"             # Qwen2.5-7B with grammar - structured output
+
+@dataclass
+class LocalLLMConfig:
+    primary_url: str = "http://127.0.0.1:8080/v1"
+    fast_url: str = "http://127.0.0.1:8081/v1"
+    code_url: str = "http://127.0.0.1:8082/v1"
+    api_key: str = "not-needed"  # llama.cpp doesn't require auth
+    timeout: int = 120
+    max_retries: int = 3
+
+class LocalLLMProvider:
+    """
+    Multi-model local LLM provider with tiered routing.
+    Routes different types of requests to different models based on complexity.
+    """
+    
+    def __init__(self, config: LocalLLMConfig = None):
+        self.config = config or LocalLLMConfig()
+        self.session = requests.Session()
+        
+        # Tier routing rules
+        self.tier_routing = {
+            # Complex reasoning → Primary model
+            'study_design': ModelTier.PRIMARY,
+            'paper_generation': ModelTier.PRIMARY,
+            'gap_analysis': ModelTier.PRIMARY,
+            'contradiction_reasoning': ModelTier.PRIMARY,
+            'synthesis': ModelTier.PRIMARY,
+            'deep_analysis': ModelTier.PRIMARY,
+            
+            # Structured extraction → Fast model
+            'wiki_extraction': ModelTier.FAST,
+            'claim_extraction': ModelTier.FAST,
+            'verification': ModelTier.FAST,
+            'classification': ModelTier.FAST,
+            'similarity': ModelTier.FAST,
+            
+            # Code → Code specialist
+            'code_generation': ModelTier.CODE,
+            'pseudocode': ModelTier.CODE,
+            'latex_generation': ModelTier.CODE,
+            'implement': ModelTier.CODE,
+            
+            # JSON structured → Fast with grammar
+            'structured_output': ModelTier.JSON,
+        }
+    
+    def complete(
+        self, 
+        prompt: str, 
+        task_type: str = 'general',
+        response_format: str = 'text',
+        max_tokens: int = 4096,
+        temperature: float = 0.1,
+        **kwargs
+    ) -> str:
+        """
+        Complete a prompt using the appropriate local model.
+        
+        Args:
+            prompt: The full prompt text
+            task_type: Type of task for model routing
+            response_format: 'text' or 'json'
+            max_tokens: Max tokens to generate
+            temperature: Generation temperature
+        """
+        
+        tier = self.tier_routing.get(task_type, ModelTier.FAST)
+        endpoint = self._get_endpoint(tier)
+        
+        payload = {
+            "messages": [
+                {"role": "user", "content": prompt}
+            ],
+            "max_tokens": max_tokens,
+            "temperature": temperature,
+            "top_p": 0.9,
+            "stream": False
+        }
+        
+        # Add JSON grammar if needed
+        if response_format == 'json':
+            payload["response_format"] = {"type": "json_object"}
+        
+        for attempt in range(self.config.max_retries):
+            try:
+                response = self.session.post(
+                    f"{endpoint}/chat/completions",
+                    json=payload,
+                    timeout=self.config.timeout
+                )
+                
+                if response.status_code == 200:
+                    result = response.json()
+                    return result['choices'][0]['message']['content']
+                else:
+                    logger.warning(f"Attempt {attempt+1} failed: {response.status_code}")
+                    
+            except requests.exceptions.Timeout:
+                logger.warning(f"Timeout on attempt {attempt+1}")
+                # Try shorter generation on timeout
+                payload['max_tokens'] = payload['max_tokens'] // 2
+                
+            except Exception as e:
+                logger.error(f"Error on attempt {attempt+1}: {e}")
+        
+        # All retries exhausted - fall back to fast model
+        if tier != ModelTier.FAST:
+            logger.warning(f"Falling back to fast model for {task_type}")
+            return self._fallback_complete(prompt, max_tokens)
+        
+        raise Exception(f"All {self.config.max_retries} attempts failed")
+    
+    def _get_endpoint(self, tier: ModelTier) -> str:
+        """Get API endpoint URL for a model tier"""
+        endpoints = {
+            ModelTier.PRIMARY: self.config.primary_url,
+            ModelTier.FAST: self.config.fast_url,
+            ModelTier.CODE: self.config.code_url,
+            ModelTier.JSON: self.config.fast_url,  # JSON uses fast model with grammar
+        }
+        return endpoints[tier]
+    
+    def _fallback_complete(self, prompt: str, max_tokens: int) -> str:
+        """Fallback to fast model with reduced context"""
+        try:
+            response = self.session.post(
+                f"{self.config.fast_url}/chat/completions",
+                json={
+                    "messages": [{"role": "user", "content": prompt[-4000:]}],  # Truncate
+                    "max_tokens": min(max_tokens, 2048),
+                    "temperature": 0.1
+                },
+                timeout=60
+            )
+            return response.json()['choices'][0]['message']['content']
+        except:
+            raise Exception("All models unavailable")
+    
+    def health_check(self) -> Dict[str, bool]:
+        """Check which models are available"""
+        status = {}
+        for tier, endpoint in [
+            ('primary', self.config.primary_url),
+            ('fast', self.config.fast_url),
+            ('code', self.config.code_url),
+        ]:
+            try:
+                response = self.session.get(f"{endpoint}/models", timeout=5)
+                status[tier] = response.status_code == 200
+            except:
+                status[tier] = False
+        return status
+
+
+# Factory function for your agent system
+def create_local_llm_provider() -> LocalLLMProvider:
+    """Create and validate a local LLM provider"""
+    provider = LocalLLMProvider()
+    
+    # Health check
+    status = provider.health_check()
+    available = [k for k, v in status.items() if v]
+    
+    if not available:
+        logger.warning("No local models available. Run start-llm-servers.sh first.")
+        logger.warning("See: cd scripts && ./start-llm-servers.sh")
+    else:
+        logger.info(f"Local models available: {', '.join(available)}")
+    
+    return provider
+```
+
+---
+
+## Agent-Specific Model Routing
+
+Update your agent orchestrator to use task-type routing:
+
+```python
+# backend/agents/orchestrator.py (updated)
+
+class ResearchPipelineOrchestrator:
+    def __init__(self):
+        # Use local LLM provider instead of OpenAI
+        self.llm = create_local_llm_provider()
+        
+        # Initialize agents with local LLM
+        self.wiki_extractor = WikiExtractor(
+            self.llm,
+            task_type='wiki_extraction'  # Routes to fast model
+        )
+        
+        self.claim_extractor = ClaimExtractor(
+            self.llm,
+            task_type='claim_extraction'  # Routes to fast model
+        )
+        
+        self.wiki_verifier = WikiVerifier(
+            self.llm,
+            task_type='verification'  # Routes to fast model
+        )
+        
+        self.contradiction_detector = ContradictionDetector(
+            self.llm,
+            task_type='contradiction_reasoning'  # Routes to primary model
+        )
+        
+        self.method_problem_detector = MethodProblemGapDetector(
+            self.llm,
+            task_type='gap_analysis'  # Routes to primary model
+        )
+        
+        self.study_designer = StudyDesigner(
+            self.llm,
+            task_type='study_design'  # Routes to primary model
+        )
+        
+        self.paper_generator = PaperGenerator(
+            self.llm,
+            task_type='paper_generation'  # Routes to primary model
+        )
+        
+        self.connection_agent = ConnectionAgent(
+            self.llm,
+            task_type='deep_analysis'  # Routes to primary model
+        )
+```
+
+---
+
+## Performance Estimates
+
+Based on your 3080 Ti (12GB):
+
+| Operation | Model | Speed | Quality |
+|:----------|:------|:------|:--------|
+| Wiki extraction (10 pages) | Qwen2.5-7B | ~15 sec | High |
+| Claim extraction | Qwen2.5-7B | ~10 sec | High |
+| Verification (per claim) | Qwen2.5-7B | ~3 sec | Good |
+| Contradiction analysis | Qwen2.5-14B | ~8 sec | Very High |
+| Method-problem scoring | Qwen2.5-14B | ~12 sec | Very High |
+| Study design (full) | Qwen2.5-14B | ~45 sec | Very High |
+| Paper draft generation | Qwen2.5-14B | ~2-3 min | Very High |
+| Code generation | DeepSeek-Coder | ~15 sec | Very High |
+
+**Rough daily throughput**: ~200-300 papers fully processed on a single 3080 Ti (running overnight).
+
+---
+
+## If You Need More VRAM Headroom
+
+### Option A: Offload to System RAM (Slower but Works)
+
+```bash
+# Use fewer GPU layers to free VRAM for context
+llama-server \
+  -m ~/models/research/qwen2.5-14b-q4km.gguf \
+  --n-gpu-layers 35 \  # Only 35 layers on GPU (rest on CPU)
+  --ctx-size 16384 \     # More context window
+  --threads 12           # Use more CPU threads
+```
+
+### Option B: Quantization Tuning
+
+For 14B models on 12GB, experiment with:
+- `Q4_K_M` (9.5GB) - Good quality, fits with 8K ctx
+- `IQ4_XS` (8GB) - Smaller, leaves room for 16K ctx
+- `Q3_K_M` (7.5GB) - Smaller still, quality drop starts becoming noticeable
+
+### Option C: Run Only What You Need
+
+```bash
+# Daytime: Just the fast 7B model for extraction/verification
+# Nighttime: Load 14B for batch processing of studies/papers
+
+# Script to swap models
+#!/bin/bash
+# swap-model.sh
+pkill -f "llama-server.*8080"
+llama-server -m ~/models/research/$1 --port 8080 --n-gpu-layers 99 &
+echo "Switched to $1"
+```
+
+---
+
+## Comparison with API Services
+
+| Aspect | Local (3080 Ti) | OpenAI API |
+|:-------|:----------------|:-----------|
+| **Running cost** | $0 (electricity only) | $0.01-0.05 per paper |
+| **Privacy** | Complete | Data sent to OpenAI |
+| **Speed** | 20-40 tok/sec (14B) | 60-100 tok/sec |
+| **Quality** | Qwen2.5-14B ≈ GPT-4o-mini | GPT-4o is better |
+| **Batch capability** | Limited by VRAM | Unlimited |
+| **Uptime** | Your machine | 99.9% |
+| **Fine-tuning** | Possible with QLoRA | Possible via API |
+| **Context window** | 8-16K | 128K (GPT-4o) |
+
+**My recommendation**: Use local for 90% of work. For the final paper polish or very complex multi-paper synthesis, call GPT-4o API as a premium tier fallback.
+
+---
+
+## Quick Start Script
+
+```bash
+#!/bin/bash
+# quick-start.sh — Download models and start servers
+
+echo "=== Research LLM Setup for RTX 3080 Ti ==="
+
+# Create directories
+mkdir -p ~/models/research
+
+# Download models (only if not present)
+download_if_missing() {
+    if [ ! -f "$2" ]; then
+        echo "Downloading $1..."
+        wget -q --show-progress "$1" -O "$2"
+    else
+        echo "✓ $1 already downloaded"
+    fi
+}
+
+download_if_missing \
+  "https://huggingface.co/bartowski/Qwen2.5-14B-Instruct-GGUF/resolve/main/Qwen2.5-14B-Instruct-Q4_K_M.gguf" \
+  ~/models/research/qwen2.5-14b-q4km.gguf
+
+download_if_missing \
+  "https://huggingface.co/bartowski/Qwen2.5-7B-Instruct-GGUF/resolve/main/Qwen2.5-7B-Instruct-Q6_K.gguf" \
+  ~/models/research/qwen2.5-7b-q6.gguf
+
+download_if_missing \
+  "https://huggingface.co/bartowski/DeepSeek-Coder-V2-Lite-Instruct-GGUF/resolve/main/DeepSeek-Coder-V2-Lite-Instruct-IQ4_XS.gguf" \
+  ~/models/research/deepseek-coder-v2-lite-iq4xs.gguf
+
+# Start servers
+echo "Starting LLM servers..."
+./start-llm-servers.sh
+
+# Wait for servers to be ready
+echo "Waiting for servers..."
+sleep 10
+
+# Health check
+python -c "
+from backend.services.local_llm_service import create_local_llm_provider
+provider = create_local_llm_provider()
+status = provider.health_check()
+print(f'Servers ready: {status}')
+"
+
+echo "=== Setup complete ==="
+```

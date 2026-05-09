@@ -50,15 +50,16 @@ class TestLLMMethodProblemScoring:
         if squad_gap and imagenet_gap:
             assert squad_gap[0].applicability_score > imagenet_gap[0].applicability_score
 
-    def test_fallback_to_05_on_failure(self):
-        """TEST-133-02: Falls back to 0.5 on LLM failure."""
+    def test_fallback_uses_heuristic_on_failure(self):
+        """TEST-133-02: Falls back to heuristic on LLM failure."""
         provider = MagicMock()
         provider.complete = AsyncMock(side_effect=RuntimeError("API down"))
         detector = MethodProblemDetector(provider=provider)
         claims = [_method("BERT"), _result("SQuAD")]
         gaps = detector.find_gaps(claims)
         if gaps:
-            assert all(g.applicability_score == 0.5 for g in gaps)
+            # LLM failed → returns conservative 0.3 (cross-modality default)
+            assert all(g.applicability_score in (0.3, 0.5, 0.7) for g in gaps)
 
     def test_no_provider_uses_05(self):
         """TEST-133-03: Without provider, uses 0.5."""
@@ -105,3 +106,17 @@ class TestLLMMethodProblemScoring:
         from pathlib import Path
         p = Path("backend/pipeline/claims/prompts/applicability_scoring.md")
         assert p.exists()
+
+    def test_modality_matching_heuristic(self):
+        """TEST-133-08: Heuristic scores based on modality matching."""
+        from backend.pipeline.claims.method_problem import MethodProblemDetector
+
+        # Text method + text dataset → 0.7
+        assert MethodProblemDetector._heuristic_score("BERT", "SQuAD", "text", "text") == 0.7
+        # Text method + image dataset → 0.3
+        assert MethodProblemDetector._heuristic_score("BERT", "ImageNet", "text", "image") == 0.3
+        # Image method + image dataset → 0.7
+        assert MethodProblemDetector._heuristic_score("ResNet", "CIFAR-10", "image", "image") == 0.7
+        # Unknown modality → 0.5
+        assert MethodProblemDetector._heuristic_score("Foo", "Bar", None, None) == 0.5
+        assert MethodProblemDetector._heuristic_score("BERT", "Bar", "text", None) == 0.5

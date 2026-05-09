@@ -88,24 +88,79 @@ class MethodProblemDetector:
         return sorted(gaps, key=lambda g: g.applicability_score, reverse=True)
 
     def _find_gaps_sync(self, claims: list[Claim]) -> list[MethodProblemGap]:
-        """Sync fallback when already inside an event loop."""
+        """Sync fallback when already inside an event loop.
+        
+        Uses modality-matching heuristic instead of uniform 0.5:
+        - Text method + text dataset   → 0.7 (likely compatible)
+        - Image method + image dataset → 0.7
+        - Cross-modality              → 0.3 (probably incompatible)
+        - Unknown modality            → 0.5 (no signal)
+        """
         methods, datasets, known_pairs = self._extract_methods_datasets(claims)
         if not methods or not datasets:
             return []
+
+        # Build modality map from METHOD claims
+        method_modalities: dict[str, str] = {}
+        for claim in claims:
+            if claim.claim_type == ClaimType.METHOD and claim.method_name:
+                desc = (claim.description or "").lower()
+                if any(w in desc for w in ["image", "vision", "visual", "convolutional", "resnet", "vit", "cnn"]):
+                    method_modalities[claim.method_name.lower()] = "image"
+                elif any(w in desc for w in ["text", "language", "nlp", "transformer", "bert", "gpt", "llm"]):
+                    method_modalities[claim.method_name.lower()] = "text"
+                elif any(w in desc for w in ["audio", "speech", "wave", "acoustic"]):
+                    method_modalities[claim.method_name.lower()] = "audio"
+
+        # Build dataset modality map from RESULT claims
+        dataset_modalities: dict[str, str] = {}
+        for claim in claims:
+            if claim.claim_type == ClaimType.RESULT and claim.dataset:
+                ds = claim.dataset.lower()
+                if any(w in ds for w in ["imagenet", "cifar", "mnist", "coco", "voc", "isic", "visual"]):
+                    dataset_modalities[ds] = "image"
+                elif any(w in ds for w in ["squad", "glue", "mnli", "qqp", "sst", "wikitext", "ptb"]):
+                    dataset_modalities[ds] = "text"
+                elif any(w in ds for w in ["librispeech", "voxforge", "timit", "audio"]):
+                    dataset_modalities[ds] = "audio"
 
         gaps: list[MethodProblemGap] = []
         for method_name, paper_id in methods:
             for dataset in datasets:
                 pair = (method_name.lower(), dataset.lower())
                 if pair not in known_pairs:
+                    score = self._heuristic_score(
+                        method_name, dataset,
+                        method_modalities.get(method_name.lower()),
+                        dataset_modalities.get(dataset.lower()),
+                    )
                     gaps.append(MethodProblemGap(
                         method_name=method_name,
                         method_paper_id=paper_id,
                         problem_dataset=dataset,
-                        applicability_score=0.5,
-                        reasoning=f"{method_name} has not been applied to {dataset}",
+                        applicability_score=score,
+                        reasoning=f"{method_name} has not been applied to {dataset}" + 
+                                  (f" (modality: {method_modalities.get(method_name.lower(), '?')}→{dataset_modalities.get(dataset.lower(), '?')})" 
+                                   if method_modalities.get(method_name.lower()) or dataset_modalities.get(dataset.lower()) else ""),
                     ))
         return sorted(gaps, key=lambda g: g.applicability_score, reverse=True)
+
+    @staticmethod
+    def _heuristic_score(method_name: str, dataset: str,
+                         method_modality: str | None, dataset_modality: str | None) -> float:
+        """Modality-matching heuristic for applicability scoring.
+        
+        Returns:
+            0.7 if modalities match (text→text, image→image)
+            0.3 if modalities mismatch (text→image)
+            0.5 if either modality is unknown
+        """
+        if method_modality and dataset_modality:
+            if method_modality == dataset_modality:
+                return 0.7
+            else:
+                return 0.3
+        return 0.5  # Unknown modality for either
 
     @staticmethod
     def _extract_methods_datasets(claims: list[Claim]):
@@ -125,7 +180,7 @@ class MethodProblemDetector:
         return methods, datasets, known_pairs
 
     async def _score_gap_llm(self, method_name: str, dataset: str) -> float:
-        """Use LLM to score applicability. Returns 0.5 on failure."""
+        """Use LLM to score applicability. Falls back to heuristic on failure."""
         try:
             prompt = self._prompt_template.replace("{method_name}", method_name).replace("{dataset_name}", dataset)
             messages = [{"role": "user", "content": prompt}]
@@ -142,5 +197,5 @@ class MethodProblemDetector:
             return max(0.0, min(1.0, score))
 
         except Exception as e:
-            logger.warning("LLM applicability scoring failed: %s", e)
-            return 0.5
+            logger.warning("LLM applicability scoring failed, using heuristic: %s", e)
+            return 0.3  # Conservative: assume cross-modality when LLM fails
