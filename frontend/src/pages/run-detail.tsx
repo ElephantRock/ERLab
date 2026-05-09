@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect } from "react";
+import { useMemo, useState, useEffect, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate, useParams } from "react-router-dom";
 import { getRunDetail, getRunIdeas } from "@/api/pipeline";
@@ -18,6 +18,7 @@ import {
   Lightbulb,
   Clock,
   GitBranch,
+  Timer,
 } from "lucide-react";
 import type { IdeaSummary } from "@/api/types";
 import { TreeVisualization } from "@/components/pipeline/tree-visualization";
@@ -29,11 +30,22 @@ const statusColors: Record<string, string> = {
   failed: "bg-red-100 text-red-800",
 };
 
+function fmtDuration(sec: number): string {
+  if (sec < 60) return `${sec.toFixed(0)}s`;
+  const m = Math.floor(sec / 60);
+  const s = Math.floor(sec % 60);
+  if (m < 60) return `${m}m ${s}s`;
+  const h = Math.floor(m / 60);
+  return `${h}h ${m % 60}m ${s}s`;
+}
+
 export default function RunDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const runId = Number(id);
-  const [now, setNow] = useState(Date.now());
+
+  // Tick every second for live elapsed timer
+  const [tick, setTick] = useState(0);
 
   const {
     data: run,
@@ -43,28 +55,43 @@ export default function RunDetail() {
     queryKey: ["run", runId],
     queryFn: () => getRunDetail(runId),
     enabled: !isNaN(runId),
+    // Fast refetch while running — every 3 seconds
+    refetchInterval: (query) => {
+      const data = query.state.data;
+      return data && data.status === "running" ? 3000 : false;
+    },
   });
+
+  const isRunning = run?.status === "running";
 
   const { data: ideasData } = useQuery({
     queryKey: ["run", runId, "ideas"],
     queryFn: () => getRunIdeas(runId),
     enabled: !isNaN(runId) && !!run,
+    refetchInterval: isRunning ? 5000 : false,
   });
 
-  // Stale run detector (BATCH-55): re-check every 30 seconds
+  // Live 1-second tick
+  useEffect(() => {
+    if (!isRunning) return;
+    const interval = setInterval(() => setTick((t) => t + 1), 1000);
+    return () => clearInterval(interval);
+  }, [isRunning]);
+
+  // Live elapsed time
+  const elapsedSec = useMemo(() => {
+    if (!run) return 0;
+    const start = new Date(run.created_at).getTime();
+    const end = run.completed_at ? new Date(run.completed_at).getTime() : Date.now();
+    return Math.max(0, (end - start) / 1000);
+  }, [run, tick]);
+
+  // Stale run detector (BATCH-55)
   const isStale = useMemo(() => {
     if (!run || run.status !== "running") return false;
     const created = new Date(run.created_at).getTime();
-    return Date.now() - created > 5 * 60 * 1000; // 5 minutes
-  }, [run, now]);
-
-  useEffect(() => {
-    if (!run || run.status !== "running") return;
-    const interval = setInterval(() => {
-      setNow(Date.now());
-    }, 30000);
-    return () => clearInterval(interval);
-  }, [run]);
+    return Date.now() - created > 5 * 60 * 1000;
+  }, [run, tick]);
 
   if (runError) {
     return (
@@ -113,6 +140,8 @@ export default function RunDetail() {
   }
 
   const ideas = ideasData?.ideas ?? [];
+  const progressPct = Math.min(100, (run.stages_completed.length / PIPELINE_STAGES.length) * 100);
+  const currentStageLabel = PIPELINE_STAGES.find((s) => s.key === run.current_stage)?.label ?? run.current_stage;
 
   return (
     <div className="space-y-6" data-testid="run-detail">
@@ -129,10 +158,41 @@ export default function RunDetail() {
             <p className="text-sm text-muted-foreground">{run.domain}</p>
           </div>
         </div>
-        <Badge className={cn("text-sm", statusColors[run.status])} data-testid="run-status">
-          {run.status}
-        </Badge>
+        <div className="flex items-center gap-3">
+          {isRunning && (
+            <span className="text-sm text-muted-foreground font-mono tabular-nums flex items-center gap-1">
+              <Timer className="h-4 w-4" />
+              {fmtDuration(elapsedSec)}
+            </span>
+          )}
+          <Badge className={cn("text-sm", statusColors[run.status])} data-testid="run-status">
+            {run.status}
+          </Badge>
+        </div>
       </div>
+
+      {/* Live Progress Banner */}
+      {isRunning && (
+        <Card className="border-blue-200 dark:border-blue-800 bg-blue-50/50 dark:bg-blue-900/10" data-testid="live-progress">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2 text-blue-700 dark:text-blue-300">
+                <Loader2 className="h-5 w-5 animate-spin" />
+                <span className="text-sm font-medium">{currentStageLabel}</span>
+              </div>
+              <span className="text-xs text-muted-foreground">
+                Stage {run.stages_completed.length + 1} of {PIPELINE_STAGES.length}
+              </span>
+            </div>
+            <div className="w-full bg-blue-100 dark:bg-blue-900/30 rounded-full h-2 overflow-hidden">
+              <div
+                className="h-full bg-blue-500 rounded-full transition-all duration-1000 ease-linear"
+                style={{ width: `${progressPct}%` }}
+              />
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Stale Run Warning (BATCH-55) */}
       {isStale && (
@@ -179,7 +239,13 @@ export default function RunDetail() {
               <dd className="font-medium" data-testid="run-completed-at">
                 {run.completed_at
                   ? new Date(run.completed_at).toLocaleString()
-                  : "—"}
+                  : "\u2014"}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-muted-foreground">Duration</dt>
+              <dd className="font-medium font-mono tabular-nums" data-testid="run-duration">
+                {fmtDuration(elapsedSec)}
               </dd>
             </div>
           </dl>
@@ -208,11 +274,20 @@ export default function RunDetail() {
                   <span
                     className={cn(
                       "text-sm",
-                      isCompleted ? "text-foreground font-medium" : "text-muted-foreground",
+                      isCompleted
+                        ? "text-foreground font-medium"
+                        : isCurrent
+                          ? "text-blue-700 font-medium"
+                          : "text-muted-foreground",
                     )}
                   >
                     {stage.label}
                   </span>
+                  {isCurrent && (
+                    <span className="text-xs text-blue-500 ml-auto font-mono">
+                      {fmtDuration(elapsedSec)}
+                    </span>
+                  )}
                 </div>
               );
             })}
@@ -276,7 +351,9 @@ export default function RunDetail() {
         </CardHeader>
         <CardContent>
           {ideas.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No ideas generated in this run.</p>
+            <p className="text-sm text-muted-foreground">
+              {isRunning ? "Ideas will appear here once generated..." : "No ideas generated in this run."}
+            </p>
           ) : (
             <div className="space-y-3">
               {ideas.map((idea: IdeaSummary) => (
@@ -305,21 +382,13 @@ export default function RunDetail() {
         </CardContent>
       </Card>
 
-      {/* Duration info */}
-      {run.completed_at && run.created_at && (
+      {/* Duration card for completed runs */}
+      {run.status === "completed" && run.completed_at && run.created_at && (
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <Clock className="h-4 w-4" />
-              <span>
-                Duration:{" "}
-                {(
-                  (new Date(run.completed_at).getTime() -
-                    new Date(run.created_at).getTime()) /
-                  1000
-                ).toFixed(1)}{" "}
-                seconds
-              </span>
+              <span>Total duration: {fmtDuration(elapsedSec)}</span>
             </div>
           </CardContent>
         </Card>
