@@ -1,9 +1,9 @@
 # CODEBASE STATE
 
 Last Updated:       2026-05-10
-Updated By:         ivory-wolf — via BATCH-137 Close
+Updated By:         ivory-wolf — via BATCH-138 Close
 Framework Version:  5.3
-Phase:              BATCH-137 COMPLETE (Credential Hygiene + Secret Hardening)
+Phase:              BATCH-138 COMPLETE (Configuration Centralization)
 
 ───────────────────────────────────────────────────────────
 VERIFIED MODULE MAP
@@ -137,6 +137,13 @@ ARCHITECTURAL DECISIONS
   Source:   BATCH-137
   Active:   YES
 
+  DEC-008: config.py is the SOLE location for default URL and model values.
+           All pipeline modules read from settings via lazy import pattern
+           (try/except with get_settings()). Constructor override params
+           are allowed for testability.
+  Source:   BATCH-138
+  Active:   YES
+
 ───────────────────────────────────────────────────────────
 KNOWN GOTCHAS
 ───────────────────────────────────────────────────────────
@@ -158,13 +165,19 @@ KNOWN GOTCHAS
               first run. git clone alone won't produce a working .env.
   Status:      OPEN — expected behavior per DEC-007
 
+  GOTCHA-006: Literature sources (crossref, openalex, semantic_scholar) use
+              lazy import for settings (try/except). If imported before app
+              init, they fall back to hardcoded defaults. This is intentional
+              but means unit tests must mock get_settings explicitly.
+  Status:      MITIGATED — constructor api_base override for testability
+
 ───────────────────────────────────────────────────────────
 TEST BASELINE
 ───────────────────────────────────────────────────────────
 
-  Last verified count: 2,429
-  Verified in:         BATCH-137 (2026-05-10)
-  Breakdown:           2,416 pre-existing + 13 new (BATCH-137)
+  Last verified count: 2,457
+  Verified in:         BATCH-138 (2026-05-10)
+  Breakdown:           2,429 pre-existing + 28 new (BATCH-138)
 
 ───────────────────────────────────────────────────────────
 CARRY-FORWARD OBLIGATIONS

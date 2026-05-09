@@ -3,6 +3,20 @@
 All notable changes to the Elephant Rock Research Platform are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.138.0-prealpha] — 2026-05-10
+
+### Changed
+- **BATCH-138 — Configuration Centralization**
+  - Externalized CrossRef, OpenAlex, Semantic Scholar API URLs into
+    config.py (`EROCK_CROSSREF_API_URL`, `EROCK_OPENALEX_API_URL`,
+    `EROCK_SEMANTIC_SCHOLAR_API_URL`).
+  - Externalized compaction fallback model (`EROCK_COMPACTION_FALLBACK_MODEL`).
+  - All pipeline modules now read URLs/models from settings via lazy import
+    pattern — no more hardcoded values in non-config source files.
+  - Literature sources accept constructor `api_base` override for testability.
+  - Removed all `getattr` URL fallbacks from provider_factory.py.
+  - 28 new tests covering config defaults, env overrides, and constructor injection.
+
 ## [0.137.0-prealpha] — 2026-05-10
 
 ### Security
