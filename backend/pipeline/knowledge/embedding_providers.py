@@ -117,10 +117,16 @@ class OllamaEmbeddingProvider(EmbeddingProvider):
     def __init__(
         self,
         model: str = "nomic-embed-text",
-        base_url: str = "http://localhost:11434",
+        base_url: str | None = None,
     ):
         import httpx
 
+        if base_url is None:
+            try:
+                from backend.config import get_settings
+                base_url = get_settings().ollama_base_url
+            except Exception:
+                base_url = "http://localhost:11434"
         self._client = httpx.AsyncClient(timeout=60.0)
         self._model = model
         self._base_url = base_url
@@ -286,7 +292,7 @@ def create_embedding_provider(
     elif name == "ollama":
         return OllamaEmbeddingProvider(
             model=model or "nomic-embed-text",
-            base_url=base_url or "http://localhost:11434",
+            base_url=base_url,
         )
     else:
         raise ValueError(f"Unknown embedding provider: {provider_name}")

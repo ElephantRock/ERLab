@@ -63,7 +63,7 @@ class ObservabilityManager:
         trace_memory: bool = True,
         max_memory_spans: int = 10000,
         otlp_enabled: bool = False,
-        otlp_endpoint: str = "http://localhost:4317",
+        otlp_endpoint: str | None = None,
         otlp_protocol: str = "grpc",
         metrics_enabled: bool = True,
         cost_tracker: CostTracker | None = None,
@@ -72,6 +72,14 @@ class ObservabilityManager:
         self._memory_processor: InMemoryProcessor | None = None
         self._otlp_exporter = None
         self._metrics = None
+
+        # Resolve OTLP endpoint from settings if not explicitly provided
+        if otlp_endpoint is None:
+            try:
+                from backend.config import get_settings
+                otlp_endpoint = get_settings().observability_otlp_endpoint
+            except Exception:
+                otlp_endpoint = "http://localhost:4317"
 
         if trace_logging:
             self._composite.add(LoggingProcessor())

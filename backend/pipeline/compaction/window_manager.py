@@ -8,6 +8,15 @@ from typing import TYPE_CHECKING
 from backend.pipeline.compaction.model_profiles import get_context_size, get_trigger_threshold
 from backend.pipeline.compaction.offload import ContextOffloadStore
 
+
+def _get_fallback_model() -> str:
+    """Read compaction fallback model from settings."""
+    try:
+        from backend.config import get_settings
+        return get_settings().compaction_fallback_model
+    except Exception:
+        return "gpt-4o"
+
 if TYPE_CHECKING:
     from backend.providers.base import LLMProvider
 
@@ -44,7 +53,7 @@ class ContextWindowManager:
         run_id: str | None = None,
     ) -> list[dict]:
         """Main entry: check budget and compress if triggered."""
-        model = model_name or getattr(self._provider, "default_model", "gpt-4o")
+        model = model_name or getattr(self._provider, "default_model", _get_fallback_model())
         context_size = get_context_size(model)
         threshold = get_trigger_threshold(model, self._trigger_fraction)
 
@@ -94,7 +103,7 @@ class ContextWindowManager:
 
     def get_usage_report(self, messages: list[dict], model_name: str | None = None) -> dict:
         """Return current context utilization."""
-        model = model_name or getattr(self._provider, "default_model", "gpt-4o")
+        model = model_name or getattr(self._provider, "default_model", _get_fallback_model())
         context_size = get_context_size(model)
         current = self._estimate_total_tokens(messages)
         return {

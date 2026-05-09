@@ -36,6 +36,9 @@ class Settings(BaseSettings):
     # Academic APIs
     semantic_scholar_api_key: str | None = None
     openalex_email: str | None = None
+    crossref_api_url: str = "https://api.crossref.org"
+    openalex_api_url: str = "https://api.openalex.org"
+    semantic_scholar_api_url: str = "https://api.semanticscholar.org/graph/v1"
 
     # Knowledge Base
     chroma_persist_dir: str = "./data/chroma"
@@ -233,6 +236,7 @@ class Settings(BaseSettings):
     compaction_smart_truncation: bool = True
     compaction_summarization: bool = True
     compaction_budget_management: bool = True
+    compaction_fallback_model: str = "gpt-4o"
 
     # World Model + Autonomy (WP-8)
     versioning_enabled: bool = True

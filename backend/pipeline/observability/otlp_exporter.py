@@ -28,9 +28,16 @@ except ImportError:
 class OTLPExporter(TracingProcessor):
     """Converts Elephant Rock spans to OTLP and exports via gRPC or HTTP."""
 
-    def __init__(self, endpoint: str = "http://localhost:4317", protocol: str = "grpc") -> None:
+    def __init__(self, endpoint: str | None = None, protocol: str = "grpc") -> None:
         if not _OTEL_AVAILABLE:
             raise ImportError("opentelemetry packages not installed")
+
+        if endpoint is None:
+            try:
+                from backend.config import get_settings
+                endpoint = get_settings().observability_otlp_endpoint
+            except Exception:
+                endpoint = "http://localhost:4317"
 
         resource = Resource.create({"service.name": "elephant-rock"})
         provider = TracerProvider(resource=resource)

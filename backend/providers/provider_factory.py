@@ -303,7 +303,7 @@ def _wrap_cached(
             provider_name=getattr(settings, "embedding_provider", "openai"),
             model=getattr(settings, "embedding_model", "text-embedding-3-small"),
             api_key=getattr(settings, "openai_api_key", ""),
-            base_url=getattr(settings, "ollama_base_url", "http://localhost:11434"),
+            base_url=settings.ollama_base_url,
             dimension=getattr(settings, "embedding_dimension", 1536) or None,
         )
         emb_service = EmbeddingService(

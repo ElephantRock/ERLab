@@ -11,11 +11,17 @@ from backend.providers.base import LLMProvider, LLMResponse
 class OllamaProvider(LLMProvider):
     def __init__(
         self,
-        base_url: str = "http://localhost:11434",
+        base_url: str | None = None,
         model: str = "llama3",
         embedding_model: str = "nomic-embed-text",
     ):
         super().__init__()
+        if base_url is None:
+            try:
+                from backend.config import get_settings
+                base_url = get_settings().ollama_base_url
+            except Exception:
+                base_url = "http://localhost:11434"
         self._base_url = base_url.rstrip("/")
         self._model = model
         self._embedding_model = embedding_model

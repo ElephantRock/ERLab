@@ -20,8 +20,14 @@ class StructuredDocument:
 class PDFService:
     """Parse PDFs into structured text using S1-Parser or PyMuPDF fallback."""
 
-    def __init__(self, mode: str = "import", s1_parser_url: str = "http://localhost:8000"):
+    def __init__(self, mode: str = "import", s1_parser_url: str | None = None):
         self._mode = mode
+        if s1_parser_url is None:
+            try:
+                from backend.config import get_settings
+                s1_parser_url = get_settings().s1_parser_url
+            except Exception:
+                s1_parser_url = "http://localhost:8000"
         self._s1_url = s1_parser_url
 
     async def parse_pdf(self, file_path: str) -> StructuredDocument:

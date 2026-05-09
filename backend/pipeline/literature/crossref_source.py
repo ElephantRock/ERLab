@@ -14,7 +14,16 @@ from backend.pipeline.literature.models import Author, Paper, SearchResult
 
 logger = logging.getLogger(__name__)
 
-API_BASE = "https://api.crossref.org"
+DEFAULT_API_BASE = "https://api.crossref.org"
+
+
+def _get_api_base() -> str:
+    """Read CrossRef API base URL from settings, falling back to default."""
+    try:
+        from backend.config import get_settings
+        return get_settings().crossref_api_url
+    except Exception:
+        return DEFAULT_API_BASE
 
 
 class CrossRefSource(AcademicSearchSource):
@@ -23,12 +32,16 @@ class CrossRefSource(AcademicSearchSource):
     No API key required. Use mailto parameter for polite pool (faster).
     """
 
-    def __init__(self, mailto: str = "") -> None:
+    def __init__(self, mailto: str = "", api_base: str | None = None) -> None:
         self._mailto = mailto
+        base = api_base or _get_api_base()
+        user_agent = (
+            f"ElephantRock/1.0 (mailto:{mailto or 'noreply@example.com'})"
+        )
         self._client = httpx.AsyncClient(
-            base_url=API_BASE,
+            base_url=base,
             timeout=30.0,
-            headers={"User-Agent": f"ElephantRock/1.0 (mailto:{mailto or 'noreply@example.com'})"},
+            headers={"User-Agent": user_agent},
         )
 
     @property

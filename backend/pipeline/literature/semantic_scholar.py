@@ -11,15 +11,25 @@ from backend.pipeline.literature.models import Author, Paper, SearchResult
 
 logger = logging.getLogger(__name__)
 
-API_BASE = "https://api.semanticscholar.org/graph/v1"
+DEFAULT_API_BASE = "https://api.semanticscholar.org/graph/v1"
 SEARCH_FIELDS = "title,abstract,year,authors,citationCount,url,externalIds,venue,fieldsOfStudy"
 
 
+def _get_api_base() -> str:
+    """Read Semantic Scholar API base URL from settings, falling back to default."""
+    try:
+        from backend.config import get_settings
+        return get_settings().semantic_scholar_api_url
+    except Exception:
+        return DEFAULT_API_BASE
+
+
 class SemanticScholarSource(AcademicSearchSource):
-    def __init__(self, api_key: str | None = None):
+    def __init__(self, api_key: str | None = None, api_base: str | None = None):
+        base = api_base or _get_api_base()
         self._headers = {"x-api-key": api_key} if api_key else {}
         self._client = httpx.AsyncClient(
-            base_url=API_BASE,
+            base_url=base,
             headers=self._headers,
             timeout=30.0,
         )

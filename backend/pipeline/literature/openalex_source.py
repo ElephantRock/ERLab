@@ -9,15 +9,25 @@ from backend.pipeline.literature.models import Author, Paper, SearchResult
 
 logger = logging.getLogger(__name__)
 
-API_BASE = "https://api.openalex.org"
+DEFAULT_API_BASE = "https://api.openalex.org"
+
+
+def _get_api_base() -> str:
+    """Read OpenAlex API base URL from settings, falling back to default."""
+    try:
+        from backend.config import get_settings
+        return get_settings().openalex_api_url
+    except Exception:
+        return DEFAULT_API_BASE
 
 
 class OpenAlexSource(AcademicSearchSource):
-    def __init__(self, email: str | None = None):
+    def __init__(self, email: str | None = None, api_base: str | None = None):
         params = {}
         if email:
             params["mailto"] = email
-        self._client = httpx.AsyncClient(base_url=API_BASE, params=params, timeout=30.0)
+        base = api_base or _get_api_base()
+        self._client = httpx.AsyncClient(base_url=base, params=params, timeout=30.0)
 
     @property
     def source_name(self) -> str:
