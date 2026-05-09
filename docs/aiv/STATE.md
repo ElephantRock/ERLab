@@ -1,9 +1,9 @@
 # CODEBASE STATE
 
-Last Updated:       2026-05-07
-Updated By:         ivory-wolf — via BATCH-120 Close
+Last Updated:       2026-05-10
+Updated By:         ivory-wolf — via BATCH-137 Close
 Framework Version:  5.3
-Phase:              PHASE 8 COMPLETE (B112–B120)
+Phase:              BATCH-137 COMPLETE (Credential Hygiene + Secret Hardening)
 
 ───────────────────────────────────────────────────────────
 VERIFIED MODULE MAP
@@ -131,6 +131,12 @@ ARCHITECTURAL DECISIONS
   Source:   BATCH-112
   Active:   YES
 
+  DEC-007: .env.example is the SOLE environment template tracked in git.
+           .env is the SOLE source of runtime secrets. No .py file may
+           contain real credentials. Startup warnings fire on insecure defaults.
+  Source:   BATCH-137
+  Active:   YES
+
 ───────────────────────────────────────────────────────────
 KNOWN GOTCHAS
 ───────────────────────────────────────────────────────────
@@ -148,13 +154,17 @@ KNOWN GOTCHAS
   GOTCHA-004: ChromaDB stale zero-vector data from old runs.
   Status:      MITIGATED — validate_startup() warns
 
+  GOTCHA-005: .env must be manually created from .env.example before
+              first run. git clone alone won't produce a working .env.
+  Status:      OPEN — expected behavior per DEC-007
+
 ───────────────────────────────────────────────────────────
 TEST BASELINE
 ───────────────────────────────────────────────────────────
 
-  Last verified count: 2,292
-  Verified in:         BATCH-120 (2026-05-07)
-  Phase 8 delta:       +48 tests (B112: 8, B113: 8, B114: 7, B115: 7, B116: 7, B117: 7, B118: 4)
+  Last verified count: 2,429
+  Verified in:         BATCH-137 (2026-05-10)
+  Breakdown:           2,416 pre-existing + 13 new (BATCH-137)
 
 ───────────────────────────────────────────────────────────
 CARRY-FORWARD OBLIGATIONS

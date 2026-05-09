@@ -3,6 +3,19 @@
 All notable changes to the Elephant Rock Research Platform are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.137.0-prealpha] — 2026-05-10
+
+### Security
+- **BATCH-137 — Credential Hygiene + Secret Hardening**
+  - Removed `.env` from git tracking (`git rm --cached`). No secrets in repository.
+  - Expanded `.env.example` from 12 → 20 documented fields covering all
+    security-relevant settings (JWT, API keys, LM Studio, CORS, DB URL).
+  - Added startup security warnings: alerts when default JWT secret used with
+    `auth_enabled=True`, and when no LLM API key is configured.
+  - Replaced hardcoded developer IP (`100.64.0.1`) in config defaults and
+    provider factory with `localhost` / settings-based resolution.
+  - 13 new tests verifying git hygiene, warning behavior, and IP absence.
+
 ## [0.76.0-prealpha] — 2026-05-06
 
 ### Added
