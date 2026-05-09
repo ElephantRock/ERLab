@@ -240,6 +240,9 @@ class GapAnalysisStage(PipelineStage):
             return await self._execute_gap_analysis(ctx)
 
     async def _execute_gap_analysis(self, ctx: StageContext) -> bool:
+        # Brief pause to let API rate limiter cool after ingestion burst
+        await asyncio.sleep(15.0)
+
         prior_gaps = await self._recall_prior_gaps(ctx.domain)
         gaps, cluster_report = await self._gap_analyzer.analyze(
             ctx.all_papers,

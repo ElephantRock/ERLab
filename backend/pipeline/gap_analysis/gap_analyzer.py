@@ -1,5 +1,6 @@
 """Gap analysis — identify underexplored research areas."""
 
+import json
 import logging
 
 from backend.pipeline.gap_analysis.cluster_service import ClusterService
@@ -74,7 +75,7 @@ class GapAnalyzer:
 
         # Step 2: Build context for LLM
         cluster_summary = self._format_clusters(cluster_report)
-        paper_summaries = self._format_paper_summaries(papers[:30])  # Limit context
+        paper_summaries = self._format_paper_summaries(papers[:20])  # Limit context to avoid timeout
 
         # Step 3: Ask LLM to identify gaps
         prompt = GAP_ANALYSIS_PROMPT.format(
@@ -84,48 +85,26 @@ class GapAnalyzer:
         )
 
         try:
-            if not hasattr(self._provider, 'structured_output'):
-                logger.error(
-                    "GapAnalyzer._provider is %s (type: %s), not an LLMProvider!",
-                    self._provider, type(self._provider).__name__,
-                )
-                return [], cluster_report
-            result = await self._provider.structured_output(
+            # Use complete() instead of structured_output() to avoid tool_use timeout
+            # through the z.ai proxy
+            raw_response = await self._provider.complete(
                 messages=[
-                    {"role": "system", "content": f"You are a {domain} research analyst."},
+                    {"role": "system", "content": f"You are a {domain} research analyst. Respond with valid JSON only."},
                     {"role": "user", "content": prompt},
                 ],
-                schema={
-                    "type": "object",
-                    "properties": {
-                        "gaps": {
-                            "type": "array",
-                            "items": {
-                                "type": "object",
-                                "properties": {
-                                    "title": {"type": "string"},
-                                    "description": {"type": "string"},
-                                    "gap_type": {"type": "string"},
-                                    "related_clusters": {
-                                        "type": "array",
-                                        "items": {"type": "integer"},
-                                    },
-                                    "potential_impact": {"type": "string"},
-                                    "confidence": {"type": "number"},
-                                },
-                                "required": [
-                                    "title",
-                                    "description",
-                                    "gap_type",
-                                    "potential_impact",
-                                    "confidence",
-                                ],
-                            },
-                        }
-                    },
-                    "required": ["gaps"],
-                },
+                temperature=0.3,
+                max_tokens=4096,
             )
+
+            # Parse JSON from response
+            response_text = raw_response.strip()
+            if "```json" in response_text:
+                response_text = response_text.split("```json")[1].split("```")[0].strip()
+            elif "```" in response_text:
+                response_text = response_text.split("```")[1].split("```")[0].strip()
+
+            parsed = json.loads(response_text)
+            result = parsed if isinstance(parsed, dict) else {"gaps": parsed}
 
             gaps = []
             # Handle both dict and list returns from different providers
@@ -203,7 +182,7 @@ class GapAnalyzer:
     def _format_paper_summaries(papers: list[Paper]) -> str:
         lines = []
         for i, p in enumerate(papers[:30], 1):
-            abstract = (p.abstract or "")[:200]
+            abstract = (p.abstract or "")[:150]
             # Include authors and year for citation grounding
             authors_str = ""
             if hasattr(p, 'authors') and p.authors:

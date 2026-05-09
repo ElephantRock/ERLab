@@ -17,7 +17,7 @@ class AnthropicProvider(LLMProvider):
         base_url: str | None = None,
     ):
         super().__init__()
-        kwargs = {"api_key": api_key}
+        kwargs = {"api_key": api_key, "timeout": 600.0}  # 10 min timeout
         if base_url:
             kwargs["base_url"] = base_url
         self._client = anthropic.AsyncAnthropic(**kwargs)
