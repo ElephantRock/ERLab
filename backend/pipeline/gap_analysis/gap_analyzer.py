@@ -110,13 +110,28 @@ class GapAnalyzer:
             # Handle both dict and list returns from different providers
             raw_gaps = result.get("gaps", []) if isinstance(result, dict) else (result if isinstance(result, list) else [])
             for g in raw_gaps:
+                # Normalize related_clusters: local LLMs may return strings instead of ints
+                clusters_raw = g.get("related_clusters", [])
+                clusters_normalized: list[int] = []
+                for c in clusters_raw:
+                    if isinstance(c, int):
+                        clusters_normalized.append(c)
+                    elif isinstance(c, str):
+                        # Try to extract integer from strings like "Cluster 1 (vision)" or "1"
+                        import re as _re
+                        match = _re.search(r'\d+', c)
+                        if match:
+                            clusters_normalized.append(int(match.group()))
+                    elif isinstance(c, (float,)):
+                        clusters_normalized.append(int(c))
+
                 new_gap = ResearchGap(
                     title=g.get("title", "Untitled Gap"),
                     description=g.get("description", ""),
                     gap_type=g.get("gap_type", "unknown"),
-                    related_clusters=g.get("related_clusters", []),
+                    related_clusters=clusters_normalized,
                     potential_impact=g.get("potential_impact", ""),
-                    confidence=min(1.0, max(0.0, g.get("confidence", 0.5))),
+                    confidence=min(1.0, max(0.0, float(g.get("confidence", 0.5)))),
                 )
 
                 # Truth revision: if this gap matches a prior gap, revise truth
