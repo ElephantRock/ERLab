@@ -58,6 +58,8 @@ class WikiEntry:
     # Verifier output
     quality_score: float = 0.0           # 0-1, set by WikiVerifier
     unsupported_claims: list[str] = field(default_factory=list)
+    verification_results: list = field(default_factory=list)  # List[ClaimVerificationResult]
+    trust_tier_summary: str = ""          # Aggregate trust: "3 HIGH, 2 MEDIUM, 1 LOW"
 
     # Additional
     related_methods: list[str] = field(default_factory=list)
