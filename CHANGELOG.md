@@ -21,6 +21,19 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
     settings reads from `self._settings`.
   - 13 new tests (budgets: 10, constraints: 3).
 
+## [0.139.0-prealpha] — 2026-05-10
+
+### Changed
+- **BATCH-139 — Token Budget & Threshold Externalization**
+  - Externalized all 5 stage token budgets into config.py as JSON string
+    (`EROCK_COMPACTION_STAGE_BUDGETS`) with graceful malformed-JSON fallback.
+  - Externalized paper limits per stage (`EROCK_COMPACTION_PAPER_LIMITS`).
+  - Externalized abstract char limits (`EROCK_COMPACTION_ABSTRACT_CHARS_TIGHT/LOOSE`).
+  - Externalized constraint config (`EROCK_CONSTRAINT_MAX_SIZE`, `MAX_GROWTH_PCT`,
+    `MIN_SECTIONS`, `ALLOW_EMPTY`) into config.py from orchestrator.py.
+  - Pipeline quality-vs-cost tuning is now possible via `.env` edits only.
+  - 13 new tests including malformed JSON fallback coverage.
+
 ## [0.138.0-prealpha] — 2026-05-10
 
 ### Changed

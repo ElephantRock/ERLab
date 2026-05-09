@@ -1,9 +1,9 @@
 # CODEBASE STATE
 
 Last Updated:       2026-05-10
-Updated By:         ivory-wolf — via BATCH-138 Close
+Updated By:         ivory-wolf — via BATCH-139 Close
 Framework Version:  5.3
-Phase:              BATCH-138 COMPLETE (Configuration Centralization)
+Phase:              BATCH-139 COMPLETE (Token Budget & Threshold Externalization)
 
 ───────────────────────────────────────────────────────────
 VERIFIED MODULE MAP
@@ -175,9 +175,9 @@ KNOWN GOTCHAS
 TEST BASELINE
 ───────────────────────────────────────────────────────────
 
-  Last verified count: 2,457
-  Verified in:         BATCH-138 (2026-05-10)
-  Breakdown:           2,429 pre-existing + 28 new (BATCH-138)
+  Last verified count: 2,470
+  Verified in:         BATCH-139 (2026-05-10)
+  Breakdown:           2,457 pre-existing + 13 new (BATCH-139)
 
 ───────────────────────────────────────────────────────────
 CARRY-FORWARD OBLIGATIONS
