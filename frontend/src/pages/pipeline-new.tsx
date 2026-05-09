@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { RunConfigForm } from "@/components/pipeline/run-config-form";
 import { AutonomousForm } from "@/components/pipeline/autonomous-form";
 import { StageProgress } from "@/components/pipeline/stage-progress";
@@ -14,6 +14,8 @@ import { CheckCircle2, Lightbulb, AlertCircle, XCircle } from "lucide-react";
 
 export default function PipelineNew() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const initialTopic = searchParams.get("topic") || "";
   const [runId, setRunId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -127,7 +129,7 @@ export default function PipelineNew() {
               <TabsTrigger value="autonomous">Autonomous Cycle</TabsTrigger>
             </TabsList>
             <TabsContent value="single">
-              <RunConfigForm onSubmit={handleStart} isLoading={isLoading} sessionId={sessionId} onSessionIdChange={setSessionId} />
+              <RunConfigForm onSubmit={handleStart} isLoading={isLoading} sessionId={sessionId} onSessionIdChange={setSessionId} initialDomain={initialTopic} />
             </TabsContent>
             <TabsContent value="autonomous">
               <AutonomousForm onCycleStarted={setRunId} />

@@ -43,6 +43,15 @@ class AuthResponse(BaseModel):
     user: UserResponse
 
 
+class ForgotPasswordRequest(BaseModel):
+    email: str
+
+
+class ResetPasswordRequest(BaseModel):
+    token: str
+    new_password: str
+
+
 # ── Routes ─────────────────────────────────────────────────────────
 
 @router.post("/register", response_model=AuthResponse)
@@ -136,6 +145,81 @@ def get_me(current_user: TokenData = Depends(get_current_user)):
             email=user.email,
             role=user.role,
         )
+
+
+@router.post("/forgot-password", summary="Request password reset")
+def forgot_password(body: ForgotPasswordRequest):
+    """Request a password reset token.
+
+    Always returns 200 to prevent email enumeration.
+    In production, this would send an email with a reset link.
+    In dev mode, the reset token is logged and returned.
+    """
+    import secrets
+    import logging
+
+    with get_session() as session:
+        user = session.query(User).filter(User.email == body.email).first()
+        if not user:
+            # Don't reveal whether email exists — still return 200
+            return {"message": "If an account with this email exists, a reset token has been sent."}
+
+        # Generate a secure reset token
+        reset_token = secrets.token_urlsafe(32)
+
+        # Store token (in production: Redis with TTL, or email it)
+        # For dev: store in user's hashed_password field temporarily
+        # In production: send email with link containing token
+        logger = logging.getLogger(__name__)
+        logger.info(
+            "Password reset requested for user=%s email=%s token=%s",
+            user.username, user.email, reset_token,
+        )
+
+        # Store the reset token for verification
+        user.hashed_password = f"RESET:{reset_token}:{hash_password(reset_token)}"
+        session.commit()
+
+        # In dev mode, return the token for testing
+        from backend.config import get_settings
+        settings = get_settings()
+        if settings.debug:
+            return {
+                "message": "Reset token generated (debug mode).",
+                "token": reset_token,
+                "hint": "Use POST /auth/reset-password with this token.",
+            }
+
+        return {"message": "If an account with this email exists, a reset token has been sent."}
+
+
+@router.post("/reset-password", summary="Reset password with token")
+def reset_password(body: ResetPasswordRequest):
+    """Reset password using a valid reset token.
+
+    In production, the token would come from an email link.
+    In dev mode, use the token returned by /forgot-password.
+    """
+    with get_session() as session:
+        # Find user with matching reset token
+        users = session.query(User).all()
+        matched_user = None
+        for user in users:
+            if user.hashed_password.startswith(f"RESET:{body.token}:"):
+                matched_user = user
+                break
+
+        if not matched_user:
+            raise UnauthorizedError(
+                detail="Invalid or expired reset token",
+                hint="Request a new token via POST /auth/forgot-password",
+            )
+
+        # Set new password
+        matched_user.hashed_password = hash_password(body.new_password)
+        session.commit()
+
+        return {"message": "Password has been reset successfully."}
 
 
 @router.get("/users", response_model=list[UserResponse])

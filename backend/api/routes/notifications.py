@@ -4,10 +4,11 @@ import asyncio
 import json
 import logging
 
-from fastapi import APIRouter, Query, Request
+from fastapi import APIRouter, Depends, Query, Request
 from fastapi.responses import StreamingResponse
 
 from backend.api.errors import ForbiddenError, NotFoundError, UnauthorizedError
+from backend.api.auth import get_current_user
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -16,14 +17,15 @@ logger = logging.getLogger(__name__)
 @router.get(
     "/",
     summary="List notifications",
-    description="List notifications with pagination, filterable by read status.",
+    description="List notifications with pagination, filterable by read status. Returns only notifications for the current user.",
 )
 async def list_notifications(
     limit: int = Query(default=20, ge=1, le=100),
     offset: int = Query(default=0, ge=0),
     read: bool | None = Query(default=None),
+    current_user=Depends(get_current_user),
 ):
-    """List notifications with pagination.
+    """List notifications with pagination, filtered by current user.
 
     Args:
         limit: Maximum number of notifications to return (1-100).
@@ -37,10 +39,18 @@ async def list_notifications(
     from backend.db.models import NotificationDB
     from sqlalchemy import select, func
 
+    user_id = current_user.user_id
+
     with get_session() as session:
-        # Build query
+        # Build query — filter by user_id when available
         query = select(NotificationDB).order_by(NotificationDB.created_at.desc())
         count_query = select(func.count(NotificationDB.id))
+
+        if user_id and user_id != 0:
+            # Real authenticated user — show only their notifications
+            query = query.where(NotificationDB.user_id == user_id)
+            count_query = count_query.where(NotificationDB.user_id == user_id)
+        # else: dev mode (user_id=0) — show all (backward compatible)
 
         if read is not None:
             query = query.where(NotificationDB.read == read)
@@ -106,8 +116,8 @@ async def mark_read(notification_id: int):
     summary="Mark all notifications as read",
     description="Mark all notifications as read.",
 )
-async def mark_all_read():
-    """Mark all notifications as read.
+async def mark_all_read(current_user=Depends(get_current_user)):
+    """Mark all notifications as read for the current user.
 
     Returns:
         {"updated": N} — number of notifications updated.
@@ -115,8 +125,13 @@ async def mark_all_read():
     from backend.db.database import get_session
     from backend.db.models import NotificationDB
 
+    user_id = current_user.user_id
+
     with get_session() as session:
-        count = session.query(NotificationDB).filter(NotificationDB.read == False).update({"read": True})
+        q = session.query(NotificationDB).filter(NotificationDB.read == False)
+        if user_id and user_id != 0:
+            q = q.filter(NotificationDB.user_id == user_id)
+        count = q.update({"read": True})
         session.commit()
         return {"updated": count}
 

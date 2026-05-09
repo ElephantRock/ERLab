@@ -11,19 +11,32 @@ export default function LoginPage() {
   const { login, register } = useAuth();
   const navigate = useNavigate();
 
-  const [mode, setMode] = useState<"login" | "register">("login");
+  const [mode, setMode] = useState<"login" | "register" | "forgot">("login");
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setError("");
+    setSuccess("");
     setSubmitting(true);
 
     try {
+      if (mode === "forgot") {
+        const res = await fetch("/api/v1/auth/forgot-password", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data?.error?.message || data?.detail || "Reset failed");
+        setSuccess(data.message || "Reset instructions sent.");
+        return;
+      }
       if (mode === "register") {
         await register(username, email, password);
       } else {
@@ -44,26 +57,28 @@ export default function LoginPage() {
       <Card className="w-full max-w-sm">
         <CardHeader>
           <CardTitle className="text-xl text-center">
-            {mode === "login" ? "Sign In" : "Create Account"}
+            {mode === "login" ? "Sign In" : mode === "register" ? "Create Account" : "Reset Password"}
           </CardTitle>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4" data-testid="auth-form">
-            <div className="space-y-2">
-              <label className="text-sm font-medium" htmlFor="username">
-                Username
-              </label>
-              <Input
-                id="username"
-                placeholder="Username"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                required
-                data-testid="username-input"
-              />
-            </div>
+            {(mode === "login" || mode === "register") && (
+              <div className="space-y-2">
+                <label className="text-sm font-medium" htmlFor="username">
+                  Username
+                </label>
+                <Input
+                  id="username"
+                  placeholder="Username"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  required
+                  data-testid="username-input"
+                />
+              </div>
+            )}
 
-            {mode === "register" && (
+            {(mode === "register" || mode === "forgot") && (
               <div className="space-y-2">
                 <label className="text-sm font-medium" htmlFor="email">
                   Email
@@ -80,24 +95,32 @@ export default function LoginPage() {
               </div>
             )}
 
-            <div className="space-y-2">
-              <label className="text-sm font-medium" htmlFor="password">
-                Password
-              </label>
-              <Input
-                id="password"
-                type="password"
-                placeholder="Password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                data-testid="password-input"
-              />
-            </div>
+            {(mode === "login" || mode === "register") && (
+              <div className="space-y-2">
+                <label className="text-sm font-medium" htmlFor="password">
+                  Password
+                </label>
+                <Input
+                  id="password"
+                  type="password"
+                  placeholder="Password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  data-testid="password-input"
+                />
+              </div>
+            )}
 
             {error && (
               <p className="text-sm text-red-500" data-testid="auth-error">
                 {error}
+              </p>
+            )}
+
+            {success && (
+              <p className="text-sm text-green-600" data-testid="auth-success">
+                {success}
               </p>
             )}
 
@@ -111,36 +134,58 @@ export default function LoginPage() {
                 ? "Please wait..."
                 : mode === "login"
                   ? "Sign In"
-                  : "Create Account"}
+                  : mode === "register"
+                    ? "Create Account"
+                    : "Send Reset Link"}
             </Button>
 
-            <div className="text-center text-sm">
-              {mode === "login" ? (
-                <span>
-                  Don't have an account?{" "}
-                  <button
-                    type="button"
-                    className="text-primary underline"
-                    onClick={() => {
-                      setMode("register");
-                      setError("");
-                    }}
-                    data-testid="switch-to-register"
-                  >
-                    Register
-                  </button>
-                </span>
-              ) : (
+            <div className="text-center text-sm space-y-1">
+              {mode === "login" && (
+                <>
+                  <div>
+                    <button
+                      type="button"
+                      className="text-primary underline"
+                      onClick={() => { setMode("forgot"); setError(""); setSuccess(""); }}
+                      data-testid="switch-to-forgot"
+                    >
+                      Forgot password?
+                    </button>
+                  </div>
+                  <div>
+                    Don't have an account?{" "}
+                    <button
+                      type="button"
+                      className="text-primary underline"
+                      onClick={() => { setMode("register"); setError(""); setSuccess(""); }}
+                      data-testid="switch-to-register"
+                    >
+                      Register
+                    </button>
+                  </div>
+                </>
+              )}
+              {mode === "register" && (
                 <span>
                   Already have an account?{" "}
                   <button
                     type="button"
                     className="text-primary underline"
-                    onClick={() => {
-                      setMode("login");
-                      setError("");
-                    }}
+                    onClick={() => { setMode("login"); setError(""); setSuccess(""); }}
                     data-testid="switch-to-login"
+                  >
+                    Sign In
+                  </button>
+                </span>
+              )}
+              {mode === "forgot" && (
+                <span>
+                  Remember your password?{" "}
+                  <button
+                    type="button"
+                    className="text-primary underline"
+                    onClick={() => { setMode("login"); setError(""); setSuccess(""); }}
+                    data-testid="switch-to-login-from-forgot"
                   >
                     Sign In
                   </button>

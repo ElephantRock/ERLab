@@ -24,10 +24,11 @@ interface RunConfigFormProps {
   isLoading?: boolean;
   sessionId?: string;
   onSessionIdChange?: (value: string) => void;
+  initialDomain?: string;
 }
 
-export function RunConfigForm({ onSubmit, isLoading, sessionId = "", onSessionIdChange }: RunConfigFormProps) {
-  const [domain, setDomain] = useState("");
+export function RunConfigForm({ onSubmit, isLoading, sessionId = "", onSessionIdChange, initialDomain = "" }: RunConfigFormProps) {
+  const [domain, setDomain] = useState(initialDomain);
   const [maxGaps, setMaxGaps] = useState(VALIDATION.max_gaps.default);
   const [ideasPerRound, setIdeasPerRound] = useState(VALIDATION.ideas_per_round.default);
   const [generationRounds, setGenerationRounds] = useState(VALIDATION.generation_rounds.default);

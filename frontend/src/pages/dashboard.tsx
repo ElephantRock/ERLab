@@ -9,6 +9,8 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useNavigate } from "react-router-dom";
 import { Activity, Lightbulb, FlaskConical, Server } from "lucide-react";
+import { useState, useEffect } from "react";
+import { OnboardingOverlay } from "@/components/onboarding/onboarding-overlay";
 
 const ScoreDistributionChart = lazy(() =>
   import("@/components/charts/score-distribution").then((m) => ({ default: m.ScoreDistributionChart })),
@@ -22,6 +24,7 @@ const RunStatusChart = lazy(() =>
 
 export default function Dashboard() {
   const navigate = useNavigate();
+  const [showOnboarding, setShowOnboarding] = useState(false);
 
   const { data: status, isLoading: statusLoading } = useQuery({
     queryKey: ["status"],
@@ -47,6 +50,19 @@ export default function Dashboard() {
     queryKey: ["runs", { limit: 50 }],
     queryFn: () => listRuns({ limit: 50 }),
   });
+
+  // Onboarding: show for first-time users with no completed runs
+  useEffect(() => {
+    const onboardingDone = localStorage.getItem("erock_onboarding_complete");
+    if (!onboardingDone && runsData && (runsData.total ?? 0) === 0) {
+      setShowOnboarding(true);
+    }
+  }, [runsData]);
+
+  function handleOnboardingStart(topic: string) {
+    // Navigate to pipeline with the topic pre-filled
+    navigate(`/pipeline/new?topic=${encodeURIComponent(topic)}`);
+  }
 
   const hasChartData =
     (chartIdeas?.ideas.length ?? 0) > 0 || (chartRuns?.runs.length ?? 0) > 0;
@@ -211,6 +227,14 @@ export default function Dashboard() {
           )}
         </div>
       </div>
+
+      {/* Onboarding overlay for first-time users */}
+      {showOnboarding && (
+        <OnboardingOverlay
+          onStartPipeline={handleOnboardingStart}
+          onDismiss={() => setShowOnboarding(false)}
+        />
+      )}
     </div>
   );
 }
