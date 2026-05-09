@@ -45,33 +45,35 @@ class MethodProblemDetector:
         return "Score applicability of {method_name} to {dataset_name}. Return JSON: {\"applicability_score\": float, \"reasoning\": str, \"estimated_improvement\": str}"
 
     def find_gaps(self, claims: list[Claim]) -> list[MethodProblemGap]:
+        """Sync wrapper — calls async implementation."""
+        import asyncio
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            loop = None
+
+        if loop and loop.is_running():
+            # Already inside an event loop — run synchronously without LLM
+            return self._find_gaps_sync(claims)
+        else:
+            return asyncio.run(self._find_gaps_async(claims))
+
+    async def _find_gaps_async(self, claims: list[Claim]) -> list[MethodProblemGap]:
+        """Async implementation with LLM scoring."""
         if not claims:
             return []
 
-        methods: list[tuple[str, str]] = []
-        datasets: set[str] = set()
-        known_pairs: set[tuple[str, str]] = set()
-
-        for claim in claims:
-            if claim.claim_type == ClaimType.METHOD and claim.method_name:
-                methods.append((claim.method_name, claim.source_paper_id))
-            elif claim.claim_type == ClaimType.RESULT and claim.dataset:
-                datasets.add(claim.dataset)
-                if claim.method_name:
-                    known_pairs.add((claim.method_name.lower(), claim.dataset.lower()))
-
+        methods, datasets, known_pairs = self._extract_methods_datasets(claims)
         if not methods or not datasets:
             return []
 
         gaps: list[MethodProblemGap] = []
-        import asyncio
-
         for method_name, paper_id in methods:
             for dataset in datasets:
                 pair = (method_name.lower(), dataset.lower())
                 if pair not in known_pairs:
                     if self._provider is not None:
-                        score = asyncio.run(self._score_gap_llm(method_name, dataset))
+                        score = await self._score_gap_llm(method_name, dataset)
                     else:
                         score = 0.5
                     if score > 0:
@@ -84,6 +86,43 @@ class MethodProblemDetector:
                         ))
 
         return sorted(gaps, key=lambda g: g.applicability_score, reverse=True)
+
+    def _find_gaps_sync(self, claims: list[Claim]) -> list[MethodProblemGap]:
+        """Sync fallback when already inside an event loop."""
+        methods, datasets, known_pairs = self._extract_methods_datasets(claims)
+        if not methods or not datasets:
+            return []
+
+        gaps: list[MethodProblemGap] = []
+        for method_name, paper_id in methods:
+            for dataset in datasets:
+                pair = (method_name.lower(), dataset.lower())
+                if pair not in known_pairs:
+                    gaps.append(MethodProblemGap(
+                        method_name=method_name,
+                        method_paper_id=paper_id,
+                        problem_dataset=dataset,
+                        applicability_score=0.5,
+                        reasoning=f"{method_name} has not been applied to {dataset}",
+                    ))
+        return sorted(gaps, key=lambda g: g.applicability_score, reverse=True)
+
+    @staticmethod
+    def _extract_methods_datasets(claims: list[Claim]):
+        """Extract methods, datasets, and known pairs from claims."""
+        methods: list[tuple[str, str]] = []
+        datasets: set[str] = set()
+        known_pairs: set[tuple[str, str]] = set()
+
+        for claim in claims:
+            if claim.claim_type == ClaimType.METHOD and claim.method_name:
+                methods.append((claim.method_name, claim.source_paper_id))
+            elif claim.claim_type == ClaimType.RESULT and claim.dataset:
+                datasets.add(claim.dataset)
+                if claim.method_name:
+                    known_pairs.add((claim.method_name.lower(), claim.dataset.lower()))
+
+        return methods, datasets, known_pairs
 
     async def _score_gap_llm(self, method_name: str, dataset: str) -> float:
         """Use LLM to score applicability. Returns 0.5 on failure."""

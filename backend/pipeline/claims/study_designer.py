@@ -70,10 +70,18 @@ class StudyDesigner:
         if self._provider is not None:
             import asyncio
             try:
-                return asyncio.run(self._design_with_llm(title, problem, method))
-            except Exception as e:
-                logger.warning("LLM study design failed, falling back to template: %s", e)
+                loop = asyncio.get_running_loop()
+            except RuntimeError:
+                loop = None
+
+            if loop and loop.is_running():
                 return self._design_template(title, problem, method)
+            else:
+                try:
+                    return asyncio.run(self._design_with_llm(title, problem, method))
+                except Exception as e:
+                    logger.warning("LLM study design failed, falling back to template: %s", e)
+                    return self._design_template(title, problem, method)
         else:
             return self._design_template(title, problem, method)
 

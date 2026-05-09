@@ -50,12 +50,20 @@ class ContradictionDetector:
             candidates = self._find_candidates(claims)
             if self._provider is not None:
                 import asyncio
-                verified = []
-                for c in candidates:
-                    verified.append(asyncio.run(self._verify_contradiction(c)))
-                return verified
+                try:
+                    loop = asyncio.get_running_loop()
+                except RuntimeError:
+                    loop = None
+
+                if loop and loop.is_running():
+                    # Already inside event loop — use numeric fallback
+                    return [self._verify_numeric(c) for c in candidates]
+                else:
+                    verified = []
+                    for c in candidates:
+                        verified.append(asyncio.run(self._verify_contradiction(c)))
+                    return verified
             else:
-                # Fallback: numeric heuristic
                 return [self._verify_numeric(c) for c in candidates]
         except Exception as e:
             logger.warning("ContradictionDetector failed: %s", e)

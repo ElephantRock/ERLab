@@ -74,6 +74,13 @@ class ConnectionAgent:
         # Path 3: LLM-based inference for papers sharing datasets
         if self._provider is not None:
             import asyncio
+            try:
+                loop = asyncio.get_running_loop()
+            except RuntimeError:
+                loop = None
+
+            use_llm = not (loop and loop.is_running())
+
             dataset_papers: dict[str, set[str]] = {}
             paper_claims: dict[str, list[str]] = {}
             for claim in claims:
@@ -87,21 +94,20 @@ class ConnectionAgent:
                 papers = list(papers)
                 for i in range(len(papers)):
                     for j in range(i + 1, len(papers)):
-                        # Check if already connected
                         pair = tuple(sorted([papers[i], papers[j]]))
                         if any(tuple(sorted([c.paper_a, c.paper_b])) == pair for c in connections):
                             continue
-                        # LLM inference
-                        try:
-                            conn = asyncio.run(self._infer_connection(
-                                paper_claims.get(papers[i], []),
-                                paper_claims.get(papers[j], []),
-                                papers[i], papers[j],
-                            ))
-                            if conn:
-                                connections.append(conn)
-                        except Exception as e:
-                            logger.warning("LLM connection inference failed: %s", e)
+                        if use_llm:
+                            try:
+                                conn = asyncio.run(self._infer_connection(
+                                    paper_claims.get(papers[i], []),
+                                    paper_claims.get(papers[j], []),
+                                    papers[i], papers[j],
+                                ))
+                                if conn:
+                                    connections.append(conn)
+                            except Exception as e:
+                                logger.warning("LLM connection inference failed: %s", e)
 
         return self._deduplicate(connections)
 
