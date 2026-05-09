@@ -21,9 +21,16 @@ app = FastAPI(
 
 # ── Middleware ──────────────────────────────────────────────────────
 
+
+def _get_cors_origins() -> list[str]:
+    from backend.config import get_settings
+
+    return get_settings().effective_cors_origins
+
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=_get_cors_origins(),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -249,12 +256,31 @@ async def startup():
         traces_sample_rate=settings.sentry_traces_sample_rate,
     )
 
-    # Startup security warnings (BATCH-137)
+    # Startup security warnings (BATCH-137, BATCH-140)
     import logging
     _log = logging.getLogger(__name__)
 
-    # BATCH-137: Warn when JWT secret is the default value AND auth is enabled
-    if settings.auth_enabled and settings.jwt_secret == "dev-secret-change-in-production":
+    # BATCH-140: Warn when debug is forced off in production
+    if settings.is_production and settings.debug:
+        _log.warning(
+            "CONFIG: debug=True ignored in production mode (EROCK_ENV=production). "
+            "Debug is forced off for security."
+        )
+
+    # BATCH-140: Production JWT secret enforcement (fires REGARDLESS of auth_enabled)
+    if settings.is_production and settings.jwt_secret == "dev-secret-change-in-production":
+        _log.error(
+            "FATAL: Running in production with default JWT secret. "
+            "Set EROCK_JWT_SECRET to a strong random string."
+        )
+        raise RuntimeError("Insecure JWT secret in production mode")
+
+    # BATCH-137: Warn when JWT secret is default AND auth enabled (development only)
+    if (
+        not settings.is_production
+        and settings.auth_enabled
+        and settings.jwt_secret == "dev-secret-change-in-production"
+    ):
         _log.warning(
             "SECURITY: JWT secret is the default value while auth_enabled=True. "
             "Change EROCK_JWT_SECRET in .env to a strong random string for production use."

@@ -18,6 +18,7 @@ class Settings(BaseSettings):
     # App
     app_name: str = "Elephant Rock Research"
     debug: bool = False
+    env: str = "development"  # EROCK_ENV — "development" or "production"
 
     # LLM Providers
     default_provider: str = "openai"
@@ -411,6 +412,35 @@ class Settings(BaseSettings):
     experiment_enabled: bool = False
     experiment_default_timeout: float = 30.0
     experiment_max_code_size: int = 10000
+
+
+    # ── Environment-aware security properties ────────────────────
+
+    @property
+    def is_production(self) -> bool:
+        """True when running in production mode."""
+        return self.env == "production"
+
+    @property
+    def effective_cors_origins(self) -> list[str]:
+        """CORS origins respecting environment.
+
+        Production + wildcard → empty (same-origin only).
+        Otherwise, returns configured cors_origins as-is.
+        """
+        if self.is_production and self.cors_origins == ["*"]:
+            return []
+        return self.cors_origins
+
+    @property
+    def effective_debug(self) -> bool:
+        """Debug flag respecting environment.
+
+        Production always returns False regardless of the debug setting.
+        """
+        if self.is_production:
+            return False
+        return self.debug
 
 
 @functools.lru_cache()
