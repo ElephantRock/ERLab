@@ -7,6 +7,8 @@ import {
   BarChart3,
   FilePen,
   Download,
+  Activity,
+  Sparkles,
   type LucideIcon,
 } from "lucide-react";
 
@@ -24,6 +26,8 @@ export const PIPELINE_STAGES: readonly StageInfo[] = [
   { key: "novelty_checking", label: "Novelty Checking", icon: Shield },
   { key: "feasibility_scoring", label: "Feasibility Scoring", icon: BarChart3 },
   { key: "proposal_synthesis", label: "Proposal Synthesis", icon: FilePen },
+  { key: "mechanical_metrics", label: "Mechanical Metrics", icon: Activity },
+  { key: "proposal_deepening", label: "Proposal Deepening", icon: Sparkles },
   { key: "export", label: "Export", icon: Download },
 ] as const;
 

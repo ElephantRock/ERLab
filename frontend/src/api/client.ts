@@ -35,7 +35,13 @@ export async function apiFetch<T>(path: string, options?: RequestInit): Promise<
 
   if (!res.ok) {
     const body = await res.json().catch(() => ({ detail: res.statusText }));
-    throw new ApiError(res.status, body.detail || body.error || res.statusText);
+    // Backend returns {detail: "..."} or {error: {message: "...", code: "..."}} or {error: "string"}
+    const message =
+      body.detail ||
+      (body.error && typeof body.error === 'object' ? body.error.message : null) ||
+      (typeof body.error === 'string' ? body.error : null) ||
+      res.statusText;
+    throw new ApiError(res.status, message);
   }
 
   if (res.status === 204) return undefined as T;

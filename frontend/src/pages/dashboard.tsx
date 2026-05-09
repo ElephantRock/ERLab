@@ -5,6 +5,7 @@ import { getSystemStatus } from "@/api/status";
 import { listIdeas } from "@/api/ideas";
 import { RunCard } from "@/components/pipeline/run-card";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useNavigate } from "react-router-dom";
 import { Activity, Lightbulb, FlaskConical, Server } from "lucide-react";
@@ -142,12 +143,14 @@ export default function Dashboard() {
         <div className="space-y-3">
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-semibold">Recent Runs</h2>
-            <button
+            <Button
+              variant="default"
+              size="sm"
               onClick={() => navigate("/pipeline/new")}
-              className="text-sm text-primary hover:underline"
+              data-testid="new-run-btn"
             >
-              New run
-            </button>
+              New Pipeline
+            </Button>
           </div>
           {runsLoading ? (
             <div className="space-y-2">

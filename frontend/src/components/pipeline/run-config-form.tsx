@@ -22,9 +22,11 @@ export { VALIDATION };
 interface RunConfigFormProps {
   onSubmit: (config: PipelineRunRequest) => void;
   isLoading?: boolean;
+  sessionId?: string;
+  onSessionIdChange?: (value: string) => void;
 }
 
-export function RunConfigForm({ onSubmit, isLoading }: RunConfigFormProps) {
+export function RunConfigForm({ onSubmit, isLoading, sessionId = "", onSessionIdChange }: RunConfigFormProps) {
   const [domain, setDomain] = useState("");
   const [maxGaps, setMaxGaps] = useState(VALIDATION.max_gaps.default);
   const [ideasPerRound, setIdeasPerRound] = useState(VALIDATION.ideas_per_round.default);
@@ -39,6 +41,12 @@ export function RunConfigForm({ onSubmit, isLoading }: RunConfigFormProps) {
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (!domain.trim()) {
+      const confirmed = window.confirm(
+        "No research domain specified. The pipeline will use 'AI/NLP' as default. Continue?"
+      );
+      if (!confirmed) return;
+    }
     const config: PipelineRunRequest = {
       domain: domain || undefined,
       max_gaps: maxGaps,
@@ -99,38 +107,44 @@ export function RunConfigForm({ onSubmit, isLoading }: RunConfigFormProps) {
           {/* Core numeric fields */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <label className="text-sm font-medium">Max Gaps</label>
+              <label className="text-sm font-medium" htmlFor="max-gaps-input">Max Gaps</label>
               <Input
+                id="max-gaps-input"
                 type="number"
                 min={VALIDATION.max_gaps.min}
                 max={VALIDATION.max_gaps.max}
                 value={maxGaps}
                 onChange={(e) => setMaxGaps(Number(e.target.value))}
                 data-testid="max-gaps-input"
+                aria-label="Maximum research gaps to find"
               />
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium">Ideas Per Round</label>
+              <label className="text-sm font-medium" htmlFor="ideas-per-round-input">Ideas Per Round</label>
               <Input
+                id="ideas-per-round-input"
                 type="number"
                 min={VALIDATION.ideas_per_round.min}
                 max={VALIDATION.ideas_per_round.max}
                 value={ideasPerRound}
                 onChange={(e) => setIdeasPerRound(Number(e.target.value))}
+                aria-label="Number of ideas to generate per round"
               />
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <label className="text-sm font-medium">Generation Rounds</label>
+              <label className="text-sm font-medium" htmlFor="generation-rounds-input">Generation Rounds</label>
               <Input
+                id="generation-rounds-input"
                 type="number"
                 min={VALIDATION.generation_rounds.min}
                 max={VALIDATION.generation_rounds.max}
                 value={generationRounds}
                 onChange={(e) => setGenerationRounds(Number(e.target.value))}
                 data-testid="generation-rounds-input"
+                aria-label="Number of generation rounds"
               />
             </div>
             <div className="space-y-2">
@@ -178,6 +192,26 @@ export function RunConfigForm({ onSubmit, isLoading }: RunConfigFormProps) {
             </button>
             {advancedOpen && (
               <div className="px-4 pb-4 space-y-3" data-testid="advanced-content">
+                {/* Session ID (moved from top-level — P1-03) */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium" htmlFor="session-id-input">
+                    Session ID (optional)
+                  </label>
+                  <input
+                    id="session-id-input"
+                    type="text"
+                    placeholder="e.g., my-session-name"
+                    value={sessionId}
+                    onChange={(e) => onSessionIdChange?.(e.target.value)}
+                    data-testid="session-id-input"
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    maxLength={200}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Group multiple runs under the same session for easy tracking.
+                  </p>
+                </div>
+
                 {/* Run Toggles */}
                 <div className="flex items-center justify-between">
                   <label className="text-sm font-medium" htmlFor="run-novelty-toggle">

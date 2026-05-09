@@ -184,7 +184,7 @@ export function GlobalSearchDialog({ open, onOpenChange }: Props) {
                   items={results.results.ideas.items.map((item) => ({
                     id: item.id,
                     title: item.title,
-                    secondary: `${item.domain} · Score: ${item.overall_score}`,
+                    secondary: `${item.domain} · ${item.overall_score != null ? `Score: ${(item.overall_score * 100).toFixed(0)}%` : 'Not scored'}`,
                   }))}
                   type="ideas"
                   onSelect={handleSelect}

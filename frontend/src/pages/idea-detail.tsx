@@ -74,15 +74,27 @@ export default function IdeaDetail() {
           <h1 className="text-2xl font-bold tracking-tight">{idea.title}</h1>
           <p className="text-muted-foreground mt-1">{idea.domain}</p>
           <div className="flex flex-wrap gap-2 mt-3">
-            {idea.novelty_score != null && (
+            {idea.novelty_score != null ? (
               <ScoreBadge score={idea.novelty_score} scale="novelty" />
+            ) : (
+              <span className="inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
+                Novelty: Not scored
+              </span>
             )}
-            {idea.feasibility_score != null && (
+            {idea.feasibility_score != null ? (
               <ScoreBadge score={idea.feasibility_score} scale="feasibility" />
+            ) : (
+              <span className="inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
+                Feasibility: Not scored
+              </span>
             )}
-            {idea.overall_score != null && (
+            {idea.overall_score != null ? (
               <span className="inline-flex items-center rounded-full bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary">
                 Overall: {idea.overall_score.toFixed(2)}
+              </span>
+            ) : (
+              <span className="inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
+                Overall: Not scored — click Refine to generate scores
               </span>
             )}
           </div>
@@ -97,6 +109,7 @@ export default function IdeaDetail() {
             size="sm"
             onClick={() => refineMutation.mutate()}
             disabled={refineMutation.isPending}
+            title="Re-run novelty and feasibility scoring with updated parameters"
           >
             {refineMutation.isPending ? (
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />

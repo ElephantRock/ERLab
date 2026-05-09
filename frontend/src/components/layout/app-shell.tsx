@@ -1,14 +1,18 @@
 import { useState, useEffect, type ReactNode } from "react";
 import { Sidebar, MobileBottomNav } from "./sidebar";
 import { cn } from "@/lib/utils";
-import { PanelLeftClose, PanelLeft, Search } from "lucide-react";
+import { PanelLeftClose, PanelLeft, Search, Sun, Moon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { GlobalSearchDialog } from "@/components/search/global-search-dialog";
 import { NotificationBell } from "@/components/notifications/notification-bell";
+import { useSettings } from "@/contexts/settings-context";
 
 export function AppShell({ children }: { children: ReactNode }) {
   const [collapsed, setCollapsed] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
+  const { theme, setTheme } = useSettings();
+
+  const toggleTheme = () => setTheme(theme === "dark" ? "light" : "dark");
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -60,7 +64,16 @@ export function AppShell({ children }: { children: ReactNode }) {
               ⌘K
             </kbd>
           </Button>
-          <div className="ml-auto">
+          <div className="ml-auto flex items-center gap-1">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7"
+              onClick={toggleTheme}
+              title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+            >
+              {theme === "dark" ? <Sun className="h-3.5 w-3.5" /> : <Moon className="h-3.5 w-3.5" />}
+            </Button>
             <NotificationBell />
           </div>
         </div>
