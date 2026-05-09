@@ -3,6 +3,15 @@
 All notable changes to the Elephant Rock Research Platform are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.140.0-prealpha] — 2026-05-10
+
+### Security
+- **BATCH-140 — CORS + Security Defaults Hardening**
+  - Added `EROCK_ENV` toggle (`development` | `production`, default: `development`).
+  - Production mode: CORS defaults to empty, debug forced off, JWT must be non-default.
+  - Development mode: identical to pre-batch behavior (backward compatible).
+  - 10 new tests covering dev/prod CORS, debug, and JWT enforcement.
+
 ## [0.139.0-prealpha] — 2026-05-10
 
 ### Changed

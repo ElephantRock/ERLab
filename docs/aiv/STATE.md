@@ -1,9 +1,9 @@
 # CODEBASE STATE
 
 Last Updated:       2026-05-10
-Updated By:         ivory-wolf — via BATCH-139 Close
+Updated By:         ivory-wolf — via BATCH-140 Close
 Framework Version:  5.3
-Phase:              BATCH-139 COMPLETE (Token Budget & Threshold Externalization)
+Phase:              BATCH-140 COMPLETE — HARDCODED CONFIG REMEDIATION DONE
 
 ───────────────────────────────────────────────────────────
 VERIFIED MODULE MAP
@@ -144,6 +144,13 @@ ARCHITECTURAL DECISIONS
   Source:   BATCH-138
   Active:   YES
 
+  DEC-009: EROCK_ENV toggle governs security posture. development = permissive
+           defaults (CORS *, no JWT enforcement). production = strict defaults
+           (CORS empty, JWT mandatory, debug forced off). Production startup
+           raises RuntimeError on default JWT secret regardless of auth_enabled.
+  Source:   BATCH-140
+  Active:   YES
+
 ───────────────────────────────────────────────────────────
 KNOWN GOTCHAS
 ───────────────────────────────────────────────────────────
@@ -175,9 +182,9 @@ KNOWN GOTCHAS
 TEST BASELINE
 ───────────────────────────────────────────────────────────
 
-  Last verified count: 2,470
-  Verified in:         BATCH-139 (2026-05-10)
-  Breakdown:           2,457 pre-existing + 13 new (BATCH-139)
+  Last verified count: 2,480
+  Verified in:         BATCH-140 (2026-05-10)
+  Breakdown:           2,470 pre-existing + 10 new (BATCH-140)
 
 ───────────────────────────────────────────────────────────
 CARRY-FORWARD OBLIGATIONS
