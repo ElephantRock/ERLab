@@ -170,7 +170,7 @@ class ProviderRegistry:
                 api_key="lmstudio",
                 model=settings.lmstudio_model,
                 embedding_model=settings.embedding_model,
-                base_url=getattr(settings, "lmstudio_base_url", "http://100.64.0.1:1234"),
+                base_url=settings.lmstudio_base_url,
             )
         else:
             return cls()

@@ -249,10 +249,33 @@ async def startup():
         traces_sample_rate=settings.sentry_traces_sample_rate,
     )
 
-    # Warn about missing Semantic Scholar API key (BATCH-68)
+    # Startup security warnings (BATCH-137)
     import logging
+    _log = logging.getLogger(__name__)
+
+    # BATCH-137: Warn when JWT secret is the default value AND auth is enabled
+    if settings.auth_enabled and settings.jwt_secret == "dev-secret-change-in-production":
+        _log.warning(
+            "SECURITY: JWT secret is the default value while auth_enabled=True. "
+            "Change EROCK_JWT_SECRET in .env to a strong random string for production use."
+        )
+
+    # BATCH-137: Warn when no LLM API key is configured and LM Studio is disabled
+    has_any_api_key = any([
+        settings.openai_api_key,
+        settings.anthropic_api_key,
+        settings.gemini_api_key,
+    ])
+    if not has_any_api_key and not settings.lmstudio_enabled:
+        _log.warning(
+            "CONFIG: No LLM API key configured and LM Studio is disabled. "
+            "Set at least one of EROCK_OPENAI_API_KEY, EROCK_ANTHROPIC_API_KEY, "
+            "EROCK_GEMINI_API_KEY, or enable EROCK_LMSTUDIO_ENABLED=true for local inference."
+        )
+
+    # Warn about missing Semantic Scholar API key (BATCH-68)
     if not settings.semantic_scholar_api_key:
-        logging.getLogger(__name__).warning(
+        _log.warning(
             "S2_API_KEY not set. Semantic Scholar API will be rate-limited (429 errors). "
             "Get a key at https://www.semanticscholar.org/product/api#api-key"
         )
