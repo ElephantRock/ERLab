@@ -3,6 +3,24 @@
 All notable changes to the Elephant Rock Research Platform are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.139.0-prealpha] — 2026-05-10
+
+### Changed
+- **BATCH-139 — Externalize Compaction Budgets & Constraint Config**
+  - Added compaction stage budgets (`compaction_stage_budgets`), paper limits
+    (`compaction_paper_limits`), and abstract char limits
+    (`compaction_abstract_chars_tight`, `compaction_abstract_chars_loose`)
+    to config.py as JSON-string fields with sensible defaults.
+  - Added constraint config fields (`constraint_max_size`,
+    `constraint_max_growth_pct`, `constraint_min_sections`,
+    `constraint_allow_empty`) to config.py.
+  - Replaced hardcoded `DEFAULT_BUDGETS`, `DEFAULT_PAPER_LIMITS`, and
+    abstract char limits (80/150) in budget_manager.py with settings reads
+    and JSON parse fallback for graceful degradation.
+  - Replaced hardcoded `ConstraintConfig` values in orchestrator.py with
+    settings reads from `self._settings`.
+  - 13 new tests (budgets: 10, constraints: 3).
+
 ## [0.138.0-prealpha] — 2026-05-10
 
 ### Changed
