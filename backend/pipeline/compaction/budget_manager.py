@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+import json
+from dataclasses import dataclass
 
 
 @dataclass
@@ -32,7 +33,8 @@ class CompactionRecommendation:
 # Rough heuristic: 1 token ≈ 4 chars for English text
 CHARS_PER_TOKEN = 4
 
-DEFAULT_BUDGETS: dict[str, StageTokenBudget] = {
+# Hardcoded fallback values (used only when settings JSON parsing fails)
+_FALLBACK_BUDGETS: dict[str, StageTokenBudget] = {
     "gap_analysis": StageTokenBudget(base=6000, min_budget=3000, max_budget=10000),
     "idea_generation": StageTokenBudget(base=8000, min_budget=4000, max_budget=15000),
     "novelty_checking": StageTokenBudget(base=4000, min_budget=2000, max_budget=8000),
@@ -40,14 +42,63 @@ DEFAULT_BUDGETS: dict[str, StageTokenBudget] = {
     "proposal_synthesis": StageTokenBudget(base=10000, min_budget=5000, max_budget=20000),
 }
 
-# Default paper counts per stage (mirrors current hardcoded limits)
-DEFAULT_PAPER_LIMITS: dict[str, int] = {
+_FALLBACK_PAPER_LIMITS: dict[str, int] = {
     "gap_analysis": 30,
     "idea_generation": 20,
     "novelty_checking": 10,
     "feasibility_scoring": 0,
     "proposal_synthesis": 15,
 }
+
+
+def _get_budgets_from_settings() -> dict[str, StageTokenBudget]:
+    """Read stage token budgets from settings, with JSON parse fallback."""
+    try:
+        from backend.config import get_settings
+        settings = get_settings()
+        raw = json.loads(settings.compaction_stage_budgets)
+        return {
+            stage: StageTokenBudget(
+                base=v["base"], min_budget=v["min_budget"], max_budget=v["max_budget"],
+            )
+            for stage, v in raw.items()
+        }
+    except Exception:
+        return dict(_FALLBACK_BUDGETS)
+
+
+def _get_paper_limits_from_settings() -> dict[str, int]:
+    """Read per-stage paper limits from settings, with JSON parse fallback."""
+    try:
+        from backend.config import get_settings
+        settings = get_settings()
+        raw = json.loads(settings.compaction_paper_limits)
+        return {stage: int(v) for stage, v in raw.items()}
+    except Exception:
+        return dict(_FALLBACK_PAPER_LIMITS)
+
+
+def _get_abstract_chars_tight() -> int:
+    """Read tight-mode abstract char limit from settings."""
+    try:
+        from backend.config import get_settings
+        return get_settings().compaction_abstract_chars_tight
+    except Exception:
+        return 80
+
+
+def _get_abstract_chars_loose() -> int:
+    """Read loose-mode abstract char limit from settings."""
+    try:
+        from backend.config import get_settings
+        return get_settings().compaction_abstract_chars_loose
+    except Exception:
+        return 150
+
+
+# Module-level defaults read from settings (lazy)
+DEFAULT_BUDGETS: dict[str, StageTokenBudget] = _get_budgets_from_settings()
+DEFAULT_PAPER_LIMITS: dict[str, int] = _get_paper_limits_from_settings()
 
 
 class ContextBudgetManager:
@@ -120,10 +171,10 @@ class ContextBudgetManager:
         default_papers = self._paper_limits.get(stage_name, 20)
         if is_tight or is_global_tight:
             rec.max_papers = max(default_papers // 2, 5)
-            rec.max_abstract_chars = 80
+            rec.max_abstract_chars = _get_abstract_chars_tight()
         else:
             rec.max_papers = default_papers
-            rec.max_abstract_chars = 150
+            rec.max_abstract_chars = _get_abstract_chars_loose()
 
         # Summarization flags
         if is_tight or is_global_tight:

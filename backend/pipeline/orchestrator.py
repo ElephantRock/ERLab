@@ -455,7 +455,12 @@ class PipelineOrchestrator:
             from backend.pipeline.self_improve.fitness import FitnessScore
 
             frontier = ParetoFrontier(f"{settings.self_improve_persist_dir}/frontier.json")
-            constraint_config = ConstraintConfig(max_size=5000, max_growth_pct=0.3, allow_empty=False, min_sections=3)
+            constraint_config = ConstraintConfig(
+                max_size=settings.constraint_max_size,
+                max_growth_pct=settings.constraint_max_growth_pct,
+                allow_empty=settings.constraint_allow_empty,
+                min_sections=settings.constraint_min_sections,
+            )
             self._lesson_extractor = LessonExtractor(self._provider)
             self._evolver = PipelineEvolver(
                 frontier, constraint_config=constraint_config,

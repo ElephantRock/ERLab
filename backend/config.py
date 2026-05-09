@@ -237,6 +237,26 @@ class Settings(BaseSettings):
     compaction_summarization: bool = True
     compaction_budget_management: bool = True
     compaction_fallback_model: str = "gpt-4o"
+    compaction_stage_budgets: str = (
+        '{"gap_analysis":{"base":6000,"min_budget":3000,"max_budget":10000},'
+        '"idea_generation":{"base":8000,"min_budget":4000,"max_budget":15000},'
+        '"novelty_checking":{"base":4000,"min_budget":2000,"max_budget":8000},'
+        '"feasibility_scoring":{"base":2000,"min_budget":1000,"max_budget":4000},'
+        '"proposal_synthesis":{"base":10000,"min_budget":5000,"max_budget":20000}}'
+    )
+    compaction_paper_limits: str = (
+        '{"gap_analysis":30,"idea_generation":20,'
+        '"novelty_checking":10,"feasibility_scoring":0,'
+        '"proposal_synthesis":15}'
+    )
+    compaction_abstract_chars_tight: int = 80
+    compaction_abstract_chars_loose: int = 150
+
+    # Constraint Config
+    constraint_max_size: int = 5000
+    constraint_max_growth_pct: float = 0.3
+    constraint_min_sections: int = 3
+    constraint_allow_empty: bool = False
 
     # World Model + Autonomy (WP-8)
     versioning_enabled: bool = True
