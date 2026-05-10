@@ -975,6 +975,207 @@ class ExportStage(PipelineStage):
         return True
 
 
+class AdversarialReviewStage(PipelineStage):
+    """Adversarial cross-model review of proposals with revision loop.
+
+    Routes proposals through a different model family for critical scoring.
+    Rejected proposals (overall < 7.0) receive revision notes and are
+    re-synthesized. Max 2 revision rounds (HB-04).
+
+    HB-02: Skips review if reviewer provider == synthesizer provider.
+    HB-03: Graceful fallback on LLM failure — marks proposal as skipped.
+    """
+
+    MAX_REVISION_ROUNDS = 2
+    PASS_THRESHOLD = 7.0
+
+    def __init__(
+        self,
+        reviewer,
+        synthesizer,
+        generation_provider=None,
+        thinking_provider=None,
+    ):
+        from backend.pipeline.evaluation.adversarial_reviewer import AdversarialReviewer
+        self._reviewer: AdversarialReviewer = reviewer
+        self._synthesizer = synthesizer
+        self._generation_provider = generation_provider
+        self._thinking_provider = thinking_provider
+
+    @property
+    def name(self) -> str:
+        return "adversarial_review"
+
+    async def execute(self, ctx: StageContext) -> bool:
+        # HB-02: Skip if both providers resolve to the same instance/class
+        if self._thinking_provider and self._generation_provider:
+            thinking_name = getattr(
+                self._thinking_provider, "provider_name",
+                type(self._thinking_provider).__name__,
+            )
+            generation_name = getattr(
+                self._generation_provider, "provider_name",
+                type(self._generation_provider).__name__,
+            )
+            if thinking_name == generation_name:
+                logger.warning(
+                    "HB-02: Thinking provider (%s) == Generation provider (%s) — "
+                    "skipping adversarial review to avoid self-play",
+                    thinking_name, generation_name,
+                )
+                return True
+
+        if not ctx.result.proposals:
+            return True
+
+        for idx, proposal in list(ctx.result.proposals.items()):
+            try:
+                await self._review_proposal(idx, proposal, ctx)
+            except Exception as e:
+                logger.warning(
+                    "Adversarial review failed for proposal %d (non-fatal, HB-03): %s",
+                    idx, e,
+                )
+                metadata = self._get_metadata(proposal)
+                metadata["adversarial_review"] = {
+                    "status": "skipped",
+                    "reason": str(e),
+                }
+                self._set_metadata(proposal, metadata)
+
+        return True
+
+    async def _review_proposal(
+        self, idx: int, proposal, ctx: StageContext,
+    ) -> None:
+        """Review a single proposal with revision loop."""
+        proposal_text = proposal.to_markdown() if hasattr(proposal, "to_markdown") else str(proposal)
+        source_papers = [
+            f"{p.title}: {getattr(p, 'abstract', '')}"
+            for p in ctx.all_papers[:10]
+        ]
+
+        for round_num in range(1, self.MAX_REVISION_ROUNDS + 2):  # 1..3
+            score = await self._reviewer.review(
+                proposal_text=proposal_text,
+                source_papers=source_papers,
+                round_num=round_num,
+            )
+
+            # Store score in metadata
+            metadata = self._get_metadata(proposal)
+            metadata["adversarial_review"] = score.to_dict()
+            self._set_metadata(proposal, metadata)
+
+            if score.overall >= self.PASS_THRESHOLD:
+                logger.info(
+                    "Proposal %d passed adversarial review (round %d, overall=%.1f)",
+                    idx, round_num, score.overall,
+                )
+                return  # Accepted
+
+            if score.revision_notes and round_num <= self.MAX_REVISION_ROUNDS:
+                logger.info(
+                    "Proposal %d rejected (round %d, overall=%.1f) — re-synthesizing",
+                    idx, round_num, score.overall,
+                )
+                # Re-synthesize using ONLY revision notes (A-02)
+                try:
+                    proposal = await self._re_synthesize(
+                        proposal, score.revision_notes, ctx, idx,
+                    )
+                    proposal_text = (
+                        proposal.to_markdown()
+                        if hasattr(proposal, "to_markdown")
+                        else str(proposal)
+                    )
+                except Exception as e:
+                    logger.warning(
+                        "Re-synthesis failed for proposal %d (non-fatal): %s", idx, e,
+                    )
+                    break
+            else:
+                # Max revisions reached or no revision notes
+                break
+
+        # After loop: accept with current scores + max_revisions_reached flag
+        metadata = self._get_metadata(proposal)
+        review_data = metadata.get("adversarial_review", {})
+        review_data["max_revisions_reached"] = True
+        metadata["adversarial_review"] = review_data
+        self._set_metadata(proposal, metadata)
+        # Write back to context so tests/callers see updated proposal
+        ctx.result.proposals[idx] = proposal
+        logger.info(
+            "Proposal %d accepted after max revisions (overall=%.1f)",
+            idx, review_data.get("overall", 0.0),
+        )
+
+    async def _re_synthesize(
+        self,
+        proposal,
+        revision_notes: str,
+        ctx: StageContext,
+        idx: int,
+    ):
+        """Re-synthesize proposal using revision notes as the ONLY input (A-02)."""
+        with _override_provider(self._synthesizer, ctx.provider_override):
+            # Build minimal idea from proposal for re-synthesis
+            from backend.pipeline.generation.models import ResearchIdea
+            idea = ResearchIdea(
+                title=proposal.title if hasattr(proposal, "title") else f"Proposal {idx}",
+                problem_statement=proposal.sections.get("introduction", "")[:500]
+                if hasattr(proposal, "sections") and isinstance(proposal.sections, dict)
+                else "",
+                proposed_method=proposal.sections.get("proposed_method", "")[:500]
+                if hasattr(proposal, "sections") and isinstance(proposal.sections, dict)
+                else "",
+                expected_contributions=revision_notes,  # A-02: only revision notes
+                novelty_rationale="",
+                evaluation_approach="",
+                domain=ctx.domain,
+                round_generated=1,
+                score=0.0,
+                supporting_papers=[],
+                source_gap_ids=[],
+            )
+            new_proposal = await self._synthesizer.synthesize(
+                idea=idea,
+                novelty_report=None,
+                feasibility_report=None,
+                supporting_papers=ctx.all_papers[:30],
+                gaps=ctx.result.gaps,
+            )
+            # Copy over sections from re-synthesized proposal
+            if hasattr(new_proposal, "sections") and hasattr(proposal, "sections"):
+                proposal.sections.update(new_proposal.sections)
+            return proposal
+
+    @staticmethod
+    def _get_metadata(proposal) -> dict:
+        """Get metadata dict from a proposal, handling JSON string storage."""
+        metadata = {}
+        if hasattr(proposal, "metadata") and proposal.metadata:
+            if isinstance(proposal.metadata, str):
+                try:
+                    metadata = json.loads(proposal.metadata)
+                except (json.JSONDecodeError, TypeError):
+                    metadata = {}
+            elif isinstance(proposal.metadata, dict):
+                metadata = proposal.metadata
+        return metadata
+
+    @staticmethod
+    def _set_metadata(proposal, metadata: dict) -> None:
+        """Set metadata dict on a proposal, handling JSON string storage."""
+        # Always set the attribute — ResearchProposal may not have metadata initially
+        current = getattr(proposal, "metadata", None)
+        if isinstance(current, str) or current is None:
+            proposal.metadata = json.dumps(metadata)
+        else:
+            proposal.metadata = metadata
+
+
 class ProposalDeepeningStage(PipelineStage):
     """Enriches proposals with architecture, toy examples, failure modes, and criteria."""
 

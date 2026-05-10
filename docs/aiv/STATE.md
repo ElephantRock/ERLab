@@ -1,9 +1,9 @@
 # CODEBASE STATE
 
 Last Updated:       2026-05-11
-Updated By:         ivory-wolf — via BATCH-151 Close
+Updated By:         ivory-wolf — via BATCH-152 Close
 Framework Version:  5.3
-Phase:              BATCH-151 COMPLETE — DOCKER DEPLOYMENT + AI HONESTY BADGE
+Phase:              BATCH-152 COMPLETE — CROSS-MODEL ADVERSARIAL REVIEW
 
 ───────────────────────────────────────────────────────────
 VERIFIED MODULE MAP
@@ -115,9 +115,9 @@ ARCHITECTURAL DECISIONS
   Source:   BATCH-76 (updated B114)
   Active:   YES
 
-  DEC-004: _STAGE_ORDER has 10 entries (proposal_deepening added in B114).
-           All strategy presets must be updated to account for this stage.
-  Source:   BATCH-114
+  DEC-004: _STAGE_ORDER has 11 entries (adversarial_review added in B152).
+           All strategy presets must be updated to account for new stages.
+  Source:   BATCH-152
   Active:   YES
 
   DEC-005: Quality evaluation (_evaluate_pipeline) runs after ALL stages complete,
@@ -149,6 +149,14 @@ ARCHITECTURAL DECISIONS
            (CORS empty, JWT mandatory, debug forced off). Production startup
            raises RuntimeError on default JWT secret regardless of auth_enabled.
   Source:   BATCH-140
+  Active:   YES
+
+  DEC-010: AdversarialReviewStage uses the thinking provider (local LM Studio)
+           to review proposals synthesized by the generation provider (cloud).
+           If both providers resolve to the same model, the review is skipped
+           with a warning log. Revision loop max 2 rounds. Threshold: 7.0/10.
+           Stage name: adversarial_review (in _STAGE_ORDER after proposal_synthesis).
+  Source:   BATCH-152
   Active:   YES
 
 ───────────────────────────────────────────────────────────
@@ -187,9 +195,9 @@ KNOWN GOTCHAS
 TEST BASELINE
 ───────────────────────────────────────────────────────────
 
-  Last verified count: 2,499
-  Verified in:         BATCH-151 (2026-05-11)
-  Breakdown:           2,480 pre-existing + 19 new (BATCH-151)
+  Last verified count: 2,515
+  Verified in:         BATCH-152 (2026-05-11)
+  Breakdown:           2,499 pre-existing + 16 new (BATCH-152)
 
 ───────────────────────────────────────────────────────────
 CARRY-FORWARD OBLIGATIONS

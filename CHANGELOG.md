@@ -20,6 +20,23 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Test baseline: 2,480 → 2,499 (+19)
 
+## [2026-05-11] BATCH-152 — Cross-Model Adversarial Review
+
+### Added
+- `backend/pipeline/evaluation/adversarial_reviewer.py` — AdversarialReviewer class with AdversarialReviewScore dataclass
+- `backend/pipeline/evaluation/prompts/adversarial_review.md` — Critical adversarial review prompt template
+- AdversarialReviewStage: scores proposals on Soundness, Novelty, Feasibility, Clarity (1-10)
+- Revision loop: rejected proposals (score < 7.0) re-synthesized with revision notes (max 2 rounds)
+- Provider isolation: uses thinking provider (local LM Studio) for review, generation provider (cloud) for synthesis
+- Strategy presets: deep_research enables adversarial review, fast_scan disables it
+- 16 new tests covering scoring, clamping, revision loop, max rounds, provider mismatch, preset loading
+
+### Changed
+- `_STAGE_ORDER` now 11 entries (added `adversarial_review` after `proposal_synthesis`)
+- `strategies/presets.py` fixed pre-existing drift (added `proposal_deepening` + `adversarial_review`)
+
+### Test baseline: 2,499 → 2,515 (+16)
+
 ## [0.140.0-prealpha] — 2026-05-10
 
 ### Security
