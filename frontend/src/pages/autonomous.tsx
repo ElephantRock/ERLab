@@ -57,8 +57,8 @@ export default function AutonomousPage() {
       ]);
       setSchedulerStatus(sched);
       setEvolutionStatus(evo);
-    } catch {
-      // Non-fatal
+    } catch (err) {
+      console.warn("[autonomous] Failed to load status:", err);
     }
   }
 

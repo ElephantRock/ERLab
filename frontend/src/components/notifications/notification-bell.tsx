@@ -3,6 +3,7 @@ import { Bell } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { getNotifications, markRead, markAllRead } from "@/api/notifications";
 import type { Notification } from "@/api/types";
+import { toast } from "sonner";
 
 function timeAgo(dateStr: string): string {
   const now = Date.now();
@@ -35,8 +36,8 @@ export function NotificationBell() {
     try {
       const res = await getNotifications({ limit: 50, read: false });
       setUnreadCount(res.total);
-    } catch {
-      // ignore
+    } catch (err) {
+      console.warn("[notifications] Failed to fetch unread count:", err);
     }
   }, []);
 
@@ -46,8 +47,8 @@ export function NotificationBell() {
       setItems(res.notifications);
       setTotal(res.total);
       setUnreadCount(res.notifications.filter((n) => !n.read).length);
-    } catch {
-      // ignore
+    } catch (err) {
+      console.warn("[notifications] Failed to load notifications:", err);
     }
   }, []);
 
@@ -77,8 +78,8 @@ export function NotificationBell() {
       await markAllRead();
       setUnreadCount(0);
       setItems((prev) => prev.map((n) => ({ ...n, read: true })));
-    } catch {
-      // ignore
+    } catch (err) {
+      toast.error("Failed to mark notifications as read");
     }
   };
 
@@ -87,8 +88,8 @@ export function NotificationBell() {
       await markRead(id);
       setItems((prev) => prev.map((n) => (n.id === id ? { ...n, read: true } : n)));
       setUnreadCount((prev) => Math.max(0, prev - 1));
-    } catch {
-      // ignore
+    } catch (err) {
+      toast.error("Failed to mark notification as read");
     }
   };
 

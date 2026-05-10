@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { getGap, listGaps, updateGapStatus } from "@/api/gaps";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -107,7 +108,7 @@ export default function GapDetailPage() {
           <select
             value={gap.status || "identified"}
             onChange={async (e) => {
-              try { await updateGapStatus(gapId, e.target.value); } catch {} 
+              try { await updateGapStatus(gapId, e.target.value); } catch (err) { toast.error("Failed to update gap status"); } 
             }}
             className="px-2 py-0.5 text-xs border rounded-md bg-background"
             aria-label="Gap lifecycle status"

@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Lightbulb, GitBranch, BookMarked, Play, Search } from "lucide-react";
 import { globalSearch } from "@/api/search";
+import { toast } from "sonner";
 import type {
   GlobalSearchResponse,
   IdeaSearchItem,
@@ -71,7 +72,8 @@ export function GlobalSearchDialog({ open, onOpenChange }: Props) {
       try {
         const res = await globalSearch(q);
         setResults(res);
-      } catch {
+      } catch (err) {
+        toast.error("Search failed \u2014 please try again");
         setResults(null);
       } finally {
         setLoading(false);

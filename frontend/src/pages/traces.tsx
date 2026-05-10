@@ -63,8 +63,8 @@ export default function TracesPage() {
     try {
       const detail = await getTrace(traceId);
       setSelectedTrace(detail);
-    } catch {
-      // Silently ignore — span detail is optional
+    } catch (err) {
+      console.warn("[traces] Failed to load trace detail:", err);
     }
   }, []);
 

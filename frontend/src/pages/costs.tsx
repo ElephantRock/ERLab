@@ -71,8 +71,8 @@ export default function CostsPage() {
     try {
       const data = await getRunCostBreakdown(runId);
       setRunCosts((prev) => [...prev, data]);
-    } catch {
-      // Silently ignore — run data is optional
+    } catch (err) {
+      console.warn("[costs] Failed to load cost data:", err);
     }
   }
 

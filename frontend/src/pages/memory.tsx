@@ -9,6 +9,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { getMemoryStats, recallMemories, deleteMemory } from "@/api/memory";
 import type { MemoryStats as MemoryStatsData, MemoryRecallResult } from "@/api/memory";
+import { toast } from "sonner";
 import { MemoryCard } from "@/components/memory/memory-card";
 import { MemoryStats } from "@/components/memory/memory-stats";
 import { Input } from "@/components/ui/input";
@@ -44,8 +45,8 @@ export default function MemoryBrowserPage() {
     try {
       const data = await getMemoryStats();
       setStats(data);
-    } catch {
-      // Stats are non-critical; don't block the page
+    } catch (err) {
+      console.warn("[memory] Failed to load stats:", err);
     }
   }, []);
 
@@ -111,8 +112,8 @@ export default function MemoryBrowserPage() {
       setResults((prev) => prev.filter((m) => m !== confirmDelete));
       // Refresh stats after deletion
       loadStats();
-    } catch {
-      // Silently ignore — item stays in list
+    } catch (err) {
+      toast.error("Failed to delete memory item");
     } finally {
       setConfirmDelete(null);
     }

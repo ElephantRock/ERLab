@@ -55,8 +55,8 @@ export default function KnowledgeGraphPage() {
       try {
         const detail = await getEntity(id);
         setDetailData(detail);
-      } catch {
-        // Silently handle — detail panel stays hidden
+      } catch (err) {
+        console.warn("[knowledge-graph] Failed to load entity:", err);
       }
     },
     [],
