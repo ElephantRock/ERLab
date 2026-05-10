@@ -72,6 +72,8 @@ export function RunConfigForm({ onSubmit, isLoading, sessionId = "", onSessionId
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Essential Fields — always visible (2 fields for first-time users) */}
+
           {/* Domain */}
           <div className="space-y-2">
             <label className="text-sm font-medium">Research Domain</label>
@@ -80,6 +82,7 @@ export function RunConfigForm({ onSubmit, isLoading, sessionId = "", onSessionId
               value={domain}
               onChange={(e) => setDomain(e.target.value)}
               maxLength={VALIDATION.domain.maxLength}
+              data-testid="domain-input"
             />
           </div>
 
@@ -105,77 +108,7 @@ export function RunConfigForm({ onSubmit, isLoading, sessionId = "", onSessionId
             </p>
           </div>
 
-          {/* Core numeric fields */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium" htmlFor="max-gaps-input">Max Gaps</label>
-              <Input
-                id="max-gaps-input"
-                type="number"
-                min={VALIDATION.max_gaps.min}
-                max={VALIDATION.max_gaps.max}
-                value={maxGaps}
-                onChange={(e) => setMaxGaps(Number(e.target.value))}
-                data-testid="max-gaps-input"
-                aria-label="Maximum research gaps to find"
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium" htmlFor="ideas-per-round-input">Ideas Per Round</label>
-              <Input
-                id="ideas-per-round-input"
-                type="number"
-                min={VALIDATION.ideas_per_round.min}
-                max={VALIDATION.ideas_per_round.max}
-                value={ideasPerRound}
-                onChange={(e) => setIdeasPerRound(Number(e.target.value))}
-                aria-label="Number of ideas to generate per round"
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium" htmlFor="generation-rounds-input">Generation Rounds</label>
-              <Input
-                id="generation-rounds-input"
-                type="number"
-                min={VALIDATION.generation_rounds.min}
-                max={VALIDATION.generation_rounds.max}
-                value={generationRounds}
-                onChange={(e) => setGenerationRounds(Number(e.target.value))}
-                data-testid="generation-rounds-input"
-                aria-label="Number of generation rounds"
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Export Format</label>
-              <select
-                value={exportFormat}
-                onChange={(e) => setExportFormat(e.target.value)}
-                data-testid="export-format-select"
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-              >
-                {VALIDATION.export_formats.map((fmt) => (
-                  <option key={fmt} value={fmt}>
-                    {fmt.charAt(0).toUpperCase() + fmt.slice(1)}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          {/* Search Queries */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Search Queries (comma-separated)</label>
-            <Input
-              placeholder="transformer attention, few-shot learning"
-              value={searchQueries}
-              onChange={(e) => setSearchQueries(e.target.value)}
-            />
-          </div>
-
-          {/* Advanced Options - Collapsible */}
+          {/* Advanced Options - Collapsible (all tuning knobs here) */}
           <div className="border rounded-md">
             <button
               type="button"
@@ -193,7 +126,78 @@ export function RunConfigForm({ onSubmit, isLoading, sessionId = "", onSessionId
             </button>
             {advancedOpen && (
               <div className="px-4 pb-4 space-y-3" data-testid="advanced-content">
-                {/* Session ID (moved from top-level — P1-03) */}
+                {/* Core numeric fields */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium" htmlFor="max-gaps-input">Max Gaps</label>
+                    <Input
+                      id="max-gaps-input"
+                      type="number"
+                      min={VALIDATION.max_gaps.min}
+                      max={VALIDATION.max_gaps.max}
+                      value={maxGaps}
+                      onChange={(e) => setMaxGaps(Number(e.target.value))}
+                      data-testid="max-gaps-input"
+                      aria-label="Maximum research gaps to find"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium" htmlFor="ideas-per-round-input">Ideas Per Round</label>
+                    <Input
+                      id="ideas-per-round-input"
+                      type="number"
+                      min={VALIDATION.ideas_per_round.min}
+                      max={VALIDATION.ideas_per_round.max}
+                      value={ideasPerRound}
+                      onChange={(e) => setIdeasPerRound(Number(e.target.value))}
+                      aria-label="Number of ideas to generate per round"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium" htmlFor="generation-rounds-input">Generation Rounds</label>
+                    <Input
+                      id="generation-rounds-input"
+                      type="number"
+                      min={VALIDATION.generation_rounds.min}
+                      max={VALIDATION.generation_rounds.max}
+                      value={generationRounds}
+                      onChange={(e) => setGenerationRounds(Number(e.target.value))}
+                      data-testid="generation-rounds-input"
+                      aria-label="Number of generation rounds"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Export Format</label>
+                    <select
+                      value={exportFormat}
+                      onChange={(e) => setExportFormat(e.target.value)}
+                      data-testid="export-format-select"
+                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                    >
+                      {VALIDATION.export_formats.map((fmt) => (
+                        <option key={fmt} value={fmt}>
+                          {fmt.charAt(0).toUpperCase() + fmt.slice(1)}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                {/* Search Queries */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Search Queries (comma-separated)</label>
+                  <Input
+                    placeholder="transformer attention, few-shot learning"
+                    value={searchQueries}
+                    onChange={(e) => setSearchQueries(e.target.value)}
+                    data-testid="search-queries-input"
+                  />
+                </div>
+
+                {/* Session ID */}
                 <div className="space-y-2">
                   <label className="text-sm font-medium" htmlFor="session-id-input">
                     Session ID (optional)
