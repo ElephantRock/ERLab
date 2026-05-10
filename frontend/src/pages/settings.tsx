@@ -312,6 +312,28 @@ export default function Settings() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Help & Onboarding */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Help & Onboarding</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-muted-foreground mb-3">
+            Re-show the guided introduction that appears for first-time users.
+          </p>
+          <Button
+            variant="outline"
+            onClick={() => {
+              localStorage.removeItem("erock_onboarding_complete");
+              window.location.href = "/";
+            }}
+            data-testid="show-onboarding-btn"
+          >
+            Show Onboarding Again
+          </Button>
+        </CardContent>
+      </Card>
     </div>
   );
 }
