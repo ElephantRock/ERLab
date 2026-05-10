@@ -90,12 +90,22 @@ class SearchService:
 
         for level in range(1, depth):
             followup_queries = self._extract_followup_queries(all_papers, query)
-            for fq in followup_queries[:3]:  # Max 3 follow-up queries per level
-                new_papers = await self.search_all(
-                    fq, limit_per_source=min(limit_per_source, 10),
-                    year_from=year_from, year_to=year_to,
-                )
-                for p in new_papers:
+            # Fire all follow-up queries concurrently
+            followup_results = await asyncio.gather(
+                *(
+                    self.search_all(
+                        fq, limit_per_source=min(limit_per_source, 10),
+                        year_from=year_from, year_to=year_to,
+                    )
+                    for fq in followup_queries[:3]
+                ),
+                return_exceptions=True,
+            )
+            for result in followup_results:
+                if isinstance(result, Exception):
+                    logger.warning("Recursive search failed: %s", result)
+                    continue
+                for p in result:
                     if p.title.lower().strip() not in seen_titles:
                         all_papers.append(p)
                         seen_titles.add(p.title.lower().strip())

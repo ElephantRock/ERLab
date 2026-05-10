@@ -83,11 +83,18 @@ class LiteratureSearchStage(PipelineStage):
             f"{ctx.domain} recent advances",
             f"{ctx.domain} open problems",
         ]
+        # Parallel query fan-out — all queries fire concurrently
+        query_results = await asyncio.gather(
+            *(self._search.search_all(q, limit_per_source=20) for q in queries),
+            return_exceptions=True,
+        )
         all_papers = []
-        for query in queries:
-            papers = await self._search.search_all(query, limit_per_source=20)
-            all_papers.extend(papers)
-            logger.info("Found %d papers for query: %s", len(papers), query)
+        for query, result in zip(queries, query_results, strict=True):
+            if isinstance(result, Exception):
+                logger.warning("Query '%s' failed: %s", query[:50], result)
+            else:
+                all_papers.extend(result)
+                logger.info("Found %d papers for query: %s", len(result), query)
 
         # Deduplicate papers — cross-source duplicates have different IDs
         seen = set()
