@@ -4,6 +4,7 @@ from pathlib import Path
 
 from jinja2 import Template
 
+from backend.pipeline.constants import AI_HONESTY_BADGE_BRIEF
 from backend.pipeline.synthesis.proposal_synthesizer import ResearchProposal
 
 TEMPLATE = r"""\documentclass[11pt,a4paper]{article}
@@ -56,6 +57,9 @@ TEMPLATE = r"""\documentclass[11pt,a4paper]{article}
 {% endfor %}
 \end{thebibliography}
 
+\vspace{1em}
+\noindent\textit{\small AI_HONESTY_BADGE}
+
 \end{document}
 """
 
@@ -80,6 +84,9 @@ class LatexExporter:
                 sections[key] = self._escape_latex(value)
 
         latex = template.render(**sections)
+
+        # Insert AI honesty badge (A-05, HB-04)
+        latex = latex.replace("AI_HONESTY_BADGE", AI_HONESTY_BADGE_BRIEF)
 
         if output_path:
             Path(output_path).parent.mkdir(parents=True, exist_ok=True)

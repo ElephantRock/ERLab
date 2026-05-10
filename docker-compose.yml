@@ -1,95 +1,55 @@
 version: "3.9"
 
+# ── Elephant Rock — One-Command Deployment ──────────────────────
+#
+# Usage:
+#   1. cp .env.docker .env   (edit with your API keys)
+#   2. docker compose up --build
+#   3. Open http://localhost:3000
+#
+# Backend API: http://localhost:8000
+# Frontend:    http://localhost:3000
+
 services:
-  # ── PostgreSQL ──────────────────────────────────────────────────────
-  postgres:
-    image: postgres:16-alpine
-    restart: unless-stopped
-    environment:
-      POSTGRES_USER: erock
-      POSTGRES_PASSWORD: erock
-      POSTGRES_DB: elephant_rock
-    ports:
-      - "5432:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U erock -d elephant_rock"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 10s
-
-  # ── Redis ───────────────────────────────────────────────────────────
-  redis:
-    image: redis:7-alpine
-    restart: unless-stopped
-    ports:
-      - "6379:6379"
-    volumes:
-      - redis_data:/data
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 5s
-
-  # ── Application ────────────────────────────────────────────────────
-  app:
+  # ── Backend (FastAPI) ──────────────────────────────────────────
+  backend:
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.backend
     restart: unless-stopped
     ports:
-      - "8000"
+      - "8000:8000"
     environment:
-      EROCK_DATABASE_URL: postgresql+psycopg2://erock:erock@postgres:5432/elephant_rock
-      EROCK_DEBUG: "false"
+      EROCK_DATABASE_URL: sqlite:///./data/elephant_rock.db
       EROCK_CHROMA_PERSIST_DIR: /app/data/chroma
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
+    env_file:
+      - .env
     volumes:
-      - app_data:/app/data
+      - erock_data:/app/data
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/v1/health')"]
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
       interval: 30s
       timeout: 5s
       retries: 3
-      start_period: 15s
+      start_period: 30s
 
-  # ── Frontend ───────────────────────────────────────────────────────
+  # ── Frontend (React + Nginx) ──────────────────────────────────
   frontend:
     build:
-      context: frontend
-      dockerfile: ../frontend.Dockerfile
-    volumes:
-      - frontend_dist:/output
-    command: ["cp", "-r", "/app/dist/.", "/output/"]
-
-  # ── nginx ──────────────────────────────────────────────────────────
-  nginx:
-    image: nginx:alpine
+      context: .
+      dockerfile: Dockerfile.frontend
     restart: unless-stopped
     ports:
-      - "8080:80"
-    volumes:
-      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
-      - frontend_dist:/usr/share/nginx/html:ro
+      - "3000:80"
     depends_on:
-      - app
-      - frontend
+      backend:
+        condition: service_healthy
     healthcheck:
-      test: ["CMD", "nginx", "-t"]
+      test: ["CMD", "wget", "-qO-", "http://localhost/"]
       interval: 30s
       timeout: 5s
       retries: 3
+      start_period: 10s
 
 volumes:
-  postgres_data:
-  redis_data:
-  app_data:
-  frontend_dist:
+  erock_data:

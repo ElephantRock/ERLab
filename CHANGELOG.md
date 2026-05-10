@@ -3,6 +3,23 @@
 All notable changes to the Elephant Rock Research Platform are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [2026-05-11] BATCH-151 — Docker Deployment + AI Honesty Badge
+
+### Added
+- `Dockerfile.backend` — Multi-stage Python backend image (non-root, health check, Alembic migrations)
+- `Dockerfile.frontend` — Multi-stage Node.js + Nginx frontend image (Vite build, SPA routing)
+- `docker-entrypoint.sh` — Entrypoint script: migrations → uvicorn
+- `.env.docker` — Example Docker environment variables (EROCK_ keys)
+- `backend/pipeline/constants.py` — `AI_HONESTY_BADGE` constant for all export formats
+- AI honesty badge appended to all proposal exports: Markdown, LaTeX, BibTeX, md_to_latex
+- 19 new tests covering Docker files, compose config, and badge consistency
+
+### Changed
+- `docker-compose.yml` — Simplified from Postgres+Redis+App+Nginx to Backend+Frontend with SQLite
+- `nginx/nginx.conf` — Updated upstream to `backend:8000` service name
+
+### Test baseline: 2,480 → 2,499 (+19)
+
 ## [0.140.0-prealpha] — 2026-05-10
 
 ### Security

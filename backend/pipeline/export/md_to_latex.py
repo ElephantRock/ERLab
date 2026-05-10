@@ -8,6 +8,8 @@ from __future__ import annotations
 import re
 import logging
 
+from backend.pipeline.constants import AI_HONESTY_BADGE_BRIEF
+
 logger = logging.getLogger(__name__)
 
 
@@ -158,6 +160,8 @@ class MarkdownToLatexConverter:
             "\\maketitle\n"
             "\n"
             f"{body}\n"
+            "\n"
+            f"\\vspace{{1em}}\\noindent\\textit{{\\small {AI_HONESTY_BADGE_BRIEF}}}"
             "\n"
             "\\end{document}\n"
         )

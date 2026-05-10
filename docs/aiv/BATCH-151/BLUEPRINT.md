@@ -284,17 +284,28 @@ LEAD RESPONSE TO REVIEW REPORT
 
 [Completed by Lead after Phase I-B. Leave blank until Review Report is received.]
 
-Reviewer Report ID:
-Review Cycle:             [1 or 2]
-Lead Decision:            [ ] ACCEPT   [ ] ACCEPT WITH MODIFICATIONS   [ ] REJECT
+Reviewer Report ID:       REVIEW-BATCH-151-2026-05-11
+Review Cycle:             1
+Lead Decision:            [X] ACCEPT WITH MODIFICATIONS
 
 If ACCEPT WITH MODIFICATIONS — list each Reviewer flag acted on:
-  FLAG-01 → Action taken:
-  FLAG-02 → Action taken:
+  FLAG-01 → ACTION: Existing health endpoint is at /health. Updated TASK-01
+            to use /health in healthcheck and tests. No new route needed.
+  FLAG-02 → ACKNOWLEDGED: HB-03 is manual-only. Added to Known Gotchas.
+            No test change needed — docker compose config validates structure.
+  FLAG-03 → ACTION: Will create backend/pipeline/constants.py as planned.
+            Health endpoint in app.py is sufficient — no new health.py file.
+  FLAG-04 → ACTION: Dockerfile will use `pip install .` from pyproject.toml,
+            not requirements.txt. Updated TASK-01 description.
 
-If REJECT — reason and next action:
+Additional Lead Notes:
+  - Existing Docker files (Dockerfile, docker-compose.yml, nginx/nginx.conf)
+    will be REPLACED. The new SQLite-based setup supersedes the Postgres+Redis
+    architecture. Old files backed up via git history.
+  - Docker-dependent tests (TEST-151-01-02, 01-04, 02-01) are marked as
+    manual type. They verify Docker builds but require Docker daemon.
 
-Blueprint Version after response:
-Lead Sign:                ivory-wolf + YYYY-MM-DD HH:MM
+Blueprint Version after response: 1.1
+Lead Sign:                ivory-wolf — 2026-05-11 00:35
 
 ═══════════════════════════════════════════════════════════

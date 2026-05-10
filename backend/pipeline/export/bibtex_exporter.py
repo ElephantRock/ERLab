@@ -8,6 +8,7 @@ import re
 import logging
 from typing import Any
 
+from backend.pipeline.constants import AI_HONESTY_BADGE_BRIEF
 from backend.pipeline.literature.models import Paper
 
 logger = logging.getLogger(__name__)
@@ -70,6 +71,7 @@ def proposal_to_bibtex(
     if domain:
         lines.append(f"  note = {{Research proposal for domain: {domain}}},")
     lines.append("  howpublished = {{Elephant Rock AI Research Platform}},")
+    lines.append(f"  note = {{{{AI-generated proposal. {AI_HONESTY_BADGE_BRIEF}}}}},")
     lines.append("}")
     return "\n".join(lines)
 

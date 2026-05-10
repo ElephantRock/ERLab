@@ -4,6 +4,7 @@ from pathlib import Path
 
 from jinja2 import Template
 
+from backend.pipeline.constants import AI_HONESTY_BADGE
 from backend.pipeline.synthesis.proposal_synthesizer import ResearchProposal
 
 TEMPLATE = """# {{ title }}
@@ -57,6 +58,9 @@ class MarkdownExporter:
         sections["evaluation_plan"] = self._format_eval(sections.get("evaluation_plan", ""))
 
         md = template.render(**sections)
+
+        # Append AI honesty badge (A-05, HB-04)
+        md += AI_HONESTY_BADGE
 
         if output_path:
             Path(output_path).parent.mkdir(parents=True, exist_ok=True)

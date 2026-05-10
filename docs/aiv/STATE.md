@@ -1,9 +1,9 @@
 # CODEBASE STATE
 
-Last Updated:       2026-05-10
-Updated By:         ivory-wolf — via BATCH-140 Close
+Last Updated:       2026-05-11
+Updated By:         ivory-wolf — via BATCH-151 Close
 Framework Version:  5.3
-Phase:              BATCH-150 COMPLETE — THREE-REPORT REMEDIATION DONE + LIVE E2E VERIFIED))))
+Phase:              BATCH-151 COMPLETE — DOCKER DEPLOYMENT + AI HONESTY BADGE
 
 ───────────────────────────────────────────────────────────
 VERIFIED MODULE MAP
@@ -178,13 +178,18 @@ KNOWN GOTCHAS
               but means unit tests must mock get_settings explicitly.
   Status:      MITIGATED — constructor api_base override for testability
 
+  GOTCHA-007: Docker-dependent tests (TEST-151-01-02, 01-04, 02-01) require
+              Docker daemon running. Cannot execute in CI without Docker.
+              These are `manual` type tests.
+  Status:      OPEN — requires Docker daemon for verification
+
 ───────────────────────────────────────────────────────────
 TEST BASELINE
 ───────────────────────────────────────────────────────────
 
-  Last verified count: 2,480
-  Verified in:         BATCH-140 (2026-05-10)
-  Breakdown:           2,470 pre-existing + 10 new (BATCH-140)
+  Last verified count: 2,499
+  Verified in:         BATCH-151 (2026-05-11)
+  Breakdown:           2,480 pre-existing + 19 new (BATCH-151)
 
 ───────────────────────────────────────────────────────────
 CARRY-FORWARD OBLIGATIONS
