@@ -18,6 +18,7 @@ import type {
 } from "@/api/traces";
 import { TraceSummary } from "@/components/traces/trace-summary";
 import { SpanDetail } from "@/components/traces/span-detail";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function TracesPage() {
   const [summary, setSummary] = useState<TraceSummaryData | null>(null);
@@ -77,7 +78,11 @@ export default function TracesPage() {
     return (
       <div className="space-y-6" data-testid="traces-page">
         <h1 className="text-2xl font-bold tracking-tight">Traces</h1>
-        <p className="text-muted-foreground" data-testid="traces-loading">Loading trace data…</p>
+        <div className="space-y-3" data-testid="traces-loading">
+          <Skeleton className="h-16 w-full" />
+          <Skeleton className="h-16 w-full" />
+          <Skeleton className="h-16 w-full" />
+        </div>
       </div>
     );
   }

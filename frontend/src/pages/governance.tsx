@@ -10,6 +10,7 @@ import { useEffect, useState, useCallback } from "react";
 import { getPending, approveDecision, denyDecision } from "@/api/governance";
 import type { PendingApproval } from "@/api/governance";
 import { ApprovalCard } from "@/components/governance/approval-card";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function GovernancePage() {
   const [items, setItems] = useState<PendingApproval[]>([]);
@@ -63,7 +64,11 @@ export default function GovernancePage() {
     return (
       <div className="space-y-6" data-testid="governance-page">
         <h1 className="text-2xl font-bold tracking-tight">Governance Queue</h1>
-        <p className="text-muted-foreground">Loading pending approvals…</p>
+        <div className="space-y-3">
+          <Skeleton className="h-32 w-full" />
+          <Skeleton className="h-32 w-full" />
+          <Skeleton className="h-32 w-full" />
+        </div>
       </div>
     );
   }

@@ -24,6 +24,7 @@ import type {
 import { CostSummaryCard } from "@/components/costs/cost-summary-card";
 import { CostBreakdownTable } from "@/components/costs/cost-breakdown-table";
 import { BudgetBar } from "@/components/costs/budget-bar";
+import { Skeleton } from "@/components/ui/skeleton";
 
 /** Default budget limit in USD (matches backend budget_max_cost_usd default) */
 const DEFAULT_BUDGET_LIMIT = 10.0;
@@ -82,7 +83,11 @@ export default function CostsPage() {
     return (
       <div className="space-y-6" data-testid="costs-page">
         <h1 className="text-2xl font-bold tracking-tight">Cost Dashboard</h1>
-        <p className="text-muted-foreground">Loading cost data…</p>
+        <div className="space-y-3">
+          <Skeleton className="h-24 w-full" />
+          <Skeleton className="h-48 w-full" />
+          <Skeleton className="h-32 w-full" />
+        </div>
       </div>
     );
   }
