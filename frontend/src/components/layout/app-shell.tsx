@@ -27,6 +27,13 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   return (
     <div className="flex h-screen overflow-hidden">
+      {/* Skip to content link for keyboard/screen-reader users */}
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:p-4 focus:bg-primary focus:text-primary-foreground focus:rounded-br-md"
+      >
+        Skip to content
+      </a>
       {/* Desktop sidebar — hidden on mobile via CSS */}
       <aside
         className={cn(
@@ -49,7 +56,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         </div>
         <Sidebar collapsed={collapsed} />
       </aside>
-      <main className="app-main flex-1 overflow-auto">
+      <main id="main-content" className="app-main flex-1 overflow-auto" tabIndex={-1}>
         {/* Search button in header area */}
         <div className="flex items-center gap-2 border-b px-4 h-10">
           <Button

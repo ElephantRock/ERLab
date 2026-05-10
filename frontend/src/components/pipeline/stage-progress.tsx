@@ -9,7 +9,7 @@ interface StageProgressProps {
 
 export function StageProgress({ stages }: StageProgressProps) {
   return (
-    <div className="space-y-2">
+    <div className="space-y-2" role="status" aria-live="polite" aria-label="Pipeline progress">
       {stages.map((stage, i) => (
         <div key={stage.key} className="flex items-center gap-3">
           <div className="flex-shrink-0">
