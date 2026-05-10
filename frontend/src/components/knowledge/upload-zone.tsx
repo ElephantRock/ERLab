@@ -4,6 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
 import { ingestPdf } from "@/api/knowledge";
+import { toast } from "sonner";
 
 type UploadState = "idle" | "uploading" | "success" | "error";
 
@@ -43,11 +44,13 @@ export function UploadZone({ onUploadSuccess }: UploadZoneProps) {
         const result = await ingestPdf(file);
         setState("success");
         setUploadResult({ filename: result.filename, chunks: result.chunks });
+        toast.success(`Uploaded ${result.filename} (${result.chunks} chunks)`);
         onUploadSuccess?.({ filename: result.filename, chunks: result.chunks });
       } catch (err) {
         setState("error");
         const message = err instanceof Error ? err.message : "Upload failed";
         setErrorMessage(message);
+        toast.error(message);
       }
     },
     [onUploadSuccess],

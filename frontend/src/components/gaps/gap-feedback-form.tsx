@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { submitGapFeedback } from "@/api/gaps";
+import { toast } from "sonner";
 import { Star } from "lucide-react";
 
 interface GapFeedbackFormProps {
@@ -21,7 +22,10 @@ export function GapFeedbackForm({ gapId, currentRating, currentNotes, onSubmitte
     setSubmitting(true);
     try {
       await submitGapFeedback(gapId, rating, notes || undefined);
+      toast.success("Feedback submitted");
       onSubmitted?.();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to submit feedback");
     } finally {
       setSubmitting(false);
     }
