@@ -57,19 +57,16 @@ export default function PipelineNew() {
   // Fetch ideas when pipeline completes
   useEffect(() => {
     if (!isComplete) return;
+    if (!runId) return;
 
     async function fetchIdeas() {
       setIdeasLoading(true);
       setIdeasError(null);
       try {
-        const { listRuns } = await import("@/api/pipeline");
-        const runsData = await listRuns({ limit: 1 });
-        if (runsData.runs.length > 0) {
-          const latestRun = runsData.runs[0];
-          const ideasData = await getRunIdeas(latestRun.id);
-          setIdeas(ideasData.ideas);
-        }
+        const ideasData = await getRunIdeas(Number(runId));
+        setIdeas(ideasData.ideas);
       } catch (err) {
+        setIdeas([]);
         setIdeasError(err instanceof Error ? err.message : "Failed to load results");
       } finally {
         setIdeasLoading(false);
@@ -77,7 +74,7 @@ export default function PipelineNew() {
     }
 
     fetchIdeas();
-  }, [isComplete]);
+  }, [isComplete, runId]);
 
   // ── Cancel handlers (AR-01: explicit user confirmation) ───────
   function handleCancelClick() {

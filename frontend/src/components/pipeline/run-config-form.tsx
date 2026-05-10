@@ -38,7 +38,7 @@ export function RunConfigForm({ onSubmit, isLoading, sessionId = "", onSessionId
   const [runSynthesis, setRunSynthesis] = useState(true);
   const [searchQueries, setSearchQueries] = useState("");
   const [advancedOpen, setAdvancedOpen] = useState(false);
-  const [strategy, setStrategy] = useState<string>("deep_research");
+  const [strategy, setStrategy] = useState<string>("fast_scan");
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();

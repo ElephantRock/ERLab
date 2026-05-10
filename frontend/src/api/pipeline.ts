@@ -41,6 +41,12 @@ export function getRunIdeas(runId: number): Promise<{ ideas: IdeaSummary[]; tota
   return apiFetch(`/pipeline/runs/${runId}/ideas`);
 }
 
+export function resumeRun(runId: string): Promise<{ status: string; run_id: string; ideas_count: number; gaps_count: number; proposals_count: number }> {
+  return apiFetch(`/pipeline/resume/${runId}`, {
+    method: "POST",
+  });
+}
+
 export function triggerAutonomous(req: AutonomousCycleRequest): Promise<AutonomousCycleResponse> {
   return apiFetch("/pipeline/autonomous", {
     method: "POST",

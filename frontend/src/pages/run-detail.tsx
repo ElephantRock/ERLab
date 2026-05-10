@@ -1,11 +1,12 @@
-import { useMemo, useState, useEffect, useCallback } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useMemo, useState, useEffect } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useParams } from "react-router-dom";
-import { getRunDetail, getRunIdeas } from "@/api/pipeline";
+import { getRunDetail, getRunIdeas, resumeRun } from "@/api/pipeline";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { toast } from "sonner";
 import { PIPELINE_STAGES } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 import {
@@ -42,7 +43,11 @@ function fmtDuration(sec: number): string {
 export default function RunDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const runId = Number(id);
+
+  // Resume state
+  const [isResuming, setIsResuming] = useState(false);
 
   // Tick every second for live elapsed timer
   const [tick, setTick] = useState(0);
@@ -312,9 +317,28 @@ export default function RunDetail() {
 
       {/* Resume Button (for failed runs) */}
       {run.status === "failed" && (
-        <Button data-testid="resume-btn" className="w-full sm:w-auto">
-          <Play className="h-4 w-4 mr-2" />
-          Resume Pipeline
+        <Button
+          data-testid="resume-btn"
+          className="w-full sm:w-auto"
+          disabled={isResuming}
+          onClick={async () => {
+            setIsResuming(true);
+            try {
+              await resumeRun(String(run.id));
+              queryClient.invalidateQueries({ queryKey: ["run", runId] });
+            } catch (err) {
+              toast.error(err instanceof Error ? err.message : "Failed to resume pipeline");
+            } finally {
+              setIsResuming(false);
+            }
+          }}
+        >
+          {isResuming ? (
+            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+          ) : (
+            <Play className="h-4 w-4 mr-2" />
+          )}
+          {isResuming ? "Resuming..." : "Resume Pipeline"}
         </Button>
       )}
 
