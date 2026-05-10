@@ -163,7 +163,13 @@ export default function IdeaDetail() {
               {idea.source_gap_ids.map((gapId, idx) => (
                 <li key={idx} className="flex items-center gap-2 text-sm">
                   <span className="inline-block h-2 w-2 rounded-full bg-amber-500 flex-shrink-0" />
-                  {gapId}
+                  <button
+                    className="text-blue-600 hover:underline cursor-pointer bg-transparent border-none p-0"
+                    onClick={() => navigate(`/gaps/${gapId}`)}
+                    data-testid="source-gap-link"
+                  >
+                    {gapId}
+                  </button>
                 </li>
               ))}
             </ul>

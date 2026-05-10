@@ -101,7 +101,7 @@ export default function RunDetail() {
   if (runError) {
     return (
       <div className="space-y-6">
-        <Button variant="ghost" onClick={() => navigate("/")} data-testid="back-btn">
+        <Button variant="ghost" onClick={() => navigate("/pipeline")} data-testid="back-btn">
           <ArrowLeft className="h-4 w-4 mr-2" />
           Back to Dashboard
         </Button>
@@ -130,7 +130,7 @@ export default function RunDetail() {
   if (!run) {
     return (
       <div className="space-y-6">
-        <Button variant="ghost" onClick={() => navigate("/")} data-testid="back-btn">
+        <Button variant="ghost" onClick={() => navigate("/pipeline")} data-testid="back-btn">
           <ArrowLeft className="h-4 w-4 mr-2" />
           Back to Dashboard
         </Button>
@@ -152,7 +152,7 @@ export default function RunDetail() {
     <div className="space-y-6" data-testid="run-detail">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <Button variant="ghost" onClick={() => navigate("/")} data-testid="back-btn">
+          <Button variant="ghost" onClick={() => navigate("/pipeline")} data-testid="back-btn">
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back
           </Button>

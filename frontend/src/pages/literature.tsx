@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useSearchParams } from "react-router-dom";
 import { searchLiterature, ingestPaper } from "@/api/literature";
 import { PaperCard } from "@/components/literature/paper-card";
 import { Input } from "@/components/ui/input";
@@ -10,8 +11,18 @@ import type { Paper } from "@/api/literature";
 export default function LiteraturePage() {
   const [query, setQuery] = useState("");
   const [submittedQuery, setSubmittedQuery] = useState<string | null>(null);
+  const [urlParams] = useSearchParams();
 
   const queryClient = useQueryClient();
+
+  // Auto-search from URL param (e.g., from global search navigation)
+  useEffect(() => {
+    const q = urlParams.get("q");
+    if (q && q.trim()) {
+      setQuery(q);
+      setSubmittedQuery(q);
+    }
+  }, [urlParams]);
 
   const {
     data: searchData,

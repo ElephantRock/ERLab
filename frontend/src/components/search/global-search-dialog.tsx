@@ -103,7 +103,7 @@ export function GlobalSearchDialog({ open, onOpenChange }: Props) {
         navigate(`/gaps/${id}`);
         break;
       case "papers":
-        navigate("/literature");
+        navigate(`/literature?q=${encodeURIComponent(query)}`);
         break;
       case "runs":
         navigate(`/runs/${id}`);
