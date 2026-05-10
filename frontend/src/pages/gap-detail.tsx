@@ -2,7 +2,8 @@ import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { getGap, listGaps, updateGapStatus } from "@/api/gaps";
+import { getGap, updateGapStatus } from "@/api/gaps";
+import { listIdeas } from "@/api/ideas";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ArrowLeft, BookOpen, GitBranch, Lightbulb, BarChart3 } from "lucide-react";
@@ -34,8 +35,8 @@ export default function GapDetailPage() {
   const { data: relatedIdeasData } = useQuery({
     queryKey: ["ideas-for-gap", gap?.title],
     queryFn: () =>
-      listGaps({ search: gap?.title, limit: 5 } as Record<string, unknown>).catch(() => ({
-        gaps: [],
+      listIdeas({ search: gap?.title, limit: 5 }).catch(() => ({
+        ideas: [],
         total: 0,
       })),
     enabled: !!gap?.title,
