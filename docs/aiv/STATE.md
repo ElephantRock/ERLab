@@ -3,7 +3,7 @@
 Last Updated:       2026-05-11
 Updated By:         ivory-wolf — via BATCH-152 Close
 Framework Version:  5.3
-Phase:              BATCH-170 COMPLETE — CITATION GRAPH + FRONTEND POLISH
+Phase:              BATCH-171 COMPLETE — INTERNAL ALPHA — PHASE 10 COMPLETE
 
 ───────────────────────────────────────────────────────────
 VERIFIED MODULE MAP
@@ -212,8 +212,9 @@ KNOWN GOTCHAS
 TEST BASELINE
 ───────────────────────────────────────────────────────────
 
-  Last verified count: 2,733
-  Verified in:         BATCH-170 (2026-05-11)
+  Last verified count: 2,743
+  Verified in:         BATCH-171 (2026-05-11)
+  Phase 10 total:      +263 (21 batches, B151→B171)
   Breakdown:           2,499 + 16 + 21 + 15 + 16 + 12 + 12 + 14 + 14 + 12 + 12 + 10
 
 ───────────────────────────────────────────────────────────
