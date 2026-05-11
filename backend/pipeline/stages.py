@@ -373,7 +373,9 @@ class IngestionStage(PipelineStage):
             # Extract relationships between papers (Fix #4)
             try:
                 from backend.pipeline.knowledge.relationship_extractor import extract_relationships
-                rels = await extract_relationships(ctx.all_papers, ctx.provider_override or self._provider)
+                # Limit to top 10 papers for relationship extraction to avoid O(n) LLM bottleneck
+                top_papers = ctx.all_papers[:10]
+                rels = await extract_relationships(top_papers, ctx.provider_override or self._provider)
                 for rel in rels:
                     self._kg.add_relationship(rel)
                 if rels:
