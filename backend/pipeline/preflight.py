@@ -132,12 +132,11 @@ async def _check_llm_provider(settings: Any) -> PreflightResult:
     import time
     start = time.monotonic()
     try:
-        from backend.providers.provider_factory import ProviderFactory
-        factory = ProviderFactory()
-        provider = factory.create(settings=settings)
+        from backend.providers.provider_factory import create_provider
+        provider = create_provider()
         # Try a minimal completion
         response = await asyncio.wait_for(
-            provider.complete("Reply with exactly: OK"),
+            provider.complete([{"role": "user", "content": "Reply with exactly: OK"}]),
             timeout=15.0,
         )
         latency = (time.monotonic() - start) * 1000
