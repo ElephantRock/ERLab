@@ -22,7 +22,7 @@ from backend.pipeline.memory.service import MemoryService
 from backend.pipeline.novelty.novelty_checker import NoveltyChecker
 from backend.pipeline.verification.proposal_deepener import ProposalDeepener
 from backend.pipeline.persistence import PipelinePersistence
-from backend.pipeline.result import PipelineResult
+from backend.pipeline.result import PipelineResult, StageReport
 from backend.pipeline.self_improve.evolution import PipelineEvolver
 from backend.pipeline.self_improve.frontier import ParetoFrontier
 from backend.pipeline.self_improve.lessons import LessonExtractor
@@ -1166,20 +1166,40 @@ class PipelineOrchestrator:
         checkpoint.mark_stage_running(self._stages[0].name)
         self._persistence.save_checkpoint(checkpoint)
 
-        # Execute stages
+        # Execute stages (BATCH-173: track all stages in stage_report)
         for stage in self._stages:
             # Strategy: skip stages disabled in the current strategy config
             strategy_stage = self._strategy_config.stages.get(stage.name)
             if strategy_stage is not None and not strategy_stage.enabled:
                 logger.info("Strategy '%s' skips stage: %s", self._strategy_name, stage.name)
+                result.stage_report.append(StageReport(
+                    name=stage.name,
+                    status="skipped_by_strategy",
+                    skip_reason=f"Strategy {self._strategy_name}",
+                ))
                 continue
 
             # Gate optional stages
             if isinstance(stage, NoveltyCheckingStage) and not run_novelty:
+                result.stage_report.append(StageReport(
+                    name=stage.name,
+                    status="skipped_by_gate",
+                    skip_reason="run_novelty=False",
+                ))
                 continue
             if isinstance(stage, FeasibilityScoringStage) and not run_feasibility:
+                result.stage_report.append(StageReport(
+                    name=stage.name,
+                    status="skipped_by_gate",
+                    skip_reason="run_feasibility=False",
+                ))
                 continue
             if isinstance(stage, ProposalSynthesisStage) and not run_synthesis:
+                result.stage_report.append(StageReport(
+                    name=stage.name,
+                    status="skipped_by_gate",
+                    skip_reason="run_synthesis=False",
+                ))
                 continue
 
             # Resume support: skip stages already completed in a prior run
@@ -1273,6 +1293,26 @@ class PipelineOrchestrator:
                     should_continue = await self._execute_stage_with_retry(
                         stage, prepared_ctx, checkpoint
                     )
+                    elapsed = time.time() - t0
+                    result.stage_report.append(StageReport(
+                        name=stage.name,
+                        status="executed",
+                        elapsed_s=round(elapsed, 3),
+                    ))
+                except Exception as e:
+                    elapsed = time.time() - t0
+                    logger.error("Stage '%s' failed (continuing pipeline): %s", stage.name, e)
+                    result.stage_report.append(StageReport(
+                        name=stage.name,
+                        status="skipped_by_error",
+                        elapsed_s=round(elapsed, 3),
+                        error=str(e)[:500],
+                    ))
+                    if heartbeat:
+                        await heartbeat.stop()
+                    # Record partial stage info
+                    self._record_stage(stage.name, t0)
+                    continue
                 finally:
                     if heartbeat:
                         await heartbeat.stop()
@@ -1382,7 +1422,28 @@ class PipelineOrchestrator:
                 )
 
             if not should_continue or self._should_stop():
+                # Fill not_reached for remaining stages
+                reported_names = {r.name for r in result.stage_report}
+                for stage_name in self._STAGE_ORDER:
+                    if stage_name not in reported_names:
+                        result.stage_report.append(StageReport(
+                            name=stage_name,
+                            status="not_reached",
+                        ))
+                # Persist stage report to DB
+                self._persist_stage_report(result, db_run_id)
                 return result
+
+        # Fill not_reached for stages not in the loop (e.g. strategy excluded)
+        reported_names = {r.name for r in result.stage_report}
+        for stage_name in self._STAGE_ORDER:
+            if stage_name not in reported_names:
+                result.stage_report.append(StageReport(
+                    name=stage_name,
+                    status="not_reached",
+                ))
+        # Persist stage report to DB
+        self._persist_stage_report(result, db_run_id)
 
         # Phase 8: Pipeline quality evaluation
         self._evaluate_pipeline(result, ctx)
@@ -2057,6 +2118,24 @@ class PipelineOrchestrator:
         warnings = self._persistence.get_warnings()
         if warnings:
             result.persistence_warnings.extend(warnings)
+
+    def _persist_stage_report(self, result: PipelineResult, db_run_id: int | None) -> None:
+        """Persist stage_report list to DB (BATCH-173)."""
+        if not db_run_id or not result.stage_report:
+            return
+        try:
+            import json
+            from backend.db.database import get_session
+            from backend.db.models import PipelineRun
+
+            report_json = json.dumps([r.to_dict() for r in result.stage_report])
+            with get_session() as session:
+                run = session.query(PipelineRun).filter(PipelineRun.id == db_run_id).first()
+                if run:
+                    run.stage_report_json = report_json
+                    session.commit()
+        except Exception as e:
+            logger.warning("Failed to persist stage_report: %s", e)
 
     async def _background_memory_extraction(self, result: PipelineResult, run_id: str) -> None:
         try:

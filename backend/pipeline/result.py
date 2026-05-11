@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+import json as _json
+from dataclasses import asdict, dataclass, field
 from typing import TYPE_CHECKING
 
 from backend.pipeline.feasibility.feasibility_scorer import FeasibilityReport
@@ -13,6 +14,22 @@ from backend.pipeline.synthesis.proposal_synthesizer import ResearchProposal
 
 if TYPE_CHECKING:
     from backend.pipeline.evaluation.pipeline_evaluator import UnifiedEvaluationReport
+
+
+@dataclass
+class StageReport:
+    """Per-stage execution report for observability (BATCH-173)."""
+
+    name: str
+    status: str  # "executed" | "skipped_by_strategy" | "skipped_by_gate" | "skipped_by_error" | "not_reached"
+    elapsed_s: float = 0.0
+    error: str | None = None
+    skip_reason: str | None = None
+
+    def to_dict(self) -> dict:
+        return asdict(self)
+
+
 
 
 @dataclass
@@ -36,3 +53,4 @@ class PipelineResult:
     persistence_warnings: list[str] = field(default_factory=list)
     tree_data: dict | None = None  # Serialized tree structure for frontend (HB-03: max 500KB)
     quality_report: dict | None = None  # Phase 8: Pipeline quality evaluation results
+    stage_report: list = field(default_factory=list)  # list[StageReport] (BATCH-173)

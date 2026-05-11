@@ -1,9 +1,9 @@
 # CODEBASE STATE
 
 Last Updated:       2026-05-11
-Updated By:         pure-tide — via BATCH-172 Wire
+Updated By:         misty-island — via BATCH-173 Stage Observability
 Framework Version:  5.3
-Phase:              BATCH-172 COMPLETE — INTERNAL ALPHA — PHASE 10 COMPLETE
+Phase:              BATCH-173 COMPLETE — INTERNAL ALPHA — PHASE 10 COMPLETE
 
 ───────────────────────────────────────────────────────────
 VERIFIED MODULE MAP
@@ -315,3 +315,16 @@ PHASE 9 SUMMARY
   New tests:           69 (12+12+8+6+7+6+7+5+6)
   Total test baseline: 2,361 (was 2,292)
   Decision gates:      All passed (claims viable, wiki accurate, contradictions real)
+
+───────────────────────────────────────────────────────────
+BATCH-173 — Stage Observability + Graceful Degradation
+───────────────────────────────────────────────────────────
+  StageReport dataclass:   name, status, elapsed_s, error, skip_reason
+  PipelineResult field:    stage_report: list[StageReport]
+  Orchestrator tracking:   All 16 stages tracked (executed/skipped_by_strategy/skipped_by_gate/skipped_by_error/not_reached)
+  Graceful degradation:    Stage errors no longer halt the pipeline
+  DB persistence:          stage_report_json column on PipelineRun model
+  API exposure:            /runs/detail/{id} includes stage_report (backward compatible)
+  New files:              3 test files
+  New tests:              21 (10+6+5)
+  Total test baseline:    2,769 → 2,790 (+21)

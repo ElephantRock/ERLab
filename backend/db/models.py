@@ -123,6 +123,9 @@ class PipelineRun(Base):
     current_stage: Mapped[str | None] = mapped_column(String(50), nullable=True)
     stages_completed: Mapped[str] = mapped_column(Text, default="[]")  # JSON list
 
+    # Stage observability report (BATCH-173)
+    stage_report_json: Mapped[str | None] = mapped_column(Text, nullable=True)
+
     # Cluster report (BATCH-38)
     cluster_report_json: Mapped[str | None] = mapped_column(Text, nullable=True)
 

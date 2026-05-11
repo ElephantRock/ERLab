@@ -3,6 +3,26 @@
 All notable changes to the Elephant Rock Research Platform are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [2026-05-11] BATCH-173 — Stage Observability + Graceful Degradation
+
+### Added
+- `StageReport` dataclass in `backend/pipeline/result.py` with name, status, elapsed_s, error, skip_reason fields
+- `PipelineResult.stage_report` field (list[StageReport]) for per-stage observability
+- Orchestrator tracks all 16 stages: executed, skipped_by_strategy, skipped_by_gate, skipped_by_error, not_reached
+- Graceful degradation: stages that throw exceptions no longer halt the pipeline
+- `stage_report_json` column on `PipelineRun` DB model for persistence
+- `_persist_stage_report()` helper method on PipelineOrchestrator
+- Run detail API (`/runs/detail/{id}`) includes `stage_report` in response
+- Backward compatible: pre-B173 runs return empty `stage_report` list
+- 21 new tests across 3 test files (stage_report, api_expose, verification)
+
+### Changed
+- `backend/pipeline/orchestrator.py` — stage loop now appends StageReport entries for each skip/execute path
+- `backend/api/routes/pipeline.py` — run detail endpoint includes stage_report from DB
+- `backend/db/models.py` — PipelineRun has stage_report_json column
+
+### Test baseline: 2,769 → 2,790 (+21)
+
 ## [2026-05-11] BATCH-172 — Wire Dead Stages + Preflight Validation
 
 ### Added
