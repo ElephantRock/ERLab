@@ -3,6 +3,25 @@
 All notable changes to the Elephant Rock Research Platform are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [2026-05-11] BATCH-176 — Rate Limit Resilience with Exponential Backoff
+
+### Added
+- `backend/providers/retry.py` — new module with `retry_llm_call()` and `_is_rate_limit_error()`
+- `retry_llm_call(coro_factory, max_retries, base_delay)` — async LLM call wrapper with exponential backoff on 429/503
+- `_is_rate_limit_error(exc)` — detects rate limit errors via status_code attribute, response.status_code, or string patterns
+- `llm_rate_limit_retries` config field in Settings (default 3, env `EROCK_LLM_RATE_LIMIT_RETRIES`)
+- `retries_used` field on `StageReport` dataclass — tracks LLM retries consumed per stage
+- `_last_stage_retries` attribute on `PipelineOrchestrator` — tracks per-stage retry count
+- `StageReport` appends now include `retries_used` for executed and error stages
+- 12 new tests in `test_batch176_retry.py`
+
+### Changed
+- `backend/pipeline/orchestrator.py` — `_execute_stage_with_retry()` wraps `stage.execute(ctx)` with `retry_llm_call()`
+- `backend/pipeline/result.py` — `StageReport` gains `retries_used: int = 0` field
+- `backend/config.py` — `Settings` gains `llm_rate_limit_retries: int = 3` field
+
+### Test baseline: 2,826 → 2,838 (+12 tests)
+
 ## [2026-05-11] BATCH-175 — End-to-End Pipeline Integration Test
 
 ### Added

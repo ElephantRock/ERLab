@@ -346,6 +346,7 @@ class Settings(BaseSettings):
 
     # Stage-level execution (Gap 13)
     stage_max_retries: int = 3
+    llm_rate_limit_retries: int = 3  # EROCK_LLM_RATE_LIMIT_RETRIES (BATCH-176)
     stage_retry_base_delay: float = 2.0
     stage_retry_max_delay: float = 120.0
     stage_retry_jitter: float = 0.1

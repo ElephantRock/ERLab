@@ -54,6 +54,7 @@ from backend.pipeline.synthesis.reference_validator import ReferenceValidator
 from backend.pipeline.verification.reference_verifier import ReferenceVerifier
 from backend.providers.base import LLMProvider
 from backend.providers.provider_factory import get_registry
+from backend.providers.retry import retry_llm_call
 from backend.providers.token_counter import TokenCounter
 from backend.pipeline.compaction.middleware import CompactionMiddleware
 
@@ -96,6 +97,7 @@ class PipelineOrchestrator:
         self._cost_tracker = self._registry.cost_tracker
         self._stage_callback = stage_callback
         self._settings = settings
+        self._last_stage_retries = 0  # BATCH-176: track LLM retries per stage
 
         # Hybrid model routing: local for thinking tasks, cloud for generation
         self._model_selector = None
@@ -1298,6 +1300,7 @@ class PipelineOrchestrator:
                         name=stage.name,
                         status="executed",
                         elapsed_s=round(elapsed, 3),
+                        retries_used=getattr(self, '_last_stage_retries', 0),
                     ))
                 except Exception as e:
                     elapsed = time.time() - t0
@@ -1307,6 +1310,7 @@ class PipelineOrchestrator:
                         status="skipped_by_error",
                         elapsed_s=round(elapsed, 3),
                         error=str(e)[:500],
+                        retries_used=0,
                     ))
                     if heartbeat:
                         await heartbeat.stop()
@@ -1851,11 +1855,19 @@ class PipelineOrchestrator:
         max_delay = getattr(self._settings, "stage_retry_max_delay", 120.0)
         jitter_frac = getattr(self._settings, "stage_retry_jitter", 0.1)
 
+        # BATCH-176: LLM-level rate limit retry (wraps the actual LLM call)
+        max_llm_retries = getattr(self._settings, "llm_rate_limit_retries", 3)
+
         for attempt in range(max_retries + 1):
             try:
-                result = await stage.execute(ctx)
+                result, retries = await retry_llm_call(
+                    lambda: stage.execute(ctx),
+                    max_retries=max_llm_retries,
+                )
+                self._last_stage_retries = retries
                 return result
             except Exception as exc:
+                self._last_stage_retries = 0
                 checkpoint.mark_stage_failed(stage.name, str(exc))
                 self._persistence.save_checkpoint(checkpoint)
                 if attempt >= max_retries:

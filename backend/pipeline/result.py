@@ -25,6 +25,7 @@ class StageReport:
     elapsed_s: float = 0.0
     error: str | None = None
     skip_reason: str | None = None
+    retries_used: int = 0  # BATCH-176: LLM rate-limit retries consumed
 
     def to_dict(self) -> dict:
         return asdict(self)

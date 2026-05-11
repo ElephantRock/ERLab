@@ -1,9 +1,9 @@
 # CODEBASE STATE
 
 Last Updated:       2026-05-11
-Updated By:          Craft Agent — via BATCH-175 E2E Integration Test
+Updated By:          Craft Agent — via BATCH-176 Rate Limit Resilience
 Framework Version:  5.3
-Phase:              BATCH-175 COMPLETE — INTERNAL ALPHA — PHASE 10 COMPLETE
+Phase:              BATCH-176 COMPLETE — INTERNAL ALPHA — PHASE 10 COMPLETE
 
 ───────────────────────────────────────────────────────────
 VERIFIED MODULE MAP
@@ -216,8 +216,8 @@ KNOWN GOTCHAS
 TEST BASELINE
 ───────────────────────────────────────────────────────────
 
-  Last verified count: 2,826
-  Verified in:         BATCH-175 (2026-05-11)
+  Last verified count: 2,838
+  Verified in:         BATCH-176 (2026-05-11)
   Phase 10 total:      +300 (23 batches, B151→B175)
   Breakdown:           2,499 + 16 + 21 + 15 + 16 + 12 + 12 + 14 + 14 + 12 + 12 + 10 + 26 + 21 + 25 + 11
 
@@ -360,3 +360,24 @@ BATCH-175 — End-to-End Pipeline Integration Test
   New files:              1 test file (test_batch175_e2e_integration.py)
   New tests:              11 (7+1+1+2)
   Total test baseline:    2,815 → 2,826 (+11)
+
+───────────────────────────────────────────────────────────
+BATCH-176 — Rate Limit Resilience with Exponential Backoff
+───────────────────────────────────────────────────────────
+  Scope:                  LLM-level retry wrapper for 429/503 errors
+  Approach:               retry_llm_call() wraps async LLM calls with exponential backoff.
+                          Takes coro_factory (callable) not coroutine, so retries re-invoke.
+  New module:             backend/providers/retry.py
+  Key functions:          _is_rate_limit_error(exc), retry_llm_call(coro_factory, max_retries, base_delay)
+  Config:                 llm_rate_limit_retries (default 3, env EROCK_LLM_RATE_LIMIT_RETRIES)
+  StageReport:            retries_used field tracks LLM retries consumed per stage
+  Orchestrator wiring:    _execute_stage_with_retry() wraps stage.execute(ctx) with retry_llm_call
+                          _last_stage_retries tracks per-stage retry count
+                          StageReport appends include retries_used for executed/skipped stages
+  Error detection:        Checks status_code attribute, response.status_code, and string patterns (429, rate, 503, overloaded)
+  Backoff:                Exponential: base_delay * 2^attempt (default 2.0s, so 2s → 4s → 8s)
+  Zero overhead:          No sleep/retry on success path (retries_used=0)
+  Source code changes:    retry.py (new), result.py, config.py, orchestrator.py
+  New files:              1 source file + 1 test file
+  New tests:              12
+  Total test baseline:    2,826 → 2,838 (+12)
