@@ -308,6 +308,14 @@ async def startup():
 
     _get_limiter()
 
+    # Initialize governance approval manager
+    if settings.governance_enabled:
+        from backend.api.routes.governance import set_approval_manager
+        from backend.pipeline.governance.approval import ApprovalManager
+        manager = ApprovalManager(timeout_seconds=settings.governance_approval_timeout)
+        set_approval_manager(manager)
+        _log.info("Governance approval manager initialized")
+
 
 @app.get("/health", summary="Health check", description="Returns platform health status and version.")
 async def health():

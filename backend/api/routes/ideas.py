@@ -265,7 +265,7 @@ async def refine_idea(idea_id: int):
                 base_url=settings.ollama_base_url,
                 dimension=settings.embedding_dimension or None,
             )
-            embedding_service = EmbeddingService(embedding_provider, dimension=settings.embedding_dimension or 768)
+            embedding_service = EmbeddingService(embedding_provider, expected_dimension=settings.embedding_dimension or 768)
             store = VectorStore(settings.chroma_persist_dir, embedding_service)
 
             novelty_checker = NoveltyChecker(provider, store)
