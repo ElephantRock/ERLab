@@ -134,6 +134,21 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Test baseline: 2,591 → 2,605 (+14)
 
+## [2026-05-11] BATCH-159 — 5-State Verification + Staged Confidence Deepening
+
+### Added
+- VerificationState enum: 5 states (SUPPORTED, PARTIALLY_SUPPORTED, INSUFFICIENT_EVIDENCE, CONTRADICTED, UNVERIFIED)
+- TrustTier gates in CitationClaimAuditor: LOW_TRUST and FABRICATED warnings
+- Temporal decay module: exponential decay for citation confidence (3-year half-life)
+- CitationCheck.decayed_confidence field applied during verification
+- 14 new tests covering all three subsystems
+
+### Changed
+- `reference_verifier.py` — CitationCheck gets verification_state + decayed_confidence
+- `citation_claim_auditor.py` — compute_trust_tiers() + trust_gate_warnings
+
+### Test baseline: 2,605 → 2,619 (+14)
+
 ## [0.140.0-prealpha] — 2026-05-10
 
 ### Security

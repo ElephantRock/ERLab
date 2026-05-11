@@ -46,6 +46,7 @@ class CitationAuditItem:
     quantitative_claims: list[dict]         # Extracted numbers/metrics
     quantitative_verified: bool            # All numbers match source
     trust_contribution: float              # 0.0-1.0 for this citation
+    trust_tier: str = "UNVERIFIED"         # B159: TrustTier name string
 
 
 @dataclass
@@ -62,6 +63,7 @@ class CitationAuditReport:
     items: list[CitationAuditItem]
     model_used: str
     status: str                             # "complete" | "partial" | "skipped"
+    trust_gate_warnings: list[str] = None   # B159: warnings for low-trust patterns
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -82,12 +84,48 @@ class CitationAuditReport:
                     "quantitative_claims": item.quantitative_claims,
                     "quantitative_verified": item.quantitative_verified,
                     "trust_contribution": round(item.trust_contribution, 4),
+                    "trust_tier": item.trust_tier,
                 }
                 for item in self.items
             ],
             "model_used": self.model_used,
             "status": self.status,
+            "trust_gate_warnings": self.trust_gate_warnings or [],
         }
+
+    def compute_trust_tiers(self) -> None:
+        """B159: Assign trust tiers to each audit item and generate gate warnings."""
+        warnings = []
+        for item in self.items:
+            if not item.ref_exists:
+                item.trust_tier = "UNVERIFIED"
+            elif item.context_verified and item.quantitative_verified:
+                item.trust_tier = "VERY_HIGH"
+            elif item.context_verified:
+                item.trust_tier = "HIGH"
+            elif item.ref_exists:
+                item.trust_tier = "MEDIUM"
+            else:
+                item.trust_tier = "LOW"
+
+        # Gate warnings
+        total = max(len(self.items), 1)
+        supported = sum(1 for i in self.items if i.trust_tier in ("HIGH", "VERY_HIGH"))
+        supported_rate = supported / total
+
+        if supported_rate < 0.5:
+            warnings.append(
+                f"LOW_TRUST: Only {supported_rate:.0%} of citations are HIGH/VERY_HIGH trust. "
+                "Consider re-verifying or removing unsupported claims."
+            )
+
+        fabricated = sum(1 for i in self.items if i.trust_tier == "UNVERIFIED")
+        if fabricated > 0:
+            warnings.append(
+                f"FABRICATED: {fabricated} citation(s) could not be found in source corpus."
+            )
+
+        self.trust_gate_warnings = warnings
 
 
 class CitationClaimAuditor:

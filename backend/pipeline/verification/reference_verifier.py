@@ -12,6 +12,7 @@ from __future__ import annotations
 import re
 import logging
 from dataclasses import dataclass, field
+from enum import Enum
 from typing import Any
 
 logger = logging.getLogger(__name__)
@@ -29,6 +30,18 @@ _NUMBERED_REF_PATTERN = re.compile(r'\[(\d+)\]')
 _SOURCE_X_PATTERN = re.compile(r'\[SOURCE-(\d+)\]')
 
 
+class VerificationState(Enum):
+    """5-state verification for citations and claims (B159).
+
+    Replaces binary found/not-found with nuanced assessment.
+    """
+    SUPPORTED = "supported"                    # Citation found, context matches
+    PARTIALLY_SUPPORTED = "partially_supported"  # Citation found, context unclear
+    INSUFFICIENT_EVIDENCE = "insufficient_evidence"  # Citation exists but can't verify context
+    CONTRADICTED = "contradicted"              # Citation found but claim contradicts source
+    UNVERIFIED = "unverified"                  # Citation not found in corpus at all
+
+
 @dataclass
 class CitationCheck:
     """Result of verifying a single citation."""
@@ -38,6 +51,8 @@ class CitationCheck:
     found_in_corpus: bool = False
     matched_paper_title: str = ""
     confidence: float = 0.0  # 0.0 = unverifiable, 1.0 = confirmed
+    verification_state: VerificationState = VerificationState.UNVERIFIED
+    decayed_confidence: float = 0.0  # After temporal decay (B159-TASK-03)
 
 
 @dataclass
@@ -98,6 +113,7 @@ class ReferenceVerifier:
                 cit.found_in_corpus = True
                 cit.matched_paper_title = matches[0].get("title", "")
                 cit.confidence = 1.0
+                cit.verification_state = VerificationState.SUPPORTED
                 report.verified += 1
             else:
                 # Try fuzzy matching on author name
@@ -107,6 +123,7 @@ class ReferenceVerifier:
                         cit.found_in_corpus = True
                         cit.matched_paper_title = papers[0].get("title", "")
                         cit.confidence = 0.7
+                        cit.verification_state = VerificationState.PARTIALLY_SUPPORTED
                         report.verified += 1
                         fuzzy_found = True
                         break
@@ -114,6 +131,7 @@ class ReferenceVerifier:
                 if not fuzzy_found:
                     cit.found_in_corpus = False
                     cit.confidence = 0.0
+                    cit.verification_state = VerificationState.UNVERIFIED
                     report.potentially_hallucinated += 1
 
             report.citations.append(cit)
@@ -128,6 +146,17 @@ class ReferenceVerifier:
 
         report.unverifiable = report.total_citations - report.verified
         report.coverage_rate = report.verified / max(report.total_citations, 1)
+
+        # B159: Apply temporal decay to each citation's confidence
+        try:
+            from backend.pipeline.verification.temporal_decay import apply_decay
+            for cit in report.citations:
+                year_int = int(cit.year) if cit.year and cit.year.isdigit() else None
+                cit.decayed_confidence = apply_decay(cit.confidence, year_int)
+        except Exception:
+            for cit in report.citations:
+                cit.decayed_confidence = cit.confidence
+
         return report
 
     def verify_source_x(self, proposal_text: str, source_count: int) -> list[CitationCheck]:

@@ -3,7 +3,7 @@
 Last Updated:       2026-05-11
 Updated By:         ivory-wolf — via BATCH-152 Close
 Framework Version:  5.3
-Phase:              BATCH-158 COMPLETE — KNOWLEDGE LIBRARY PERSISTENCE
+Phase:              BATCH-159 COMPLETE — 5-STATE VERIFICATION + TEMPORAL DECAY
 
 ───────────────────────────────────────────────────────────
 VERIFIED MODULE MAP
@@ -212,9 +212,9 @@ KNOWN GOTCHAS
 TEST BASELINE
 ───────────────────────────────────────────────────────────
 
-  Last verified count: 2,605
-  Verified in:         BATCH-158 (2026-05-11)
-  Breakdown:           2,499 + 16 + 21 + 15 + 16 + 12 + 12 + 14
+  Last verified count: 2,619
+  Verified in:         BATCH-159 (2026-05-11)
+  Breakdown:           2,499 + 16 + 21 + 15 + 16 + 12 + 12 + 14 + 14
 
 ───────────────────────────────────────────────────────────
 CARRY-FORWARD OBLIGATIONS
