@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { StageModelSelector } from "./stage-model-selector";
 import type { PipelineRunRequest } from "@/api/types";
 import { Search, Loader2, ChevronDown, ChevronRight } from "lucide-react";
 
@@ -39,6 +40,7 @@ export function RunConfigForm({ onSubmit, isLoading, sessionId = "", onSessionId
   const [searchQueries, setSearchQueries] = useState("");
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const [strategy, setStrategy] = useState<string>("fast_scan");
+  const [modelOverrides, setModelOverrides] = useState<Record<string, string>>({});
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -61,6 +63,7 @@ export function RunConfigForm({ onSubmit, isLoading, sessionId = "", onSessionId
       run_synthesis: runSynthesis,
       export_format: exportFormat,
       strategy,
+      model_overrides: Object.keys(modelOverrides).length > 0 ? modelOverrides : undefined,
     };
     onSubmit(config);
   }
@@ -255,6 +258,15 @@ export function RunConfigForm({ onSubmit, isLoading, sessionId = "", onSessionId
                     onChange={(e) => setRunSynthesis(e.target.checked)}
                     data-testid="run-synthesis-toggle"
                     className="h-4 w-4 rounded border-input"
+                  />
+                </div>
+
+                {/* Model Selection per Stage */}
+                <div className="space-y-2 pt-2 border-t">
+                  <label className="text-sm font-medium">Model Selection</label>
+                  <StageModelSelector
+                    value={modelOverrides}
+                    onChange={setModelOverrides}
                   />
                 </div>
               </div>

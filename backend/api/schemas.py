@@ -15,6 +15,7 @@ class PipelineRunRequest(BaseModel):
     export_format: str = Field(default="markdown")
     session_id: str | None = None
     strategy: str = Field(default="deep_research", pattern="^(fast_scan|deep_research|academic_proposal|literature_review)$")
+    model_overrides: dict[str, str] | None = Field(default=None, description="Per-stage model ID overrides, e.g. {\"gap_analysis\": \"local\", \"proposal_synthesis\": \"cloud\"}")
 
 
 class SearchRequest(BaseModel):

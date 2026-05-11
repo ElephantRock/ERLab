@@ -924,6 +924,19 @@ class PipelineOrchestrator:
             ref_validator=ref_validator,
         )
 
+    def _resolve_user_model(self, model_id: str):
+        """Resolve a user-selected model ID to a provider instance."""
+        from backend.providers.provider_factory import create_provider
+        from backend.config import get_settings
+        settings = get_settings()
+
+        if model_id == "cloud":
+            return create_provider("anthropic", settings=settings)
+        elif model_id == "local":
+            return create_provider("lmstudio", settings=settings)
+        else:
+            return create_provider(model_id, settings=settings)
+
     def _build_adversarial_review_stage(
         self, synthesizer, thinking_provider,
     ) -> AdversarialReviewStage:
@@ -1218,6 +1231,15 @@ class PipelineOrchestrator:
             # Per-stage model routing
             if self._task_router:
                 ctx.provider_override = self._task_router.get_provider(stage.name, run_id)
+
+            # User-configured per-stage model override (UI model selector)
+            from backend.api.routes.model_config import get_stage_model
+            user_model = get_stage_model(stage.name)
+            if user_model and user_model != "auto":
+                try:
+                    ctx.provider_override = self._resolve_user_model(user_model)
+                except Exception as e:
+                    logger.warning("User model '%s' for stage '%s' failed, using default: %s", user_model, stage.name, e)
 
             # Policy gate: evaluate governance policy before each stage
             if self._governance_policy:

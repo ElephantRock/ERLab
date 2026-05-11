@@ -12,6 +12,7 @@ export interface PipelineRunRequest {
   export_format?: string;
   session_id?: string | null;
   strategy?: string;
+  model_overrides?: Record<string, string> | null;
 }
 
 export interface PipelineRunSummary {

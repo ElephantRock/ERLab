@@ -78,6 +78,13 @@ async def trigger_run(request: PipelineRunRequest):
                         }))
 
     async def _run_pipeline():
+        # Apply per-stage model overrides for this run
+        if request.model_overrides:
+            from backend.api.routes.model_config import _save_config, _load_config
+            existing = _load_config()
+            existing.update(request.model_overrides)
+            _save_config(existing)
+
         orchestrator = PipelineOrchestrator(stage_callback=_stage_callback, strategy=request.strategy)
         original_should_stop = orchestrator._should_stop
 
