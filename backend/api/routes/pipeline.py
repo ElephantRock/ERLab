@@ -304,6 +304,57 @@ async def list_sessions_for_runs():
 
 
 @router.get(
+    "/runs/stale",
+    summary="List stale pipeline runs",
+    description="List pipeline runs stuck in 'running' status beyond the timeout.",
+)
+async def list_stale_runs(
+    timeout_minutes: int = Query(default=30, ge=1, le=1440, description="Timeout in minutes"),
+):
+    """List stale running runs.
+
+    Returns runs that have been in 'running' status longer than the
+    specified timeout threshold.
+
+    Args:
+        timeout_minutes: Maximum minutes a run should be in 'running' state.
+
+    Returns:
+        {"stale_runs": [...], "count": N}
+
+    Example response:
+        {"stale_runs": [{"id": 1, "run_id": null, "domain": "AI/NLP", "created_at": "...", "age_minutes": 45.2}], "count": 1}
+    """
+    from datetime import timedelta
+    from backend.db.database import get_session
+    from backend.db.models import PipelineRun
+    import sqlalchemy as sa
+
+    cutoff = datetime.now(timezone.utc) - timedelta(minutes=timeout_minutes)
+
+    with get_session() as session:
+        runs = session.query(PipelineRun).filter(
+            PipelineRun.status == "running",
+            PipelineRun.created_at < cutoff,
+        ).order_by(PipelineRun.created_at.asc()).limit(100).all()
+
+        stale_runs = []
+        now = datetime.now(timezone.utc)
+        for run in runs:
+            created = run.created_at.replace(tzinfo=timezone.utc) if run.created_at.tzinfo is None else run.created_at
+            age = now - created
+            stale_runs.append({
+                "id": run.id,
+                "run_id": getattr(run, 'run_id', None),
+                "domain": run.domain,
+                "created_at": str(run.created_at),
+                "age_minutes": round(age.total_seconds() / 60, 1),
+            })
+
+        return {"stale_runs": stale_runs, "count": len(stale_runs)}
+
+
+@router.get(
     "/runs/detail/{run_id}",
     summary="Get run details",
     description="Get full details for a pipeline run by its database ID, including config, stages, and ideas.",
@@ -320,6 +371,7 @@ async def get_run(run_id: int):
     Example response:
         {"id": 1, "status": "completed", "domain": "AI/NLP", "current_stage": "done", "config": {}, "stages_completed": ["generation", "novelty"], "ideas": [{"id": 1, "title": "...", "novelty_score": 0.8, "feasibility_score": 7.0, "overall_score": 0.75}], "created_at": "...", "completed_at": "...", "error_message": null}
     """
+    from datetime import timedelta
     from backend.db.crud import get_pipeline_run
     from backend.db.database import get_session
 
@@ -327,6 +379,15 @@ async def get_run(run_id: int):
         run = get_pipeline_run(session, run_id)
         if not run:
             raise NotFoundError("Run not found")
+
+        # Compute stale flag (BATCH-177)
+        timeout_minutes = 30  # Same default as watchdog
+        stale = False
+        if run.status == "running" and run.created_at:
+            cutoff = datetime.now(timezone.utc) - timedelta(minutes=timeout_minutes)
+            created = run.created_at.replace(tzinfo=timezone.utc) if run.created_at.tzinfo is None else run.created_at
+            stale = created < cutoff
+
         return {
             "id": run.id,
             "status": run.status,
@@ -350,6 +411,7 @@ async def get_run(run_id: int):
             "created_at": str(run.created_at),
             "completed_at": str(run.completed_at) if run.completed_at else None,
             "error_message": run.error_message,
+            "stale": stale,
         }
 
 

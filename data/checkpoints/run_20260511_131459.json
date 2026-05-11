@@ -1,0 +1,110 @@
+{
+  "run_id": "run_20260511_131459",
+  "state": "pending",
+  "stages": [
+    {
+      "stage_name": "literature_search",
+      "status": "completed",
+      "started_at": "2026-05-11T13:15:02.968191",
+      "completed_at": "2026-05-11T13:15:10.354162",
+      "error": null,
+      "retry_count": 0,
+      "duration_seconds": 0.0,
+      "last_error_type": null
+    },
+    {
+      "stage_name": "ingestion",
+      "status": "completed",
+      "started_at": "2026-05-11T13:15:10.354162",
+      "completed_at": "2026-05-11T13:24:24.243612",
+      "error": null,
+      "retry_count": 0,
+      "duration_seconds": 0.0,
+      "last_error_type": null
+    },
+    {
+      "stage_name": "gap_analysis",
+      "status": "completed",
+      "started_at": "2026-05-11T13:24:24.243612",
+      "completed_at": "2026-05-11T13:24:33.209258",
+      "error": null,
+      "retry_count": 0,
+      "duration_seconds": 0.0,
+      "last_error_type": null
+    },
+    {
+      "stage_name": "idea_generation",
+      "status": "completed",
+      "started_at": "2026-05-11T13:24:33.209258",
+      "completed_at": "2026-05-11T13:26:42.848879",
+      "error": null,
+      "retry_count": 0,
+      "duration_seconds": 0.0,
+      "last_error_type": null
+    },
+    {
+      "stage_name": "novelty_checking",
+      "status": "running",
+      "started_at": "2026-05-11T13:26:42.848879",
+      "completed_at": null,
+      "error": null,
+      "retry_count": 0,
+      "duration_seconds": 0.0,
+      "last_error_type": null
+    },
+    {
+      "stage_name": "feasibility_scoring",
+      "status": "completed",
+      "started_at": null,
+      "completed_at": "2026-05-11T13:26:42.853916",
+      "error": null,
+      "retry_count": 0,
+      "duration_seconds": 0.0,
+      "last_error_type": null
+    },
+    {
+      "stage_name": "mechanical_metrics",
+      "status": "completed",
+      "started_at": "2026-05-11T13:26:42.853916",
+      "completed_at": "2026-05-11T13:26:42.859218",
+      "error": null,
+      "retry_count": 0,
+      "duration_seconds": 0.0,
+      "last_error_type": null
+    },
+    {
+      "stage_name": "proposal_synthesis",
+      "status": "completed",
+      "started_at": "2026-05-11T13:26:42.859218",
+      "completed_at": "2026-05-11T13:26:42.863969",
+      "error": null,
+      "retry_count": 0,
+      "duration_seconds": 0.0,
+      "last_error_type": null
+    },
+    {
+      "stage_name": "proposal_deepening",
+      "status": "completed",
+      "started_at": "2026-05-11T13:26:42.863969",
+      "completed_at": "2026-05-11T13:26:42.870355",
+      "error": null,
+      "retry_count": 0,
+      "duration_seconds": 0.0,
+      "last_error_type": null
+    },
+    {
+      "stage_name": "export",
+      "status": "completed",
+      "started_at": "2026-05-11T13:26:42.870355",
+      "completed_at": "2026-05-11T13:26:42.876458",
+      "error": null,
+      "retry_count": 0,
+      "duration_seconds": 0.0,
+      "last_error_type": null
+    }
+  ],
+  "domain": "",
+  "params": {},
+  "created_at": "2026-05-11T13:15:02.968191",
+  "updated_at": "2026-05-11T13:26:42.876458"
+}

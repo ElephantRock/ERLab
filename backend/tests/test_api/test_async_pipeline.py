@@ -27,12 +27,20 @@ def _make_app():
 
 
 def test_trigger_run_returns_202():
-    """POST /run returns run_id and status 'running'."""
+    """POST /run returns run_id and status 'running' when preflight passes."""
     mock_orch = MagicMock()
     mock_orch.run = AsyncMock(return_value=MagicMock())
     mock_orch._should_stop = MagicMock(return_value=False)
 
-    with patch("backend.pipeline.orchestrator.PipelineOrchestrator", return_value=mock_orch):
+    # Mock preflight to pass (BATCH-172)
+    mock_report = MagicMock()
+    mock_report.can_proceed = True
+    mock_report.warnings = 0
+    mock_report.fatal = 0
+    mock_report.checks = []
+
+    with patch("backend.pipeline.orchestrator.PipelineOrchestrator", return_value=mock_orch), \
+         patch("backend.pipeline.preflight.run_preflight", new=AsyncMock(return_value=mock_report)):
         client = TestClient(_make_app())
         resp = client.post("/run", json={"domain": "AI/NLP"})
         assert resp.status_code == 200
@@ -47,7 +55,14 @@ def test_trigger_run_accepts_full_params():
     mock_orch.run = AsyncMock(return_value=MagicMock())
     mock_orch._should_stop = MagicMock(return_value=False)
 
-    with patch("backend.pipeline.orchestrator.PipelineOrchestrator", return_value=mock_orch):
+    mock_report = MagicMock()
+    mock_report.can_proceed = True
+    mock_report.warnings = 0
+    mock_report.fatal = 0
+    mock_report.checks = []
+
+    with patch("backend.pipeline.orchestrator.PipelineOrchestrator", return_value=mock_orch), \
+         patch("backend.pipeline.preflight.run_preflight", new=AsyncMock(return_value=mock_report)):
         client = TestClient(_make_app())
         resp = client.post(
             "/run",

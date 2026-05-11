@@ -1,9 +1,9 @@
 # CODEBASE STATE
 
 Last Updated:       2026-05-11
-Updated By:          Craft Agent — via BATCH-176 Rate Limit Resilience
+Updated By:          Craft Agent — via BATCH-177 Stale Run Cleanup + Run Status Accuracy
 Framework Version:  5.3
-Phase:              BATCH-176 COMPLETE — INTERNAL ALPHA — PHASE 10 COMPLETE
+Phase:              BATCH-177 COMPLETE — INTERNAL ALPHA — PHASE 10 COMPLETE (B172-B177 ROADMAP DONE)
 
 ───────────────────────────────────────────────────────────
 VERIFIED MODULE MAP
@@ -216,8 +216,8 @@ KNOWN GOTCHAS
 TEST BASELINE
 ───────────────────────────────────────────────────────────
 
-  Last verified count: 2,838
-  Verified in:         BATCH-176 (2026-05-11)
+  Last verified count: 2,848
+  Verified in:         BATCH-177 (2026-05-11)
   Phase 10 total:      +300 (23 batches, B151→B175)
   Breakdown:           2,499 + 16 + 21 + 15 + 16 + 12 + 12 + 14 + 14 + 12 + 12 + 10 + 26 + 21 + 25 + 11
 
@@ -381,3 +381,19 @@ BATCH-176 — Rate Limit Resilience with Exponential Backoff
   New files:              1 source file + 1 test file
   New tests:              12
   Total test baseline:    2,826 → 2,838 (+12)
+
+───────────────────────────────────────────────────────────
+BATCH-177 — Stale Run Cleanup + Run Status Accuracy
+───────────────────────────────────────────────────────────
+  Scope:                  Stale run detection API + run detail stale flag
+  Approach:               New GET /runs/stale endpoint lists running runs past timeout.
+                          Run detail GET /runs/detail/{id} includes stale boolean flag.
+  New endpoint:           GET /runs/stale?timeout_minutes=30 — lists stale running runs
+  Modified endpoint:      GET /runs/detail/{id} — response now includes "stale" boolean field
+  Stale logic:            status=="running" AND created_at < (now - 30min timeout)
+  Watchdog verified:      POST /watchdog still marks stale runs as failed correctly
+  Route ordering:         /runs/stale registered BEFORE /runs/detail/{run_id} (static before dynamic)
+  Source code changes:    backend/api/routes/pipeline.py
+  New files:              1 test file
+  New tests:              10 (6 endpoint + 4 verification)
+  Total test baseline:    2,838 → 2,848 (+10)

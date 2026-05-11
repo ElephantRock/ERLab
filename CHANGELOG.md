@@ -3,6 +3,20 @@
 All notable changes to the Elephant Rock Research Platform are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [2026-05-11] BATCH-177 — Stale Run Cleanup + Run Status Accuracy
+
+### Added
+- `GET /runs/stale` endpoint — lists pipeline runs stuck in 'running' status beyond the timeout threshold
+- `stale` boolean field in `GET /runs/detail/{id}` response — indicates if a running run has exceeded the 30-minute timeout
+- 10 new tests in `test_batch177_stale.py`
+
+### Changed
+- `backend/api/routes/pipeline.py` — added `list_stale_runs()` endpoint registered before `/runs/detail/{run_id}` (static before dynamic)
+- `backend/api/routes/pipeline.py` — `get_run()` now computes and returns `stale` flag based on status + created_at age
+- Route ordering preserved: `/runs/stale` (static) registered before `/runs/detail/{run_id}` (dynamic)
+
+### Test baseline: 2,838 → 2,848 (+10 tests)
+
 ## [2026-05-11] BATCH-176 — Rate Limit Resilience with Exponential Backoff
 
 ### Added
