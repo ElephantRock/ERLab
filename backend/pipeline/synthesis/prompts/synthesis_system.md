@@ -122,11 +122,36 @@ A concise, descriptive title (under 15 words).
 300+ words organized by themes (NOT chronologically). For each related work, state what it does AND its limitation relative to the proposed approach. **Only cite papers from your [SOURCE-X] list.** Use [SOURCE-X] tag or (Author, Year) format. If you wish to discuss a concept but have no supporting paper for it, describe the concept without a citation. Cover at least 3 distinct research directions.
 
 ## Proposed Method
-500+ words. This is the core section. Include:
-- A formal problem definition with notation
-- The method description with algorithmic steps
-- Mathematical formulations for key components (loss functions, objectives)
-- A figure description (describe what a diagram would show)
+600+ words. This is the core section. You MUST include ALL of the following sub-sections:
+
+### 3.1 Problem Definition
+Define the problem formally. Introduce all notation here. Example:
+> Given a frozen LLM $f_\theta$, a source domain $\mathcal{D}_S$ with knowledge bank $\mathcal{B}_S$, and a target domain $\mathcal{D}_T$ with query $q \in \mathcal{D}_T$, the goal is to retrieve structurally analogous knowledge $a \in \mathcal{B}_S$ and inject it into $f_\theta$'s attention layers to improve answer quality on $q$ without updating $\theta$.
+
+### 3.2 Architecture
+Describe each component with its inputs, outputs, and dimensions. Use math notation for all operations. Example:
+> The retriever encodes queries as $h_q = \text{Enc}(q) \in \mathbb{R}^d$ and retrieves via $a^* = \arg\max_{a \in \mathcal{B}_S} \text{sim}(W_T^T h_q, W_S^T h_a)$
+
+### 3.3 Training Objectives (MANDATORY)
+Define the EXACT loss function(s) used to train each trainable component. You MUST include:
+- The primary loss function with a display equation: $$\mathcal{L} = ...$$
+- Each variable in the loss must be defined
+- If contrastive learning is used, define the positive/negative sampling strategy
+- If end-to-end training is used, specify which parameters receive gradients and how gradients flow through frozen components
+- State the optimizer (e.g., AdamW) and key hyperparameters (learning rate, batch size, warmup)
+
+Example:
+> The retriever is trained with InfoNCE loss:
+> $$\mathcal{L}_{\text{retr}} = -\log \frac{\exp(\text{sim}(q, a^+) / \tau)}{\sum_{j=1}^{K} \exp(\text{sim}(q, a_j) / \tau)}$$
+> where $a^+$ is the positive analogy, $\{a_j\}_{j=1}^K$ are negatives, and $\tau = 0.07$ is the temperature.
+
+### 3.4 Inference Procedure
+Step-by-step algorithm for how the system produces an answer at test time.
+
+### 3.5 Computational Requirements
+Estimate GPU hours, model sizes, and training time. Example:
+> Training the retriever requires ~10 GPU-hours on a single A100. The synthesis module adds ~50 GPU-hours for end-to-end training through the frozen 7B model. Total estimated compute: ~60 GPU-hours.
+
 Use LaTeX math: `$...$` for inline, `$$...$$` for display equations.
 
 ## Expected Contributions
@@ -134,13 +159,28 @@ Use LaTeX math: `$...$` for inline, `$$...$$` for display equations.
 
 ## Evaluation Plan
 300+ words with four subsections:
-- **Datasets**: Name each dataset, size, and source URL
-- **Baselines**: Name each baseline with citation (from your [SOURCE-X] list) and description
-- **Metrics**: Define each metric with a formula or description
-- **Ablation design**: At least 2 ablation experiments
+- **Datasets**: Name each dataset, size, and source URL. At least one must be a standard public benchmark.
+- **Baselines**: You MUST include at least 3 baselines covering these categories:
+  1. An **in-domain baseline** (e.g., standard RAG on target domain data)
+  2. A **cross-domain naive baseline** (e.g., retrieving from source domain WITHOUT structural alignment) to isolate the contribution of domain alignment
+  3. A **minimal-intervention baseline** (e.g., chain-of-thought prompting that instructs the model to find cross-domain analogies, or few-shot with analogical examples) to test whether the architecture outperforms simple prompting
+  4. Optionally: a parameter-efficient fine-tuning baseline (LoRA/adapter) on the target domain, since this is the standard domain adaptation approach
+  Name each baseline with description.
+- **Metrics**: Define each metric with a formula or description. Include both task performance (accuracy, F1) and retrieval quality (Hit@K, MRR).
+- **Ablation design**: At least 3 ablation experiments:
+  1. Remove cross-domain retrieval entirely (in-domain only) — quantifies the specific benefit of cross-domain knowledge
+  2. Remove the domain alignment projections — tests whether structural alignment matters vs raw retrieval
+  3. Vary the number of retrieved analogies K — sensitivity analysis
 
 ## Timeline
-100+ words. A 12-week breakdown in 4 phases. For each phase list 2-3 tasks. Mark dependencies.
+150+ words. A 12-week breakdown in 4 phases. For each phase list 2-3 tasks. Mark dependencies.
+
+**MANDATORY**: The timeline MUST be realistic for the stated model size and compute budget. Rules:
+- If using a model >13B parameters, you MUST justify the compute budget (e.g., "access to 4×A100 80GB GPUs")
+- If training through a frozen large model, account for at least 2 weeks of debugging + 1 week of actual training
+- Include a specific week for hyperparameter tuning
+- Include a specific week for error analysis and failure mode investigation
+- Prefer smaller models (7B/13B) unless the research question specifically requires scale. State: "We use a 7B parameter model because..."
 
 ## References
 List all cited works using ONLY papers from your [SOURCE-X] list. Format: [SOURCE-X] Author (Year). Title. Venue. DOI/URL if available.

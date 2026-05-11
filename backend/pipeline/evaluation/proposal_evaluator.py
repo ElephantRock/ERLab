@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 _PROMPT_PATH = Path(__file__).parent / "prompts" / "evaluation.md"
 
-DIMENSIONS = ["novelty", "feasibility", "completeness", "rigor", "clarity"]
+DIMENSIONS = ["novelty", "feasibility", "completeness", "rigor", "clarity", "baseline_adequacy", "compute_realism"]
 
 
 @dataclass
@@ -30,12 +30,14 @@ class DimensionScore:
 
 @dataclass
 class ProposalEvaluation:
-    """Full 5-dimension evaluation of a research proposal."""
+    """Full 7-dimension evaluation of a research proposal."""
     novelty: DimensionScore = field(default_factory=DimensionScore)
     feasibility: DimensionScore = field(default_factory=DimensionScore)
     completeness: DimensionScore = field(default_factory=DimensionScore)
     rigor: DimensionScore = field(default_factory=DimensionScore)
     clarity: DimensionScore = field(default_factory=DimensionScore)
+    baseline_adequacy: DimensionScore = field(default_factory=DimensionScore)
+    compute_realism: DimensionScore = field(default_factory=DimensionScore)
     overall: float = 0.0
 
     def to_dict(self) -> dict:
@@ -45,6 +47,8 @@ class ProposalEvaluation:
             "completeness": {"score": self.completeness.score, "justification": self.completeness.justification},
             "rigor": {"score": self.rigor.score, "justification": self.rigor.justification},
             "clarity": {"score": self.clarity.score, "justification": self.clarity.justification},
+            "baseline_adequacy": {"score": self.baseline_adequacy.score, "justification": self.baseline_adequacy.justification},
+            "compute_realism": {"score": self.compute_realism.score, "justification": self.compute_realism.justification},
             "overall": self.overall,
         }
 
@@ -60,6 +64,8 @@ class ProposalEvaluation:
             completeness=_ds(data.get("completeness", {})),
             rigor=_ds(data.get("rigor", {})),
             clarity=_ds(data.get("clarity", {})),
+            baseline_adequacy=_ds(data.get("baseline_adequacy", {})),
+            compute_realism=_ds(data.get("compute_realism", {})),
             overall=data.get("overall", 0.0),
         )
 
@@ -91,9 +97,11 @@ class ProposalEvaluator:
 
         try:
             response = await self._provider.complete(
-                system_prompt=self._system_prompt,
-                user_prompt=user_prompt,
-                max_tokens=1000,
+                messages=[
+                    {"role": "system", "content": self._system_prompt},
+                    {"role": "user", "content": user_prompt},
+                ],
+                max_tokens=1500,
             )
         except TimeoutError:
             logger.warning("LLM timeout during proposal evaluation — returning default scores")
@@ -144,5 +152,7 @@ class ProposalEvaluator:
             completeness=DimensionScore(score=scores.get("completeness", 0.0), justification=justifications.get("completeness", "")),
             rigor=DimensionScore(score=scores.get("rigor", 0.0), justification=justifications.get("rigor", "")),
             clarity=DimensionScore(score=scores.get("clarity", 0.0), justification=justifications.get("clarity", "")),
+            baseline_adequacy=DimensionScore(score=scores.get("baseline_adequacy", 0.0), justification=justifications.get("baseline_adequacy", "")),
+            compute_realism=DimensionScore(score=scores.get("compute_realism", 0.0), justification=justifications.get("compute_realism", "")),
             overall=overall,
         )

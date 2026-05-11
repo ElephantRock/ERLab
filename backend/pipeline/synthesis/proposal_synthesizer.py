@@ -35,7 +35,7 @@ MIN_WORDS = {
     "abstract": 150,
     "introduction": 400,
     "related_work": 300,
-    "proposed_method": 500,
+    "proposed_method": 600,
     "expected_contributions": 150,
     "evaluation_plan": 300,
     "timeline": 100,
@@ -47,7 +47,10 @@ MIN_WORDS = {
 # re-generates sections that fail any check, plus the word-count check.
 SECTION_CHECKLIST: dict[str, list[tuple[str, str]]] = {
     "proposed_method": [
+        (r"\$\$.*\$\$", "formal loss function ($$...$$ display equation)"),
+        (r"\bloss\b|\bobjective\b|\boptimiz", "training objective or loss function"),
         (r"\$.*\$", "mathematical notation ($...$)"),
+        (r"\bGPU\b|\bcompute\b|\bA100\b|\bGPU-hours\b", "computational requirements estimate"),
     ],
     "related_work": [
         (r"\[\d+\]|\(\w+,\s*\d{4}\)", "citation markers ([1] or Author, Year)"),
@@ -56,7 +59,13 @@ SECTION_CHECKLIST: dict[str, list[tuple[str, str]]] = {
         (r"contribut|novelt|our ", "contributions statement"),
     ],
     "evaluation_plan": [
-        (r"baseline|metric|dataset|benchmark", "evaluation specifics (baseline/metric/dataset)"),
+        (r"\bbaseline\b", "named baselines"),
+        (r"\bcross-domain\b|\bnaive\b|\bwithout.*alignment", "naive cross-domain baseline (without alignment)"),
+        (r"\bablation\b", "ablation experiments"),
+        (r"\bmetric\b|\baccuracy\b|\bF1\b", "evaluation metrics"),
+    ],
+    "timeline": [
+        (r"\bGPU\b|\bcompute\b|\bA100\b|\b7B\b|\b13B\b", "compute budget or model size justification"),
     ],
 }
 
@@ -172,7 +181,16 @@ class ProposalSynthesizer:
                             "produce ALL sections with substantial content. Do NOT write stubs, "
                             "summaries, or placeholder text. Each section must be detailed and "
                             "technically precise.\n\n"
-                            "CRITICAL: This is a CLOSED-BOOK EXAM. You may ONLY cite sources "
+                            "CRITICAL REQUIREMENTS:\n"
+                            "1. PROPOSED METHOD MUST include formal loss functions with $$...$$ equations.\n"
+                            "   Every trainable component must have its training objective defined.\n"
+                            "   Specify optimizer, learning rate, and gradient flow.\n"
+                            "2. EVALUATION PLAN MUST include at least 3 baselines: in-domain RAG, naive cross-domain retrieval,\n"
+                            "   and a minimal-intervention baseline (e.g., CoT prompting for analogies).\n"
+                            "3. TIMELINE MUST be realistic for the model size. Prefer 7B/13B models.\n"
+                            "   Account for debugging time. State GPU budget explicitly.\n"
+                            "4. Include a Computational Requirements subsection in the Proposed Method.\n\n"
+                            "This is a CLOSED-BOOK EXAM. You may ONLY cite sources "
                             "labeled [SOURCE-X] in the Supporting Literature. If a claim cannot "
                             "be backed by a [SOURCE-X] paper, write 'internal reasoning' — do NOT "
                             "invent citations. Do NOT use author names from your training data that "
@@ -183,8 +201,8 @@ class ProposalSynthesizer:
                             "## Expected Contributions\n...\n## Evaluation Plan\n...\n"
                             "## Timeline\n...\n## References\n...\n## Risk Mitigation\n...\n\n"
                             "You MUST include ALL 10 sections. Each prose section must be at least "
-                            "200 words. The Proposed Method must be at least 500 words with "
-                            "mathematical notation ($...$). The Introduction must be at least 400 words.\n\n"
+                            "200 words. The Proposed Method must be at least 600 words with "
+                            "formal loss functions ($$...$$). The Introduction must be at least 400 words.\n\n"
                             "MANDATORY PRE-COMPUTATION: Before writing prose, internally: (1) list each "
                             "[SOURCE-X] and its key claim, (2) map claims to sources, (3) assign sources "
                             "to sections. Map first, write second."
@@ -251,12 +269,12 @@ class ProposalSynthesizer:
             "Abstract": "150-250 words. State problem, approach, expected result. No first person.",
             "Introduction": "400+ words. 3-4 paragraphs: context, limitations, approach, contributions.",
             "Related Work": "300+ words. Organized by themes, not chronologically. Cite specific papers.",
-            "Proposed Method": "500+ words. Formal problem definition, algorithmic steps, math notation.",
+            "Proposed Method": "600+ words. MUST include: (1) formal problem definition with notation, (2) architecture with input/output dimensions, (3) LOSS FUNCTIONS with $$...$$ display equations defining training objectives, optimizer, and hyperparameters, (4) inference procedure, (5) computational requirements (GPU-hours, model size).",
             "Expected Contributions": "3-5 numbered contributions, each stating WHAT and WHY.",
-            "Evaluation Plan": "300+ words. Datasets, baselines, metrics, ablation design.",
-            "Timeline": "100+ words. 12-week breakdown in 4 phases.",
+            "Evaluation Plan": "300+ words. MUST include: (1) at least 3 baselines covering in-domain RAG, naive cross-domain retrieval, and a minimal-intervention baseline like CoT prompting, (2) metrics with formulas, (3) at least 3 ablation experiments.",
+            "Timeline": "150+ words. 12-week breakdown. MUST state model size (prefer 7B/13B), GPU budget, and account for debugging + hyperparameter tuning weeks.",
             "References": "List all cited works with author-year-title-venue.",
-            "Risk Mitigation": "Top 3 risks with mitigation strategies.",
+            "Risk Mitigation": "Top 3 risks with mitigation strategies and fallback plans.",
             "Title": "Concise title under 15 words.",
         }
         tip = tips.get(section_name, "Write a detailed, technically precise section.")
