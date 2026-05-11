@@ -162,6 +162,20 @@ class NoveltyChecker:
 
             # Augment with citation traversal and embedding scoring
             report = await self._augment_with_graph_novelty(idea, report)
+
+            # B163: Optional S2 web novelty verification
+            try:
+                from backend.pipeline.novelty.s2_verifier import S2NoveltyVerifier
+                s2 = getattr(self, '_s2_source', None)
+                if s2:
+                    verifier = S2NoveltyVerifier(s2_source=s2, llm_provider=self._provider)
+                    s2_result = await verifier.verify(idea.title, idea.proposed_method)
+                    # Blend S2 score with local score (50/50 weight)
+                    report.overall_score = (report.overall_score + s2_result.novelty_score) / 2.0
+                    report.novelty_arguments += f" [S2 web check: {s2_result.llm_verdict}, {s2_result.s2_papers_found} similar papers]"
+            except Exception as e:
+                logger.debug("S2 novelty verification skipped: %s", e)
+
             return report
 
         except Exception as e:
