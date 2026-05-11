@@ -296,6 +296,8 @@ async def refine_idea(idea_id: int):
     except Exception as e:
         traceback.print_exc()
         raise APIError(
-            message=f"Idea refinement failed: {str(e)}",
-            hint="The LLM provider may be unavailable. Check provider connectivity.",
+            500,
+            "INTERNAL_ERROR",
+            f"Idea refinement failed: {str(e)}",
+            "The LLM provider may be unavailable. Check provider connectivity.",
         )
