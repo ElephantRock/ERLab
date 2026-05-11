@@ -165,10 +165,32 @@ async def trigger_run(request: PipelineRunRequest):
                     _progress_queues[run_id].put_nowait({"done": True})
             _background_tasks.discard(asyncio.current_task())
 
+    # Preflight validation (BATCH-172)
+    from backend.pipeline.preflight import run_preflight
+    preflight_report = await run_preflight(
+        domain=request.domain,
+        strategy=request.strategy,
+    )
+    if not preflight_report.can_proceed:
+        from fastapi.responses import JSONResponse
+        fatal_checks = [c for c in preflight_report.checks if c.severity.value == "fatal"]
+        return JSONResponse(
+            status_code=503,
+            content={
+                "error": "Pipeline preflight checks failed",
+                "preflight": {
+                    "can_proceed": False,
+                    "fatal_count": preflight_report.fatal,
+                    "warning_count": preflight_report.warnings,
+                    "fatal_checks": [{"name": c.name, "message": c.message, "detail": c.detail} for c in fatal_checks],
+                },
+            },
+        )
+
     task = asyncio.create_task(_run_pipeline())
     _background_tasks.add(task)
 
-    return {"run_id": run_id, "status": "running"}
+    return {"run_id": run_id, "status": "running", "preflight": {"can_proceed": True, "warnings": preflight_report.warnings}}
 
 
 @router.get(

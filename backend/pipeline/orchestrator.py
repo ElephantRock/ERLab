@@ -29,10 +29,13 @@ from backend.pipeline.self_improve.lessons import LessonExtractor
 from backend.pipeline.stages import (
     AdversarialReviewStage,
     CitationAuditStage,
+    EvaluationStage,
     ExportStage,
     FeasibilityScoringStage,
     GapAnalysisStage,
+    GapReflectionStage,
     IdeaGenerationStage,
+    IdeaReflectionStage,
     IngestionStage,
     LiteratureSearchStage,
     MechanicalMetricsStage,
@@ -44,6 +47,8 @@ from backend.pipeline.stages import (
     StageContext,
     TreeSearchStage,
 )
+from backend.pipeline.reflection.reflector import ReflectionStage
+from backend.pipeline.evaluation.proposal_evaluator import ProposalEvaluator
 from backend.pipeline.synthesis.proposal_synthesizer import ProposalSynthesizer
 from backend.pipeline.synthesis.reference_validator import ReferenceValidator
 from backend.pipeline.verification.reference_verifier import ReferenceVerifier
@@ -989,16 +994,22 @@ class PipelineOrchestrator:
             thinking_provider=thinking_provider,
         )
 
+        # BATCH-172: resolve thinking_provider with fallback
+        tp = self._thinking_provider or self._provider
+
         return [
             LiteratureSearchStage(self._search, self._hooks),
             IngestionStage(self._store, self._bm25, self._embedding, kg=self._kg, provider=self._provider),
             GapAnalysisStage(self._gap_analyzer, self._goal_manager, self._hooks, self._memory, kg=self._kg, faithfulness_checker=self._faithfulness_checker),
+            GapReflectionStage(provider=tp, reflector=ReflectionStage(provider=tp), threshold=0.6),
             idea_stage,
+            IdeaReflectionStage(provider=tp, reflector=ReflectionStage(provider=tp), threshold=0.6),
             NoveltyCheckingStage(self._novelty, self._hooks),
             FeasibilityScoringStage(self._feasibility),
             MechanicalMetricsStage(),
             self._build_synthesis_stage(ref_validator),
             adversarial_stage,
+            EvaluationStage(provider=tp, evaluator=ProposalEvaluator(provider=tp)),
             PaperSynthesisStage(provider=self._provider),
             CitationAuditStage(provider=thinking_provider),
             ProposalDeepeningStage(deepener=ProposalDeepener(provider=self._provider)),

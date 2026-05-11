@@ -3,6 +3,27 @@
 All notable changes to the Elephant Rock Research Platform are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [2026-05-11] BATCH-172 — Wire Dead Stages + Preflight Validation
+
+### Added
+- `GapReflectionStage` wired at index 3 in `PipelineOrchestrator._build_stages()`
+- `IdeaReflectionStage` wired at index 5 in `PipelineOrchestrator._build_stages()`
+- `EvaluationStage` wired at index 11 in `PipelineOrchestrator._build_stages()`
+- All 3 stages use `thinking_provider` with `self._provider` fallback
+- Preflight validation runs before API accepts pipeline runs (`/run` endpoint)
+- API returns 503 with detailed fatal checks on preflight failure
+- API returns 200 with preflight summary on success
+- `backend/pipeline/preflight.py` — 8 checks: settings, LLM, embedding, local LLM, database, export dir, strategy, domain
+- 26 new tests across 4 test files (wiring, preflight, strategies, verification)
+- Updated `docs/aiv/STATE.md` with BATCH-172 verification info
+
+### Changed
+- `backend/pipeline/orchestrator.py` — `_build_stages()` now returns 16 stages (was 13)
+- `backend/api/routes/pipeline.py` — `trigger_run()` runs preflight before `asyncio.create_task()`
+- All 4 strategy presets verified to correctly enable/disable new stages
+
+### Test baseline: 2,743 → 2,769 (+26)
+
 ## [2026-05-11] BATCH-151 — Docker Deployment + AI Honesty Badge
 
 ### Added

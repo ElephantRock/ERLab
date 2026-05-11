@@ -1,9 +1,9 @@
 # CODEBASE STATE
 
 Last Updated:       2026-05-11
-Updated By:         ivory-wolf — via BATCH-152 Close
+Updated By:         pure-tide — via BATCH-172 Wire
 Framework Version:  5.3
-Phase:              BATCH-171 COMPLETE — INTERNAL ALPHA — PHASE 10 COMPLETE
+Phase:              BATCH-172 COMPLETE — INTERNAL ALPHA — PHASE 10 COMPLETE
 
 ───────────────────────────────────────────────────────────
 VERIFIED MODULE MAP
@@ -37,11 +37,11 @@ VERIFIED MODULE MAP
 
   Module:              backend.pipeline.orchestrator
   Exports:             PipelineOrchestrator
-  Key note:            _STAGE_ORDER now has 10 entries (added proposal_deepening).
-                       _verify_references() runs after synthesis (B112).
-                       _evaluate_pipeline() runs after all stages (B116).
-                       Both are non-blocking (HB-01).
-  Verified in:         BATCH-116
+  Key note:            _STAGE_ORDER has 16 entries. GapReflectionStage at idx 3,
+                       IdeaReflectionStage at idx 5, EvaluationStage at idx 11.
+                       _build_stages() wires all 16 with thinking_provider fallback.
+                       Preflight checks run before API accepts pipeline runs (B172).
+  Verified in:         BATCH-172
 
   Module:              backend.pipeline.verification.reference_verifier
   Exports:             ReferenceVerifier, VerificationReport, CitationCheck
@@ -79,10 +79,12 @@ VERIFIED MODULE MAP
   Key note:            Template mode produces 3 datasets, 3 baselines, 4 metrics, 3 ablations.
   Verified in:         BATCH-115
 
-  Module:              backend.pipeline.result
-  Exports:             PipelineResult
-  Key note:            Now includes quality_report: dict | None field (Phase 8).
-  Verified in:         BATCH-116
+  Module:              backend.pipeline.preflight
+  Exports:             run_preflight, PreflightReport, PreflightResult, CheckSeverity
+  Key note:            8 preflight checks before pipeline acceptance: settings, LLM provider,
+                       embedding provider, local LLM, database, export dir, strategy, domain.
+                       Returns 503 on FATAL, 200 on OK/WARNING.
+  Verified in:         BATCH-172
 
   Module:              backend.pipeline.gap_analysis.gap_analyzer
   Key note:            GAP_ANALYSIS_PROMPT now includes CITATION INTEGRITY (MANDATORY)
@@ -109,10 +111,12 @@ ARCHITECTURAL DECISIONS
   Active:   YES
 
   DEC-003: Strategy stage names MUST match PipelineOrchestrator._STAGE_ORDER exactly.
-           The 10 stage names are: literature_search, ingestion, gap_analysis,
-           idea_generation, novelty_checking, feasibility_scoring,
-           mechanical_metrics, proposal_synthesis, proposal_deepening, export.
-  Source:   BATCH-76 (updated B114)
+           The 16 stage names are: literature_search, ingestion, gap_analysis,
+           gap_reflection, idea_generation, idea_reflection, novelty_checking,
+           feasibility_scoring, mechanical_metrics, proposal_synthesis,
+           adversarial_review, evaluation, paper_synthesis, citation_audit,
+           proposal_deepening, export.
+  Source:   BATCH-76 (updated B172)
   Active:   YES
 
   DEC-004: _STAGE_ORDER has 16 entries (gap_reflection + idea_reflection added in B157).
@@ -212,10 +216,10 @@ KNOWN GOTCHAS
 TEST BASELINE
 ───────────────────────────────────────────────────────────
 
-  Last verified count: 2,743
-  Verified in:         BATCH-171 (2026-05-11)
-  Phase 10 total:      +263 (21 batches, B151→B171)
-  Breakdown:           2,499 + 16 + 21 + 15 + 16 + 12 + 12 + 14 + 14 + 12 + 12 + 10
+  Last verified count: 2,769
+  Verified in:         BATCH-172 (2026-05-11)
+  Phase 10 total:      +289 (22 batches, B151→B172)
+  Breakdown:           2,499 + 16 + 21 + 15 + 16 + 12 + 12 + 14 + 14 + 12 + 12 + 10 + 26
 
 ───────────────────────────────────────────────────────────
 CARRY-FORWARD OBLIGATIONS
