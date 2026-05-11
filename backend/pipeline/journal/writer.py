@@ -63,6 +63,10 @@ class JournalWriter:
             f"**Started**: {self._started_at.isoformat()}",
             f"**Entries**: {len(self._entries)}",
             f"",
+            f"> **AI-Generated Content**: This journal was produced by an automated",
+            f"> research pipeline (Elephant Rock). All content below was generated",
+            f"> by AI systems. Verify findings independently.",
+            f"",
             "---",
             "",
         ]
@@ -83,6 +87,7 @@ class JournalWriter:
 
     def _generate_readme(self) -> str:
         """Generate clean README.md summary."""
+        from backend.pipeline.constants import AI_HONESTY_BADGE_BRIEF
         duration = (datetime.utcnow() - self._started_at).total_seconds()
 
         lines = [
@@ -95,6 +100,8 @@ class JournalWriter:
             f"| Duration | {duration:.0f}s |",
             f"| Stages | {len(set(e['stage'] for e in self._entries))} |",
             f"| Notes | {len(self._entries)} |",
+            f"",
+            f"> {AI_HONESTY_BADGE_BRIEF}",
             f"",
         ]
 

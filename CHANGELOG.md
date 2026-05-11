@@ -180,6 +180,22 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Test baseline: 2,631 → 2,643 (+12)
 
+## [2026-05-11] BATCH-162 — Research Journal & AI Honesty Labeling
+
+### Added
+- Journal API: `GET /api/v1/pipeline/runs/{run_id}/journal` returns notes + readme
+- AI honesty disclaimer in notes.md and README.md journal output
+- `StageContext.journal` field for per-stage journaling
+- Journal hooks in LiteratureSearchStage and ExportStage
+- 10 new tests
+
+### Changed
+- `journal/writer.py` — AI honesty labeling in both outputs
+- `stages.py` — journal hooks in key stages
+- `api/routes/pipeline.py` — new journal endpoint
+
+### Test baseline: 2,643 → 2,653 (+10)
+
 ## [0.140.0-prealpha] — 2026-05-10
 
 ### Security

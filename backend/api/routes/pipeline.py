@@ -975,3 +975,40 @@ async def run_stats():
             "total_gaps": 0,
             "error": str(e),
         }
+
+
+@router.get(
+    "/runs/{run_id}/journal",
+    summary="Get pipeline run journal",
+    description="Retrieve the research journal (notes + README) for a completed run (B162).",
+)
+async def get_run_journal(run_id: str):
+    """Get the journal for a pipeline run.
+
+    Returns the notes.md and README.md contents generated during the run.
+    """
+    from pathlib import Path
+
+    journal_dir = Path(f"./data/runs/{run_id}")
+    if not journal_dir.exists():
+        # Try with run_ prefix
+        journal_dir = Path(f"./data/runs/run_{run_id}")
+
+    result = {"run_id": run_id, "notes": None, "readme": None}
+
+    notes_path = journal_dir / "notes.md"
+    readme_path = journal_dir / "README.md"
+
+    if notes_path.exists():
+        result["notes"] = notes_path.read_text(encoding="utf-8", errors="replace")
+    if readme_path.exists():
+        result["readme"] = readme_path.read_text(encoding="utf-8", errors="replace")
+
+    if result["notes"] is None and result["readme"] is None:
+        from fastapi.responses import JSONResponse
+        return JSONResponse(
+            status_code=404,
+            content={"error": "No journal found for this run", "run_id": run_id},
+        )
+
+    return result

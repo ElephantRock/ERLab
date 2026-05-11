@@ -58,6 +58,7 @@ class StageContext:
     ideas_per: int = 3
     export_format: str | None = "markdown"
     provider_override: Any = None  # LLMProvider override for model routing
+    journal: Any = None  # B162: Optional JournalWriter or callback
 
 
 class PipelineStage(ABC):
@@ -269,6 +270,16 @@ class LiteratureSearchStage(PipelineStage):
         ctx.all_papers = unique
         ctx.result.papers_found = len(unique)
         logger.info("Total unique papers: %d (from %d total)", len(unique), len(all_papers))
+
+        # B162: Journal note
+        if ctx.journal:
+            try:
+                ctx.journal.add_note("literature_search", f"Found {len(unique)} unique papers from {len(all_papers)} total", {
+                    "unique_papers": len(unique),
+                    "total_found": len(all_papers),
+                })
+            except Exception:
+                pass
 
         if not all_papers:
             logger.warning("No papers found. Proceeding with domain knowledge only.")
@@ -1132,6 +1143,17 @@ class ExportStage(PipelineStage):
             service.close()
         except Exception as e:
             logger.warning("Knowledge library indexing failed (non-fatal, HB-02): %s", e)
+
+        # B162: Journal note for export
+        if ctx.journal:
+            try:
+                export_count = len(ctx.result.export_paths) if ctx.result.export_paths else 0
+                ctx.journal.add_note("export", f"Exported {export_count} proposal(s)", {
+                    "export_count": export_count,
+                    "format": ctx.export_format,
+                })
+            except Exception:
+                pass
 
         return True
 
