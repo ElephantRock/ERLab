@@ -1036,3 +1036,59 @@ async def get_execution_plan(
 
     plan = agent.plan(domain=domain, strategy=strategy, disabled_stages=disabled)
     return plan.to_dict()
+
+
+@router.get(
+    "/runs/{run_id}/citation-graph",
+    summary="Get citation graph data",
+    description="Get citation graph data for a pipeline run (B170).",
+)
+async def get_citation_graph(run_id: str):
+    """Get citation graph data for visualization.
+
+    Returns nodes (papers) and edges (citations) for the run.
+    """
+    try:
+        from backend.db.database import get_session
+        from backend.db.models import PipelineRun
+
+        with next(get_session()) as db:
+            run = db.query(PipelineRun).filter(PipelineRun.run_id == run_id).first()
+            if not run:
+                from fastapi.responses import JSONResponse
+                return JSONResponse(status_code=404, content={"error": "Run not found"})
+
+        # Build graph from run results
+        papers = run.result.get("papers", []) if isinstance(run.result, dict) else []
+        ideas = run.result.get("ideas", []) if isinstance(run.result, dict) else []
+
+        nodes = []
+        edges = []
+        seen = set()
+
+        for p in papers[:50]:
+            pid = p.get("id", p.get("title", ""))[:20]
+            if pid not in seen:
+                seen.add(pid)
+                nodes.append({
+                    "id": pid,
+                    "label": p.get("title", "Unknown")[:60],
+                    "type": "paper",
+                    "year": p.get("year"),
+                    "source": p.get("source", ""),
+                })
+
+        for idea in ideas[:20]:
+            iid = f"idea_{idea.get('id', len(nodes))}"
+            if iid not in seen:
+                seen.add(iid)
+                nodes.append({
+                    "id": iid,
+                    "label": idea.get("title", "Idea")[:60],
+                    "type": "idea",
+                    "score": idea.get("overall_score", 0),
+                })
+
+        return {"run_id": run_id, "nodes": nodes, "edges": edges}
+    except Exception as e:
+        return {"run_id": run_id, "nodes": [], "edges": [], "error": str(e)}

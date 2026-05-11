@@ -3,7 +3,7 @@
 Last Updated:       2026-05-11
 Updated By:         ivory-wolf — via BATCH-152 Close
 Framework Version:  5.3
-Phase:              BATCH-169 COMPLETE — DOMAIN PROMPTS + BUDGET CONTROLS
+Phase:              BATCH-170 COMPLETE — CITATION GRAPH + FRONTEND POLISH
 
 ───────────────────────────────────────────────────────────
 VERIFIED MODULE MAP
@@ -212,8 +212,8 @@ KNOWN GOTCHAS
 TEST BASELINE
 ───────────────────────────────────────────────────────────
 
-  Last verified count: 2,723
-  Verified in:         BATCH-169 (2026-05-11)
+  Last verified count: 2,733
+  Verified in:         BATCH-170 (2026-05-11)
   Breakdown:           2,499 + 16 + 21 + 15 + 16 + 12 + 12 + 14 + 14 + 12 + 12 + 10
 
 ───────────────────────────────────────────────────────────
