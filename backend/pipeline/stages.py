@@ -84,6 +84,22 @@ class LiteratureSearchStage(PipelineStage):
         return "literature_search"
 
     async def execute(self, ctx: StageContext) -> bool:
+        # Pre-run knowledge library query (B158)
+        pre_existing = []
+        try:
+            from backend.pipeline.knowledge.integration import KnowledgeIntegrationService
+            service = KnowledgeIntegrationService()
+            existing = service.query_existing_knowledge(ctx.domain)
+            if existing.get("has_knowledge"):
+                pre_existing = service._indexer.get_existing_papers(ctx.domain, limit=50)
+                logger.info(
+                    "Knowledge library: %d pre-existing papers for '%s'",
+                    len(pre_existing), ctx.domain,
+                )
+            service.close()
+        except Exception as e:
+            logger.debug("Knowledge library query skipped: %s", e)
+
         queries = ctx.search_queries or [
             f"{ctx.domain} recent advances",
             f"{ctx.domain} open problems",
@@ -131,6 +147,29 @@ class LiteratureSearchStage(PipelineStage):
                 len(unique) - len(fuzzy_unique), len(unique), len(fuzzy_unique),
             )
         unique = fuzzy_unique
+
+        # Merge pre-existing knowledge library papers
+        if pre_existing:
+            from backend.pipeline.literature.models import Paper, Author
+            for entry in pre_existing:
+                try:
+                    content = json.loads(entry.get("content", "{}")) if isinstance(entry.get("content"), str) else entry.get("content", {})
+                    paper = Paper(
+                        id=f"lib:{entry.get('id', '')}",
+                        source="knowledge_library",
+                        title=entry.get("title", ""),
+                        abstract=content.get("abstract", ""),
+                        authors=[],
+                        year=content.get("year"),
+                        doi=content.get("doi"),
+                    )
+                    key = paper.doi if paper.doi else paper.title.lower().strip()
+                    if key not in seen:
+                        seen.add(key)
+                        unique.append(paper)
+                except Exception as e:
+                    logger.debug("Failed to merge library paper: %s", e)
+            logger.info("Merged %d papers from knowledge library", len([p for p in unique if getattr(p, 'source', '') == 'knowledge_library']))
 
         ctx.all_papers = unique
         ctx.result.papers_found = len(unique)
@@ -977,6 +1016,28 @@ class ExportStage(PipelineStage):
                 path = await self._export.export(proposal, format=ctx.export_format)
                 ctx.result.export_paths[i] = path
                 logger.info("Exported proposal to: %s", path)
+
+        # Post-run knowledge indexing (B158)
+        try:
+            from backend.pipeline.knowledge.integration import KnowledgeIntegrationService
+            domain = getattr(ctx, 'domain', '') or 'unknown'
+            service = KnowledgeIntegrationService()
+            counts = service.index_run_results(
+                domain=domain,
+                papers=getattr(ctx.result, 'papers', None) or getattr(ctx, 'all_papers', None),
+                gaps=getattr(ctx.result, 'gaps', None),
+                ideas=getattr(ctx.result, 'ideas', None),
+                run_id=getattr(ctx, 'run_id', ''),
+            )
+            if counts.get("total", 0) > 0:
+                logger.info(
+                    "Knowledge library indexed: %d papers, %d gaps, %d ideas for '%s'",
+                    counts.get("papers", 0), counts.get("gaps", 0), counts.get("ideas", 0), domain,
+                )
+            service.close()
+        except Exception as e:
+            logger.warning("Knowledge library indexing failed (non-fatal, HB-02): %s", e)
+
         return True
 
 

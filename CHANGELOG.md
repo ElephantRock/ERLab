@@ -119,6 +119,21 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Test baseline: 2,579 → 2,591 (+12)
 
+## [2026-05-11] BATCH-158 — Knowledge Library Persistence
+
+### Added
+- Post-run knowledge indexing: ExportStage indexes papers/gaps/ideas into SQLite
+- Pre-run knowledge query: LiteratureSearchStage merges existing papers from library
+- Knowledge query API: `GET /api/v1/search/knowledge/{domain}`
+- Cross-run memory — future runs benefit from past runs
+- 14 new tests covering library operations, integration, API
+
+### Changed
+- `stages.py` — ExportStage adds post-run indexing; LiteratureSearchStage adds pre-run query
+- `api/routes/search.py` — new knowledge endpoint
+
+### Test baseline: 2,591 → 2,605 (+14)
+
 ## [0.140.0-prealpha] — 2026-05-10
 
 ### Security

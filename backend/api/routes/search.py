@@ -75,3 +75,27 @@ async def global_search(
             total += len(run_rows)
 
     return {"query": q, "results": results, "total": total}
+
+
+@router.get(
+    "/knowledge/{domain}",
+    summary="Query knowledge library",
+    description="Get previously indexed papers, gaps, and ideas for a domain (B158).",
+)
+async def query_knowledge(domain: str):
+    from backend.pipeline.knowledge.integration import KnowledgeIntegrationService
+    service = KnowledgeIntegrationService()
+    try:
+        summary = service.query_existing_knowledge(domain)
+        papers = service._indexer.get_existing_papers(domain, limit=20)
+        gaps = service._indexer.get_existing_gaps(domain, limit=20)
+        return {
+            "domain": domain,
+            "summary": summary,
+            "papers": papers,
+            "gaps": gaps,
+        }
+    except Exception as e:
+        return {"domain": domain, "error": str(e), "papers": [], "gaps": []}
+    finally:
+        service.close()

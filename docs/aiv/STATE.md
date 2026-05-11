@@ -3,7 +3,7 @@
 Last Updated:       2026-05-11
 Updated By:         ivory-wolf — via BATCH-152 Close
 Framework Version:  5.3
-Phase:              BATCH-157 COMPLETE — ITERATIVE REFLECTION LOOP
+Phase:              BATCH-158 COMPLETE — KNOWLEDGE LIBRARY PERSISTENCE
 
 ───────────────────────────────────────────────────────────
 VERIFIED MODULE MAP
@@ -120,6 +120,14 @@ ARCHITECTURAL DECISIONS
   Source:   BATCH-157
   Active:   YES
 
+  DEC-015: KnowledgeLibrary wired into pipeline. Post-run indexing via
+           ExportStage saves papers/gaps/ideas to SQLite (data/knowledge_library.db).
+           Pre-run query via LiteratureSearchStage merges existing papers.
+           Knowledge query API: GET /api/v1/search/knowledge/{domain}.
+           Cross-run memory — Run #2 knows Run #1 existed.
+  Source:   BATCH-158
+  Active:   YES
+
   DEC-014: EvaluationStage uses the thinking provider to score proposals on
            5 dimensions: Novelty, Feasibility, Completeness, Rigor, Clarity.
            Scores 0.0-1.0 with written justifications. Frontend includes
@@ -204,9 +212,9 @@ KNOWN GOTCHAS
 TEST BASELINE
 ───────────────────────────────────────────────────────────
 
-  Last verified count: 2,591
-  Verified in:         BATCH-157 (2026-05-11)
-  Breakdown:           2,499 + 16 (B152) + 21 (B153) + 15 (B154) + 16 (B155) + 12 (B156) + 12 (B157)
+  Last verified count: 2,605
+  Verified in:         BATCH-158 (2026-05-11)
+  Breakdown:           2,499 + 16 + 21 + 15 + 16 + 12 + 12 + 14
 
 ───────────────────────────────────────────────────────────
 CARRY-FORWARD OBLIGATIONS
