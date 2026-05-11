@@ -72,6 +72,24 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Test baseline: 2,536 → 2,551 (+15)
 
+## [2026-05-11] BATCH-155 — Search Engine Expansion
+
+### Added
+- PubMed source wired into SearchService (toggleable via `pubmed_enabled`)
+- CrossRef source wired into SearchService (toggleable via `crossref_enabled`)
+- 5 concurrent search sources: Semantic Scholar, arXiv, OpenAlex, PubMed, CrossRef
+- RelevanceFilter integrated into search pipeline (post-dedup, embedding-based scoring)
+- Health check: `SearchService.health_check()` reports per-source status and latency
+- Config settings: `pubmed_api_key`, `pubmed_enabled`, `crossref_enabled`
+- 16 new tests covering source wiring, filter integration, health checks
+
+### Changed
+- `search_service.py` — _default_sources() now returns up to 5 sources
+- `config.py` — 3 new search settings fields
+- `.env.example` — PubMed and CrossRef settings added
+
+### Test baseline: 2,551 → 2,567 (+16)
+
 ## [0.140.0-prealpha] — 2026-05-10
 
 ### Security

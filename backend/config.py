@@ -40,6 +40,9 @@ class Settings(BaseSettings):
     crossref_api_url: str = "https://api.crossref.org"
     openalex_api_url: str = "https://api.openalex.org"
     semantic_scholar_api_url: str = "https://api.semanticscholar.org/graph/v1"
+    pubmed_api_key: str | None = None
+    pubmed_enabled: bool = True
+    crossref_enabled: bool = True
 
     # Knowledge Base
     chroma_persist_dir: str = "./data/chroma"

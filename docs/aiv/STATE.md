@@ -3,7 +3,7 @@
 Last Updated:       2026-05-11
 Updated By:         ivory-wolf — via BATCH-152 Close
 Framework Version:  5.3
-Phase:              BATCH-154 COMPLETE — CITATION & CLAIM AUDIT
+Phase:              BATCH-155 COMPLETE — SEARCH ENGINE EXPANSION
 
 ───────────────────────────────────────────────────────────
 VERIFIED MODULE MAP
@@ -120,6 +120,15 @@ ARCHITECTURAL DECISIONS
   Source:   BATCH-154
   Active:   YES
 
+  DEC-013: SearchService wires 5 concurrent sources (Semantic Scholar, arXiv,
+           OpenAlex, PubMed, CrossRef). PubMed and CrossRef are toggleable via
+           config (pubmed_enabled, crossref_enabled, default True).
+           RelevanceFilter runs after dedup with embedding-based scoring.
+           Source priority: S2 > PubMed > OpenAlex > CrossRef > arXiv.
+           Health check endpoint reports per-source status and latency.
+  Source:   BATCH-155
+  Active:   YES
+
   DEC-005: Quality evaluation (_evaluate_pipeline) runs after ALL stages complete,
            before self-improvement. Stores result in PipelineResult.quality_report.
   Source:   BATCH-116
@@ -196,9 +205,9 @@ KNOWN GOTCHAS
 TEST BASELINE
 ───────────────────────────────────────────────────────────
 
-  Last verified count: 2,551
-  Verified in:         BATCH-154 (2026-05-11)
-  Breakdown:           2,499 pre-existing + 16 (B152) + 21 (B153) + 15 (B154)
+  Last verified count: 2,567
+  Verified in:         BATCH-155 (2026-05-11)
+  Breakdown:           2,499 + 16 (B152) + 21 (B153) + 15 (B154) + 16 (B155)
 
 ───────────────────────────────────────────────────────────
 CARRY-FORWARD OBLIGATIONS
