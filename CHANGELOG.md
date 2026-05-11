@@ -56,6 +56,22 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Test baseline: 2,515 → 2,536 (+21)
 
+## [2026-05-11] BATCH-154 — Citation & Claim Audit (3-Axis)
+
+### Added
+- `backend/pipeline/verification/citation_claim_auditor.py` — CitationClaimAuditor with 3-axis verification
+- `backend/pipeline/verification/prompts/citation_audit.md` — Context verification prompt
+- CitationAuditStage: verifies every [SOURCE-X] citation existence, context accuracy, and quantitative faithfulness
+- Trust score system: 0.0-1.0 per proposal based on citation verification results
+- Timeout handling: partial results returned after 60s per proposal
+
+### Changed
+- `_STAGE_ORDER` now 13 entries (added `citation_audit` after `paper_synthesis`)
+- `reference_verifier.py` extended with [SOURCE-X] pattern support
+- Strategy presets: deep_research + academic_proposal enable audit; fast_scan + literature_review disable
+
+### Test baseline: 2,536 → 2,551 (+15)
+
 ## [0.140.0-prealpha] — 2026-05-10
 
 ### Security

@@ -13,6 +13,11 @@ from typing import TYPE_CHECKING, Any, Generator
 from backend.pipeline.generation.models import ResearchIdea
 from backend.pipeline.ingestion.chunker import DocumentChunk  # noqa: F401 — re-exported by stages
 from backend.pipeline.synthesis.proposal_synthesizer import ResearchProposal  # noqa: F401 — used by ProposalSynthesisStage
+from backend.pipeline.verification.citation_claim_auditor import (  # noqa: F401 — used by CitationAuditStage
+    CitationAuditReport,
+    CitationClaimAuditor,
+    create_skipped_report,
+)
 
 if TYPE_CHECKING:
     from backend.providers.base import LLMProvider
@@ -1380,3 +1385,151 @@ class ProposalDeepeningStage(PipelineStage):
             logger.warning("Proposal deepening stage failed (non-fatal, HB-01): %s", e)
 
         return True
+
+
+class CitationAuditStage(PipelineStage):
+    """Post-processing audit that verifies citations and quantitative claims.
+
+    Runs after paper_synthesis. For each proposal, audits [SOURCE-X] citations
+    against the actual source papers and stores results in proposal metadata.
+
+    HB-02: Graceful fallback on LLM failure — stores status="skipped".
+    """
+
+    def __init__(self, provider=None, auditor=None):
+        self._provider = provider
+        self._auditor = auditor  # Optional: inject for testing
+
+    @property
+    def name(self) -> str:
+        return "citation_audit"
+
+    async def execute(self, ctx: StageContext) -> bool:
+        # Check strategy flag — skip if citation_audit disabled
+        strategy_config = getattr(ctx, 'params', {}).get('strategy_config', None)
+        if strategy_config:
+            stage_cfg = strategy_config.stages.get('citation_audit')
+            if stage_cfg and not stage_cfg.enabled:
+                logger.info("Citation audit disabled by strategy — skipping")
+                return True
+
+        if not ctx.result.proposals:
+            return True
+
+        # Resolve auditor
+        auditor = self._auditor
+        if auditor is None:
+            provider = self._provider
+            if provider is None:
+                try:
+                    from backend.config import get_settings
+                    from backend.providers.provider_factory import get_thinking_provider
+                    provider = get_thinking_provider(get_settings())
+                except Exception as e:
+                    logger.warning(
+                        "Cannot resolve provider for citation audit (non-fatal): %s", e,
+                    )
+            auditor = CitationClaimAuditor(provider)
+
+        # Build source paper texts from all_papers
+        source_papers = []
+        for idx, p in enumerate(ctx.all_papers[:30], 1):
+            authors = getattr(p, 'authors', None)
+            if authors:
+                author_str = ", ".join(
+                    getattr(a, 'name', str(a)) for a in (authors[:3] if hasattr(authors, '__getitem__') else authors)
+                )
+            else:
+                author_str = "Unknown"
+            line = (
+                f"[SOURCE-{idx}] {author_str} "
+                f"({getattr(p, 'year', 'n.d.')}). "
+                f"{getattr(p, 'title', 'Untitled')}. "
+                f"{getattr(p, 'venue', 'Unknown venue')}."
+            )
+            abstract = getattr(p, 'abstract', '')
+            if abstract:
+                line += f"\n  Abstract: {abstract[:500]}"
+            source_papers.append(line)
+
+        for idx, proposal in ctx.result.proposals.items():
+            try:
+                await self._audit_proposal(idx, proposal, ctx, auditor, source_papers)
+            except Exception as e:
+                # HB-02: Per-proposal failure is non-fatal
+                logger.warning(
+                    "Citation audit failed for proposal %d (non-fatal, HB-02): %s",
+                    idx, e,
+                )
+                metadata = self._get_metadata(proposal)
+                metadata["citation_audit"] = {
+                    "status": "skipped",
+                    "reason": str(e),
+                }
+                self._set_metadata(proposal, metadata)
+
+        return True
+
+    async def _audit_proposal(
+        self, idx: int, proposal, ctx: StageContext,
+        auditor: CitationClaimAuditor, source_papers: list[str],
+    ) -> None:
+        """Audit a single proposal."""
+        # Build proposal text: proposal + full paper if available
+        proposal_text = (
+            proposal.to_markdown()
+            if hasattr(proposal, "to_markdown")
+            else str(proposal)
+        )
+
+        # Include full paper text if available from paper_synthesis
+        metadata = self._get_metadata(proposal)
+        full_paper = metadata.get("full_paper")
+        if full_paper and isinstance(full_paper, dict):
+            paper_md = full_paper.get("paper_markdown", "")
+            if paper_md:
+                proposal_text = paper_md
+
+        report = await auditor.audit(
+            proposal_text=proposal_text,
+            source_papers=source_papers,
+            proposal_id=idx,
+        )
+
+        # Store report in metadata
+        metadata["citation_audit"] = report.to_dict()
+        self._set_metadata(proposal, metadata)
+
+        # Log warning if trust_score < 0.5
+        if report.trust_score < 0.5:
+            logger.warning(
+                "Low citation trust score for proposal %d: %.2f "
+                "(%d fabricated, %d context mismatches, %d quantitative errors)",
+                idx, report.trust_score,
+                report.fabricated_citations,
+                report.context_mismatches,
+                report.quantitative_errors,
+            )
+
+    @staticmethod
+    def _get_metadata(proposal) -> dict:
+        """Get metadata dict from a proposal, handling JSON string storage."""
+        metadata = {}
+        if hasattr(proposal, "metadata") and proposal.metadata:
+            if isinstance(proposal.metadata, str):
+                try:
+                    metadata = json.loads(proposal.metadata)
+                except (json.JSONDecodeError, TypeError):
+                    metadata = {}
+            elif isinstance(proposal.metadata, dict):
+                metadata = proposal.metadata
+        return metadata
+
+    @staticmethod
+    def _set_metadata(proposal, metadata: dict) -> None:
+        """Set metadata dict on a proposal, handling JSON string storage."""
+        current = getattr(proposal, "metadata", None)
+        if isinstance(current, str) or current is None:
+            proposal.metadata = json.dumps(metadata)
+        else:
+            proposal.metadata = metadata

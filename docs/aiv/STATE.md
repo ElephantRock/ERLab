@@ -3,7 +3,7 @@
 Last Updated:       2026-05-11
 Updated By:         ivory-wolf — via BATCH-152 Close
 Framework Version:  5.3
-Phase:              BATCH-153 COMPLETE — LATEX PAPER SYNTHESIS
+Phase:              BATCH-154 COMPLETE — CITATION & CLAIM AUDIT
 
 ───────────────────────────────────────────────────────────
 VERIFIED MODULE MAP
@@ -115,9 +115,9 @@ ARCHITECTURAL DECISIONS
   Source:   BATCH-76 (updated B114)
   Active:   YES
 
-  DEC-004: _STAGE_ORDER has 12 entries (paper_synthesis added in B153).
+  DEC-004: _STAGE_ORDER has 13 entries (citation_audit added in B154).
            All strategy presets must be updated to account for new stages.
-  Source:   BATCH-153
+  Source:   BATCH-154
   Active:   YES
 
   DEC-005: Quality evaluation (_evaluate_pipeline) runs after ALL stages complete,
@@ -196,9 +196,9 @@ KNOWN GOTCHAS
 TEST BASELINE
 ───────────────────────────────────────────────────────────
 
-  Last verified count: 2,536
-  Verified in:         BATCH-153 (2026-05-11)
-  Breakdown:           2,499 pre-existing + 16 (B152) + 21 (B153)
+  Last verified count: 2,551
+  Verified in:         BATCH-154 (2026-05-11)
+  Breakdown:           2,499 pre-existing + 16 (B152) + 21 (B153) + 15 (B154)
 
 ───────────────────────────────────────────────────────────
 CARRY-FORWARD OBLIGATIONS

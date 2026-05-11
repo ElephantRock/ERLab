@@ -25,6 +25,9 @@ _CITATION_PATTERN = re.compile(
 # Match patterns like "[1]", "[2]" numbered references
 _NUMBERED_REF_PATTERN = re.compile(r'\[(\d+)\]')
 
+# Match patterns like "[SOURCE-1]", "[SOURCE-2]"
+_SOURCE_X_PATTERN = re.compile(r'\[SOURCE-(\d+)\]')
+
 
 @dataclass
 class CitationCheck:
@@ -79,7 +82,9 @@ class ReferenceVerifier:
             VerificationReport with per-citation results and aggregate trust score.
         """
         citations = self._extract_citations(proposal_text)
-        report = VerificationReport(total_citations=len(citations))
+        source_x_checks = self.verify_source_x(proposal_text, len(corpus_papers))
+
+        report = VerificationReport(total_citations=len(citations) + len(source_x_checks))
 
         # Build lookup indices from corpus
         author_year_index = self._build_author_year_index(corpus_papers)
@@ -113,9 +118,48 @@ class ReferenceVerifier:
 
             report.citations.append(cit)
 
+        # Add [SOURCE-X] checks to report
+        for check in source_x_checks:
+            report.citations.append(check)
+            if check.found_in_corpus:
+                report.verified += 1
+            else:
+                report.potentially_hallucinated += 1
+
         report.unverifiable = report.total_citations - report.verified
         report.coverage_rate = report.verified / max(report.total_citations, 1)
         return report
+
+    def verify_source_x(self, proposal_text: str, source_count: int) -> list[CitationCheck]:
+        """Verify [SOURCE-X] references in proposal text.
+
+        Args:
+            proposal_text: The full proposal markdown text.
+            source_count: Number of available source papers.
+
+        Returns:
+            List of CitationCheck for each [SOURCE-X] reference found.
+        """
+        checks: list[CitationCheck] = []
+        seen: set[int] = set()
+
+        for match in _SOURCE_X_PATTERN.finditer(proposal_text):
+            idx = int(match.group(1))
+            if idx in seen:
+                continue
+            seen.add(idx)
+
+            found = 1 <= idx <= source_count
+            checks.append(CitationCheck(
+                citation_text=match.group(0),
+                author=f"SOURCE-{idx}",
+                year="",
+                found_in_corpus=found,
+                matched_paper_title=f"Source paper {idx}" if found else "",
+                confidence=1.0 if found else 0.0,
+            ))
+
+        return checks
 
     def _extract_citations(self, text: str) -> list[CitationCheck]:
         """Extract author-year citations from text."""

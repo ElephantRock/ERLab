@@ -28,6 +28,7 @@ from backend.pipeline.self_improve.frontier import ParetoFrontier
 from backend.pipeline.self_improve.lessons import LessonExtractor
 from backend.pipeline.stages import (
     AdversarialReviewStage,
+    CitationAuditStage,
     ExportStage,
     FeasibilityScoringStage,
     GapAnalysisStage,
@@ -68,6 +69,7 @@ class PipelineOrchestrator:
         "proposal_synthesis",
         "adversarial_review",
         "paper_synthesis",
+        "citation_audit",
         "proposal_deepening",
         "export",
     ]
@@ -995,6 +997,7 @@ class PipelineOrchestrator:
             self._build_synthesis_stage(ref_validator),
             adversarial_stage,
             PaperSynthesisStage(provider=self._provider),
+            CitationAuditStage(provider=thinking_provider),
             ProposalDeepeningStage(deepener=ProposalDeepener(provider=self._provider)),
             ExportStage(self._export),
         ]
