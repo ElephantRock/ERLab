@@ -164,6 +164,22 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Test baseline: 2,619 → 2,631 (+12)
 
+## [2026-05-11] BATCH-161 — Recursive Deep Research (Tree Exploration)
+
+### Added
+- CitationExplorer: bidirectional citation graph traversal via S2 + OpenAlex
+- TreeNode + TreeExplorationResult models for tree exploration state
+- Configurable breadth x depth with API cooldown between requests
+- Tree exploration wired into LiteratureSearchStage (deep_research + academic_proposal)
+- Backward traversal finds foundational papers cited by seed papers
+- 12 new tests covering explorer, result model, preset wiring
+
+### Changed
+- `stages.py` — LiteratureSearchStage runs CitationExplorer when strategy enables it
+- `presets.py` — deep_research + academic_proposal enable citation_explore
+
+### Test baseline: 2,631 → 2,643 (+12)
+
 ## [0.140.0-prealpha] — 2026-05-10
 
 ### Security

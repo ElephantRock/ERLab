@@ -219,6 +219,53 @@ class LiteratureSearchStage(PipelineStage):
                 len([p for p in unique if getattr(p, 'source', '') == 'local_upload']),
             )
 
+        # B161: Citation tree exploration for deep_research strategy
+        try:
+            explore_enabled = False
+            strat_config = ctx.params.get("strategy_config") if ctx.params else None
+            if strat_config:
+                ls_config = strat_config.stages.get("literature_search")
+                if ls_config and ls_config.params.get("citation_explore"):
+                    explore_enabled = True
+
+            if explore_enabled and unique:
+                from backend.pipeline.literature.citation_explorer import CitationExplorer
+                from backend.pipeline.literature.semantic_scholar import SemanticScholarSource
+                from backend.pipeline.literature.openalex_source import OpenAlexSource
+
+                s2 = None
+                oa = None
+                try:
+                    from backend.config import get_settings
+                    settings = get_settings()
+                    s2 = SemanticScholarSource(api_key=settings.s2_api_key or "")
+                    oa = OpenAlexSource(email=settings.openalex_email or "")
+                except Exception:
+                    pass
+
+                explorer = CitationExplorer(s2_source=s2, openalex_source=oa, cooldown=1.0)
+                tree_result = await explorer.explore(
+                    seed_papers=unique[:10],
+                    max_depth=1,
+                    breadth=5,
+                    direction="backward",
+                )
+                if tree_result.total_discovered > 0:
+                    tree_papers = explorer.extract_papers(tree_result)
+                    added = 0
+                    for tp in tree_papers:
+                        key = tp.doi if tp.doi else tp.title.lower().strip()
+                        if key not in seen:
+                            seen.add(key)
+                            unique.append(tp)
+                            added += 1
+                    logger.info(
+                        "Citation tree: %d foundational papers discovered, %d new added",
+                        tree_result.total_discovered, added,
+                    )
+        except Exception as e:
+            logger.debug("Citation tree exploration skipped: %s", e)
+
         ctx.all_papers = unique
         ctx.result.papers_found = len(unique)
         logger.info("Total unique papers: %d (from %d total)", len(unique), len(all_papers))

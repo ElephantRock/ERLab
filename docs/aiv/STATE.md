@@ -3,7 +3,7 @@
 Last Updated:       2026-05-11
 Updated By:         ivory-wolf — via BATCH-152 Close
 Framework Version:  5.3
-Phase:              BATCH-160 COMPLETE — LOCAL DOCUMENT INGESTION
+Phase:              BATCH-161 COMPLETE — RECURSIVE DEEP RESEARCH (TREE EXPLORATION)
 
 ───────────────────────────────────────────────────────────
 VERIFIED MODULE MAP
@@ -212,9 +212,9 @@ KNOWN GOTCHAS
 TEST BASELINE
 ───────────────────────────────────────────────────────────
 
-  Last verified count: 2,631
-  Verified in:         BATCH-160 (2026-05-11)
-  Breakdown:           2,499 + 16 + 21 + 15 + 16 + 12 + 12 + 14 + 14 + 12
+  Last verified count: 2,643
+  Verified in:         BATCH-161 (2026-05-11)
+  Breakdown:           2,499 + 16 + 21 + 15 + 16 + 12 + 12 + 14 + 14 + 12 + 12
 
 ───────────────────────────────────────────────────────────
 CARRY-FORWARD OBLIGATIONS

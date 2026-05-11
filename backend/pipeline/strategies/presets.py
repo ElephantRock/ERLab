@@ -62,6 +62,7 @@ def register_presets(registry: StrategyRegistry) -> None:
     registry.register(StrategyConfig(
         name=PipelineStrategy.DEEP_RESEARCH,
         stages=_all_stages_enabled(
+            literature_search=StageConfig(params={"citation_explore": True}),
             adversarial_review=StageConfig(params={"enabled": True}),
             evaluation=StageConfig(),
             paper_synthesis=StageConfig(params={"enabled": True}),
@@ -112,6 +113,7 @@ def register_presets(registry: StrategyRegistry) -> None:
     registry.register(StrategyConfig(
         name=PipelineStrategy.ACADEMIC_PROPOSAL,
         stages=_all_stages_enabled(
+            literature_search=StageConfig(params={"citation_explore": True}),
             novelty_checking=StageConfig(timeout=600.0, params={"threshold": 0.7}),
             feasibility_scoring=StageConfig(timeout=600.0, params={"threshold": 0.7}),
             proposal_synthesis=StageConfig(timeout=900.0),
