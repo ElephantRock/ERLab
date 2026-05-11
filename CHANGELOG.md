@@ -105,6 +105,20 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Test baseline: 2,567 → 2,579 (+12)
 
+## [2026-05-11] BATCH-157 — Iterative Reflection Loop
+
+### Added
+- GapReflectionStage: reflects on gap quality after gap_analysis, max 2 retries
+- IdeaReflectionStage: reflects on idea quality after idea_generation, max 2 retries
+- Iterative self-improvement loop using existing ReflectionStage (from B80)
+- 12 new tests covering both stages, fallback behavior, strategy presets
+
+### Changed
+- `_STAGE_ORDER` now 16 entries (added gap_reflection + idea_reflection)
+- Strategy presets: deep_research + academic_proposal enable; fast_scan + literature_review disable
+
+### Test baseline: 2,579 → 2,591 (+12)
+
 ## [0.140.0-prealpha] — 2026-05-10
 
 ### Security

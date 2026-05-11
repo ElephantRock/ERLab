@@ -4,7 +4,9 @@ Actual stage names (from PipelineOrchestrator._STAGE_ORDER):
   0. literature_search
   1. ingestion
   2. gap_analysis
-  3. idea_generation
+  3. gap_reflection
+  4. idea_generation
+  5. idea_reflection
   4. novelty_checking
   5. feasibility_scoring
   6. mechanical_metrics
@@ -23,12 +25,14 @@ from .registry import StrategyRegistry
 
 
 def _all_stages_enabled(**overrides: dict) -> dict[str, StageConfig]:
-    """Return all 14 stages enabled with optional per-stage overrides."""
+    """Return all 16 stages enabled with optional per-stage overrides."""
     stage_names = [
         "literature_search",
         "ingestion",
         "gap_analysis",
+        "gap_reflection",
         "idea_generation",
+        "idea_reflection",
         "novelty_checking",
         "feasibility_scoring",
         "mechanical_metrics",
@@ -62,6 +66,8 @@ def register_presets(registry: StrategyRegistry) -> None:
             evaluation=StageConfig(),
             paper_synthesis=StageConfig(params={"enabled": True}),
             citation_audit=StageConfig(),
+            gap_reflection=StageConfig(),
+            idea_reflection=StageConfig(),
         ),
         max_total_time=1800.0,
         description=(
@@ -85,6 +91,8 @@ def register_presets(registry: StrategyRegistry) -> None:
             mechanical_metrics=StageConfig(enabled=False),
             adversarial_review=StageConfig(enabled=False, params={"enabled": False}),
             evaluation=StageConfig(enabled=False),
+            gap_reflection=StageConfig(enabled=False),
+            idea_reflection=StageConfig(enabled=False),
             paper_synthesis=StageConfig(enabled=False, params={"enabled": False}),
             citation_audit=StageConfig(enabled=False),
         ),
@@ -111,6 +119,8 @@ def register_presets(registry: StrategyRegistry) -> None:
             evaluation=StageConfig(),
             paper_synthesis=StageConfig(timeout=900.0, params={"enabled": True}),
             citation_audit=StageConfig(),
+            gap_reflection=StageConfig(),
+            idea_reflection=StageConfig(),
         ),
         max_total_time=3600.0,
         description=(
@@ -133,6 +143,8 @@ def register_presets(registry: StrategyRegistry) -> None:
             proposal_synthesis=StageConfig(enabled=False),
             adversarial_review=StageConfig(enabled=False),
             evaluation=StageConfig(enabled=False),
+            gap_reflection=StageConfig(enabled=False),
+            idea_reflection=StageConfig(enabled=False),
             paper_synthesis=StageConfig(enabled=False, params={"enabled": False}),
             citation_audit=StageConfig(enabled=False),
             proposal_deepening=StageConfig(enabled=False),

@@ -3,7 +3,7 @@
 Last Updated:       2026-05-11
 Updated By:         ivory-wolf — via BATCH-152 Close
 Framework Version:  5.3
-Phase:              BATCH-156 COMPLETE — MULTI-DIMENSIONAL EVALUATION
+Phase:              BATCH-157 COMPLETE — ITERATIVE REFLECTION LOOP
 
 ───────────────────────────────────────────────────────────
 VERIFIED MODULE MAP
@@ -115,9 +115,9 @@ ARCHITECTURAL DECISIONS
   Source:   BATCH-76 (updated B114)
   Active:   YES
 
-  DEC-004: _STAGE_ORDER has 14 entries (evaluation added in B156).
+  DEC-004: _STAGE_ORDER has 16 entries (gap_reflection + idea_reflection added in B157).
            All strategy presets must be updated to account for new stages.
-  Source:   BATCH-156
+  Source:   BATCH-157
   Active:   YES
 
   DEC-014: EvaluationStage uses the thinking provider to score proposals on
@@ -204,9 +204,9 @@ KNOWN GOTCHAS
 TEST BASELINE
 ───────────────────────────────────────────────────────────
 
-  Last verified count: 2,579
-  Verified in:         BATCH-156 (2026-05-11)
-  Breakdown:           2,499 + 16 (B152) + 21 (B153) + 15 (B154) + 16 (B155) + 12 (B156)
+  Last verified count: 2,591
+  Verified in:         BATCH-157 (2026-05-11)
+  Breakdown:           2,499 + 16 (B152) + 21 (B153) + 15 (B154) + 16 (B155) + 12 (B156) + 12 (B157)
 
 ───────────────────────────────────────────────────────────
 CARRY-FORWARD OBLIGATIONS

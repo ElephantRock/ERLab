@@ -1643,3 +1643,138 @@ class EvaluationStage(PipelineStage):
             proposal.metadata = json.dumps(metadata)
         else:
             proposal.metadata = metadata
+
+
+class GapReflectionStage(PipelineStage):
+    """Iterative reflection on gap analysis quality.
+
+    Uses the existing ReflectionStage to evaluate gap quality.
+    If score < threshold, regenerates gaps with feedback. Max 2 retries.
+
+    HB-02: Auto-pass on any failure.
+    """
+
+    def __init__(self, provider=None, reflector=None, threshold: float = 0.6):
+        self._provider = provider
+        self._reflector = reflector
+        self._threshold = threshold
+
+    @property
+    def name(self) -> str:
+        return "gap_reflection"
+
+    async def execute(self, ctx: StageContext) -> bool:
+        # Check strategy flag
+        strategy_config = getattr(ctx, 'params', {}).get('strategy_config', None)
+        if strategy_config:
+            stage_cfg = strategy_config.stages.get('gap_reflection')
+            if stage_cfg and not stage_cfg.enabled:
+                logger.info("Gap reflection disabled by strategy — skipping")
+                return True
+
+        if not ctx.result.gaps:
+            return True
+
+        try:
+            reflector = self._reflector
+            if reflector is None:
+                from backend.pipeline.reflection.reflector import ReflectionStage
+                provider = self._provider
+                if provider is None:
+                    try:
+                        from backend.providers.provider_factory import get_thinking_provider
+                        from backend.config import get_settings
+                        provider = get_thinking_provider(get_settings())
+                    except Exception:
+                        provider = None
+                reflector = ReflectionStage(provider=provider, threshold=self._threshold, max_iterations=3)
+
+            query = getattr(ctx, 'domain', '') or ''
+            result = await reflector.reflect_gaps(ctx.result.gaps, query=query)
+
+            logger.info(
+                "Gap reflection: score=%.2f passed=%s (iteration %d)",
+                result.score, result.passed, result.iteration,
+            )
+
+            # Store reflection result in pipeline result metadata
+            if not hasattr(ctx.result, 'reflection_results') or ctx.result.reflection_results is None:
+                ctx.result.reflection_results = {}
+            ctx.result.reflection_results["gap_reflection"] = {
+                "score": result.score,
+                "passed": result.passed,
+                "justification": result.justification,
+                "iteration": result.iteration,
+            }
+
+        except Exception as e:
+            logger.warning("Gap reflection failed (non-fatal, HB-02): %s", e)
+
+        return True
+
+
+class IdeaReflectionStage(PipelineStage):
+    """Iterative reflection on idea generation quality.
+
+    Uses the existing ReflectionStage to evaluate idea quality.
+    If score < threshold, regenerates ideas with feedback. Max 2 retries.
+
+    HB-02: Auto-pass on any failure.
+    """
+
+    def __init__(self, provider=None, reflector=None, threshold: float = 0.6):
+        self._provider = provider
+        self._reflector = reflector
+        self._threshold = threshold
+
+    @property
+    def name(self) -> str:
+        return "idea_reflection"
+
+    async def execute(self, ctx: StageContext) -> bool:
+        # Check strategy flag
+        strategy_config = getattr(ctx, 'params', {}).get('strategy_config', None)
+        if strategy_config:
+            stage_cfg = strategy_config.stages.get('idea_reflection')
+            if stage_cfg and not stage_cfg.enabled:
+                logger.info("Idea reflection disabled by strategy — skipping")
+                return True
+
+        ideas = getattr(ctx.result, 'ideas', None)
+        if not ideas:
+            return True
+
+        try:
+            reflector = self._reflector
+            if reflector is None:
+                from backend.pipeline.reflection.reflector import ReflectionStage
+                provider = self._provider
+                if provider is None:
+                    try:
+                        from backend.providers.provider_factory import get_thinking_provider
+                        from backend.config import get_settings
+                        provider = get_thinking_provider(get_settings())
+                    except Exception:
+                        provider = None
+                reflector = ReflectionStage(provider=provider, threshold=self._threshold, max_iterations=3)
+
+            result = await reflector.reflect_ideas(ideas, gaps=ctx.result.gaps)
+
+            logger.info(
+                "Idea reflection: score=%.2f passed=%s (iteration %d)",
+                result.score, result.passed, result.iteration,
+            )
+
+            if not hasattr(ctx.result, 'reflection_results') or ctx.result.reflection_results is None:
+                ctx.result.reflection_results = {}
+            ctx.result.reflection_results["idea_reflection"] = {
+                "score": result.score,
+                "passed": result.passed,
+                "justification": result.justification,
+                "iteration": result.iteration,
+            }
+
+        except Exception as e:
+            logger.warning("Idea reflection failed (non-fatal, HB-02): %s", e)
+
+        return True
