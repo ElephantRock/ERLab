@@ -3,6 +3,19 @@
 All notable changes to the Elephant Rock Research Platform are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [2026-05-11] BATCH-174 — Functional Test Suite for All 16 Pipeline Stages
+
+### Added
+- 25 functional tests across 3 test files covering all 16 pipeline stages
+- `test_batch174_core_stages.py` — 10 tests for stages 0-8 (LitSearch, Ingestion, GapAnalysis, GapReflection, IdeaGeneration, IdeaReflection, NoveltyChecking, FeasibilityScoring, MechanicalMetrics)
+- `test_batch174_synthesis_stages.py` — 11 tests for stages 9-15 (ProposalSynthesis, AdversarialReview, Evaluation, PaperSynthesis, CitationAudit, ProposalDeepening, Export)
+- `test_batch174_verification.py` — 4 meta-tests (batch pass, regression, STATE.md, CHANGELOG)
+- Each test: instantiate stage with mocks, create StageContext, asyncio.run(), assert output
+
+### Changed
+- Test baseline: 2,790 → 2,815 (+25 tests)
+- No source code changes in backend/pipeline/
+
 ## [2026-05-11] BATCH-173 — Stage Observability + Graceful Degradation
 
 ### Added

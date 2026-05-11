@@ -1,7 +1,7 @@
 # CODEBASE STATE
 
 Last Updated:       2026-05-11
-Updated By:         misty-island — via BATCH-173 Stage Observability
+Updated By:         plain-chrome — via BATCH-174 Functional Test Suite
 Framework Version:  5.3
 Phase:              BATCH-173 COMPLETE — INTERNAL ALPHA — PHASE 10 COMPLETE
 
@@ -328,3 +328,18 @@ BATCH-173 — Stage Observability + Graceful Degradation
   New files:              3 test files
   New tests:              21 (10+6+5)
   Total test baseline:    2,769 → 2,790 (+21)
+
+───────────────────────────────────────────────────────────
+BATCH-174 — Functional Test Suite for All 16 Pipeline Stages
+───────────────────────────────────────────────────────────
+  Scope:                  Functional tests for every pipeline stage
+  Approach:               Instantiate with mocks, execute via asyncio.run(), verify output
+  Stages covered:         All 16 (LitSearch, Ingestion, GapAnalysis, GapReflection,
+                          IdeaGeneration, IdeaReflection, NoveltyChecking,
+                          FeasibilityScoring, MechanicalMetrics, ProposalSynthesis,
+                          AdversarialReview, Evaluation, PaperSynthesis,
+                          CitationAudit, ProposalDeepening, Export)
+  Source code changes:    NONE — only test files
+  New files:              3 test files
+  New tests:              25 (10+11+4)
+  Total test baseline:    2,790 → 2,815 (+25)
