@@ -3,7 +3,7 @@
 Last Updated:       2026-05-11
 Updated By:         ivory-wolf — via BATCH-152 Close
 Framework Version:  5.3
-Phase:              BATCH-168 COMPLETE — MCP SERVER INTEGRATION
+Phase:              BATCH-169 COMPLETE — DOMAIN PROMPTS + BUDGET CONTROLS
 
 ───────────────────────────────────────────────────────────
 VERIFIED MODULE MAP
@@ -212,8 +212,8 @@ KNOWN GOTCHAS
 TEST BASELINE
 ───────────────────────────────────────────────────────────
 
-  Last verified count: 2,713
-  Verified in:         BATCH-168 (2026-05-11)
+  Last verified count: 2,723
+  Verified in:         BATCH-169 (2026-05-11)
   Breakdown:           2,499 + 16 + 21 + 15 + 16 + 12 + 12 + 14 + 14 + 12 + 12 + 10
 
 ───────────────────────────────────────────────────────────
