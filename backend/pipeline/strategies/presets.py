@@ -10,10 +10,11 @@ Actual stage names (from PipelineOrchestrator._STAGE_ORDER):
   6. mechanical_metrics
   7. proposal_synthesis
   8. adversarial_review
-  9. paper_synthesis
-  10. citation_audit
-  11. proposal_deepening
-  12. export
+  9. evaluation
+  10. paper_synthesis
+  11. citation_audit
+  12. proposal_deepening
+  13. export
 """
 from __future__ import annotations
 
@@ -22,7 +23,7 @@ from .registry import StrategyRegistry
 
 
 def _all_stages_enabled(**overrides: dict) -> dict[str, StageConfig]:
-    """Return all 13 stages enabled with optional per-stage overrides."""
+    """Return all 14 stages enabled with optional per-stage overrides."""
     stage_names = [
         "literature_search",
         "ingestion",
@@ -33,6 +34,7 @@ def _all_stages_enabled(**overrides: dict) -> dict[str, StageConfig]:
         "mechanical_metrics",
         "proposal_synthesis",
         "adversarial_review",
+        "evaluation",
         "paper_synthesis",
         "citation_audit",
         "proposal_deepening",
@@ -51,12 +53,13 @@ def register_presets(registry: StrategyRegistry) -> None:
     """Register the four built-in strategy presets."""
 
     # ── DEEP RESEARCH ─────────────────────────────────────
-    # All 13 stages enabled. Adversarial review ON. Paper synthesis ON.
-    # Citation audit ON.
+    # All 14 stages enabled. Adversarial review ON. Paper synthesis ON.
+    # Citation audit ON. Evaluation ON.
     registry.register(StrategyConfig(
         name=PipelineStrategy.DEEP_RESEARCH,
         stages=_all_stages_enabled(
             adversarial_review=StageConfig(params={"enabled": True}),
+            evaluation=StageConfig(),
             paper_synthesis=StageConfig(params={"enabled": True}),
             citation_audit=StageConfig(),
         ),
@@ -81,6 +84,7 @@ def register_presets(registry: StrategyRegistry) -> None:
             novelty_checking=StageConfig(enabled=False),
             mechanical_metrics=StageConfig(enabled=False),
             adversarial_review=StageConfig(enabled=False, params={"enabled": False}),
+            evaluation=StageConfig(enabled=False),
             paper_synthesis=StageConfig(enabled=False, params={"enabled": False}),
             citation_audit=StageConfig(enabled=False),
         ),
@@ -104,6 +108,7 @@ def register_presets(registry: StrategyRegistry) -> None:
             feasibility_scoring=StageConfig(timeout=600.0, params={"threshold": 0.7}),
             proposal_synthesis=StageConfig(timeout=900.0),
             adversarial_review=StageConfig(timeout=600.0, params={"enabled": True}),
+            evaluation=StageConfig(),
             paper_synthesis=StageConfig(timeout=900.0, params={"enabled": True}),
             citation_audit=StageConfig(),
         ),
@@ -127,6 +132,7 @@ def register_presets(registry: StrategyRegistry) -> None:
             mechanical_metrics=StageConfig(enabled=False),
             proposal_synthesis=StageConfig(enabled=False),
             adversarial_review=StageConfig(enabled=False),
+            evaluation=StageConfig(enabled=False),
             paper_synthesis=StageConfig(enabled=False, params={"enabled": False}),
             citation_audit=StageConfig(enabled=False),
             proposal_deepening=StageConfig(enabled=False),

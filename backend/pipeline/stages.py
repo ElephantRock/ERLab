@@ -1533,3 +1533,113 @@ class CitationAuditStage(PipelineStage):
             proposal.metadata = json.dumps(metadata)
         else:
             proposal.metadata = metadata
+
+
+class EvaluationStage(PipelineStage):
+    """Multi-dimensional proposal evaluation on 5 axes.
+
+    Scores each proposal on Novelty, Feasibility, Completeness, Rigor, Clarity.
+    Uses the thinking provider (local LM Studio) for evaluation.
+
+    HB-02: Graceful fallback on LLM failure — stores default scores (all 0.0).
+    """
+
+    def __init__(self, provider=None, evaluator=None):
+        self._provider = provider
+        self._evaluator = evaluator  # Optional: inject for testing
+
+    @property
+    def name(self) -> str:
+        return "evaluation"
+
+    async def execute(self, ctx: StageContext) -> bool:
+        # Check strategy flag
+        strategy_config = getattr(ctx, 'params', {}).get('strategy_config', None)
+        if strategy_config:
+            stage_cfg = strategy_config.stages.get('evaluation')
+            if stage_cfg and not stage_cfg.enabled:
+                logger.info("Evaluation disabled by strategy — skipping")
+                return True
+
+        if not ctx.result.proposals:
+            return True
+
+        # Create evaluator if not injected
+        evaluator = self._evaluator
+        if evaluator is None:
+            try:
+                from backend.pipeline.evaluation.proposal_evaluator import ProposalEvaluator
+                provider = self._provider
+                if provider is None:
+                    try:
+                        from backend.providers.provider_factory import get_thinking_provider
+                        from backend.config import get_settings
+                        provider = get_thinking_provider(get_settings())
+                    except Exception as e:
+                        logger.warning("Could not get thinking provider for evaluation: %s", e)
+                        provider = None
+                evaluator = ProposalEvaluator(provider=provider)
+            except Exception as e:
+                logger.warning("Failed to create ProposalEvaluator: %s", e)
+                return True
+
+        for idx, proposal in ctx.result.proposals.items():
+            try:
+                proposal_text = ""
+                if hasattr(proposal, 'to_markdown'):
+                    proposal_text = proposal.to_markdown()
+                elif hasattr(proposal, 'sections') and isinstance(proposal.sections, dict):
+                    proposal_text = "\n\n".join(f"## {k}\n{v}" for k, v in proposal.sections.items())
+                else:
+                    proposal_text = str(proposal)
+
+                evaluation = await evaluator.evaluate(proposal_text)
+
+                metadata = self._get_metadata(proposal)
+                metadata["evaluation"] = evaluation.to_dict()
+                self._set_metadata(proposal, metadata)
+                ctx.result.proposals[idx] = proposal
+
+                logger.info(
+                    "Evaluated proposal %d: overall=%.2f (N=%.2f F=%.2f C=%.2f R=%.2f Cl=%.2f)",
+                    idx, evaluation.overall,
+                    evaluation.novelty.score, evaluation.feasibility.score,
+                    evaluation.completeness.score, evaluation.rigor.score,
+                    evaluation.clarity.score,
+                )
+            except Exception as e:
+                logger.warning("Failed to evaluate proposal %d (non-fatal): %s", idx, e)
+                # Store default evaluation (HB-02)
+                metadata = self._get_metadata(proposal)
+                metadata["evaluation"] = {
+                    "novelty": {"score": 0.0, "justification": "Evaluation failed"},
+                    "feasibility": {"score": 0.0, "justification": "Evaluation failed"},
+                    "completeness": {"score": 0.0, "justification": "Evaluation failed"},
+                    "rigor": {"score": 0.0, "justification": "Evaluation failed"},
+                    "clarity": {"score": 0.0, "justification": "Evaluation failed"},
+                    "overall": 0.0,
+                }
+                self._set_metadata(proposal, metadata)
+
+        return True
+
+    @staticmethod
+    def _get_metadata(proposal) -> dict:
+        metadata = {}
+        if hasattr(proposal, "metadata") and proposal.metadata:
+            if isinstance(proposal.metadata, str):
+                try:
+                    metadata = json.loads(proposal.metadata)
+                except (json.JSONDecodeError, TypeError):
+                    metadata = {}
+            elif isinstance(proposal.metadata, dict):
+                metadata = proposal.metadata
+        return metadata
+
+    @staticmethod
+    def _set_metadata(proposal, metadata: dict) -> None:
+        current = getattr(proposal, "metadata", None)
+        if isinstance(current, str) or current is None:
+            proposal.metadata = json.dumps(metadata)
+        else:
+            proposal.metadata = metadata

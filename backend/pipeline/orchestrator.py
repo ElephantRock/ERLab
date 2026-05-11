@@ -68,6 +68,7 @@ class PipelineOrchestrator:
         "mechanical_metrics",
         "proposal_synthesis",
         "adversarial_review",
+        "evaluation",
         "paper_synthesis",
         "citation_audit",
         "proposal_deepening",

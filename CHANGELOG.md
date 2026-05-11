@@ -90,6 +90,21 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Test baseline: 2,551 → 2,567 (+16)
 
+## [2026-05-11] BATCH-156 — Multi-Dimensional Proposal Evaluation
+
+### Added
+- `EvaluationStage`: scores proposals on Novelty, Feasibility, Completeness, Rigor, Clarity
+- `frontend/src/components/ideas/radar-chart.tsx` — Pure SVG 5-point radar chart
+- RadarChart + EvaluationCard wired into idea-detail page
+- 12 new tests covering stage registration, metadata storage, fallback, presets
+
+### Changed
+- `_STAGE_ORDER` now 14 entries (added `evaluation` after `adversarial_review`)
+- Strategy presets: deep_research + academic_proposal enable; fast_scan + literature_review disable
+- `idea-detail.tsx` imports EvaluationCard and RadarChart
+
+### Test baseline: 2,567 → 2,579 (+12)
+
 ## [0.140.0-prealpha] — 2026-05-10
 
 ### Security

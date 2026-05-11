@@ -3,7 +3,7 @@
 Last Updated:       2026-05-11
 Updated By:         ivory-wolf — via BATCH-152 Close
 Framework Version:  5.3
-Phase:              BATCH-155 COMPLETE — SEARCH ENGINE EXPANSION
+Phase:              BATCH-156 COMPLETE — MULTI-DIMENSIONAL EVALUATION
 
 ───────────────────────────────────────────────────────────
 VERIFIED MODULE MAP
@@ -115,18 +115,17 @@ ARCHITECTURAL DECISIONS
   Source:   BATCH-76 (updated B114)
   Active:   YES
 
-  DEC-004: _STAGE_ORDER has 13 entries (citation_audit added in B154).
+  DEC-004: _STAGE_ORDER has 14 entries (evaluation added in B156).
            All strategy presets must be updated to account for new stages.
-  Source:   BATCH-154
+  Source:   BATCH-156
   Active:   YES
 
-  DEC-013: SearchService wires 5 concurrent sources (Semantic Scholar, arXiv,
-           OpenAlex, PubMed, CrossRef). PubMed and CrossRef are toggleable via
-           config (pubmed_enabled, crossref_enabled, default True).
-           RelevanceFilter runs after dedup with embedding-based scoring.
-           Source priority: S2 > PubMed > OpenAlex > CrossRef > arXiv.
-           Health check endpoint reports per-source status and latency.
-  Source:   BATCH-155
+  DEC-014: EvaluationStage uses the thinking provider to score proposals on
+           5 dimensions: Novelty, Feasibility, Completeness, Rigor, Clarity.
+           Scores 0.0-1.0 with written justifications. Frontend includes
+           radar chart (pure SVG) and EvaluationCard on idea-detail page.
+           Stage name: evaluation (after adversarial_review, before paper_synthesis).
+  Source:   BATCH-156
   Active:   YES
 
   DEC-005: Quality evaluation (_evaluate_pipeline) runs after ALL stages complete,
@@ -205,9 +204,9 @@ KNOWN GOTCHAS
 TEST BASELINE
 ───────────────────────────────────────────────────────────
 
-  Last verified count: 2,567
-  Verified in:         BATCH-155 (2026-05-11)
-  Breakdown:           2,499 + 16 (B152) + 21 (B153) + 15 (B154) + 16 (B155)
+  Last verified count: 2,579
+  Verified in:         BATCH-156 (2026-05-11)
+  Breakdown:           2,499 + 16 (B152) + 21 (B153) + 15 (B154) + 16 (B155) + 12 (B156)
 
 ───────────────────────────────────────────────────────────
 CARRY-FORWARD OBLIGATIONS
