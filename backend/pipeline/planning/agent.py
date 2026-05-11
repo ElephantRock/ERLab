@@ -68,6 +68,26 @@ class ExecutionPlan:
     def has_blockers(self) -> bool:
         return bool(self.blockers)
 
+    def to_dict(self) -> dict:
+        return {
+            "strategy": self.strategy,
+            "domain": self.domain,
+            "total_estimated_time_s": self.total_estimated_time_s,
+            "total_estimated_tokens": self.total_estimated_tokens,
+            "blockers": self.blockers,
+            "stages": [
+                {
+                    "name": s.stage_name,
+                    "enabled": s.enabled,
+                    "estimated_time_s": s.estimated_time_s,
+                    "estimated_tokens": s.estimated_tokens,
+                    "dependencies": s.dependencies,
+                    "blockers": s.blockers,
+                }
+                for s in self.stages
+            ],
+        }
+
 
 class PlanningAgent:
     """Pre-execution planner for pipeline runs.

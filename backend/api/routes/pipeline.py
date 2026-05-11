@@ -1012,3 +1012,27 @@ async def get_run_journal(run_id: str):
         )
 
     return result
+
+
+@router.get(
+    "/plan",
+    summary="Get execution plan",
+    description="Preview the execution plan for a given strategy and domain (B164).",
+)
+async def get_execution_plan(
+    strategy: str = "deep_research",
+    domain: str = "",
+):
+    """Get a preview of the pipeline execution plan."""
+    from backend.pipeline.planning.agent import PlanningAgent
+
+    agent = PlanningAgent()
+
+    # Determine disabled stages based on strategy
+    disabled = []
+    if strategy == "fast_scan":
+        disabled = ["adversarial_review", "paper_synthesis", "citation_audit",
+                     "gap_reflection", "idea_reflection"]
+
+    plan = agent.plan(domain=domain, strategy=strategy, disabled_stages=disabled)
+    return plan.to_dict()
