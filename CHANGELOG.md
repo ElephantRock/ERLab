@@ -3,6 +3,22 @@
 All notable changes to the Elephant Rock Research Platform are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [2026-05-11] BATCH-175 — End-to-End Pipeline Integration Test
+
+### Added
+- 11 E2E integration tests in `test_batch175_e2e_integration.py`
+- `_OrchestratorUnderTest` subclass that bypasses real service creation and injects mocks
+- Full 16-stage pipeline run via `asyncio.run(orchestrator.run())` with all services mocked
+- Verifies all stages execute in correct `_STAGE_ORDER` sequence
+- Verifies `PipelineResult` has papers, gaps, ideas, and proposals after full run
+- Verifies `stage_report` has 16 entries with `status="executed"`
+- Regression test confirms batch172-174 tests still pass
+- Doc checks confirm STATE.md and CHANGELOG.md are updated
+
+### Changed
+- Test baseline: 2,815 → 2,826 (+11 tests)
+- No source code changes in backend/pipeline/ or backend/api/
+
 ## [2026-05-11] BATCH-174 — Functional Test Suite for All 16 Pipeline Stages
 
 ### Added

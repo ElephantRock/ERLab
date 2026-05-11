@@ -1,9 +1,9 @@
 # CODEBASE STATE
 
 Last Updated:       2026-05-11
-Updated By:         plain-chrome — via BATCH-174 Functional Test Suite
+Updated By:          Craft Agent — via BATCH-175 E2E Integration Test
 Framework Version:  5.3
-Phase:              BATCH-173 COMPLETE — INTERNAL ALPHA — PHASE 10 COMPLETE
+Phase:              BATCH-175 COMPLETE — INTERNAL ALPHA — PHASE 10 COMPLETE
 
 ───────────────────────────────────────────────────────────
 VERIFIED MODULE MAP
@@ -216,10 +216,10 @@ KNOWN GOTCHAS
 TEST BASELINE
 ───────────────────────────────────────────────────────────
 
-  Last verified count: 2,769
-  Verified in:         BATCH-172 (2026-05-11)
-  Phase 10 total:      +289 (22 batches, B151→B172)
-  Breakdown:           2,499 + 16 + 21 + 15 + 16 + 12 + 12 + 14 + 14 + 12 + 12 + 10 + 26
+  Last verified count: 2,826
+  Verified in:         BATCH-175 (2026-05-11)
+  Phase 10 total:      +300 (23 batches, B151→B175)
+  Breakdown:           2,499 + 16 + 21 + 15 + 16 + 12 + 12 + 14 + 14 + 12 + 12 + 10 + 26 + 21 + 25 + 11
 
 ───────────────────────────────────────────────────────────
 CARRY-FORWARD OBLIGATIONS
@@ -343,3 +343,20 @@ BATCH-174 — Functional Test Suite for All 16 Pipeline Stages
   New files:              3 test files
   New tests:              25 (10+11+4)
   Total test baseline:    2,790 → 2,815 (+25)
+
+───────────────────────────────────────────────────────────
+BATCH-175 — End-to-End Pipeline Integration Test
+───────────────────────────────────────────────────────────
+  Scope:                  Full 16-stage pipeline run with mocked providers
+  Approach:               Subclass PipelineOrchestrator, override __init__ to inject mocks,
+                          call real run() method, verify all stages execute in order
+  Stages executed:        All 16 (literature_search → export)
+  Strategy:               _OrchestratorUnderTest bypasses super().__init__(),
+                          manually sets all service attributes, builds stages with mocks
+  Mock infrastructure:    MockSearchService, MockLLMProvider (via MagicMock),
+                          all persistence/governance/observability disabled
+  Verification:           11 tests — 7 pipeline output + 1 ordering + 1 regression + 2 doc checks
+  Source code changes:    NONE — only test files
+  New files:              1 test file (test_batch175_e2e_integration.py)
+  New tests:              11 (7+1+1+2)
+  Total test baseline:    2,815 → 2,826 (+11)
