@@ -149,6 +149,21 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Test baseline: 2,605 → 2,619 (+14)
 
+## [2026-05-11] BATCH-160 — Local Document Ingestion
+
+### Added
+- Generic DocumentParser: PDF, TXT, CSV, MD, DOCX with graceful fallbacks
+- Extended upload API: POST /ingest accepts all 5 formats (50MB limit)
+- Documents list endpoint: GET /api/v1/knowledge/documents
+- Pipeline integration: locally uploaded docs injected into LiteratureSearchStage
+- 12 new tests covering parser, API validation, pipeline integration
+
+### Changed
+- `api/routes/knowledge.py` — extended ingest endpoint + documents list
+- `pipeline/stages.py` — LiteratureSearchStage merges local uploads
+
+### Test baseline: 2,619 → 2,631 (+12)
+
 ## [0.140.0-prealpha] — 2026-05-10
 
 ### Security

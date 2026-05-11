@@ -100,6 +100,30 @@ class LiteratureSearchStage(PipelineStage):
         except Exception as e:
             logger.debug("Knowledge library query skipped: %s", e)
 
+        # B160: Also retrieve locally uploaded documents from vector store
+        local_docs = []
+        try:
+            from backend.config import get_settings
+            from backend.pipeline.knowledge.embedding_service import EmbeddingService
+            from backend.pipeline.knowledge.vector_store import VectorStore
+            from backend.providers.provider_factory import create_provider
+
+            settings = get_settings()
+            provider = create_provider()
+            embedding = EmbeddingService(provider)
+            store = VectorStore(settings.chroma_persist_dir, embedding)
+
+            # Query vector store for any documents matching the domain
+            results = await store.query(ctx.domain, n_results=20)
+            for r in results:
+                meta = r.get("metadata", {})
+                if meta.get("source") == "local_upload":
+                    local_docs.append(r)
+            if local_docs:
+                logger.info("Found %d locally uploaded documents for '%s'", len(local_docs), ctx.domain)
+        except Exception as e:
+            logger.debug("Local document retrieval skipped: %s", e)
+
         queries = ctx.search_queries or [
             f"{ctx.domain} recent advances",
             f"{ctx.domain} open problems",
@@ -170,6 +194,30 @@ class LiteratureSearchStage(PipelineStage):
                 except Exception as e:
                     logger.debug("Failed to merge library paper: %s", e)
             logger.info("Merged %d papers from knowledge library", len([p for p in unique if getattr(p, 'source', '') == 'knowledge_library']))
+
+        # B160: Merge locally uploaded documents
+        if local_docs:
+            from backend.pipeline.literature.models import Paper
+            for doc in local_docs:
+                meta = doc.get("metadata", {})
+                content = doc.get("content", "")
+                doc_id = meta.get("paper_id", "")
+                title = meta.get("title", doc_id)
+                paper = Paper(
+                    id=f"upload:{doc_id}",
+                    source="local_upload",
+                    title=title,
+                    abstract=content[:500] if content else "",
+                    authors=[],
+                )
+                key = paper.title.lower().strip()
+                if key not in seen:
+                    seen.add(key)
+                    unique.append(paper)
+            logger.info(
+                "Merged %d locally uploaded documents",
+                len([p for p in unique if getattr(p, 'source', '') == 'local_upload']),
+            )
 
         ctx.all_papers = unique
         ctx.result.papers_found = len(unique)
