@@ -254,6 +254,7 @@ async def refine_idea(idea_id: int):
 
             from backend.config import get_settings
             from backend.pipeline.knowledge.embedding_providers import create_embedding_provider
+            from backend.pipeline.knowledge.embedding_service import EmbeddingService
             from backend.pipeline.knowledge.vector_store import VectorStore
 
             settings = get_settings()
@@ -264,7 +265,8 @@ async def refine_idea(idea_id: int):
                 base_url=settings.ollama_base_url,
                 dimension=settings.embedding_dimension or None,
             )
-            store = VectorStore(settings.chroma_persist_dir, embedding_provider)
+            embedding_service = EmbeddingService(embedding_provider, dimension=settings.embedding_dimension or 768)
+            store = VectorStore(settings.chroma_persist_dir, embedding_service)
 
             novelty_checker = NoveltyChecker(provider, store)
             feasibility_scorer = FeasibilityScorer(provider)
