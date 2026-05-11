@@ -59,27 +59,37 @@ class VectorStore:
         all_embeddings = []
         all_metadata = []
 
+        # Batch all texts for parallel embedding (fixes 18min ingestion)
+        paper_text_pairs = []
         for paper, paper_chunks in zip(papers, chunks, strict=True):
             texts = [c.text for c in paper_chunks]
-            if not texts:
-                continue
+            if texts:
+                paper_text_pairs.append((paper, paper_chunks, texts))
 
-            embeddings = await self._embedding_service.embed_texts(texts)
+        if paper_text_pairs:
+            all_batch_texts = [t for _, _, texts in paper_text_pairs for t in texts]
+            all_batch_embeddings = await self._embedding_service.embed_texts(all_batch_texts)
 
-            for i, (chunk, embedding) in enumerate(zip(paper_chunks, embeddings, strict=True)):
-                chunk_id = f"{paper.id}_chunk_{i}"
-                all_ids.append(chunk_id)
-                all_texts.append(chunk.text)
-                all_embeddings.append(embedding)
-                all_metadata.append(
-                    {
-                        "paper_id": paper.id,
-                        "paper_title": paper.title[:500],
-                        "source": paper.source,
-                        "section": chunk.section,
-                        "year": paper.year or 0,
-                    }
-                )
+            # Map embeddings back to papers
+            offset = 0
+            for paper, paper_chunks, texts in paper_text_pairs:
+                embeddings = all_batch_embeddings[offset:offset + len(texts)]
+                offset += len(texts)
+
+                for i, (chunk, embedding) in enumerate(zip(paper_chunks, embeddings, strict=True)):
+                    chunk_id = f"{paper.id}_chunk_{i}"
+                    all_ids.append(chunk_id)
+                    all_texts.append(chunk.text)
+                    all_embeddings.append(embedding)
+                    all_metadata.append(
+                        {
+                            "paper_id": paper.id,
+                            "paper_title": paper.title[:500],
+                            "source": paper.source,
+                            "section": chunk.section,
+                            "year": paper.year or 0,
+                        }
+                    )
 
         if all_ids:
             # Deduplicate by ID — same paper can appear across multiple queries

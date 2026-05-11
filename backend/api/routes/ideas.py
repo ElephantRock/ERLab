@@ -5,7 +5,7 @@ import json
 from fastapi import APIRouter, Query
 from sqlalchemy import select
 
-from backend.api.errors import NotFoundError
+from backend.api.errors import APIError, NotFoundError
 from backend.api.schemas import IdeaFeedbackRequest
 
 router = APIRouter()
@@ -226,6 +226,7 @@ async def refine_idea(idea_id: int):
     Example response:
         {"id": 1, "novelty_score": 0.88, "feasibility_score": 7.5, "proposal_title": "Improved Attention via Sparse Gating"}
     """
+    import traceback
     from backend.db.crud import get_idea as db_get_idea
     from backend.db.crud import update_idea_scores
     from backend.db.database import get_session
@@ -235,49 +236,50 @@ async def refine_idea(idea_id: int):
     from backend.pipeline.synthesis.proposal_synthesizer import ProposalSynthesizer
     from backend.providers.provider_factory import create_provider
 
-    with get_session() as session:
-        idea = db_get_idea(session, idea_id)
-        if not idea:
-            raise NotFoundError("Idea not found")
+    try:
+        with get_session() as session:
+            idea = db_get_idea(session, idea_id)
+            if not idea:
+                raise NotFoundError("Idea not found")
 
-        provider = create_provider()
-        research_idea = ResearchIdea(
-            title=idea.title,
-            problem_statement=idea.problem_statement,
-            proposed_method=idea.proposed_method,
-            expected_contributions=idea.expected_contributions,
-            novelty_rationale="",
-            evaluation_approach="",
-        )
+            provider = create_provider()
+            research_idea = ResearchIdea(
+                title=idea.title,
+                problem_statement=idea.problem_statement,
+                proposed_method=idea.proposed_method,
+                expected_contributions=idea.expected_contributions,
+                novelty_rationale="",
+                evaluation_approach="",
+            )
 
-        from backend.config import get_settings
-        from backend.pipeline.knowledge.embedding_providers import create_embedding_provider
-        from backend.pipeline.knowledge.vector_store import VectorStore
+            from backend.config import get_settings
+            from backend.pipeline.knowledge.embedding_providers import create_embedding_provider
+            from backend.pipeline.knowledge.vector_store import VectorStore
 
-        settings = get_settings()
-        embedding_provider = create_embedding_provider(
-            provider_name=settings.embedding_provider,
-            model=settings.embedding_model,
-            api_key=settings.openai_api_key,
-            base_url=settings.ollama_base_url,
-            dimension=settings.embedding_dimension or None,
-        )
-        store = VectorStore(settings.chroma_persist_dir, embedding_provider)
+            settings = get_settings()
+            embedding_provider = create_embedding_provider(
+                provider_name=settings.embedding_provider,
+                model=settings.embedding_model,
+                api_key=settings.openai_api_key,
+                base_url=settings.ollama_base_url,
+                dimension=settings.embedding_dimension or None,
+            )
+            store = VectorStore(settings.chroma_persist_dir, embedding_provider)
 
-        novelty_checker = NoveltyChecker(provider, store)
-        feasibility_scorer = FeasibilityScorer(provider)
-        synthesizer = ProposalSynthesizer(provider)
+            novelty_checker = NoveltyChecker(provider, store)
+            feasibility_scorer = FeasibilityScorer(provider)
+            synthesizer = ProposalSynthesizer(provider)
 
-        novelty_report = await novelty_checker.check_novelty(research_idea)
-        feasibility_report = await feasibility_scorer.score_feasibility(
-            research_idea, novelty_report
-        )
-        proposal = await synthesizer.synthesize(
-            research_idea, novelty_report, feasibility_report
-        )
+            novelty_report = await novelty_checker.check_novelty(research_idea)
+            feasibility_report = await feasibility_scorer.score_feasibility(
+                research_idea, novelty_report
+            )
+            proposal = await synthesizer.synthesize(
+                research_idea, novelty_report, feasibility_report
+            )
 
-        update_idea_scores(
-            session,
+            update_idea_scores(
+                session,
             idea_id,
             novelty_score=novelty_report.overall_score,
             feasibility_score=feasibility_report.overall_score,
@@ -285,9 +287,15 @@ async def refine_idea(idea_id: int):
             feasibility_report=json.dumps({"overall_score": feasibility_report.overall_score}),
         )
 
-        return {
-            "id": idea_id,
-            "novelty_score": novelty_report.overall_score,
-            "feasibility_score": feasibility_report.overall_score,
-            "proposal_title": proposal.title,
-        }
+            return {
+                "id": idea_id,
+                "novelty_score": novelty_report.overall_score,
+                "feasibility_score": feasibility_report.overall_score,
+                "proposal_title": proposal.title,
+            }
+    except Exception as e:
+        traceback.print_exc()
+        raise APIError(
+            message=f"Idea refinement failed: {str(e)}",
+            hint="The LLM provider may be unavailable. Check provider connectivity.",
+        )
