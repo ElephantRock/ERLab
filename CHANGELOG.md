@@ -37,6 +37,25 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Test baseline: 2,499 → 2,515 (+16)
 
+## [2026-05-11] BATCH-153 — Full Paper Synthesis (LaTeX Output)
+
+### Added
+- `backend/pipeline/synthesis/paper_synthesizer.py` — PaperSynthesizer + PaperSynthesisResult dataclass
+- `backend/pipeline/synthesis/prompts/paper_synthesis_system.md` — Academic paper synthesis prompt
+- `backend/pipeline/export/venue_templates.py` — VenueTemplate dataclass with IEEE, ACM, NeurIPS, Generic presets
+- PaperSynthesisStage: generates full academic papers from proposals (3,000-5,000 words)
+- LaTeX export API: `GET /api/export/latex/{run_id}?venue=generic`
+- LatexExporter extended with venue template support
+- 21 new tests covering paper synthesis, venue templates, LaTeX export, API, presets
+
+### Changed
+- `_STAGE_ORDER` now 12 entries (added `paper_synthesis` after `adversarial_review`)
+- `strategies/presets.py` — paper_synthesis enabled for deep_research + academic_proposal
+- `latex_exporter.py` — venue parameter for template selection
+- `api/routes/export.py` — new LaTeX endpoint
+
+### Test baseline: 2,515 → 2,536 (+21)
+
 ## [0.140.0-prealpha] — 2026-05-10
 
 ### Security

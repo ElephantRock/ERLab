@@ -36,6 +36,7 @@ from backend.pipeline.stages import (
     LiteratureSearchStage,
     MechanicalMetricsStage,
     NoveltyCheckingStage,
+    PaperSynthesisStage,
     PipelineStage,
     ProposalDeepeningStage,
     ProposalSynthesisStage,
@@ -66,6 +67,7 @@ class PipelineOrchestrator:
         "mechanical_metrics",
         "proposal_synthesis",
         "adversarial_review",
+        "paper_synthesis",
         "proposal_deepening",
         "export",
     ]
@@ -992,6 +994,7 @@ class PipelineOrchestrator:
             MechanicalMetricsStage(),
             self._build_synthesis_stage(ref_validator),
             adversarial_stage,
+            PaperSynthesisStage(provider=self._provider),
             ProposalDeepeningStage(deepener=ProposalDeepener(provider=self._provider)),
             ExportStage(self._export),
         ]

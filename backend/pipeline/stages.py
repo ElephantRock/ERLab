@@ -1176,6 +1176,135 @@ class AdversarialReviewStage(PipelineStage):
             proposal.metadata = metadata
 
 
+class PaperSynthesisStage(PipelineStage):
+    """Expand proposals into full academic papers via LLM.
+
+    Runs after adversarial_review. For each proposal, uses PaperSynthesizer
+    to produce a structured academic paper stored in proposal metadata.
+
+    HB-02: Graceful fallback — logs warning and sets full_paper to None
+    on LLM failure. Never blocks the pipeline.
+    """
+
+    def __init__(self, provider=None, synthesizer=None):
+        self._provider = provider
+        self._synthesizer = synthesizer  # Optional: inject for testing
+
+    @property
+    def name(self) -> str:
+        return "paper_synthesis"
+
+    async def execute(self, ctx: StageContext) -> bool:
+        # Check strategy flag
+        strategy_config = getattr(ctx, 'params', {}).get('strategy_config', None)
+        if strategy_config:
+            stage_cfg = strategy_config.stages.get('paper_synthesis')
+            if stage_cfg and not stage_cfg.enabled:
+                logger.info("Paper synthesis disabled by strategy — skipping")
+                return True
+
+        if not ctx.result.proposals:
+            return True
+
+        # Resolve provider — use generation provider (A-01)
+        provider = ctx.provider_override or self._provider
+        if not provider:
+            try:
+                from backend.config import get_settings
+                from backend.providers.provider_factory import get_generation_provider
+                provider = get_generation_provider(get_settings())
+            except Exception as e:
+                logger.warning("Cannot resolve generation provider for paper synthesis: %s", e)
+                return True
+
+        from backend.pipeline.synthesis.paper_synthesizer import PaperSynthesizer
+        synthesizer = self._synthesizer or PaperSynthesizer(provider)
+
+        # Format source papers for citation
+        source_papers = []
+        for idx, p in enumerate(ctx.all_papers[:30], 1):
+            authors = getattr(p, 'authors', None)
+            if authors:
+                author_str = ", ".join(
+                    getattr(a, 'name', str(a)) for a in (authors[:3] if hasattr(authors, '__getitem__') else authors)
+                )
+            else:
+                author_str = "Unknown"
+            line = (
+                f"[SOURCE-{idx}] {author_str} "
+                f"({getattr(p, 'year', 'n.d.')}). "
+                f"{getattr(p, 'title', 'Untitled')}. "
+                f"{getattr(p, 'venue', 'Unknown venue')}."
+            )
+            abstract = getattr(p, 'abstract', '')
+            if abstract:
+                line += f"\n  Abstract: {abstract[:500]}"
+            source_papers.append(line)
+
+        for idx, proposal in ctx.result.proposals.items():
+            try:
+                proposal_text = (
+                    proposal.to_markdown()
+                    if hasattr(proposal, "to_markdown")
+                    else str(proposal)
+                )
+
+                result = await synthesizer.synthesize(
+                    proposal_text=proposal_text,
+                    source_papers=source_papers,
+                    domain=ctx.domain,
+                    proposal_id=idx,
+                )
+
+                metadata = self._get_metadata(proposal)
+                if result is not None:
+                    metadata["full_paper"] = result.to_dict()
+                    logger.info(
+                        "Paper synthesis completed for proposal %d: %d words",
+                        idx, result.word_count,
+                    )
+                else:
+                    metadata["full_paper"] = None
+                    logger.warning(
+                        "Paper synthesis failed for proposal %d (HB-02)", idx,
+                    )
+                self._set_metadata(proposal, metadata)
+
+            except Exception as e:
+                logger.warning(
+                    "Paper synthesis failed for proposal %d (non-fatal, HB-02): %s",
+                    idx, e,
+                )
+                metadata = self._get_metadata(proposal)
+                metadata["full_paper"] = None
+                self._set_metadata(proposal, metadata)
+
+        return True
+
+    @staticmethod
+    def _get_metadata(proposal) -> dict:
+        """Get metadata dict from a proposal, handling JSON string storage."""
+        metadata = {}
+        if hasattr(proposal, "metadata") and proposal.metadata:
+            if isinstance(proposal.metadata, str):
+                try:
+                    metadata = json.loads(proposal.metadata)
+                except (json.JSONDecodeError, TypeError):
+                    metadata = {}
+            elif isinstance(proposal.metadata, dict):
+                metadata = proposal.metadata
+        return metadata
+
+    @staticmethod
+    def _set_metadata(proposal, metadata: dict) -> None:
+        """Set metadata dict on a proposal, handling JSON string storage."""
+        current = getattr(proposal, "metadata", None)
+        if isinstance(current, str) or current is None:
+            proposal.metadata = json.dumps(metadata)
+        else:
+            proposal.metadata = metadata
+
+
 class ProposalDeepeningStage(PipelineStage):
     """Enriches proposals with architecture, toy examples, failure modes, and criteria."""
 

@@ -3,7 +3,7 @@
 Last Updated:       2026-05-11
 Updated By:         ivory-wolf — via BATCH-152 Close
 Framework Version:  5.3
-Phase:              BATCH-152 COMPLETE — CROSS-MODEL ADVERSARIAL REVIEW
+Phase:              BATCH-153 COMPLETE — LATEX PAPER SYNTHESIS
 
 ───────────────────────────────────────────────────────────
 VERIFIED MODULE MAP
@@ -115,9 +115,9 @@ ARCHITECTURAL DECISIONS
   Source:   BATCH-76 (updated B114)
   Active:   YES
 
-  DEC-004: _STAGE_ORDER has 11 entries (adversarial_review added in B152).
+  DEC-004: _STAGE_ORDER has 12 entries (paper_synthesis added in B153).
            All strategy presets must be updated to account for new stages.
-  Source:   BATCH-152
+  Source:   BATCH-153
   Active:   YES
 
   DEC-005: Quality evaluation (_evaluate_pipeline) runs after ALL stages complete,
@@ -151,12 +151,13 @@ ARCHITECTURAL DECISIONS
   Source:   BATCH-140
   Active:   YES
 
-  DEC-010: AdversarialReviewStage uses the thinking provider (local LM Studio)
-           to review proposals synthesized by the generation provider (cloud).
-           If both providers resolve to the same model, the review is skipped
-           with a warning log. Revision loop max 2 rounds. Threshold: 7.0/10.
-           Stage name: adversarial_review (in _STAGE_ORDER after proposal_synthesis).
-  Source:   BATCH-152
+  DEC-011: PaperSynthesisStage generates full academic papers from proposals
+           using the generation provider (cloud). Papers are 3,000-5,000 words
+           with academic structure (Abstract, Intro, Related Work, Methodology,
+           Experiments, Discussion, Conclusion). Venue templates (IEEE, ACM,
+           NeurIPS, Generic) control LaTeX formatting. Stage name: paper_synthesis.
+           Runs after adversarial_review, before proposal_deepening.
+  Source:   BATCH-153
   Active:   YES
 
 ───────────────────────────────────────────────────────────
@@ -195,9 +196,9 @@ KNOWN GOTCHAS
 TEST BASELINE
 ───────────────────────────────────────────────────────────
 
-  Last verified count: 2,515
-  Verified in:         BATCH-152 (2026-05-11)
-  Breakdown:           2,499 pre-existing + 16 new (BATCH-152)
+  Last verified count: 2,536
+  Verified in:         BATCH-153 (2026-05-11)
+  Breakdown:           2,499 pre-existing + 16 (B152) + 21 (B153)
 
 ───────────────────────────────────────────────────────────
 CARRY-FORWARD OBLIGATIONS
