@@ -113,10 +113,12 @@ def test_llm_reranker_handles_bad_response():
 # ── Factory Tests ──────────────────────────────────────────────────────
 
 def test_create_reranker_auto():
-    """create_reranker('auto') returns JinaCrossEncoderReranker with fallback."""
+    """create_reranker('auto') returns RemoteReranker with fallback chain."""
+    from backend.pipeline.knowledge.reranker import RemoteReranker
+
     reranker = create_reranker("auto")
-    assert isinstance(reranker, JinaCrossEncoderReranker)
-    assert isinstance(reranker._fallback, LMStudioReranker)
+    assert isinstance(reranker, RemoteReranker)
+    assert reranker._fallback is not None  # Has JinaCrossEncoderReranker fallback
 
 
 def test_create_reranker_cross_encoder():
@@ -147,3 +149,42 @@ def test_create_reranker_unknown():
     """create_reranker raises for unknown method."""
     with pytest.raises(ValueError, match="Unknown"):
         create_reranker("nonexistent-method")
+
+
+# ── RemoteReranker Tests ──────────────────────────────────────────────
+
+def test_remote_reranker_unreachable_uses_fallback():
+    """RemoteReranker falls back when service unreachable."""
+    from backend.pipeline.knowledge.reranker import RemoteReranker
+
+    remote = RemoteReranker(base_url="http://localhost:19999")
+    remote.set_fallback(JinaCrossEncoderReranker(model_id="nonexistent-model"))
+    result = asyncio.run(remote.rerank("transformer", SAMPLE_DOCS, top_k=2))
+    assert len(result) <= 2
+    # Falls through to heuristic
+    assert all(isinstance(r.score, float) for r in result)
+
+
+def test_remote_reranker_empty_docs():
+    """RemoteReranker handles empty document list."""
+    from backend.pipeline.knowledge.reranker import RemoteReranker
+
+    remote = RemoteReranker(base_url="http://localhost:19999")
+    result = asyncio.run(remote.rerank("query", []))
+    assert result == []
+
+
+def test_create_reranker_auto_uses_remote():
+    """create_reranker('auto') returns RemoteReranker as primary."""
+    from backend.pipeline.knowledge.reranker import RemoteReranker
+
+    reranker = create_reranker("auto")
+    assert isinstance(reranker, RemoteReranker)
+
+
+def test_create_reranker_remote():
+    """create_reranker('remote') returns RemoteReranker."""
+    from backend.pipeline.knowledge.reranker import RemoteReranker
+
+    reranker = create_reranker("remote", reranker_url="http://gpu-machine:8100")
+    assert isinstance(reranker, RemoteReranker)

@@ -408,10 +408,97 @@ class CrossEncoderReranker(Reranker):
         return scored[:top_k] if top_k else scored
 
 
+class RemoteReranker(Reranker):
+    """Remote GPU reranker — calls the reranker microservice.
+
+    The microservice runs on the GPU machine (RTX 3080 Ti) and
+    exposes a POST /v1/rerank endpoint. This class is a thin client
+    that forwards requests and returns scored documents.
+
+    Falls back to a configured fallback reranker if the service
+    is unreachable.
+
+    Parameters
+    ----------
+    base_url:
+        URL of the reranker microservice (e.g., http://100.64.0.1:8100).
+    """
+
+    def __init__(self, base_url: str = "http://100.64.0.1:8100"):
+        self._base_url = base_url.rstrip("/")
+        self._fallback: Reranker | None = None
+
+    def set_fallback(self, fallback: Reranker) -> None:
+        """Set fallback reranker when remote service is unavailable."""
+        self._fallback = fallback
+
+    async def rerank(
+        self,
+        query: str,
+        documents: list[dict],
+        top_k: int | None = None,
+    ) -> list[ScoredDocument]:
+        """Rerank via remote GPU service."""
+        if not documents:
+            return []
+
+        try:
+            import httpx
+
+            texts = [doc.get("text", "") for doc in documents]
+
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                resp = await client.post(
+                    f"{self._base_url}/v1/rerank",
+                    json={
+                        "query": query,
+                        "documents": texts,
+                        "top_n": top_k or len(texts),
+                    },
+                )
+                resp.raise_for_status()
+                data = resp.json()
+
+            results = data.get("results", [])
+            scored = []
+            for r in results:
+                idx = r.get("index", 0)
+                original_doc = documents[idx] if idx < len(documents) else {}
+                scored.append(
+                    ScoredDocument(
+                        id=original_doc.get("id", ""),
+                        text=r.get("text", ""),
+                        score=r.get("relevance_score", 0.0),
+                        metadata=original_doc.get("metadata", {}),
+                    )
+                )
+
+            return scored
+
+        except Exception as e:
+            logger.info(
+                "Remote reranker unavailable (%s), using fallback",
+                str(e)[:80],
+            )
+            if self._fallback:
+                return await self._fallback.rerank(query, documents, top_k)
+            # Last resort: return unsorted with equal scores
+            return [
+                ScoredDocument(
+                    id=doc.get("id", ""),
+                    text=doc.get("text", ""),
+                    score=0.5,
+                    metadata=doc.get("metadata", {}),
+                )
+                for doc in documents
+            ]
+
+
 def create_reranker(
     method: str = "auto",
     api_base: str = "http://100.64.0.1:1234/v1",
     model: str = "jina-reranker-v3@bf16",
+    reranker_url: str = "http://100.64.0.1:8100",
     provider: Any = None,
 ) -> Reranker:
     """Factory function to create the best available reranker.
@@ -419,17 +506,26 @@ def create_reranker(
     Parameters
     ----------
     method:
-        "auto" — try cross-encoder, fallback to LM Studio
-        "cross-encoder" — jina-reranker-v3 via transformers
+        "auto" — try remote GPU reranker, then local cross-encoder, then LM Studio
+        "remote" — remote GPU microservice at reranker_url
+        "cross-encoder" — jina-reranker-v3 via local transformers
         "lm-studio" — LM Studio chat-based scoring
         "llm" — provider-based LLM scoring
         "sentence-transformers" — ms-marco cross-encoder
         "heuristic" — keyword overlap only
+    reranker_url:
+        URL of the remote reranker microservice (runs on GPU machine).
     """
     if method == "auto":
-        reranker = JinaCrossEncoderReranker()
-        reranker.set_fallback(LMStudioReranker(api_base=api_base, model=model))
-        return reranker
+        # Try remote GPU reranker first, fallback to local
+        remote = RemoteReranker(base_url=reranker_url)
+        fallback = JinaCrossEncoderReranker()
+        fallback.set_fallback(LMStudioReranker(api_base=api_base, model=model))
+        remote.set_fallback(fallback)
+        return remote
+
+    if method == "remote":
+        return RemoteReranker(base_url=reranker_url)
 
     if method == "cross-encoder":
         return JinaCrossEncoderReranker()
