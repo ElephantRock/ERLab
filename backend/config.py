@@ -346,6 +346,8 @@ class Settings(BaseSettings):
 
     # Stage-level execution (Gap 13)
     stage_max_retries: int = 3
+    stage_default_timeout: float = 1800.0  # 30 minutes per stage
+    stage_timeouts: dict = {}  # per-stage overrides e.g. {"ingestion": 3600}
     llm_rate_limit_retries: int = 3  # EROCK_LLM_RATE_LIMIT_RETRIES (BATCH-176)
     stage_retry_base_delay: float = 2.0
     stage_retry_max_delay: float = 120.0

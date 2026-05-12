@@ -1869,7 +1869,7 @@ class PipelineOrchestrator:
     async def _execute_stage_with_retry(
         self, stage: PipelineStage, ctx: StageContext, checkpoint: RunCheckpoint
     ) -> bool:
-        """Execute a stage with retry, exponential backoff, and checkpointing."""
+        """Execute a stage with retry, exponential backoff, checkpointing, and timeout."""
         import random
 
         max_retries = getattr(self._settings, "stage_max_retries", 3)
@@ -1880,14 +1880,36 @@ class PipelineOrchestrator:
         # BATCH-176: LLM-level rate limit retry (wraps the actual LLM call)
         max_llm_retries = getattr(self._settings, "llm_rate_limit_retries", 3)
 
+        # Per-stage timeout: default 30 minutes, configurable via settings
+        stage_timeouts = getattr(self._settings, "stage_timeouts", {})
+        default_timeout = getattr(self._settings, "stage_default_timeout", 1800)  # 30 min
+        stage_timeout = stage_timeouts.get(stage.name, default_timeout)
+
         for attempt in range(max_retries + 1):
             try:
-                result, retries = await retry_llm_call(
-                    lambda: stage.execute(ctx),
-                    max_retries=max_llm_retries,
-                )
-                self._last_stage_retries = retries
+                async def _run():
+                    result, retries = await retry_llm_call(
+                        lambda: stage.execute(ctx),
+                        max_retries=max_llm_retries,
+                    )
+                    self._last_stage_retries = retries
+                    return result
+
+                result = await asyncio.wait_for(_run(), timeout=stage_timeout)
                 return result
+            except asyncio.TimeoutError:
+                self._last_stage_retries = 0
+                logger.error(
+                    "Stage %s TIMED OUT after %ds (attempt %d/%d)",
+                    stage.name, stage_timeout, attempt + 1, max_retries + 1,
+                )
+                if attempt >= max_retries:
+                    raise RuntimeError(
+                        f"Stage {stage.name} timed out after {stage_timeout}s "
+                        f"across {max_retries + 1} attempts"
+                    )
+                delay = min(base_delay * (2 ** attempt), max_delay)
+                await asyncio.sleep(delay)
             except Exception as exc:
                 self._last_stage_retries = 0
                 checkpoint.mark_stage_failed(stage.name, str(exc))
