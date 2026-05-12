@@ -82,7 +82,7 @@ export function ApprovalCard({ item, onApprove, onDeny }: ApprovalCardProps) {
             {denying && (
               <input
                 type="text"
-                placeholder="Optional amendment…"
+                placeholder="Optional amendment..."
                 value={amendment}
                 onChange={(e) => setAmendment(e.target.value)}
                 className="w-56 rounded-md border border-input bg-background px-3 py-1.5 text-xs ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"

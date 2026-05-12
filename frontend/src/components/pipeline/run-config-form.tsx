@@ -81,7 +81,7 @@ export function RunConfigForm({ onSubmit, isLoading, sessionId = "", onSessionId
           <div className="space-y-2">
             <label className="text-sm font-medium">Research Domain</label>
             <Input
-              placeholder="e.g., machine learning, nlp, computer vision"
+              placeholder="machine learning, nlp, computer vision..."
               value={domain}
               onChange={(e) => setDomain(e.target.value)}
               maxLength={VALIDATION.domain.maxLength}
@@ -208,7 +208,7 @@ export function RunConfigForm({ onSubmit, isLoading, sessionId = "", onSessionId
                   <input
                     id="session-id-input"
                     type="text"
-                    placeholder="e.g., my-session-name"
+                    placeholder="my-session-name"
                     value={sessionId}
                     onChange={(e) => onSessionIdChange?.(e.target.value)}
                     data-testid="session-id-input"

@@ -196,7 +196,7 @@ export default function Settings() {
           <div className="space-y-2">
             <label className="text-sm font-medium">Default Research Domain</label>
             <Input
-              placeholder="e.g., AI/NLP, machine learning"
+              placeholder="AI, NLP, machine learning..."
               value={defaultDomain}
               onChange={(e) => handleDefaultDomainChange(e.target.value)}
               data-testid="default-domain-input"

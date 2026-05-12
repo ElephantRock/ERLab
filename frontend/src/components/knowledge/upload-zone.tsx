@@ -131,7 +131,7 @@ export function UploadZone({ onUploadSuccess }: UploadZoneProps) {
           {state === "uploading" && (
             <div className="flex flex-col items-center gap-2" data-testid="upload-loading">
               <Loader2 className="h-8 w-8 text-primary animate-spin" />
-              <p className="text-sm font-medium">Uploading {fileName}…</p>
+              <p className="text-sm font-medium">Uploading {fileName}...</p>
               <Progress value={undefined} className="max-w-[200px]" />
             </div>
           )}

@@ -66,7 +66,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             onClick={() => setSearchOpen(true)}
           >
             <Search className="h-3.5 w-3.5" />
-            <span className="text-xs">Search…</span>
+            <span className="text-xs">Search...</span>
             <kbd className="pointer-events-none ml-1 inline-flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground">
               ⌘K
             </kbd>

@@ -154,7 +154,7 @@ export function OnboardingOverlay({ onStartPipeline, onDismiss }: OnboardingOver
               <div className="space-y-3 pt-2">
                 <input
                   type="text"
-                  placeholder='e.g., "Mechanistic Interpretability of Transformer Reasoning Chains"'
+                  placeholder="Mechanistic Interpretability of Transformer Reasoning Chains..."
                   value={topic}
                   onChange={(e) => setTopic(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && handleStart()}

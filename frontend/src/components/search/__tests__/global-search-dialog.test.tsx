@@ -44,7 +44,7 @@ describe("BATCH-48/TASK-02: GlobalSearchDialog", () => {
 
   it("shows empty state message when opened with no query", () => {
     renderDialog();
-    expect(screen.getByText("Start typing to search…")).toBeInTheDocument();
+    expect(screen.getByText("Start typing to search...")).toBeInTheDocument();
   });
 
   it("calls search API with correct query after debounce", async () => {
@@ -55,7 +55,7 @@ describe("BATCH-48/TASK-02: GlobalSearchDialog", () => {
     });
     renderDialog();
 
-    const input = screen.getByPlaceholderText("Search ideas, gaps, papers, runs…");
+    const input = screen.getByPlaceholderText("Search ideas, gaps, papers, runs...");
     await userEvent.setup({ advanceTimers: vi.advanceTimersByTime }).type(input, "test");
 
     // Advance past debounce
@@ -74,7 +74,7 @@ describe("BATCH-48/TASK-02: GlobalSearchDialog", () => {
     });
     renderDialog();
 
-    const input = screen.getByPlaceholderText("Search ideas, gaps, papers, runs…");
+    const input = screen.getByPlaceholderText("Search ideas, gaps, papers, runs...");
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
 
     // Rapid typing
@@ -117,7 +117,7 @@ describe("BATCH-48/TASK-02: GlobalSearchDialog", () => {
     });
     renderDialog();
 
-    const input = screen.getByPlaceholderText("Search ideas, gaps, papers, runs…");
+    const input = screen.getByPlaceholderText("Search ideas, gaps, papers, runs...");
     await userEvent.setup({ advanceTimers: vi.advanceTimersByTime }).type(input, "neural");
 
     await act(async () => {
@@ -152,7 +152,7 @@ describe("BATCH-48/TASK-02: GlobalSearchDialog", () => {
     });
     renderDialog();
 
-    const input = screen.getByPlaceholderText("Search ideas, gaps, papers, runs…");
+    const input = screen.getByPlaceholderText("Search ideas, gaps, papers, runs...");
     await userEvent.setup({ advanceTimers: vi.advanceTimersByTime }).type(input, "idea");
 
     await act(async () => {

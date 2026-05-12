@@ -125,7 +125,7 @@ export function GlobalSearchDialog({ open, onOpenChange }: Props) {
           <Search className="mr-2 h-4 w-4 shrink-0 text-muted-foreground" />
           <input
             ref={inputRef}
-            placeholder="Search ideas, gaps, papers, runs…"
+            placeholder="Search ideas, gaps, papers, runs..."
             className="flex h-11 w-full rounded-md bg-transparent py-3 text-sm outline-none placeholder:text-muted-foreground"
             value={query}
             onChange={(e) => handleInputChange(e.target.value)}
@@ -147,7 +147,7 @@ export function GlobalSearchDialog({ open, onOpenChange }: Props) {
           {/* Empty state */}
           {!loading && !results && recentSearches.length === 0 && (
             <p className="py-6 text-center text-sm text-muted-foreground">
-              Start typing to search…
+              Start typing to search...
             </p>
           )}
 

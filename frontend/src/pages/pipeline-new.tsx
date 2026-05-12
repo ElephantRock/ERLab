@@ -114,7 +114,7 @@ export default function PipelineNew() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Pipeline</h1>
+        <h1 className="text-2xl font-bold tracking-tight">Pipelines</h1>
         <p className="text-muted-foreground">Configure and launch a research pipeline.</p>
       </div>
 
@@ -167,7 +167,7 @@ export default function PipelineNew() {
                     disabled={isCancelling}
                     data-testid="cancel-run-btn"
                   >
-                    {isCancelling ? "Cancelling…" : "Cancel Run"}
+                    {isCancelling ? "Cancelling..." : "Cancel Run"}
                   </Button>
                 )}
               </div>
@@ -214,7 +214,7 @@ export default function PipelineNew() {
                       disabled={isCancelling}
                       data-testid="cancel-confirm-btn"
                     >
-                      {isCancelling ? "Cancelling…" : "Yes, Cancel Run"}
+                      {isCancelling ? "Cancelling..." : "Yes, Cancel Run"}
                     </Button>
                   </div>
                 </CardContent>
@@ -284,7 +284,7 @@ export default function PipelineNew() {
               )}
 
               {ideasLoading && (
-                <p className="text-sm text-muted-foreground">Loading results…</p>
+                <p className="text-sm text-muted-foreground">Loading results...</p>
               )}
 
               {!ideasLoading && !ideasError && ideas.length === 0 && (
