@@ -28,6 +28,16 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - `src/lib/typography.ts` — exported constants for typography scale, icon sizes, and shadow levels
 - 7 new typography unit tests
 
+## [BATCH-DA-03] — 2026-05-12
+
+### Changed
+- Replaced 6 raw `<button>` elements in login.tsx with `<Button variant="link">`
+- Replaced link-style `<button>` in idea-detail.tsx and dashboard.tsx with `<Button variant="link">`
+- Fixed "View all" → "View all ideas" (verb + destination pattern)
+
+### Verified
+- All 29 `<label>` elements already follow 2 consistent patterns (no changes needed)
+
 ## [2026-05-11] BATCH-177 — Stale Run Cleanup + Run Status Accuracy
 
 ### Added
