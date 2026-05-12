@@ -25,7 +25,7 @@ export function GapFeedbackForm({ gapId, currentRating, currentNotes, onSubmitte
       toast.success("Feedback submitted");
       onSubmitted?.();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to submit feedback");
+      toast.error("Failed to submit feedback");
     } finally {
       setSubmitting(false);
     }

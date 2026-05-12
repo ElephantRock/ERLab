@@ -58,7 +58,7 @@ export default function CostsPage() {
         setError(null);
       } catch (err) {
         if (cancelled) return;
-        setError(err instanceof Error ? err.message : "Failed to load cost data");
+        setError("Failed to load cost data");
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -96,7 +96,7 @@ export default function CostsPage() {
     return (
       <div className="space-y-6" data-testid="costs-page">
         <h1 className="text-2xl font-bold tracking-tight">Cost Dashboard</h1>
-        <div className="rounded-lg border border-red-300 bg-red-50 p-4 text-red-800" data-testid="cost-error">
+        <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-destructive" data-testid="cost-error">
           <p className="font-medium">Error loading cost data</p>
           <p className="text-sm">{error}</p>
         </div>

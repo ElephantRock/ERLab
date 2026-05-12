@@ -35,8 +35,8 @@ export default function IdeaDetail() {
       toast.success("Idea refined — scores updated");
       queryClient.invalidateQueries({ queryKey: ["idea", ideaId] });
     },
-    onError: (err) => {
-      toast.error(err.message || "Refinement failed");
+    onError: (_err) => {
+      toast.error("Refinement failed");
     },
   });
 

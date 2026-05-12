@@ -47,7 +47,7 @@ export function StageModelSelector({ value, onChange }: StageModelSelectorProps)
         // Initialize with saved assignments merged into value
         onChange({ ...data.assignments, ...value });
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to load models");
+        setError("Failed to load models");
       } finally {
         setLoading(false);
       }
@@ -79,7 +79,7 @@ export function StageModelSelector({ value, onChange }: StageModelSelectorProps)
         throw new Error(err.error?.message || `HTTP ${resp.status}`);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Save failed");
+      setError("Save failed");
     } finally {
       setSaving(false);
     }

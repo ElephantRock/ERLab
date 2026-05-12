@@ -23,7 +23,7 @@ export default function SessionsPage() {
         const data = await getSessionList();
         setSessions(data.sessions);
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to load sessions");
+        setError("Failed to load sessions");
       } finally {
         setIsLoading(false);
       }
@@ -38,7 +38,7 @@ export default function SessionsPage() {
       const data = await listRuns({ session_id: sessionId, limit: 50 });
       setRuns(data.runs);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load runs");
+      setError("Failed to load runs");
     } finally {
       setIsRunsLoading(false);
     }

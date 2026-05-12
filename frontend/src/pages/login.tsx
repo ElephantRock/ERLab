@@ -45,7 +45,7 @@ export default function LoginPage() {
       navigate("/", { replace: true });
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : "Authentication failed",
+        "Authentication failed",
       );
     } finally {
       setSubmitting(false);

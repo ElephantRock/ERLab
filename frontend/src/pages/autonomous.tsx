@@ -43,7 +43,7 @@ export default function AutonomousPage() {
       const data = await getAutonomousHistory();
       setCycles(data.cycles);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load history");
+      setError("Failed to load history");
     } finally {
       setIsLoading(false);
     }
@@ -69,7 +69,7 @@ export default function AutonomousPage() {
       await startScheduler();
       await loadSchedulerAndEvolution();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to start scheduler");
+      setError("Failed to start scheduler");
     } finally {
       setSchedulerLoading(false);
     }
@@ -82,7 +82,7 @@ export default function AutonomousPage() {
       await stopScheduler();
       await loadSchedulerAndEvolution();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to stop scheduler");
+      setError("Failed to stop scheduler");
     } finally {
       setSchedulerLoading(false);
     }
@@ -95,7 +95,7 @@ export default function AutonomousPage() {
       await triggerAutonomous({ domain, max_runs: maxRuns });
       await loadHistory();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to start cycle");
+      setError("Failed to start cycle");
     } finally {
       setIsStarting(false);
     }
@@ -112,7 +112,7 @@ export default function AutonomousPage() {
       await stopAutonomousCycle(cycleId);
       await loadHistory();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to stop cycle");
+      setError("Failed to stop cycle");
     }
   }
 

@@ -21,8 +21,8 @@ export function ShareDialog({ ideaId }: ShareDialogProps) {
       setShareUrl(fullUrl);
       toast.success("Share link created");
     },
-    onError: (err) => {
-      toast.error(err.message || "Failed to create share link");
+    onError: (_err) => {
+      toast.error("Failed to create share link");
     },
   });
 

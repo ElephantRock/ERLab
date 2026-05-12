@@ -48,7 +48,7 @@ export default function PipelineNew() {
       const res = await triggerRun(configWithSession);
       setRunId(res.run_id);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to start pipeline");
+      setError("Failed to start pipeline");
     } finally {
       setIsLoading(false);
     }
@@ -67,7 +67,7 @@ export default function PipelineNew() {
         setIdeas(ideasData.ideas);
       } catch (err) {
         setIdeas([]);
-        setIdeasError(err instanceof Error ? err.message : "Failed to load results");
+        setIdeasError("Failed to load results");
       } finally {
         setIdeasLoading(false);
       }
@@ -95,7 +95,7 @@ export default function PipelineNew() {
       setIsCancelled(true);
       setShowCancelConfirm(false);
     } catch (err) {
-      setCancelError(err instanceof Error ? err.message : "Failed to cancel run");
+      setCancelError("Failed to cancel run");
     } finally {
       setIsCancelling(false);
     }

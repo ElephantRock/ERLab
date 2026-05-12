@@ -23,7 +23,7 @@ export default function GovernancePage() {
       setItems(data.pending);
       setError(null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load pending approvals");
+      setError("Failed to load pending approvals");
     } finally {
       setLoading(false);
     }
@@ -40,7 +40,7 @@ export default function GovernancePage() {
         setError(null);
       } catch (err) {
         if (cancelled) return;
-        setError(err instanceof Error ? err.message : "Failed to load pending approvals");
+        setError("Failed to load pending approvals");
       } finally {
         if (!cancelled) setLoading(false);
       }

@@ -54,11 +54,11 @@ export function ExportDialog({ ideaId, ideaIds, title }: ExportDialogProps) {
         const blob = await exportPdf({ idea_id: ideaId });
         const safeTitle = (title || "idea").replace(/[^a-zA-Z0-9]/g, "_").slice(0, 50);
         downloadBlob(blob, `${safeTitle}.${format === "pdf" ? "pdf" : "html"}`);
-        toast.success("PDF exported successfully");
+        toast.success("PDF exported");
       }
       setOpen(false);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Export failed");
+      toast.error("Export failed");
     } finally {
       setLoading(false);
     }

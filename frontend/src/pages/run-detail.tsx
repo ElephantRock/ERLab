@@ -327,7 +327,7 @@ export default function RunDetail() {
               await resumeRun(String(run.id));
               queryClient.invalidateQueries({ queryKey: ["run", runId] });
             } catch (err) {
-              toast.error(err instanceof Error ? err.message : "Failed to resume pipeline");
+              toast.error("Failed to resume pipeline");
             } finally {
               setIsResuming(false);
             }

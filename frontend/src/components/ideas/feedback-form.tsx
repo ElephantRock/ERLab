@@ -27,8 +27,8 @@ export function FeedbackForm({ ideaId, onSuccess }: FeedbackFormProps) {
       setNotes("");
       onSuccess?.();
     },
-    onError: (err) => {
-      toast.error(err.message || "Failed to submit feedback");
+    onError: (_err) => {
+      toast.error("Failed to submit feedback");
     },
   });
 

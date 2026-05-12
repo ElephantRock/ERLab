@@ -21,8 +21,8 @@ export function AutonomousForm({ onCycleStarted }: AutonomousFormProps) {
       toast.success(`Autonomous cycle started (${data.cycle_id})`);
       onCycleStarted?.(data.cycle_id);
     },
-    onError: (err) => {
-      toast.error(err.message || "Failed to start autonomous cycle");
+    onError: (_err) => {
+      toast.error("Failed to start autonomous cycle");
     },
   });
 

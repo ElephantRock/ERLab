@@ -45,7 +45,7 @@ export default function TracesPage() {
         setServiceUnavailable(false);
       } catch (err) {
         if (cancelled) return;
-        const message = err instanceof Error ? err.message : "Failed to load trace data";
+        const message = "Failed to load trace data";
         if (message.toLowerCase().includes("observability not enabled") ||
             message.toLowerCase().includes("service unavailable")) {
           setServiceUnavailable(true);

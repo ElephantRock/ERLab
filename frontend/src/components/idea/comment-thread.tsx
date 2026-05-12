@@ -30,8 +30,8 @@ export function CommentThread({ ideaId }: CommentThreadProps) {
       setContent("");
       setReplyTo(null);
     },
-    onError: (err) => {
-      toast.error(err.message || "Failed to add comment");
+    onError: (_err) => {
+      toast.error("Failed to add comment");
     },
   });
 

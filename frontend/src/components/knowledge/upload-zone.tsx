@@ -48,7 +48,7 @@ export function UploadZone({ onUploadSuccess }: UploadZoneProps) {
         onUploadSuccess?.({ filename: result.filename, chunks: result.chunks });
       } catch (err) {
         setState("error");
-        const message = err instanceof Error ? err.message : "Upload failed";
+        const message = "Upload failed";
         setErrorMessage(message);
         toast.error(message);
       }

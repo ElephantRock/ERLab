@@ -23,13 +23,13 @@ export default function PluginsPage() {
   const installMutation = useMutation({
     mutationFn: installPlugin,
     onSuccess: () => {
-      toast.success("Plugin installed successfully");
+      toast.success("Plugin installed");
       queryClient.invalidateQueries({ queryKey: ["plugins"] });
       setNewPluginName("");
       setNewPluginDesc("");
     },
-    onError: (err) => {
-      toast.error(err.message || "Installation failed");
+    onError: (_err) => {
+      toast.error("Installation failed");
     },
   });
 

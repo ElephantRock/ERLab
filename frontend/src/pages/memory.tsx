@@ -65,7 +65,7 @@ export default function MemoryBrowserPage() {
         const data = await recallMemories(searchQuery || BROAD_QUERY, params);
         setResults(data.results);
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to load memories");
+        setError("Failed to load memories");
         setResults([]);
       } finally {
         setLoading(false);
