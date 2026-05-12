@@ -213,9 +213,10 @@ async def list_reports() -> dict[str, Any]:
 async def get_pipeline_metrics(run_id: int) -> dict[str, Any]:
     """Get retrieval metrics computed during a pipeline run.
 
-    Returns metrics logged by the orchestrator after the literature_search stage.
+    Returns metrics from the pipeline_metrics DB table.
     """
     try:
+        from backend.pipeline.evaluation.metrics_persistence import get_metrics_for_run
         from backend.db.database import get_session
         from backend.db.models import PipelineRun
 
@@ -224,29 +225,36 @@ async def get_pipeline_metrics(run_id: int) -> dict[str, Any]:
             if not run:
                 raise HTTPException(status_code=404, detail="Pipeline run not found")
 
-            # Try to get metrics from stage_report_json
-            metrics = {}
-            if hasattr(run, "stage_report_json") and run.stage_report_json:
-                import json
-                try:
-                    reports = json.loads(run.stage_report_json)
-                    for report in reports:
-                        if report.get("name") == "literature_search":
-                            metrics = report.get("metrics", {})
-                            break
-                except (json.JSONDecodeError, TypeError):
-                    pass
+        metrics_by_stage = get_metrics_for_run(run_id)
 
-            return {
-                "run_id": run_id,
-                "domain": run.domain,
-                "status": run.status,
-                "metrics": metrics,
-            }
+        return {
+            "run_id": run_id,
+            "domain": run.domain,
+            "status": run.status,
+            "metrics": metrics_by_stage,
+        }
     except HTTPException:
         raise
     except Exception as e:
         logger.error("Failed to get pipeline metrics: %s", str(e)[:200])
         raise HTTPException(
             status_code=500, detail=f"Failed to get metrics: {str(e)[:100]}"
+        )
+
+
+@router.get("/metrics/history/{metric_name}", summary="Get metric history")
+async def get_metric_history_api(metric_name: str, limit: int = 50) -> dict[str, Any]:
+    """Get historical values for a specific metric across all runs."""
+    try:
+        from backend.pipeline.evaluation.metrics_persistence import get_metric_history
+        history = get_metric_history(metric_name, limit=limit)
+        return {
+            "metric": metric_name,
+            "count": len(history),
+            "history": history,
+        }
+    except Exception as e:
+        logger.error("Failed to get metric history: %s", str(e)[:200])
+        raise HTTPException(
+            status_code=500, detail=f"Failed to get history: {str(e)[:100]}"
         )
