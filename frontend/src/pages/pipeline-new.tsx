@@ -145,7 +145,7 @@ export default function PipelineNew() {
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between">
-              <CardTitle className="text-lg">Pipeline Progress</CardTitle>
+              <CardTitle>Pipeline Progress</CardTitle>
               <div className="flex items-center gap-2">
                 <Badge variant="outline">Run #{runId}</Badge>
                 {isCancelled ? (
@@ -187,7 +187,7 @@ export default function PipelineNew() {
                 <CardHeader>
                   <div className="flex items-center gap-2">
                     <AlertCircle className="h-5 w-5 text-destructive" />
-                    <CardTitle className="text-lg">Cancel Pipeline Run?</CardTitle>
+                    <CardTitle>Cancel Pipeline Run?</CardTitle>
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -256,12 +256,12 @@ export default function PipelineNew() {
                   {isComplete ? (
                     <>
                       <CheckCircle2 className="h-5 w-5 text-success" />
-                      <CardTitle className="text-lg">Pipeline Complete</CardTitle>
+                      <CardTitle>Pipeline Complete</CardTitle>
                     </>
                   ) : (
                     <>
                       <XCircle className="h-5 w-5 text-destructive" />
-                      <CardTitle className="text-lg">Pipeline Cancelled</CardTitle>
+                      <CardTitle>Pipeline Cancelled</CardTitle>
                     </>
                   )}
                 </div>

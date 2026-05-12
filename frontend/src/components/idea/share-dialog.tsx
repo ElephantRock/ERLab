@@ -38,7 +38,7 @@ export function ShareDialog({ ideaId }: ShareDialogProps) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-lg flex items-center gap-2">
+        <CardTitle className="flex items-center gap-2">
           <Share2 className="h-4 w-4" />
           Share
         </CardTitle>

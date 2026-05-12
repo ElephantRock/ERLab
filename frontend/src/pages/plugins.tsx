@@ -64,7 +64,7 @@ export default function PluginsPage() {
       {/* Install New Plugin */}
       <Card data-testid="plugin-install-card">
         <CardHeader>
-          <CardTitle className="text-lg flex items-center gap-2">
+          <CardTitle className="flex items-center gap-2">
             <Plus className="h-4 w-4" />
             Install Plugin
           </CardTitle>

@@ -153,7 +153,7 @@ export default function AutonomousPage() {
       {/* Start Cycle Form */}
       <Card data-testid="autonomous-start-form">
         <CardHeader>
-          <CardTitle className="text-lg">Start New Cycle</CardTitle>
+          <CardTitle>Start New Cycle</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="flex items-end gap-4">
@@ -198,7 +198,7 @@ export default function AutonomousPage() {
       {/* Scheduler Controls */}
       <Card data-testid="scheduler-controls">
         <CardHeader>
-          <CardTitle className="text-lg flex items-center gap-2">
+          <CardTitle className="flex items-center gap-2">
             <Clock className="h-4 w-4" />
             Scheduler
           </CardTitle>
@@ -242,7 +242,7 @@ export default function AutonomousPage() {
       {/* Evolution Status */}
       <Card data-testid="evolution-status-card">
         <CardHeader>
-          <CardTitle className="text-lg flex items-center gap-2">
+          <CardTitle className="flex items-center gap-2">
             <Activity className="h-4 w-4" />
             Evolution Status
           </CardTitle>

@@ -191,7 +191,7 @@ export default function RunDetail() {
             </div>
             <div className="w-full bg-info/10 dark:bg-info/20 rounded-full h-2 overflow-hidden">
               <div
-                className="h-full bg-info rounded-full transition-all duration-1000 ease-linear"
+                className="h-full bg-info rounded-full transition-[width] duration-1000 ease-linear"
                 style={{ width: `${progressPct}%` }}
               />
             </div>

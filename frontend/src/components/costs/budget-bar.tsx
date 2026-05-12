@@ -34,7 +34,7 @@ export function BudgetBar({ currentSpend, budgetLimit }: BudgetBarProps) {
       </div>
       <div className="h-3 w-full rounded-full bg-muted overflow-hidden">
         <div
-          className={`h-full rounded-full transition-all ${barColor}`}
+          className={`h-full rounded-full transition-[width] ${barColor}`}
           style={{ width: `${pct}%` }}
           data-testid="budget-bar-fill"
         />

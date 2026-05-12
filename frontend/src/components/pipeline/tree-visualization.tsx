@@ -271,7 +271,7 @@ export function TreeVisualization({ tree_data, className }: TreeVisualizationPro
                 rx={NODE_RX}
                 fill={isHovered ? color : color}
                 opacity={isHovered ? 1.0 : 0.85}
-                className="transition-all duration-150"
+                className="transition-colors duration-150"
               />
 
               {/* Title text (truncated) */}

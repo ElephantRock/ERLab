@@ -127,7 +127,7 @@ export default function SessionsPage() {
           {selectedSession ? (
             <div className="space-y-4">
               <div className="flex items-center gap-2">
-                <CardTitle className="text-lg">{selectedSession}</CardTitle>
+                <CardTitle>{selectedSession}</CardTitle>
                 <Badge variant="outline">{runs.length} run{runs.length !== 1 ? "s" : ""}</Badge>
               </div>
 

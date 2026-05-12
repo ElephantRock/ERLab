@@ -71,7 +71,7 @@ export function RunConfigForm({ onSubmit, isLoading, sessionId = "", onSessionId
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-lg">Pipeline Configuration</CardTitle>
+        <CardTitle>Pipeline Configuration</CardTitle>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">

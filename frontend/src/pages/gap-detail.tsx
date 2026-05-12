@@ -97,7 +97,7 @@ export default function GapDetailPage() {
             <BarChart3 className="h-4 w-4 text-muted-foreground" />
             <div className="w-32 bg-muted/50 rounded-full h-2">
               <div
-                className="bg-primary rounded-full h-2 transition-all"
+                className="bg-primary rounded-full h-2 transition-[width]"
                 style={{ width: `${Math.round(gap.confidence * 100)}%` }}
               />
             </div>

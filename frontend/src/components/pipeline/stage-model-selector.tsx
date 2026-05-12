@@ -196,7 +196,7 @@ export function StageModelSelector({ value, onChange }: StageModelSelectorProps)
                             key={m.id}
                             type="button"
                             onClick={() => handleStageChange(stage.name, m.id)}
-                            className={`text-xs px-2 py-0.5 rounded border transition-all ${
+                            className={`text-xs px-2 py-0.5 rounded border transition-colors ${
                               isActive
                                 ? m.location === "local"
                                   ? "border-success/40 bg-success/10 text-success dark:border-success/50 dark:bg-success/20 dark:text-success/70"

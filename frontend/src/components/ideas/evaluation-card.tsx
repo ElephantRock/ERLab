@@ -78,7 +78,7 @@ export function EvaluationCard({ evaluation }: EvaluationCardProps) {
             </div>
             <div className="h-2 bg-muted rounded-full overflow-hidden">
               <div
-                className={`h-full rounded-full ${scoreColor(dim.score)} transition-all`}
+                className={`h-full rounded-full ${scoreColor(dim.score)} transition-[width]`}
                 style={{ width: `${Math.round(dim.score * 100)}%` }}
               />
             </div>

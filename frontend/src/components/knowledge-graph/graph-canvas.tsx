@@ -157,7 +157,7 @@ export function GraphCanvas({
                 r={NODE_RADIUS}
                 fill={color}
                 opacity={0.85}
-                className="transition-all duration-150 hover:opacity-100"
+                className="transition-opacity duration-150 hover:opacity-100"
               />
               {/* Label */}
               <text

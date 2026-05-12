@@ -103,7 +103,7 @@ export default function Settings() {
       {/* API Connection */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">API Connection</CardTitle>
+          <CardTitle>API Connection</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
@@ -167,7 +167,7 @@ export default function Settings() {
       {/* Backend Info */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">Backend Info</CardTitle>
+          <CardTitle>Backend Info</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="space-y-2 text-sm">
@@ -190,7 +190,7 @@ export default function Settings() {
       {/* Default Domain */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">Defaults</CardTitle>
+          <CardTitle>Defaults</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
@@ -211,7 +211,7 @@ export default function Settings() {
       {/* Self-Improvement — READ-ONLY per HB-01 */}
       <Card data-testid="self-improve-section">
         <CardHeader>
-          <CardTitle className="text-lg">Self-Improvement</CardTitle>
+          <CardTitle>Self-Improvement</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="space-y-2 text-sm">
@@ -255,7 +255,7 @@ export default function Settings() {
       {currentUser?.role === "admin" && (
         <Card data-testid="user-management-section">
           <CardHeader>
-            <CardTitle className="text-lg">User Management</CardTitle>
+            <CardTitle>User Management</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
@@ -293,7 +293,7 @@ export default function Settings() {
       {/* Appearance */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">Appearance</CardTitle>
+          <CardTitle>Appearance</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="flex items-center gap-2">
@@ -316,7 +316,7 @@ export default function Settings() {
       {/* Help & Onboarding */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">Help & Onboarding</CardTitle>
+          <CardTitle>Help & Onboarding</CardTitle>
         </CardHeader>
         <CardContent>
           <p className="text-sm text-muted-foreground mb-3">

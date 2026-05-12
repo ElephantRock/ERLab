@@ -125,7 +125,7 @@ export default function IdeaDetail() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">Problem Statement</CardTitle>
+          <CardTitle>Problem Statement</CardTitle>
         </CardHeader>
         <CardContent>
           <MarkdownRenderer content={idea.problem_statement} />
@@ -134,7 +134,7 @@ export default function IdeaDetail() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">Proposed Method</CardTitle>
+          <CardTitle>Proposed Method</CardTitle>
         </CardHeader>
         <CardContent>
           <MarkdownRenderer content={idea.proposed_method} />
@@ -143,7 +143,7 @@ export default function IdeaDetail() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">Expected Contributions</CardTitle>
+          <CardTitle>Expected Contributions</CardTitle>
         </CardHeader>
         <CardContent>
           <MarkdownRenderer content={idea.expected_contributions} />
@@ -153,7 +153,7 @@ export default function IdeaDetail() {
       {idea.source_gap_ids && idea.source_gap_ids.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg flex items-center gap-2">
+            <CardTitle className="flex items-center gap-2">
               <GitBranch className="h-4 w-4" />
               Source Research Gaps
             </CardTitle>

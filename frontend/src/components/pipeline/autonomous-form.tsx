@@ -34,7 +34,7 @@ export function AutonomousForm({ onCycleStarted }: AutonomousFormProps) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-lg flex items-center gap-2">
+        <CardTitle className="flex items-center gap-2">
           <Bot className="h-5 w-5" />
           Autonomous Cycle
         </CardTitle>

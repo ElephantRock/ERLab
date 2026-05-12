@@ -101,7 +101,7 @@ export function OnboardingOverlay({ onStartPipeline, onDismiss }: OnboardingOver
             {STEPS.map((_, i) => (
               <div
                 key={i}
-                className={`h-2 rounded-full transition-all ${
+                className={`h-2 rounded-full transition-[width] ${
                   i === step
                     ? "w-8 bg-primary"
                     : i < step

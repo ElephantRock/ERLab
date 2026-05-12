@@ -35,7 +35,7 @@ export function FeedbackForm({ ideaId, onSuccess }: FeedbackFormProps) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-lg">Feedback</CardTitle>
+        <CardTitle>Feedback</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="flex items-center gap-1">

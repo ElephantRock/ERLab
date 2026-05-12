@@ -45,7 +45,7 @@ export function CommentThread({ ideaId }: CommentThreadProps) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-lg flex items-center gap-2">
+        <CardTitle className="flex items-center gap-2">
           <MessageSquare className="h-4 w-4" />
           Comments ({data?.total ?? 0})
         </CardTitle>

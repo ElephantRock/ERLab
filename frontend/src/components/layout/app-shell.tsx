@@ -37,7 +37,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       {/* Desktop sidebar — hidden on mobile via CSS */}
       <aside
         className={cn(
-          "app-sidebar flex-shrink-0 border-r border-border transition-all duration-200 bg-card",
+          "app-sidebar flex-shrink-0 border-r border-border transition-[width] duration-200 bg-card",
           collapsed ? "w-16" : "w-56",
         )}
       >
