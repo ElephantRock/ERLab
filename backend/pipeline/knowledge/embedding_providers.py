@@ -155,6 +155,89 @@ class OllamaEmbeddingProvider(EmbeddingProvider):
         return f"ollama:{self._model}"
 
 
+class LMStudioEmbeddingProvider(EmbeddingProvider):
+    """Embeddings via LM Studio's OpenAI-compatible /v1/embeddings endpoint.
+
+    Supports all embedding models loaded in LM Studio on the GPU machine.
+    Uses the standard OpenAI embeddings API format.
+
+    Available models on 100.64.0.1:1234:
+      - text-embedding-nomic-embed-text-v2-moe  (768d, general text)
+      - text-embedding-bge-m3                  (1024d, multilingual)
+      - sfr-embedding-mistral                   (1024d, high-quality English)
+      - nomic-embed-code                        (1024d, code/technical)
+      - text-embedding-ms-marco-minilm-l6-v2    (384d, fast search)
+      - text-embedding-nomic-embed-text-v1.5    (768d, legacy nomic)
+    """
+
+    # Known model dimensions
+    MODEL_DIMENSIONS: dict[str, int] = {
+        "text-embedding-nomic-embed-text-v2-moe": 768,
+        "text-embedding-bge-m3": 1024,
+        "sfr-embedding-mistral": 1024,
+        "nomic-embed-code": 1024,
+        "text-embedding-ms-marco-minilm-l6-v2": 384,
+        "text-embedding-nomic-embed-text-v1.5": 768,
+    }
+
+    def __init__(
+        self,
+        model: str = "text-embedding-bge-m3",
+        base_url: str = "http://100.64.0.1:1234/v1",
+        dimension_override: int | None = None,
+        batch_size: int = 32,
+    ):
+        import httpx
+
+        self._model = model
+        self._base_url = base_url.rstrip("/")
+        self._batch_size = batch_size
+        self._client = httpx.AsyncClient(timeout=120.0)
+        self._dimension = dimension_override or self.MODEL_DIMENSIONS.get(model, 768)
+
+    async def embed(self, texts: list[str]) -> list[list[float]]:
+        """Embed texts using LM Studio's /v1/embeddings endpoint."""
+        all_embeddings: list[list[float]] = []
+
+        for i in range(0, len(texts), self._batch_size):
+            batch = texts[i : i + self._batch_size]
+            try:
+                response = await self._client.post(
+                    f"{self._base_url}/embeddings",
+                    json={
+                        "model": self._model,
+                        "input": batch,
+                    },
+                )
+                response.raise_for_status()
+                data = response.json()
+
+                # Sort by index to maintain order
+                items = sorted(data["data"], key=lambda x: x["index"])
+                all_embeddings.extend(item["embedding"] for item in items)
+
+            except Exception as e:
+                logger.error(
+                    "LM Studio embedding batch %d failed: %s",
+                    i // self._batch_size,
+                    str(e)[:100],
+                )
+                # Return zero vectors on failure
+                all_embeddings.extend(
+                    [[0.0] * self._dimension for _ in batch]
+                )
+
+        return all_embeddings
+
+    @property
+    def dimension(self) -> int:
+        return self._dimension
+
+    @property
+    def provider_name(self) -> str:
+        return f"lmstudio:{self._model}"
+
+
 class FallbackEmbeddingProvider(EmbeddingProvider):
     """Provider that tries primary, then falls back to secondary on failure."""
 
@@ -293,6 +376,21 @@ def create_embedding_provider(
         return OllamaEmbeddingProvider(
             model=model or "nomic-embed-text",
             base_url=base_url,
+        )
+    elif name == "lmstudio":
+        provider = LMStudioEmbeddingProvider(
+            model=model or "text-embedding-bge-m3",
+            base_url=base_url or "http://100.64.0.1:1234/v1",
+            dimension_override=dimension,
+        )
+        return CachedEmbeddingProvider(provider)
+    elif name in ("openai-compatible", "lm-studio"):
+        # Aliases for lmstudio
+        return create_embedding_provider(
+            provider_name="lmstudio",
+            model=model,
+            base_url=base_url,
+            dimension=dimension,
         )
     else:
         raise ValueError(f"Unknown embedding provider: {provider_name}")
