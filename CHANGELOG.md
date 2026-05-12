@@ -38,6 +38,29 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Verified
 - All 29 `<label>` elements already follow 2 consistent patterns (no changes needed)
 
+## [BATCH-DA-04] — 2026-05-12
+
+### Changed
+- Removed "successfully" from 2 toast messages ("Plugin installed", "PDF exported")
+- Replaced 12 `err.message` passthroughs with generic fallback messages
+- Fixed unused error variables in `onError` callbacks
+- Fixed remaining hardcoded red colors in costs.tsx error container
+
+## [BATCH-DA-05] — 2026-05-12
+
+### Changed
+- Replaced all Unicode ellipsis (…) with ASCII (...) in 8 UI text locations
+- Removed "e.g." prefix from 4 placeholder strings
+- Fixed page title: "Pipeline" → "Pipelines"
+- Updated global-search-dialog test expectations
+
+## [BATCH-DA-06] — 2026-05-12
+
+### Verified
+- Style guide codified in `src/lib/typography.ts` (created in DA-02)
+- All 6 design audit batches complete: DA-01 through DA-06
+- Design remediation roadmap fully executed
+
 ## [2026-05-11] BATCH-177 — Stale Run Cleanup + Run Status Accuracy
 
 ### Added
