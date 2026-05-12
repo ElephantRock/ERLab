@@ -258,3 +258,17 @@ async def get_metric_history_api(metric_name: str, limit: int = 50) -> dict[str,
         raise HTTPException(
             status_code=500, detail=f"Failed to get history: {str(e)[:100]}"
         )
+
+
+@router.get("/benchmarks/{domain}/gold", summary="Get gold benchmark for domain")
+async def get_gold_benchmark_api(domain: str) -> dict[str, Any]:
+    """Get the gold-standard benchmark dataset for a domain."""
+    try:
+        from backend.pipeline.evaluation.domain_benchmarks import get_gold_benchmark
+        ds = get_gold_benchmark(domain)
+        return ds.to_dict()
+    except Exception as e:
+        logger.error("Failed to get gold benchmark: %s", str(e)[:200])
+        raise HTTPException(
+            status_code=500, detail=f"Failed to get benchmark: {str(e)[:100]}"
+        )
