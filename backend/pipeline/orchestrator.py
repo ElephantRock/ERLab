@@ -1463,6 +1463,28 @@ class PipelineOrchestrator:
                 # Phase 8: Run reference verification after synthesis (HB-02)
                 self._verify_references(result, ctx)
 
+                # BATCH-RAG-03: Faithfulness scoring via LLM-as-judge
+                try:
+                    from backend.pipeline.evaluation.faithfulness_scorer import FaithfulnessScorer
+                    scorer = FaithfulnessScorer(provider=None)  # Heuristic mode for now
+                    source_abstracts = [
+                        p.abstract for p in ctx.all_papers[:30]
+                        if hasattr(p, 'abstract') and p.abstract
+                    ]
+                    for prop in result.proposals:
+                        report = asyncio.get_event_loop().run_until_complete(
+                            scorer.score_proposal(
+                                proposal_text=prop.methodology if hasattr(prop, 'methodology') else str(prop),
+                                proposal_title=prop.title if hasattr(prop, 'title') else "",
+                                proposal_id=str(prop.id) if hasattr(prop, 'id') else "",
+                                source_texts=source_abstracts,
+                            )
+                        )
+                        prop._faithfulness_report = report
+                    logger.info("Faithfulness scoring complete for %d proposals", len(result.proposals))
+                except Exception as e:
+                    logger.debug("Faithfulness scoring skipped: %s", str(e)[:100])
+
             # Cross-stage context: persist stage outputs
             if self._cross_stage_ctx:
                 await self._persist_stage_context(run_id, stage.name, ctx, result)
