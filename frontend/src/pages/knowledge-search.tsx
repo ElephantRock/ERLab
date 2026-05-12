@@ -10,9 +10,9 @@ import { cn } from "@/lib/utils";
 import { UploadZone } from "@/components/knowledge/upload-zone";
 
 function distanceColor(distance: number): string {
-  if (distance < 0.3) return "text-green-600";
-  if (distance < 0.6) return "text-amber-600";
-  return "text-red-600";
+  if (distance < 0.3) return "text-success";
+  if (distance < 0.6) return "text-warning";
+  return "text-destructive";
 }
 
 function distanceLabel(distance: number): string {

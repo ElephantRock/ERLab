@@ -19,10 +19,10 @@ interface MemoryCardProps {
 }
 
 function confidenceColor(confidence: number): string {
-  if (confidence >= 0.8) return "bg-green-500";
-  if (confidence >= 0.6) return "bg-emerald-500";
-  if (confidence >= 0.3) return "bg-amber-500";
-  return "bg-red-500";
+  if (confidence >= 0.8) return "bg-success";
+  if (confidence >= 0.6) return "bg-success/70";
+  if (confidence >= 0.3) return "bg-warning";
+  return "bg-destructive";
 }
 
 function typeBadgeVariant(type: string): "default" | "secondary" | "outline" {

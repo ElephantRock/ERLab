@@ -75,7 +75,7 @@ it("TEST-13-02-02: green dot shown when backend is reachable", async () => {
 
   await waitFor(() => {
     const dot = screen.getByTestId("connection-dot");
-    expect(dot.className).toContain("bg-green-500");
+    expect(dot.className).toContain("bg-success");
   });
   expect(screen.getByTestId("connection-success")).toHaveTextContent("Connected");
 });
@@ -91,7 +91,7 @@ it("TEST-13-02-03: red dot shown when backend is unreachable", async () => {
 
   await waitFor(() => {
     const dot = screen.getByTestId("connection-dot");
-    expect(dot.className).toContain("bg-red-500");
+    expect(dot.className).toContain("bg-destructive");
   });
   expect(screen.getByTestId("connection-error")).toHaveTextContent("Failed to fetch");
 });

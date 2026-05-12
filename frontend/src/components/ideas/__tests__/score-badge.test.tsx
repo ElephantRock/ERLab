@@ -18,12 +18,12 @@ describe("ScoreBadge", () => {
   it("applies green background for high novelty score", () => {
     const { container } = render(<ScoreBadge score={0.9} scale="novelty" />);
     const span = container.querySelector("span");
-    expect(span?.className).toContain("bg-green-100");
+    expect(span?.className).toContain("bg-success/10");
   });
 
   it("applies amber background for moderate feasibility score", () => {
     const { container } = render(<ScoreBadge score={5} scale="feasibility" />);
     const span = container.querySelector("span");
-    expect(span?.className).toContain("bg-amber-100");
+    expect(span?.className).toContain("bg-warning/10");
   });
 });

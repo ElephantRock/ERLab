@@ -20,7 +20,7 @@ function ScoreBar({ value, max }: { value: number; max: number }) {
         <div
           className={cn(
             "h-full rounded-full",
-            pct >= 70 ? "bg-green-500" : pct >= 40 ? "bg-amber-500" : "bg-red-500",
+            pct >= 70 ? "bg-success" : pct >= 40 ? "bg-warning" : "bg-destructive",
           )}
           style={{ width: `${pct}%` }}
         />

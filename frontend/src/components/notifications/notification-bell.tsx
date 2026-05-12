@@ -105,7 +105,7 @@ export function NotificationBell() {
         <Bell className="h-4 w-4" />
         {unreadCount > 0 && (
           <span
-            className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white"
+            className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-[10px] font-bold text-white"
             data-testid="unread-badge"
           >
             {unreadCount > 9 ? "9+" : unreadCount}
@@ -118,7 +118,7 @@ export function NotificationBell() {
             <span className="text-sm font-medium">Notifications</span>
             {unreadCount > 0 && (
               <button
-                className="text-xs text-blue-600 hover:underline"
+                className="text-xs text-info hover:underline"
                 onClick={handleMarkAllRead}
                 data-testid="mark-all-read"
               >
@@ -149,7 +149,7 @@ export function NotificationBell() {
                     <div className="flex items-center gap-1">
                       <span className="text-sm font-medium truncate">{n.title}</span>
                       {!n.read && (
-                        <span className="h-2 w-2 rounded-full bg-blue-500 flex-shrink-0" />
+                        <span className="h-2 w-2 rounded-full bg-info flex-shrink-0" />
                       )}
                     </div>
                     <p className="text-xs text-muted-foreground truncate">{n.message}</p>

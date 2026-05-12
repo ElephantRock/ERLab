@@ -41,7 +41,7 @@ const STEPS = [
       "An AI research platform that discovers academic papers, identifies gaps in the literature, and generates novel research proposals with full methodology, evaluation plans, and risk analysis.",
     detail:
       "Give it a research topic, wait ~20 minutes, and receive publication-ready proposals you can export as Markdown or LaTeX.",
-    color: "text-blue-600 bg-blue-100",
+    color: "text-info bg-info/10",
   },
   {
     icon: Play,
@@ -49,7 +49,7 @@ const STEPS = [
     description:
       "Enter a research topic below. The pipeline will search academic databases, analyze hundreds of papers, and generate novel ideas with full proposals.",
     detail: "",
-    color: "text-green-600 bg-green-100",
+    color: "text-success bg-success/10",
   },
   {
     icon: Lightbulb,
@@ -57,7 +57,7 @@ const STEPS = [
     description:
       "After the pipeline completes, you'll see scored research ideas with novelty ratings, feasibility assessments, and detailed proposals covering:",
     detail: "",
-    color: "text-amber-600 bg-amber-100",
+    color: "text-warning bg-warning/10",
   },
 ];
 
@@ -189,8 +189,8 @@ export function OnboardingOverlay({ onStartPipeline, onDismiss }: OnboardingOver
                   </li>
                 ))}
               </ul>
-              <div className="rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 p-3">
-                <p className="text-xs text-amber-800 dark:text-amber-200">
+              <div className="rounded-lg bg-warning/5 dark:bg-warning/20 border border-warning/30 dark:border-warning/40 p-3">
+                <p className="text-xs text-warning dark:text-warning">
                   <strong>⏱ Timing:</strong> A "Quick Scan" takes ~3 minutes. A "Deep Research" run takes ~20 minutes. You can watch the progress in real-time.
                 </p>
               </div>

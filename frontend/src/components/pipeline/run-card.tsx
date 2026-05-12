@@ -10,10 +10,10 @@ interface RunCardProps {
 }
 
 const statusColors: Record<string, string> = {
-  pending: "bg-yellow-100 text-yellow-800",
-  running: "bg-blue-100 text-blue-800",
-  completed: "bg-green-100 text-green-800",
-  failed: "bg-red-100 text-red-800",
+  pending: "bg-warning/10 text-warning",
+  running: "bg-info/10 text-info",
+  completed: "bg-success/10 text-success",
+  failed: "bg-destructive/10 text-destructive",
 };
 
 function isStaleRun(run: PipelineRunSummary): boolean {

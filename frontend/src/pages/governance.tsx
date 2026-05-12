@@ -78,7 +78,7 @@ export default function GovernancePage() {
       <div className="space-y-6" data-testid="governance-page">
         <h1 className="text-2xl font-bold tracking-tight">Governance Queue</h1>
         <div
-          className="rounded-lg border border-red-300 bg-red-50 p-4 text-red-800"
+          className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-destructive"
           data-testid="governance-error"
         >
           <p className="font-medium">Error loading governance queue</p>

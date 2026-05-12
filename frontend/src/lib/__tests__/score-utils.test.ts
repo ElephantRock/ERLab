@@ -54,28 +54,28 @@ describe("getFeasibilityLabel", () => {
 
 describe("getScoreColor", () => {
   it("returns correct color classes for novelty scale", () => {
-    expect(getScoreColor(0.1, "novelty")).toBe("text-red-500");
-    expect(getScoreColor(0.4, "novelty")).toBe("text-amber-500");
-    expect(getScoreColor(0.7, "novelty")).toBe("text-emerald-500");
-    expect(getScoreColor(0.9, "novelty")).toBe("text-green-600");
+    expect(getScoreColor(0.1, "novelty")).toBe("text-destructive");
+    expect(getScoreColor(0.4, "novelty")).toBe("text-warning");
+    expect(getScoreColor(0.7, "novelty")).toBe("text-success");
+    expect(getScoreColor(0.9, "novelty")).toBe("text-success");
   });
 
   it("normalizes feasibility scale (0-10) to 0-1", () => {
-    expect(getScoreColor(2, "feasibility")).toBe("text-red-500");
-    expect(getScoreColor(5, "feasibility")).toBe("text-amber-500");
-    expect(getScoreColor(7, "feasibility")).toBe("text-emerald-500");
-    expect(getScoreColor(9, "feasibility")).toBe("text-green-600");
+    expect(getScoreColor(2, "feasibility")).toBe("text-destructive");
+    expect(getScoreColor(5, "feasibility")).toBe("text-warning");
+    expect(getScoreColor(7, "feasibility")).toBe("text-success");
+    expect(getScoreColor(9, "feasibility")).toBe("text-success");
   });
 });
 
 describe("getScoreBg", () => {
   it("returns correct bg classes for novelty scale", () => {
-    expect(getScoreBg(0.1, "novelty")).toBe("bg-red-100 text-red-800");
-    expect(getScoreBg(0.9, "novelty")).toBe("bg-green-100 text-green-800");
+    expect(getScoreBg(0.1, "novelty")).toBe("bg-destructive/10 text-destructive");
+    expect(getScoreBg(0.9, "novelty")).toBe("bg-success/10 text-success");
   });
 
   it("normalizes feasibility scale (0-10) to 0-1", () => {
-    expect(getScoreBg(2, "feasibility")).toBe("bg-red-100 text-red-800");
-    expect(getScoreBg(9, "feasibility")).toBe("bg-green-100 text-green-800");
+    expect(getScoreBg(2, "feasibility")).toBe("bg-destructive/10 text-destructive");
+    expect(getScoreBg(9, "feasibility")).toBe("bg-success/10 text-success");
   });
 });

@@ -22,7 +22,7 @@ export function RunStats({ stats, loading }: RunStatsProps) {
     return (
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         {Array.from({ length: 5 }).map((_, i) => (
-          <div key={i} className="animate-pulse bg-gray-200 dark:bg-gray-700 rounded-lg h-20" />
+          <div key={i} className="animate-pulse bg-muted/50 dark:bg-muted rounded-lg h-20" />
         ))}
       </div>
     );
@@ -30,7 +30,7 @@ export function RunStats({ stats, loading }: RunStatsProps) {
 
   if (!stats) {
     return (
-      <div className="text-center text-gray-500 py-8">
+      <div className="text-center text-muted-foreground py-8">
         No pipeline statistics available yet.
       </div>
     );
@@ -44,11 +44,11 @@ export function RunStats({ stats, loading }: RunStatsProps) {
   };
 
   const cards = [
-    { label: "Total Runs", value: stats.total_runs, color: "text-blue-600" },
-    { label: "Avg Duration", value: formatDuration(stats.avg_duration_s), color: "text-purple-600" },
-    { label: "Ideas Generated", value: stats.total_ideas, color: "text-green-600" },
-    { label: "Gaps Found", value: stats.total_gaps, color: "text-orange-600" },
-    { label: "Success Rate", value: formatSuccessRate(stats.by_status), color: "text-emerald-600" },
+    { label: "Total Runs", value: stats.total_runs, color: "text-info" },
+    { label: "Avg Duration", value: formatDuration(stats.avg_duration_s), color: "text-info" },
+    { label: "Ideas Generated", value: stats.total_ideas, color: "text-success" },
+    { label: "Gaps Found", value: stats.total_gaps, color: "text-warning" },
+    { label: "Success Rate", value: formatSuccessRate(stats.by_status), color: "text-success" },
   ];
 
   return (
@@ -56,9 +56,9 @@ export function RunStats({ stats, loading }: RunStatsProps) {
       {cards.map((card) => (
         <div
           key={card.label}
-          className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4"
+          className="bg-white dark:bg-muted rounded-lg border border-border dark:border-border p-4"
         >
-          <div className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+          <div className="text-xs text-muted-foreground dark:text-muted-foreground uppercase tracking-wide">
             {card.label}
           </div>
           <div className={`text-2xl font-bold mt-1 ${card.color}`}>

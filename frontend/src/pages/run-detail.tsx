@@ -25,10 +25,10 @@ import type { IdeaSummary } from "@/api/types";
 import { TreeVisualization } from "@/components/pipeline/tree-visualization";
 
 const statusColors: Record<string, string> = {
-  pending: "bg-yellow-100 text-yellow-800",
-  running: "bg-blue-100 text-blue-800",
-  completed: "bg-green-100 text-green-800",
-  failed: "bg-red-100 text-red-800",
+  pending: "bg-warning/10 text-warning",
+  running: "bg-info/10 text-info",
+  completed: "bg-success/10 text-success",
+  failed: "bg-destructive/10 text-destructive",
 };
 
 function fmtDuration(sec: number): string {
@@ -178,10 +178,10 @@ export default function RunDetail() {
 
       {/* Live Progress Banner */}
       {isRunning && (
-        <Card className="border-blue-200 dark:border-blue-800 bg-blue-50/50 dark:bg-blue-900/10" data-testid="live-progress">
+        <Card className="border-info/30 dark:border-info/40 bg-info/5 dark:bg-info/10" data-testid="live-progress">
           <CardContent className="p-4">
             <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2 text-blue-700 dark:text-blue-300">
+              <div className="flex items-center gap-2 text-info dark:text-info">
                 <Loader2 className="h-5 w-5 animate-spin" />
                 <span className="text-sm font-medium">{currentStageLabel}</span>
               </div>
@@ -189,9 +189,9 @@ export default function RunDetail() {
                 Stage {run.stages_completed.length + 1} of {PIPELINE_STAGES.length}
               </span>
             </div>
-            <div className="w-full bg-blue-100 dark:bg-blue-900/30 rounded-full h-2 overflow-hidden">
+            <div className="w-full bg-info/10 dark:bg-info/20 rounded-full h-2 overflow-hidden">
               <div
-                className="h-full bg-blue-500 rounded-full transition-all duration-1000 ease-linear"
+                className="h-full bg-info rounded-full transition-all duration-1000 ease-linear"
                 style={{ width: `${progressPct}%` }}
               />
             </div>
@@ -201,8 +201,8 @@ export default function RunDetail() {
 
       {/* Stale Run Warning (BATCH-55) */}
       {isStale && (
-        <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4 mb-4" data-testid="stale-run-warning">
-          <div className="flex items-center gap-2 text-yellow-800 dark:text-yellow-200">
+        <div className="bg-warning/5 dark:bg-warning/20 border border-warning/30 dark:border-warning/40 rounded-lg p-4 mb-4" data-testid="stale-run-warning">
+          <div className="flex items-center gap-2 text-warning dark:text-warning">
             <AlertTriangle className="h-5 w-5" />
             <p className="text-sm">
               This run has been running for over 5 minutes. It may have encountered an issue.
@@ -270,9 +270,9 @@ export default function RunDetail() {
               return (
                 <div key={stage.key} className="flex items-center gap-3">
                   {isCompleted ? (
-                    <CheckCircle2 className="h-5 w-5 text-green-600 flex-shrink-0" />
+                    <CheckCircle2 className="h-5 w-5 text-success flex-shrink-0" />
                   ) : isCurrent ? (
-                    <Loader2 className="h-5 w-5 text-blue-600 animate-spin flex-shrink-0" />
+                    <Loader2 className="h-5 w-5 text-info animate-spin flex-shrink-0" />
                   ) : (
                     <Circle className="h-5 w-5 text-muted-foreground flex-shrink-0" />
                   )}
@@ -282,14 +282,14 @@ export default function RunDetail() {
                       isCompleted
                         ? "text-foreground font-medium"
                         : isCurrent
-                          ? "text-blue-700 font-medium"
+                          ? "text-info font-medium"
                           : "text-muted-foreground",
                     )}
                   >
                     {stage.label}
                   </span>
                   {isCurrent && (
-                    <span className="text-xs text-blue-500 ml-auto font-mono">
+                    <span className="text-xs text-info ml-auto font-mono">
                       {fmtDuration(elapsedSec)}
                     </span>
                   )}

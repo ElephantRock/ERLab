@@ -138,8 +138,8 @@ export function UploadZone({ onUploadSuccess }: UploadZoneProps) {
 
           {state === "success" && uploadResult && (
             <div className="flex flex-col items-center gap-2" data-testid="upload-success">
-              <CheckCircle2 className="h-8 w-8 text-green-600" />
-              <p className="text-sm font-medium text-green-700">
+              <CheckCircle2 className="h-8 w-8 text-success" />
+              <p className="text-sm font-medium text-success">
                 Successfully ingested {uploadResult.filename}
               </p>
               <p className="text-xs text-muted-foreground">

@@ -12,10 +12,10 @@ import type { ResearchGap } from "@/api/types";
 
 /** Gap type badge color mapping. */
 const GAP_TYPE_COLORS: Record<string, string> = {
-  methodological: "bg-blue-100 text-blue-800",
-  empirical: "bg-green-100 text-green-800",
-  theoretical: "bg-purple-100 text-purple-800",
-  "cross-domain": "bg-orange-100 text-orange-800",
+  methodological: "bg-info/10 text-info",
+  empirical: "bg-success/10 text-success",
+  theoretical: "bg-info/10 text-info",
+  "cross-domain": "bg-warning/10 text-warning",
 };
 
 export default function GapDetailPage() {
@@ -87,7 +87,7 @@ export default function GapDetailPage() {
           {/* Gap type badge */}
           <span
             className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${
-              GAP_TYPE_COLORS[gap.gap_type] || "bg-gray-100 text-gray-800"
+              GAP_TYPE_COLORS[gap.gap_type] || "bg-muted/50 text-muted-foreground"
             }`}
           >
             {gap.gap_type || "unknown"}
@@ -95,7 +95,7 @@ export default function GapDetailPage() {
           {/* Confidence */}
           <div className="flex items-center gap-2">
             <BarChart3 className="h-4 w-4 text-muted-foreground" />
-            <div className="w-32 bg-gray-200 rounded-full h-2">
+            <div className="w-32 bg-muted/50 rounded-full h-2">
               <div
                 className="bg-primary rounded-full h-2 transition-all"
                 style={{ width: `${Math.round(gap.confidence * 100)}%` }}

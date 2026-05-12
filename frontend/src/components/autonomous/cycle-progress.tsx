@@ -9,9 +9,9 @@ interface CycleProgressProps {
 }
 
 const STATUS_COLORS: Record<string, string> = {
-  running: "bg-blue-100 text-blue-800",
-  completed: "bg-green-100 text-green-800",
-  stopped: "bg-yellow-100 text-yellow-800",
+  running: "bg-info/10 text-info",
+  completed: "bg-success/10 text-success",
+  stopped: "bg-warning/10 text-warning",
 };
 
 export function CycleProgress({ cycle, onStop }: CycleProgressProps) {
@@ -20,7 +20,7 @@ export function CycleProgress({ cycle, onStop }: CycleProgressProps) {
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between">
           <CardTitle className="text-sm font-mono">{cycle.cycle_id}</CardTitle>
-          <Badge className={STATUS_COLORS[cycle.status] || "bg-gray-100 text-gray-800"}>
+          <Badge className={STATUS_COLORS[cycle.status] || "bg-muted/50 text-muted-foreground"}>
             {cycle.status}
           </Badge>
         </div>

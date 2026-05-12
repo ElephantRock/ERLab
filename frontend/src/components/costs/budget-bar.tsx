@@ -19,10 +19,10 @@ export function BudgetBar({ currentSpend, budgetLimit }: BudgetBarProps) {
   const isOverBudget = currentSpend > budgetLimit && budgetLimit > 0;
 
   const barColor = isOverBudget
-    ? "bg-red-500"
+    ? "bg-destructive"
     : pct > 80
-      ? "bg-yellow-500"
-      : "bg-green-500";
+      ? "bg-warning"
+      : "bg-success";
 
   return (
     <div className="rounded-lg border bg-card p-6" data-testid="budget-bar">

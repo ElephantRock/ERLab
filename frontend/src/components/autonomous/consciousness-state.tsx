@@ -7,11 +7,11 @@ interface ConsciousnessStateBadgeProps {
 }
 
 const STATE_CONFIG: Record<ConsciousnessState, { label: string; color: string }> = {
-  idle: { label: "Idle", color: "bg-gray-100 text-gray-800" },
-  exploring: { label: "Exploring", color: "bg-blue-100 text-blue-800" },
-  generating: { label: "Generating", color: "bg-purple-100 text-purple-800" },
-  evaluating: { label: "Evaluating", color: "bg-orange-100 text-orange-800" },
-  synthesizing: { label: "Synthesizing", color: "bg-green-100 text-green-800" },
+  idle: { label: "Idle", color: "bg-muted/50 text-muted-foreground" },
+  exploring: { label: "Exploring", color: "bg-info/10 text-info" },
+  generating: { label: "Generating", color: "bg-info/10 text-info" },
+  evaluating: { label: "Evaluating", color: "bg-warning/10 text-warning" },
+  synthesizing: { label: "Synthesizing", color: "bg-success/10 text-success" },
   resting: { label: "Resting", color: "bg-indigo-100 text-indigo-800" },
 };
 

@@ -17,16 +17,16 @@ export function getFeasibilityLabel(score: number): FeasibilityLabel {
 
 export function getScoreColor(score: number, scale: "novelty" | "feasibility"): string {
   const normalized = scale === "feasibility" ? score / 10 : score;
-  if (normalized >= 0.8) return "text-green-600";
-  if (normalized >= 0.6) return "text-emerald-500";
-  if (normalized >= 0.3) return "text-amber-500";
-  return "text-red-500";
+  if (normalized >= 0.8) return "text-success";
+  if (normalized >= 0.6) return "text-success";
+  if (normalized >= 0.3) return "text-warning";
+  return "text-destructive";
 }
 
 export function getScoreBg(score: number, scale: "novelty" | "feasibility"): string {
   const normalized = scale === "feasibility" ? score / 10 : score;
-  if (normalized >= 0.8) return "bg-green-100 text-green-800";
-  if (normalized >= 0.6) return "bg-emerald-100 text-emerald-800";
-  if (normalized >= 0.3) return "bg-amber-100 text-amber-800";
-  return "bg-red-100 text-red-800";
+  if (normalized >= 0.8) return "bg-success/10 text-success";
+  if (normalized >= 0.6) return "bg-success/10 text-success";
+  if (normalized >= 0.3) return "bg-warning/10 text-warning";
+  return "bg-destructive/10 text-destructive";
 }

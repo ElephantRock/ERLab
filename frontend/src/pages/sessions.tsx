@@ -155,12 +155,12 @@ export default function SessionsPage() {
                             <Badge
                               className={
                                 run.status === "completed"
-                                  ? "bg-green-100 text-green-800"
+                                  ? "bg-success/10 text-success"
                                   : run.status === "failed"
-                                  ? "bg-red-100 text-red-800"
+                                  ? "bg-destructive/10 text-destructive"
                                   : run.status === "running"
-                                  ? "bg-blue-100 text-blue-800"
-                                  : "bg-gray-100 text-gray-800"
+                                  ? "bg-info/10 text-info"
+                                  : "bg-muted/50 text-muted-foreground"
                               }
                             >
                               {run.status}

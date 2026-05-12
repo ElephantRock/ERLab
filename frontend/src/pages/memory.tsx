@@ -177,7 +177,7 @@ export default function MemoryBrowserPage() {
       {/* Error State */}
       {error && !loading && (
         <div
-          className="rounded-lg border border-red-300 bg-red-50 p-4 text-red-800"
+          className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-destructive"
           data-testid="error-state"
         >
           <div className="flex items-center gap-2">

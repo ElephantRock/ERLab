@@ -153,9 +153,9 @@ export default function PipelineNew() {
                     Cancelled
                   </Badge>
                 ) : isComplete ? (
-                  <Badge className="bg-green-100 text-green-800">Complete</Badge>
+                  <Badge className="bg-success/10 text-success">Complete</Badge>
                 ) : isConnected ? (
-                  <Badge className="bg-blue-100 text-blue-800">Live</Badge>
+                  <Badge className="bg-info/10 text-info">Live</Badge>
                 ) : (
                   <Badge variant="secondary">Connecting...</Badge>
                 )}
@@ -224,7 +224,7 @@ export default function PipelineNew() {
 
           {isComplete && (
             <CardContent className="border-t pt-4">
-              <div className="flex items-center gap-2 text-green-700">
+              <div className="flex items-center gap-2 text-success">
                 <CheckCircle2 className="h-5 w-5" />
                 <span className="font-medium">Pipeline completed successfully</span>
               </div>
@@ -233,7 +233,7 @@ export default function PipelineNew() {
 
           {isCancelled && (
             <CardContent className="border-t pt-4" data-testid="cancelled-partial-results">
-              <div className="flex items-center gap-2 text-red-700">
+              <div className="flex items-center gap-2 text-destructive">
                 <XCircle className="h-5 w-5" />
                 <span className="font-medium">Pipeline run was cancelled</span>
               </div>
@@ -255,12 +255,12 @@ export default function PipelineNew() {
                 <div className="flex items-center gap-2">
                   {isComplete ? (
                     <>
-                      <CheckCircle2 className="h-5 w-5 text-green-600" />
+                      <CheckCircle2 className="h-5 w-5 text-success" />
                       <CardTitle className="text-lg">Pipeline Complete</CardTitle>
                     </>
                   ) : (
                     <>
-                      <XCircle className="h-5 w-5 text-red-600" />
+                      <XCircle className="h-5 w-5 text-destructive" />
                       <CardTitle className="text-lg">Pipeline Cancelled</CardTitle>
                     </>
                   )}

@@ -162,9 +162,9 @@ export default function IdeaDetail() {
             <ul className="space-y-2">
               {idea.source_gap_ids.map((gapId, idx) => (
                 <li key={idx} className="flex items-center gap-2 text-sm">
-                  <span className="inline-block h-2 w-2 rounded-full bg-amber-500 flex-shrink-0" />
+                  <span className="inline-block h-2 w-2 rounded-full bg-warning flex-shrink-0" />
                   <button
-                    className="text-blue-600 hover:underline cursor-pointer bg-transparent border-none p-0"
+                    className="text-info hover:underline cursor-pointer bg-transparent border-none p-0"
                     onClick={() => navigate(`/gaps/${gapId}`)}
                     data-testid="source-gap-link"
                   >
@@ -342,7 +342,7 @@ export default function IdeaDetail() {
                       <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center gap-2">
                           {exp.success ? (
-                            <CheckCircle2 className="h-4 w-4 text-green-500" />
+                            <CheckCircle2 className="h-4 w-4 text-success" />
                           ) : (
                             <AlertTriangle className="h-4 w-4 text-destructive" />
                           )}

@@ -14,11 +14,11 @@ interface EntityDetailProps {
 }
 
 const TYPE_COLORS: Record<string, string> = {
-  paper: "bg-blue-100 text-blue-800",
-  author: "bg-emerald-100 text-emerald-800",
-  method: "bg-amber-100 text-amber-800",
-  dataset: "bg-purple-100 text-purple-800",
-  concept: "bg-red-100 text-red-800",
+  paper: "bg-info/10 text-info",
+  author: "bg-success/10 text-success",
+  method: "bg-warning/10 text-warning",
+  dataset: "bg-info/10 text-info",
+  concept: "bg-destructive/10 text-destructive",
 };
 
 export function EntityDetail({ detail, onClose, onNavigateToEntity }: EntityDetailProps) {
@@ -32,7 +32,7 @@ export function EntityDetail({ detail, onClose, onNavigateToEntity }: EntityDeta
           <div className="flex items-center gap-2 mb-1">
             <span
               className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${
-                TYPE_COLORS[entity.entity_type] || "bg-gray-100 text-gray-800"
+                TYPE_COLORS[entity.entity_type] || "bg-muted/50 text-muted-foreground"
               }`}
             >
               {entity.entity_type}

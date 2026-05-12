@@ -11,10 +11,10 @@ interface GapCardProps {
 }
 
 function confidenceColor(confidence: number): string {
-  if (confidence >= 0.8) return "bg-green-500";
-  if (confidence >= 0.6) return "bg-emerald-500";
-  if (confidence >= 0.3) return "bg-amber-500";
-  return "bg-red-500";
+  if (confidence >= 0.8) return "bg-success";
+  if (confidence >= 0.6) return "bg-success/70";
+  if (confidence >= 0.3) return "bg-warning";
+  return "bg-destructive";
 }
 
 export function GapCard({ gap, onIdeaCountClick }: GapCardProps) {
@@ -45,7 +45,7 @@ export function GapCard({ gap, onIdeaCountClick }: GapCardProps) {
                     e.stopPropagation();
                     onIdeaCountClick?.(gap);
                   }}
-                  className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800 hover:bg-amber-200 transition-colors cursor-pointer"
+                  className="inline-flex items-center gap-1 rounded-full bg-warning/10 px-2 py-0.5 text-xs font-medium text-warning hover:bg-warning/15 transition-colors cursor-pointer"
                   aria-label={`${ideaCount} idea${ideaCount !== 1 ? "s" : ""} generated`}
                 >
                   <Lightbulb className="h-3 w-3" />

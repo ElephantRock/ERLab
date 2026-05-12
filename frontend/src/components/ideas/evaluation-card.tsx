@@ -27,17 +27,17 @@ const dimensionLabels: Record<string, string> = {
 };
 
 function scoreColor(score: number): string {
-  if (score >= 0.8) return "bg-green-500";
-  if (score >= 0.6) return "bg-yellow-500";
-  if (score >= 0.4) return "bg-orange-500";
-  return "bg-red-500";
+  if (score >= 0.8) return "bg-success";
+  if (score >= 0.6) return "bg-warning";
+  if (score >= 0.4) return "bg-warning";
+  return "bg-destructive";
 }
 
 function scoreTextColor(score: number): string {
-  if (score >= 0.8) return "text-green-700";
-  if (score >= 0.6) return "text-yellow-700";
-  if (score >= 0.4) return "text-orange-700";
-  return "text-red-700";
+  if (score >= 0.8) return "text-success";
+  if (score >= 0.6) return "text-warning";
+  if (score >= 0.4) return "text-warning";
+  return "text-destructive";
 }
 
 export function EvaluationCard({ evaluation }: EvaluationCardProps) {

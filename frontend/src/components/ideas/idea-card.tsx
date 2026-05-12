@@ -14,14 +14,14 @@ export function IdeaCard({ idea, onClick }: IdeaCardProps) {
       <CardContent className="p-4">
         <div className="flex items-start gap-3">
           <div className="flex-shrink-0 mt-0.5">
-            <Lightbulb className="h-5 w-5 text-amber-500" />
+            <Lightbulb className="h-5 w-5 text-warning" />
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-start gap-2">
               <h3 className="text-sm font-medium leading-tight line-clamp-2 flex-1">{idea.title}</h3>
               {idea.has_proposal && (
                 <FileText
-                  className="h-4 w-4 text-blue-500 flex-shrink-0 mt-0.5"
+                  className="h-4 w-4 text-info flex-shrink-0 mt-0.5"
                   aria-label="Has proposal"
                 />
               )}

@@ -1,0 +1,90 @@
+# Pipeline Run Journal — run_20260511_193021
+
+**Domain**: AI/NLP
+**Started**: 2026-05-11T16:30:21.117393
+**Entries**: 20
+
+> **AI-Generated Content**: This journal was produced by an automated
+> research pipeline (Elephant Rock). All content below was generated
+> by AI systems. Verify findings independently.
+
+---
+
+## Pipeline
+
+- **2026-05-11T16:30:21.117393**: Pipeline started for domain: AI/NLP
+## Literature Search
+
+- **2026-05-11T16:30:21.120392**: Stage completed
+  - elapsed_s: 0.0
+## Ingestion
+
+- **2026-05-11T16:30:21.121391**: Stage completed
+  - elapsed_s: 0.0
+## Gap Analysis
+
+- **2026-05-11T16:30:23.134070**: Stage completed
+  - elapsed_s: 2.0
+## Gap Reflection
+
+- **2026-05-11T16:30:23.134070**: Stage completed
+  - elapsed_s: 0.0
+## Idea Generation
+
+- **2026-05-11T16:30:23.135070**: Stage completed
+  - elapsed_s: 0.0
+## Idea Reflection
+
+- **2026-05-11T16:30:23.135070**: Stage completed
+  - elapsed_s: 0.0
+## Novelty Checking
+
+- **2026-05-11T16:30:23.135070**: Stage completed
+  - elapsed_s: 0.0
+## Feasibility Scoring
+
+- **2026-05-11T16:30:23.135070**: Stage completed
+  - elapsed_s: 0.0
+## Mechanical Metrics
+
+- **2026-05-11T16:30:23.135070**: Stage completed
+  - elapsed_s: 0.0
+## Reference Verification
+
+- **2026-05-11T16:30:23.136071**: Verified 0 citations, 0 unverifiable
+## Proposal Synthesis
+
+- **2026-05-11T16:30:23.136071**: Stage completed
+  - elapsed_s: 0.0
+## Adversarial Review
+
+- **2026-05-11T16:30:23.136071**: Stage completed
+  - elapsed_s: 0.0
+## Evaluation
+
+- **2026-05-11T16:30:23.136071**: Stage completed
+  - elapsed_s: 0.0
+## Paper Synthesis
+
+- **2026-05-11T16:30:23.136071**: Stage completed
+  - elapsed_s: 0.0
+## Citation Audit
+
+- **2026-05-11T16:30:23.137071**: Stage completed
+  - elapsed_s: 0.0
+## Proposal Deepening
+
+- **2026-05-11T16:30:23.137071**: Stage completed
+  - elapsed_s: 0.0
+## Export
+
+- **2026-05-11T16:30:23.138071**: Stage completed
+  - elapsed_s: 0.0
+## Pipeline Evaluation
+
+- **2026-05-11T16:30:23.139071**: Quality score: 0.70
+## Pipeline
+
+- **2026-05-11T16:30:23.139071**: Pipeline completed
+  - ideas: 2
+  - gaps: 2

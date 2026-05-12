@@ -86,12 +86,12 @@ export default function Settings() {
   /** Status dot color based on connection state. */
   const dotColor =
     connState === "connected"
-      ? "bg-green-500"
+      ? "bg-success"
       : connState === "error"
-        ? "bg-red-500"
+        ? "bg-destructive"
         : connState === "testing"
-          ? "bg-yellow-500 animate-pulse"
-          : "bg-gray-400";
+          ? "bg-warning animate-pulse"
+          : "bg-muted-foreground";
 
   return (
     <div className="space-y-6">

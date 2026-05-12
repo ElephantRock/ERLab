@@ -145,7 +145,7 @@ export function StageModelSelector({ value, onChange }: StageModelSelectorProps)
       </div>
 
       {error && (
-        <div className="text-xs text-red-500 bg-red-50 dark:bg-red-950/20 px-3 py-2 rounded">
+        <div className="text-xs text-destructive bg-destructive/5 dark:bg-destructive/20 px-3 py-2 rounded">
           {error}
         </div>
       )}
@@ -157,10 +157,10 @@ export function StageModelSelector({ value, onChange }: StageModelSelectorProps)
             key={m.id}
             className={`px-2 py-1 rounded border ${
               m.location === "local"
-                ? "border-green-300 bg-green-50 text-green-700 dark:border-green-800 dark:bg-green-950/30 dark:text-green-400"
+                ? "border-success/30 bg-success/5 text-success dark:border-success/40 dark:bg-success/20 dark:text-success/70"
                 : m.location === "cloud"
-                ? "border-blue-300 bg-blue-50 text-blue-700 dark:border-blue-800 dark:bg-blue-950/30 dark:text-blue-400"
-                : "border-purple-300 bg-purple-50 text-purple-700 dark:border-purple-800 dark:bg-purple-950/30 dark:text-purple-400"
+                ? "border-info/30 bg-info/5 text-info dark:border-info/40 dark:bg-info/20 dark:text-info/70"
+                : "border-info/30 bg-info/5 text-info dark:border-info/40 dark:bg-info/20 dark:text-info/70"
             }`}
           >
             {m.id === "auto" ? "🔄" : m.location === "local" ? "🏠" : "☁️"}{" "}
@@ -199,10 +199,10 @@ export function StageModelSelector({ value, onChange }: StageModelSelectorProps)
                             className={`text-xs px-2 py-0.5 rounded border transition-all ${
                               isActive
                                 ? m.location === "local"
-                                  ? "border-green-400 bg-green-100 text-green-700 dark:border-green-600 dark:bg-green-900/40 dark:text-green-300"
+                                  ? "border-success/40 bg-success/10 text-success dark:border-success/50 dark:bg-success/20 dark:text-success/70"
                                   : m.location === "cloud"
-                                  ? "border-blue-400 bg-blue-100 text-blue-700 dark:border-blue-600 dark:bg-blue-900/40 dark:text-blue-300"
-                                  : "border-purple-400 bg-purple-100 text-purple-700 dark:border-purple-600 dark:bg-purple-900/40 dark:text-purple-300"
+                                  ? "border-info/40 bg-info/10 text-info dark:border-info/50 dark:bg-info/20 dark:text-info/70"
+                                  : "border-info/40 bg-info/10 text-info dark:border-info/50 dark:bg-info/20 dark:text-info/70"
                                 : "border-input text-muted-foreground hover:border-muted-foreground/50"
                             }`}
                             title={m.name}

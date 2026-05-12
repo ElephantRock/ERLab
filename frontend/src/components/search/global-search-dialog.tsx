@@ -182,7 +182,7 @@ export function GlobalSearchDialog({ open, onOpenChange }: Props) {
               {results.results.ideas && results.results.ideas.items.length > 0 && (
                 <ResultGroup
                   label="Ideas"
-                  icon={<Lightbulb className="h-4 w-4 text-yellow-500" />}
+                  icon={<Lightbulb className="h-4 w-4 text-warning" />}
                   items={results.results.ideas.items.map((item) => ({
                     id: item.id,
                     title: item.title,
@@ -195,7 +195,7 @@ export function GlobalSearchDialog({ open, onOpenChange }: Props) {
               {results.results.gaps && results.results.gaps.items.length > 0 && (
                 <ResultGroup
                   label="Gaps"
-                  icon={<GitBranch className="h-4 w-4 text-blue-500" />}
+                  icon={<GitBranch className="h-4 w-4 text-info" />}
                   items={results.results.gaps.items.map((item) => ({
                     id: item.id,
                     title: item.title,
@@ -208,7 +208,7 @@ export function GlobalSearchDialog({ open, onOpenChange }: Props) {
               {results.results.papers && results.results.papers.items.length > 0 && (
                 <ResultGroup
                   label="Papers"
-                  icon={<BookMarked className="h-4 w-4 text-green-500" />}
+                  icon={<BookMarked className="h-4 w-4 text-success" />}
                   items={results.results.papers.items.map((item) => ({
                     id: item.id,
                     title: item.title,
@@ -221,7 +221,7 @@ export function GlobalSearchDialog({ open, onOpenChange }: Props) {
               {results.results.runs && results.results.runs.items.length > 0 && (
                 <ResultGroup
                   label="Runs"
-                  icon={<Play className="h-4 w-4 text-purple-500" />}
+                  icon={<Play className="h-4 w-4 text-info" />}
                   items={results.results.runs.items.map((item) => ({
                     id: item.id,
                     title: `Run #${item.id}`,

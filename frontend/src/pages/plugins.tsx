@@ -138,7 +138,7 @@ export default function PluginsPage() {
                           v{plugin.version}
                         </Badge>
                         {plugin.enabled ? (
-                          <Badge className="text-xs bg-green-100 text-green-700">Enabled</Badge>
+                          <Badge className="text-xs bg-success/10 text-success">Enabled</Badge>
                         ) : (
                           <Badge variant="secondary" className="text-xs">Disabled</Badge>
                         )}

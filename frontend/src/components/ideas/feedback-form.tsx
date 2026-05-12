@@ -52,7 +52,7 @@ export function FeedbackForm({ ideaId, onSuccess }: FeedbackFormProps) {
                 className={cn(
                   "h-6 w-6",
                   (hovered || rating) >= star
-                    ? "fill-amber-400 text-amber-400"
+                    ? "fill-warning text-warning"
                     : "text-muted-foreground",
                 )}
               />

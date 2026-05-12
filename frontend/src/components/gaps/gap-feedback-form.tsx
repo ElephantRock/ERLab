@@ -48,8 +48,8 @@ export function GapFeedbackForm({ gapId, currentRating, currentNotes, onSubmitte
             <Star
               className={`h-5 w-5 ${
                 (hoverRating ?? rating) !== null && star <= (hoverRating ?? rating)!
-                  ? "fill-yellow-400 text-yellow-400"
-                  : "text-gray-300"
+                  ? "fill-warning text-warning"
+                  : "text-muted-foreground"
               }`}
             />
           </button>

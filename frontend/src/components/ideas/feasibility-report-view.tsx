@@ -23,7 +23,7 @@ function ScoreBar({ value, max }: { value: number; max: number }) {
         <div
           className={cn(
             "h-full rounded-full",
-            pct >= 70 ? "bg-green-500" : pct >= 40 ? "bg-amber-500" : "bg-red-500",
+            pct >= 70 ? "bg-success" : pct >= 40 ? "bg-warning" : "bg-destructive",
           )}
           style={{ width: `${pct}%` }}
         />
@@ -68,7 +68,7 @@ export function FeasibilityReportView({ report }: FeasibilityReportViewProps) {
           <ul className="mt-1 space-y-1">
             {risks.map((risk, i) => (
               <li key={i} className="text-sm text-muted-foreground flex items-start gap-2">
-                <span className="text-red-400 mt-0.5">•</span>
+                <span className="text-destructive mt-0.5">•</span>
                 {String(risk)}
               </li>
             ))}

@@ -14,11 +14,11 @@ export function StageProgress({ stages }: StageProgressProps) {
         <div key={stage.key} className="flex items-center gap-3">
           <div className="flex-shrink-0">
             {stage.status === "completed" ? (
-              <div className="h-7 w-7 rounded-full bg-green-100 text-green-600 flex items-center justify-center">
+              <div className="h-7 w-7 rounded-full bg-success/10 text-success flex items-center justify-center">
                 <Check className="h-4 w-4" />
               </div>
             ) : stage.status === "running" ? (
-              <div className="h-7 w-7 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center">
+              <div className="h-7 w-7 rounded-full bg-info/10 text-info flex items-center justify-center">
                 <Loader2 className="h-4 w-4 animate-spin" />
               </div>
             ) : (
@@ -32,9 +32,9 @@ export function StageProgress({ stages }: StageProgressProps) {
               className={cn(
                 "text-sm font-medium truncate",
                 stage.status === "completed"
-                  ? "text-green-700"
+                  ? "text-success"
                   : stage.status === "running"
-                    ? "text-blue-700"
+                    ? "text-info"
                     : "text-muted-foreground",
               )}
             >
