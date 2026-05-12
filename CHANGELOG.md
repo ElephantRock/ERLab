@@ -3,6 +3,20 @@
 All notable changes to the Elephant Rock Research Platform are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [BATCH-DA-01] — 2026-05-12
+
+### Added
+- CSS custom properties `--success`, `--warning`, `--info` (and `-foreground` variants) in both light and dark themes
+- Tailwind CSS color tokens: `success`, `warning`, `info` with `DEFAULT` and `foreground` subkeys
+
+### Changed
+- Replaced all hardcoded Tailwind color classes (`bg-blue-100`, `text-green-800`, etc.) with semantic design tokens across 36 component/page files
+- `score-utils.ts` now returns `text-success`, `text-warning`, `text-destructive` instead of `text-green-600`, `text-amber-500`, `text-red-500`
+- Updated `score-badge.test.ts` and `settings-batch13.test.ts` to expect new token class names
+
+### Fixed
+- Dark mode contrast issues: all score badges, status pills, and notification elements now use theme-aware tokens
+
 ## [2026-05-11] BATCH-177 — Stale Run Cleanup + Run Status Accuracy
 
 ### Added
