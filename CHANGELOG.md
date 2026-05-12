@@ -17,6 +17,17 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Fixed
 - Dark mode contrast issues: all score badges, status pills, and notification elements now use theme-aware tokens
 
+## [BATCH-DA-02] — 2026-05-12
+
+### Changed
+- CardTitle default changed from `text-2xl font-semibold` to `text-lg font-semibold`
+- Removed 25 redundant `text-lg` overrides from CardTitle instances across 12 files
+- Replaced all 11 `transition-all` with specific transition properties (`transition-[width]`, `transition-colors`, `transition-opacity`)
+
+### Added
+- `src/lib/typography.ts` — exported constants for typography scale, icon sizes, and shadow levels
+- 7 new typography unit tests
+
 ## [2026-05-11] BATCH-177 — Stale Run Cleanup + Run Status Accuracy
 
 ### Added
