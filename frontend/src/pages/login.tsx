@@ -143,52 +143,52 @@ export default function LoginPage() {
               {mode === "login" && (
                 <>
                   <div>
-                    <button
+                    <Button
+                      variant="link"
                       type="button"
-                      className="text-primary underline"
                       onClick={() => { setMode("forgot"); setError(""); setSuccess(""); }}
                       data-testid="switch-to-forgot"
                     >
                       Forgot password?
-                    </button>
+                    </Button>
                   </div>
                   <div>
                     Don't have an account?{" "}
-                    <button
+                    <Button
+                      variant="link"
                       type="button"
-                      className="text-primary underline"
                       onClick={() => { setMode("register"); setError(""); setSuccess(""); }}
                       data-testid="switch-to-register"
                     >
                       Register
-                    </button>
+                    </Button>
                   </div>
                 </>
               )}
               {mode === "register" && (
                 <span>
                   Already have an account?{" "}
-                  <button
+                  <Button
+                    variant="link"
                     type="button"
-                    className="text-primary underline"
                     onClick={() => { setMode("login"); setError(""); setSuccess(""); }}
                     data-testid="switch-to-login"
                   >
                     Sign In
-                  </button>
+                  </Button>
                 </span>
               )}
               {mode === "forgot" && (
                 <span>
                   Remember your password?{" "}
-                  <button
+                  <Button
+                    variant="link"
                     type="button"
-                    className="text-primary underline"
                     onClick={() => { setMode("login"); setError(""); setSuccess(""); }}
                     data-testid="switch-to-login-from-forgot"
                   >
                     Sign In
-                  </button>
+                  </Button>
                 </span>
               )}
             </div>

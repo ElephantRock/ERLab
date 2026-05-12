@@ -191,12 +191,12 @@ export default function Dashboard() {
         <div className="space-y-3">
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-semibold">Recent Ideas</h2>
-            <button
+            <Button
+              variant="link"
               onClick={() => navigate("/ideas")}
-              className="text-sm text-primary hover:underline"
             >
-              View all
-            </button>
+              View all ideas
+            </Button>
           </div>
           {ideasLoading ? (
             <div className="space-y-2">
