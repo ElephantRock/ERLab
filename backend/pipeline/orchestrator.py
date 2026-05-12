@@ -1356,6 +1356,41 @@ class PipelineOrchestrator:
             if stage.name == "literature_search":
                 self._persistence.persist_papers(ctx.all_papers, db_run_id)
                 self._collect_warnings(result)
+
+                # BATCH-RAG-02: Compute retrieval metrics after literature search
+                try:
+                    from backend.pipeline.evaluation.retrieval_metrics import (
+                        compute_retrieval_metrics,
+                        RetrievedDocument,
+                    )
+                    queries = ctx.search_queries or [ctx.domain]
+                    if ctx.all_papers and queries:
+                        docs_per_query = []
+                        for q in queries:
+                            docs = [
+                                RetrievedDocument(
+                                    doc_id=str(p.id),
+                                    rank=i + 1,
+                                    score=p.relevance_score or 0.0,
+                                    is_relevant=False,  # No ground truth in live runs
+                                )
+                                for i, p in enumerate(ctx.all_papers[:20])
+                            ]
+                            docs_per_query.append((q, docs))
+                        metrics_report = compute_retrieval_metrics(docs_per_query)
+                        metrics_report.domain = ctx.domain
+                        metrics_report.strategy = ctx.params.get("strategy", "unknown")
+                        # Store in result metadata for later retrieval
+                        if not hasattr(result, '_retrieval_metrics'):
+                            result._retrieval_metrics = metrics_report
+                        logger.info(
+                            "Retrieval metrics: %d queries, %d docs, hit_rate=%.2f",
+                            metrics_report.total_queries,
+                            metrics_report.total_documents_retrieved,
+                            metrics_report.hit_rate,
+                        )
+                except Exception as e:
+                    logger.debug("Retrieval metrics computation skipped: %s", str(e)[:100])
                 if not should_continue:
                     self._persistence.mark_run_failed(db_run_id, "No papers found")
                     self._collect_warnings(result)
