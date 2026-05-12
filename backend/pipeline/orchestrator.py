@@ -1357,6 +1357,34 @@ class PipelineOrchestrator:
                 self._persistence.persist_papers(ctx.all_papers, db_run_id)
                 self._collect_warnings(result)
 
+                # Rerank papers using cross-encoder for better relevance ordering
+                try:
+                    from backend.pipeline.knowledge.reranker import create_reranker
+                    reranker = create_reranker("auto")
+                    if ctx.all_papers and ctx.domain:
+                        docs = [
+                            {"id": str(p.id), "text": f"{p.title} {p.abstract or ''}"}
+                            for p in ctx.all_papers
+                            if p.abstract
+                        ]
+                        if docs:
+                            ranked = await reranker.rerank(ctx.domain, docs, top_k=min(20, len(docs)))
+                            # Reorder all_papers based on reranked order
+                            ranked_ids = {r.id: r.score for r in ranked}
+                            scored_papers = []
+                            for p in ctx.all_papers:
+                                score = ranked_ids.get(str(p.id), 0.0)
+                                scored_papers.append((score, p))
+                            scored_papers.sort(key=lambda x: x[0], reverse=True)
+                            ctx.all_papers = [p for _, p in scored_papers]
+                            logger.info(
+                                "Reranked %d papers, top score=%.3f",
+                                len(ranked),
+                                ranked[0].score if ranked else 0.0,
+                            )
+                except Exception as e:
+                    logger.debug("Reranking skipped: %s", str(e)[:100])
+
                 # BATCH-RAG-02: Compute retrieval metrics after literature search
                 try:
                     from backend.pipeline.evaluation.retrieval_metrics import (

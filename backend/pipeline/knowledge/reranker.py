@@ -222,17 +222,17 @@ class LMStudioReranker(Reranker):
     """
 
     SCORING_PROMPT = (
-        "Rate the relevance of this document to the query.\n"
-        "Respond with ONLY a JSON object: {\"score\": <0.0-1.0>}\n\n"
+        "Score this document's relevance to the query on a 0.0-1.0 scale.\n"
+        "Reply with ONLY a single number. No explanation.\n\n"
         "Query: {query}\n\n"
         "Document: {document}\n\n"
-        "Relevance score JSON:"
+        "Score:"
     )
 
     def __init__(
         self,
         api_base: str = "http://100.64.0.1:1234/v1",
-        model: str = "jina-reranker-v3@bf16",
+        model: str = "qwen/qwen3-4b-2507",
     ):
         self._api_base = api_base
         self._model = model
@@ -270,12 +270,21 @@ class LMStudioReranker(Reranker):
                     data = resp.json()
                     content = data["choices"][0]["message"]["content"].strip()
 
-                    # Parse score
+                    # Parse score from response
+                    score = 0.5
                     try:
-                        parsed = json.loads(content)
-                        score = float(parsed.get("score", 0.5))
-                    except (json.JSONDecodeError, ValueError):
-                        score = 0.5
+                        # Try direct float parse (ideal response)
+                        score = float(content)
+                    except ValueError:
+                        # Extract first number from response
+                        import re
+                        match = re.search(r'([0-9]\.[0-9]+)', content)
+                        if match:
+                            score = float(match.group(1))
+                        else:
+                            match = re.search(r'([01])', content)
+                            if match:
+                                score = float(match.group(1))
 
                     return ScoredDocument(
                         id=doc.get("id", ""),
