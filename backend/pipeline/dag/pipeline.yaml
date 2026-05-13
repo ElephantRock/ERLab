@@ -1,27 +1,57 @@
 # ═══════════════════════════════════════════════════════════════
 # CogniGen Pipeline Configuration — Single Source of Truth
-# BATCH-180: YAML is the ONLY config source. No env vars, no .env,
-# no strategy presets, no gate booleans.
+# BATCH-180 / FIX-01: YAML reflects real production model routing.
+#
+# Model routing architecture:
+#   thinking   → qwen3-4b via LM Studio (local, fast, cheap)
+#                Used for: classification, extraction, ranking, scoring
+#   generation → glm-5.1 via z.ai proxy (cloud, powerful, expensive)
+#                Used for: synthesis, writing, ideation, deepening
+#   embedding  → bge-m3 via LM Studio GPU (local, 1024d)
+#                Used for: vector store, similarity, novelty
+#   reranker   → qwen3-4b via LM Studio chat (local, relevance scoring)
+#                Used for: post-search paper reordering
 # ═══════════════════════════════════════════════════════════════
 
 models:
   thinking:
-    provider: openai
-    model: gpt-4o
-    base_url: https://api.openai.com/v1
+    provider: lmstudio
+    model: qwen/qwen3-4b-2507
+    base_url: http://100.64.0.1:1234/v1
+    max_tokens: 2048
+    temperature: 0.1
+    description: >
+      Fast local LLM for reasoning tasks: classification, extraction,
+      ranking, scoring, gap analysis. Runs on RTX 3080 Ti via LM Studio.
+
   generation:
     provider: openai
-    model: gpt-4o
-    base_url: https://api.openai.com/v1
+    model: glm-5.1
+    base_url: https://open.bigmodel.cn/api/paas/v4
+    max_tokens: 4096
+    temperature: 0.7
+    description: >
+      Cloud LLM for generation tasks: proposal synthesis, paper writing,
+      idea generation, proposal deepening. High quality, higher cost.
+
   embedding:
-    provider: openai
-    model: text-embedding-3-small
-    dimension: 1536
-    base_url: https://api.openai.com/v1
+    provider: lmstudio
+    model: text-embedding-bge-m3
+    base_url: http://100.64.0.1:1234/v1
+    dimension: 1024
+    description: >
+      Local GPU embedding model via LM Studio. 1024-dimensional,
+      multilingual, 32% better noise discrimination than nomic-embed-text.
+
   reranker:
-    strategy: llm
-    model: gpt-4o
-    base_url: https://api.openai.com/v1
+    provider: lmstudio
+    model: qwen/qwen3-4b-2507
+    base_url: http://100.64.0.1:1234/v1
+    strategy: llm_chat
+    top_k: 20
+    description: >
+      Chat-based reranking via LM Studio. Scores paper relevance 0-1
+      using qwen3-4b prompt. Falls back to keyword heuristic on failure.
 
 infrastructure:
   chroma_dir: data/chroma
@@ -35,10 +65,10 @@ budgets:
   max_papers: 50
   max_gaps: 30
   max_ideas: 20
-  max_abstract_chars: 500
-  trim_top_k: 10
-  stage_timeout: 300
-  total_timeout: 1800
+  max_abstract_chars: 800
+  trim_top_k: 20
+  stage_timeout: 1800
+  total_timeout: 7200
 
 search:
   sources:
@@ -47,6 +77,7 @@ search:
     - semantic_scholar
   queries_per_source: 5
   citation_explore: true
+  cooldown_seconds: 2
 
 strategies:
   deep_research:
@@ -68,10 +99,10 @@ strategies:
       - proposal_deepening
       - export
     description: >
-      Full pipeline: literature search, ingestion, gap analysis, idea generation
-      with tree search, novelty checking, feasibility scoring, metrics, proposal
-      synthesis, adversarial review, paper synthesis, citation audit, proposal
-      deepening, and export. ~25 minutes.
+      Full pipeline: 16 stages, ~25 minutes. Literature search with
+      reranking, gap analysis via local LLM, tree search idea generation,
+      novelty checking with embeddings, full proposal synthesis via cloud,
+      adversarial review, paper synthesis, citation audit, deepening.
 
   fast_scan:
     stages:
@@ -82,9 +113,9 @@ strategies:
       - proposal_synthesis
       - export
     description: >
-      Quick scan: literature search, ingestion, gap analysis, feasibility scoring,
-      light synthesis, and export. Skips tree search, novelty checking, metrics,
-      adversarial review, paper synthesis, and citation audit. ~2-5 minutes.
+      Quick scan: 6 stages, ~5 minutes. Literature search, gap analysis,
+      feasibility scoring, light synthesis, export. Skips tree search,
+      novelty, metrics, adversarial, paper synthesis, citation audit.
 
   academic_proposal:
     stages:
@@ -105,9 +136,10 @@ strategies:
       - proposal_deepening
       - export
     description: >
-      Academic-grade proposal: full pipeline with longer timeouts, stricter
-      novelty/feasibility thresholds, paper synthesis and citation audit for
-      publication-ready output. ~45 minutes.
+      Academic-grade proposal: full 16-stage pipeline with stricter
+      thresholds, paper synthesis and citation audit for publication-ready
+      output. ~45 minutes. Same stages as deep_research but with higher
+      budgets and longer timeouts.
 
   literature_review:
     stages:
@@ -116,5 +148,28 @@ strategies:
       - gap_analysis
       - export
     description: >
-      Literature review only: search, ingest, analyze gaps, then export.
-      No idea generation, proposal synthesis, or citation audit. ~10 minutes.
+      Literature review only: search, ingest, analyze gaps, export.
+      No idea generation, proposals, or citation audit. ~10 minutes.
+
+# ─────────────────────────────────────────────────────────────
+# Stage-to-model mapping (verified against orchestrator stage order)
+# ─────────────────────────────────────────────────────────────
+#
+# Stage                → Category    → Model
+# ──────────────────────────────────────────────
+# literature_search    → thinking    → qwen3-4b  (rerank scoring)
+# ingestion            → embedding   → bge-m3    (vector indexing)
+# gap_analysis         → thinking    → qwen3-4b  (gap identification)
+# gap_reflection       → thinking    → qwen3-4b  (gap refinement)
+# idea_generation      → thinking    → qwen3-4b  (tree search)
+# idea_reflection      → thinking    → qwen3-4b  (idea refinement)
+# novelty_checking     → embedding   → bge-m3    (similarity scoring)
+# feasibility_scoring  → thinking    → qwen3-4b  (feasibility assessment)
+# mechanical_metrics   → system      → none       (formula-based)
+# proposal_synthesis   → generation  → glm-5.1   (full proposals)
+# adversarial_review   → thinking    → qwen3-4b  (critique)
+# evaluation           → thinking    → qwen3-4b  (7-dim scoring)
+# paper_synthesis      → generation  → glm-5.1   (paper writing)
+# citation_audit       → thinking    → qwen3-4b  (citation verification)
+# proposal_deepening   → generation  → glm-5.1   (proposal enrichment)
+# export               → system      → none       (file generation)

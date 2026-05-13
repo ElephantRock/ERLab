@@ -28,7 +28,7 @@ class TestConfigLoader:
         loader = ConfigLoader()
         config = loader.load()
         assert "models" in config
-        assert config["models"]["thinking"]["provider"] == "openai"
+        assert config["models"]["thinking"]["provider"] == "lmstudio"
 
     def test_02_validates_required_fields(self):
         """TEST-180-01-02: ConfigLoader validates required fields present."""
@@ -51,7 +51,7 @@ class TestConfigLoader:
         snap1 = loader.load()
         snap1["models"]["thinking"]["provider"] = "MUTATED"
         snap2 = loader.load()
-        assert snap2["models"]["thinking"]["provider"] == "openai"
+        assert snap2["models"]["thinking"]["provider"] == "lmstudio"
 
     def test_04_all_four_strategies_present(self):
         """TEST-180-01-04: All 4 strategies present in config."""
@@ -199,8 +199,14 @@ class TestDAGRunner:
         from backend.pipeline.dag.runner import DAGRunner
         runner = DAGRunner()
         output = runner.dry_run("test", "deep_research")
-        # Should show model info
-        assert "thinking" in output or "generation" in output or "embedding" in output
+        # Must show all three model categories (thinking, generation, embedding)
+        assert "thinking" in output, "dry_run missing 'thinking' category"
+        assert "generation" in output, "dry_run missing 'generation' category"
+        assert "embedding" in output, "dry_run missing 'embedding' category"
+        # Must show actual model names, not 'unknown/unknown' for LLM stages
+        assert "qwen" in output, "dry_run missing qwen3-4b for thinking stages"
+        assert "glm" in output, "dry_run missing glm-5.1 for generation stages"
+        assert "bge" in output, "dry_run missing bge-m3 for embedding stages"
 
     def test_05_context_config_immutable(self):
         """TEST-180-03-05: StageContext config is immutable-in."""
@@ -238,3 +244,78 @@ class TestDAGRunner:
         }
         mapped = set(STAGE_REGISTRY.keys())
         assert expected_stages.issubset(mapped), f"Missing: {expected_stages - mapped}"
+
+    def test_08_generation_stages_use_cloud_model(self):
+        """TEST-180-03-08: Generation stages map to cloud model (glm-5.1)."""
+        from backend.pipeline.dag.registry import STAGE_REGISTRY
+        from backend.pipeline.dag.runner import DAGRunner
+
+        generation_stages = {
+            name for name, cat in STAGE_REGISTRY.items()
+            if cat == "generation"
+        }
+        # proposal_synthesis, paper_synthesis, proposal_deepening must be generation
+        assert "proposal_synthesis" in generation_stages
+        assert "paper_synthesis" in generation_stages
+        assert "proposal_deepening" in generation_stages
+
+        # Verify config assigns glm-5.1 to generation category
+        runner = DAGRunner()
+        config = runner.load_config()
+        gen_model = config["models"]["generation"]
+        assert gen_model["model"] == "glm-5.1"
+        assert "bigmodel" in gen_model["base_url"] or "z.ai" in gen_model.get("base_url", "") or gen_model["provider"] in ("openai", "zai")
+
+    def test_09_thinking_stages_use_local_model(self):
+        """TEST-180-03-09: Thinking stages map to local model (qwen3-4b)."""
+        from backend.pipeline.dag.registry import STAGE_REGISTRY
+        from backend.pipeline.dag.runner import DAGRunner
+
+        thinking_stages = {
+            name for name, cat in STAGE_REGISTRY.items()
+            if cat == "thinking"
+        }
+        # gap_analysis, idea_generation, evaluation must be thinking
+        assert "gap_analysis" in thinking_stages
+        assert "idea_generation" in thinking_stages
+        assert "evaluation" in thinking_stages
+
+        # Verify config assigns qwen3-4b to thinking category
+        runner = DAGRunner()
+        config = runner.load_config()
+        think_model = config["models"]["thinking"]
+        assert "qwen" in think_model["model"]
+        assert "100.64.0.1" in think_model["base_url"]
+
+    def test_10_embedding_stages_use_local_gpu(self):
+        """TEST-180-03-10: Embedding stages use local GPU (bge-m3, 1024d)."""
+        from backend.pipeline.dag.registry import STAGE_REGISTRY
+        from backend.pipeline.dag.runner import DAGRunner
+
+        embedding_stages = {
+            name for name, cat in STAGE_REGISTRY.items()
+            if cat == "embedding"
+        }
+        assert "ingestion" in embedding_stages
+        assert "novelty_checking" in embedding_stages
+
+        runner = DAGRunner()
+        config = runner.load_config()
+        emb_model = config["models"]["embedding"]
+        assert "bge-m3" in emb_model["model"]
+        assert emb_model.get("dimension") == 1024
+        assert "100.64.0.1" in emb_model["base_url"]
+
+    def test_11_no_model_homogenisation(self):
+        """TEST-180-03-11: Thinking and generation use DIFFERENT models."""
+        from backend.pipeline.dag.runner import DAGRunner
+        runner = DAGRunner()
+        config = runner.load_config()
+        think = config["models"]["thinking"]
+        gen = config["models"]["generation"]
+        assert think["model"] != gen["model"], (
+            f"Model homogenisation detected: thinking={think['model']} == generation={gen['model']}"
+        )
+        assert think["base_url"] != gen["base_url"], (
+            f"Endpoint homogenisation: thinking and generation point to same server"
+        )
