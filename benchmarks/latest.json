@@ -1,0 +1,4936 @@
+{
+  "generated_at": "2026-05-13T05:11:54.855656+00:00",
+  "source_db": "data\\elephant_rock.db",
+  "run_count": 65,
+  "runs": [
+    {
+      "db_id": 127,
+      "domain": "Sparse Mixture-of-Experts Routing with Load Balancing in LLMs",
+      "status": "completed",
+      "session_id": null,
+      "created_at": "2026-05-12 23:39:51.861340",
+      "completed_at": "2026-05-12 23:58:14.369228",
+      "current_stage": "completed",
+      "stages_completed": [
+        "literature_search",
+        "ingestion",
+        "gap_analysis",
+        "gap_reflection",
+        "idea_generation",
+        "idea_reflection",
+        "feasibility_scoring",
+        "mechanical_metrics",
+        "proposal_synthesis",
+        "adversarial_review",
+        "evaluation",
+        "paper_synthesis",
+        "citation_audit",
+        "proposal_deepening",
+        "export",
+        "completed"
+      ],
+      "stage_report": [
+        {
+          "name": "literature_search",
+          "status": "executed",
+          "elapsed_s": 4.576,
+          "error": null,
+          "skip_reason": null,
+          "retries_used": 0
+        },
+        {
+          "name": "ingestion",
+          "status": "executed",
+          "elapsed_s": 86.506,
+          "error": null,
+          "skip_reason": null,
+          "retries_used": 0
+        },
+        {
+          "name": "gap_analysis",
+          "status": "executed",
+          "elapsed_s": 42.115,
+          "error": null,
+          "skip_reason": null,
+          "retries_used": 0
+        },
+        {
+          "name": "gap_reflection",
+          "status": "executed",
+          "elapsed_s": 0.002,
+          "error": null,
+          "skip_reason": null,
+          "retries_used": 0
+        },
+        {
+          "name": "idea_generation",
+          "status": "executed",
+          "elapsed_s": 95.051,
+          "error": null,
+          "skip_reason": null,
+          "retries_used": 0
+        },
+        {
+          "name": "idea_reflection",
+          "status": "executed",
+          "elapsed_s": 0.002,
+          "error": null,
+          "skip_reason": null,
+          "retries_used": 0
+        },
+        {
+          "name": "novelty_checking",
+          "status": "skipped_by_gate",
+          "elapsed_s": 0.0,
+          "error": null,
+          "skip_reason": "run_novelty=False",
+          "retries_used": 0
+        },
+        {
+          "name": "feasibility_scoring",
+          "status": "executed",
+          "elapsed_s": 5.501,
+          "error": null,
+          "skip_reason": null,
+          "retries_used": 0
+        },
+        {
+          "name": "mechanical_metrics",
+          "status": "executed",
+          "elapsed_s": 0.024,
+          "error": null,
+          "skip_reason": null,
+          "retries_used": 0
+        },
+        {
+          "name": "proposal_synthesis",
+          "status": "executed",
+          "elapsed_s": 360.25,
+          "error": null,
+          "skip_reason": null,
+          "retries_used": 0
+        },
+        {
+          "name": "adversarial_review",
+          "status": "executed",
+          "elapsed_s": 0.0,
+          "error": null,
+          "skip_reason": null,
+          "retries_used": 0
+        },
+        {
+          "name": "evaluation",
+          "status": "executed",
+          "elapsed_s": 12.023,
+          "error": null,
+          "skip_reason": null,
+          "retries_used": 0
+        },
+        {
+          "name": "paper_synthesis",
+          "status": "executed",
+          "elapsed_s": 207.654,
+          "error": null,
+          "skip_reason": null,
+          "retries_used": 0
+        },
+        {
+          "name": "citation_audit",
+          "status": "executed",
+          "elapsed_s": 39.684,
+          "error": null,
+          "skip_reason": null,
+          "retries_used": 0
+        },
+        {
+          "name": "proposal_deepening",
+          "status": "executed",
+          "elapsed_s": 85.449,
+          "error": null,
+          "skip_reason": null,
+          "retries_used": 0
+        },
+        {
+          "name": "export",
+          "status": "executed",
+          "elapsed_s": 0.045,
+          "error": null,
+          "skip_reason": null,
+          "retries_used": 0
+        }
+      ],
+      "gaps_count": 5,
+      "gaps": [
+        {
+          "title": "Token-Level Expert Selection Dynamics in Sparse MoE Routing",
+          "confidence": 0.92,
+          "type": "methodological"
+        },
+        {
+          "title": "Safety and Robustness of Routing in Sparse MoE LLMs Against Adversarial Attacks",
+          "confidence": 0.9,
+          "type": "methodological"
+        },
+        {
+          "title": "Empirical Evaluation of Routing Performance Across Diverse Task Domains",
+          "confidence": 0.88,
+          "type": "empirical"
+        },
+        {
+          "title": "Theoretical Foundations of Load Balancing in Sparse MoE Architectures",
+          "confidence": 0.85,
+          "type": "theoretical"
+        },
+        {
+          "title": "Cross-Domain Transfer of Routing Strategies from Sensor Networks to LLMs",
+          "confidence": 0.8,
+          "type": "cross-domain"
+        }
+      ],
+      "ideas_count": 2,
+      "ideas": [
+        {
+          "title": "Contextual Temporal Routing: Adapting Sparse MoE Expert Selection via Token-Level Contextual Shifts",
+          "novelty": null,
+          "feasibility": null,
+          "overall": null
+        },
+        {
+          "title": "Adversarial-Robust Routing via Expert Anomaly Detection in Sparse MoE LLMs",
+          "novelty": null,
+          "feasibility": null,
+          "overall": null
+        }
+      ],
+      "proposals_count": 2,
+      "proposals_word_counts": [
+        10799,
+        5287
+      ],
+      "elapsed_s": 1102.507888
+    },
+    {
+      "db_id": 126,
+      "domain": "Mixture-of-Experts Routing with Expert Specialization in Large Language Models",
+      "status": "completed",
+      "session_id": null,
+      "created_at": "2026-05-12 23:27:05.192232",
+      "completed_at": "2026-05-12 23:32:00.630277",
+      "current_stage": "completed",
+      "stages_completed": [
+        "literature_search",
+        "ingestion",
+        "gap_analysis",
+        "gap_reflection",
+        "idea_generation",
+        "idea_reflection",
+        "novelty_checking",
+        "feasibility_scoring",
+        "mechanical_metrics",
+        "proposal_synthesis",
+        "adversarial_review",
+        "evaluation",
+        "paper_synthesis",
+        "citation_audit",
+        "proposal_deepening",
+        "export",
+        "completed"
+      ],
+      "stage_report": [
+        {
+          "name": "literature_search",
+          "status": "executed",
+          "elapsed_s": 3.715,
+          "error": null,
+          "skip_reason": null,
+          "retries_used": 0
+        },
+        {
+          "name": "ingestion",
+          "status": "executed",
+          "elapsed_s": 103.81,
+          "error": null,
+          "skip_reason": null,
+          "retries_used": 0
+        },
+        {
+          "name": "gap_analysis",
+          "status": "executed",
+          "elapsed_s": 85.74,
+          "error": null,
+          "skip_reason": null,
+          "retries_used": 0
+        },
+        {
+          "name": "gap_reflection",
+          "status": "executed",
+          "elapsed_s": 0.001,
+          "error": null,
+          "skip_reason": null,
+          "retries_used": 0
+        },
+        {
+          "name": "idea_generation",
+          "status": "executed",
+          "elapsed_s": 0.142,
+          "error": null,
+          "skip_reason": null,
+          "retries_used": 0
+        },
+        {
+          "name": "idea_reflection",
+          "status": "executed",
+          "elapsed_s": 0.002,
+          "error": null,
+          "skip_reason": null,
+          "retries_used": 0
+        },
+        {
+          "name": "novelty_checking",
+          "status": "executed",
+          "elapsed_s": 0.097,
+          "error": null,
+          "skip_reason": null,
+          "retries_used": 0
+        },
+        {
+          "name": "feasibility_scoring",
+          "status": "executed",
+          "elapsed_s": 0.134,
+          "error": null,
+          "skip_reason": null,
+          "retries_used": 0
+        },
+        {
+          "name": "mechanical_metrics",
+          "status": "executed",
+          "elapsed_s": 0.002,
+          "error": null,
+          "skip_reason": null,
+          "retries_used": 0
+        },
+        {
+          "name": "proposal_synthesis",
+          "status": "executed",
+          "elapsed_s": 0.164,
+          "error": null,
+          "skip_reason": null,
+          "retries_used": 0
+        },
+        {
+          "name": "adversarial_review",
+          "status": "executed",
+          "elapsed_s": 0.001,
+          "error": null,
+          "skip_reason": null,
+          "retries_used": 0
+        },
+        {
+          "name": "evaluation",
+          "status": "executed",
+          "elapsed_s": 0.001,
+          "error": null,
+          "skip_reason": null,
+          "retries_used": 0
+        },
+        {
+          "name": "paper_synthesis",
+          "status": "executed",
+          "elapsed_s": 0.001,
+          "error": null,
+          "skip_reason": null,
+          "retries_used": 0
+        },
+        {
+          "name": "citation_audit",
+          "status": "executed",
+          "elapsed_s": 0.001,
+          "error": null,
+          "skip_reason": null,
+          "retries_used": 0
+        },
+        {
+          "name": "proposal_deepening",
+          "status": "executed",
+          "elapsed_s": 0.001,
+          "error": null,
+          "skip_reason": null,
+          "retries_used": 0
+        },
+        {
+          "name": "export",
+          "status": "executed",
+          "elapsed_s": 0.254,
+          "error": null,
+          "skip_reason": null,
+          "retries_used": 0
+        }
+      ],
+      "gaps_count": 0,
+      "gaps": [],
+      "ideas_count": 0,
+      "ideas": [],
+      "proposals_count": 0,
+      "proposals_word_counts": [],
+      "elapsed_s": 295.438045
+    },
+    {
+      "db_id": 125,
+      "domain": "Mixture-of-Experts Routing with Expert Specialization in Large Language Models",
+      "status": "completed",
+      "session_id": null,
+      "created_at": "2026-05-12 23:26:55.102736",
+      "completed_at": "2026-05-12 23:32:00.544657",
+      "current_stage": "completed",
+      "stages_completed": [
+        "literature_search",
+        "ingestion",
+        "gap_analysis",
+        "gap_reflection",
+        "idea_generation",
+        "idea_reflection",
+        "novelty_checking",
+        "feasibility_scoring",
+        "mechanical_metrics",
+        "proposal_synthesis",
+        "adversarial_review",
+        "evaluation",
+        "paper_synthesis",
+        "citation_audit",
+        "proposal_deepening",
+        "export",
+        "completed"
+      ],
+      "stage_report": [
+        {
+          "name": "literature_search",
+          "status": "executed",
+          "elapsed_s": 4.336,
+          "error": null,
+          "skip_reason": null,
+          "retries_used": 0
+        },
+        {
+          "name": "ingestion",
+          "status": "executed",
+          "elapsed_s": 78.697,
+          "error": null,
+          "skip_reason": null,
+          "retries_used": 0
+        },
+        {
+          "name": "gap_analysis",
+          "status": "executed",
+          "elapsed_s": 110.933,
+          "error": null,
+          "skip_reason": null,
+          "retries_used": 0
+        },
+        {
+          "name": "gap_reflection",
+          "status": "executed",
+          "elapsed_s": 0.018,
+          "error": null,
+          "skip_reason": null,
+          "retries_used": 0
+        },
+        {
+          "name": "idea_generation",
+          "status": "executed",
+          "elapsed_s": 0.081,
+          "error": null,
+          "skip_reason": null,
+          "retries_used": 0
+        },
+        {
+          "name": "idea_reflection",
+          "status": "executed",
+          "elapsed_s": 0.0,
+          "error": null,
+          "skip_reason": null,
+          "retries_used": 0
+        },
+        {
+          "name": "novelty_checking",
+          "status": "executed",
+          "elapsed_s": 0.118,
+          "error": null,
+          "skip_reason": null,
+          "retries_used": 0
+        },
+        {
+          "name": "feasibility_scoring",
+          "status": "executed",
+          "elapsed_s": 0.13,
+          "error": null,
+          "skip_reason": null,
+          "retries_used": 0
+        },
+        {
+          "name": "mechanical_metrics",
+          "status": "executed",
+          "elapsed_s": 0.002,
+          "error": null,
+          "skip_reason": null,
+          "retries_used": 0
+        },
+        {
+          "name": "proposal_synthesis",
+          "status": "executed",
+          "elapsed_s": 0.157,
+          "error": null,
+          "skip_reason": null,
+          "retries_used": 0
+        },
+        {
+          "name": "adversarial_review",
+          "status": "executed",
+          "elapsed_s": 0.002,
+          "error": null,
+          "skip_reason": null,
+          "retries_used": 0
+        },
+        {
+          "name": "evaluation",
+          "status": "executed",
+          "elapsed_s": 0.003,
+          "error": null,
+          "skip_reason": null,
+          "retries_used": 0
+        },
+        {
+          "name": "paper_synthesis",
+          "status": "executed",
+          "elapsed_s": 0.007,
+          "error": null,
+          "skip_reason": null,
+          "retries_used": 0
+        },
+        {
+          "name": "citation_audit",
+          "status": "executed",
+          "elapsed_s": 0.008,
+          "error": null,
+          "skip_reason": null,
+          "retries_used": 0
+        },
+        {
+          "name": "proposal_deepening",
+          "status": "executed",
+          "elapsed_s": 0.007,
+          "error": null,
+          "skip_reason": null,
+          "retries_used": 0
+        },
+        {
+          "name": "export",
+          "status": "executed",
+          "elapsed_s": 0.181,
+          "error": null,
+          "skip_reason": null,
+          "retries_used": 0
+        }
+      ],
+      "gaps_count": 0,
+      "gaps": [],
+      "ideas_count": 0,
+      "ideas": [],
+      "proposals_count": 0,
+      "proposals_word_counts": [],
+      "elapsed_s": 305.441921
+    },
+    {
+      "db_id": 122,
+      "domain": "Integration Test Preflight",
+      "status": "completed",
+      "session_id": null,
+      "created_at": "2026-05-11 19:19:04.889089",
+      "completed_at": "2026-05-11 19:30:24.577167",
+      "current_stage": "completed",
+      "stages_completed": [
+        "literature_search",
+        "ingestion",
+        "gap_analysis",
+        "feasibility_scoring",
+        "proposal_synthesis",
+        "proposal_deepening",
+        "export",
+        "completed"
+      ],
+      "stage_report": [
+        {
+          "name": "literature_search",
+          "status": "executed",
+          "elapsed_s": 6.01,
+          "error": null,
+          "skip_reason": null,
+          "retries_used": 0
+        },
+        {
+          "name": "ingestion",
+          "status": "executed",
+          "elapsed_s": 616.739,
+          "error": null,
+          "skip_reason": null,
+          "retries_used": 0
+        },
+        {
+          "name": "gap_analysis",
+          "status": "executed",
+          "elapsed_s": 15.535,
+          "error": null,
+          "skip_reason": null,
+          "retries_used": 0
+        },
+        {
+          "name": "gap_reflection",
+          "status": "skipped_by_strategy",
+          "elapsed_s": 0.0,
+          "error": null,
+          "skip_reason": "Strategy fast_scan",
+          "retries_used": 0
+        },
+        {
+          "name": "idea_generation",
+          "status": "skipped_by_strategy",
+          "elapsed_s": 0.0,
+          "error": null,
+          "skip_reason": "Strategy fast_scan",
+          "retries_used": 0
+        },
+        {
+          "name": "idea_reflection",
+          "status": "skipped_by_strategy",
+          "elapsed_s": 0.0,
+          "error": null,
+          "skip_reason": "Strategy fast_scan",
+          "retries_used": 0
+        },
+        {
+          "name": "novelty_checking",
+          "status": "skipped_by_strategy",
+          "elapsed_s": 0.0,
+          "error": null,
+          "skip_reason": "Strategy fast_scan",
+          "retries_used": 0
+        },
+        {
+          "name": "feasibility_scoring",
+          "status": "executed",
+          "elapsed_s": 11.498,
+          "error": null,
+          "skip_reason": null,
+          "retries_used": 0
+        },
+        {
+          "name": "mechanical_metrics",
+          "status": "skipped_by_strategy",
+          "elapsed_s": 0.0,
+          "error": null,
+          "skip_reason": "Strategy fast_scan",
+          "retries_used": 0
+        },
+        {
+          "name": "proposal_synthesis",
+          "status": "executed",
+          "elapsed_s": 13.72,
+          "error": null,
+          "skip_reason": null,
+          "retries_used": 0
+        },
+        {
+          "name": "adversarial_review",
+          "status": "skipped_by_strategy",
+          "elapsed_s": 0.0,
+          "error": null,
+          "skip_reason": "Strategy fast_scan",
+          "retries_used": 0
+        },
+        {
+          "name": "evaluation",
+          "status": "skipped_by_strategy",
+          "elapsed_s": 0.0,
+          "error": null,
+          "skip_reason": "Strategy fast_scan",
+          "retries_used": 0
+        },
+        {
+          "name": "paper_synthesis",
+          "status": "skipped_by_strategy",
+          "elapsed_s": 0.0,
+          "error": null,
+          "skip_reason": "Strategy fast_scan",
+          "retries_used": 0
+        },
+        {
+          "name": "citation_audit",
+          "status": "skipped_by_strategy",
+          "elapsed_s": 0.0,
+          "error": null,
+          "skip_reason": "Strategy fast_scan",
+          "retries_used": 0
+        },
+        {
+          "name": "proposal_deepening",
+          "status": "executed",
+          "elapsed_s": 0.0,
+          "error": null,
+          "skip_reason": null,
+          "retries_used": 0
+        },
+        {
+          "name": "export",
+          "status": "executed",
+          "elapsed_s": 16.066,
+          "error": null,
+          "skip_reason": null,
+          "retries_used": 0
+        }
+      ],
+      "gaps_count": 4,
+      "gaps": [
+        {
+          "title": "Absence of Cross-Domain Integration Between Preflight and Operational Test Metrics",
+          "confidence": 0.88,
+          "type": "cross-domain"
+        },
+        {
+          "title": "Missing Empirical Validation of Open RAN Test Scenarios",
+          "confidence": 0.85,
+          "type": "empirical"
+        },
+        {
+          "title": "Limited Exploration of Software Test Coverage in Preflight Contexts",
+          "confidence": 0.8,
+          "type": "methodological"
+        },
+        {
+          "title": "Underexplored Theoretical Foundations of Sequential Test Generation",
+          "confidence": 0.75,
+          "type": "theoretical"
+        }
+      ],
+      "ideas_count": 0,
+      "ideas": [],
+      "proposals_count": 0,
+      "proposals_word_counts": [],
+      "elapsed_s": 679.688078
+    },
+    {
+      "db_id": 121,
+      "domain": "Integration Test Preflight",
+      "status": "completed",
+      "session_id": null,
+      "created_at": "2026-05-11 19:17:57.954989",
+      "completed_at": "2026-05-11 19:29:37.989841",
+      "current_stage": "completed",
+      "stages_completed": [
+        "literature_search",
+        "ingestion",
+        "gap_analysis",
+        "feasibility_scoring",
+        "proposal_synthesis",
+        "proposal_deepening",
+        "export",
+        "completed"
+      ],
+      "stage_report": [
+        {
+          "name": "literature_search",
+          "status": "executed",
+          "elapsed_s": 6.125,
+          "error": null,
+          "skip_reason": null,
+          "retries_used": 0
+        },
+        {
+          "name": "ingestion",
+          "status": "executed",
+          "elapsed_s": 635.669,
+          "error": null,
+          "skip_reason": null,
+          "retries_used": 0
+        },
+        {
+          "name": "gap_analysis",
+          "status": "executed",
+          "elapsed_s": 17.007,
+          "error": null,
+          "skip_reason": null,
+          "retries_used": 0
+        },
+        {
+          "name": "gap_reflection",
+          "status": "skipped_by_strategy",
+          "elapsed_s": 0.0,
+          "error": null,
+          "skip_reason": "Strategy fast_scan",
+          "retries_used": 0
+        },
+        {
+          "name": "idea_generation",
+          "status": "skipped_by_strategy",
+          "elapsed_s": 0.0,
+          "error": null,
+          "skip_reason": "Strategy fast_scan",
+          "retries_used": 0
+        },
+        {
+          "name": "idea_reflection",
+          "status": "skipped_by_strategy",
+          "elapsed_s": 0.0,
+          "error": null,
+          "skip_reason": "Strategy fast_scan",
+          "retries_used": 0
+        },
+        {
+          "name": "novelty_checking",
+          "status": "skipped_by_strategy",
+          "elapsed_s": 0.0,
+          "error": null,
+          "skip_reason": "Strategy fast_scan",
+          "retries_used": 0
+        },
+        {
+          "name": "feasibility_scoring",
+          "status": "executed",
+          "elapsed_s": 11.367,
+          "error": null,
+          "skip_reason": null,
+          "retries_used": 0
+        },
+        {
+          "name": "mechanical_metrics",
+          "status": "skipped_by_strategy",
+          "elapsed_s": 0.0,
+          "error": null,
+          "skip_reason": "Strategy fast_scan",
+          "retries_used": 0
+        },
+        {
+          "name": "proposal_synthesis",
+          "status": "executed",
+          "elapsed_s": 13.711,
+          "error": null,
+          "skip_reason": null,
+          "retries_used": 0
+        },
+        {
+          "name": "adversarial_review",
+          "status": "skipped_by_strategy",
+          "elapsed_s": 0.0,
+          "error": null,
+          "skip_reason": "Strategy fast_scan",
+          "retries_used": 0
+        },
+        {
+          "name": "evaluation",
+          "status": "skipped_by_strategy",
+          "elapsed_s": 0.0,
+          "error": null,
+          "skip_reason": "Strategy fast_scan",
+          "retries_used": 0
+        },
+        {
+          "name": "paper_synthesis",
+          "status": "skipped_by_strategy",
+          "elapsed_s": 0.0,
+          "error": null,
+          "skip_reason": "Strategy fast_scan",
+          "retries_used": 0
+        },
+        {
+          "name": "citation_audit",
+          "status": "skipped_by_strategy",
+          "elapsed_s": 0.0,
+          "error": null,
+          "skip_reason": "Strategy fast_scan",
+          "retries_used": 0
+        },
+        {
+          "name": "proposal_deepening",
+          "status": "executed",
+          "elapsed_s": 0.0,
+          "error": null,
+          "skip_reason": null,
+          "retries_used": 0
+        },
+        {
+          "name": "export",
+          "status": "executed",
+          "elapsed_s": 15.975,
+          "error": null,
+          "skip_reason": null,
+          "retries_used": 0
+        }
+      ],
+      "gaps_count": 4,
+      "gaps": [
+        {
+          "title": "Lack of Machine Learning-Driven Test Case Generation for Open RAN Integration",
+          "confidence": 0.92,
+          "type": "methodological"
+        },
+        {
+          "title": "Absence of Empirical Validation of Preflight Test Procedures in Modern Aerospace Systems",
+          "confidence": 0.9,
+          "type": "empirical"
+        },
+        {
+          "title": "Missing Framework for Cross-Domain Test Integration (Aerospace + Software + AI)",
+          "confidence": 0.85,
+          "type": "cross-domain"
+        },
+        {
+          "title": "Limited Exploration of Dynamic Test Environments in Integration and Test Centers",
+          "confidence": 0.8,
+          "type": "methodological"
+        }
+      ],
+      "ideas_count": 0,
+      "ideas": [],
+      "proposals_count": 0,
+      "proposals_word_counts": [],
+      "elapsed_s": 700.034852
+    },
+    {
+      "db_id": 120,
+      "domain": "Integration Test Preflight",
+      "status": "completed",
+      "session_id": null,
+      "created_at": "2026-05-11 19:15:52.911382",
+      "completed_at": "2026-05-11 19:27:43.440899",
+      "current_stage": "completed",
+      "stages_completed": [
+        "literature_search",
+        "ingestion",
+        "gap_analysis",
+        "feasibility_scoring",
+        "proposal_synthesis",
+        "proposal_deepening",
+        "export",
+        "completed"
+      ],
+      "stage_report": [
+        {
+          "name": "literature_search",
+          "status": "executed",
+          "elapsed_s": 6.007,
+          "error": null,
+          "skip_reason": null,
+          "retries_used": 0
+        },
+        {
+          "name": "ingestion",
+          "status": "executed",
+          "elapsed_s": 644.887,
+          "error": null,
+          "skip_reason": null,
+          "retries_used": 0
+        },
+        {
+          "name": "gap_analysis",
+          "status": "executed",
+          "elapsed_s": 18.018,
+          "error": null,
+          "skip_reason": null,
+          "retries_used": 0
+        },
+        {
+          "name": "gap_reflection",
+          "status": "skipped_by_strategy",
+          "elapsed_s": 0.0,
+          "error": null,
+          "skip_reason": "Strategy fast_scan",
+          "retries_used": 0
+        },
+        {
+          "name": "idea_generation",
+          "status": "skipped_by_strategy",
+          "elapsed_s": 0.0,
+          "error": null,
+          "skip_reason": "Strategy fast_scan",
+          "retries_used": 0
+        },
+        {
+          "name": "idea_reflection",
+          "status": "skipped_by_strategy",
+          "elapsed_s": 0.0,
+          "error": null,
+          "skip_reason": "Strategy fast_scan",
+          "retries_used": 0
+        },
+        {
+          "name": "novelty_checking",
+          "status": "skipped_by_strategy",
+          "elapsed_s": 0.0,
+          "error": null,
+          "skip_reason": "Strategy fast_scan",
+          "retries_used": 0
+        },
+        {
+          "name": "feasibility_scoring",
+          "status": "executed",
+          "elapsed_s": 11.538,
+          "error": null,
+          "skip_reason": null,
+          "retries_used": 0
+        },
+        {
+          "name": "mechanical_metrics",
+          "status": "skipped_by_strategy",
+          "elapsed_s": 0.0,
+          "error": null,
+          "skip_reason": "Strategy fast_scan",
+          "retries_used": 0
+        },
+        {
+          "name": "proposal_synthesis",
+          "status": "executed",
+          "elapsed_s": 13.8,
+          "error": null,
+          "skip_reason": null,
+          "retries_used": 0
+        },
+        {
+          "name": "adversarial_review",
+          "status": "skipped_by_strategy",
+          "elapsed_s": 0.0,
+          "error": null,
+          "skip_reason": "Strategy fast_scan",
+          "retries_used": 0
+        },
+        {
+          "name": "evaluation",
+          "status": "skipped_by_strategy",
+          "elapsed_s": 0.0,
+          "error": null,
+          "skip_reason": "Strategy fast_scan",
+          "retries_used": 0
+        },
+        {
+          "name": "paper_synthesis",
+          "status": "skipped_by_strategy",
+          "elapsed_s": 0.0,
+          "error": null,
+          "skip_reason": "Strategy fast_scan",
+          "retries_used": 0
+        },
+        {
+          "name": "citation_audit",
+          "status": "skipped_by_strategy",
+          "elapsed_s": 0.0,
+          "error": null,
+          "skip_reason": "Strategy fast_scan",
+          "retries_used": 0
+        },
+        {
+          "name": "proposal_deepening",
+          "status": "executed",
+          "elapsed_s": 0.001,
+          "error": null,
+          "skip_reason": null,
+          "retries_used": 0
+        },
+        {
+          "name": "export",
+          "status": "executed",
+          "elapsed_s": 16.139,
+          "error": null,
+          "skip_reason": null,
+          "retries_used": 0
+        }
+      ],
+      "gaps_count": 5,
+      "gaps": [
+        {
+          "title": "Lack of Machine Learning-Driven Preflight Test Planning",
+          "confidence": 0.92,
+          "type": "methodological"
+        },
+        {
+          "title": "Missing Formalization of Preflight Test Sequence Logic",
+          "confidence": 0.9,
+          "type": "theoretical"
+        },
+        {
+          "title": "Limited Exploration of Cross-Domain Preflight Test Principles",
+          "confidence": 0.88,
+          "type": "cross-domain"
+        },
+        {
+          "title": "Absence of Empirical Validation for Preflight Test Automation in Open RAN Systems",
+          "confidence": 0.85,
+          "type": "empirical"
+        },
+        {
+          "title": "Underrepresentation of Human-in-the-Loop Decision Models in Preflight Testing",
+          "confidence": 0.75,
+          "type": "methodological"
+        }
+      ],
+      "ideas_count": 0,
+      "ideas": [],
+      "proposals_count": 0,
+      "proposals_word_counts": [],
+      "elapsed_s": 710.529517
+    },
+    {
+      "db_id": 119,
+      "domain": "Integration Test Preflight",
+      "status": "completed",
+      "session_id": null,
+      "created_at": "2026-05-11 19:14:29.243901",
+      "completed_at": "2026-05-11 19:28:31.569951",
+      "current_stage": "completed",
+      "stages_completed": [
+        "literature_search",
+        "ingestion",
+        "gap_analysis",
+        "feasibility_scoring",
+        "proposal_synthesis",
+        "proposal_deepening",
+        "export",
+        "completed"
+      ],
+      "stage_report": [
+        {
+          "name": "literature_search",
+          "status": "executed",
+          "elapsed_s": 7.586,
+          "error": null,
+          "skip_reason": null,
+          "retries_used": 0
+        },
+        {
+          "name": "ingestion",
+          "status": "executed",
+          "elapsed_s": 777.497,
+          "error": null,
+          "skip_reason": null,
+          "retries_used": 0
+        },
+        {
+          "name": "gap_analysis",
+          "status": "executed",
+          "elapsed_s": 15.847,
+          "error": null,
+          "skip_reason": null,
+          "retries_used": 0
+        },
+        {
+          "name": "gap_reflection",
+          "status": "skipped_by_strategy",
+          "elapsed_s": 0.0,
+          "error": null,
+          "skip_reason": "Strategy fast_scan",
+          "retries_used": 0
+        },
+        {
+          "name": "idea_generation",
+          "status": "skipped_by_strategy",
+          "elapsed_s": 0.0,
+          "error": null,
+          "skip_reason": "Strategy fast_scan",
+          "retries_used": 0
+        },
+        {
+          "name": "idea_reflection",
+          "status": "skipped_by_strategy",
+          "elapsed_s": 0.0,
+          "error": null,
+          "skip_reason": "Strategy fast_scan",
+          "retries_used": 0
+        },
+        {
+          "name": "novelty_checking",
+          "status": "skipped_by_strategy",
+          "elapsed_s": 0.0,
+          "error": null,
+          "skip_reason": "Strategy fast_scan",
+          "retries_used": 0
+        },
+        {
+          "name": "feasibility_scoring",
+          "status": "executed",
+          "elapsed_s": 11.482,
+          "error": null,
+          "skip_reason": null,
+          "retries_used": 0
+        },
+        {
+          "name": "mechanical_metrics",
+          "status": "skipped_by_strategy",
+          "elapsed_s": 0.0,
+          "error": null,
+          "skip_reason": "Strategy fast_scan",
+          "retries_used": 0
+        },
+        {
+          "name": "proposal_synthesis",
+          "status": "executed",
+          "elapsed_s": 13.762,
+          "error": null,
+          "skip_reason": null,
+          "retries_used": 0
+        },
+        {
+          "name": "adversarial_review",
+          "status": "skipped_by_strategy",
+          "elapsed_s": 0.0,
+          "error": null,
+          "skip_reason": "Strategy fast_scan",
+          "retries_used": 0
+        },
+        {
+          "name": "evaluation",
+          "status": "skipped_by_strategy",
+          "elapsed_s": 0.0,
+          "error": null,
+          "skip_reason": "Strategy fast_scan",
+          "retries_used": 0
+        },
+        {
+          "name": "paper_synthesis",
+          "status": "skipped_by_strategy",
+          "elapsed_s": 0.0,
+          "error": null,
+          "skip_reason": "Strategy fast_scan",
+          "retries_used": 0
+        },
+        {
+          "name": "citation_audit",
+          "status": "skipped_by_strategy",
+          "elapsed_s": 0.0,
+          "error": null,
+          "skip_reason": "Strategy fast_scan",
+          "retries_used": 0
+        },
+        {
+          "name": "proposal_deepening",
+          "status": "executed",
+          "elapsed_s": 0.0,
+          "error": null,
+          "skip_reason": null,
+          "retries_used": 0
+        },
+        {
+          "name": "export",
+          "status": "executed",
+          "elapsed_s": 16.019,
+          "error": null,
+          "skip_reason": null,
+          "retries_used": 0
+        }
+      ],
+      "gaps_count": 4,
+      "gaps": [
+        {
+          "title": "Underexplored Theoretical Foundations for Test Sequence Optimization in Complex Systems",
+          "confidence": 0.9,
+          "type": "theoretical"
+        },
+        {
+          "title": "Absence of Quantitative Metrics for Preflight Test Effectiveness",
+          "confidence": 0.85,
+          "type": "empirical"
+        },
+        {
+          "title": "Limited Integration of Open RAN Test Activities with Pre-flight Validation Frameworks",
+          "confidence": 0.8,
+          "type": "cross-domain"
+        },
+        {
+          "title": "Missing Research on Real-Time Test Monitoring and Feedback Loops in Preflight",
+          "confidence": 0.75,
+          "type": "methodological"
+        }
+      ],
+      "ideas_count": 0,
+      "ideas": [],
+      "proposals_count": 0,
+      "proposals_word_counts": [],
+      "elapsed_s": 842.32605
+    },
+    {
+      "db_id": 118,
+      "domain": "Test Preflight Integration",
+      "status": "completed",
+      "session_id": null,
+      "created_at": "2026-05-11 19:13:10.234602",
+      "completed_at": "2026-05-11 19:25:24.622241",
+      "current_stage": "completed",
+      "stages_completed": [
+        "literature_search",
+        "ingestion",
+        "gap_analysis",
+        "feasibility_scoring",
+        "proposal_synthesis",
+        "proposal_deepening",
+        "export",
+        "completed"
+      ],
+      "stage_report": [
+        {
+          "name": "literature_search",
+          "status": "executed",
+          "elapsed_s": 6.734,
+          "error": null,
+          "skip_reason": null,
+          "retries_used": 0
+        },
+        {
+          "name": "ingestion",
+          "status": "executed",
+          "elapsed_s": 666.339,
+          "error": null,
+          "skip_reason": null,
+          "retries_used": 0
+        },
+        {
+          "name": "gap_analysis",
+          "status": "executed",
+          "elapsed_s": 19.039,
+          "error": null,
+          "skip_reason": null,
+          "retries_used": 0
+        },
+        {
+          "name": "gap_reflection",
+          "status": "skipped_by_strategy",
+          "elapsed_s": 0.0,
+          "error": null,
+          "skip_reason": "Strategy fast_scan",
+          "retries_used": 0
+        },
+        {
+          "name": "idea_generation",
+          "status": "skipped_by_strategy",
+          "elapsed_s": 0.0,
+          "error": null,
+          "skip_reason": "Strategy fast_scan",
+          "retries_used": 0
+        },
+        {
+          "name": "idea_reflection",
+          "status": "skipped_by_strategy",
+          "elapsed_s": 0.0,
+          "error": null,
+          "skip_reason": "Strategy fast_scan",
+          "retries_used": 0
+        },
+        {
+          "name": "novelty_checking",
+          "status": "skipped_by_strategy",
+          "elapsed_s": 0.0,
+          "error": null,
+          "skip_reason": "Strategy fast_scan",
+          "retries_used": 0
+        },
+        {
+          "name": "feasibility_scoring",
+          "status": "executed",
+          "elapsed_s": 11.634,
+          "error": null,
+          "skip_reason": null,
+          "retries_used": 0
+        },
+        {
+          "name": "mechanical_metrics",
+          "status": "skipped_by_strategy",
+          "elapsed_s": 0.0,
+          "error": null,
+          "skip_reason": "Strategy fast_scan",
+          "retries_used": 0
+        },
+        {
+          "name": "proposal_synthesis",
+          "status": "executed",
+          "elapsed_s": 13.889,
+          "error": null,
+          "skip_reason": null,
+          "retries_used": 0
+        },
+        {
+          "name": "adversarial_review",
+          "status": "skipped_by_strategy",
+          "elapsed_s": 0.0,
+          "error": null,
+          "skip_reason": "Strategy fast_scan",
+          "retries_used": 0
+        },
+        {
+          "name": "evaluation",
+          "status": "skipped_by_strategy",
+          "elapsed_s": 0.0,
+          "error": null,
+          "skip_reason": "Strategy fast_scan",
+          "retries_used": 0
+        },
+        {
+          "name": "paper_synthesis",
+          "status": "skipped_by_strategy",
+          "elapsed_s": 0.0,
+          "error": null,
+          "skip_reason": "Strategy fast_scan",
+          "retries_used": 0
+        },
+        {
+          "name": "citation_audit",
+          "status": "skipped_by_strategy",
+          "elapsed_s": 0.0,
+          "error": null,
+          "skip_reason": "Strategy fast_scan",
+          "retries_used": 0
+        },
+        {
+          "name": "proposal_deepening",
+          "status": "executed",
+          "elapsed_s": 0.0,
+          "error": null,
+          "skip_reason": null,
+          "retries_used": 0
+        },
+        {
+          "name": "export",
+          "status": "executed",
+          "elapsed_s": 16.124,
+          "error": null,
+          "skip_reason": null,
+          "retries_used": 0
+        }
+      ],
+      "gaps_count": 5,
+      "gaps": [
+        {
+          "title": "Lack of Machine Learning-Driven Test Case Generation for Preflight Testing",
+          "confidence": 0.92,
+          "type": "methodological"
+        },
+        {
+          "title": "Missing Theoretical Framework for Dynamic Test Prioritization in Preflight Environments",
+          "confidence": 0.9,
+          "type": "theoretical"
+        },
+        {
+          "title": "Limited Exploration of Cross-Domain Test Integration Between Aerospace and Software Systems",
+          "confidence": 0.88,
+          "type": "cross-domain"
+        },
+        {
+          "title": "Absence of Empirical Validation of Open RAN Test Integration in Real-World Deployments",
+          "confidence": 0.85,
+          "type": "empirical"
+        },
+        {
+          "title": "Underrepresentation of Human-in-the-Loop Decision Making in Preflight Test Design",
+          "confidence": 0.8,
+          "type": "methodological"
+        }
+      ],
+      "ideas_count": 0,
+      "ideas": [],
+      "proposals_count": 0,
+      "proposals_word_counts": [],
+      "elapsed_s": 734.387639
+    },
+    {
+      "db_id": 117,
+      "domain": "Transformer Attention Mechanisms",
+      "status": "completed",
+      "session_id": null,
+      "created_at": "2026-05-11 18:45:15.960166",
+      "completed_at": "2026-05-11 19:00:53.955609",
+      "current_stage": "completed",
+      "stages_completed": [
+        "literature_search",
+        "ingestion",
+        "gap_analysis",
+        "feasibility_scoring",
+        "proposal_synthesis",
+        "proposal_deepening",
+        "export",
+        "completed"
+      ],
+      "stage_report": [
+        {
+          "name": "literature_search",
+          "status": "executed",
+          "elapsed_s": 6.941,
+          "error": null,
+          "skip_reason": null,
+          "retries_used": 0
+        },
+        {
+          "name": "ingestion",
+          "status": "executed",
+          "elapsed_s": 851.393,
+          "error": null,
+          "skip_reason": null,
+          "retries_used": 0
+        },
+        {
+          "name": "gap_analysis",
+          "status": "executed",
+          "elapsed_s": 37.156,
+          "error": null,
+          "skip_reason": null,
+          "retries_used": 0
+        },
+        {
+          "name": "gap_reflection",
+          "status": "skipped_by_strategy",
+          "elapsed_s": 0.0,
+          "error": null,
+          "skip_reason": "Strategy fast_scan",
+          "retries_used": 0
+        },
+        {
+          "name": "idea_generation",
+          "status": "skipped_by_strategy",
+          "elapsed_s": 0.0,
+          "error": null,
+          "skip_reason": "Strategy fast_scan",
+          "retries_used": 0
+        },
+        {
+          "name": "idea_reflection",
+          "status": "skipped_by_strategy",
+          "elapsed_s": 0.0,
+          "error": null,
+          "skip_reason": "Strategy fast_scan",
+          "retries_used": 0
+        },
+        {
+          "name": "novelty_checking",
+          "status": "skipped_by_strategy",
+          "elapsed_s": 0.0,
+          "error": null,
+          "skip_reason": "Strategy fast_scan",
+          "retries_used": 0
+        },
+        {
+          "name": "feasibility_scoring",
+          "status": "executed",
+          "elapsed_s": 11.501,
+          "error": null,
+          "skip_reason": null,
+          "retries_used": 0
+        },
+        {
+          "name": "mechanical_metrics",
+          "status": "skipped_by_strategy",
+          "elapsed_s": 0.0,
+          "error": null,
+          "skip_reason": "Strategy fast_scan",
+          "retries_used": 0
+        },
+        {
+          "name": "proposal_synthesis",
+          "status": "executed",
+          "elapsed_s": 13.784,
+          "error": null,
+          "skip_reason": null,
+          "retries_used": 0
+        },
+        {
+          "name": "adversarial_review",
+          "status": "skipped_by_strategy",
+          "elapsed_s": 0.0,
+          "error": null,
+          "skip_reason": "Strategy fast_scan",
+          "retries_used": 0
+        },
+        {
+          "name": "evaluation",
+          "status": "skipped_by_strategy",
+          "elapsed_s": 0.0,
+          "error": null,
+          "skip_reason": "Strategy fast_scan",
+          "retries_used": 0
+        },
+        {
+          "name": "paper_synthesis",
+          "status": "skipped_by_strategy",
+          "elapsed_s": 0.0,
+          "error": null,
+          "skip_reason": "Strategy fast_scan",
+          "retries_used": 0
+        },
+        {
+          "name": "citation_audit",
+          "status": "skipped_by_strategy",
+          "elapsed_s": 0.0,
+          "error": null,
+          "skip_reason": "Strategy fast_scan",
+          "retries_used": 0
+        },
+        {
+          "name": "proposal_deepening",
+          "status": "executed",
+          "elapsed_s": 0.0,
+          "error": null,
+          "skip_reason": null,
+          "retries_used": 0
+        },
+        {
+          "name": "export",
+          "status": "executed",
+          "elapsed_s": 16.092,
+          "error": null,
+          "skip_reason": null,
+          "retries_used": 0
+        }
+      ],
+      "gaps_count": 5,
+      "gaps": [
+        {
+          "title": "Dynamic Attention Mechanism Calibration in Real-Time Systems",
+          "confidence": 0.92,
+          "type": "methodological"
+        },
+        {
+          "title": "Attention Mechanism Performance in Low-Data Scenarios",
+          "confidence": 0.87,
+          "type": "empirical"
+        },
+        {
+          "title": "Interpretability of Attention Weights in Multimodal Transformer Architectures",
+          "confidence": 0.85,
+          "type": "theoretical"
+        },
+        {
+          "title": "Attention Mechanism Robustness to Adversarial Perturbations",
+          "confidence": 0.8,
+          "type": "empirical"
+        },
+        {
+          "title": "Attention Mechanisms in Graph-Based Transformers for Dynamic Networks",
+          "confidence": 0.78,
+          "type": "methodological"
+        }
+      ],
+      "ideas_count": 0,
+      "ideas": [],
+      "proposals_count": 0,
+      "proposals_word_counts": [],
+      "elapsed_s": 937.995443
+    },
+    {
+      "db_id": 116,
+      "domain": "Test Domain",
+      "status": "completed",
+      "session_id": null,
+      "created_at": "2026-05-11 16:44:58.498715",
+      "completed_at": "2026-05-11 17:05:22.407839",
+      "current_stage": "completed",
+      "stages_completed": [
+        "literature_search",
+        "ingestion",
+        "gap_analysis",
+        "feasibility_scoring",
+        "proposal_synthesis",
+        "proposal_deepening",
+        "export",
+        "completed"
+      ],
+      "stage_report": [
+        {
+          "name": "literature_search",
+          "status": "executed",
+          "elapsed_s": 73.748,
+          "error": null,
+          "skip_reason": null,
+          "retries_used": 0
+        },
+        {
+          "name": "ingestion",
+          "status": "executed",
+          "elapsed_s": 1119.944,
+          "error": null,
+          "skip_reason": null,
+          "retries_used": 0
+        },
+        {
+          "name": "gap_analysis",
+          "status": "executed",
+          "elapsed_s": 29.587,
+          "error": null,
+          "skip_reason": null,
+          "retries_used": 0
+        },
+        {
+          "name": "gap_reflection",
+          "status": "skipped_by_strategy",
+          "elapsed_s": 0.0,
+          "error": null,
+          "skip_reason": "Strategy fast_scan",
+          "retries_used": 0
+        },
+        {
+          "name": "idea_generation",
+          "status": "skipped_by_strategy",
+          "elapsed_s": 0.0,
+          "error": null,
+          "skip_reason": "Strategy fast_scan",
+          "retries_used": 0
+        },
+        {
+          "name": "idea_reflection",
+          "status": "skipped_by_strategy",
+          "elapsed_s": 0.0,
+          "error": null,
+          "skip_reason": "Strategy fast_scan",
+          "retries_used": 0
+        },
+        {
+          "name": "novelty_checking",
+          "status": "skipped_by_strategy",
+          "elapsed_s": 0.0,
+          "error": null,
+          "skip_reason": "Strategy fast_scan",
+          "retries_used": 0
+        },
+        {
+          "name": "feasibility_scoring",
+          "status": "executed",
+          "elapsed_s": 0.0,
+          "error": null,
+          "skip_reason": null,
+          "retries_used": 0
+        },
+        {
+          "name": "mechanical_metrics",
+          "status": "skipped_by_strategy",
+          "elapsed_s": 0.0,
+          "error": null,
+          "skip_reason": "Strategy fast_scan",
+          "retries_used": 0
+        },
+        {
+          "name": "proposal_synthesis",
+          "status": "executed",
+          "elapsed_s": 0.001,
+          "error": null,
+          "skip_reason": null,
+          "retries_used": 0
+        },
+        {
+          "name": "adversarial_review",
+          "status": "skipped_by_strategy",
+          "elapsed_s": 0.0,
+          "error": null,
+          "skip_reason": "Strategy fast_scan",
+          "retries_used": 0
+        },
+        {
+          "name": "evaluation",
+          "status": "skipped_by_strategy",
+          "elapsed_s": 0.0,
+          "error": null,
+          "skip_reason": "Strategy fast_scan",
+          "retries_used": 0
+        },
+        {
+          "name": "paper_synthesis",
+          "status": "skipped_by_strategy",
+          "elapsed_s": 0.0,
+          "error": null,
+          "skip_reason": "Strategy fast_scan",
+          "retries_used": 0
+        },
+        {
+          "name": "citation_audit",
+          "status": "skipped_by_strategy",
+          "elapsed_s": 0.0,
+          "error": null,
+          "skip_reason": "Strategy fast_scan",
+          "retries_used": 0
+        },
+        {
+          "name": "proposal_deepening",
+          "status": "executed",
+          "elapsed_s": 0.0,
+          "error": null,
+          "skip_reason": null,
+          "retries_used": 0
+        },
+        {
+          "name": "export",
+          "status": "executed",
+          "elapsed_s": 0.001,
+          "error": null,
+          "skip_reason": null,
+          "retries_used": 0
+        }
+      ],
+      "gaps_count": 5,
+      "gaps": [
+        {
+          "title": "Lack of Evaluation Frameworks for Continual Test-Time Domain Adaptation",
+          "confidence": 0.92,
+          "type": "methodological"
+        },
+        {
+          "title": "Limited Integration of Ontology Construction with Domain-Referenced Test Interpretation",
+          "confidence": 0.85,
+          "type": "cross-domain"
+        },
+        {
+          "title": "Missing Evaluation of Ontology-Driven Test Generation in Dynamic Domains",
+          "confidence": 0.83,
+          "type": "methodological"
+        },
+        {
+          "title": "Underexplored Application of Domain Invariant Embeddings in Medical XAI",
+          "confidence": 0.8,
+          "type": "theoretical"
+        },
+        {
+          "title": "Absence of Real-World Validation for Open Problems in Software Test Coverage",
+          "confidence": 0.78,
+          "type": "empirical"
+        }
+      ],
+      "ideas_count": 0,
+      "ideas": [],
+      "proposals_count": 0,
+      "proposals_word_counts": [],
+      "elapsed_s": 1223.909124
+    },
+    {
+      "db_id": 111,
+      "domain": "Event-sourced and transactionally governed multi-agent LLM systems for security-auditable software engineering workflows",
+      "status": "completed",
+      "session_id": "esaa-sagallm-deep-research",
+      "created_at": "2026-05-11 11:36:59.844264",
+      "completed_at": "2026-05-11 11:50:00.309739",
+      "current_stage": "completed",
+      "stages_completed": [
+        "literature_search",
+        "ingestion",
+        "gap_analysis",
+        "idea_generation",
+        "feasibility_scoring",
+        "mechanical_metrics",
+        "proposal_synthesis",
+        "adversarial_review",
+        "paper_synthesis",
+        "citation_audit",
+        "proposal_deepening",
+        "export",
+        "completed"
+      ],
+      "stage_report": {},
+      "gaps_count": 5,
+      "gaps": [
+        {
+          "title": "Lack of Event-Driven Security Auditing in Multi-Agent LLM Systems",
+          "confidence": 0.95,
+          "type": "methodological"
+        },
+        {
+          "title": "Missing Integration of Ethical Guardrails in LLM Agent Decision-Making",
+          "confidence": 0.92,
+          "type": "methodological"
+        },
+        {
+          "title": "Absence of Formal Verification in LLM-Driven Agent Decision Chains",
+          "confidence": 0.9,
+          "type": "theoretical"
+        },
+        {
+          "title": "Underexplored Interplay Between Tool Orchestration and Event Sourcing in Agent Systems",
+          "confidence": 0.88,
+          "type": "cross-domain"
+        },
+        {
+          "title": "Limited Empirical Evaluation of Agent Performance in Real-World Software Development Workflows",
+          "confidence": 0.85,
+          "type": "empirical"
+        }
+      ],
+      "ideas_count": 0,
+      "ideas": [],
+      "proposals_count": 0,
+      "proposals_word_counts": [],
+      "elapsed_s": 780.465475
+    },
+    {
+      "db_id": 109,
+      "domain": "Event-Sourced Transactional Architectures for Multi-Agent LLM Systems",
+      "status": "completed",
+      "session_id": null,
+      "created_at": "2026-05-11 10:15:02.966396",
+      "completed_at": "2026-05-11 10:26:42.877459",
+      "current_stage": "completed",
+      "stages_completed": [
+        "literature_search",
+        "ingestion",
+        "gap_analysis",
+        "idea_generation",
+        "feasibility_scoring",
+        "mechanical_metrics",
+        "proposal_synthesis",
+        "proposal_deepening",
+        "export",
+        "completed"
+      ],
+      "stage_report": {},
+      "gaps_count": 5,
+      "gaps": [
+        {
+          "title": "Integration of Knowledge Graphs with LLMs in Real-Time Decision Making",
+          "confidence": 0.92,
+          "type": "methodological"
+        },
+        {
+          "title": "Explainability of AI Agents in Dynamic, Real-World Environments",
+          "confidence": 0.9,
+          "type": "empirical"
+        },
+        {
+          "title": "Evaluation Frameworks for Generative AI in UI Design Feedback",
+          "confidence": 0.88,
+          "type": "methodological"
+        },
+        {
+          "title": "Ethical and Bias Mitigation in AI Agent Collaboration via Blockchain",
+          "confidence": 0.85,
+          "type": "theoretical"
+        },
+        {
+          "title": "Human-AI Co-Design in Sustainable Entrepreneurship",
+          "confidence": 0.78,
+          "type": "cross-domain"
+        }
+      ],
+      "ideas_count": 0,
+      "ideas": [],
+      "proposals_count": 0,
+      "proposals_word_counts": [],
+      "elapsed_s": 699.911063
+    },
+    {
+      "db_id": 108,
+      "domain": "Sparse Mixture of Experts for Efficient LLM Inference",
+      "status": "completed",
+      "session_id": null,
+      "created_at": "2026-05-11 09:38:17.851660",
+      "completed_at": "2026-05-11 10:06:26.504248",
+      "current_stage": "completed",
+      "stages_completed": [
+        "literature_search",
+        "ingestion",
+        "gap_analysis",
+        "idea_generation",
+        "feasibility_scoring",
+        "mechanical_metrics",
+        "proposal_synthesis",
+        "proposal_deepening",
+        "export",
+        "completed"
+      ],
+      "stage_report": {},
+      "gaps_count": 5,
+      "gaps": [
+        {
+          "title": "Lack of Evaluation Frameworks for MoE Models in Healthcare Settings",
+          "confidence": 0.92,
+          "type": "empirical"
+        },
+        {
+          "title": "Lack of Real-World Deployment Studies for MoE Models in Practice",
+          "confidence": 0.9,
+          "type": "empirical"
+        },
+        {
+          "title": "Missing Analysis of Bias and Fairness in MoE-Driven Decision Support Systems",
+          "confidence": 0.88,
+          "type": "empirical"
+        },
+        {
+          "title": "Limited Understanding of Expert Specialization Dynamics in MoE Models",
+          "confidence": 0.85,
+          "type": "theoretical"
+        },
+        {
+          "title": "Absence of Cross-Domain Transfer Studies for MoE Models",
+          "confidence": 0.8,
+          "type": "methodological"
+        }
+      ],
+      "ideas_count": 2,
+      "ideas": [
+        {
+          "title": "MoE-ClinicBench: A Standardized Evaluation Framework for Mixture-of-Experts LLMs in Clinical Decision-Making",
+          "novelty": null,
+          "feasibility": null,
+          "overall": null
+        },
+        {
+          "title": "FairMoE: Auditing and Mitigating Bias in Expert Routing for Cancer Treatment Recommendations",
+          "novelty": null,
+          "feasibility": null,
+          "overall": null
+        }
+      ],
+      "proposals_count": 2,
+      "proposals_word_counts": [
+        5609,
+        4966
+      ],
+      "elapsed_s": 1688.652588
+    },
+    {
+      "db_id": 107,
+      "domain": "Mechanistic Interpretability of Transformer Reasoning",
+      "status": "completed",
+      "session_id": null,
+      "created_at": "2026-05-11 09:29:12.570934",
+      "completed_at": "2026-05-11 09:34:40.370303",
+      "current_stage": "completed",
+      "stages_completed": [
+        "literature_search",
+        "ingestion",
+        "gap_analysis",
+        "feasibility_scoring",
+        "proposal_synthesis",
+        "proposal_deepening",
+        "export",
+        "completed"
+      ],
+      "stage_report": {},
+      "gaps_count": 5,
+      "gaps": [
+        {
+          "title": "Lack of Mechanistic Understanding of Attention Dynamics in LLMs",
+          "confidence": 0.95,
+          "type": "theoretical"
+        },
+        {
+          "title": "Missing Empirical Evaluation of LLMs in Scientific Discovery Workflows",
+          "confidence": 0.9,
+          "type": "empirical"
+        },
+        {
+          "title": "Absence of Mechanistic Interpretability in Non-Transformer Sequence Models (e.g., Mamba, RWKV)",
+          "confidence": 0.88,
+          "type": "methodological"
+        },
+        {
+          "title": "Underexplored Causal Inference in LLMs and Their Generated Outputs",
+          "confidence": 0.85,
+          "type": "theoretical"
+        },
+        {
+          "title": "Lack of Cross-Domain Transfer of LLM Reasoning Capabilities",
+          "confidence": 0.8,
+          "type": "methodological"
+        }
+      ],
+      "ideas_count": 0,
+      "ideas": [],
+      "proposals_count": 0,
+      "proposals_word_counts": [],
+      "elapsed_s": 327.799369
+    },
+    {
+      "db_id": 106,
+      "domain": "Sparse Mixture of Experts in LLMs",
+      "status": "completed",
+      "session_id": null,
+      "created_at": "2026-05-10 15:53:37.931947",
+      "completed_at": "2026-05-10 16:11:05.667835",
+      "current_stage": "completed",
+      "stages_completed": [
+        "literature_search",
+        "ingestion",
+        "gap_analysis",
+        "idea_generation",
+        "feasibility_scoring",
+        "mechanical_metrics",
+        "proposal_synthesis",
+        "proposal_deepening",
+        "export",
+        "completed"
+      ],
+      "stage_report": {},
+      "gaps_count": 5,
+      "gaps": [
+        {
+          "title": "Lack of Evaluation Frameworks for LLMs in Low-Resource and Multilingual Settings",
+          "confidence": 0.92,
+          "type": "empirical"
+        },
+        {
+          "title": "Lack of Cross-Domain Transfer and Generalization Studies in LLMs",
+          "confidence": 0.91,
+          "type": "empirical"
+        },
+        {
+          "title": "Underrepresentation of Long-Term Memory and Stateful Reasoning in LLM Architectures",
+          "confidence": 0.9,
+          "type": "theoretical"
+        },
+        {
+          "title": "Limited Exploration of LLMs in Real-Time, Interactive, and Human-AI Collaborative Environments",
+          "confidence": 0.88,
+          "type": "methodological"
+        },
+        {
+          "title": "Insufficient Analysis of LLMs in Ethical and Legal Decision-Making Contexts",
+          "confidence": 0.85,
+          "type": "theoretical"
+        }
+      ],
+      "ideas_count": 2,
+      "ideas": [
+        {
+          "title": "Cross-Lingual Diagnostic Adapter: A Parameter-Efficient Framework for Evaluating and Aligning LLMs in Low-Resource Languages",
+          "novelty": null,
+          "feasibility": null,
+          "overall": null
+        },
+        {
+          "title": "DomainBridge: An Episodic Memory Architecture for Zero-Shot Cross-Domain Transfer in LLMs",
+          "novelty": null,
+          "feasibility": null,
+          "overall": null
+        }
+      ],
+      "proposals_count": 2,
+      "proposals_word_counts": [
+        4652,
+        4800
+      ],
+      "elapsed_s": 1047.735888
+    },
+    {
+      "db_id": 105,
+      "domain": "Sparse Mixture of Experts in Large Language Models",
+      "status": "completed",
+      "session_id": null,
+      "created_at": "2026-05-10 15:47:04.857796",
+      "completed_at": "2026-05-10 15:52:26.187268",
+      "current_stage": "completed",
+      "stages_completed": [
+        "literature_search",
+        "ingestion",
+        "gap_analysis",
+        "feasibility_scoring",
+        "proposal_synthesis",
+        "proposal_deepening",
+        "export",
+        "completed"
+      ],
+      "stage_report": {},
+      "gaps_count": 3,
+      "gaps": [
+        {
+          "title": "Lack of Interpretable and Explainable Reasoning in Large Language Models",
+          "confidence": 0.92,
+          "type": "methodological"
+        },
+        {
+          "title": "Absence of Evaluation Frameworks for Real-World Robustness in AI Systems",
+          "confidence": 0.88,
+          "type": "empirical"
+        },
+        {
+          "title": "Limited Integration of Knowledge Graphs with Large Language Models",
+          "confidence": 0.85,
+          "type": "cross-domain"
+        }
+      ],
+      "ideas_count": 0,
+      "ideas": [],
+      "proposals_count": 0,
+      "proposals_word_counts": [],
+      "elapsed_s": 321.329472
+    },
+    {
+      "db_id": 104,
+      "domain": "Mechanistic Interpretability of LLMs",
+      "status": "completed",
+      "session_id": null,
+      "created_at": "2026-05-10 15:19:28.435363",
+      "completed_at": "2026-05-10 15:26:22.368912",
+      "current_stage": "completed",
+      "stages_completed": [
+        "literature_search",
+        "ingestion",
+        "gap_analysis",
+        "feasibility_scoring",
+        "proposal_synthesis",
+        "proposal_deepening",
+        "export",
+        "completed"
+      ],
+      "stage_report": {},
+      "gaps_count": 1,
+      "gaps": [
+        {
+          "title": "Explainability of Generative AI in High-Stakes Decision-Making",
+          "confidence": 0.9,
+          "type": "methodological"
+        }
+      ],
+      "ideas_count": 0,
+      "ideas": [],
+      "proposals_count": 0,
+      "proposals_word_counts": [],
+      "elapsed_s": 413.933549
+    },
+    {
+      "db_id": 103,
+      "domain": "Mechanistic Interpretability of LLMs",
+      "status": "completed",
+      "session_id": null,
+      "created_at": "2026-05-10 15:15:20.494482",
+      "completed_at": "2026-05-10 15:24:11.430505",
+      "current_stage": "completed",
+      "stages_completed": [
+        "literature_search",
+        "ingestion",
+        "gap_analysis",
+        "feasibility_scoring",
+        "proposal_synthesis",
+        "proposal_deepening",
+        "export",
+        "completed"
+      ],
+      "stage_report": {},
+      "gaps_count": 3,
+      "gaps": [
+        {
+          "title": "Mechanistic Interpretability of LLMs in Domain-Specific Reasoning",
+          "confidence": 0.92,
+          "type": "methodological"
+        },
+        {
+          "title": "Explainability of Generative AI in Real-World Decision-Making Contexts",
+          "confidence": 0.88,
+          "type": "empirical"
+        },
+        {
+          "title": "Cross-Domain Transfer of LLM Reasoning Mechanisms",
+          "confidence": 0.85,
+          "type": "theoretical"
+        }
+      ],
+      "ideas_count": 0,
+      "ideas": [],
+      "proposals_count": 0,
+      "proposals_word_counts": [],
+      "elapsed_s": 530.936023
+    },
+    {
+      "db_id": 102,
+      "domain": "Mechanistic Interpretability of LLMs",
+      "status": "completed",
+      "session_id": null,
+      "created_at": "2026-05-10 15:15:13.679859",
+      "completed_at": "2026-05-10 15:22:18.292404",
+      "current_stage": "completed",
+      "stages_completed": [
+        "literature_search",
+        "ingestion",
+        "gap_analysis",
+        "feasibility_scoring",
+        "proposal_synthesis",
+        "proposal_deepening",
+        "export",
+        "completed"
+      ],
+      "stage_report": {},
+      "gaps_count": 3,
+      "gaps": [
+        {
+          "title": "Mechanistic Interpretability of LLMs in Dynamic, Real-World Decision Contexts",
+          "confidence": 0.92,
+          "type": "methodological"
+        },
+        {
+          "title": "Empirical Evaluation of Bias in LLMs Across Multilingual and Multicultural Contexts",
+          "confidence": 0.9,
+          "type": "empirical"
+        },
+        {
+          "title": "Cross-Domain Transfer of Explainability in Generative AI Models",
+          "confidence": 0.85,
+          "type": "cross-domain"
+        }
+      ],
+      "ideas_count": 0,
+      "ideas": [],
+      "proposals_count": 0,
+      "proposals_word_counts": [],
+      "elapsed_s": 424.612545
+    },
+    {
+      "db_id": 97,
+      "domain": "AI/NLP",
+      "status": "completed",
+      "session_id": null,
+      "created_at": "2026-05-09 13:24:52.524842",
+      "completed_at": "2026-05-09 13:45:22.455288",
+      "current_stage": "completed",
+      "stages_completed": [
+        "literature_search",
+        "ingestion",
+        "gap_analysis",
+        "idea_generation",
+        "novelty_checking",
+        "feasibility_scoring",
+        "mechanical_metrics",
+        "proposal_synthesis",
+        "proposal_deepening",
+        "export",
+        "completed"
+      ],
+      "stage_report": {},
+      "gaps_count": 3,
+      "gaps": [
+        {
+          "title": "Limited Evaluation of Explainability in Medical NLP Applications",
+          "confidence": 0.9,
+          "type": "empirical"
+        },
+        {
+          "title": "Missing Integration of Energy Efficiency and Sustainability in AI Model Design",
+          "confidence": 0.87,
+          "type": "empirical"
+        },
+        {
+          "title": "Underrepresentation of Low-Resource Language Models in Global Applications",
+          "confidence": 0.85,
+          "type": "theoretical"
+        }
+      ],
+      "ideas_count": 2,
+      "ideas": [
+        {
+          "title": "PromptAdapter: A Multi-Domain Prompt Tuning Framework for Cross-Domain NLP Transfer",
+          "novelty": null,
+          "feasibility": null,
+          "overall": null
+        },
+        {
+          "title": "ClinXAI: A Clinically-Grounded Explainable AI Framework for Mental Health and Pathology NLP",
+          "novelty": null,
+          "feasibility": null,
+          "overall": null
+        }
+      ],
+      "proposals_count": 2,
+      "proposals_word_counts": [
+        4534,
+        5025
+      ],
+      "elapsed_s": 1229.930446
+    },
+    {
+      "db_id": 96,
+      "domain": "AI/NLP",
+      "status": "completed",
+      "session_id": null,
+      "created_at": "2026-05-09 12:50:38.156091",
+      "completed_at": "2026-05-09 13:11:57.094471",
+      "current_stage": "completed",
+      "stages_completed": [
+        "literature_search",
+        "ingestion",
+        "gap_analysis",
+        "idea_generation",
+        "novelty_checking",
+        "feasibility_scoring",
+        "mechanical_metrics",
+        "proposal_synthesis",
+        "proposal_deepening",
+        "export",
+        "completed"
+      ],
+      "stage_report": {},
+      "gaps_count": 4,
+      "gaps": [
+        {
+          "title": "Absence of Evaluation Frameworks for AI in Orthopaedic Research Implementation",
+          "confidence": 0.9,
+          "type": "methodological"
+        },
+        {
+          "title": "Limited Empirical Evaluation of Explainability in Medical NLP Applications",
+          "confidence": 0.88,
+          "type": "empirical"
+        },
+        {
+          "title": "Limited Integration of Energy Efficiency and Sustainability in Deep Learning Research",
+          "confidence": 0.87,
+          "type": "theoretical"
+        },
+        {
+          "title": "Underrepresentation of Multilingual and Low-Resource Language Models in Healthcare NLP",
+          "confidence": 0.85,
+          "type": "theoretical"
+        }
+      ],
+      "ideas_count": 2,
+      "ideas": [
+        {
+          "title": "Cross-Domain Prompt Transferability Framework for Specialized NLP Tasks",
+          "novelty": null,
+          "feasibility": null,
+          "overall": null
+        },
+        {
+          "title": "Clinically-Grounded Explainability Evaluation Framework for Medical NLP",
+          "novelty": null,
+          "feasibility": null,
+          "overall": null
+        }
+      ],
+      "proposals_count": 2,
+      "proposals_word_counts": [
+        5396,
+        4539
+      ],
+      "elapsed_s": 1278.93838
+    },
+    {
+      "db_id": 95,
+      "domain": "AI/NLP",
+      "status": "completed",
+      "session_id": null,
+      "created_at": "2026-05-09 12:10:50.093563",
+      "completed_at": "2026-05-09 12:29:02.326392",
+      "current_stage": "completed",
+      "stages_completed": [
+        "literature_search",
+        "ingestion",
+        "gap_analysis",
+        "idea_generation",
+        "novelty_checking",
+        "feasibility_scoring",
+        "mechanical_metrics",
+        "proposal_synthesis",
+        "proposal_deepening",
+        "export",
+        "completed"
+      ],
+      "stage_report": {},
+      "gaps_count": 4,
+      "gaps": [
+        {
+          "title": "Absence of Evaluation Frameworks for Explainable AI in Clinical NLP",
+          "confidence": 0.9,
+          "type": "empirical"
+        },
+        {
+          "title": "Underrepresentation of Low-Resource Language Models in Multilingual NLP Research",
+          "confidence": 0.88,
+          "type": "empirical"
+        },
+        {
+          "title": "Missing Integration of AI in Early-Stage Medical Research Workflow",
+          "confidence": 0.87,
+          "type": "methodological"
+        },
+        {
+          "title": "Limited Exploration of Ethical Implications in Prompt-Based AI for Sensitive Domains",
+          "confidence": 0.85,
+          "type": "theoretical"
+        }
+      ],
+      "ideas_count": 2,
+      "ideas": [
+        {
+          "title": "Cross-Domain Prompt Tuning Adaptation Framework for Specialized NLP Tasks",
+          "novelty": null,
+          "feasibility": null,
+          "overall": null
+        },
+        {
+          "title": "Clinically-Grounded Evaluation Framework for Explainable AI in Pathology NLP",
+          "novelty": null,
+          "feasibility": null,
+          "overall": null
+        }
+      ],
+      "proposals_count": 2,
+      "proposals_word_counts": [
+        4483,
+        4624
+      ],
+      "elapsed_s": 1092.232829
+    },
+    {
+      "db_id": 94,
+      "domain": "AI/NLP",
+      "status": "completed",
+      "session_id": null,
+      "created_at": "2026-05-09 11:57:59.028319",
+      "completed_at": "2026-05-09 12:07:34.209044",
+      "current_stage": "completed",
+      "stages_completed": [
+        "literature_search",
+        "ingestion",
+        "gap_analysis",
+        "feasibility_scoring",
+        "proposal_synthesis",
+        "proposal_deepening",
+        "export",
+        "completed"
+      ],
+      "stage_report": {},
+      "gaps_count": 5,
+      "gaps": [
+        {
+          "title": "Lack of Cross-Domain Transfer in Prompt-Based NLP Models",
+          "confidence": 0.92,
+          "type": "methodological"
+        },
+        {
+          "title": "Limited Evaluation of Explainability in Clinical NLP Applications",
+          "confidence": 0.9,
+          "type": "empirical"
+        },
+        {
+          "title": "Absence of Benchmarking Frameworks for AI in Orthopaedic Research",
+          "confidence": 0.88,
+          "type": "methodological"
+        },
+        {
+          "title": "Missing Integration of AI in Software Engineering Workflows for ML Systems",
+          "confidence": 0.87,
+          "type": "methodological"
+        },
+        {
+          "title": "Underrepresentation of Multilingual and Low-Resource Language Models in Healthcare",
+          "confidence": 0.85,
+          "type": "theoretical"
+        }
+      ],
+      "ideas_count": 0,
+      "ideas": [],
+      "proposals_count": 0,
+      "proposals_word_counts": [],
+      "elapsed_s": 575.180725
+    },
+    {
+      "db_id": 92,
+      "domain": "AI/NLP",
+      "status": "completed",
+      "session_id": null,
+      "created_at": "2026-05-09 11:45:15.319767",
+      "completed_at": "2026-05-09 11:52:49.164951",
+      "current_stage": "completed",
+      "stages_completed": [
+        "literature_search",
+        "ingestion",
+        "gap_analysis",
+        "feasibility_scoring",
+        "proposal_synthesis",
+        "proposal_deepening",
+        "export",
+        "completed"
+      ],
+      "stage_report": {},
+      "gaps_count": 0,
+      "gaps": [],
+      "ideas_count": 0,
+      "ideas": [],
+      "proposals_count": 0,
+      "proposals_word_counts": [],
+      "elapsed_s": 453.845184
+    },
+    {
+      "db_id": 91,
+      "domain": "AI/NLP",
+      "status": "completed",
+      "session_id": null,
+      "created_at": "2026-05-09 03:51:06.550076",
+      "completed_at": "2026-05-09 04:02:14.417516",
+      "current_stage": "completed",
+      "stages_completed": [
+        "literature_search",
+        "ingestion",
+        "gap_analysis",
+        "idea_generation",
+        "novelty_checking",
+        "feasibility_scoring",
+        "mechanical_metrics",
+        "proposal_synthesis",
+        "proposal_deepening",
+        "export",
+        "completed"
+      ],
+      "stage_report": {},
+      "gaps_count": 0,
+      "gaps": [],
+      "ideas_count": 0,
+      "ideas": [],
+      "proposals_count": 0,
+      "proposals_word_counts": [],
+      "elapsed_s": 667.86744
+    },
+    {
+      "db_id": 90,
+      "domain": "AI/NLP",
+      "status": "completed",
+      "session_id": null,
+      "created_at": "2026-05-09 03:38:48.074825",
+      "completed_at": "2026-05-09 03:49:43.196375",
+      "current_stage": "completed",
+      "stages_completed": [
+        "literature_search",
+        "ingestion",
+        "gap_analysis",
+        "idea_generation",
+        "novelty_checking",
+        "feasibility_scoring",
+        "mechanical_metrics",
+        "proposal_synthesis",
+        "proposal_deepening",
+        "export",
+        "completed"
+      ],
+      "stage_report": {},
+      "gaps_count": 0,
+      "gaps": [],
+      "ideas_count": 0,
+      "ideas": [],
+      "proposals_count": 0,
+      "proposals_word_counts": [],
+      "elapsed_s": 655.12155
+    },
+    {
+      "db_id": 89,
+      "domain": "AI/NLP",
+      "status": "completed",
+      "session_id": null,
+      "created_at": "2026-05-09 03:25:52.416177",
+      "completed_at": "2026-05-09 03:36:46.578423",
+      "current_stage": "completed",
+      "stages_completed": [
+        "literature_search",
+        "ingestion",
+        "gap_analysis",
+        "idea_generation",
+        "novelty_checking",
+        "feasibility_scoring",
+        "mechanical_metrics",
+        "proposal_synthesis",
+        "proposal_deepening",
+        "export",
+        "completed"
+      ],
+      "stage_report": {},
+      "gaps_count": 0,
+      "gaps": [],
+      "ideas_count": 0,
+      "ideas": [],
+      "proposals_count": 0,
+      "proposals_word_counts": [],
+      "elapsed_s": 654.162246
+    },
+    {
+      "db_id": 88,
+      "domain": "AI/NLP",
+      "status": "completed",
+      "session_id": null,
+      "created_at": "2026-05-09 03:12:49.332293",
+      "completed_at": "2026-05-09 03:24:15.871521",
+      "current_stage": "completed",
+      "stages_completed": [
+        "literature_search",
+        "ingestion",
+        "gap_analysis",
+        "feasibility_scoring",
+        "proposal_synthesis",
+        "proposal_deepening",
+        "export",
+        "completed"
+      ],
+      "stage_report": {},
+      "gaps_count": 0,
+      "gaps": [],
+      "ideas_count": 0,
+      "ideas": [],
+      "proposals_count": 0,
+      "proposals_word_counts": [],
+      "elapsed_s": 686.539228
+    },
+    {
+      "db_id": 87,
+      "domain": "AI/NLP",
+      "status": "completed",
+      "session_id": null,
+      "created_at": "2026-05-09 03:03:01.720749",
+      "completed_at": "2026-05-09 03:11:02.799662",
+      "current_stage": "completed",
+      "stages_completed": [
+        "literature_search",
+        "ingestion",
+        "gap_analysis",
+        "feasibility_scoring",
+        "proposal_synthesis",
+        "proposal_deepening",
+        "export",
+        "completed"
+      ],
+      "stage_report": {},
+      "gaps_count": 0,
+      "gaps": [],
+      "ideas_count": 0,
+      "ideas": [],
+      "proposals_count": 0,
+      "proposals_word_counts": [],
+      "elapsed_s": 481.078913
+    },
+    {
+      "db_id": 86,
+      "domain": "AI/NLP",
+      "status": "completed",
+      "session_id": null,
+      "created_at": "2026-05-09 02:54:13.561077",
+      "completed_at": "2026-05-09 03:01:56.610079",
+      "current_stage": "completed",
+      "stages_completed": [
+        "literature_search",
+        "ingestion",
+        "gap_analysis",
+        "feasibility_scoring",
+        "proposal_synthesis",
+        "proposal_deepening",
+        "export",
+        "completed"
+      ],
+      "stage_report": {},
+      "gaps_count": 0,
+      "gaps": [],
+      "ideas_count": 0,
+      "ideas": [],
+      "proposals_count": 0,
+      "proposals_word_counts": [],
+      "elapsed_s": 463.049002
+    },
+    {
+      "db_id": 85,
+      "domain": "AI/NLP",
+      "status": "completed",
+      "session_id": null,
+      "created_at": "2026-05-09 02:43:39.523498",
+      "completed_at": "2026-05-09 02:51:22.674473",
+      "current_stage": "completed",
+      "stages_completed": [
+        "literature_search",
+        "ingestion",
+        "gap_analysis",
+        "feasibility_scoring",
+        "proposal_synthesis",
+        "proposal_deepening",
+        "export",
+        "completed"
+      ],
+      "stage_report": {},
+      "gaps_count": 0,
+      "gaps": [],
+      "ideas_count": 0,
+      "ideas": [],
+      "proposals_count": 0,
+      "proposals_word_counts": [],
+      "elapsed_s": 463.150975
+    },
+    {
+      "db_id": 84,
+      "domain": "AI/NLP",
+      "status": "completed",
+      "session_id": null,
+      "created_at": "2026-05-09 02:31:01.198155",
+      "completed_at": "2026-05-09 02:41:37.771916",
+      "current_stage": "completed",
+      "stages_completed": [
+        "literature_search",
+        "ingestion",
+        "gap_analysis",
+        "idea_generation",
+        "novelty_checking",
+        "feasibility_scoring",
+        "mechanical_metrics",
+        "proposal_synthesis",
+        "proposal_deepening",
+        "export",
+        "completed"
+      ],
+      "stage_report": {},
+      "gaps_count": 0,
+      "gaps": [],
+      "ideas_count": 0,
+      "ideas": [],
+      "proposals_count": 0,
+      "proposals_word_counts": [],
+      "elapsed_s": 636.573761
+    },
+    {
+      "db_id": 83,
+      "domain": "AI/NLP",
+      "status": "completed",
+      "session_id": null,
+      "created_at": "2026-05-09 01:57:14.677433",
+      "completed_at": "2026-05-09 02:09:52.792727",
+      "current_stage": "completed",
+      "stages_completed": [
+        "literature_search",
+        "ingestion",
+        "gap_analysis",
+        "idea_generation",
+        "feasibility_scoring",
+        "mechanical_metrics",
+        "proposal_synthesis",
+        "proposal_deepening",
+        "export",
+        "completed"
+      ],
+      "stage_report": {},
+      "gaps_count": 0,
+      "gaps": [],
+      "ideas_count": 0,
+      "ideas": [],
+      "proposals_count": 0,
+      "proposals_word_counts": [],
+      "elapsed_s": 758.115294
+    },
+    {
+      "db_id": 82,
+      "domain": "AI/Structured Reasoning",
+      "status": "completed",
+      "session_id": null,
+      "created_at": "2026-05-07 21:39:34.209450",
+      "completed_at": "2026-05-07 21:58:33.791368",
+      "current_stage": "completed",
+      "stages_completed": [
+        "literature_search",
+        "ingestion",
+        "gap_analysis",
+        "idea_generation",
+        "novelty_checking",
+        "feasibility_scoring",
+        "mechanical_metrics",
+        "proposal_synthesis",
+        "proposal_deepening",
+        "export",
+        "completed"
+      ],
+      "stage_report": {},
+      "gaps_count": 0,
+      "gaps": [],
+      "ideas_count": 0,
+      "ideas": [],
+      "proposals_count": 0,
+      "proposals_word_counts": [],
+      "elapsed_s": 1139.581918
+    },
+    {
+      "db_id": 81,
+      "domain": "AI/Structured Reasoning",
+      "status": "completed",
+      "session_id": null,
+      "created_at": "2026-05-07 21:19:08.313014",
+      "completed_at": "2026-05-07 21:39:09.163209",
+      "current_stage": "completed",
+      "stages_completed": [
+        "literature_search",
+        "ingestion",
+        "gap_analysis",
+        "idea_generation",
+        "novelty_checking",
+        "feasibility_scoring",
+        "mechanical_metrics",
+        "proposal_synthesis",
+        "proposal_deepening",
+        "export",
+        "completed"
+      ],
+      "stage_report": {},
+      "gaps_count": 0,
+      "gaps": [],
+      "ideas_count": 0,
+      "ideas": [],
+      "proposals_count": 0,
+      "proposals_word_counts": [],
+      "elapsed_s": 1200.850195
+    },
+    {
+      "db_id": 80,
+      "domain": "AI/Structured Reasoning",
+      "status": "completed",
+      "session_id": null,
+      "created_at": "2026-05-07 20:58:45.637821",
+      "completed_at": "2026-05-07 21:17:42.763217",
+      "current_stage": "completed",
+      "stages_completed": [
+        "literature_search",
+        "ingestion",
+        "gap_analysis",
+        "idea_generation",
+        "novelty_checking",
+        "feasibility_scoring",
+        "mechanical_metrics",
+        "proposal_synthesis",
+        "proposal_deepening",
+        "export",
+        "completed"
+      ],
+      "stage_report": {},
+      "gaps_count": 0,
+      "gaps": [],
+      "ideas_count": 0,
+      "ideas": [],
+      "proposals_count": 0,
+      "proposals_word_counts": [],
+      "elapsed_s": 1137.125396
+    },
+    {
+      "db_id": 78,
+      "domain": "AI/Structured Reasoning",
+      "status": "completed",
+      "session_id": null,
+      "created_at": "2026-05-07 20:29:17.862581",
+      "completed_at": "2026-05-07 20:54:28.704774",
+      "current_stage": "completed",
+      "stages_completed": [
+        "literature_search",
+        "ingestion",
+        "gap_analysis",
+        "idea_generation",
+        "feasibility_scoring",
+        "mechanical_metrics",
+        "proposal_synthesis",
+        "proposal_deepening",
+        "export",
+        "completed"
+      ],
+      "stage_report": {},
+      "gaps_count": 0,
+      "gaps": [],
+      "ideas_count": 0,
+      "ideas": [],
+      "proposals_count": 0,
+      "proposals_word_counts": [],
+      "elapsed_s": 1510.842193
+    },
+    {
+      "db_id": 77,
+      "domain": "AI/Structured Reasoning",
+      "status": "completed",
+      "session_id": null,
+      "created_at": "2026-05-07 19:42:32.262597",
+      "completed_at": "2026-05-07 20:18:10.190633",
+      "current_stage": "completed",
+      "stages_completed": [
+        "literature_search",
+        "ingestion",
+        "gap_analysis",
+        "idea_generation",
+        "feasibility_scoring",
+        "mechanical_metrics",
+        "proposal_synthesis",
+        "proposal_deepening",
+        "export",
+        "completed"
+      ],
+      "stage_report": {},
+      "gaps_count": 7,
+      "gaps": [
+        {
+          "title": "Lack of Temporal Causal Reasoning in Multimodal Models",
+          "confidence": 0.95,
+          "type": "methodological"
+        },
+        {
+          "title": "Lack of Benchmarking for Causal Reasoning in Multimodal and Temporal Contexts",
+          "confidence": 0.93,
+          "type": "empirical"
+        },
+        {
+          "title": "Absence of Formal Semantics for Neuro-Symbolic Reasoning in Graph-Based Systems",
+          "confidence": 0.92,
+          "type": "theoretical"
+        },
+        {
+          "title": "Limited Evaluation of Causal Reasoning in Real-World, Dynamic Environments",
+          "confidence": 0.9,
+          "type": "empirical"
+        },
+        {
+          "title": "Underexplored Spatial Reasoning in Language-Instructed Environments",
+          "confidence": 0.88,
+          "type": "methodological"
+        },
+        {
+          "title": "Insufficient Exploration of Neuro-Symbolic Reasoning in Autonomous Human-Autonomy Teaming",
+          "confidence": 0.85,
+          "type": "methodological"
+        },
+        {
+          "title": "Missing Integration of Human Motivated Reasoning in AI Systems",
+          "confidence": 0.75,
+          "type": "cross-domain"
+        }
+      ],
+      "ideas_count": 0,
+      "ideas": [],
+      "proposals_count": 0,
+      "proposals_word_counts": [],
+      "elapsed_s": 2137.928036
+    },
+    {
+      "db_id": 76,
+      "domain": "AI/Structured Reasoning",
+      "status": "completed",
+      "session_id": null,
+      "created_at": "2026-05-07 19:14:15.796566",
+      "completed_at": "2026-05-07 19:41:36.446702",
+      "current_stage": "completed",
+      "stages_completed": [
+        "literature_search",
+        "ingestion",
+        "gap_analysis",
+        "idea_generation",
+        "novelty_checking",
+        "feasibility_scoring",
+        "mechanical_metrics",
+        "proposal_synthesis",
+        "proposal_deepening",
+        "export",
+        "completed"
+      ],
+      "stage_report": {},
+      "gaps_count": 0,
+      "gaps": [],
+      "ideas_count": 0,
+      "ideas": [],
+      "proposals_count": 0,
+      "proposals_word_counts": [],
+      "elapsed_s": 1640.650136
+    },
+    {
+      "db_id": 75,
+      "domain": "AI/Structured Reasoning",
+      "status": "completed",
+      "session_id": null,
+      "created_at": "2026-05-07 17:47:55.132629",
+      "completed_at": "2026-05-07 18:23:20.240680",
+      "current_stage": "completed",
+      "stages_completed": [
+        "literature_search",
+        "ingestion",
+        "gap_analysis",
+        "idea_generation",
+        "novelty_checking",
+        "feasibility_scoring",
+        "mechanical_metrics",
+        "proposal_synthesis",
+        "proposal_deepening",
+        "export",
+        "completed"
+      ],
+      "stage_report": {},
+      "gaps_count": 7,
+      "gaps": [
+        {
+          "title": "Scalable Integration of Neuro-Symbolic Architectures for Complex Reasoning",
+          "confidence": 0.92,
+          "type": "methodological"
+        },
+        {
+          "title": "Robustness and Reliability of LLM Reasoning in High-Stakes Domains",
+          "confidence": 0.91,
+          "type": "empirical"
+        },
+        {
+          "title": "Bridging Classical Bayesian Causal Frameworks with Modern LLM Reasoning",
+          "confidence": 0.9,
+          "type": "theoretical"
+        },
+        {
+          "title": "Mechanistic Interpretability of Temporal and Spatial Reasoning in LLMs",
+          "confidence": 0.88,
+          "type": "methodological"
+        },
+        {
+          "title": "Unified Frameworks for Multimodal Causal and Compositional Reasoning",
+          "confidence": 0.87,
+          "type": "cross-domain"
+        },
+        {
+          "title": "Standardized Evaluation Benchmarks for Multi-hop and Compositional Reasoning",
+          "confidence": 0.85,
+          "type": "empirical"
+        },
+        {
+          "title": "Adapting Reasoning Capabilities for Cross-Linguistic Machine Translation",
+          "confidence": 0.82,
+          "type": "cross-domain"
+        }
+      ],
+      "ideas_count": 2,
+      "ideas": [
+        {
+          "title": "CausalMediation-TS: Mechanistic Interpretability of Temporal Reasoning in LLMs via Causal Mediation Analysis",
+          "novelty": null,
+          "feasibility": null,
+          "overall": null
+        },
+        {
+          "title": "SafeReason-RAG: Quantifying and Enforcing Robustness Bounds for LLM Reasoning via RAG and Causal Frameworks",
+          "novelty": null,
+          "feasibility": null,
+          "overall": null
+        }
+      ],
+      "proposals_count": 2,
+      "proposals_word_counts": [
+        5091,
+        4758
+      ],
+      "elapsed_s": 2125.108051
+    },
+    {
+      "db_id": 74,
+      "domain": "AI/Structured Reasoning",
+      "status": "completed",
+      "session_id": null,
+      "created_at": "2026-05-07 17:07:35.510587",
+      "completed_at": "2026-05-07 17:46:06.612663",
+      "current_stage": "completed",
+      "stages_completed": [
+        "literature_search",
+        "ingestion",
+        "gap_analysis",
+        "idea_generation",
+        "novelty_checking",
+        "feasibility_scoring",
+        "mechanical_metrics",
+        "proposal_synthesis",
+        "proposal_deepening",
+        "export",
+        "completed"
+      ],
+      "stage_report": {},
+      "gaps_count": 5,
+      "gaps": [
+        {
+          "title": "Bridging Classical Bayesian Reasoning with Modern LLM Capabilities",
+          "confidence": 0.95,
+          "type": "methodological"
+        },
+        {
+          "title": "Temporal and Dynamic Causal Reasoning in LLMs",
+          "confidence": 0.92,
+          "type": "methodological"
+        },
+        {
+          "title": "Unified Evaluation Benchmarks for Multi-Domain Reasoning",
+          "confidence": 0.9,
+          "type": "empirical"
+        },
+        {
+          "title": "Scalability and Efficiency of Spectral Neuro-Symbolic Methods",
+          "confidence": 0.88,
+          "type": "methodological"
+        },
+        {
+          "title": "Trustworthy and Assured Human-Autonomy Teaming",
+          "confidence": 0.87,
+          "type": "cross-domain"
+        }
+      ],
+      "ideas_count": 2,
+      "ideas": [
+        {
+          "title": "Bayesian-Calibrated Chain-of-Thought: Integrating Probabilistic Reasoning with LLM Inference",
+          "novelty": null,
+          "feasibility": null,
+          "overall": null
+        },
+        {
+          "title": "Spatio-Temporal Causal Scene Understanding for Dynamic Traffic Risk Assessment",
+          "novelty": null,
+          "feasibility": null,
+          "overall": null
+        }
+      ],
+      "proposals_count": 2,
+      "proposals_word_counts": [
+        4758,
+        4311
+      ],
+      "elapsed_s": 2311.102076
+    },
+    {
+      "db_id": 73,
+      "domain": "AI/Structured Reasoning",
+      "status": "completed",
+      "session_id": null,
+      "created_at": "2026-05-07 16:27:09.103888",
+      "completed_at": "2026-05-07 17:05:48.088976",
+      "current_stage": "completed",
+      "stages_completed": [
+        "literature_search",
+        "ingestion",
+        "gap_analysis",
+        "idea_generation",
+        "novelty_checking",
+        "feasibility_scoring",
+        "mechanical_metrics",
+        "proposal_synthesis",
+        "proposal_deepening",
+        "export",
+        "completed"
+      ],
+      "stage_report": {},
+      "gaps_count": 4,
+      "gaps": [
+        {
+          "title": "Unified Evaluation Frameworks for Multi-Domain Causal Reasoning",
+          "confidence": 0.92,
+          "type": "methodological"
+        },
+        {
+          "title": "Trustworthiness and Assurance in Human-Autonomy Teaming",
+          "confidence": 0.89,
+          "type": "cross-domain"
+        },
+        {
+          "title": "Scalability and Real-World Validation of Synthetic Reasoning Systems",
+          "confidence": 0.85,
+          "type": "empirical"
+        },
+        {
+          "title": "Cross-Lingual and Machine Translation Reasoning Capabilities",
+          "confidence": 0.82,
+          "type": "empirical"
+        }
+      ],
+      "ideas_count": 2,
+      "ideas": [
+        {
+          "title": "Bayesian-Calibrated Chain-of-Thought: Integrating Probabilistic Priors into LLM Reasoning Traces",
+          "novelty": null,
+          "feasibility": null,
+          "overall": null
+        },
+        {
+          "title": "CausalBench-Holistic: A Unified Multi-Domain Evaluation Suite for Causal and Mathematical Reasoning",
+          "novelty": null,
+          "feasibility": null,
+          "overall": null
+        }
+      ],
+      "proposals_count": 2,
+      "proposals_word_counts": [
+        5003,
+        5495
+      ],
+      "elapsed_s": 2318.985088
+    },
+    {
+      "db_id": 72,
+      "domain": "AI/Structured Reasoning",
+      "status": "completed",
+      "session_id": null,
+      "created_at": "2026-05-07 15:04:42.155359",
+      "completed_at": "2026-05-07 15:55:37.688625",
+      "current_stage": "completed",
+      "stages_completed": [
+        "literature_search",
+        "ingestion",
+        "gap_analysis",
+        "idea_generation",
+        "novelty_checking",
+        "feasibility_scoring",
+        "mechanical_metrics",
+        "proposal_synthesis",
+        "proposal_deepening",
+        "export",
+        "completed"
+      ],
+      "stage_report": {},
+      "gaps_count": 7,
+      "gaps": [
+        {
+          "title": "Bridging Classical Bayesian Models with Modern LLM Reasoning",
+          "confidence": 0.95,
+          "type": "theoretical"
+        },
+        {
+          "title": "Standardized Evaluation of Causal Reasoning in LLMs",
+          "confidence": 0.92,
+          "type": "empirical"
+        },
+        {
+          "title": "Temporal and Spatial Reasoning Integration in Multimodal Systems",
+          "confidence": 0.9,
+          "type": "methodological"
+        },
+        {
+          "title": "Scalability and Efficiency of Composite Reasoning Chains",
+          "confidence": 0.89,
+          "type": "methodological"
+        },
+        {
+          "title": "Mechanistic Interpretability of Neuro-Symbolic Architectures",
+          "confidence": 0.88,
+          "type": "methodological"
+        },
+        {
+          "title": "Cross-Domain Transfer of Reasoning Capabilities",
+          "confidence": 0.87,
+          "type": "cross-domain"
+        },
+        {
+          "title": "Trustworthiness and Safety in Neuro-Symbolic Reasoning Systems",
+          "confidence": 0.85,
+          "type": "empirical"
+        }
+      ],
+      "ideas_count": 2,
+      "ideas": [
+        {
+          "title": "Bayes-LLM Bridge: Probabilistic Priors for Grounded Chain-of-Thought Reasoning",
+          "novelty": null,
+          "feasibility": null,
+          "overall": null
+        },
+        {
+          "title": "CausalReasoningBench: A Unified Hierarchical Benchmark for LLM Causal Evaluation",
+          "novelty": null,
+          "feasibility": null,
+          "overall": null
+        }
+      ],
+      "proposals_count": 2,
+      "proposals_word_counts": [
+        5518,
+        4447
+      ],
+      "elapsed_s": 3055.533266
+    },
+    {
+      "db_id": 71,
+      "domain": "AI/Structured Reasoning",
+      "status": "completed",
+      "session_id": null,
+      "created_at": "2026-05-07 13:40:53.699907",
+      "completed_at": "2026-05-07 14:24:58.950822",
+      "current_stage": "completed",
+      "stages_completed": [
+        "literature_search",
+        "ingestion",
+        "gap_analysis",
+        "idea_generation",
+        "novelty_checking",
+        "feasibility_scoring",
+        "mechanical_metrics",
+        "proposal_synthesis",
+        "proposal_deepening",
+        "export",
+        "completed"
+      ],
+      "stage_report": {},
+      "gaps_count": 7,
+      "gaps": [
+        {
+          "title": "Unified Evaluation Frameworks for Multi-Domain Reasoning in LLMs",
+          "confidence": 0.92,
+          "type": "methodological"
+        },
+        {
+          "title": "Bridging Neuro-Symbolic Theory and Practical LLM Integration",
+          "confidence": 0.88,
+          "type": "methodological"
+        },
+        {
+          "title": "Longitudinal and Temporal Consistency in Reasoning",
+          "confidence": 0.87,
+          "type": "empirical"
+        },
+        {
+          "title": "Mechanistic Understanding of Cross-Modal Reasoning Processes",
+          "confidence": 0.85,
+          "type": "theoretical"
+        },
+        {
+          "title": "Robustness and Reliability of Reasoning Under Distribution Shift",
+          "confidence": 0.83,
+          "type": "empirical"
+        },
+        {
+          "title": "Integration of Classical Reasoning Frameworks with Modern LLMs",
+          "confidence": 0.81,
+          "type": "theoretical"
+        },
+        {
+          "title": "Trustworthy and Assured Reasoning for Human-AI Collaboration",
+          "confidence": 0.79,
+          "type": "cross-domain"
+        }
+      ],
+      "ideas_count": 2,
+      "ideas": [
+        {
+          "title": "Unified Multi-Domain Reasoning Evaluation via Dialectical Neuro-Symbolic Probing",
+          "novelty": null,
+          "feasibility": null,
+          "overall": null
+        },
+        {
+          "title": "MRKL-NS3D: A Modular Neuro-Symbolic Architecture for Robust 3D Spatial-Temporal Reasoning",
+          "novelty": null,
+          "feasibility": null,
+          "overall": null
+        }
+      ],
+      "proposals_count": 2,
+      "proposals_word_counts": [
+        4983,
+        4694
+      ],
+      "elapsed_s": 2645.250915
+    },
+    {
+      "db_id": 69,
+      "domain": "AI/Structured Reasoning",
+      "status": "completed",
+      "session_id": null,
+      "created_at": "2026-05-07 00:03:17.948962",
+      "completed_at": "2026-05-07 00:41:21.684424",
+      "current_stage": "completed",
+      "stages_completed": [
+        "literature_search",
+        "ingestion",
+        "gap_analysis",
+        "idea_generation",
+        "novelty_checking",
+        "feasibility_scoring",
+        "mechanical_metrics",
+        "proposal_synthesis",
+        "export",
+        "completed"
+      ],
+      "stage_report": {},
+      "gaps_count": 7,
+      "gaps": [
+        {
+          "title": "Explainability and Causal Validation in Autonomous LLM Agents",
+          "confidence": 0.95,
+          "type": "theoretical"
+        },
+        {
+          "title": "Formal Verification and Security of Neuro-Symbolic Systems",
+          "confidence": 0.93,
+          "type": "methodological"
+        },
+        {
+          "title": "Unified Frameworks for Multi-Modal Neuro-Symbolic Reasoning",
+          "confidence": 0.92,
+          "type": "methodological"
+        },
+        {
+          "title": "Dynamic Knowledge Graph Evolution and Temporal Reasoning",
+          "confidence": 0.9,
+          "type": "empirical"
+        },
+        {
+          "title": "Standardized Evaluation Metrics for Abductive and Commonsense Reasoning",
+          "confidence": 0.89,
+          "type": "empirical"
+        },
+        {
+          "title": "Sustainable and Resource-Efficient Generative AI Architectures",
+          "confidence": 0.88,
+          "type": "methodological"
+        },
+        {
+          "title": "Bridging Cognitive Control and Artificial Task Switching",
+          "confidence": 0.85,
+          "type": "cross-domain"
+        }
+      ],
+      "ideas_count": 2,
+      "ideas": [
+        {
+          "title": "CausalTrajectory: Interventional Validation and Explainability for Autonomous LLM Agents",
+          "novelty": null,
+          "feasibility": null,
+          "overall": null
+        },
+        {
+          "title": "CogniSwitch: Translating Human Cognitive Control Frameworks for Multi-Task LLM Agents",
+          "novelty": null,
+          "feasibility": null,
+          "overall": null
+        }
+      ],
+      "proposals_count": 2,
+      "proposals_word_counts": [
+        4872,
+        4836
+      ],
+      "elapsed_s": 2283.735462
+    },
+    {
+      "db_id": 68,
+      "domain": "AI/Reasoning",
+      "status": "completed",
+      "session_id": null,
+      "created_at": "2026-05-06 22:44:54.198287",
+      "completed_at": "2026-05-06 23:07:35.709525",
+      "current_stage": "completed",
+      "stages_completed": [
+        "literature_search",
+        "ingestion",
+        "gap_analysis",
+        "idea_generation",
+        "novelty_checking",
+        "feasibility_scoring",
+        "mechanical_metrics",
+        "proposal_synthesis",
+        "export",
+        "completed"
+      ],
+      "stage_report": {},
+      "gaps_count": 5,
+      "gaps": [
+        {
+          "title": "Standardized Benchmarks and Evaluation Metrics for Neuro-Symbolic Systems",
+          "confidence": 0.95,
+          "type": "methodological"
+        },
+        {
+          "title": "Dynamic Adaptation and Continuous Learning in Neuro-Symbolic Systems",
+          "confidence": 0.92,
+          "type": "methodological"
+        },
+        {
+          "title": "Scalability and Computational Complexity of Hybrid Architectures",
+          "confidence": 0.9,
+          "type": "empirical"
+        },
+        {
+          "title": "Robustness and Mitigation of Cascading Errors in Dual-Process Architectures",
+          "confidence": 0.88,
+          "type": "methodological"
+        },
+        {
+          "title": "Formal Theoretical Foundations for Neuro-Symbolic Knowledge Distillation",
+          "confidence": 0.85,
+          "type": "theoretical"
+        }
+      ],
+      "ideas_count": 2,
+      "ideas": [
+        {
+          "title": "Neuro-SymbolicBench: A Unified Evaluation Suite for Cross-Domain Apples-to-Apples Comparison of Hybrid AI",
+          "novelty": null,
+          "feasibility": null,
+          "overall": null
+        },
+        {
+          "title": "Guardian Angels: Uncertainty-Aware Neural Gates for Mitigating Cascading Errors in Dual-Process Systems",
+          "novelty": null,
+          "feasibility": null,
+          "overall": null
+        }
+      ],
+      "proposals_count": 2,
+      "proposals_word_counts": [
+        4777,
+        4732
+      ],
+      "elapsed_s": 1361.511238
+    },
+    {
+      "db_id": 67,
+      "domain": "AI/Reasoning",
+      "status": "completed",
+      "session_id": null,
+      "created_at": "2026-05-06 22:44:52.550640",
+      "completed_at": "2026-05-06 23:07:16.364369",
+      "current_stage": "completed",
+      "stages_completed": [
+        "literature_search",
+        "ingestion",
+        "gap_analysis",
+        "idea_generation",
+        "novelty_checking",
+        "feasibility_scoring",
+        "mechanical_metrics",
+        "proposal_synthesis",
+        "export",
+        "completed"
+      ],
+      "stage_report": {},
+      "gaps_count": 5,
+      "gaps": [
+        {
+          "title": "Unified Theoretical Foundations for Graph-of-Thought (GoT) Reasoning",
+          "confidence": 0.95,
+          "type": "theoretical"
+        },
+        {
+          "title": "Methodologies for Deep Integration of Causal Graphs and LLM Reasoning",
+          "confidence": 0.92,
+          "type": "methodological"
+        },
+        {
+          "title": "Empirical Benchmarks for Cost-Efficiency vs. Reasoning Fidelity Trade-offs",
+          "confidence": 0.9,
+          "type": "empirical"
+        },
+        {
+          "title": "Explainability and Interpretability of Graph-Based Reasoning Paths",
+          "confidence": 0.88,
+          "type": "methodological"
+        },
+        {
+          "title": "Cross-Domain Generalization of Knowledge-Graph-Augmented Reasoning",
+          "confidence": 0.85,
+          "type": "cross-domain"
+        }
+      ],
+      "ideas_count": 2,
+      "ideas": [
+        {
+          "title": "TopoReason: A Formal Complexity-Theoretic Framework for Optimal Reasoning Topology Selection",
+          "novelty": null,
+          "feasibility": null,
+          "overall": null
+        },
+        {
+          "title": "Axiom: A Standardized Benchmark Suite for Cost-Efficiency vs. Reasoning Fidelity Trade-offs",
+          "novelty": null,
+          "feasibility": null,
+          "overall": null
+        }
+      ],
+      "proposals_count": 2,
+      "proposals_word_counts": [
+        5064,
+        4576
+      ],
+      "elapsed_s": 1343.813729
+    },
+    {
+      "db_id": 66,
+      "domain": "AI/Reasoning",
+      "status": "completed",
+      "session_id": null,
+      "created_at": "2026-05-06 22:44:40.221056",
+      "completed_at": "2026-05-06 23:05:57.158628",
+      "current_stage": "completed",
+      "stages_completed": [
+        "literature_search",
+        "ingestion",
+        "gap_analysis",
+        "idea_generation",
+        "novelty_checking",
+        "feasibility_scoring",
+        "mechanical_metrics",
+        "proposal_synthesis",
+        "export",
+        "completed"
+      ],
+      "stage_report": {},
+      "gaps_count": 5,
+      "gaps": [
+        {
+          "title": "Neuro-Symbolic Integration of Cognitive Architectures and Graph-of-Thought Reasoning",
+          "confidence": 0.92,
+          "type": "theoretical"
+        },
+        {
+          "title": "Causal Discovery and Counterfactual Reasoning in LLM Graph-of-Thoughts",
+          "confidence": 0.9,
+          "type": "methodological"
+        },
+        {
+          "title": "Unified Evaluation Benchmarks for Dynamic and Adaptive Graph Reasoning",
+          "confidence": 0.88,
+          "type": "methodological"
+        },
+        {
+          "title": "Human-Computer Interaction and Cognitive Load in Graph-Augmented AI Systems",
+          "confidence": 0.87,
+          "type": "empirical"
+        },
+        {
+          "title": "Cognitive Digital Twins Powered by Autonomous Graph-Based Reasoning",
+          "confidence": 0.85,
+          "type": "cross-domain"
+        }
+      ],
+      "ideas_count": 2,
+      "ideas": [
+        {
+          "title": "Cognitive Load-Aware Graph-of-Thoughts: Grounding LLM Reasoning in ACT-R Working Memory Constraints",
+          "novelty": null,
+          "feasibility": null,
+          "overall": null
+        },
+        {
+          "title": "Human-Centered Graph-of-Thoughts: Empirical Analysis of Cognitive Load and Comprehension in AI-Assisted Decision Making",
+          "novelty": null,
+          "feasibility": null,
+          "overall": null
+        }
+      ],
+      "proposals_count": 2,
+      "proposals_word_counts": [
+        4740,
+        4842
+      ],
+      "elapsed_s": 1276.937572
+    },
+    {
+      "db_id": 64,
+      "domain": "AI/NLP",
+      "status": "completed",
+      "session_id": null,
+      "created_at": "2026-05-06 11:00:02.681083",
+      "completed_at": "2026-05-06 11:25:55.590940",
+      "current_stage": "completed",
+      "stages_completed": [
+        "literature_search",
+        "ingestion",
+        "gap_analysis",
+        "idea_generation",
+        "novelty_checking",
+        "feasibility_scoring",
+        "mechanical_metrics",
+        "proposal_synthesis",
+        "export",
+        "completed"
+      ],
+      "stage_report": {},
+      "gaps_count": 5,
+      "gaps": [
+        {
+          "title": "Bridging Multimodal Fusion with Logical Entailment and Contradiction",
+          "confidence": 0.9,
+          "type": "methodological"
+        },
+        {
+          "title": "Theoretical Unification of Attention Sink Phenomena Across Diverse Modalities",
+          "confidence": 0.85,
+          "type": "theoretical"
+        },
+        {
+          "title": "Cross-Domain Translation of Efficient Attention Mechanisms",
+          "confidence": 0.85,
+          "type": "cross-domain"
+        },
+        {
+          "title": "Empirical Benchmarking of Entailment Pipelines for Domain-Specific Scientific Data",
+          "confidence": 0.8,
+          "type": "empirical"
+        },
+        {
+          "title": "Neuro-Symbolic Integration for Hierarchical Logical Reasoning",
+          "confidence": 0.75,
+          "type": "methodological"
+        }
+      ],
+      "ideas_count": 2,
+      "ideas": [
+        {
+          "title": "Genomic Differential Attention: Translating Advanced NLP Attention to Genomic Sequence Modeling",
+          "novelty": null,
+          "feasibility": null,
+          "overall": null
+        },
+        {
+          "title": "CrossModal NLI: Detecting Logical Contradictions Across Text, Audio, and Video",
+          "novelty": null,
+          "feasibility": null,
+          "overall": null
+        }
+      ],
+      "proposals_count": 2,
+      "proposals_word_counts": [
+        4592,
+        4572
+      ],
+      "elapsed_s": 1552.909857
+    },
+    {
+      "db_id": 63,
+      "domain": "AI/NLP",
+      "status": "completed",
+      "session_id": null,
+      "created_at": "2026-05-06 01:08:48.765747",
+      "completed_at": "2026-05-06 01:19:53.354017",
+      "current_stage": "completed",
+      "stages_completed": [
+        "literature_search",
+        "ingestion",
+        "gap_analysis",
+        "idea_generation",
+        "novelty_checking",
+        "feasibility_scoring",
+        "mechanical_metrics",
+        "proposal_synthesis",
+        "export",
+        "completed"
+      ],
+      "stage_report": {},
+      "gaps_count": 5,
+      "gaps": [
+        {
+          "title": "Unified Theoretical Framework for Attention Mechanism Efficiency",
+          "confidence": 0.9,
+          "type": "theoretical"
+        },
+        {
+          "title": "Bridging Multi-Scale Representations in 3D Spatiotemporal Domains",
+          "confidence": 0.85,
+          "type": "cross-domain"
+        },
+        {
+          "title": "Explainability and Causal Tracing in Routing-based Attention",
+          "confidence": 0.8,
+          "type": "empirical"
+        },
+        {
+          "title": "Systematic Knowledge Distillation for Dynamic Attention Architectures",
+          "confidence": 0.75,
+          "type": "methodological"
+        },
+        {
+          "title": "Adaptive Attention Scaling for Heterogeneous Medical Image Segmentation",
+          "confidence": 0.7,
+          "type": "methodological"
+        }
+      ],
+      "ideas_count": 2,
+      "ideas": [
+        {
+          "title": "Voxel-BiFormer with Post-Hoc Causal Proxy Models for Explainable 3D Spatiotemporal Perception",
+          "novelty": null,
+          "feasibility": null,
+          "overall": null
+        },
+        {
+          "title": "Voxel-BiFormer with Post-Hoc Causal Proxy Models for Explainable 3D Spatiotemporal Perception",
+          "novelty": 0.75,
+          "feasibility": 6.3,
+          "overall": 0.69
+        }
+      ],
+      "proposals_count": 1,
+      "proposals_word_counts": [
+        3388
+      ],
+      "elapsed_s": 664.58827
+    },
+    {
+      "db_id": 62,
+      "domain": "AI/NLP",
+      "status": "completed",
+      "session_id": null,
+      "created_at": "2026-05-06 00:52:13.300545",
+      "completed_at": "2026-05-06 01:06:06.110020",
+      "current_stage": "completed",
+      "stages_completed": [
+        "literature_search",
+        "ingestion",
+        "gap_analysis",
+        "idea_generation",
+        "novelty_checking",
+        "feasibility_scoring",
+        "mechanical_metrics",
+        "proposal_synthesis",
+        "export",
+        "completed"
+      ],
+      "stage_report": {},
+      "gaps_count": 4,
+      "gaps": [
+        {
+          "title": "Bridging Spatiotemporal 3D Perception and Advanced Attention Formulations",
+          "confidence": 0.9,
+          "type": "empirical"
+        },
+        {
+          "title": "Unified Theoretical Framework for Attention Mechanisms Across Modalities",
+          "confidence": 0.85,
+          "type": "theoretical"
+        },
+        {
+          "title": "Neuro-Symbolic and Cognitive Attention for 3D Scene Understanding",
+          "confidence": 0.8,
+          "type": "cross-domain"
+        },
+        {
+          "title": "Formal Scaling Laws and Infinite Limits for Sparse/Deformable Attention",
+          "confidence": 0.75,
+          "type": "theoretical"
+        }
+      ],
+      "ideas_count": 2,
+      "ideas": [
+        {
+          "title": "Voxel-Grounded Spatiotemporal Attention Bottlenecks for Debuggable 3D Video Object Detection",
+          "novelty": null,
+          "feasibility": null,
+          "overall": null
+        },
+        {
+          "title": "Voxel-Grounded Spatiotemporal Attention Bottlenecks for Debuggable 3D Video Object Detection",
+          "novelty": 0.85,
+          "feasibility": 7.63,
+          "overall": 0.8065
+        }
+      ],
+      "proposals_count": 0,
+      "proposals_word_counts": [],
+      "elapsed_s": 832.809475
+    },
+    {
+      "db_id": 61,
+      "domain": "AI/NLP",
+      "status": "completed",
+      "session_id": null,
+      "created_at": "2026-05-06 00:35:07.535770",
+      "completed_at": "2026-05-06 00:50:11.732355",
+      "current_stage": "completed",
+      "stages_completed": [
+        "literature_search",
+        "ingestion",
+        "gap_analysis",
+        "idea_generation",
+        "novelty_checking",
+        "feasibility_scoring",
+        "mechanical_metrics",
+        "proposal_synthesis",
+        "export",
+        "completed"
+      ],
+      "stage_report": {},
+      "gaps_count": 3,
+      "gaps": [
+        {
+          "title": "Explainability and Debugging for 3D and Spatiotemporal Models",
+          "confidence": 0.88,
+          "type": "methodological"
+        },
+        {
+          "title": "Unified Attention Mechanisms for Multimodal 3D-Text-Vision Alignment",
+          "confidence": 0.82,
+          "type": "empirical"
+        },
+        {
+          "title": "Neuro-Symbolic and Cognitive Attention Integration",
+          "confidence": 0.78,
+          "type": "methodological"
+        }
+      ],
+      "ideas_count": 4,
+      "ideas": [
+        {
+          "title": "Context-Aware Intervenable Transformers for Explainable 3D Object Detection",
+          "novelty": null,
+          "feasibility": null,
+          "overall": null
+        },
+        {
+          "title": "Affine-Scaled Spatiotemporal Attention with Geometric Routing for Efficient 3D LiDAR Video Object Detection",
+          "novelty": null,
+          "feasibility": null,
+          "overall": null
+        },
+        {
+          "title": "Context-Aware Intervenable Transformers for Explainable 3D Object Detection",
+          "novelty": 0.775,
+          "feasibility": 7.25,
+          "overall": 0.75
+        },
+        {
+          "title": "Affine-Scaled Spatiotemporal Attention with Geometric Routing for Efficient 3D LiDAR Video Object Detection",
+          "novelty": 0.575,
+          "feasibility": 7.55,
+          "overall": 0.665
+        }
+      ],
+      "proposals_count": 0,
+      "proposals_word_counts": [],
+      "elapsed_s": 904.196585
+    },
+    {
+      "db_id": 60,
+      "domain": "AI/NLP",
+      "status": "completed",
+      "session_id": null,
+      "created_at": "2026-05-06 00:08:58.124004",
+      "completed_at": "2026-05-06 00:19:34.416151",
+      "current_stage": "completed",
+      "stages_completed": [
+        "literature_search",
+        "ingestion",
+        "gap_analysis",
+        "idea_generation",
+        "novelty_checking",
+        "feasibility_scoring",
+        "mechanical_metrics",
+        "export",
+        "completed"
+      ],
+      "stage_report": {},
+      "gaps_count": 4,
+      "gaps": [
+        {
+          "title": "Bridging Spatiotemporal 3D Perception with Advanced Attention Mechanisms",
+          "confidence": 0.95,
+          "type": "cross-domain"
+        },
+        {
+          "title": "Empirical Benchmarking of Novel Attention Operators in Dense Vision Tasks",
+          "confidence": 0.92,
+          "type": "empirical"
+        },
+        {
+          "title": "Explainability and Debugging in Spatiotemporal 3D Object Detection",
+          "confidence": 0.9,
+          "type": "methodological"
+        },
+        {
+          "title": "Theoretical Foundations of Attention in Non-Euclidean Geometries",
+          "confidence": 0.88,
+          "type": "theoretical"
+        }
+      ],
+      "ideas_count": 4,
+      "ideas": [
+        {
+          "title": "Memory-Bounded Dynamic Sparse Attention for Efficient Vision Transformers",
+          "novelty": null,
+          "feasibility": null,
+          "overall": null
+        },
+        {
+          "title": "Hyperbolic Affine Attention for Cortical Surface Modeling",
+          "novelty": null,
+          "feasibility": null,
+          "overall": null
+        },
+        {
+          "title": "Memory-Bounded Dynamic Sparse Attention for Efficient Vision Transformers",
+          "novelty": 0.65,
+          "feasibility": 7.55,
+          "overall": 0.7025
+        },
+        {
+          "title": "Hyperbolic Affine Attention for Cortical Surface Modeling",
+          "novelty": 0.8375,
+          "feasibility": 7.43,
+          "overall": 0.79025
+        }
+      ],
+      "proposals_count": 0,
+      "proposals_word_counts": [],
+      "elapsed_s": 636.292147
+    },
+    {
+      "db_id": 59,
+      "domain": "AI/NLP",
+      "status": "completed",
+      "session_id": null,
+      "created_at": "2026-05-05 23:57:45.848615",
+      "completed_at": "2026-05-06 00:08:36.190113",
+      "current_stage": "completed",
+      "stages_completed": [
+        "literature_search",
+        "ingestion",
+        "gap_analysis",
+        "idea_generation",
+        "novelty_checking",
+        "feasibility_scoring",
+        "mechanical_metrics",
+        "export",
+        "completed"
+      ],
+      "stage_report": {},
+      "gaps_count": 4,
+      "gaps": [
+        {
+          "title": "Bridging Advanced Attention Mechanisms with 3D Spatiotemporal Perception",
+          "confidence": 0.95,
+          "type": "methodological"
+        },
+        {
+          "title": "Theoretical Foundations of Non-Softmax and Geometric Attention",
+          "confidence": 0.88,
+          "type": "theoretical"
+        },
+        {
+          "title": "Empirical Benchmarking of Core Attention Variants Across Modalities",
+          "confidence": 0.85,
+          "type": "empirical"
+        },
+        {
+          "title": "Neuromorphic and Cognitive Efficiency in Vision Transformers",
+          "confidence": 0.82,
+          "type": "methodological"
+        }
+      ],
+      "ideas_count": 4,
+      "ideas": [
+        {
+          "title": "PointBiFormer: Uncertainty-Aware Bi-Level Routing Attention for Robust 3D Spatiotemporal Object Detection",
+          "novelty": null,
+          "feasibility": null,
+          "overall": null
+        },
+        {
+          "title": "Post-Hoc Graph-Attention Attribution for Explainable 3D Spatiotemporal Object Detection",
+          "novelty": null,
+          "feasibility": null,
+          "overall": null
+        },
+        {
+          "title": "PointBiFormer: Uncertainty-Aware Bi-Level Routing Attention for Robust 3D Spatiotemporal Object Detection",
+          "novelty": 0.79,
+          "feasibility": 7.45,
+          "overall": 0.7675000000000001
+        },
+        {
+          "title": "Post-Hoc Graph-Attention Attribution for Explainable 3D Spatiotemporal Object Detection",
+          "novelty": 0.825,
+          "feasibility": 7.35,
+          "overall": 0.78
+        }
+      ],
+      "proposals_count": 0,
+      "proposals_word_counts": [],
+      "elapsed_s": 650.341498
+    },
+    {
+      "db_id": 35,
+      "domain": "AI Empirical Validity",
+      "status": "completed",
+      "session_id": null,
+      "created_at": "2026-05-04 09:40:41.589114",
+      "completed_at": "2026-05-04 10:10:33.596174",
+      "current_stage": "completed",
+      "stages_completed": [
+        "literature_search",
+        "ingestion",
+        "gap_analysis",
+        "idea_generation",
+        "novelty_checking",
+        "feasibility_scoring",
+        "proposal_synthesis",
+        "export",
+        "completed"
+      ],
+      "stage_report": {},
+      "gaps_count": 10,
+      "gaps": [
+        {
+          "title": "Standardized Empirical Evaluation of LLMs in Clinical Workflows",
+          "confidence": 0.95,
+          "type": "methodological"
+        },
+        {
+          "title": "Empirical Benchmarking of AI in Scientific Discovery vs. Human Baselines",
+          "confidence": 0.92,
+          "type": "empirical"
+        },
+        {
+          "title": "Integration of Job Demands-Resources Theory with AI Workplace Dynamics",
+          "confidence": 0.9,
+          "type": "theoretical"
+        },
+        {
+          "title": "Validation of Real-World Data (RWD) Processing by Large Language Models",
+          "confidence": 0.9,
+          "type": "methodological"
+        },
+        {
+          "title": "Longitudinal Impact of AI on Research Peer Review",
+          "confidence": 0.88,
+          "type": "empirical"
+        },
+        {
+          "title": "Empirical Validation of Generative AI in Health Economics",
+          "confidence": 0.85,
+          "type": "empirical"
+        },
+        {
+          "title": "Automated Machine Learning (AutoML) for Non-Experimental Data",
+          "confidence": 0.85,
+          "type": "methodological"
+        },
+        {
+          "title": "Epistemological Frameworks for AI-Generated Academic Content",
+          "confidence": 0.82,
+          "type": "theoretical"
+        },
+        {
+          "title": "Reporting Guidelines for Human-Centered AI Design Studies",
+          "confidence": 0.8,
+          "type": "methodological"
+        },
+        {
+          "title": "Bridging AI Identity Threat and Entrepreneurial Orientation",
+          "confidence": 0.75,
+          "type": "cross-domain"
+        }
+      ],
+      "ideas_count": 10,
+      "ideas": [
+        {
+          "title": "RWD-LLM Validator: A Grounded Hallucination and Intersectional Bias Detection Framework for Clinical Data",
+          "novelty": 0.65,
+          "feasibility": 7.875,
+          "overall": 0.71875
+        },
+        {
+          "title": "SciBench-Expert: A Living Benchmark for Longitudinal Evaluation of AI in Scientific Discovery",
+          "novelty": 0.8125,
+          "feasibility": 6.65,
+          "overall": 0.73875
+        },
+        {
+          "title": "CLEAR-Triage: A Quasi-Experimental Field Evaluation of LLMs in Clinical Workflows",
+          "novelty": 0.75,
+          "feasibility": 5.15,
+          "overall": 0.6325000000000001
+        },
+        {
+          "title": "The JD-AI Framework: A Longitudinal Extension of Job Demands-Resources Theory for Human-AI Teaming",
+          "novelty": 0.825,
+          "feasibility": 7.35,
+          "overall": 0.78
+        },
+        {
+          "title": "HEOR-LLM: Empirical Validation of Generative AI in Health Economics Outcomes Research",
+          "novelty": 0.55,
+          "feasibility": 7.05,
+          "overall": 0.6275
+        },
+        {
+          "title": "CausalAutoML 2.0: A Human-in-the-Loop Framework for Automated Causal Inference from Observational Data",
+          "novelty": 0.7,
+          "feasibility": 7.925,
+          "overall": 0.74625
+        },
+        {
+          "title": "Mitigating AI Identity Threat through Entrepreneurial Orientation: A Multilevel Empirical Study",
+          "novelty": 0.6,
+          "feasibility": 6.65,
+          "overall": 0.6325000000000001
+        },
+        {
+          "title": "CLEAR-AI: A Delphi-Driven Reporting Guideline for Human-Centered AI Design Studies",
+          "novelty": 0.5,
+          "feasibility": 7.95,
+          "overall": 0.6475
+        },
+        {
+          "title": "EpistemicAI: A Mixed-Methods Framework for Validating AI-Generated Academic Hypotheses",
+          "novelty": 0.75,
+          "feasibility": 7.775,
+          "overall": 0.76375
+        },
+        {
+          "title": "LLMs in the Loop: A Longitudinal RCT on AI-Assisted Peer Review",
+          "novelty": 0.85,
+          "feasibility": 5.55,
+          "overall": 0.7024999999999999
+        }
+      ],
+      "proposals_count": 10,
+      "proposals_word_counts": [
+        150,
+        145,
+        114,
+        150,
+        125,
+        155,
+        124,
+        138,
+        121,
+        141
+      ],
+      "elapsed_s": 1792.00706
+    },
+    {
+      "db_id": 33,
+      "domain": "AI Empirical Validity",
+      "status": "completed",
+      "session_id": null,
+      "created_at": "2026-05-04 09:27:49.861465",
+      "completed_at": "2026-05-04 09:27:55.645478",
+      "current_stage": "completed",
+      "stages_completed": [
+        "literature_search",
+        "ingestion",
+        "gap_analysis",
+        "idea_generation",
+        "novelty_checking",
+        "feasibility_scoring",
+        "proposal_synthesis",
+        "export",
+        "completed"
+      ],
+      "stage_report": {},
+      "gaps_count": 0,
+      "gaps": [],
+      "ideas_count": 0,
+      "ideas": [],
+      "proposals_count": 0,
+      "proposals_word_counts": [],
+      "elapsed_s": 5.784013
+    },
+    {
+      "db_id": 32,
+      "domain": "AI Empirical Validity",
+      "status": "completed",
+      "session_id": null,
+      "created_at": "2026-05-04 09:23:51.262970",
+      "completed_at": "2026-05-04 09:23:57.000020",
+      "current_stage": "completed",
+      "stages_completed": [
+        "literature_search",
+        "ingestion",
+        "gap_analysis",
+        "idea_generation",
+        "novelty_checking",
+        "feasibility_scoring",
+        "proposal_synthesis",
+        "export",
+        "completed"
+      ],
+      "stage_report": {},
+      "gaps_count": 0,
+      "gaps": [],
+      "ideas_count": 0,
+      "ideas": [],
+      "proposals_count": 0,
+      "proposals_word_counts": [],
+      "elapsed_s": 5.73705
+    },
+    {
+      "db_id": 31,
+      "domain": "AI Empirical Validity",
+      "status": "completed",
+      "session_id": null,
+      "created_at": "2026-05-04 09:21:39.100798",
+      "completed_at": "2026-05-04 09:21:45.011020",
+      "current_stage": "completed",
+      "stages_completed": [
+        "literature_search",
+        "ingestion",
+        "gap_analysis",
+        "idea_generation",
+        "novelty_checking",
+        "feasibility_scoring",
+        "proposal_synthesis",
+        "export",
+        "completed"
+      ],
+      "stage_report": {},
+      "gaps_count": 0,
+      "gaps": [],
+      "ideas_count": 0,
+      "ideas": [],
+      "proposals_count": 0,
+      "proposals_word_counts": [],
+      "elapsed_s": 5.910222
+    },
+    {
+      "db_id": 30,
+      "domain": "AI Empirical Validity",
+      "status": "completed",
+      "session_id": null,
+      "created_at": "2026-05-04 09:14:15.899531",
+      "completed_at": "2026-05-04 09:14:28.985517",
+      "current_stage": "completed",
+      "stages_completed": [
+        "literature_search",
+        "ingestion",
+        "gap_analysis",
+        "idea_generation",
+        "novelty_checking",
+        "feasibility_scoring",
+        "proposal_synthesis",
+        "export",
+        "completed"
+      ],
+      "stage_report": {},
+      "gaps_count": 0,
+      "gaps": [],
+      "ideas_count": 0,
+      "ideas": [],
+      "proposals_count": 0,
+      "proposals_word_counts": [],
+      "elapsed_s": 13.085986
+    },
+    {
+      "db_id": 27,
+      "domain": "AI Empirical Validity",
+      "status": "completed",
+      "session_id": null,
+      "created_at": "2026-05-04 09:00:03.385177",
+      "completed_at": "2026-05-04 09:00:21.923203",
+      "current_stage": "completed",
+      "stages_completed": [
+        "literature_search",
+        "ingestion",
+        "gap_analysis",
+        "idea_generation",
+        "novelty_checking",
+        "feasibility_scoring",
+        "proposal_synthesis",
+        "export",
+        "completed"
+      ],
+      "stage_report": {},
+      "gaps_count": 0,
+      "gaps": [],
+      "ideas_count": 0,
+      "ideas": [],
+      "proposals_count": 0,
+      "proposals_word_counts": [],
+      "elapsed_s": 18.538026
+    },
+    {
+      "db_id": 26,
+      "domain": "AI Empirical Validity",
+      "status": "completed",
+      "session_id": null,
+      "created_at": "2026-05-04 08:55:12.043076",
+      "completed_at": "2026-05-04 08:55:43.898375",
+      "current_stage": "completed",
+      "stages_completed": [
+        "literature_search",
+        "ingestion",
+        "gap_analysis",
+        "idea_generation",
+        "novelty_checking",
+        "feasibility_scoring",
+        "proposal_synthesis",
+        "export",
+        "completed"
+      ],
+      "stage_report": {},
+      "gaps_count": 0,
+      "gaps": [],
+      "ideas_count": 0,
+      "ideas": [],
+      "proposals_count": 0,
+      "proposals_word_counts": [],
+      "elapsed_s": 31.855299
+    },
+    {
+      "db_id": 25,
+      "domain": "AI Agent Self-Improvement Architecture",
+      "status": "completed",
+      "session_id": null,
+      "created_at": "2026-05-04 02:52:46.608993",
+      "completed_at": "2026-05-04 03:38:38.194449",
+      "current_stage": "completed",
+      "stages_completed": [
+        "literature_search",
+        "ingestion",
+        "gap_analysis",
+        "idea_generation",
+        "novelty_checking",
+        "feasibility_scoring",
+        "proposal_synthesis",
+        "export",
+        "completed"
+      ],
+      "stage_report": {},
+      "gaps_count": 10,
+      "gaps": [
+        {
+          "title": "Bridging Multi-Agent Coordination and Large Language Models",
+          "confidence": 0.95,
+          "type": "theoretical"
+        },
+        {
+          "title": "Robust Defenses Against LLM-Powered Social Engineering",
+          "confidence": 0.94,
+          "type": "methodological"
+        },
+        {
+          "title": "Federated Learning in the Era of Foundation Models",
+          "confidence": 0.93,
+          "type": "methodological"
+        },
+        {
+          "title": "Standardized Evaluation Metrics for LLM-Driven Scientific Discovery",
+          "confidence": 0.92,
+          "type": "methodological"
+        },
+        {
+          "title": "AI-Specific Reporting Guidelines for Clinical and Educational Trials",
+          "confidence": 0.91,
+          "type": "cross-domain"
+        },
+        {
+          "title": "Longitudinal Impact of Generative AI on Human Cognitive Development",
+          "confidence": 0.89,
+          "type": "empirical"
+        },
+        {
+          "title": "Explainability and Safety in Automated Architecture Search",
+          "confidence": 0.88,
+          "type": "theoretical"
+        },
+        {
+          "title": "Unified Frameworks for Multitask Learning in Heterogeneous Modalities",
+          "confidence": 0.87,
+          "type": "methodological"
+        },
+        {
+          "title": "Theoretical Foundations of LLM Prompting via Evolutionary Algorithms",
+          "confidence": 0.85,
+          "type": "theoretical"
+        },
+        {
+          "title": "Integration of Predictive Coding Architectures with Modern Deep Learning",
+          "confidence": 0.82,
+          "type": "theoretical"
+        }
+      ],
+      "ideas_count": 10,
+      "ideas": [
+        {
+          "title": "Neuro-Inspired Event-Driven LLM Swarms via Predictive Coding for Decentralized Coordination",
+          "novelty": 0.88,
+          "feasibility": 7.85,
+          "overall": 0.8325
+        },
+        {
+          "title": "SciTriage: Neuro-Symbolic RAG for Granular Triage of LLM-Generated Scientific Hypotheses",
+          "novelty": 0.8125,
+          "feasibility": 5.55,
+          "overall": 0.68375
+        },
+        {
+          "title": "From Art to Science: Empirical Landscape Analysis and Surrogate-Guided Evolutionary Prompt Optimization",
+          "novelty": 0.68,
+          "feasibility": 7.55,
+          "overall": 0.7175
+        },
+        {
+          "title": "Federated Parameter-Efficient Fine-Tuning with Gradient-Aware Modality Balancing for Heterogeneous Edge Environments",
+          "novelty": 0.82,
+          "feasibility": 7.63,
+          "overall": 0.7915
+        },
+        {
+          "title": "FedGrad: Streaming Orthogonal Gradient Projection for Parameter-Efficient Federated Fine-Tuning of LLMs",
+          "novelty": 0.78,
+          "feasibility": 7.45,
+          "overall": 0.7625
+        },
+        {
+          "title": "SciMeta-Bench: A Standardized Triage and Evaluation Framework for LLM-Driven Scientific Discovery",
+          "novelty": 0.84,
+          "feasibility": 7.39,
+          "overall": 0.7895
+        },
+        {
+          "title": "ArchX-Ray: Post-Hoc Auditing and Mitigation of Architectural Bias in Neural Networks via LLM-Based Structural Counterfactuals",
+          "novelty": 0.85,
+          "feasibility": 6.85,
+          "overall": 0.7675
+        },
+        {
+          "title": "Latent Prompt Topology: Persistent Homology and GNN Surrogates for Discrete Prompt Optimization",
+          "novelty": 0.8125,
+          "feasibility": 7.3,
+          "overall": 0.77125
+        },
+        {
+          "title": "LLM-Guard: Tiered GNN Defense via Targeted Pragmatic Probing of Synthetic Botnets",
+          "novelty": 0.8125,
+          "feasibility": 6.35,
+          "overall": 0.72375
+        },
+        {
+          "title": "Post-Hoc Architectural Auditing: Quantitative Graph Spectral Analysis of NAS Fairness Propensity",
+          "novelty": 0.845,
+          "feasibility": 7.25,
+          "overall": 0.7849999999999999
+        }
+      ],
+      "proposals_count": 0,
+      "proposals_word_counts": [],
+      "elapsed_s": 2751.585456
+    },
+    {
+      "db_id": 24,
+      "domain": "AI/Self-Learning",
+      "status": "completed",
+      "session_id": null,
+      "created_at": "2026-05-04 02:01:26.052557",
+      "completed_at": "2026-05-04 02:38:28.414113",
+      "current_stage": "completed",
+      "stages_completed": [
+        "literature_search",
+        "ingestion",
+        "gap_analysis",
+        "idea_generation",
+        "novelty_checking",
+        "feasibility_scoring",
+        "proposal_synthesis",
+        "export",
+        "completed"
+      ],
+      "stage_report": {},
+      "gaps_count": 10,
+      "gaps": [
+        {
+          "title": "Bridging Qualitative Research Methodologies with AI-Driven Analysis",
+          "confidence": 0.95,
+          "type": "cross-domain"
+        },
+        {
+          "title": "Bridging the Educator-AI Algorithmic Divide",
+          "confidence": 0.93,
+          "type": "cross-domain"
+        },
+        {
+          "title": "Standardized Evaluation Metrics for AI in Self-Regulated Learning",
+          "confidence": 0.92,
+          "type": "methodological"
+        },
+        {
+          "title": "Explainable AI (XAI) in Educational and Psychological Assessments",
+          "confidence": 0.9,
+          "type": "methodological"
+        },
+        {
+          "title": "Integration of Deep Reinforcement Learning with Qualitative Human Feedback",
+          "confidence": 0.9,
+          "type": "methodological"
+        },
+        {
+          "title": "AI-Driven Optimization of Qualitative Survey Instruments",
+          "confidence": 0.89,
+          "type": "methodological"
+        },
+        {
+          "title": "Self-Play and Alignment in Multi-Agent Societal Simulations",
+          "confidence": 0.88,
+          "type": "theoretical"
+        },
+        {
+          "title": "Real-Time Adaptive Deep Learning for Longitudinal Behavioral Studies",
+          "confidence": 0.87,
+          "type": "empirical"
+        },
+        {
+          "title": "Dynamic Prompting Strategies for Domain-Specific Expert Systems",
+          "confidence": 0.85,
+          "type": "empirical"
+        },
+        {
+          "title": "Automated Generation of Trustworthy Content for Mental Health Interventions",
+          "confidence": 0.85,
+          "type": "empirical"
+        }
+      ],
+      "ideas_count": 15,
+      "ideas": [
+        {
+          "title": "Cite-XAI-V2: Adaptive Concept Bottlenecks with RAG-Grounded Citations for Psychological Assessment",
+          "novelty": 0.86,
+          "feasibility": 6.05,
+          "overall": 0.7324999999999999
+        },
+        {
+          "title": "SocioSim-Strategic: Grounded Self-Play Multi-Agent Simulation of Historical Deliberation via Rule-Based Reward",
+          "novelty": 0.8,
+          "feasibility": 7.55,
+          "overall": 0.7775000000000001
+        },
+        {
+          "title": "XAI-Tutor: Concept-Bottlenecked Pedagogical Chain-of-Thought for Educational Assessment",
+          "novelty": 0.775,
+          "feasibility": 6.85,
+          "overall": 0.73
+        },
+        {
+          "title": "Qual2Reward-V3: Grounded Reward Modeling from Qualitative Interviews via RAG-Augmented Coding and Hierarchical Code Aggregation",
+          "novelty": 0.85,
+          "feasibility": 6.35,
+          "overall": 0.7424999999999999
+        },
+        {
+          "title": "Open-CBM: Dirichlet Process Concept Bottleneck Models with Semantic Validation for XAI in Mental Health",
+          "novelty": 0.8625,
+          "feasibility": 7.55,
+          "overall": 0.8087500000000001
+        },
+        {
+          "title": "CulturalAdapt-BO: Bayesian Optimization for Safe Survey Localization",
+          "novelty": 0.82,
+          "feasibility": 7.7,
+          "overall": 0.7949999999999999
+        },
+        {
+          "title": "LongiSense-Attentive: Predictive Behavioral Shift Detection with Attentive Neural CDEs",
+          "novelty": 0.775,
+          "feasibility": 6.35,
+          "overall": 0.7050000000000001
+        },
+        {
+          "title": "CulturalAdapt-TPE: Scalable Bayesian Optimization for Culturally Adaptive Survey Localization",
+          "novelty": 0.825,
+          "feasibility": 7.26,
+          "overall": 0.7755
+        },
+        {
+          "title": "LongiSense: Safe Deep RL for Predicting Longitudinal Behavioral Shifts in Mental Health",
+          "novelty": 0.725,
+          "feasibility": 6.67,
+          "overall": 0.696
+        },
+        {
+          "title": "SocioSim-Struct: Strategic Self-Play for Societal Simulations with Structured Deterministic Rewards",
+          "novelty": 0.55,
+          "feasibility": 7.0,
+          "overall": 0.625
+        },
+        {
+          "title": "AdaptiveSurveyLLM: Human-in-the-Loop RL for Culturally-Grounded Survey Localization",
+          "novelty": 0.825,
+          "feasibility": 5.55,
+          "overall": 0.69
+        },
+        {
+          "title": "LongiSense-CDE: Integral-Gated Neural CDEs with Deep Change-Point Detection for Behavioral Shifts",
+          "novelty": 0.825,
+          "feasibility": 7.18,
+          "overall": 0.7715
+        },
+        {
+          "title": "Qual2Quant-Reward: Latent-Space Reward Modeling from Qualitative Codes via LLM-Driven Contrastive Generation",
+          "novelty": 0.82,
+          "feasibility": 7.05,
+          "overall": 0.7625
+        },
+        {
+          "title": "Qual2Reward: Grounded Qualitative-to-Reward Mapping with Expert-Calibrated Validation for RLHF",
+          "novelty": 0.75,
+          "feasibility": 6.35,
+          "overall": 0.6925
+        },
+        {
+          "title": "SocioSim: Constrained Self-Play RL for Simulating Historical Societal Dynamics",
+          "novelty": 0.82,
+          "feasibility": 5.575,
+          "overall": 0.68875
+        }
+      ],
+      "proposals_count": 15,
+      "proposals_word_counts": [
+        191,
+        198,
+        152,
+        223,
+        151,
+        177,
+        201,
+        146,
+        171,
+        148,
+        175,
+        124,
+        204,
+        192,
+        189
+      ],
+      "elapsed_s": 2222.361556
+    },
+    {
+      "db_id": 17,
+      "domain": "quantum computing, error correction",
+      "status": "completed",
+      "session_id": null,
+      "created_at": "2026-05-03 15:11:10.243333",
+      "completed_at": "2026-05-03 15:41:05.999342",
+      "current_stage": "completed",
+      "stages_completed": [
+        "literature_search",
+        "ingestion",
+        "gap_analysis",
+        "idea_generation",
+        "novelty_checking",
+        "feasibility_scoring",
+        "proposal_synthesis",
+        "export",
+        "completed"
+      ],
+      "stage_report": {},
+      "gaps_count": 5,
+      "gaps": [
+        {
+          "title": "Hardware-Adaptive Decoding Algorithms for Biased and Correlated Noise",
+          "confidence": 0.95,
+          "type": "methodological"
+        },
+        {
+          "title": "Fault-Tolerant Overhead Reduction for Non-Clifford Gates",
+          "confidence": 0.92,
+          "type": "theoretical"
+        },
+        {
+          "title": "Cross-Domain Integration of QEC with Quantum Sensing and Thermodynamics",
+          "confidence": 0.9,
+          "type": "cross-domain"
+        },
+        {
+          "title": "Resource-Optimized Interconnects and Lattice Surgery for 3D Architectures",
+          "confidence": 0.88,
+          "type": "empirical"
+        },
+        {
+          "title": "Unified Framework for Continuous-Variable and Hybrid QEC",
+          "confidence": 0.85,
+          "type": "theoretical"
+        }
+      ],
+      "ideas_count": 10,
+      "ideas": [
+        {
+          "title": "Optimal Analog-Information Decoding for Bosonic-Discrete Variable Concatenation",
+          "novelty": 0.735,
+          "feasibility": 7.55,
+          "overall": 0.745
+        },
+        {
+          "title": "Asymmetric Surface Codes for Fault-Tolerant Quantum Sensing of Global Fields",
+          "novelty": 0.85,
+          "feasibility": 7.65,
+          "overall": 0.8075
+        },
+        {
+          "title": "Neural Hardware-Adaptive Decoding via Offline-Pretrained, Online-Fine-Tuned GNNs",
+          "novelty": 0.85,
+          "feasibility": 7.35,
+          "overall": 0.7925
+        },
+        {
+          "title": "Deadlock-Free Dynamic Routing and Patching for Lattice Surgery in Modular 3D Quantum Architectures",
+          "novelty": 0.85,
+          "feasibility": 8.35,
+          "overall": 0.8425
+        },
+        {
+          "title": "Resource-Optimized Routing Algorithms for Modular 3D Lattice Surgery",
+          "novelty": 0.725,
+          "feasibility": 8.05,
+          "overall": 0.765
+        },
+        {
+          "title": "Hardware-Aware Lightweight CNN-MWPM Hybrid Decoding with Bayesian Edge Updates for Correlated Noise",
+          "novelty": 0.9225,
+          "feasibility": 7.35,
+          "overall": 0.82875
+        },
+        {
+          "title": "Analog-Informed Cross-Hilbert-Space Mapping for Concatenated Bosonic-Surface Codes",
+          "novelty": 0.85,
+          "feasibility": 7.55,
+          "overall": 0.8025
+        },
+        {
+          "title": "Robust Operator-Specific Surface Codes for Fault-Tolerant Quantum Sensing under Asymmetric Noise",
+          "novelty": 0.85,
+          "feasibility": 7.75,
+          "overall": 0.8125
+        },
+        {
+          "title": "Theoretical Bounds on Thermodynamic Recovery of Discarded Magic States",
+          "novelty": 0.8625,
+          "feasibility": 8.35,
+          "overall": 0.84875
+        },
+        {
+          "title": "Theoretical Bounds on Thermodynamic Recovery of Single-Qubit Discarded Magic States via Autonomous Thermal Machines",
+          "novelty": 0.8,
+          "feasibility": 7.65,
+          "overall": 0.7825
+        }
+      ],
+      "proposals_count": 10,
+      "proposals_word_counts": [
+        188,
+        200,
+        211,
+        221,
+        168,
+        273,
+        220,
+        237,
+        194,
+        260
+      ],
+      "elapsed_s": 1795.756009
+    },
+    {
+      "db_id": 15,
+      "domain": "AI/NLP",
+      "status": "completed",
+      "session_id": null,
+      "created_at": "2026-05-03 06:35:55.261263",
+      "completed_at": "2026-05-03 06:49:46.981647",
+      "current_stage": "initializing",
+      "stages_completed": [],
+      "stage_report": {},
+      "gaps_count": 2,
+      "gaps": [
+        {
+          "title": "Integration of Advanced Attention Mechanisms in Spatiotemporal 3D Perception",
+          "confidence": 0.92,
+          "type": "cross-domain"
+        },
+        {
+          "title": "Theoretical and Empirical Evaluation of Flexible Attention in Non-Euclidean Geometries",
+          "confidence": 0.88,
+          "type": "methodological"
+        }
+      ],
+      "ideas_count": 2,
+      "ideas": [
+        {
+          "title": "Manifold-Aware Affine Attention (MA2): Geometric Transformers for Cortical Surface Analysis",
+          "novelty": 0.575,
+          "feasibility": 7.35,
+          "overall": 0.655
+        },
+        {
+          "title": "GeoSparse Affine Attention: Density-Aware Spatiotemporal Transformers for Robust 3D LiDAR Object Detection",
+          "novelty": 0.375,
+          "feasibility": 6.32,
+          "overall": 0.5035000000000001
+        }
+      ],
+      "proposals_count": 2,
+      "proposals_word_counts": [
+        246,
+        295
+      ],
+      "elapsed_s": 831.720384
+    }
+  ]
+}
