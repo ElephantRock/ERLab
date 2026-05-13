@@ -67,6 +67,7 @@ class PipelineOrchestrator:
     _STAGE_ORDER = [
         "literature_search",
         "ingestion",
+        "trimmer",  # BATCH-184: paper reranking + truncation
         "gap_analysis",
         "gap_reflection",
         "idea_generation",
@@ -115,13 +116,10 @@ class PipelineOrchestrator:
             except Exception as e:
                 logger.warning("Model selector init failed, using single provider: %s", e)
 
-        # Strategy: resolve config, default to deep_research (HB-02)
-        from backend.pipeline.strategies import StrategyRegistry, register_presets
-        self._strategy_registry = StrategyRegistry()
-        register_presets(self._strategy_registry)
+        # Strategy: resolve from pipeline.yaml (BATCH-184: single source of truth)
         self._strategy_name = strategy or "deep_research"
-        self._strategy_config = self._strategy_registry.get(self._strategy_name)
-        logger.info("Pipeline strategy: %s", self._strategy_name)
+        self._strategy_config = self._load_yaml_strategy(self._strategy_name)
+        logger.info("Pipeline strategy: %s (from pipeline.yaml)", self._strategy_name)
 
         # Task routing (optional per-stage model selection)
         self._task_router = None
@@ -905,6 +903,84 @@ class PipelineOrchestrator:
         """Return the name of the active pipeline strategy."""
         return self._strategy_name
 
+    def dry_run(self, domain: str = "test", strategy: str | None = None) -> str:
+        """Print execution plan without running (BATCH-184).
+
+        Reads pipeline.yaml for stage list and model assignments.
+        Returns the plan as a formatted string.
+        """
+        from backend.pipeline.dag.config import ConfigLoader
+
+        strat = strategy or self._strategy_name
+        config = ConfigLoader().load()
+        strategies = config.get("strategies", {})
+        if strat not in strategies:
+            return f"Unknown strategy '{strat}'. Available: {', '.join(strategies.keys())}"
+
+        stages = strategies[strat].get("stages", [])
+        models = config.get("models", {})
+
+        # Stage-to-category mapping (from pipeline.yaml comments)
+        CATEGORY_MAP = {
+            "literature_search": "thinking", "ingestion": "embedding",
+            "trimmer": "system", "gap_analysis": "thinking",
+            "gap_reflection": "thinking", "idea_generation": "thinking",
+            "idea_reflection": "thinking", "novelty_checking": "embedding",
+            "feasibility_scoring": "thinking", "mechanical_metrics": "system",
+            "proposal_synthesis": "generation", "adversarial_review": "thinking",
+            "evaluation": "thinking", "paper_synthesis": "generation",
+            "citation_audit": "thinking", "proposal_deepening": "generation",
+            "export": "system",
+        }
+
+        lines = [
+            f"dry_run: strategy={strat}, domain={domain}",
+            f"run_id: (not generated -- dry run)",
+            f"stages: {len(stages)}",
+            "",
+        ]
+        for i, name in enumerate(stages, 1):
+            category = CATEGORY_MAP.get(name, "system")
+            model_cfg = models.get(category, {})
+            provider = model_cfg.get("provider", "unknown")
+            model = model_cfg.get("model", "unknown")
+            lines.append(f"   {i}. {name:<28s} {category} ({provider}/{model})")
+
+        return "\n".join(lines)
+
+    @staticmethod
+    def _load_yaml_strategy(strategy_name: str):
+        """Load strategy config from pipeline.yaml (BATCH-184).
+
+        Returns a StrategyConfig with stages dict built from YAML.
+        Falls back to legacy StrategyRegistry if YAML is unavailable.
+        """
+        try:
+            from backend.pipeline.dag.config import ConfigLoader
+            from backend.pipeline.strategies.models import StageConfig, StrategyConfig
+            config = ConfigLoader().load()
+            strategies = config.get("strategies", {})
+            if strategy_name not in strategies:
+                raise ValueError(
+                    f"Unknown strategy '{strategy_name}'. "
+                    f"Available: {', '.join(strategies.keys())}"
+                )
+            strat_yaml = strategies[strategy_name]
+            stages = {}
+            for name in strat_yaml.get("stages", []):
+                stages[name] = StageConfig(enabled=True)
+            return StrategyConfig(
+                name=strategy_name,
+                description=strat_yaml.get("description", ""),
+                stages=stages,
+            )
+        except Exception as e:
+            logger.warning("YAML strategy load failed, falling back to presets: %s", e)
+            from backend.pipeline.strategies import StrategyRegistry, register_presets
+            registry = StrategyRegistry()
+            register_presets(registry)
+            return registry.get(strategy_name)
+
     def _build_synthesis_stage(self, ref_validator) -> PipelineStage:
         """Build the proposal synthesis stage, selecting synthesizer based on strategy."""
         if self._strategy_name == "fast_scan":
@@ -1012,9 +1088,22 @@ class PipelineOrchestrator:
         # BATCH-172: resolve thinking_provider with fallback
         tp = self._thinking_provider or self._provider
 
+        # BATCH-184: Trimmer config from YAML
+        try:
+            from backend.pipeline.dag.runner import DAGRunner
+            dag_cfg = DAGRunner().load_config()
+            budgets = dag_cfg.get("budgets", {})
+            trim_top_k = budgets.get("trim_top_k", 20)
+            trim_max_chars = budgets.get("max_abstract_chars", 800)
+        except Exception:
+            trim_top_k, trim_max_chars = 20, 800
+
+        from backend.pipeline.dag.trimmer import TrimmerStage
+
         return [
             LiteratureSearchStage(self._search, self._hooks),
             IngestionStage(self._store, self._bm25, self._embedding, kg=self._kg, provider=self._provider),
+            TrimmerStage(top_k=trim_top_k, max_abstract_chars=trim_max_chars),  # BATCH-184
             GapAnalysisStage(self._gap_analyzer, self._goal_manager, self._hooks, self._memory, kg=self._kg, faithfulness_checker=self._faithfulness_checker),
             GapReflectionStage(provider=tp, reflector=ReflectionStage(provider=tp), threshold=0.6),
             idea_stage,
@@ -1060,6 +1149,8 @@ class PipelineOrchestrator:
 
         run_id = run_id or datetime.now().strftime("run_%Y%m%d_%H%M%S")
         result.run_id = run_id
+        self._current_run_id = run_id  # BATCH-184: for StageLogger
+        self._stage_logger = None  # Reset logger for new run
 
         # Phase 7: Initialize integration service (Soul + Journal + Context)
         try:
@@ -2028,6 +2119,23 @@ class PipelineOrchestrator:
                 stage_costs = self._cost_tracker.by_stage()
                 cost_usd = stage_costs.get(stage_name, {}).get("total_cost_usd", 0.0)
             self._budget.record(stage_name, tokens=tokens, cost_usd=cost_usd, elapsed=elapsed)
+
+        # BATCH-184: structured JSON logging per stage
+        try:
+            from backend.pipeline.dag.stage_log import StageLogger
+            if not hasattr(self, '_stage_logger'):
+                run_id = getattr(self, '_current_run_id', 'unknown')
+                self._stage_logger = StageLogger(run_id=run_id)
+            self._stage_logger.log(
+                stage=stage_name,
+                event="complete",
+                config={"strategy": self._strategy_name},
+                inputs={},
+                outputs={},
+                elapsed_s=elapsed,
+            )
+        except Exception as e:
+            logger.debug("StageLogger failed for %s: %s", stage_name, e)
         self._token_counter.reset()
 
     # ── Reference Verification (Phase 8) ───────────────────────────

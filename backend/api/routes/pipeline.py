@@ -1204,7 +1204,6 @@ async def trigger_dag_run(request: PipelineRunRequest, skip_preflight: bool = Fa
     """
     from backend.pipeline.dag.runner import DAGRunner
     from backend.pipeline.dag.stage_log import StageLogger
-    from backend.pipeline.dag.registry import STAGE_REGISTRY
 
     run_id = datetime.now().strftime("run_%Y%m%d_%H%M%S")
 
@@ -1215,27 +1214,39 @@ async def trigger_dag_run(request: PipelineRunRequest, skip_preflight: bool = Fa
 
     async def _run_dag():
         try:
-            from backend.pipeline.dag.adapter import DAGStageAdapter
+            from backend.pipeline.orchestrator import PipelineOrchestrator
 
-            adapter = DAGStageAdapter()
-            result = await adapter.execute(
-                strategy=request.strategy or "deep_research",
-                domain=request.domain,
-                run_id=run_id,
+            # Create orchestrator with YAML strategy (BATCH-184)
+            orchestrator = PipelineOrchestrator(
                 stage_callback=lambda name, idx, total, elapsed: (
                     _progress_queues[run_id].put_nowait({
                         "stage": name, "index": idx,
                         "total": total, "elapsed": round(elapsed, 2),
                     }) if run_id in _progress_queues else None
                 ),
+                strategy=request.strategy or "deep_research",
+            )
+
+            # Override _should_stop to respect cancel event
+            original_should_stop = orchestrator._should_stop
+            def _should_stop_with_cancel():
+                if cancel_event.is_set():
+                    return True
+                return original_should_stop()
+            orchestrator._should_stop = _should_stop_with_cancel
+
+            result = await orchestrator.run(
+                domain=request.domain,
                 search_queries=request.search_queries,
                 max_gaps=request.max_gaps or 5,
                 export_format=request.export_format or "markdown",
+                run_id=run_id,
+                session_id=request.session_id,
             )
             logger.info(
                 "DAG run %s completed: %d papers, %d gaps, %d ideas",
                 run_id,
-                len(result.papers) if result.papers else 0,
+                len(result.papers_found) if result.papers_found else 0,
                 len(result.gaps) if result.gaps else 0,
                 len(result.ideas) if result.ideas else 0,
             )
