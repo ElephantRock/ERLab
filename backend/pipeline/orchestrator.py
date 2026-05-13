@@ -23,6 +23,11 @@ from backend.pipeline.novelty.novelty_checker import NoveltyChecker
 from backend.pipeline.verification.proposal_deepener import ProposalDeepener
 from backend.pipeline.persistence import PipelinePersistence
 from backend.pipeline.result import PipelineResult, StageReport
+from backend.pipeline.monitoring.doom_loop import (
+    StageOutputSignature,
+    check_pipeline_doom,
+    hash_stage_output,
+)
 from backend.pipeline.self_improve.evolution import PipelineEvolver
 from backend.pipeline.self_improve.frontier import ParetoFrontier
 from backend.pipeline.self_improve.lessons import LessonExtractor
@@ -99,6 +104,8 @@ class PipelineOrchestrator:
         self._stage_callback = stage_callback
         self._settings = settings
         self._last_stage_retries = 0  # BATCH-176: track LLM retries per stage
+        self._doom_history: list[dict] = []  # BATCH-185: doom loop detection
+        self._doom_detected = False  # BATCH-185: flag to skip optional stages
 
         # Hybrid model routing: local for thinking tasks, cloud for generation
         self._model_selector = None
@@ -185,6 +192,10 @@ class PipelineOrchestrator:
             global_token_limit=getattr(settings, "budget_max_tokens", 500000),
         )
         self._stages = self._build_stages()
+
+        # BATCH-185: Doom loop detection history
+        self._doom_history: list = []
+        self._doom_detected: bool = False
 
         # Register built-in tools after all services are initialized
         from backend.pipeline.tools.builtin import register_builtin_tools
@@ -1152,6 +1163,10 @@ class PipelineOrchestrator:
         self._current_run_id = run_id  # BATCH-184: for StageLogger
         self._stage_logger = None  # Reset logger for new run
 
+        # BATCH-185: Reset doom loop detection for this run
+        self._doom_history = []
+        self._doom_detected = False
+
         # Phase 7: Initialize integration service (Soul + Journal + Context)
         try:
             from backend.pipeline.integration_service import PipelineIntegrationService
@@ -1282,6 +1297,15 @@ class PipelineOrchestrator:
                     name=stage.name,
                     status="skipped_by_strategy",
                     skip_reason=f"Strategy {self._strategy_name}",
+                ))
+                continue
+
+            # BATCH-185: Skip optional stages when doom loop detected
+            if self._doom_detected and stage.name not in ("export",):
+                result.stage_report.append(StageReport(
+                    name=stage.name,
+                    status="skipped_by_doom",
+                    skip_reason="Doom loop detected — skipping optional stage",
                 ))
                 continue
 
@@ -1442,6 +1466,32 @@ class PipelineOrchestrator:
                 "pipeline.stage.complete",
                 {"stage": stage.name, "elapsed": elapsed, "run_id": run_id},
             )
+
+            # BATCH-185: Doom loop detection
+            if not self._doom_detected:
+                try:
+                    from backend.pipeline.monitoring.doom_loop import (
+                        extract_stage_fingerprint,
+                        hash_stage_output,
+                        check_pipeline_doom,
+                    )
+                    fingerprint = extract_stage_fingerprint(
+                        stage.name,
+                        gaps=result.gaps if hasattr(result, 'gaps') else None,
+                        ideas=result.ideas if hasattr(result, 'ideas') else None,
+                        proposals=result.proposals if hasattr(result, 'proposals') else None,
+                    )
+                    if fingerprint:
+                        self._doom_history.append({
+                            "stage_name": stage.name,
+                            "output_hash": hash_stage_output(fingerprint),
+                        })
+                        doom_msg = check_pipeline_doom(self._doom_history)
+                        if doom_msg:
+                            logger.warning("Doom loop detected: %s", doom_msg)
+                            self._doom_detected = True
+                except Exception as e:
+                    logger.debug("Doom loop check failed for %s: %s", stage.name, e)
 
             # Persistence checkpoints
             if stage.name == "literature_search":
@@ -1622,6 +1672,39 @@ class PipelineOrchestrator:
                     f"Stage completed",
                     {"elapsed_s": f"{elapsed:.1f}"} if 'elapsed' in dir() else {},
                 )
+
+            # BATCH-185: Doom loop detection — check after each stage
+            fingerprint = self._extract_stage_fingerprint(stage.name, result)
+            if fingerprint:  # Only check monitored stages
+                output_hash = hash_stage_output(fingerprint)
+                self._doom_history.append({
+                    "stage_name": stage.name,
+                    "output_hash": output_hash,
+                })
+                doom_msg = check_pipeline_doom(self._doom_history)
+                if doom_msg:
+                    logger.warning("BATCH-185 doom detection: %s", doom_msg)
+                    self._doom_detected = True
+
+            # BATCH-185: Skip remaining optional stages if doom detected (except export)
+            if self._doom_detected and not isinstance(stage, ExportStage):
+                logger.info(
+                    "Doom detected — skipping remaining optional stages (export will still run)"
+                )
+                # Report remaining stages as skipped
+                reported_names = {r.name for r in result.stage_report}
+                for remaining_stage in self._stages:
+                    if (
+                        remaining_stage.name not in reported_names
+                        and not isinstance(remaining_stage, ExportStage)
+                    ):
+                        result.stage_report.append(StageReport(
+                            name=remaining_stage.name,
+                            status="skipped_by_doom",
+                            skip_reason="Doom loop detected",
+                        ))
+                # Continue loop — export stage will still execute
+                continue
 
             if not should_continue or self._should_stop():
                 # Fill not_reached for remaining stages
@@ -2236,6 +2319,42 @@ class PipelineOrchestrator:
         except Exception as e:
             # HB-01: Never crash the pipeline over verification
             logger.warning("Reference verification failed (non-fatal, HB-01): %s", e)
+
+    # ── Doom Loop Fingerprint Extraction (BATCH-185) ─────────────────────
+
+    @staticmethod
+    def _extract_stage_fingerprint(stage_name: str, result: PipelineResult) -> str:
+        """Extract minimal fingerprint for doom-prone stages.
+
+        Only gap_analysis, idea_generation, and proposal_synthesis produce
+        fingerprints — these are the stages most likely to loop.
+        Other stages return empty string (no doom check).
+        """
+        if stage_name == "gap_analysis":
+            if result.gaps:
+                return "|".join(g.title for g in result.gaps)
+            return ""
+
+        if stage_name == "idea_generation":
+            if result.ideas:
+                parts = [f"{i.title}:{i.score:.2f}" for i in result.ideas]
+                return "|".join(parts)
+            return ""
+
+        if stage_name == "proposal_synthesis":
+            if result.proposals:
+                parts = []
+                for prop in result.proposals.values():
+                    # Truncate long proposal content before hashing (NOTE-01)
+                    abstract = getattr(prop, 'abstract', '') or ''
+                    if not abstract and hasattr(prop, 'sections'):
+                        abstract = prop.sections.get('abstract', '')
+                    parts.append(abstract[:500])
+                return "|".join(parts)
+            return ""
+
+        # Other stages: no fingerprint → no doom check
+        return ""
 
     # ── Pipeline Quality Evaluation (Phase 8) ────────────────────────
 
