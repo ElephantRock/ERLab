@@ -1,0 +1,120 @@
+# ═══════════════════════════════════════════════════════════════
+# CogniGen Pipeline Configuration — Single Source of Truth
+# BATCH-180: YAML is the ONLY config source. No env vars, no .env,
+# no strategy presets, no gate booleans.
+# ═══════════════════════════════════════════════════════════════
+
+models:
+  thinking:
+    provider: openai
+    model: gpt-4o
+    base_url: https://api.openai.com/v1
+  generation:
+    provider: openai
+    model: gpt-4o
+    base_url: https://api.openai.com/v1
+  embedding:
+    provider: openai
+    model: text-embedding-3-small
+    dimension: 1536
+    base_url: https://api.openai.com/v1
+  reranker:
+    strategy: llm
+    model: gpt-4o
+    base_url: https://api.openai.com/v1
+
+infrastructure:
+  chroma_dir: data/chroma
+  bm25_dir: data/bm25
+  database: data/research.db
+  server:
+    host: 0.0.0.0
+    port: 8000
+
+budgets:
+  max_papers: 50
+  max_gaps: 30
+  max_ideas: 20
+  max_abstract_chars: 500
+  trim_top_k: 10
+  stage_timeout: 300
+  total_timeout: 1800
+
+search:
+  sources:
+    - crossref
+    - openalex
+    - semantic_scholar
+  queries_per_source: 5
+  citation_explore: true
+
+strategies:
+  deep_research:
+    stages:
+      - literature_search
+      - ingestion
+      - gap_analysis
+      - gap_reflection
+      - idea_generation
+      - idea_reflection
+      - novelty_checking
+      - feasibility_scoring
+      - mechanical_metrics
+      - proposal_synthesis
+      - adversarial_review
+      - evaluation
+      - paper_synthesis
+      - citation_audit
+      - proposal_deepening
+      - export
+    description: >
+      Full pipeline: literature search, ingestion, gap analysis, idea generation
+      with tree search, novelty checking, feasibility scoring, metrics, proposal
+      synthesis, adversarial review, paper synthesis, citation audit, proposal
+      deepening, and export. ~25 minutes.
+
+  fast_scan:
+    stages:
+      - literature_search
+      - ingestion
+      - gap_analysis
+      - feasibility_scoring
+      - proposal_synthesis
+      - export
+    description: >
+      Quick scan: literature search, ingestion, gap analysis, feasibility scoring,
+      light synthesis, and export. Skips tree search, novelty checking, metrics,
+      adversarial review, paper synthesis, and citation audit. ~2-5 minutes.
+
+  academic_proposal:
+    stages:
+      - literature_search
+      - ingestion
+      - gap_analysis
+      - gap_reflection
+      - idea_generation
+      - idea_reflection
+      - novelty_checking
+      - feasibility_scoring
+      - mechanical_metrics
+      - proposal_synthesis
+      - adversarial_review
+      - evaluation
+      - paper_synthesis
+      - citation_audit
+      - proposal_deepening
+      - export
+    description: >
+      Academic-grade proposal: full pipeline with longer timeouts, stricter
+      novelty/feasibility thresholds, paper synthesis and citation audit for
+      publication-ready output. ~45 minutes.
+
+  literature_review:
+    stages:
+      - literature_search
+      - ingestion
+      - gap_analysis
+      - export
+    description: >
+      Literature review only: search, ingest, analyze gaps, then export.
+      No idea generation, proposal synthesis, or citation audit. ~10 minutes.
