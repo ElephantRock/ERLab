@@ -128,6 +128,25 @@ class TestContextMapping:
         assert len(new.ideas) == 1
 
 
+class TestAdapterAvailableStages:
+    """TEST-181-02-01 through TEST-181-02-04: Adapter stage listing."""
+
+    def test_01_available_stages_includes_16(self):
+        """TEST-181-02-01: Adapter lists all 16+ stages from YAML."""
+        from backend.pipeline.dag.adapter import DAGStageAdapter
+        adapter = DAGStageAdapter()
+        stages = adapter.available_stages
+        assert len(stages) >= 16
+
+    def test_02_adapter_import_is_fast(self):
+        """TEST-181-02-02: Adapter import completes in under 1 second."""
+        import time
+        t0 = time.time()
+        from backend.pipeline.dag.adapter import DAGStageAdapter
+        elapsed = time.time() - t0
+        assert elapsed < 1.0, f"Adapter import took {elapsed:.2f}s — too slow"
+
+
 # ── TASK-03: DAG API Endpoint ─────────────────────────────────────────
 
 

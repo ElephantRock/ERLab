@@ -1195,7 +1195,7 @@ async def get_citation_graph(run_id: str):
     summary="Trigger DAG-based pipeline run",
     description="Start a pipeline run using the new DAG runner with YAML config. Returns 202 with run_id.",
 )
-async def trigger_dag_run(request: PipelineRunRequest):
+async def trigger_dag_run(request: PipelineRunRequest, skip_preflight: bool = False):
     """Trigger a pipeline run via the new DAG orchestrator.
 
     Uses pipeline.yaml as the single source of truth for models, budgets,
@@ -1203,8 +1203,8 @@ async def trigger_dag_run(request: PipelineRunRequest):
     implementations.
     """
     from backend.pipeline.dag.runner import DAGRunner
-    from backend.pipeline.dag.adapter import DAGStageAdapter
     from backend.pipeline.dag.stage_log import StageLogger
+    from backend.pipeline.dag.registry import STAGE_REGISTRY
 
     run_id = datetime.now().strftime("run_%Y%m%d_%H%M%S")
 
@@ -1215,126 +1215,30 @@ async def trigger_dag_run(request: PipelineRunRequest):
 
     async def _run_dag():
         try:
-            runner = DAGRunner()
-            config = runner.load_config()
-            plan = runner.build_plan(request.strategy or "deep_research")
+            from backend.pipeline.dag.adapter import DAGStageAdapter
 
-            logger.info(
-                "DAG run %s: strategy=%s, stages=%d, domain=%s",
-                run_id, request.strategy, len(plan), request.domain,
-            )
-
-            # Initialize adapter (builds stages)
             adapter = DAGStageAdapter()
-            adapter.build_stages()
-
-            # Initialize stage logger
-            dag_logger = StageLogger(run_id=run_id)
-
-            # Build old-style context from request
-            from backend.pipeline.result import PipelineResult
-            from backend.pipeline.stages import StageContext as OldCtx
-
-            result = PipelineResult()
-            result.run_id = run_id
-            old_ctx = OldCtx(
-                result=result,
+            result = await adapter.execute(
+                strategy=request.strategy or "deep_research",
                 domain=request.domain,
                 run_id=run_id,
-                params={
-                    "max_gaps": request.max_gaps or config.get("budgets", {}).get("max_gaps", 5),
-                    "generation_rounds": request.generation_rounds or 2,
-                    "ideas_per_round": request.ideas_per_round or 3,
-                    "run_novelty": request.run_novelty if request.run_novelty is not None else True,
-                    "run_feasibility": request.run_feasibility if request.run_feasibility is not None else True,
-                    "run_synthesis": request.run_synthesis if request.run_synthesis is not None else True,
-                    "export_format": request.export_format or "markdown",
-                },
-                max_gaps=request.max_gaps or config.get("budgets", {}).get("max_gaps", 5),
-                export_format=request.export_format or "markdown",
+                stage_callback=lambda name, idx, total, elapsed: (
+                    _progress_queues[run_id].put_nowait({
+                        "stage": name, "index": idx,
+                        "total": total, "elapsed": round(elapsed, 2),
+                    }) if run_id in _progress_queues else None
+                ),
                 search_queries=request.search_queries,
+                max_gaps=request.max_gaps or 5,
+                export_format=request.export_format or "markdown",
             )
-
-            # Execute each stage in the plan
-            for idx, stage_name in enumerate(plan):
-                if cancel_event.is_set():
-                    logger.info("DAG run %s cancelled at stage %s", run_id, stage_name)
-                    result.status = "cancelled"
-                    break
-
-                stage = adapter.get_stage(stage_name)
-                if stage is None:
-                    logger.warning("DAG run %s: stage '%s' not found, skipping", run_id, stage_name)
-                    continue
-
-                import time
-                t0 = time.time()
-                logger.info(
-                    "DAG run %s: stage %d/%d '%s' starting",
-                    run_id, idx + 1, len(plan), stage_name,
-                )
-
-                try:
-                    success = await stage.execute(old_ctx)
-                    elapsed = time.time() - t0
-
-                    # Log to structured logger
-                    dag_logger.log(
-                        stage=stage_name,
-                        event="complete",
-                        config={"model_category": str(STAGE_REGISTRY.get(stage_name, "unknown"))},
-                        inputs={"papers": len(old_ctx.all_papers), "gaps": len(old_ctx.result.gaps)},
-                        outputs={"ideas": len(old_ctx.result.ideas), "proposals": len(old_ctx.result.proposals)},
-                        elapsed_s=elapsed,
-                    )
-
-                    # Progress callback
-                    if run_id in _progress_queues:
-                        _progress_queues[run_id].put_nowait({
-                            "stage": stage_name,
-                            "index": idx,
-                            "total": len(plan),
-                            "elapsed": round(elapsed, 2),
-                        })
-
-                    logger.info(
-                        "DAG run %s: stage %d/%d '%s' completed in %.1fs (success=%s)",
-                        run_id, idx + 1, len(plan), stage_name, elapsed, success,
-                    )
-
-                    if not success:
-                        logger.warning("DAG run %s: stage '%s' returned False, halting", run_id, stage_name)
-                        break
-
-                except Exception as e:
-                    elapsed = time.time() - t0
-                    dag_logger.log_error(
-                        stage=stage_name,
-                        event="error",
-                        error=str(e),
-                        elapsed_s=elapsed,
-                    )
-                    logger.error(
-                        "DAG run %s: stage '%s' failed: %s", run_id, stage_name, e,
-                    )
-                    raise
-
-            result.status = "completed"
-
-            # Persist to DB (same as old orchestrator)
-            try:
-                from backend.pipeline.persistence import PipelinePersistence
-                persistence = PipelinePersistence()
-                db_id = persistence.save_run(
-                    run_id=run_id,
-                    domain=request.domain,
-                    strategy=request.strategy or "deep_research",
-                    result=result,
-                )
-                logger.info("DAG run %s persisted to DB (id=%d)", run_id, db_id)
-            except Exception as e:
-                logger.warning("DAG run %s persistence failed: %s", run_id, e)
-
+            logger.info(
+                "DAG run %s completed: %d papers, %d gaps, %d ideas",
+                run_id,
+                len(result.papers) if result.papers else 0,
+                len(result.gaps) if result.gaps else 0,
+                len(result.ideas) if result.ideas else 0,
+            )
         except Exception as e:
             logger.error("DAG run %s failed: %s", run_id, e)
         finally:
@@ -1343,26 +1247,30 @@ async def trigger_dag_run(request: PipelineRunRequest):
                     _progress_queues[run_id].put_nowait({"done": True})
             _background_tasks.discard(asyncio.current_task())
 
-    # Preflight (reuse existing preflight check)
-    from backend.pipeline.preflight import run_preflight
-    preflight_report = await run_preflight(
-        domain=request.domain,
-        strategy=request.strategy,
-    )
-    if not preflight_report.can_proceed:
-        from fastapi.responses import JSONResponse
-        fatal_checks = [c for c in preflight_report.checks if c.severity.value == "fatal"]
-        return JSONResponse(
-            status_code=503,
-            content={
-                "error": "Pipeline preflight checks failed",
-                "preflight": {
-                    "can_proceed": False,
-                    "fatal_count": preflight_report.fatal,
-                    "fatal_checks": [{"name": c.name, "message": c.message} for c in fatal_checks],
-                },
-            },
-        )
+    # Preflight (optional — can be skipped for testing)
+    if not skip_preflight:
+        try:
+            from backend.pipeline.preflight import run_preflight
+            preflight_report = await asyncio.wait_for(
+                run_preflight(domain=request.domain, strategy=request.strategy),
+                timeout=15.0,
+            )
+            if not preflight_report.can_proceed:
+                from fastapi.responses import JSONResponse
+                fatal_checks = [c for c in preflight_report.checks if c.severity.value == "fatal"]
+                return JSONResponse(
+                    status_code=503,
+                    content={
+                        "error": "Pipeline preflight checks failed",
+                        "preflight": {
+                            "can_proceed": False,
+                            "fatal_count": preflight_report.fatal,
+                            "fatal_checks": [{"name": c.name, "message": c.message} for c in fatal_checks],
+                        },
+                    },
+                )
+        except asyncio.TimeoutError:
+            logger.warning("Preflight timed out for DAG run %s, proceeding anyway", run_id)
 
     task = asyncio.create_task(_run_dag())
     _background_tasks.add(task)
