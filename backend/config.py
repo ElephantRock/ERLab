@@ -276,6 +276,11 @@ class Settings(BaseSettings):
     tree_of_thought_max_depth: int = 3
     tree_of_thought_beam_width: int = 2
 
+    # Research sub-agent (BATCH-186): isolated search contexts
+    research_subagent_enabled: bool = False  # opt-in for now
+    research_subagent_max_iterations: int = 20
+    research_subagent_context_budget: int = 100_000  # tokens per sub-agent
+
     # Autonomous scheduling (P4)
     autonomy_schedule_enabled: bool = False
     autonomy_schedule_interval_seconds: int = 3600
