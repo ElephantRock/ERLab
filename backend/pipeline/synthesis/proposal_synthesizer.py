@@ -252,6 +252,16 @@ class ProposalSynthesizer:
             except Exception as e:
                 logger.warning("Ensemble review failed: %s", e)
 
+        # BATCH-188: Context compaction for oversized proposals
+        try:
+            from backend.pipeline.synthesis.context_compactor import compact_proposal
+            content = proposal.proposed_method or ""
+            if len(content) > 100_000:  # > ~25K tokens
+                logger.info("Compacting oversized proposal (%d chars)", len(content))
+                proposal.proposed_method = compact_proposal(content, max_tokens=20_000)
+        except Exception as e:
+            logger.debug("Context compaction skipped: %s", e)
+
         return proposal
 
     async def _generate_single_section(

@@ -107,6 +107,12 @@ class PipelineOrchestrator:
         self._doom_history: list[dict] = []  # BATCH-185: doom loop detection
         self._doom_detected = False  # BATCH-185: flag to skip optional stages
 
+        # BATCH-191: Consolidated Context Window
+        self._ccw = None  # Initialized in run()
+
+        # BATCH-190: Notification gateway
+        self._notifier = None
+
         # Hybrid model routing: local for thinking tasks, cloud for generation
         self._model_selector = None
         self._thinking_provider = None
@@ -1167,6 +1173,30 @@ class PipelineOrchestrator:
         self._doom_history = []
         self._doom_detected = False
 
+        # BATCH-191: Initialize Consolidated Context Window
+        from backend.pipeline.monitoring.ccw import ConsolidatedContextWindow
+        self._ccw = ConsolidatedContextWindow()
+
+        # BATCH-190: Initialize notification gateway
+        try:
+            from backend.pipeline.notifications.gateway import create_notifier
+            webhook_url = getattr(settings, 'notification_webhook_url', None)
+            self._notifier = create_notifier(webhook_url)
+        except Exception:
+            self._notifier = None
+
+        # BATCH-190: Send run_started notification
+        if self._notifier:
+            try:
+                from backend.pipeline.notifications.gateway import Notification, PipelineEvent
+                await self._notifier.send(Notification(
+                    event=PipelineEvent.RUN_STARTED,
+                    run_id=run_id, strategy=strategy, domain=domain,
+                    message=f"Pipeline started: {strategy} on '{domain}'",
+                ))
+            except Exception:
+                pass
+
         # Phase 7: Initialize integration service (Soul + Journal + Context)
         try:
             from backend.pipeline.integration_service import PipelineIntegrationService
@@ -1492,6 +1522,38 @@ class PipelineOrchestrator:
                             self._doom_detected = True
                 except Exception as e:
                     logger.debug("Doom loop check failed for %s: %s", stage.name, e)
+
+            # BATCH-191: CCW compression after key stages
+            if self._ccw:
+                try:
+                    if stage.name == "literature_search" or stage.name == "ingestion":
+                        if ctx.all_papers:
+                            self._ccw.add_papers(ctx.all_papers)
+                            logger.info("CCW: compressed %d papers (%d tokens)",
+                                         len(self._ccw.papers), self._ccw.estimate_tokens())
+                    elif stage.name == "gap_analysis":
+                        if result.gaps:
+                            self._ccw.add_gaps(result.gaps)
+                            logger.info("CCW: compressed %d gaps", len(self._ccw.gaps))
+                    elif stage.name == "idea_generation":
+                        if result.ideas:
+                            self._ccw.add_ideas(result.ideas)
+                            logger.info("CCW: compressed %d ideas", len(self._ccw.ideas))
+                except Exception as e:
+                    logger.debug("CCW compression failed for %s: %s", stage.name, e)
+
+            # BATCH-190: Stage completion notification
+            if self._notifier:
+                try:
+                    from backend.pipeline.notifications.gateway import Notification, PipelineEvent
+                    await self._notifier.send(Notification(
+                        event=PipelineEvent.STAGE_COMPLETED,
+                        run_id=run_id, strategy=strategy, domain=domain,
+                        message=f"Stage {stage.name} completed ({elapsed:.1f}s)",
+                        data={"stage": stage.name, "elapsed": elapsed},
+                    ))
+                except Exception:
+                    pass
 
             # Persistence checkpoints
             if stage.name == "literature_search":
@@ -1852,6 +1914,22 @@ class PipelineOrchestrator:
 
         logger.info("=== Pipeline Complete ===")
         self._persistence.mark_run_completed(db_run_id)
+
+        # BATCH-190: Run completed notification
+        if self._notifier:
+            try:
+                from backend.pipeline.notifications.gateway import Notification, PipelineEvent
+                n_gaps = len(result.gaps) if result.gaps else 0
+                n_ideas = len(result.ideas) if result.ideas else 0
+                n_proposals = len(result.proposals) if result.proposals else 0
+                await self._notifier.send(Notification(
+                    event=PipelineEvent.RUN_COMPLETED,
+                    run_id=run_id, strategy=strategy, domain=domain,
+                    message=f"Pipeline completed: {n_gaps} gaps, {n_ideas} ideas, {n_proposals} proposals",
+                    data={"gaps": n_gaps, "ideas": n_ideas, "proposals": n_proposals},
+                ))
+            except Exception:
+                pass
 
         # Persist cost events
         if self._cost_tracker and self._cost_tracker._events:

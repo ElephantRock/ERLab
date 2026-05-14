@@ -281,6 +281,9 @@ class Settings(BaseSettings):
     research_subagent_max_iterations: int = 20
     research_subagent_context_budget: int = 100_000  # tokens per sub-agent
 
+    # BATCH-190: Notification gateway
+    notification_webhook_url: str | None = None  # e.g. Slack webhook URL
+
     # Autonomous scheduling (P4)
     autonomy_schedule_enabled: bool = False
     autonomy_schedule_interval_seconds: int = 3600
