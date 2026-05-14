@@ -23,6 +23,30 @@ _progress_queues: dict[str, asyncio.Queue] = {}
 _background_tasks: set[asyncio.Task] = set()
 
 
+# ── BATCH-187: Pre-flight cost estimation ─────────────────────────────
+@router.get(
+    "/estimate",
+    summary="Estimate pipeline run cost and time",
+)
+async def estimate_run(
+    strategy: str = Query(default="deep_research", description="Pipeline strategy"),
+):
+    """Return estimated cost and time for a pipeline run."""
+    from backend.pipeline.monitoring.cost_estimator import estimate_run_cost
+    est = estimate_run_cost(strategy)
+    return {
+        "strategy": est.strategy,
+        "stages": est.stages,
+        "estimated_cost_usd": est.estimated_cost_usd,
+        "estimated_time_seconds": est.estimated_time_seconds,
+        "estimated_time_display": est.time_display,
+        "cost_display": est.cost_display,
+        "local_cost_usd": est.local_cost_usd,
+        "cloud_cost_usd": est.cloud_cost_usd,
+        "breakdown": est.breakdown,
+    }
+
+
 @router.post(
     "/run",
     summary="Trigger pipeline run",
