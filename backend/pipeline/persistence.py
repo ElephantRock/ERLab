@@ -157,15 +157,57 @@ class PipelinePersistence:
                             IdeaModel.pipeline_run_id == db_run_id,
                         ).limit(1)
                     ).scalar_one_or_none()
-                    if existing:
-                        logger.info(
-                            "Skipping duplicate idea: '%s' (run_id=%s)",
-                            idea.title[:50], db_run_id,
-                        )
-                        continue
-
                     nov = result.novelty_reports.get(i)
                     feas = result.feasibility_reports.get(i)
+
+                    if existing:
+                        # Idea already persisted (e.g., after idea_generation).
+                        # If novelty/feasibility data is now available, update scores.
+                        if nov or feas:
+                            nov_dict = None
+                            if nov:
+                                nov_dict = {
+                                    "method_novelty": nov.method_novelty,
+                                    "problem_novelty": nov.problem_novelty,
+                                    "domain_transfer": nov.domain_transfer,
+                                    "combination_novelty": nov.combination_novelty,
+                                    "novelty_arguments": nov.novelty_arguments,
+                                }
+                            mech = result.mechanical_metrics.get(i)
+                            if mech and nov_dict is not None:
+                                nov_dict["mechanical_metrics"] = mech
+                            elif mech and nov_dict is None:
+                                nov_dict = {"mechanical_metrics": mech, "overall_score": None}
+
+                            feas_dict = None
+                            if feas:
+                                feas_dict = {
+                                    "data_availability": feas.data_availability,
+                                    "computational_requirements": feas.computational_requirements,
+                                    "methodological_complexity": feas.methodological_complexity,
+                                    "evaluation_plan": feas.evaluation_plan,
+                                    "reasoning": feas.reasoning,
+                                    "estimated_timeline": feas.estimated_timeline,
+                                }
+
+                            crud.update_idea_scores(
+                                session,
+                                existing.id,
+                                novelty_score=nov.overall_score if nov else None,
+                                feasibility_score=feas.overall_score if feas else None,
+                                novelty_report=json.dumps(nov_dict) if nov_dict else None,
+                                feasibility_report=json.dumps(feas_dict) if feas_dict else None,
+                            )
+                            logger.info(
+                                "Updated scores for idea '%s' (run_id=%s)",
+                                idea.title[:50], db_run_id,
+                            )
+                        else:
+                            logger.debug(
+                                "Skipping duplicate idea (no new scores): '%s'",
+                                idea.title[:50],
+                            )
+                        continue
 
                     # getattr guards for IdeaCandidate compatibility (BATCH-75, HB-02)
                     source_gap_ids_raw = getattr(idea, 'source_gap_ids', None)
