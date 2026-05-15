@@ -162,12 +162,54 @@ class ProposalSynthesizer:
         feasibility_report: FeasibilityReport | None = None,
         supporting_papers: list[Paper] | None = None,
         gaps: list | None = None,
+        framing_directive: str = "",
     ) -> ResearchProposal:
         """Generate a full-length research proposal section by section."""
         literature = self._format_literature(supporting_papers or [])
         context = self._build_context(idea, novelty_report, feasibility_report, literature, gaps)
 
+        # Inject framing directive into system prompt if present
+        system_prompt = self._prompt_template
+        if framing_directive:
+            system_prompt += f"\n\n## Strategic Framing\n{framing_directive}"
+
         sections: dict[str, str | list] = {}
+
+        # Build system prompt with optional framing directive
+        base_system = (
+            "You are a senior researcher writing a full research proposal for a "
+            "competitive conference (ACL, EMNLP, NeurIPS). You MUST "
+            "produce ALL sections with substantial content. Do NOT write stubs, "
+            "summaries, or placeholder text. Each section must be detailed and "
+            "technically precise.\n\n"
+            "CRITICAL REQUIREMENTS:\n"
+            "1. PROPOSED METHOD MUST include formal loss functions with $$...$$ equations.\n"
+            "   Every trainable component must have its training objective defined.\n"
+            "   Specify optimizer, learning rate, and gradient flow.\n"
+            "2. EVALUATION PLAN MUST include at least 3 baselines: in-domain RAG, naive cross-domain retrieval,\n"
+            "   and a minimal-intervention baseline (e.g., CoT prompting for analogies).\n"
+            "3. TIMELINE MUST be realistic for the model size. Prefer 7B/13B models.\n"
+            "   Account for debugging time. State GPU budget explicitly.\n"
+            "4. Include a Computational Requirements subsection in the Proposed Method.\n\n"
+            "This is a CLOSED-BOOK EXAM. You may ONLY cite sources "
+            "labeled [SOURCE-X] in the Supporting Literature. If a claim cannot "
+            "be backed by a [SOURCE-X] paper, write 'internal reasoning' — do NOT "
+            "invent citations. Do NOT use author names from your training data that "
+            "are not listed below.\n\n"
+            "OUTPUT FORMAT: Write each section with a markdown header like:\n"
+            "## Title\n...\n## Abstract\n...\n## Introduction\n...\n"
+            "## Related Work\n...\n## Proposed Method\n...\n"
+            "## Expected Contributions\n...\n## Evaluation Plan\n...\n"
+            "## Timeline\n...\n## References\n...\n## Risk Mitigation\n...\n\n"
+            "You MUST include ALL 10 sections. Each prose section must be at least "
+            "200 words. The Proposed Method must be at least 600 words with "
+            "formal loss functions ($$...$$). The Introduction must be at least 400 words.\n\n"
+            "MANDATORY PRE-COMPUTATION: Before writing prose, internally: (1) list each "
+            "[SOURCE-X] and its key claim, (2) map claims to sources, (3) assign sources "
+            "to sections. Map first, write second."
+        )
+        if framing_directive:
+            base_system += f"\n\n## Strategic Framing\n{framing_directive}"
 
         # Pass 1: Generate all sections in one call (efficient)
         try:
@@ -175,38 +217,7 @@ class ProposalSynthesizer:
                 messages=[
                     {
                         "role": "system",
-                        "content": (
-                            "You are a senior researcher writing a full research proposal for a "
-                            "competitive conference (ACL, EMNLP, NeurIPS). You MUST "
-                            "produce ALL sections with substantial content. Do NOT write stubs, "
-                            "summaries, or placeholder text. Each section must be detailed and "
-                            "technically precise.\n\n"
-                            "CRITICAL REQUIREMENTS:\n"
-                            "1. PROPOSED METHOD MUST include formal loss functions with $$...$$ equations.\n"
-                            "   Every trainable component must have its training objective defined.\n"
-                            "   Specify optimizer, learning rate, and gradient flow.\n"
-                            "2. EVALUATION PLAN MUST include at least 3 baselines: in-domain RAG, naive cross-domain retrieval,\n"
-                            "   and a minimal-intervention baseline (e.g., CoT prompting for analogies).\n"
-                            "3. TIMELINE MUST be realistic for the model size. Prefer 7B/13B models.\n"
-                            "   Account for debugging time. State GPU budget explicitly.\n"
-                            "4. Include a Computational Requirements subsection in the Proposed Method.\n\n"
-                            "This is a CLOSED-BOOK EXAM. You may ONLY cite sources "
-                            "labeled [SOURCE-X] in the Supporting Literature. If a claim cannot "
-                            "be backed by a [SOURCE-X] paper, write 'internal reasoning' — do NOT "
-                            "invent citations. Do NOT use author names from your training data that "
-                            "are not listed below.\n\n"
-                            "OUTPUT FORMAT: Write each section with a markdown header like:\n"
-                            "## Title\n...\n## Abstract\n...\n## Introduction\n...\n"
-                            "## Related Work\n...\n## Proposed Method\n...\n"
-                            "## Expected Contributions\n...\n## Evaluation Plan\n...\n"
-                            "## Timeline\n...\n## References\n...\n## Risk Mitigation\n...\n\n"
-                            "You MUST include ALL 10 sections. Each prose section must be at least "
-                            "200 words. The Proposed Method must be at least 600 words with "
-                            "formal loss functions ($$...$$). The Introduction must be at least 400 words.\n\n"
-                            "MANDATORY PRE-COMPUTATION: Before writing prose, internally: (1) list each "
-                            "[SOURCE-X] and its key claim, (2) map claims to sources, (3) assign sources "
-                            "to sections. Map first, write second."
-                        ),
+                        "content": base_system,
                     },
                     {"role": "user", "content": context},
                 ],

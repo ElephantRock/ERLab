@@ -76,8 +76,15 @@ class FeasibilityScorer:
         self,
         idea: ResearchIdea,
         novelty_report: NoveltyReport | None = None,
+        weight_overrides: dict[str, float] | None = None,
     ) -> FeasibilityReport:
-        """Evaluate idea feasibility across 6 dimensions."""
+        """Evaluate idea feasibility across 6 dimensions.
+
+        Args:
+            weight_overrides: Optional dict to override default dimension weights
+                for computing the composite overall_score. Keys: data, compute,
+                methods, eval, novelty, impact.
+        """
         prompt = FEASIBILITY_PROMPT.format(
             title=idea.title,
             problem=idea.problem_statement,
@@ -118,18 +125,42 @@ class FeasibilityScorer:
                 temperature=0.2,
             )
 
+            data = min(10, max(0, result.get("data_availability", 5.0)))
+            compute = min(10, max(0, result.get("computational_requirements", 5.0)))
+            methods = min(10, max(0, result.get("methodological_complexity", 5.0)))
+            eval_plan = min(10, max(0, result.get("evaluation_plan", 5.0)))
+            novelty_grounding = min(10, max(0, result.get("novelty_grounding", 5.0)))
+            impact = min(10, max(0, result.get("impact_potential", 5.0)))
+
+            # Compute composite score with optional weight overrides
+            base_weights = {
+                "data": 0.20, "compute": 0.15, "methods": 0.20,
+                "eval": 0.20, "novelty": 0.10, "impact": 0.15,
+            }
+            if weight_overrides:
+                base_weights.update(weight_overrides)
+                # Normalize to sum=1.0
+                total = sum(base_weights.values())
+                if total > 0:
+                    base_weights = {k: v / total for k, v in base_weights.items()}
+
+            composite = (
+                (data / 10.0) * base_weights["data"]
+                + (compute / 10.0) * base_weights["compute"]
+                + (methods / 10.0) * base_weights["methods"]
+                + (eval_plan / 10.0) * base_weights["eval"]
+                + (novelty_grounding / 10.0) * base_weights["novelty"]
+                + (impact / 10.0) * base_weights["impact"]
+            ) * 10.0
+
             return FeasibilityReport(
-                overall_score=min(10, max(0, result.get("overall_score", 5.0))),
-                data_availability=min(10, max(0, result.get("data_availability", 5.0))),
-                computational_requirements=min(
-                    10, max(0, result.get("computational_requirements", 5.0))
-                ),
-                methodological_complexity=min(
-                    10, max(0, result.get("methodological_complexity", 5.0))
-                ),
-                evaluation_plan=min(10, max(0, result.get("evaluation_plan", 5.0))),
-                novelty_grounding=min(10, max(0, result.get("novelty_grounding", 5.0))),
-                impact_potential=min(10, max(0, result.get("impact_potential", 5.0))),
+                overall_score=round(composite, 1),
+                data_availability=data,
+                computational_requirements=compute,
+                methodological_complexity=methods,
+                evaluation_plan=eval_plan,
+                novelty_grounding=novelty_grounding,
+                impact_potential=impact,
                 reasoning=result.get("reasoning", ""),
                 estimated_timeline=result.get("estimated_timeline", "Unknown"),
                 key_risks=result.get("key_risks", []),

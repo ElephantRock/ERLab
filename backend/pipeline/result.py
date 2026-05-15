@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json as _json
 from dataclasses import asdict, dataclass, field
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from backend.pipeline.feasibility.feasibility_scorer import FeasibilityReport
 from backend.pipeline.gap_analysis.models import ClusterReport, ResearchGap
@@ -39,6 +39,8 @@ class PipelineResult:
 
     ideas: list[ResearchIdea] = field(default_factory=list)
     novelty_reports: dict[int, NoveltyReport] = field(default_factory=dict)
+    novelty_profiles: dict[int, Any] = field(default_factory=dict)   # dict[int, NoveltyProfile]
+    downstream_directives: dict[int, Any] = field(default_factory=dict)  # dict[int, DownstreamDirectives]
     feasibility_reports: dict[int, FeasibilityReport] = field(default_factory=dict)
     proposals: dict[int, ResearchProposal] = field(default_factory=dict)
     gaps: list[ResearchGap] = field(default_factory=list)

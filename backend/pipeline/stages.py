@@ -12,6 +12,7 @@ from typing import TYPE_CHECKING, Any, Generator
 
 from backend.pipeline.generation.models import ResearchIdea
 from backend.pipeline.ingestion.chunker import DocumentChunk  # noqa: F401 — re-exported by stages
+from backend.pipeline.novelty.novelty_checker import NoveltyReport  # noqa: F401 — legacy compat in NoveltyCheckingStage
 from backend.pipeline.synthesis.proposal_synthesizer import ResearchProposal  # noqa: F401 — used by ProposalSynthesisStage
 from backend.pipeline.verification.citation_claim_auditor import (  # noqa: F401 — used by CitationAuditStage
     CitationAuditReport,
@@ -691,9 +692,31 @@ class NoveltyCheckingStage(PipelineStage):
         if not ideas:
             return True
         for i, idea in enumerate(ideas):
-            report = await self._novelty.check_novelty(idea)
-            ctx.result.novelty_reports[i] = report
-            logger.info("Novelty score for '%s': %.2f", idea.title[:50], report.overall_score)
+            profile, directives = await self._novelty.check_novelty(idea)
+
+            # Write BOTH formats for backward compat
+            ctx.result.novelty_profiles[i] = profile
+            ctx.result.downstream_directives[i] = directives
+
+            # Legacy NoveltyReport for persistence/frontend
+            ctx.result.novelty_reports[i] = NoveltyReport(
+                overall_score=profile.overall_score,
+                method_novelty=next((a.score for a in profile.axes if a.axis.value == "method"), 0.5),
+                problem_novelty=next((a.score for a in profile.axes if a.axis.value == "problem"), 0.5),
+                domain_transfer=next((a.score for a in profile.axes if a.axis.value == "combination"), 0.5),
+                combination_novelty=next((a.score for a in profile.axes if a.axis.value == "contribution"), 0.5),
+                novelty_arguments=profile.novelty_arguments,
+                closest_matches=[
+                    {"title": pw.paper_title, "id": pw.paper_id, "distance": 1.0 - pw.similarity}
+                    for pw in profile.closest_prior_work
+                ],
+            )
+
+            logger.info(
+                "Novelty for '%s': %.2f (%s, confidence=%.2f)",
+                idea.title[:50], profile.overall_score,
+                profile.strategic_direction.value, profile.overall_confidence,
+            )
 
         if self._hooks:
             for i, idea in enumerate(ideas):
@@ -729,7 +752,14 @@ class FeasibilityScoringStage(PipelineStage):
         settings = get_settings()
         for i, idea in enumerate(ideas):
             novelty = ctx.result.novelty_reports.get(i)
-            report = await self._feasibility.score_feasibility(idea, novelty)
+            directives = ctx.result.downstream_directives.get(i)
+            weight_overrides = None
+            if directives and directives.feasibility_weight_overrides:
+                weight_overrides = directives.feasibility_weight_overrides
+            report = await self._feasibility.score_feasibility(
+                idea, novelty,
+                weight_overrides=weight_overrides,
+            )
             # Counterfactual analysis (Gap 14)
             if settings.counterfactual_enabled:
                 report = await self._feasibility.run_counterfactual(report)
@@ -773,6 +803,8 @@ class ProposalSynthesisStage(PipelineStage):
         for i, idea in enumerate(ideas):
             novelty = ctx.result.novelty_reports.get(i)
             feasibility = ctx.result.feasibility_reports.get(i)
+            directives = ctx.result.downstream_directives.get(i)
+            framing = directives.synthesis_framing_directive if directives else ""
             try:
                 proposal = await asyncio.wait_for(
                     self._synthesizer.synthesize(
@@ -781,6 +813,7 @@ class ProposalSynthesisStage(PipelineStage):
                         feasibility_report=feasibility,
                         supporting_papers=ctx.all_papers[:30],
                         gaps=ctx.result.gaps,
+                        framing_directive=framing,
                     ),
                     timeout=timeout,
                 )
