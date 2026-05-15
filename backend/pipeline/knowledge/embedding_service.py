@@ -33,7 +33,11 @@ class EmbeddingService:
             self.validate_dimension(expected_dimension)
 
     async def embed_texts(self, texts: list[str]) -> list[list[float]]:
-        """Generate embeddings for a list of texts, batching for efficiency."""
+        """Generate embeddings for a list of texts, batching for efficiency.
+
+        If the provider fails, logs an error and returns zero vectors (which
+        will be rejected by VectorStore.add_papers write guard).
+        """
         if not texts:
             return []
 
@@ -42,6 +46,14 @@ class EmbeddingService:
             batch = texts[i : i + self._batch_size]
             try:
                 embeddings = await self._provider.embed(batch)
+                # Phase C: Log if batch contains zero vectors
+                zero_count = sum(1 for e in embeddings if all(v == 0.0 for v in e))
+                if zero_count > 0:
+                    logger.error(
+                        "DATA INTEGRITY: Embedding provider returned %d/%d zero vectors "
+                        "in batch %d. Provider may be offline or misconfigured.",
+                        zero_count, len(batch), i // self._batch_size,
+                    )
                 all_embeddings.extend(embeddings)
             except Exception as e:
                 logger.error("Embedding batch %d failed: %s", i // self._batch_size, e)

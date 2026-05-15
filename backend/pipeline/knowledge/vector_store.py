@@ -1,4 +1,9 @@
-"""ChromaDB vector store wrapper."""
+"""ChromaDB vector store wrapper.
+
+Data integrity guarantees (Phase C):
+- Zero-vector rejection: embeddings that are all zeros are rejected at write time
+- Keyword passthrough: paper keywords are stored in VectorStore metadata
+"""
 
 import logging
 from pathlib import Path
@@ -12,6 +17,16 @@ from backend.pipeline.literature.models import Paper
 logger = logging.getLogger(__name__)
 
 COLLECTION_NAME = "research_papers"
+
+
+def _is_zero_vector(vec: list[float]) -> bool:
+    """Check if an embedding vector is all zeros."""
+    return all(v == 0.0 for v in vec)
+
+
+def _zero_vector_count(embeddings: list[list[float]]) -> int:
+    """Count how many embeddings are all-zero vectors."""
+    return sum(1 for e in embeddings if _is_zero_vector(e))
 
 
 class VectorStore:
@@ -77,6 +92,14 @@ class VectorStore:
                 offset += len(texts)
 
                 for i, (chunk, embedding) in enumerate(zip(paper_chunks, embeddings, strict=True)):
+                    # Phase C: Reject zero-vector embeddings at write time
+                    if _is_zero_vector(embedding):
+                        logger.warning(
+                            "Zero-vector embedding rejected for %s chunk %d — "
+                            "embedding provider may be offline",
+                            paper.id, i,
+                        )
+                        continue
                     chunk_id = f"{paper.id}_chunk_{i}"
                     all_ids.append(chunk_id)
                     all_texts.append(chunk.text)
@@ -88,10 +111,20 @@ class VectorStore:
                             "source": paper.source,
                             "section": chunk.section,
                             "year": paper.year or 0,
+                            # Phase C: Pass keywords through to metadata
+                            "keywords": ",".join(paper.keywords) if paper.keywords else "",
                         }
                     )
 
         if all_ids:
+            # Log data quality stats
+            zero_count = _zero_vector_count(all_embeddings)
+            if zero_count > 0:
+                logger.error(
+                    "DATA INTEGRITY: %d zero vectors passed write guard (should be 0)",
+                    zero_count,
+                )
+
             # Deduplicate by ID — same paper can appear across multiple queries
             seen = {}
             for idx, cid in enumerate(all_ids):
@@ -167,12 +200,32 @@ class VectorStore:
         return formatted
 
     def get_stats(self) -> dict:
-        """Return collection statistics."""
+        """Return collection statistics including data quality metrics."""
         count = self._collection.count()
-        return {
+        stats = {
             "collection": COLLECTION_NAME,
             "document_count": count,
         }
+
+        # Data quality: sample for zero vectors
+        if count > 0:
+            sample_n = min(count, 100)
+            sample = self._collection.get(limit=sample_n, include=["embeddings", "metadatas"])
+            embeddings = sample.get("embeddings") or []
+            metadatas = sample.get("metadatas") or []
+
+            zero_vec_count = sum(1 for e in embeddings if all(v == 0.0 for v in e))
+            keyword_coverage = sum(
+                1 for m in metadatas
+                if m and m.get("keywords") and m["keywords"].strip()
+            )
+
+            stats["zero_vectors_sampled"] = zero_vec_count
+            stats["zero_vector_pct"] = round(100.0 * zero_vec_count / max(sample_n, 1), 1)
+            stats["keyword_coverage_pct"] = round(100.0 * keyword_coverage / max(sample_n, 1), 1)
+            stats["sample_size"] = sample_n
+
+        return stats
 
     async def delete_paper(self, paper_id: str) -> int:
         """Delete all chunks for a paper. Returns count deleted."""

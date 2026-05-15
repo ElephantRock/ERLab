@@ -1311,3 +1311,54 @@ async def trigger_dag_run(request: PipelineRunRequest, skip_preflight: bool = Fa
     _background_tasks.add(task)
 
     return {"run_id": run_id, "status": "running", "preflight": {"can_proceed": True}, "orchestrator": "dag"}
+
+
+@router.get("/data-quality", response_model=dict)
+async def data_quality():
+    """Get data quality metrics for the vector store and SQL database.
+
+    Returns zero-vector counts, keyword coverage, and collection stats.
+    Phase C: Data integrity observability.
+    """
+    from backend.config import get_settings
+    settings = get_settings()
+
+    # VectorStore stats
+    vs_stats = {}
+    try:
+        from backend.pipeline.knowledge.vector_store import VectorStore
+        from backend.pipeline.knowledge.embedding_providers import create_embedding_provider
+        from backend.pipeline.knowledge.embedding_service import EmbeddingService
+
+        provider = create_embedding_provider(settings)
+        emb_service = EmbeddingService(provider, expected_dimension=getattr(provider, "dimension", None))
+        store = VectorStore(persist_dir=settings.chroma_persist_dir, embedding_service=emb_service)
+        vs_stats = store.get_stats()
+    except Exception as e:
+        vs_stats = {"error": str(e)}
+
+    # SQL stats
+    sql_stats = {}
+    try:
+        from backend.db.database import get_session
+        from backend.db.models import Paper as SQLPaper
+        session = next(get_session())
+        total_papers = session.query(SQLPaper).count()
+        papers_with_keywords = session.query(SQLPaper).filter(
+            SQLPaper.keywords != "[]",
+            SQLPaper.keywords != "",
+            SQLPaper.keywords.isnot(None),
+        ).count()
+        sql_stats = {
+            "total_papers": total_papers,
+            "papers_with_keywords": papers_with_keywords,
+            "keyword_coverage_pct": round(100.0 * papers_with_keywords / max(total_papers, 1), 1),
+        }
+    except Exception as e:
+        sql_stats = {"error": str(e)}
+
+    return {
+        "vector_store": vs_stats,
+        "sql": sql_stats,
+        "status": "healthy" if not vs_stats.get("error") else "degraded",
+    }
