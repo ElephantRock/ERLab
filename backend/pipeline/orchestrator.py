@@ -1146,15 +1146,15 @@ class PipelineOrchestrator:
         max_gaps: int = 5,
         generation_rounds: int | None = None,
         ideas_per_round: int | None = None,
-        run_novelty: bool = True,
-        run_feasibility: bool = True,
-        run_synthesis: bool = True,
         export_format: str | None = "markdown",
         run_id: str | None = None,
         session_id: str | None = None,
         skip_stages: set[str] | None = None,
     ) -> PipelineResult:
         """Execute the full pipeline from literature search to export.
+
+        Stage gating is controlled by the active strategy preset from
+        pipeline.yaml — the single source of truth. No run_* booleans.
 
         Args:
             skip_stages: Set of stage names to skip (used by --resume to avoid
@@ -1336,22 +1336,6 @@ class PipelineOrchestrator:
                     name=stage.name,
                     status="skipped_by_doom",
                     skip_reason="Doom loop detected — skipping optional stage",
-                ))
-                continue
-
-            # Gate optional stages
-            if isinstance(stage, FeasibilityScoringStage) and not run_feasibility:
-                result.stage_report.append(StageReport(
-                    name=stage.name,
-                    status="skipped_by_gate",
-                    skip_reason="run_feasibility=False",
-                ))
-                continue
-            if isinstance(stage, ProposalSynthesisStage) and not run_synthesis:
-                result.stage_report.append(StageReport(
-                    name=stage.name,
-                    status="skipped_by_gate",
-                    skip_reason="run_synthesis=False",
                 ))
                 continue
 
@@ -1976,9 +1960,6 @@ class PipelineOrchestrator:
         domain: str = "AI/NLP",
         search_queries: list[str] | None = None,
         max_gaps: int = 5,
-        run_novelty: bool = True,
-        run_feasibility: bool = True,
-        run_synthesis: bool = True,
         export_format: str | None = "markdown",
         max_stage_retries: int = 2,
     ) -> PipelineResult | None:
@@ -2051,12 +2032,6 @@ class PipelineOrchestrator:
         for stage in self._stages:
             if stage.name in completed_names:
                 logger.info("Skipping completed stage: %s", stage.name)
-                continue
-
-            # Gate optional stages
-            if isinstance(stage, FeasibilityScoringStage) and not run_feasibility:
-                continue
-            if isinstance(stage, ProposalSynthesisStage) and not run_synthesis:
                 continue
 
             logger.info("=== [RESUME] %s ===", stage.name.replace("_", " ").title())

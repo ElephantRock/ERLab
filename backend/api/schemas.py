@@ -9,9 +9,9 @@ class PipelineRunRequest(BaseModel):
     generation_rounds: int | None = Field(default=None, ge=1, le=10)
     ideas_per_round: int | None = Field(default=None, ge=1, le=20)
     search_queries: list[str] | None = Field(default=None)
-    run_novelty: bool = Field(default=True)
-    run_feasibility: bool = Field(default=True)
-    run_synthesis: bool = Field(default=True)
+    run_novelty: bool = Field(default=True, deprecated=True, description="Ignored — strategy controls stage gating")
+    run_feasibility: bool = Field(default=True, deprecated=True, description="Ignored — strategy controls stage gating")
+    run_synthesis: bool = Field(default=True, deprecated=True, description="Ignored — strategy controls stage gating")
     export_format: str = Field(default="markdown")
     session_id: str | None = None
     strategy: str = Field(default="deep_research", pattern="^(fast_scan|deep_research|academic_proposal|literature_review)$")
