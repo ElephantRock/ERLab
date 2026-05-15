@@ -1198,23 +1198,26 @@ class AdversarialReviewStage(PipelineStage):
         return "adversarial_review"
 
     async def execute(self, ctx: StageContext) -> bool:
-        # HB-02: Skip if both providers resolve to the same instance/class
+        # HB-02: Skip if both providers are genuinely the same model on the same endpoint.
+        # Compare base_url + model instead of provider_name (which is always "anthropic"
+        # because both providers use AnthropicProvider class internally).
         if self._thinking_provider and self._generation_provider:
-            thinking_name = getattr(
-                self._thinking_provider, "provider_name",
-                type(self._thinking_provider).__name__,
-            )
-            generation_name = getattr(
-                self._generation_provider, "provider_name",
-                type(self._generation_provider).__name__,
-            )
-            if thinking_name == generation_name:
+            thinking_url = getattr(self._thinking_provider, "base_url", None) or getattr(self._thinking_provider, "_base_url", None) or ""
+            generation_url = getattr(self._generation_provider, "base_url", None) or getattr(self._generation_provider, "_base_url", None) or ""
+            thinking_model = getattr(self._thinking_provider, "model", None) or getattr(self._thinking_provider, "_model", None) or ""
+            generation_model = getattr(self._generation_provider, "model", None) or getattr(self._generation_provider, "_model", None) or ""
+            # Same endpoint AND same model = self-play
+            if thinking_url == generation_url and thinking_model == generation_model:
                 logger.warning(
-                    "HB-02: Thinking provider (%s) == Generation provider (%s) — "
+                    "HB-02: Thinking (%s @ %s) == Generation (%s @ %s) - "
                     "skipping adversarial review to avoid self-play",
-                    thinking_name, generation_name,
+                    thinking_model, thinking_url, generation_model, generation_url,
                 )
                 return True
+            logger.info(
+                "Adversarial review: thinking=%s @ %s vs generation=%s @ %s (different providers)",
+                thinking_model, thinking_url, generation_model, generation_url,
+            )
 
         if not ctx.result.proposals:
             return True
@@ -1876,21 +1879,37 @@ class GapReflectionStage(PipelineStage):
                 reflector = ReflectionStage(provider=provider, threshold=self._threshold, max_iterations=3)
 
             query = getattr(ctx, 'domain', '') or ''
-            result = await reflector.reflect_gaps(ctx.result.gaps, query=query)
 
-            logger.info(
-                "Gap reflection: score=%.2f passed=%s (iteration %d)",
-                result.score, result.passed, result.iteration,
+            # Use reflect_with_retry for iterative quality improvement
+            async def _reflect_gaps(content):
+                return await reflector.reflect_gaps(content, query=query)
+
+            async def _no_regen(content, feedback):
+                logger.info("Gap reflection feedback (no regeneration available): %s", feedback[:200])
+                return content
+
+            final_gaps, reflection_results = await reflector.reflect_with_retry(
+                content=ctx.result.gaps,
+                reflect_fn=_reflect_gaps,
+                regenerate_fn=_no_regen,
             )
 
-            # Store reflection result in pipeline result metadata
+            # Log each iteration
+            for result in reflection_results:
+                logger.info(
+                    "Gap reflection: score=%.2f passed=%s (iteration %d)",
+                    result.score, result.passed, result.iteration,
+                )
+
+            # Store reflection results in pipeline result metadata
             if not hasattr(ctx.result, 'reflection_results') or ctx.result.reflection_results is None:
                 ctx.result.reflection_results = {}
             ctx.result.reflection_results["gap_reflection"] = {
-                "score": result.score,
-                "passed": result.passed,
-                "justification": result.justification,
-                "iteration": result.iteration,
+                "score": reflection_results[-1].score if reflection_results else 0.0,
+                "passed": reflection_results[-1].passed if reflection_results else True,
+                "justification": reflection_results[-1].justification if reflection_results else "",
+                "iterations": len(reflection_results),
+                "scores": [r.score for r in reflection_results],
             }
 
         except Exception as e:
@@ -1944,20 +1963,35 @@ class IdeaReflectionStage(PipelineStage):
                         provider = None
                 reflector = ReflectionStage(provider=provider, threshold=self._threshold, max_iterations=3)
 
-            result = await reflector.reflect_ideas(ideas, gaps=ctx.result.gaps)
+            # Use reflect_with_retry for iterative quality improvement
+            async def _reflect_ideas(content):
+                return await reflector.reflect_ideas(content, gaps=ctx.result.gaps)
 
-            logger.info(
-                "Idea reflection: score=%.2f passed=%s (iteration %d)",
-                result.score, result.passed, result.iteration,
+            async def _no_regen(content, feedback):
+                logger.info("Idea reflection feedback (no regeneration available): %s", feedback[:200])
+                return content
+
+            final_ideas, reflection_results = await reflector.reflect_with_retry(
+                content=ideas,
+                reflect_fn=_reflect_ideas,
+                regenerate_fn=_no_regen,
             )
+
+            # Log each iteration
+            for rr in reflection_results:
+                logger.info(
+                    "Idea reflection: score=%.2f passed=%s (iteration %d)",
+                    rr.score, rr.passed, rr.iteration,
+                )
 
             if not hasattr(ctx.result, 'reflection_results') or ctx.result.reflection_results is None:
                 ctx.result.reflection_results = {}
             ctx.result.reflection_results["idea_reflection"] = {
-                "score": result.score,
-                "passed": result.passed,
-                "justification": result.justification,
-                "iteration": result.iteration,
+                "score": reflection_results[-1].score if reflection_results else 0.0,
+                "passed": reflection_results[-1].passed if reflection_results else True,
+                "justification": reflection_results[-1].justification if reflection_results else "",
+                "iterations": len(reflection_results),
+                "scores": [r.score for r in reflection_results],
             }
 
         except Exception as e:

@@ -1212,12 +1212,12 @@ class PipelineOrchestrator:
         # G1: Lazy validation — check embedding provider on first run
         if not self._embedding_valid:
             self._embedding_valid = await self._embedding.validate_startup()
-            if not self._embedding_valid and run_novelty:
+            if not self._embedding_valid:
                 logger.warning(
-                    "Embedding provider returns zero vectors — disabling novelty checking. "
-                    "Novelty scores will be skipped, not faked."
+                    "Embedding provider returns zero vectors — novelty checking will "
+                    "produce low-confidence results. Stage will run but mark profiles "
+                    "as UNVERIFIABLE."
                 )
-                run_novelty = False
 
         # G5: Run watchdog before starting — clean up stale runs from prior crashes
         try:
@@ -1340,13 +1340,6 @@ class PipelineOrchestrator:
                 continue
 
             # Gate optional stages
-            if isinstance(stage, NoveltyCheckingStage) and not run_novelty:
-                result.stage_report.append(StageReport(
-                    name=stage.name,
-                    status="skipped_by_gate",
-                    skip_reason="run_novelty=False",
-                ))
-                continue
             if isinstance(stage, FeasibilityScoringStage) and not run_feasibility:
                 result.stage_report.append(StageReport(
                     name=stage.name,
@@ -2040,8 +2033,6 @@ class PipelineOrchestrator:
                 continue
 
             # Gate optional stages
-            if isinstance(stage, NoveltyCheckingStage) and not run_novelty:
-                continue
             if isinstance(stage, FeasibilityScoringStage) and not run_feasibility:
                 continue
             if isinstance(stage, ProposalSynthesisStage) and not run_synthesis:

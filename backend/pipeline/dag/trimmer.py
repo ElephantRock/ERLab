@@ -20,6 +20,21 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
+def _get_field(obj, key: str, default=""):
+    """Get a field from either a dict or a Pydantic/dataclass object."""
+    if isinstance(obj, dict):
+        return obj.get(key, default)
+    return getattr(obj, key, default)
+
+
+def _set_field(obj, key: str, value):
+    """Set a field on either a dict or a Pydantic/dataclass object."""
+    if isinstance(obj, dict):
+        obj[key] = value
+    else:
+        setattr(obj, key, value)
+
+
 class TrimmerStage(PipelineStage):
     """Reranks papers by relevance and truncates abstracts.
 
@@ -71,14 +86,14 @@ class TrimmerStage(PipelineStage):
         # Step 3: Truncate abstracts
         truncated = 0
         for paper in ctx.all_papers:
-            abstract = paper.get("abstract", "") or ""
+            abstract = _get_field(paper, "abstract", "") or ""
             if len(abstract) > self._max_abstract_chars:
-                paper["abstract"] = abstract[: self._max_abstract_chars]
+                _set_field(paper, "abstract", abstract[: self._max_abstract_chars])
                 truncated += 1
 
         after_count = len(ctx.all_papers)
         avg_len = (
-            sum(len(p.get("abstract", "") or "") for p in ctx.all_papers)
+            sum(len(_get_field(p, "abstract", "") or "") for p in ctx.all_papers)
             / after_count
             if after_count > 0
             else 0
@@ -104,8 +119,8 @@ class TrimmerStage(PipelineStage):
 
         scored = []
         for paper in papers:
-            title = (paper.get("title", "") or "").lower()
-            abstract = (paper.get("abstract", "") or "").lower()
+            title = (_get_field(paper, "title", "") or "").lower()
+            abstract = (_get_field(paper, "abstract", "") or "").lower()
             text = title + " " + abstract
 
             # Keyword overlap score
