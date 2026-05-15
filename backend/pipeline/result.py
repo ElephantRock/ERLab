@@ -18,14 +18,27 @@ if TYPE_CHECKING:
 
 @dataclass
 class StageReport:
-    """Per-stage execution report for observability (BATCH-173)."""
+    """Per-stage execution report for observability (BATCH-173).
+
+    Status vocabulary (7 states):
+    - "executed": Stage ran and completed
+    - "skipped_by_strategy": Stage not in strategy preset
+    - "skipped_by_gate": Stage disabled by run_* boolean
+    - "skipped_by_doom": Optional stage skipped due to doom loop
+    - "skipped_by_error": Stage raised exception, caught by HB-02
+    - "not_reached": Stage after a fatal error
+    - "contract_violation": Stage ran but output failed contract check
+    """
 
     name: str
-    status: str  # "executed" | "skipped_by_strategy" | "skipped_by_gate" | "skipped_by_error" | "not_reached"
+    status: str
     elapsed_s: float = 0.0
     error: str | None = None
     skip_reason: str | None = None
     retries_used: int = 0  # BATCH-176: LLM rate-limit retries consumed
+    contract_violations: list[str] | None = None  # Phase D: contract check results
+    data_quality: dict | None = None  # Phase E: output quality metrics
+    stage_name: str = ""  # Canonical stage name from _STAGE_ORDER
 
     def to_dict(self) -> dict:
         return asdict(self)

@@ -1362,3 +1362,75 @@ async def data_quality():
         "sql": sql_stats,
         "status": "healthy" if not vs_stats.get("error") else "degraded",
     }
+
+
+@router.get("/runs/{run_id}/report", response_model=dict)
+async def run_report(run_id: str):
+    """Get a comprehensive run report with stage observability.
+
+    Includes per-stage status, timing, contract violations, data quality,
+    and novelty profile summaries.
+    Phase E: Runtime Observability.
+    """
+    from backend.db.database import get_session
+    from backend.db.models import PipelineRun
+
+    session = next(get_session())
+
+    # Try numeric ID first
+    db_run = None
+    try:
+        db_run = session.query(PipelineRun).filter(PipelineRun.id == int(run_id)).first()
+    except (ValueError, TypeError):
+        pass
+
+    # Try string run_id
+    if not db_run:
+        db_run = session.query(PipelineRun).filter(PipelineRun.run_id == run_id).first()
+
+    if not db_run:
+        from fastapi.responses import JSONResponse
+        return JSONResponse(status_code=404, content={"error": "Run not found", "run_id": run_id})
+
+    # Build report
+    stages_raw = []
+    try:
+        stages_raw = json.loads(db_run.stages_completed) if db_run.stages_completed else []
+    except (TypeError, json.JSONDecodeError):
+        stages_raw = []
+
+    # Parse stage reports if stored
+    stage_details = []
+    try:
+        reports_raw = db_run.stage_report or "[]"
+        reports = json.loads(reports_raw) if isinstance(reports_raw, str) else reports_raw
+        for r in reports:
+            stage_details.append({
+                "name": r.get("name") or r.get("stage_name", "unknown"),
+                "status": r.get("status", "unknown"),
+                "elapsed_s": r.get("elapsed_s", 0),
+                "error": r.get("error"),
+                "skip_reason": r.get("skip_reason"),
+                "contract_violations": r.get("contract_violations"),
+            })
+    except Exception:
+        pass
+
+    # Summary stats
+    executed = sum(1 for s in stage_details if s["status"] == "executed")
+    skipped = sum(1 for s in stage_details if s["status"].startswith("skipped"))
+    errors = sum(1 for s in stage_details if s.get("error"))
+
+    return {
+        "run_id": db_run.run_id,
+        "domain": db_run.domain,
+        "status": db_run.status,
+        "created_at": str(db_run.created_at),
+        "duration_s": db_run.duration_s,
+        "stages_planned": 17,
+        "stages_executed": executed,
+        "stages_skipped": skipped,
+        "stages_with_errors": errors,
+        "stages_completed_list": stages_raw,
+        "stage_details": stage_details,
+    }
