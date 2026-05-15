@@ -1482,6 +1482,27 @@ class PipelineOrchestrator:
                         await heartbeat.stop()
             elapsed = time.time() - t0
             self._record_stage(stage.name, t0)
+
+            # Phase D: Verify stage output contract
+            try:
+                from backend.pipeline.monitoring.contracts import STAGE_CONTRACTS, verify_contract
+                contract = STAGE_CONTRACTS.get(stage.name)
+                if contract:
+                    violation = verify_contract(stage.name, result, contract)
+                    if violation:
+                        if violation.is_error:
+                            logger.error(
+                                "CONTRACT VIOLATION: %s — %s",
+                                stage.name, "; ".join(violation.violations),
+                            )
+                        else:
+                            logger.warning(
+                                "CONTRACT WARNING: %s — %s",
+                                stage.name, "; ".join(violation.violations),
+                            )
+            except Exception as e:
+                logger.debug("Contract verification failed (non-fatal): %s", e)
+
             self._compaction.record_usage(stage.name)
             if self._metacog:
                 self._metacog.record_stage(stage.name, {"elapsed_seconds": elapsed})
