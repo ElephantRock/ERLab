@@ -21,6 +21,15 @@ COLLECTION_NAME = "research_papers"
 
 def _is_zero_vector(vec: list[float]) -> bool:
     """Check if an embedding vector is all zeros."""
+    if not vec:
+        return True
+    # Handle numpy arrays
+    try:
+        import numpy as np
+        if isinstance(vec, np.ndarray):
+            return bool(np.all(vec == 0.0))
+    except ImportError:
+        pass
     return all(v == 0.0 for v in vec)
 
 
@@ -211,10 +220,17 @@ class VectorStore:
         if count > 0:
             sample_n = min(count, 100)
             sample = self._collection.get(limit=sample_n, include=["embeddings", "metadatas"])
-            embeddings = sample.get("embeddings") or []
-            metadatas = sample.get("metadatas") or []
+            embeddings = sample.get("embeddings") if sample.get("embeddings") is not None else []
+            metadatas = sample.get("metadatas") if sample.get("metadatas") is not None else []
 
-            zero_vec_count = sum(1 for e in embeddings if all(v == 0.0 for v in e))
+            zero_vec_count = 0
+            for e in embeddings:
+                if hasattr(e, 'ndim'):  # numpy array
+                    import numpy as _np
+                    if _np.all(e == 0.0):
+                        zero_vec_count += 1
+                elif all(v == 0.0 for v in e):
+                    zero_vec_count += 1
             keyword_coverage = sum(
                 1 for m in metadatas
                 if m and m.get("keywords") and m["keywords"].strip()

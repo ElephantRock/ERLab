@@ -1327,8 +1327,11 @@ async def data_quality():
         from backend.pipeline.knowledge.embedding_providers import create_embedding_provider
         from backend.pipeline.knowledge.embedding_service import EmbeddingService
 
-        provider = create_embedding_provider(settings)
-        emb_service = EmbeddingService(provider, expected_dimension=getattr(provider, "dimension", None))
+        provider = create_embedding_provider(
+            getattr(settings, "embedding_provider", "lmstudio"),
+            base_url=getattr(settings, "embedding_base_url", None),
+        )
+        emb_service = EmbeddingService(provider, expected_dimension=getattr(settings, "embedding_dimension", None))
         store = VectorStore(persist_dir=settings.chroma_persist_dir, embedding_service=emb_service)
         vs_stats = store.get_stats()
     except Exception as e:
@@ -1339,18 +1342,19 @@ async def data_quality():
     try:
         from backend.db.database import get_session
         from backend.db.models import Paper as SQLPaper
-        session = next(get_session())
-        total_papers = session.query(SQLPaper).count()
-        papers_with_keywords = session.query(SQLPaper).filter(
-            SQLPaper.keywords != "[]",
-            SQLPaper.keywords != "",
-            SQLPaper.keywords.isnot(None),
-        ).count()
-        sql_stats = {
-            "total_papers": total_papers,
-            "papers_with_keywords": papers_with_keywords,
-            "keyword_coverage_pct": round(100.0 * papers_with_keywords / max(total_papers, 1), 1),
-        }
+        from sqlalchemy import func
+        with get_session() as session:
+            total_papers = session.query(func.count(SQLPaper.id)).scalar() or 0
+            papers_with_keywords = session.query(func.count(SQLPaper.id)).filter(
+                SQLPaper.keywords != "[]",
+                SQLPaper.keywords != "",
+                SQLPaper.keywords.isnot(None),
+            ).scalar() or 0
+            sql_stats = {
+                "total_papers": total_papers,
+                "papers_with_keywords": papers_with_keywords,
+                "keyword_coverage_pct": round(100.0 * papers_with_keywords / max(total_papers, 1), 1),
+            }
     except Exception as e:
         sql_stats = {"error": str(e)}
 
