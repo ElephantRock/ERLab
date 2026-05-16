@@ -11,7 +11,7 @@ import time
 from typing import TYPE_CHECKING
 
 from backend.pipeline.result import StageReport
-from backend.pipeline.providers.retry import retry_llm_call
+from backend.providers.retry import retry_llm_call
 
 if TYPE_CHECKING:
     from backend.pipeline.stages import PipelineStage, StageContext
