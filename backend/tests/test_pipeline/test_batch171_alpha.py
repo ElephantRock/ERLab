@@ -28,7 +28,7 @@ class TestInternalAlphaReadiness:
     def test_03_all_stage_order_entries(self):
         from backend.pipeline.orchestrator import PipelineOrchestrator
         order = PipelineOrchestrator._STAGE_ORDER
-        assert len(order) == 16
+        assert len(order) == 17
         # Critical stages must be present
         for stage in ["literature_search", "gap_analysis", "idea_generation", "export"]:
             assert stage in order, f"Missing critical stage: {stage}"

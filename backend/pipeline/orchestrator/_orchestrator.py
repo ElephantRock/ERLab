@@ -215,8 +215,6 @@ class PipelineOrchestrator:
         self._stage_callback = stage_callback
         self._settings = settings
         self._last_stage_retries = 0
-        self._doom_history: list[dict] = []
-        self._doom_detected = False
 
         # Hybrid model routing: local for thinking tasks, cloud for generation
         self._model_selector = None
@@ -604,9 +602,6 @@ class PipelineOrchestrator:
         self._stage_logger = None  # Reset logger for new run
 
         # BATCH-185: Reset doom loop detection for this run
-        self._doom_history = []
-        self._doom_detected = False
-
         # BATCH-191: Initialize Consolidated Context Window
         from backend.pipeline.monitoring.ccw import ConsolidatedContextWindow
         self._ccw = ConsolidatedContextWindow()
@@ -642,6 +637,17 @@ class PipelineOrchestrator:
         except Exception as e:
             logger.warning("Integration service init failed (non-fatal): %s", e)
             self._integration = None
+
+        # Push per-run instances into lifecycle
+        self._lifecycle.reset_doom()
+        self._lifecycle.set_run_context(
+            ccw=self._ccw,
+            notifier=self._notifier,
+            integration=self._integration,
+        )
+        # Also update the result processor's integration reference
+        self._processor._integration = self._integration
+        self._processor._cross_stage_ctx = self._services.cross_stage_ctx
 
         # G1: Lazy validation — check embedding provider on first run
         if not self._services.embedding_valid:
@@ -765,7 +771,7 @@ class PipelineOrchestrator:
                 continue
 
             # BATCH-185: Skip optional stages when doom loop detected
-            if self._doom_detected and stage.name not in ("export",):
+            if self._lifecycle.doom_detected and stage.name not in ("export",):
                 result.stage_report.append(StageReport(
                     name=stage.name,
                     status="skipped_by_doom",
@@ -948,21 +954,9 @@ class PipelineOrchestrator:
                     {"elapsed_s": f"{elapsed:.1f}"} if 'elapsed' in dir() else {},
                 )
 
-            # BATCH-185: Doom loop detection — check after each stage
-            fingerprint = self._extract_stage_fingerprint(stage.name, result)
-            if fingerprint:  # Only check monitored stages
-                output_hash = hash_stage_output(fingerprint)
-                self._doom_history.append({
-                    "stage_name": stage.name,
-                    "output_hash": output_hash,
-                })
-                doom_msg = check_pipeline_doom(self._doom_history)
-                if doom_msg:
-                    logger.warning("BATCH-185 doom detection: %s", doom_msg)
-                    self._doom_detected = True
-
             # BATCH-185: Skip remaining optional stages if doom detected (except export)
-            if self._doom_detected and not isinstance(stage, ExportStage):
+            # Doom detection is handled by lifecycle.post_stage_common() above
+            if self._lifecycle.doom_detected and not isinstance(stage, ExportStage):
                 logger.info(
                     "Doom detected — skipping remaining optional stages (export will still run)"
                 )

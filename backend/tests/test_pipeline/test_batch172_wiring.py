@@ -62,12 +62,12 @@ def _make_orchestrator():
     return orch
 
 
-# ── Test 1: _build_stages returns 16 stages ────────────────────────────
+# ── Test 1: _build_stages returns 17 stages ────────────────────────────
 
-def test_build_stages_returns_16():
+def test_build_stages_returns_17():
     orch = _make_orchestrator()
     stages = orch._build_stages()
-    assert len(stages) == 16, f"Expected 16 stages, got {len(stages)}"
+    assert len(stages) == 17, f"Expected 17 stages, got {len(stages)}"
 
 
 # ── Test 2: Stage names match _STAGE_ORDER exactly ─────────────────────
@@ -84,26 +84,26 @@ def test_stage_names_match_order():
 
 # ── Test 3: gap_reflection at index 3 ──────────────────────────────────
 
-def test_gap_reflection_at_index_3():
+def test_gap_reflection_at_index_4():
     orch = _make_orchestrator()
     stages = orch._build_stages()
-    assert stages[3].name == "gap_reflection", f"Index 3 is '{stages[3].name}', expected 'gap_reflection'"
+    assert stages[4].name == "gap_reflection", f"Index 4 is '{stages[4].name}', expected 'gap_reflection'"
 
 
 # ── Test 4: idea_reflection at index 5 ─────────────────────────────────
 
-def test_idea_reflection_at_index_5():
+def test_idea_reflection_at_index_6():
     orch = _make_orchestrator()
     stages = orch._build_stages()
-    assert stages[5].name == "idea_reflection", f"Index 5 is '{stages[5].name}', expected 'idea_reflection'"
+    assert stages[6].name == "idea_reflection", f"Index 6 is '{stages[6].name}', expected 'idea_reflection'"
 
 
 # ── Test 5: evaluation at index 11 ─────────────────────────────────────
 
-def test_evaluation_at_index_11():
+def test_evaluation_at_index_12():
     orch = _make_orchestrator()
     stages = orch._build_stages()
-    assert stages[11].name == "evaluation", f"Index 11 is '{stages[11].name}', expected 'evaluation'"
+    assert stages[12].name == "evaluation", f"Index 12 is '{stages[12].name}', expected 'evaluation'"
 
 
 # ── Test 6: Reflection stages use thinking_provider (with fallback) ────
@@ -113,8 +113,8 @@ def test_reflection_stages_use_thinking_provider():
     orch = _make_orchestrator()
     # _thinking_provider is None, so fallback is self._provider
     stages = orch._build_stages()
-    gap_ref = stages[3]
-    idea_ref = stages[5]
+    gap_ref = stages[4]
+    idea_ref = stages[6]
     # Both should have received the provider
     assert gap_ref._provider is orch._provider
     assert idea_ref._provider is orch._provider
@@ -124,8 +124,8 @@ def test_reflection_stages_use_thinking_provider():
     mock_tp.provider_name = "thinking_mock"
     orch._thinking_provider = mock_tp
     stages2 = orch._build_stages()
-    assert stages2[3]._provider is mock_tp
-    assert stages2[5]._provider is mock_tp
+    assert stages2[4]._provider is mock_tp
+    assert stages2[6]._provider is mock_tp
 
 
 # ── Test 7: Orchestrator.__init__() succeeds (no import/init error) ────

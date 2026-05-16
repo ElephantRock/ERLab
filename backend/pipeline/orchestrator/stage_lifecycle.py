@@ -51,6 +51,12 @@ class StageLifecycle:
         self._doom_history: list[dict] = []
         self._doom_detected = False
 
+    def set_run_context(self, ccw=None, notifier=None, integration=None) -> None:
+        """Update per-run instances that are created inside run()."""
+        self._ccw = ccw
+        self._notifier = notifier
+        self._integration = integration
+
     def reset_doom(self) -> None:
         """Reset doom loop state for a new run."""
         self._doom_history = []
