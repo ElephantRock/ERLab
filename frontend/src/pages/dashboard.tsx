@@ -42,8 +42,8 @@ export default function Dashboard() {
   });
 
   const { data: chartIdeas } = useQuery({
-    queryKey: ["ideas", { limit: 200 }],
-    queryFn: () => listIdeas({ limit: 200 }),
+    queryKey: ["ideas", { limit: 50 }],
+    queryFn: () => listIdeas({ limit: 50 }),
   });
 
   const { data: chartRuns } = useQuery({

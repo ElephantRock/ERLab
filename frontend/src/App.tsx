@@ -2,6 +2,7 @@ import { Suspense, lazy } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import { useAuth } from "@/contexts/auth-context";
 import { AppShell } from "./components/layout/app-shell";
+import { ErrorBoundary } from "./components/error-boundary";
 import { useRTL } from "./hooks/useRTL";
 import LoginPage from "./pages/login";
 import type { ReactNode } from "react";
@@ -60,6 +61,7 @@ export default function App() {
         element={
           <ProtectedRoute>
             <AppShell>
+              <ErrorBoundary>
               <Suspense fallback={<LoadingScreen />}>
                 <Routes>
                   <Route path="/" element={<DashboardPage />} />
@@ -83,6 +85,7 @@ export default function App() {
                   <Route path="*" element={<Navigate to="/" replace />} />
                 </Routes>
               </Suspense>
+              </ErrorBoundary>
             </AppShell>
           </ProtectedRoute>
         }

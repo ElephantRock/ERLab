@@ -419,6 +419,26 @@ def count_ideas_for_gap(session: Session, gap_title: str) -> int:
     return session.execute(stmt).scalar_one()
 
 
+def batch_count_ideas_for_gaps(session: Session, gap_titles: list[str]) -> dict[str, int]:
+    """Batch count ideas for multiple gap titles in a single query.
+
+    Returns {gap_title: count} for all titles. Avoids N+1 when listing gaps.
+    """
+    if not gap_titles:
+        return {}
+    # Get all ideas with source_gap_ids, then match in Python
+    rows = session.execute(
+        select(Idea.source_gap_ids)
+        .where(Idea.source_gap_ids.isnot(None))
+    ).scalars().all()
+    counts: dict[str, int] = {t: 0 for t in gap_titles}
+    for row in rows:
+        for title in gap_titles:
+            if title.lower() in (row or "").lower():
+                counts[title] += 1
+    return counts
+
+
 def update_gap_feedback(session: Session, gap_id: int, rating: int, notes: str | None = None) -> ResearchGapDB | None:
     """Update user rating and notes for a gap (BATCH-41)."""
     gap = session.get(ResearchGapDB, gap_id)

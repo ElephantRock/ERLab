@@ -71,7 +71,7 @@ async def list_gaps(
     """
     from sqlalchemy import select
 
-    from backend.db.crud import count_ideas_for_gap, search_gaps, count_search_gaps
+    from backend.db.crud import count_ideas_for_gap, search_gaps, count_search_gaps, batch_count_ideas_for_gaps
     from backend.db.database import get_session
     from backend.db.models import PipelineRun
 
@@ -115,6 +115,9 @@ async def list_gaps(
             limit=limit,
             offset=offset,
         )
+        # Batch count ideas for all gaps (avoids N+1)
+        idea_counts = batch_count_ideas_for_gaps(session, [g.title for g in gaps])
+
         return {
             "gaps": [
                 {
@@ -124,7 +127,7 @@ async def list_gaps(
                     "gap_type": g.gap_type,
                     "confidence": g.confidence,
                     "potential_impact": g.potential_impact,
-                    "idea_count": count_ideas_for_gap(session, g.title),
+                    "idea_count": idea_counts.get(g.title, 0),
                     "truth": _build_truth(g),
                     "related_clusters": _build_related_clusters(g),
                     "status": getattr(g, "status", "identified"),
@@ -379,9 +382,20 @@ async def get_gap_papers(gap_id: int):
             sa_select(Paper)
             .limit(20)
         ).scalars().all()
+        # Filter papers by matching keywords to gap title terms
+        gap_terms = set(gap.title.lower().split()) - {"of", "the", "a", "an", "in", "for", "and", "to", "with", "from", "by"}
+        scored = []
+        for p in papers:
+            kw = json_mod.loads(p.keywords) if p.keywords and p.keywords not in ("[]", "") else []
+            title_words = set(p.title.lower().split())
+            overlap = len(gap_terms & (set(k.lower() for k in kw) | title_words))
+            if overlap > 0:
+                scored.append((overlap, p))
+        scored.sort(key=lambda x: -x[0])
+        top_papers = [p for _, p in scored[:20]] if scored else papers[:20]
         return {
-            "papers": [{"id": p.id, "title": p.title, "abstract": p.abstract, "year": p.year, "venue": p.venue, "citation_count": p.citation_count} for p in papers],
-            "total": len(papers),
+            "papers": [{"id": p.id, "title": p.title, "abstract": p.abstract[:200] if p.abstract else None, "year": p.year, "venue": p.venue, "citation_count": p.citation_count} for p in top_papers],
+            "total": len(top_papers),
         }
 
 
@@ -409,13 +423,24 @@ async def get_related_gaps(gap_id: int):
             return {"gaps": [], "total": 0}
         # Find other gaps in same run with overlapping clusters
         from sqlalchemy import select as sa_select
-        all_gaps = session.execute(
+        run_gaps = session.execute(
             sa_select(ResearchGapDB)
-            .where(ResearchGapDB.id != gap_id)
-            .limit(50)
+            .where(
+                ResearchGapDB.id != gap_id,
+                ResearchGapDB.pipeline_run_id == gap.pipeline_run_id,
+            )
+            .limit(100)
         ).scalars().all()
+        # Fallback: if no run-matched gaps, try recent gaps
+        if not run_gaps:
+            run_gaps = session.execute(
+                sa_select(ResearchGapDB)
+                .where(ResearchGapDB.id != gap_id)
+                .order_by(ResearchGapDB.id.desc())
+                .limit(50)
+            ).scalars().all()
         related = []
-        for g in all_gaps:
+        for g in run_gaps:
             rc = getattr(g, "related_clusters", None)
             if rc:
                 g_clusters = json_mod.loads(rc) if isinstance(rc, str) else rc
