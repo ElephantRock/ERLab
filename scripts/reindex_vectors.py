@@ -29,13 +29,14 @@ async def reindex(dry_run: bool = False, batch_size: int = 50) -> dict:
     from backend.db.database import get_session
     from backend.db.models import Paper as SQLPaper
     from backend.pipeline.literature.models import Paper
-    from backend.pipeline.ingestion.chunker import DocumentChunker
     from backend.pipeline.knowledge.embedding_providers import create_embedding_provider
     from backend.pipeline.knowledge.embedding_service import EmbeddingService
     from backend.pipeline.knowledge.vector_store import VectorStore
 
-    # Build embedding service
-    provider = create_embedding_provider(settings)
+    # Build embedding service — use the LM Studio provider explicitly
+    emb_provider = getattr(settings, 'embedding_provider', 'lmstudio')
+    emb_base = getattr(settings, 'embedding_base_url', None)
+    provider = create_embedding_provider(emb_provider, base_url=emb_base)
     emb_service = EmbeddingService(provider, expected_dimension=getattr(provider, "dimension", None))
 
     # Validate embedding provider first
@@ -63,8 +64,9 @@ async def reindex(dry_run: bool = False, batch_size: int = 50) -> dict:
 
     if dry_run:
         # Count papers in SQL
-        session = next(get_session())
-        paper_count = session.query(SQLPaper).count()
+        with get_session() as session:
+            from sqlalchemy import func as sa_func
+            paper_count = session.query(sa_func.count(SQLPaper.id)).scalar() or 0
         logger.info("DRY RUN: Would re-index %d papers from SQL", paper_count)
         return {"status": "dry_run", "papers_in_sql": paper_count, "before": before_stats}
 
@@ -83,15 +85,16 @@ async def reindex(dry_run: bool = False, batch_size: int = 50) -> dict:
     )
 
     # Load papers from SQL
-    session = next(get_session())
-    sql_papers = session.query(SQLPaper).all()
+    with get_session() as session:
+        from sqlalchemy import select as sa_select
+        sql_papers = session.execute(sa_select(SQLPaper)).scalars().all()
     logger.info("Loaded %d papers from SQL", len(sql_papers))
 
     if not sql_papers:
         return {"status": "no_papers", "before": before_stats}
 
-    # Convert to pipeline Paper model
-    chunker = DocumentChunker()
+    # Convert to pipeline Paper model and re-index
+    from backend.pipeline.ingestion.chunker import DocumentChunk
     total_chunks = 0
     total_zero_rejected = 0
 
@@ -108,7 +111,7 @@ async def reindex(dry_run: bool = False, batch_size: int = 50) -> dict:
                 keywords = []
 
             paper = Paper(
-                id=sp.id,
+                id=str(sp.id),
                 source=sp.source or "unknown",
                 title=sp.title,
                 abstract=sp.abstract or "",
@@ -123,10 +126,10 @@ async def reindex(dry_run: bool = False, batch_size: int = 50) -> dict:
             )
             papers.append(paper)
 
-            # Chunk the paper
+            # Single chunk: title + abstract
             text = f"{paper.title}\n\n{paper.abstract}" if paper.abstract else paper.title
-            chunks = chunker.chunk(text, paper_id=paper.id)
-            all_chunks.append(chunks)
+            chunks_for_paper = [DocumentChunk(text=text, paper_id=paper.id, section="abstract")]
+            all_chunks.append(chunks_for_paper)
 
         # Add to vector store (includes zero-vector rejection)
         before_count = sum(len(c) for c in all_chunks)
