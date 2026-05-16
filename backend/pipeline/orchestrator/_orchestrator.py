@@ -322,6 +322,21 @@ class PipelineOrchestrator:
             cross_stage_ctx=self._services.cross_stage_ctx,
         )
 
+        from backend.pipeline.orchestrator.stage_lifecycle import StageLifecycle
+        self._lifecycle = StageLifecycle(
+            services=self._services,
+            settings=settings,
+            persistence=self._persistence,
+            integration=self._integration,
+            processor=self._processor,
+            provider=self._provider,
+            cost_tracker=self._cost_tracker,
+            compaction=self._compaction,
+            token_counter=self._token_counter,
+            notifier=None,  # Set per-run in run()
+            ccw=None,  # Set per-run in run()
+        )
+
         self._stages = self._build_stages()
 
         # Register built-in tools after all services are initialized
@@ -890,252 +905,29 @@ class PipelineOrchestrator:
             elapsed = time.time() - t0
             self._record_stage(stage.name, t0)
 
-            # Phase D: Verify stage output contract
-            try:
-                from backend.pipeline.monitoring.contracts import STAGE_CONTRACTS, verify_contract
-                contract = STAGE_CONTRACTS.get(stage.name)
-                if contract:
-                    violation = verify_contract(stage.name, result, contract)
-                    if violation:
-                        if violation.is_error:
-                            logger.error(
-                                "CONTRACT VIOLATION: %s — %s",
-                                stage.name, "; ".join(violation.violations),
-                            )
-                        else:
-                            logger.warning(
-                                "CONTRACT WARNING: %s — %s",
-                                stage.name, "; ".join(violation.violations),
-                            )
-            except Exception as e:
-                logger.debug("Contract verification failed (non-fatal): %s", e)
-
-            self._compaction.record_usage(stage.name)
-            if self._services.metacog:
-                self._services.metacog.record_stage(stage.name, {"elapsed_seconds": elapsed})
-            await self._services.hooks.dispatch_sync_safe(
-                "pipeline.stage.complete",
-                {"stage": stage.name, "elapsed": elapsed, "run_id": run_id},
+            # ── Common post-stage processing (delegated) ─────────
+            await self._lifecycle.post_stage_common(
+                stage, result, ctx, elapsed, run_id, domain,
+                strategy=self._strategy_name,
             )
 
-            # BATCH-185: Doom loop detection
-            if not self._doom_detected:
-                try:
-                    from backend.pipeline.monitoring.doom_loop import (
-                        extract_stage_fingerprint,
-                        hash_stage_output,
-                        check_pipeline_doom,
-                    )
-                    fingerprint = extract_stage_fingerprint(
-                        stage.name,
-                        gaps=result.gaps if hasattr(result, 'gaps') else None,
-                        ideas=result.ideas if hasattr(result, 'ideas') else None,
-                        proposals=result.proposals if hasattr(result, 'proposals') else None,
-                    )
-                    if fingerprint:
-                        self._doom_history.append({
-                            "stage_name": stage.name,
-                            "output_hash": hash_stage_output(fingerprint),
-                        })
-                        doom_msg = check_pipeline_doom(self._doom_history)
-                        if doom_msg:
-                            logger.warning("Doom loop detected: %s", doom_msg)
-                            self._doom_detected = True
-                except Exception as e:
-                    logger.debug("Doom loop check failed for %s: %s", stage.name, e)
-
-            # BATCH-191: CCW compression after key stages
-            if self._ccw:
-                try:
-                    if stage.name == "literature_search" or stage.name == "ingestion":
-                        if ctx.all_papers:
-                            self._ccw.add_papers(ctx.all_papers)
-                            logger.info("CCW: compressed %d papers (%d tokens)",
-                                         len(self._ccw.papers), self._ccw.estimate_tokens())
-                    elif stage.name == "gap_analysis":
-                        if result.gaps:
-                            self._ccw.add_gaps(result.gaps)
-                            logger.info("CCW: compressed %d gaps", len(self._ccw.gaps))
-                    elif stage.name == "idea_generation":
-                        if result.ideas:
-                            self._ccw.add_ideas(result.ideas)
-                            logger.info("CCW: compressed %d ideas", len(self._ccw.ideas))
-                except Exception as e:
-                    logger.debug("CCW compression failed for %s: %s", stage.name, e)
-
-            # BATCH-190: Stage completion notification
-            if self._notifier:
-                try:
-                    from backend.pipeline.notifications.gateway import Notification, PipelineEvent
-                    await self._notifier.send(Notification(
-                        event=PipelineEvent.STAGE_COMPLETED,
-                        run_id=run_id, strategy=strategy, domain=domain,
-                        message=f"Stage {stage.name} completed ({elapsed:.1f}s)",
-                        data={"stage": stage.name, "elapsed": elapsed},
-                    ))
-                except Exception:
-                    pass
-
-            # Persistence checkpoints
-            if stage.name == "literature_search":
-                self._persistence.persist_papers(ctx.all_papers, db_run_id)
-                self._collect_warnings(result)
-
-                # Rerank papers using cross-encoder for better relevance ordering
-                try:
-                    from backend.pipeline.knowledge.reranker import create_reranker
-                    reranker = create_reranker("auto")
-                    if ctx.all_papers and ctx.domain:
-                        docs = [
-                            {"id": str(p.id), "text": f"{p.title} {p.abstract or ''}"}
-                            for p in ctx.all_papers
-                            if p.abstract
-                        ]
-                        if docs:
-                            ranked = await reranker.rerank(ctx.domain, docs, top_k=min(20, len(docs)))
-                            # Reorder all_papers based on reranked order
-                            ranked_ids = {r.id: r.score for r in ranked}
-                            scored_papers = []
-                            for p in ctx.all_papers:
-                                score = ranked_ids.get(str(p.id), 0.0)
-                                scored_papers.append((score, p))
-                            scored_papers.sort(key=lambda x: x[0], reverse=True)
-                            ctx.all_papers = [p for _, p in scored_papers]
-                            logger.info(
-                                "Reranked %d papers, top score=%.3f",
-                                len(ranked),
-                                ranked[0].score if ranked else 0.0,
-                            )
-                except Exception as e:
-                    logger.debug("Reranking skipped: %s", str(e)[:100])
-
-                # BATCH-RAG-02: Compute retrieval metrics after literature search
-                try:
-                    from backend.pipeline.evaluation.retrieval_metrics import (
-                        compute_retrieval_metrics,
-                        RetrievedDocument,
-                    )
-                    queries = ctx.search_queries or [ctx.domain]
-                    if ctx.all_papers and queries:
-                        docs_per_query = []
-                        for q in queries:
-                            docs = [
-                                RetrievedDocument(
-                                    doc_id=str(p.id),
-                                    rank=i + 1,
-                                    score=p.relevance_score or 0.0,
-                                    is_relevant=False,  # No ground truth in live runs
-                                )
-                                for i, p in enumerate(ctx.all_papers[:20])
-                            ]
-                            docs_per_query.append((q, docs))
-                        metrics_report = compute_retrieval_metrics(docs_per_query)
-                        metrics_report.domain = ctx.domain
-                        metrics_report.strategy = ctx.params.get("strategy", "unknown")
-                        # Store in result metadata for later retrieval
-                        if not hasattr(result, '_retrieval_metrics'):
-                            result._retrieval_metrics = metrics_report
-                        logger.info(
-                            "Retrieval metrics: %d queries, %d docs, hit_rate=%.2f",
-                            metrics_report.total_queries,
-                            metrics_report.total_documents_retrieved,
-                            metrics_report.hit_rate,
-                        )
-                except Exception as e:
-                    logger.debug("Retrieval metrics computation skipped: %s", str(e)[:100])
-                if not should_continue:
-                    self._persistence.mark_run_failed(db_run_id, "No papers found")
-                    self._collect_warnings(result)
-                    await self._services.hooks.dispatch_sync_safe(
-                        "pipeline.complete",
-                        {
-                            "run_id": run_id,
-                            "status": "no_papers",
-                        },
-                    )
-                    return result
-
-            if stage.name == "gap_analysis":
-                self._persistence.persist_gaps(result, db_run_id)
-                self._collect_warnings(result)
-
-            if stage.name == "idea_generation":
-                # Intermediate save: persist ideas immediately so they survive a crash
-                # before proposal synthesis (AC-02-01).
-                self._persistence.persist_ideas(result, db_run_id)
-                self._collect_warnings(result)
-
-                # Persist tree visualization data (BATCH-63/TASK-02)
-                if getattr(result, 'tree_data', None):
-                    self._persistence.persist_tree_data(result.tree_data, db_run_id)
-                    self._collect_warnings(result)
-
-            if stage.name == "feasibility_scoring":
-                self._persistence.persist_ideas(result, db_run_id)
-                self._collect_warnings(result)
-
-                # Unified evaluation (WP-02)
-                if self._services.pipeline_evaluator:
-                    eval_reports = await self._services.pipeline_evaluator.evaluate_all(
-                        ideas=result.ideas,
-                        novelty_reports=result.novelty_reports,
-                        feasibility_reports=result.feasibility_reports,
-                    )
-                    result.evaluation_reports = eval_reports
-                    for idx, er in eval_reports.items():
-                        if er.quality_gate_result and not er.quality_gate_result.passed:
-                            logger.warning(
-                                "Idea '%s' failed quality gate: %s (%s)",
-                                er.idea_title[:50],
-                                er.quality_gate_result.failures,
-                                er.quality_gate_result.recommendation,
-                            )
-                    if self._services.metacog:
-                        for er in eval_reports.values():
-                            self._services.metacog.record_evaluation(er)
-                        plateau = self._services.metacog.check_plateau("overall_score")
-                        if plateau.is_plateau:
-                            logger.warning("Metacognitive plateau: %s", plateau.reason)
-
-                # Quality backloop (Gap 12): loop back if ideas are weak
-                if getattr(self._settings, "quality_backloop_enabled", False) and result.ideas:
-                    avg_score = sum(i.score for i in result.ideas) / len(result.ideas)
-                    min_composite = getattr(self._settings, "quality_backloop_min_composite", 0.4)
-                    if avg_score < min_composite:
-                        logger.info(
-                            "Quality backloop: avg score %.3f < %.3f, regenerating ideas",
-                            avg_score, min_composite,
-                        )
-                        # Mark low-scoring ideas for replacement
-                        result.ideas = [i for i in result.ideas if i.score >= min_composite]
-
-            if stage.name == "proposal_synthesis":
-                self._persistence.persist_proposals(result, db_run_id)
-                self._collect_warnings(result)
-                # Phase 8: Run reference verification after synthesis (HB-02)
-                self._verify_references(result, ctx)
-
-                # BATCH-RAG-03: Faithfulness scoring via LLM-as-judge
-                try:
-                    from backend.pipeline.evaluation.faithfulness_scorer import FaithfulnessScorer
-                    scorer = FaithfulnessScorer(provider=None)  # Heuristic mode for now
-                    source_abstracts = [
-                        p.abstract for p in ctx.all_papers[:30]
-                        if hasattr(p, 'abstract') and p.abstract
-                    ]
-                    for prop in result.proposals:
-                        report = asyncio.get_event_loop().run_until_complete(
-                            scorer.score_proposal(
-                                proposal_text=prop.methodology if hasattr(prop, 'methodology') else str(prop),
-                                proposal_title=prop.title if hasattr(prop, 'title') else "",
-                                proposal_id=str(prop.id) if hasattr(prop, 'id') else "",
-                                source_texts=source_abstracts,
-                            )
-                        )
-                        prop._faithfulness_report = report
-                    logger.info("Faithfulness scoring complete for %d proposals", len(result.proposals))
-                except Exception as e:
-                    logger.debug("Faithfulness scoring skipped: %s", str(e)[:100])
+            # ── Stage-specific post-processing (delegated) ────────
+            stage_result = await self._lifecycle.post_stage_specific(
+                stage, result, ctx, run_id, db_run_id, domain,
+                strategy=self._strategy_name,
+                should_continue=should_continue,
+            )
+            if stage_result == "abort":
+                # Early exit (e.g. no papers found)
+                reported_names = {r.name for r in result.stage_report}
+                from backend.pipeline.stages import ExportStage
+                for remaining in self._stages:
+                    if remaining.name not in reported_names and not isinstance(remaining, ExportStage):
+                        result.stage_report.append(StageReport(
+                            name=remaining.name, status="not_reached",
+                        ))
+                self._persist_stage_report(result, db_run_id)
+                return result
 
             # Cross-stage context: persist stage outputs
             if self._services.cross_stage_ctx:
@@ -1216,165 +1008,18 @@ class PipelineOrchestrator:
         # Phase 8: Pipeline quality evaluation
         self._evaluate_pipeline(result, ctx)
 
-        # Post-pipeline: Self-improvement evaluation
-        if self._services.evolver and result.ideas:
-            avg_score = sum(i.score for i in result.ideas) / len(result.ideas)
-            avg_novelty = (
-                sum(r.overall_score for r in result.novelty_reports.values())
-                / len(result.novelty_reports)
-                if result.novelty_reports
-                else 0.0
-            )
-
-            # Compute FitnessScore from run outcomes
-            from backend.pipeline.self_improve.fitness import FitnessScore
-
-            total_text = sum(len(i.proposed_method) for i in result.ideas)
-            length_penalty = FitnessScore.length_penalty_ramp(total_text, 50000)
-            fitness = FitnessScore(
-                correctness=avg_score,
-                procedure_following=min(1.0, len(result.ideas) / max(1, ideas_per * rounds)),
-                conciseness=1.0 - length_penalty,
-                length_penalty=length_penalty,
-            )
-
-            self._services.evolver.evaluate(
-                params=params,
-                run_id=run_id,
-                avg_idea_score=avg_score,
-                avg_novelty_score=avg_novelty,
-                good_ideas=sum(1 for i in result.ideas if i.score >= 0.6),
-                fitness=fitness,
-            )
-
-        # Post-pipeline: Lesson extraction → store as memories
-        if self._services.lesson_extractor and result.ideas:
-            avg_score = sum(i.score for i in result.ideas) / len(result.ideas)
-            if avg_score < 0.7:
-                lessons = await self._services.lesson_extractor.extract(result, params)
-                if lessons:
-                    logger.info("Extracted %d lessons from run", len(lessons))
-                    # Store lessons as memories
-                    if self._services.memory:
-                        from backend.pipeline.knowledge.truth import TruthValue
-                        from backend.pipeline.memory.models import MemoryEntry, MemoryType
-
-                        for lesson in lessons:
-                            try:
-                                entry = MemoryEntry(
-                                    id="",
-                                    content=str(lesson),
-                                    memory_type=MemoryType.EPISODIC,
-                                    namespace="pipeline_experience",
-                                    truth=TruthValue.from_observation(frequency=0.7),
-                                    tags=["lesson", "self_improve"],
-                                    created_at=datetime.now(),
-                                )
-                                await self._services.memory.store(entry)
-                            except Exception as e:
-                                logger.warning("Failed to store lesson as memory: %s", e)
-                        logger.info("Stored %d lessons as memories", len(lessons))
-
-                    # Feed lessons back into evolver for parameter adjustment
-                    if self._services.evolver and lessons:
-                        adjusted = self._services.evolver.apply_lessons(
-                            [str(l) for l in lessons], params
-                        )
-                        logger.info(
-                            "Lessons fed back to evolver. %d params adjusted",
-                            sum(1 for k in adjusted if adjusted[k] != params.get(k)),
-                        )
-
-                    # Activate skill proposer/generator with lessons
-                    if self._services.skill_proposer and self._services.skill_generator and self._services.skill_registry:
-                        skills = self._services.skill_registry.discover(domain=domain)
-                        for skill in skills:
-                            try:
-                                diagnosis, suggestion = await self._services.skill_proposer.diagnose(
-                                    skill, trace=str(lessons)
-                                )
-                                improved = await self._services.skill_generator.generate(
-                                    skill, diagnosis, suggestion
-                                )
-                                self._services.skill_registry.add_version(skill.id, improved, score=avg_score)
-                            except Exception as e:
-                                logger.warning("Skill evolution failed for %s: %s", skill.id, e)
-
-        # Post-pipeline: World model update + change detection
-        if self._services.world_model and result.ideas:
-            await self._services.world_model.update_from_run(result, self._provider)
-            logger.info("World model updated")
-
-            # Check for significant changes and re-evaluate goals
-            if self._services.kg and getattr(self._settings, "versioning_enabled", True):
-                from backend.pipeline.knowledge.change_detector import WorldModelChangeDetector
-                detector = WorldModelChangeDetector(self._services.kg, contradiction_scanner=self._services.contradiction_scanner)
-                summary = await detector.check_and_notify(
-                    goal_manager=getattr(self, "_goal_manager", None),
-                )
-                if summary and summary.severity.value != "low":
-                    logger.info(
-                        "Change detection: %s severity, %d changes",
-                        summary.severity.value, summary.total_changes,
-                    )
-
-        # Post-pipeline: Fire-and-forget memory extraction
-        if self._services.memory:
-            asyncio.create_task(self._background_memory_extraction(result, run_id))
-
-        # Hook: pipeline.complete
-        await self._services.hooks.dispatch_sync_safe(
-            "pipeline.complete",
-            {
-                "run_id": run_id,
-                "ideas_count": len(result.ideas),
-                "gaps_count": len(result.gaps),
-                "proposals_count": len(result.proposals),
-            },
+        # ── Post-pipeline finalization (delegated) ───────────
+        await self._lifecycle.post_pipeline_finalize(
+            result, ctx, run_id, domain,
+            strategy=self._strategy_name,
+            params=params,
+            db_run_id=db_run_id,
+            session_id=session_id,
+            ideas_per=ideas_per,
+            rounds=rounds,
         )
 
-        logger.info("=== Pipeline Complete ===")
-        self._persistence.mark_run_completed(db_run_id)
-
-        # BATCH-190: Run completed notification
-        if self._notifier:
-            try:
-                from backend.pipeline.notifications.gateway import Notification, PipelineEvent
-                n_gaps = len(result.gaps) if result.gaps else 0
-                n_ideas = len(result.ideas) if result.ideas else 0
-                n_proposals = len(result.proposals) if result.proposals else 0
-                await self._notifier.send(Notification(
-                    event=PipelineEvent.RUN_COMPLETED,
-                    run_id=run_id, strategy=strategy, domain=domain,
-                    message=f"Pipeline completed: {n_gaps} gaps, {n_ideas} ideas, {n_proposals} proposals",
-                    data={"gaps": n_gaps, "ideas": n_ideas, "proposals": n_proposals},
-                ))
-            except Exception:
-                pass
-
-        # Persist cost events
-        if self._cost_tracker and self._cost_tracker._events:
-            cost_dir = getattr(self._settings, "cost_persist_dir", "./data/costs")
-            self._cost_tracker.persist(f"{cost_dir}/{run_id}.jsonl")
-
-        # Session: complete run record
-        if session_id and self._services.session_manager:
-            tokens = self._cost_tracker.total_tokens if self._cost_tracker else 0
-            cost = self._cost_tracker.total_cost if self._cost_tracker else 0.0
-            self._services.session_manager.complete_run(session_id, run_id, tokens_used=tokens, cost_usd=cost)
-
-        # Phase 7: Write journal at pipeline end
-        if self._integration:
-            self._integration.journal_note(
-                "pipeline", "Pipeline completed",
-                {"ideas": len(result.ideas), "gaps": len(result.gaps)},
-            )
-            notes_path, readme_path = self._integration.journal_write()
-            if notes_path:
-                logger.info("Research journal written to %s", notes_path)
-
         return result
-
     # ── Durable Execution: Resume ────────────────────────────────────
 
     async def resume(
