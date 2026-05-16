@@ -90,7 +90,7 @@ select = ["E", "F", "I", "N", "UP", "B", "SIM"]
 
 [tool.pytest.ini_options]
 testpaths = ["backend/tests"]
-addopts = "-p no:asyncio"
+addopts = ""
 markers = ["slow: marks tests as slow (deselect with '-m \"not slow\"')", "integration: marks tests requiring external APIs"]
 
 [tool.coverage.run]
@@ -98,6 +98,6 @@ source = ["backend"]
 omit = ["backend/tests/*", "backend/cli/*", "backend/api/*"]
 
 [tool.coverage.report]
-fail_under = 69
+fail_under = 72
 show_missing = true
 exclude_lines = ["pragma: no cover", "if TYPE_CHECKING:", "raise NotImplementedError"]
