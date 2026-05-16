@@ -1234,11 +1234,36 @@ class AdversarialReviewStage(PipelineStage):
         # HB-02: Skip if both providers are genuinely the same model on the same endpoint.
         # Compare base_url + model instead of provider_name (which is always "anthropic"
         # because both providers use AnthropicProvider class internally).
-        if self._thinking_provider and self._generation_provider:
-            thinking_url = getattr(self._thinking_provider, "base_url", None) or getattr(self._thinking_provider, "_base_url", None) or ""
-            generation_url = getattr(self._generation_provider, "base_url", None) or getattr(self._generation_provider, "_base_url", None) or ""
-            thinking_model = getattr(self._thinking_provider, "model", None) or getattr(self._thinking_provider, "_model", None) or ""
-            generation_model = getattr(self._generation_provider, "model", None) or getattr(self._generation_provider, "_model", None) or ""
+        # Must unwrap ResilientProvider to access the inner provider's attributes.
+        def _unwrap(provider):
+            """Unwrap ResilientProvider or CircuitBreakerProxy to get the real provider."""
+            visited = set()
+            while hasattr(provider, "_wrapped"):
+                if id(provider) in visited:
+                    break
+                visited.add(id(provider))
+                provider = provider._wrapped
+            return provider
+
+        tp_raw = _unwrap(self._thinking_provider) if self._thinking_provider else None
+        gp_raw = _unwrap(self._generation_provider) if self._generation_provider else None
+
+        if tp_raw and gp_raw:
+            thinking_url = (
+                getattr(tp_raw, "base_url", None)
+                or getattr(tp_raw, "_base_url", None)
+                or getattr(getattr(tp_raw, "_client", None), "base_url", None)
+                or ""
+            )
+            generation_url = (
+                getattr(gp_raw, "base_url", None)
+                or getattr(gp_raw, "_base_url", None)
+                or getattr(getattr(gp_raw, "_client", None), "base_url", None)
+                or ""
+            )
+            thinking_model = getattr(tp_raw, "default_model", None) or getattr(tp_raw, "_model", None) or ""
+            generation_model = getattr(gp_raw, "default_model", None) or getattr(gp_raw, "_model", None) or ""
+
             # Same endpoint AND same model = self-play
             if thinking_url == generation_url and thinking_model == generation_model:
                 logger.warning(
