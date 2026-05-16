@@ -1448,7 +1448,11 @@ class PipelineOrchestrator:
                     ))
                 except Exception as e:
                     elapsed = time.time() - t0
-                    logger.error("Stage '%s' failed (continuing pipeline): %s", stage.name, e)
+                    import traceback as _tb
+                    logger.error(
+                        "Stage '%s' failed (continuing pipeline): %s\n%s",
+                        stage.name, e, _tb.format_exc(),
+                    )
                     result.stage_report.append(StageReport(
                         name=stage.name,
                         status="skipped_by_error",
