@@ -47,6 +47,32 @@ export function resumeRun(runId: string): Promise<{ status: string; run_id: stri
   });
 }
 
+export interface EstimateBreakdown {
+  stage: string;
+  model: string;
+  label: string;
+  input_tokens: number;
+  output_tokens: number;
+  cost_usd: number;
+  time_seconds: number;
+}
+
+export interface EstimateResponse {
+  strategy: string;
+  stages: number;
+  estimated_cost_usd: number;
+  estimated_time_seconds: number;
+  estimated_time_display: string;
+  cost_display: string;
+  local_cost_usd: number;
+  cloud_cost_usd: number;
+  breakdown: EstimateBreakdown[];
+}
+
+export function getEstimate(strategy: string): Promise<EstimateResponse> {
+  return apiFetch(`/pipeline/estimate?strategy=${encodeURIComponent(strategy)}`);
+}
+
 export function triggerAutonomous(req: AutonomousCycleRequest): Promise<AutonomousCycleResponse> {
   return apiFetch("/pipeline/autonomous", {
     method: "POST",

@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { StageModelSelector } from "./stage-model-selector";
+import { EstimateCard } from "./estimate-card";
 import type { PipelineRunRequest } from "@/api/types";
 import { Search, Loader2, ChevronDown, ChevronRight } from "lucide-react";
 
@@ -110,6 +111,9 @@ export function RunConfigForm({ onSubmit, isLoading, sessionId = "", onSessionId
               {strategy === "literature_review" && "Literature search and gap analysis only, no proposal generation."}
             </p>
           </div>
+
+          {/* Cost & Time Estimate */}
+          <EstimateCard strategy={strategy} />
 
           {/* Advanced Options - Collapsible (all tuning knobs here) */}
           <div className="border rounded-md">
