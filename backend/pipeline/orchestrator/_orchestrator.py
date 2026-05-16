@@ -300,6 +300,28 @@ class PipelineOrchestrator:
             budget_management=getattr(settings, "compaction_budget_management", True),
             global_token_limit=getattr(settings, "budget_max_tokens", 500000),
         )
+
+        # ── Stage Executor & Result Processor ─────────────────────
+        from backend.pipeline.orchestrator.stage_executor import StageExecutor
+        self._executor = StageExecutor(
+            settings=settings,
+            persistence=self._persistence,
+            stage_callback=stage_callback,
+            cost_tracker=self._cost_tracker,
+            token_counter=self._token_counter,
+            budget=self._services.budget,
+            strategy_name=self._strategy_name,
+        )
+
+        from backend.pipeline.orchestrator.result_processor import ResultProcessor
+        self._processor = ResultProcessor(
+            reference_verifier=self._reference_verifier,
+            persistence=self._persistence,
+            integration=self._integration,
+            provider=self._provider,
+            cross_stage_ctx=self._services.cross_stage_ctx,
+        )
+
         self._stages = self._build_stages()
 
         # Register built-in tools after all services are initialized
@@ -1594,396 +1616,49 @@ class PipelineOrchestrator:
     async def _execute_stage_with_retry(
         self, stage: PipelineStage, ctx: StageContext, checkpoint: RunCheckpoint
     ) -> bool:
-        """Execute a stage with retry, exponential backoff, checkpointing, and timeout."""
-        import random
-
-        max_retries = getattr(self._settings, "stage_max_retries", 3)
-        base_delay = getattr(self._settings, "stage_retry_base_delay", 2.0)
-        max_delay = getattr(self._settings, "stage_retry_max_delay", 120.0)
-        jitter_frac = getattr(self._settings, "stage_retry_jitter", 0.1)
-
-        # BATCH-176: LLM-level rate limit retry (wraps the actual LLM call)
-        max_llm_retries = getattr(self._settings, "llm_rate_limit_retries", 3)
-
-        # Per-stage timeout: default 30 minutes, configurable via settings
-        stage_timeouts = getattr(self._settings, "stage_timeouts", {})
-        default_timeout = getattr(self._settings, "stage_default_timeout", 1800)  # 30 min
-        stage_timeout = stage_timeouts.get(stage.name, default_timeout)
-
-        for attempt in range(max_retries + 1):
-            try:
-                async def _run():
-                    result, retries = await retry_llm_call(
-                        lambda: stage.execute(ctx),
-                        max_retries=max_llm_retries,
-                    )
-                    self._last_stage_retries = retries
-                    return result
-
-                result = await asyncio.wait_for(_run(), timeout=stage_timeout)
-                return result
-            except asyncio.TimeoutError:
-                self._last_stage_retries = 0
-                logger.error(
-                    "Stage %s TIMED OUT after %ds (attempt %d/%d)",
-                    stage.name, stage_timeout, attempt + 1, max_retries + 1,
-                )
-                if attempt >= max_retries:
-                    raise RuntimeError(
-                        f"Stage {stage.name} timed out after {stage_timeout}s "
-                        f"across {max_retries + 1} attempts"
-                    )
-                delay = min(base_delay * (2 ** attempt), max_delay)
-                await asyncio.sleep(delay)
-            except Exception as exc:
-                self._last_stage_retries = 0
-                checkpoint.mark_stage_failed(stage.name, str(exc))
-                self._persistence.save_checkpoint(checkpoint)
-                if attempt >= max_retries:
-                    logger.error(
-                        "Stage %s exhausted %d retries: %s", stage.name, max_retries, exc
-                    )
-                    raise
-                delay = min(base_delay * (2 ** attempt), max_delay)
-                jitter = delay * jitter_frac
-                delay += random.uniform(-jitter, jitter)
-                logger.warning(
-                    "Stage %s failed (attempt %d/%d), retrying in %.1fs: %s",
-                    stage.name, attempt + 1, max_retries + 1, delay, exc,
-                )
-                await asyncio.sleep(delay)
-        return False  # unreachable but satisfies type checker
+        """Delegate to StageExecutor."""
+        return await self._executor.execute_with_retry(stage, ctx, checkpoint)
 
     def _record_stage(self, stage_name: str, start_time: float) -> None:
-        elapsed = time.time() - start_time
-        if self._stage_callback:
-            idx = (
-                self._STAGE_ORDER.index(stage_name) + 1 if stage_name in self._STAGE_ORDER else "?"
-            )
-            self._stage_callback(stage_name, idx, len(self._STAGE_ORDER), elapsed)
-        if self._services.budget:
-            tokens = self._token_counter.snapshot().total_tokens
-            cost_usd = 0.0
-            if self._cost_tracker:
-                stage_costs = self._cost_tracker.by_stage()
-                cost_usd = stage_costs.get(stage_name, {}).get("total_cost_usd", 0.0)
-            self._services.budget.record(stage_name, tokens=tokens, cost_usd=cost_usd, elapsed=elapsed)
-
-        # BATCH-184: structured JSON logging per stage
-        try:
-            from backend.pipeline.dag.stage_log import StageLogger
-            if not hasattr(self, '_stage_logger'):
-                run_id = getattr(self, '_current_run_id', 'unknown')
-                self._stage_logger = StageLogger(run_id=run_id)
-            self._stage_logger.log(
-                stage=stage_name,
-                event="complete",
-                config={"strategy": self._strategy_name},
-                inputs={},
-                outputs={},
-                elapsed_s=elapsed,
-            )
-        except Exception as e:
-            logger.debug("StageLogger failed for %s: %s", stage_name, e)
-        self._token_counter.reset()
-
-    # ── Reference Verification (Phase 8) ───────────────────────────
+        """Delegate to StageExecutor."""
+        self._executor.record_stage(stage_name, start_time, self._STAGE_ORDER)
 
     def _verify_references(self, result: PipelineResult, ctx: StageContext) -> None:
-        """Run reference verification on all generated proposals.
-
-        Verifies citations against the corpus papers. If trust score is below
-        0.7, strips unverifiable citations with [Citation needed] markers.
-
-        HB-01: This method MUST NOT raise exceptions that propagate to the
-        pipeline executor. All errors are caught and logged.
-        """
-        try:
-            if not result.proposals:
-                logger.debug("No proposals to verify — skipping reference verification")
-                return
-
-            # Build corpus paper dicts from all_papers in context
-            corpus_dicts: list[dict] = []
-            for paper in getattr(ctx, 'all_papers', []) or []:
-                try:
-                    corpus_dicts.append({
-                        "title": getattr(paper, 'title', ''),
-                        "authors": getattr(paper, 'authors', []),
-                        "year": getattr(paper, 'year', ''),
-                    })
-                except Exception:
-                    continue
-
-            total_verified = 0
-            total_unverifiable = 0
-
-            for proposal in result.proposals:
-                text = getattr(proposal, 'content_md', '') or getattr(proposal, 'content', '') or ''
-                if not text:
-                    continue
-
-                report = self._reference_verifier.verify(text, corpus_dicts)
-                trust = report.trust_score
-
-                logger.info(
-                    "Reference verification for proposal '%s': "
-                    "trust=%.2f, verified=%d, unverifiable=%d, hallucinated=%d",
-                    getattr(proposal, 'title', 'untitled')[:60],
-                    trust,
-                    report.verified,
-                    report.unverifiable,
-                    report.potentially_hallucinated,
-                )
-
-                if trust < 0.7:
-                    logger.warning(
-                        "Low reference trust score (%.2f) — stripping unverifiable citations",
-                        trust,
-                    )
-                    cleaned = self._reference_verifier.strip_unverified_citations(text, report)
-                    # Update the proposal text
-                    if hasattr(proposal, 'content_md'):
-                        proposal.content_md = cleaned
-                    elif hasattr(proposal, 'content'):
-                        proposal.content = cleaned
-
-                    # Store verification metadata
-                    metadata = {}
-                    if hasattr(proposal, 'metadata') and proposal.metadata:
-                        try:
-                            import json
-                            metadata = json.loads(proposal.metadata) if isinstance(proposal.metadata, str) else proposal.metadata
-                        except (json.JSONDecodeError, TypeError):
-                            metadata = {}
-                    metadata["reference_verification"] = {
-                        "trust_score": trust,
-                        "verified": report.verified,
-                        "unverifiable": report.unverifiable,
-                        "hallucinated": report.potentially_hallucinated,
-                        "stripped": True,
-                    }
-                    if hasattr(proposal, 'metadata'):
-                        import json
-                        proposal.metadata = json.dumps(metadata) if not isinstance(metadata, str) else metadata
-
-                total_verified += report.verified
-                total_unverifiable += report.unverifiable
-
-            logger.info(
-                "Reference verification complete: %d verified, %d unverifiable across %d proposals",
-                total_verified, total_unverifiable, len(result.proposals),
-            )
-
-            # Phase 7: Journal reference verification results
-            if self._integration:
-                self._integration.journal_note(
-                    "reference_verification",
-                    f"Verified {total_verified} citations, {total_unverifiable} unverifiable",
-                )
-
-        except Exception as e:
-            # HB-01: Never crash the pipeline over verification
-            logger.warning("Reference verification failed (non-fatal, HB-01): %s", e)
-
-    # ── Doom Loop Fingerprint Extraction (BATCH-185) ─────────────────────
+        """Delegate to ResultProcessor."""
+        self._processor.verify_references(result, ctx)
 
     @staticmethod
     def _extract_stage_fingerprint(stage_name: str, result: PipelineResult) -> str:
-        """Extract minimal fingerprint for doom-prone stages.
-
-        Only gap_analysis, idea_generation, and proposal_synthesis produce
-        fingerprints — these are the stages most likely to loop.
-        Other stages return empty string (no doom check).
-        """
-        if stage_name == "gap_analysis":
-            if result.gaps:
-                return "|".join(g.title for g in result.gaps)
-            return ""
-
-        if stage_name == "idea_generation":
-            if result.ideas:
-                parts = [f"{i.title}:{i.score:.2f}" for i in result.ideas]
-                return "|".join(parts)
-            return ""
-
-        if stage_name == "proposal_synthesis":
-            if result.proposals:
-                parts = []
-                for prop in result.proposals.values():
-                    # Truncate long proposal content before hashing (NOTE-01)
-                    abstract = getattr(prop, 'abstract', '') or ''
-                    if not abstract and hasattr(prop, 'sections'):
-                        abstract = prop.sections.get('abstract', '')
-                    parts.append(abstract[:500])
-                return "|".join(parts)
-            return ""
-
-        # Other stages: no fingerprint → no doom check
-        return ""
-
-    # ── Pipeline Quality Evaluation (Phase 8) ────────────────────────
+        """Delegate to ResultProcessor."""
+        return ResultProcessor.extract_stage_fingerprint(stage_name, result)
 
     def _evaluate_pipeline(self, result: PipelineResult, ctx: StageContext) -> None:
-        """Run pipeline quality evaluation after all stages complete.
-
-        Compares detected gaps against gold-standard lists and computes
-        precision, recall, novelty rate, and overall quality score.
-
-        HB-01: Non-blocking — catches all exceptions.
-        """
-        try:
-            from backend.pipeline.verification.pipeline_evaluator import PipelineEvaluator as PE
-            from backend.pipeline.verification.gold_standards import get_gold_gaps
-
-            domain = ctx.domain or "AI/NLP"
-            gold_gaps = get_gold_gaps(domain)
-
-            evaluator = PE(known_gaps=gold_gaps)
-
-            detected = [
-                {"title": g.title, "description": getattr(g, 'description', ''),
-                 "gap_type": getattr(g, 'gap_type', 'unknown')}
-                for g in result.gaps
-            ]
-            ideas = [
-                {"title": getattr(i, 'title', ''), "novelty_score": getattr(i, 'score', 0.5)}
-                for i in result.ideas
-            ]
-
-            report = evaluator.evaluate(detected, ideas)
-
-            logger.info(
-                "Pipeline quality: score=%.2f, gap_recall=%.1f%%, gap_precision=%.1f%%, "
-                "idea_novelty=%.1f%%",
-                report.pipeline_quality_score,
-                report.gap_recall * 100,
-                report.gap_precision * 100,
-                report.idea_novelty_rate * 100,
-            )
-
-            # Store in result metadata
-            if not hasattr(result, 'quality_report') or result.quality_report is None:
-                result.quality_report = {}
-            result.quality_report = {
-                "pipeline_quality_score": report.pipeline_quality_score,
-                "gap_recall": report.gap_recall,
-                "gap_precision": report.gap_precision,
-                "idea_novelty_rate": report.idea_novelty_rate,
-                "gaps_detected": report.gaps_detected,
-                "gaps_novel": report.gaps_novel,
-                "ideas_generated": report.ideas_generated,
-                "ideas_novel": report.ideas_novel,
-            }
-
-            # Journal
-            if self._integration:
-                self._integration.journal_note(
-                    "pipeline_evaluation",
-                    f"Quality score: {report.pipeline_quality_score:.2f}",
-                )
-
-        except Exception as e:
-            logger.warning("Pipeline evaluation failed (non-fatal): %s", e)
+        """Delegate to ResultProcessor."""
+        self._processor.evaluate_pipeline(result, ctx)
 
     def _should_stop(self) -> bool:
-        if not self._services.budget:
-            return False
-        from backend.pipeline.autonomy.budget import BudgetPolicy
-
-        policy = self._services.budget.check_policy()
-        if policy == BudgetPolicy.STOP:
-            logger.warning("Budget STOP triggered. Halting pipeline.")
-            return True
-        if policy == BudgetPolicy.REPLAN:
-            logger.warning("Budget REPLAN — 80%% budget used. Continuing with caution.")
-        # Also check CostTracker for hard limit
-        if self._cost_tracker:
-            summary = self._cost_tracker.summary()
-            if summary["total_cost_usd"] > self._settings.budget_max_cost_usd:
-                logger.warning(
-                    "Cost tracker STOP: $%.2f exceeds budget $%.2f",
-                    summary["total_cost_usd"],
-                    self._settings.budget_max_cost_usd,
-                )
-                return True
-        return False
+        """Delegate to ResultProcessor."""
+        return self._processor.should_stop(
+            self._services.budget, self._cost_tracker, self._settings)
 
     async def _persist_stage_context(
         self, run_id: str, stage_name: str, ctx: StageContext, result: PipelineResult
     ) -> None:
-        """Save stage outputs to cross-stage context for later retrieval."""
-        try:
-            if stage_name == "literature_search" and ctx.all_papers:
-                await self._services.cross_stage_ctx.save_stage_output(
-                    run_id, "literature_search", "papers",
-                    [{"title": p.title, "abstract": getattr(p, "abstract", "")}
-                     for p in ctx.all_papers[:50]],
-                )
-            elif stage_name == "gap_analysis" and result.gaps:
-                await self._services.cross_stage_ctx.save_stage_output(
-                    run_id, "gap_analysis", "gaps",
-                    [{"title": g.title, "description": g.description,
-                      "confidence": g.confidence, "gap_type": g.gap_type}
-                     for g in result.gaps],
-                )
-            elif stage_name == "idea_generation" and result.ideas:
-                await self._services.cross_stage_ctx.save_stage_output(
-                    run_id, "idea_generation", "ideas",
-                    [{"title": i.title, "proposed_method": getattr(i, "proposed_method", ""),
-                      "score": i.score, "domain": getattr(i, "domain", "")}
-                     for i in result.ideas],
-                )
-            elif stage_name == "feasibility_scoring" and result.feasibility_reports:
-                await self._services.cross_stage_ctx.save_stage_output(
-                    run_id, "feasibility_scoring", "scores",
-                    {str(k): {"overall": v.overall_score}
-                     for k, v in result.feasibility_reports.items()},
-                )
-            elif stage_name == "proposal_synthesis" and result.proposals:
-                await self._services.cross_stage_ctx.save_stage_output(
-                    run_id, "proposal_synthesis", "proposals",
-                    {"count": len(result.proposals)},
-                )
-        except Exception as exc:
-            logger.warning("Failed to persist cross-stage context for %s: %s", stage_name, exc)
+        """Delegate to ResultProcessor."""
+        await self._processor.persist_stage_context(run_id, stage_name, ctx, result)
 
     def _collect_warnings(self, result: PipelineResult) -> None:
-        warnings = self._persistence.get_warnings()
-        if warnings:
-            result.persistence_warnings.extend(warnings)
+        """Delegate to ResultProcessor."""
+        self._processor.collect_warnings(result)
 
     def _persist_stage_report(self, result: PipelineResult, db_run_id: int | None) -> None:
-        """Persist stage_report list to DB (BATCH-173)."""
-        if not db_run_id or not result.stage_report:
-            return
-        try:
-            import json
-            from backend.db.database import get_session
-            from backend.db.models import PipelineRun
-
-            report_json = json.dumps([r.to_dict() for r in result.stage_report])
-            with get_session() as session:
-                run = session.query(PipelineRun).filter(PipelineRun.id == db_run_id).first()
-                if run:
-                    run.stage_report_json = report_json
-                    session.commit()
-        except Exception as e:
-            logger.warning("Failed to persist stage_report: %s", e)
+        """Delegate to ResultProcessor."""
+        self._processor.persist_stage_report(result, db_run_id)
 
     async def _background_memory_extraction(self, result: PipelineResult, run_id: str) -> None:
-        try:
-            stored = await extract_from_pipeline_result(
-                result,
-                self._provider,
-                self._services.memory,  # type: ignore[arg-type]
-                run_id=run_id,
-            )
-            logger.info("Background memory extraction: stored %d memories", stored)
-        except Exception as e:
-            logger.error("Background memory extraction failed: %s", e)
-
-    # ── Scheduler Control ─────────────────────────────────────────────
+        """Delegate to ResultProcessor."""
+        await self._processor.background_memory_extraction(
+            result, run_id, self._provider, self._services.memory)
 
     async def start_scheduler(self) -> dict | None:
         """Start the autonomous scheduler."""
