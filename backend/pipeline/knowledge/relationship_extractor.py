@@ -12,6 +12,8 @@ Design constraints:
 from __future__ import annotations
 
 import json
+
+from backend.pipeline.utils.json_extraction import extract_json
 import logging
 from typing import TYPE_CHECKING
 
@@ -49,11 +51,11 @@ If no meaningful relationship exists, respond: {{"relation_type": "none", "confi
 
 def _parse_relation_response(text: str) -> dict | None:
     """Parse the LLM response JSON, handling common formatting issues."""
-    text = text.strip()
-    # Strip markdown code fences if present
-    if text.startswith("```"):
-        lines = text.split("\n")
-        text = "\n".join(lines[1:-1] if lines[-1].strip() == "```" else lines[1:])
+    result = extract_json(text)
+    if isinstance(result, dict) and "relation_type" in result:
+        return result
+    return None
+
 
     try:
         result = json.loads(text)

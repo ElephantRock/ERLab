@@ -7,6 +7,8 @@ Falls back to template generation on LLM failure.
 from __future__ import annotations
 
 import json
+
+from backend.pipeline.utils.json_extraction import extract_json
 import logging
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -100,13 +102,7 @@ class StudyDesigner:
         response = await self._provider.complete(messages, temperature=0.3, max_tokens=1024)
 
         # Parse JSON from response
-        response_text = response.strip()
-        if "```json" in response_text:
-            response_text = response_text.split("```json")[1].split("```")[0].strip()
-        elif "```" in response_text:
-            response_text = response_text.split("```")[1].split("```")[0].strip()
-
-        result = json.loads(response_text)
+        result = extract_json(response)
 
         mvp_data = result.get("mvp_experiment", {})
         mvp = MVPExperiment(

@@ -15,6 +15,8 @@ from __future__ import annotations
 
 import copy
 import json
+
+from backend.pipeline.utils.json_extraction import extract_json
 import logging
 import re
 from dataclasses import dataclass, field
@@ -288,13 +290,7 @@ class WikiVerifier:
             messages = [{"role": "user", "content": prompt}]
             response = await self._provider.complete(messages, temperature=0.1, max_tokens=512)
 
-            response_text = response.strip()
-            if "```json" in response_text:
-                response_text = response_text.split("```json")[1].split("```")[0].strip()
-            elif "```" in response_text:
-                response_text = response_text.split("```")[1].split("```")[0].strip()
-
-            result = json.loads(response_text)
+            result = extract_json(response)
             if isinstance(result, dict) and "supported" in result:
                 return result
             return None

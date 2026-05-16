@@ -11,6 +11,8 @@ Uses local qwen3-4b for zero-cost question generation.
 from __future__ import annotations
 
 import json
+
+from backend.pipeline.utils.json_extraction import extract_json
 import logging
 import uuid
 from datetime import datetime
@@ -154,27 +156,9 @@ class BenchmarkGenerator:
         self, response: str, paper: Paper
     ) -> list[BenchmarkQuestion]:
         """Parse LLM response into BenchmarkQuestion objects."""
-        # Try to extract JSON from response
-        text = response.strip()
-        # Remove markdown code fences if present
-        if text.startswith("```"):
-            lines = text.split("\n")
-            text = "\n".join(lines[1:-1]) if len(lines) > 2 else text
-
-        try:
-            items = json.loads(text)
-        except json.JSONDecodeError:
-            # Try to find JSON array in response
-            start = text.find("[")
-            end = text.rfind("]")
-            if start >= 0 and end > start:
-                try:
-                    items = json.loads(text[start : end + 1])
-                except json.JSONDecodeError:
-                    logger.warning("Could not parse LLM response as JSON")
-                    return self._template_questions(paper)
-            else:
-                return self._template_questions(paper)
+        items = extract_json(response)
+        if not items:
+            return self._template_questions(paper)
 
         questions = []
         for item in items[: self._questions_per_paper]:

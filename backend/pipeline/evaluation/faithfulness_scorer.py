@@ -10,6 +10,8 @@ paper abstracts. Produces a FaithfulnessReport with per-claim scores.
 from __future__ import annotations
 
 import json
+
+from backend.pipeline.utils.json_extraction import extract_json
 import logging
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
@@ -174,23 +176,7 @@ class FaithfulnessScorer:
         self, response: str, proposal_id: str, proposal_title: str
     ) -> FaithfulnessReport:
         """Parse LLM response into FaithfulnessReport."""
-        text = response.strip()
-        if text.startswith("```"):
-            lines = text.split("\n")
-            text = "\n".join(lines[1:-1]) if len(lines) > 2 else text
-
-        try:
-            data = json.loads(text)
-        except json.JSONDecodeError:
-            start = text.find("{")
-            end = text.rfind("}")
-            if start >= 0 and end > start:
-                try:
-                    data = json.loads(text[start : end + 1])
-                except json.JSONDecodeError:
-                    data = {}
-            else:
-                data = {}
+        data = extract_json(response)
 
         return FaithfulnessReport(
             proposal_id=proposal_id,
@@ -296,17 +282,7 @@ class FaithfulnessScorer:
         self, response: str, claim: str, source_id: str
     ) -> ClaimAssessment:
         """Parse LLM claim scoring response."""
-        text = response.strip()
-        try:
-            data = json.loads(text)
-        except json.JSONDecodeError:
-            start = text.find("{")
-            end = text.rfind("}")
-            if start >= 0 and end > start:
-                try:
-                    data = json.loads(text[start : end + 1])
-                except json.JSONDecodeError:
-                    data = {}
+        data = extract_json(response)
 
         return ClaimAssessment(
             claim=claim,

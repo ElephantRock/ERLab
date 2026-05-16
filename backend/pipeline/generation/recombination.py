@@ -8,6 +8,8 @@ of two parent IdeaCandidates into a single child with traceable lineage.
 from __future__ import annotations
 
 import json
+
+from backend.pipeline.utils.json_extraction import extract_json
 import logging
 import re
 
@@ -106,20 +108,7 @@ class IdeaRecombinator:
     @staticmethod
     def _parse_json(raw: str) -> dict:
         """Extract the first JSON object from a possibly messy LLM response."""
-        # Strip markdown code fences if present
-        text = re.sub(r"```(?:json)?\s*", "", raw).strip()
-        # Remove trailing backticks
-        text = text.rstrip("`").strip()
-
-        try:
-            return json.loads(text)  # type: ignore[no-any-return]
-        except json.JSONDecodeError:
-            # Try to find the first { … } block
-            match = re.search(r"\{.*\}", text, re.DOTALL)
-            if match:
-                try:
-                    return json.loads(match.group())  # type: ignore[no-any-return]
-                except json.JSONDecodeError:
-                    pass
+        result = extract_json(raw)
+        if not result:
             logger.warning("Failed to parse recombination JSON, using empty dict")
-            return {}
+        return result  # type: ignore[return-value]

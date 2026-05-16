@@ -1,6 +1,8 @@
 """Gap analysis — identify underexplored research areas."""
 
 import json
+
+from backend.pipeline.utils.json_extraction import extract_json
 import logging
 
 from backend.pipeline.gap_analysis.cluster_service import ClusterService
@@ -96,14 +98,7 @@ class GapAnalyzer:
                 max_tokens=4096,
             )
 
-            # Parse JSON from response
-            response_text = raw_response.strip()
-            if "```json" in response_text:
-                response_text = response_text.split("```json")[1].split("```")[0].strip()
-            elif "```" in response_text:
-                response_text = response_text.split("```")[1].split("```")[0].strip()
-
-            parsed = json.loads(response_text)
+            parsed = extract_json(raw_response)
             result = parsed if isinstance(parsed, dict) else {"gaps": parsed}
 
             gaps = []

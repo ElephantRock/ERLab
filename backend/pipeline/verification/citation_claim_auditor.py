@@ -14,6 +14,8 @@ from __future__ import annotations
 
 import asyncio
 import json
+
+from backend.pipeline.utils.json_extraction import extract_json
 import logging
 import re
 from dataclasses import dataclass, field
@@ -399,19 +401,7 @@ class CitationClaimAuditor:
     @staticmethod
     def _parse_llm_response(response: str) -> dict:
         """Parse JSON from LLM response, handling markdown code fences."""
-        # Strip markdown code fences if present
-        text = response.strip()
-        if text.startswith("```"):
-            lines = text.split("\n")
-            # Remove first and last lines (```json and ```)
-            if lines[0].startswith("```"):
-                lines = lines[1:]
-            if lines and lines[-1].strip() == "```":
-                lines = lines[:-1]
-            text = "\n".join(lines)
-
-        return json.loads(text)
-
+        return extract_json(response, strict=True)
 
 def create_skipped_report(proposal_id: int = 0, reason: str = "") -> CitationAuditReport:
     """Create a skipped report for when the entire audit must be skipped (HB-02)."""

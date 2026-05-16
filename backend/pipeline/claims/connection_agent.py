@@ -7,6 +7,8 @@ Adds LLM-based connection inference beyond COMPARISON claims + shared methods.
 from __future__ import annotations
 
 import json
+
+from backend.pipeline.utils.json_extraction import extract_json
 import logging
 from dataclasses import dataclass
 from pathlib import Path
@@ -123,13 +125,7 @@ class ConnectionAgent:
             messages = [{"role": "user", "content": prompt}]
             response = await self._provider.complete(messages, temperature=0.1, max_tokens=256)
 
-            response_text = response.strip()
-            if "```json" in response_text:
-                response_text = response_text.split("```json")[1].split("```")[0].strip()
-            elif "```" in response_text:
-                response_text = response_text.split("```")[1].split("```")[0].strip()
-
-            result = json.loads(response_text)
+            result = extract_json(response)
             return PaperConnection(
                 paper_a=paper_a,
                 paper_b=paper_b,

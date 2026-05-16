@@ -8,6 +8,8 @@ Authority: LLM judgment authoritative when available; numeric heuristic as fallb
 from __future__ import annotations
 
 import json
+
+from backend.pipeline.utils.json_extraction import extract_json
 import logging
 from collections import defaultdict
 from pathlib import Path
@@ -125,14 +127,7 @@ class ContradictionDetector:
             messages = [{"role": "user", "content": prompt}]
             response = await self._provider.complete(messages, temperature=0.1, max_tokens=256)
 
-            # Parse JSON from response
-            response_text = response.strip()
-            if "```json" in response_text:
-                response_text = response_text.split("```json")[1].split("```")[0].strip()
-            elif "```" in response_text:
-                response_text = response_text.split("```")[1].split("```")[0].strip()
-
-            result = json.loads(response_text)
+            result = extract_json(response)
 
             is_genuine = result.get("is_genuine_contradiction", False)
             category = result.get("category", "incomparable")
