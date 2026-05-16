@@ -82,7 +82,7 @@ class JinaCrossEncoderReranker(Reranker):
         self._loaded = True
         try:
             import torch
-            from transformers import AutoModelForSequenceClassification, AutoTokenizer
+            from transformers import AutoModel, AutoTokenizer
 
             device = self._device
             if device == "auto":
@@ -93,10 +93,13 @@ class JinaCrossEncoderReranker(Reranker):
             self._tokenizer = AutoTokenizer.from_pretrained(
                 self._model_id, trust_remote_code=True
             )
-            self._model = AutoModelForSequenceClassification.from_pretrained(
+            # Use AutoModel, not AutoModelForSequenceClassification.
+            # jina-reranker-v3 uses a custom JinaForRanking class that
+            # provides model.rerank(). AutoModelForSequenceClassification
+            # loads the wrong architecture and fails.
+            self._model = AutoModel.from_pretrained(
                 self._model_id,
                 trust_remote_code=True,
-                torch_dtype=torch.bfloat16 if device == "cuda" else torch.float32,
             ).to(device)
 
             self._model.eval()
@@ -148,22 +151,24 @@ class JinaCrossEncoderReranker(Reranker):
             results = self._model.rerank(
                 query,
                 texts,
-                max_length=self._max_length,
+                max_doc_length=self._max_length,
                 top_n=top_k or len(texts),
             )
 
             scored = []
             for result in results:
+                # JinaForRanking returns document as a string, not a dict
+                doc_text = result["document"] if isinstance(result["document"], str) else result["document"]["text"]
                 # Find original doc by text match
                 original_doc = next(
-                    (d for d in documents if d.get("text", "") == result["document"]["text"]),
+                    (d for d in documents if d.get("text", "") == doc_text),
                     {},
                 )
                 scored.append(
                     ScoredDocument(
                         id=original_doc.get("id", ""),
-                        text=result["document"]["text"],
-                        score=result["relevance_score"],
+                        text=doc_text,
+                        score=float(result["relevance_score"]),
                         metadata=original_doc.get("metadata", {}),
                     )
                 )

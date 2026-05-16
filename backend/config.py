@@ -57,8 +57,8 @@ class Settings(BaseSettings):
     # Retrieval (WP-1: hybrid BM25 + semantic search)
     retrieval_mode: str = "hybrid"  # "substring", "semantic", "hybrid"
     bm25_persist_dir: str = "./data/bm25"
-    reranker_enabled: bool = False
-    reranker_type: str = "llm"  # "llm" or "cross_encoder"
+    reranker_enabled: bool = True
+    reranker_type: str = "cross_encoder"  # "llm" or "cross_encoder"
     rrf_k: int = 60  # Reciprocal Rank Fusion constant
 
     # Query transform (WP-1 completion)

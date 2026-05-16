@@ -1,11 +1,11 @@
 """
-Reranker Microservice — runs on the RTX 3080 Ti machine.
+Reranker Microservice — jina-reranker-v3 via transformers AutoModel.
 
-Loads jina-reranker-v3 with CUDA BF16 acceleration and exposes
-a /v1/rerank endpoint compatible with any RAG pipeline.
+Uses the custom JinaForRanking class with trust_remote_code=True.
+Works on CPU (~2s for 5 docs) or CUDA (~50ms for 5 docs).
 
 Usage:
-    python reranker_service.py [--host 0.0.0.0] [--port 8100] [--model jinaai/jina-reranker-v3]
+    python reranker_service.py [--host 0.0.0.0] [--port 8100]
 
 Endpoints:
     POST /v1/rerank   — rerank documents against a query
@@ -13,10 +13,8 @@ Endpoints:
 """
 
 import argparse
-import json
 import logging
 import time
-from typing import Any
 
 import uvicorn
 from fastapi import FastAPI, HTTPException
@@ -25,15 +23,13 @@ from pydantic import BaseModel
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 logger = logging.getLogger("reranker-service")
 
-app = FastAPI(title="Reranker Service", version="1.0.0")
+app = FastAPI(title="Reranker Service", version="2.1.0")
 
 # ── Global model state ──────────────────────────────────────────────
 
 _model = None
-_tokenizer = None
 _device = "cpu"
 _model_id = "jinaai/jina-reranker-v3"
-_max_length = 1024
 
 
 class RerankRequest(BaseModel):
@@ -79,26 +75,28 @@ async def rerank(request: RerankRequest):
     start = time.time()
 
     try:
+        top_n = request.top_n or len(request.documents)
+
         results = _model.rerank(
             request.query,
             request.documents,
-            max_length=request.max_length or _max_length,
-            top_n=request.top_n or len(request.documents),
+            top_n=top_n,
+            max_doc_length=request.max_length,
         )
 
         elapsed = time.time() - start
 
         rerank_docs = [
             RerankDocument(
-                text=r["document"]["text"],
-                index=r["index"],
-                relevance_score=r["relevance_score"],
+                text=r["document"] if isinstance(r["document"], str) else str(r["document"]),
+                index=int(r["index"]),
+                relevance_score=float(r["relevance_score"]),
             )
             for r in results
         ]
 
         logger.info(
-            "Reranked %d docs in %.1fms (top_n=%d)",
+            "Reranked %d docs in %.0fms (top_n=%d)",
             len(request.documents),
             elapsed * 1000,
             len(rerank_docs),
@@ -110,9 +108,7 @@ async def rerank(request: RerankRequest):
             usage={
                 "prompt_tokens": 0,
                 "completion_tokens": 0,
-                "total_tokens": sum(
-                    len(d.text.split()) for d in rerank_docs
-                ),
+                "total_tokens": sum(len(d.text.split()) for d in rerank_docs),
             },
         )
 
@@ -126,23 +122,24 @@ async def rerank(request: RerankRequest):
 @app.on_event("startup")
 async def load_model():
     """Load jina-reranker-v3 on startup."""
-    global _model, _tokenizer, _device
+    global _model, _device
 
     import torch
-    from transformers import AutoModelForSequenceClassification, AutoTokenizer
+    from transformers import AutoModel
 
     _device = "cuda" if torch.cuda.is_available() else "cpu"
-    dtype = torch.bfloat16 if _device == "cuda" else torch.float32
 
-    logger.info("Loading %s on %s (dtype=%s)...", _model_id, _device, dtype)
+    logger.info("Loading %s on %s...", _model_id, _device)
     t0 = time.time()
 
-    _tokenizer = AutoTokenizer.from_pretrained(_model_id, trust_remote_code=True)
-    _model = AutoModelForSequenceClassification.from_pretrained(
+    _model = AutoModel.from_pretrained(
         _model_id,
         trust_remote_code=True,
-        torch_dtype=dtype,
-    ).to(_device)
+    )
+
+    if _device == "cuda":
+        _model = _model.to(_device)
+
     _model.eval()
 
     elapsed = time.time() - t0
@@ -155,13 +152,7 @@ def main():
     parser = argparse.ArgumentParser(description="Reranker Microservice")
     parser.add_argument("--host", default="0.0.0.0", help="Bind host")
     parser.add_argument("--port", type=int, default=8100, help="Bind port")
-    parser.add_argument("--model", default="jinaai/jina-reranker-v3", help="Model ID")
-    parser.add_argument("--max-length", type=int, default=1024, help="Max token length")
     args = parser.parse_args()
-
-    global _model_id, _max_length
-    _model_id = args.model
-    _max_length = args.max_length
 
     logger.info("Starting reranker service on %s:%d", args.host, args.port)
     uvicorn.run(app, host=args.host, port=args.port, log_level="warning")
