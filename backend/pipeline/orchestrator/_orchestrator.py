@@ -254,6 +254,37 @@ class PipelineOrchestrator:
         from backend.pipeline.governance.guardrails import default_input_guardrails
         self._input_guardrails = default_input_guardrails()
 
+        # ── LLM Gateway (control plane) ───────────────────────────
+        from backend.pipeline.gateway.capability_registry import ModelCapabilityRegistry
+        from backend.pipeline.gateway.token_budget import TokenBudgeter
+        from backend.pipeline.gateway.gateway import LLMGateway
+        from backend.pipeline.gateway.gateway_provider import GatewayProvider
+
+        self._capability_registry = ModelCapabilityRegistry()
+        self._token_budgeter = TokenBudgeter(
+            default_context=getattr(settings, 'lmstudio_max_tokens', 4096),
+        )
+        self._gateway = LLMGateway(
+            capability_registry=self._capability_registry,
+            token_budgeter=self._token_budgeter,
+            default_model=self._provider.default_model if hasattr(self._provider, 'default_model') else '',
+        )
+
+        # Set the provider function that executes actual LLM calls
+        inner_provider = self._provider
+        async def _gateway_provider_fn(*, messages, temperature, max_tokens, schema=None, tools=None):
+            if schema:
+                return await inner_provider.structured_output(messages, schema, temperature)
+            if tools:
+                resp = await inner_provider.complete_with_tools(messages, tools, temperature, max_tokens)
+                return resp.content if hasattr(resp, 'content') else str(resp)
+            return await inner_provider.complete(messages, temperature, max_tokens)
+
+        self._gateway.set_provider_fn(_gateway_provider_fn)
+
+        # Wrap provider through gateway
+        self._provider = GatewayProvider(self._gateway, inner_provider)
+
         # ── Service Registry ──────────────────────────────────────
         from backend.pipeline.orchestrator.service_registry import ServiceRegistry
         self._services = ServiceRegistry()
@@ -605,6 +636,24 @@ class PipelineOrchestrator:
         # BATCH-191: Initialize Consolidated Context Window
         from backend.pipeline.monitoring.ccw import ConsolidatedContextWindow
         self._ccw = ConsolidatedContextWindow()
+
+        # Gateway: Probe LM Studio for live model capabilities
+        if hasattr(self, '_capability_registry') and self._capability_registry:
+            lmstudio_url = getattr(self._settings, 'lmstudio_base_url', None)
+            if lmstudio_url:
+                try:
+                    await self._capability_registry.refresh(lmstudio_url)
+                    # Update budgeter with live context from probed model
+                    default_model = self._gateway._default_model
+                    if default_model:
+                        caps = self._capability_registry.get(default_model)
+                        self._token_budgeter._default_context = caps.context_window
+                        logger.info(
+                            "Gateway ready: model=%s, ctx=%d, loaded=%s",
+                            caps.model_id, caps.context_window, caps.loaded,
+                        )
+                except Exception as e:
+                    logger.warning("Gateway probe failed, using static defaults: %s", str(e)[:80])
 
         # BATCH-190: Initialize notification gateway
         try:
