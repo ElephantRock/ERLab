@@ -49,7 +49,9 @@ class ServiceRegistry:
             provider_name=settings.embedding_provider,
             model=settings.embedding_model,
             api_key=settings.openai_api_key,
-            base_url=settings.ollama_base_url,
+            base_url=(settings.lmstudio_base_url.rstrip('/') + '/v1'
+                      if settings.embedding_provider == "lmstudio"
+                      else settings.ollama_base_url),
             dimension=settings.embedding_dimension or None,
         )
 
