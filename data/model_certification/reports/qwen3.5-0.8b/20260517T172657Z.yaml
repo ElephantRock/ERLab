@@ -1,0 +1,89 @@
+eval_run_id: qwen3.5-0.8b-20260517-172657
+model_id: qwen3.5-0.8b
+eval_version: '0.1'
+tested_at: '2026-05-17T17:26:57.908222+00:00'
+status: rejected
+safe_context_window: 26214
+safe_output_tokens: 4096
+hardware:
+  hardware_id: qwen3.5-0.8b
+  engine: lmstudio
+  load_success: false
+  model_loaded: false
+  context_window_reported: null
+  safe_context_window: 26214
+  safe_output_tokens: 4096
+  load_time_seconds: 0.25
+  peak_vram_gb: null
+  stable: false
+  warnings:
+  - Model qwen3.5-0.8b not found in LM Studio
+  - "No reported context window \u2014 using advertised value"
+smoke_test:
+  passed: true
+  response_text: '{"status":"ok"}'
+  parsed_json:
+    status: ok
+  latency_seconds: 18.75
+  error: null
+schema_eval:
+  total_cases: 15
+  raw_json_valid_rate: 0.8
+  recoverable_json_rate: 0.8
+  schema_valid_rate: 0.3333333333333333
+  schema_valid_after_repair_rate: 0.3333333333333333
+  repair_attempted_count: 0
+  repair_success_rate: 0.0
+  markdown_contamination_rate: 0.0
+  native_json_mode_support: false
+  per_schema:
+    repair:
+      raw_json_valid_rate: 1.0
+      recoverable_json_rate: 1.0
+      schema_valid_rate: 0.0
+      cases: 5
+    smoke_test:
+      raw_json_valid_rate: 1.0
+      recoverable_json_rate: 1.0
+      schema_valid_rate: 1.0
+      cases: 5
+    structured_claim:
+      raw_json_valid_rate: 0.4
+      recoverable_json_rate: 0.4
+      schema_valid_rate: 0.0
+      cases: 5
+stage_eligibility:
+  idea_generation: blocked
+  adversarial_review: blocked
+  feasibility_scoring: blocked
+  gap_analysis: blocked
+  evaluation: blocked
+  draft: blocked
+  novelty_checking: blocked
+  proposal_synthesis: blocked
+  citation_audit: blocked
+  paper_synthesis: blocked
+  repair: blocked
+promotion_allowed: false
+scores:
+  schema_valid_rate: 0.3333333333333333
+  raw_json_valid_rate: 0.8
+  recoverable_json_rate: 0.8
+  repair_success_rate: 0.0
+  safe_context_tokens: 26214
+known_failure_modes:
+- Model qwen3.5-0.8b not found in LM Studio
+- "No reported context window \u2014 using advertised value"
+router_recommendation:
+  context_confidence: estimated
+  preferred_tasks: []
+stage_eval: null
+stage_eligibility_v2: null
+provenance:
+  git_commit: f142405
+  manifest_hash: 257c557225fa3d93
+  policy_version: '0.1'
+  schema_versions:
+    repair: '1.0'
+    smoke_test: '1.0'
+    structured_claim: '1.0'
