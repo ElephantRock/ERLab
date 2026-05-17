@@ -1,0 +1,138 @@
+# SmartRouter routing policy — per-stage contracts and router config.
+#
+# Each contract defines what a stage requires from its model.
+# The router uses these to filter, gate, plan, and rank candidates.
+
+smart_router:
+  enabled: false
+  mode: disabled              # disabled | dry_run | enforce
+  require_certified_models: false
+  ranking_weights:
+    stage_score: 0.35
+    grounding_score: 0.25
+    schema_score: 0.15
+    context_fit: 0.10
+    latency: 0.10
+    cost: 0.05
+
+stage_contracts:
+  literature_search:
+    task_type: search
+    risk_level: low
+    requires_json: false
+    requires_grounding: false
+    requires_citations: false
+    input_tokens_estimate: 1500
+    output_tokens_requested: 2048
+    min_context_window: 4096
+    cost_sensitivity: low
+    allowed_strategies: [single_call]
+    fallback_strategy: single_call
+
+  idea_generation:
+    task_type: generation
+    risk_level: medium
+    requires_json: false
+    requires_grounding: true
+    requires_citations: false
+    input_tokens_estimate: 3000
+    output_tokens_requested: 4096
+    min_context_window: 8192
+    cost_sensitivity: medium
+    allowed_strategies: [single_call, evidence_first]
+    fallback_strategy: single_call
+
+  proposal_synthesis:
+    task_type: generation
+    risk_level: high
+    requires_json: false
+    requires_grounding: true
+    requires_citations: true
+    input_tokens_estimate: 6000
+    output_tokens_requested: 8192
+    min_context_window: 16384
+    cost_sensitivity: medium
+    allowed_strategies: [single_call, section_wise]
+    fallback_strategy: section_wise
+
+  paper_synthesis:
+    task_type: generation
+    risk_level: high
+    requires_json: false
+    requires_grounding: true
+    requires_citations: true
+    input_tokens_estimate: 8000
+    output_tokens_requested: 12000
+    min_context_window: 16384
+    cost_sensitivity: medium
+    allowed_strategies: [section_wise, map_reduce]
+    fallback_strategy: section_wise
+
+  citation_audit:
+    task_type: audit
+    risk_level: critical
+    schema_strictness: high
+    requires_json: true
+    requires_grounding: true
+    requires_citations: true
+    input_tokens_estimate: 4000
+    output_tokens_requested: 4096
+    min_context_window: 8192
+    cost_sensitivity: low
+    allowed_strategies: [closed_set_audit]
+    fallback_strategy: closed_set_audit
+
+  adversarial_review:
+    task_type: review
+    risk_level: high
+    requires_json: false
+    requires_grounding: true
+    requires_independent_review: true
+    requires_citations: false
+    input_tokens_estimate: 5000
+    output_tokens_requested: 4096
+    min_context_window: 8192
+    cost_sensitivity: medium
+    allowed_strategies: [compressed_review_packet, section_wise_review]
+    fallback_strategy: compressed_review_packet
+
+  evidence_table:
+    task_type: audit
+    risk_level: medium
+    schema_strictness: medium
+    requires_json: true
+    requires_grounding: true
+    requires_citations: true
+    input_tokens_estimate: 4000
+    output_tokens_requested: 4096
+    min_context_window: 8192
+    cost_sensitivity: medium
+    allowed_strategies: [single_call]
+    fallback_strategy: single_call
+
+  repair:
+    task_type: audit
+    risk_level: medium
+    schema_strictness: medium
+    requires_json: true
+    requires_grounding: false
+    requires_citations: false
+    input_tokens_estimate: 3000
+    output_tokens_requested: 4096
+    min_context_window: 8192
+    cost_sensitivity: medium
+    allowed_strategies: [single_call]
+    fallback_strategy: single_call
+
+  query_generation:
+    task_type: search
+    risk_level: low
+    requires_json: false
+    requires_grounding: false
+    requires_citations: false
+    input_tokens_estimate: 1500
+    output_tokens_requested: 2048
+    min_context_window: 4096
+    cost_sensitivity: low
+    allowed_strategies: [single_call]
+    fallback_strategy: single_call
