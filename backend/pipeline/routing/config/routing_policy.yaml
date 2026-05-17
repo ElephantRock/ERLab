@@ -4,8 +4,8 @@
 # The router uses these to filter, gate, plan, and rank candidates.
 
 smart_router:
-  enabled: false
-  mode: disabled              # disabled | dry_run | enforce
+  enabled: true
+  mode: dry_run              # disabled | dry_run | enforce
   require_certified_models: false
   ranking_weights:
     stage_score: 0.35

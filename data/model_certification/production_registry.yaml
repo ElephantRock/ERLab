@@ -1,0 +1,16 @@
+models:
+  qwen3-4b-2507:
+    model_id: qwen3-4b-2507
+    provider: lmstudio
+    status: approved_for_limited_use
+    allowed_stages:
+      literature_search: limited_use
+      idea_generation: limited_use
+      proposal_synthesis: limited_use
+      adversarial_review: limited_use
+      paper_synthesis: limited_use
+      citation_audit: limited_use
+      evidence_table: limited_use
+      repair: limited_use
+      query_generation: limited_use
+    report_path: ""

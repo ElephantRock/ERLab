@@ -282,6 +282,32 @@ class PipelineOrchestrator:
 
         self._gateway.set_provider_fn(_gateway_provider_fn)
 
+        # ── SmartRouter (dry-run by default) ──────────────────────
+        try:
+            from backend.pipeline.routing.smart_router import SmartRouter
+            from backend.pipeline.routing.certified_lookup import CertifiedCapabilityLookup
+            from backend.pipeline.routing.dry_run_logger import DryRunLogger
+            from backend.pipeline.routing.stage_contract import get_smart_router_config
+
+            router_config = get_smart_router_config()
+            if router_config.get("enabled", False):
+                lookup = CertifiedCapabilityLookup()
+                smart_router = SmartRouter(
+                    lookup, mode=router_config.get("mode", "dry_run"),
+                    ranking_weights=router_config.get("ranking_weights"),
+                )
+                dry_run_logger = DryRunLogger(
+                    log_dir="data/model_certification/routing_logs"
+                )
+                self._gateway.set_smart_router(
+                    smart_router,
+                    mode=router_config.get("mode", "dry_run"),
+                    dry_run_logger=dry_run_logger,
+                )
+                logger.info("SmartRouter enabled: mode=%s", router_config.get("mode", "dry_run"))
+        except Exception as e:
+            logger.warning("SmartRouter initialization failed (non-fatal): %s", e)
+
         # Wrap provider through gateway
         self._provider = GatewayProvider(self._gateway, inner_provider)
 
@@ -925,6 +951,11 @@ class PipelineOrchestrator:
                     )
                     await heartbeat.start(stage.name)
                 try:
+                    # Update provider with current stage name for SmartRouter
+                    if hasattr(self._provider, '_stage'):
+                        self._provider._stage = stage.name
+                    if hasattr(self._provider, '_run_id'):
+                        self._provider._run_id = run_id
                     should_continue = await self._execute_stage_with_retry(
                         stage, prepared_ctx, checkpoint
                     )

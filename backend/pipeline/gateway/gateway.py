@@ -83,6 +83,12 @@ class GatewayCallLog:
     degraded: bool
     warnings: list[str]
     error: str | None = None
+    # SmartRouter fields
+    routed_model: str = ""
+    routed_strategy: str = ""
+    routing_confidence: float = 0.0
+    routing_degraded: bool = False
+    routing_reason: str = ""
 
 
 class LLMGateway:
@@ -110,12 +116,29 @@ class LLMGateway:
         self._call_log: list[GatewayCallLog] = []
         self._provider_fn = None  # set via set_provider_fn
 
+        # SmartRouter (optional, set via set_smart_router)
+        self._smart_router = None
+        self._routing_mode = "disabled"  # disabled | dry_run | enforce
+        self._dry_run_logger = None
+
     def set_provider_fn(self, fn) -> None:
         """Set the function that executes LLM calls.
 
         Signature: async fn(messages, temperature, max_tokens, schema=None, tools=None) -> str | dict
         """
         self._provider_fn = fn
+
+    def set_smart_router(self, router, mode: str = "dry_run", dry_run_logger=None) -> None:
+        """Set the SmartRouter for routing decisions.
+
+        Args:
+            router: SmartRouter instance.
+            mode: "disabled", "dry_run", or "enforce".
+            dry_run_logger: DryRunLogger instance for logging decisions.
+        """
+        self._smart_router = router
+        self._routing_mode = mode
+        self._dry_run_logger = dry_run_logger
 
     async def call(self, request: LLMRequest) -> LLMResponse:
         """Execute an LLM call through the full gateway pipeline."""
@@ -125,6 +148,12 @@ class LLMGateway:
         response = None
 
         try:
+            # 0. SmartRouter dry-run (if enabled)
+            routing_decision = None
+            if self._smart_router and self._routing_mode != "disabled":
+                routing_decision = self._route_request(request)
+                request._routing_decision = routing_decision  # attach for logging
+
             # 1. Resolve model capabilities
             model_id = self._default_model
             caps = self._resolve_model(request, model_id)
@@ -219,6 +248,86 @@ class LLMGateway:
         model_id = default_model or self._default_model
         return self._registry.get(model_id)
 
+    def _route_request(self, request: LLMRequest) -> Any:
+        """Ask SmartRouter for a routing decision. Returns RoutingDecision or None."""
+        try:
+            from backend.pipeline.routing.stage_contract import (
+                StageContract, load_contracts, get_contract,
+            )
+            from backend.pipeline.routing.smart_router import RoutingRuntimeContext
+
+            stage = request.stage or request.task
+            if not stage:
+                logger.debug("No stage/task for routing, skipping")
+                return None
+
+            contracts = load_contracts()
+
+            # Try direct match first
+            contract = None
+            try:
+                contract = get_contract(stage, contracts)
+            except KeyError:
+                pass
+
+            # Try normalized match (e.g., 'gap_analysis' -> no contract, skip)
+            if contract is None:
+                # Map common internal stage names to contract names
+                stage_map = {
+                    "complete": None,  # generic, skip
+                    "structured_output": None,  # generic, skip
+                    "literature_search": "literature_search",
+                    "gap_analysis": None,  # no direct LLM routing
+                    "idea_generation": "idea_generation",
+                    "novelty_checking": "idea_generation",
+                    "feasibility_scoring": "idea_generation",
+                    "proposal_synthesis": "proposal_synthesis",
+                    "adversarial_review": "adversarial_review",
+                    "paper_synthesis": "paper_synthesis",
+                    "citation_audit": "citation_audit",
+                    "evidence_repair": "repair",
+                    "proposal_deepening": "proposal_synthesis",
+                    "evaluation": "adversarial_review",
+                    "export": None,
+                    "ingestion": "literature_search",
+                    "retrieval": "literature_search",
+                }
+                mapped = stage_map.get(stage)
+                if mapped is None:
+                    logger.debug("No contract mapping for stage '%s', skipping routing", stage)
+                    return None
+                try:
+                    contract = get_contract(mapped, contracts)
+                except KeyError:
+                    logger.debug("No contract for mapped stage '%s', skipping", mapped)
+                    return None
+
+            ctx = RoutingRuntimeContext(
+                run_id=request.run_id,
+            )
+            decision = self._smart_router.route(contract, ctx)
+
+            if self._routing_mode == "dry_run" and self._dry_run_logger:
+                self._dry_run_logger.log(
+                    decision,
+                    actual_model_used=self._default_model,
+                    actual_strategy="legacy",
+                    actual_provider="default",
+                    run_id=request.run_id,
+                )
+                logger.info(
+                    "[DRY-RUN] stage=%s routed=%s/%s actual=%s confidence=%.2f",
+                    stage, decision.model_id, decision.strategy,
+                    self._default_model, decision.confidence,
+                )
+
+            return decision
+
+        except Exception as e:
+            logger.warning("SmartRouter routing failed for stage '%s': %s",
+                           request.stage or request.task, e)
+            return None
+
     def _validate_output(self, content: str | dict, request: LLMRequest) -> list[str]:
         """Validate LLM output. Returns list of warnings.
 
@@ -289,6 +398,21 @@ class LLMGateway:
 
     def _log_call(self, request: LLMRequest, response: LLMResponse | None, error: str | None) -> None:
         """Log every call for observability."""
+        # Extract routing decision if available
+        routed_model = ""
+        routed_strategy = ""
+        routing_confidence = 0.0
+        routing_degraded = False
+        routing_reason = ""
+
+        if hasattr(request, '_routing_decision') and request._routing_decision:
+            rd = request._routing_decision
+            routed_model = rd.model_id
+            routed_strategy = rd.strategy
+            routing_confidence = rd.confidence
+            routing_degraded = rd.degraded
+            routing_reason = rd.reason
+
         entry = GatewayCallLog(
             timestamp=time.time(),
             task=request.task,
@@ -304,6 +428,11 @@ class LLMGateway:
             degraded=response.degraded if response else True,
             warnings=response.warnings if response else [],
             error=error,
+            routed_model=routed_model,
+            routed_strategy=routed_strategy,
+            routing_confidence=round(routing_confidence, 3),
+            routing_degraded=routing_degraded,
+            routing_reason=routing_reason,
         )
         self._call_log.append(entry)
 
@@ -336,6 +465,11 @@ class LLMGateway:
                 "degraded": e.degraded,
                 "warnings": e.warnings,
                 "error": e.error,
+                "routed_model": e.routed_model,
+                "routed_strategy": e.routed_strategy,
+                "routing_confidence": e.routing_confidence,
+                "routing_degraded": e.routing_degraded,
+                "routing_reason": e.routing_reason,
             }
             for e in entries
         ]
