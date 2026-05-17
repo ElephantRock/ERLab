@@ -104,6 +104,7 @@ class DocumentValidationResult:
     needs_rewrite: int = 0
     trust_score: float = 0.0
     summary: str = ""
+    section_breakdown: dict[str, dict] = field(default_factory=dict)
 
     def to_dict(self) -> dict:
         return {
@@ -113,6 +114,7 @@ class DocumentValidationResult:
             "needs_rewrite": self.needs_rewrite,
             "trust_score": round(self.trust_score, 3),
             "summary": self.summary,
+            "section_breakdown": self.section_breakdown,
             "claims": [r.to_dict() for r in self.results],
         }
 
@@ -412,6 +414,9 @@ class ClaimEvidenceValidator:
         if rewrite > 0:
             summary_parts.append(f"{rewrite} need rewrite/regeneration")
 
+        # Section-level breakdown
+        section_breakdown = self._compute_section_breakdown(text, results)
+
         return DocumentValidationResult(
             total_claims=len(results),
             results=results,
@@ -420,11 +425,73 @@ class ClaimEvidenceValidator:
             needs_rewrite=rewrite,
             trust_score=trust_score,
             summary=", ".join(summary_parts),
+            section_breakdown=section_breakdown,
         )
 
     def get_claims_by_action(self, action: ClaimAction, results: list[ClaimEvidenceResult]) -> list[ClaimEvidenceResult]:
         """Filter results by recommended action."""
         return [r for r in results if r.recommended_action == action]
+
+    @staticmethod
+    def _compute_section_breakdown(
+        text: str, results: list[ClaimEvidenceResult],
+    ) -> dict[str, dict]:
+        """Compute per-section claim survival rates.
+
+        Assigns each claim to the section it appears in based on ## headings.
+        Returns a dict of section_name → {total, valid, survival_rate, avg_confidence}.
+        """
+        # Parse sections from text
+        sections: list[tuple[str, int, int]] = []  # (name, start, end)
+        current_name = "preamble"
+        current_start = 0
+
+        for match in re.finditer(r'^##\s+(.+)$', text, re.MULTILINE):
+            sections.append((current_name, current_start, match.start()))
+            current_name = match.group(1).strip().lower().replace(" ", "_")
+            current_start = match.start()
+
+        sections.append((current_name, current_start, len(text)))
+
+        # Assign claims to sections
+        breakdown: dict[str, dict] = {}
+        for r in results:
+            claim_text = r.claim_text[:50]
+            claim_pos = text.find(claim_text)
+            if claim_pos < 0:
+                section_name = "unknown"
+            else:
+                section_name = "unknown"
+                for name, start, end in sections:
+                    if start <= claim_pos < end:
+                        section_name = name
+                        break
+
+            if section_name not in breakdown:
+                breakdown[section_name] = {
+                    "total": 0,
+                    "valid": 0,
+                    "invalid": 0,
+                    "survival_rate": 0.0,
+                    "avg_confidence": 0.0,
+                    "confidences": [],
+                }
+
+            breakdown[section_name]["total"] += 1
+            breakdown[section_name]["confidences"].append(r.confidence)
+            if r.is_valid:
+                breakdown[section_name]["valid"] += 1
+            else:
+                breakdown[section_name]["invalid"] += 1
+
+        # Compute rates
+        for name, data in breakdown.items():
+            total = max(data["total"], 1)
+            data["survival_rate"] = round(data["valid"] / total, 3)
+            data["avg_confidence"] = round(sum(data["confidences"]) / len(data["confidences"]), 3)
+            del data["confidences"]
+
+        return breakdown
 
     def sanitize_text(
         self,

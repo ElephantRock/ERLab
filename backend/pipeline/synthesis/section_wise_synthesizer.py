@@ -283,15 +283,27 @@ class SectionWiseSynthesizer:
         relevant_sources: str,
         domain: str,
     ) -> SectionDraft:
-        """Generate a single section of the paper."""
+        """Generate a single section with evidence-first closed-set citations.
+
+        Instead of asking the model to write freely and cite later, we:
+        1. Present available evidence cards explicitly
+        2. Instruct the model to only cite from the provided set
+        3. Request each claim be tied to an evidence card
+        """
         prompt = (
             f"Write the '{section_title}' section ({target_words} target words) "
             f"for a research paper in '{domain}'.\n\n"
             f"Paper outline:\n{outline[:500]}\n\n"
             f"Proposal summary:\n{proposal_summary[:1000]}\n\n"
-            f"Available sources (cite using [SOURCE-X]):\n{relevant_sources}\n\n"
+            f"## CRITICAL: Evidence-Grounded Writing Rules\n"
+            f"You may ONLY cite sources listed below. Do NOT cite any source not listed.\n"
+            f"For each factual claim, cite the specific [SOURCE-X] that supports it.\n"
+            f"If no listed source supports a claim, write it as a hypothesis with 'we hypothesize'\n"
+            f"or 'we propose' instead of stating it as established fact.\n\n"
+            f"## Available Evidence (cite ONLY these):\n{relevant_sources}\n\n"
             f"Write the {section_title} section now. "
-            f"Be rigorous, cite sources, and aim for {target_words} words."
+            f"Be rigorous, cite sources using [SOURCE-X], and aim for {target_words} words.\n"
+            f"Every factual claim must have a citation from the evidence above."
         )
 
         # Calculate output tokens for this section

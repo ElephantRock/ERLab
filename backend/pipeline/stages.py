@@ -1880,6 +1880,72 @@ class CitationAuditStage(PipelineStage):
                 "reason": str(e),
             }
 
+        # --- Evidence Repair Loop ---
+        try:
+            from backend.pipeline.gateway.evidence_repair import EvidenceRepairLoop, ExportQualityGate
+
+            claim_val = metadata.get("claim_evidence_validation", {})
+            if claim_val.get("total_claims", 0) > 0:
+                # Build corpus for repair search
+                corpus = {}
+                for i, sp in enumerate(source_papers, 1):
+                    corpus[f"SOURCE-{i}"] = sp
+
+                repair = EvidenceRepairLoop(corpus_texts=corpus)
+
+                # Re-run validation to get ClaimEvidenceResult objects
+                from backend.pipeline.gateway.claim_evidence_validator import ClaimEvidenceValidator
+                validator = ClaimEvidenceValidator(corpus_ids=set(corpus.keys()))
+                claim_results = validator.validate_document(
+                    text=proposal_text,
+                    provided_evidence_ids=set(corpus.keys()),
+                    evidence_texts=corpus,
+                )
+
+                repair_report = repair.repair(
+                    validation_results=claim_results.results,
+                    original_text=proposal_text,
+                )
+
+                metadata["evidence_repair"] = repair_report.to_dict()
+
+                # Apply repaired text to full_paper if it exists
+                if repair_report.repaired_text and full_paper and isinstance(full_paper, dict):
+                    full_paper["paper_markdown"] = repair_report.repaired_text
+                    metadata["full_paper"] = full_paper
+
+                # Quality gate classification
+                survival_rate = repair_report.repaired_survival_rate
+                quality_level = ExportQualityGate.classify(survival_rate)
+                quality_banner = ExportQualityGate.get_banner(survival_rate)
+
+                metadata["export_quality"] = {
+                    "level": quality_level,
+                    "survival_rate": round(survival_rate, 3),
+                    "banner": quality_banner,
+                    "original_survival": round(repair_report.original_survival_rate, 3),
+                    "improvement": round(repair_report.repaired_survival_rate - repair_report.original_survival_rate, 3),
+                }
+
+                logger.info(
+                    "Evidence repair for proposal %d: survival %.0f%% → %.0f%% (%s, %s)",
+                    idx,
+                    repair_report.original_survival_rate * 100,
+                    repair_report.repaired_survival_rate * 100,
+                    quality_level,
+                    f"+{repair_report.repaired_survival_rate - repair_report.original_survival_rate:.0%}" if repair_report.repaired_survival_rate > repair_report.original_survival_rate else "no improvement",
+                )
+
+        except Exception as e:
+            logger.warning(
+                "Evidence repair failed for proposal %d (non-fatal): %s",
+                idx, e,
+            )
+            metadata["evidence_repair"] = {
+                "status": "error",
+                "reason": str(e),
+            }
+
         self._set_metadata(proposal, metadata)
 
         # Log warning if trust_score < 0.5
