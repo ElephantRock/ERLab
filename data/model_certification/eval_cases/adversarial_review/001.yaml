@@ -1,0 +1,29 @@
+case_id: adversarial_review-001
+stage: adversarial_review
+prompt_template: |
+  Review the following research paragraph and identify any problems:
+  overclaims, citation mismatches, unsupported assertions, logical errors, or
+  methodological weaknesses. List each issue found.
+  
+  "Our revolutionary method achieves 99.9% accuracy on all NLP benchmarks (Smith et al., 2024),
+  proving that transformer architectures are universally optimal for all language tasks.
+  Unlike previous approaches that achieve only mediocre results, our method requires no training
+  data whatsoever and runs in O(1) time complexity. The p-value of our results is 0.001,
+  confirming statistical significance across all 500 test sets we evaluated."
+difficulty: hard
+requires_grounding: true
+output_token_budget: 2048
+gold:
+  planted_errors:
+    - type: overclaim
+      indicator: "revolutionary"
+    - type: overclaim
+      indicator: "99.9% accuracy on all NLP benchmarks"
+    - type: overclaim
+      indicator: "universally optimal"
+    - type: unsupported
+      indicator: "no training data whatsoever"
+    - type: unsupported
+      indicator: "O(1) time complexity"
+    - type: citation_mismatch
+      indicator: "Smith et al., 2024"

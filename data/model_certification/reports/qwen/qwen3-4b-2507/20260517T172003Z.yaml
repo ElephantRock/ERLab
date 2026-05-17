@@ -1,0 +1,41 @@
+eval_run_id: qwen/qwen3-4b-2507-20260517-172003
+model_id: qwen/qwen3-4b-2507
+eval_version: '0.1'
+tested_at: '2026-05-17T17:20:03.322445+00:00'
+status: rejected
+safe_context_window: 6553
+safe_output_tokens: 1638
+hardware:
+  hardware_id: qwen/qwen3-4b-2507
+  engine: lmstudio
+  load_success: false
+  model_loaded: false
+  context_window_reported: null
+  safe_context_window: 6553
+  safe_output_tokens: 1638
+  load_time_seconds: 0.0
+  peak_vram_gb: null
+  stable: false
+  warnings:
+  - No LM Studio base_url provided
+  - "No reported context window \u2014 using advertised value"
+smoke_test:
+  passed: false
+  response_text: ''
+  parsed_json: null
+  latency_seconds: 0.0
+  error: 'Error: Connection error.'
+schema_eval: null
+stage_eligibility: {}
+promotion_allowed: false
+scores: {}
+known_failure_modes:
+- 'Smoke test failed: Error: Connection error.'
+router_recommendation: {}
+stage_eval: null
+stage_eligibility_v2: null
+provenance:
+  git_commit: e8f220f
+  manifest_hash: da7af5e6f9c119f4
+  policy_version: '0.1'
+  schema_versions: {}

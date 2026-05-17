@@ -56,6 +56,15 @@ def main() -> None:
         help="Number of test cases per schema (default: 5)",
     )
     cert.add_argument(
+        "--include-stage-eval", action="store_true",
+        help="Include v0.2 stage evaluation (scorecards + eligibility)",
+    )
+    cert.add_argument(
+        "--stage-suite", default="seed",
+        choices=["seed", "extended"],
+        help="Stage eval case suite (default: seed)",
+    )
+    cert.add_argument(
         "--verbose", "-v", action="store_true",
         help="Enable verbose logging",
     )
@@ -106,6 +115,31 @@ async def _certify(args: argparse.Namespace) -> None:
         cases_per_schema=args.cases_per_schema,
     )
 
+    # Stage evaluation (v0.2)
+    if args.include_stage_eval:
+        try:
+            from backend.pipeline.model_certification.stage_runner import (
+                StageEvalRunner, aggregate_scorecards,
+            )
+            from backend.pipeline.model_certification.stage_policy import decide_all_stages
+            from backend.pipeline.model_certification.stage_report import extend_report_with_stage_eval
+
+            print("\nRunning stage evaluation (v0.2)...")
+            eval_dir = str(Path(args.manifest).parent.parent / "eval_cases")
+            stage_runner = StageEvalRunner(provider, manifest.model_id, eval_dir=eval_dir)
+            results_by_stage = await stage_runner.run_all()
+            scorecards = aggregate_scorecards(results_by_stage)
+            eligibility = decide_all_stages(scorecards)
+            extend_report_with_stage_eval(report, scorecards, eligibility)
+            # Re-write report with v0.2 data
+            report.write_to(args.out)
+            print(f"  Stages evaluated: {len(scorecards)}")
+            for stage, dec in eligibility.items():
+                print(f"    {stage}: {dec.eligibility} (score={dec.score:.2f})")
+        except Exception as e:
+            print(f"  Stage eval failed (non-fatal): {e}")
+            logger.warning("Stage eval failed: %s", e, exc_info=True)
+
     # Print summary
     print()
     print("=" * 60)
@@ -125,6 +159,16 @@ async def _certify(args: argparse.Namespace) -> None:
     if report.stage_eligibility:
         approved = [s for s, v in report.stage_eligibility.items() if v in ("approved", "limited")]
         print(f"Eligible stages:       {', '.join(approved[:8])}")
+    if report.stage_eligibility_v2:
+        print("Stage eligibility v0.2:")
+        for stage, dec in report.stage_eligibility_v2.items():
+            if isinstance(dec, dict):
+                print(f"    {stage}: {dec.get('eligibility', '?')} ({dec.get('reason', '')[:60]})")
+    if report.stage_eval:
+        print("Stage scorecards:")
+        for stage, card in report.stage_eval.items():
+            if isinstance(card, dict):
+                print(f"    {stage}: score={card.get('aggregate_score', 0):.2f}, cases={card.get('cases_run', 0)}")
     print(f"Report:                {report.eval_run_id}")
     print("=" * 60)
 
@@ -132,17 +176,41 @@ async def _certify(args: argparse.Namespace) -> None:
 def _create_provider(manifest: CandidateModelManifest, base_url: str | None) -> object:
     """Create a minimal LLM provider for certification.
 
-    For LM Studio, creates a simple OpenAI-compatible provider.
+    For LM Studio, creates a simple provider that wraps the OpenAI client
+    with the LM Studio base URL.
     """
     if manifest.provider == "lmstudio":
+        import openai
         url = base_url or "http://localhost:1234/v1"
-        from backend.providers.openai_provider import OpenAIProvider
-        return OpenAIProvider(
-            base_url=url,
-            model=manifest.model_id,
+        client = openai.AsyncOpenAI(
             api_key="lm-studio",
-            max_tokens=manifest.advertised_max_output_tokens,
+            base_url=url,
         )
+
+        class _LMStudioProvider:
+            def __init__(self, client, model_id):
+                self._client = client
+                self._model_id = model_id
+
+            @property
+            def default_model(self):
+                return self._model_id
+
+            async def complete(self, prompt: str, max_tokens: int = 4096, temperature: float = 0.3, **kw):
+                # Accept prompt as string (from smoke_test) or messages list
+                if isinstance(prompt, str):
+                    messages = [{"role": "user", "content": prompt}]
+                else:
+                    messages = prompt
+                resp = await self._client.chat.completions.create(
+                    model=self._model_id,
+                    messages=messages,
+                    max_tokens=max_tokens,
+                    temperature=temperature,
+                )
+                return resp.choices[0].message.content or ""
+
+        return _LMStudioProvider(client, manifest.model_id)
     else:
         raise ValueError(
             f"CLI provider creation not implemented for '{manifest.provider}'. "

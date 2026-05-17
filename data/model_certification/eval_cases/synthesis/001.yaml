@@ -1,0 +1,24 @@
+case_id: synthesis-001
+stage: synthesis
+prompt_template: |
+  Write a brief "Related Work" section (3-4 paragraphs) for a paper on 
+  "Efficient Inference for Large Language Models" covering:
+  1. Model compression techniques (pruning, quantization, distillation)
+  2. KV-cache optimization
+  3. Speculative decoding
+  
+  Include at least 5 citation markers in [Author, Year] format.
+  Do not fabricate citations - only use commonly known works in this area.
+difficulty: hard
+requires_grounding: true
+output_token_budget: 4096
+gold:
+  expected_fields:
+    topic: "Efficient Inference"
+  expected_keys:
+    - pruning
+    - quantization
+    - distillation
+    - KV-cache
+    - speculative decoding
+  planted_errors: []

@@ -1,0 +1,17 @@
+case_id: query_generation-001
+stage: query_generation
+prompt_template: |
+  Generate 5 academic search queries for researching the topic:
+  "Transformer attention mechanisms for long document understanding"
+  
+  Each query should target a different aspect (architecture, efficiency, evaluation, application, comparison).
+  Return each query on a new line, numbered 1-5.
+difficulty: easy
+requires_grounding: false
+output_token_budget: 1024
+gold:
+  expected_keys:
+    - transformer
+    - attention
+    - long document
+  planted_errors: []
