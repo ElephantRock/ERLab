@@ -1803,8 +1803,8 @@ class CitationAuditStage(PipelineStage):
         self, idx: int, proposal, ctx: StageContext,
         auditor: CitationClaimAuditor, source_papers: list[str],
     ) -> None:
-        """Audit a single proposal — existing citation audit + claim survival gate."""
-        # Build proposal text: proposal + full paper if available
+        """Audit a single proposal — typed validation + repair + quality gate."""
+        # Build proposal text
         proposal_text = (
             proposal.to_markdown()
             if hasattr(proposal, "to_markdown")
@@ -1825,126 +1825,59 @@ class CitationAuditStage(PipelineStage):
             source_papers=source_papers,
             proposal_id=idx,
         )
-
-        # Store report in metadata
         metadata["citation_audit"] = report.to_dict()
 
-        # --- Claim Evidence Validation (survival gate) ---
-        try:
-            from backend.pipeline.gateway.claim_evidence_validator import ClaimEvidenceValidator
+        # --- Collect structured claims from section drafts (if available) ---
+        structured_claims_by_section = self._collect_structured_claims(metadata)
+        prose_fallback_count = self._count_prose_fallbacks(metadata)
+        assumption_register = self._collect_assumptions(metadata)
 
-            # Build corpus IDs from source papers
-            corpus_ids = set()
-            provided_ids = set()
-            evidence_texts: dict[str, str] = {}
-            for i, sp in enumerate(source_papers, 1):
-                corpus_ids.add(f"SOURCE-{i}")
-                provided_ids.add(f"SOURCE-{i}")
-                evidence_texts[f"SOURCE-{i}"] = sp
+        # --- Build corpus for validation/repair ---
+        corpus = {}
+        for i, sp in enumerate(source_papers, 1):
+            corpus[f"SOURCE-{i}"] = sp
 
-            validator = ClaimEvidenceValidator(corpus_ids=corpus_ids)
-            claim_result = validator.validate_document(
-                text=proposal_text,
-                provided_evidence_ids=provided_ids,
-                evidence_texts=evidence_texts,
-            )
+        # --- Try typed validation first (Phase D path) ---
+        typed_metrics = None
+        typed_validated = None
 
-            # Merge claim validation results into metadata
-            metadata["claim_evidence_validation"] = claim_result.to_dict()
-
-            # Log the claim survival summary
-            if claim_result.total_claims > 0:
+        if structured_claims_by_section:
+            try:
+                typed_metrics, typed_validated = self._run_typed_validation(
+                    structured_claims_by_section, corpus,
+                )
                 logger.info(
-                    "Claim survival for proposal %d: %d/%d valid, trust=%.2f, %s",
-                    idx, claim_result.valid_claims, claim_result.total_claims,
-                    claim_result.trust_score, claim_result.summary,
-                )
-                if claim_result.invalid_claims > 0:
-                    # Enhance the citation audit trust score with claim data
-                    combined_trust = (
-                        report.trust_score * 0.5
-                        + claim_result.trust_score * 0.5
-                    )
-                    metadata["citation_audit"]["combined_trust_score"] = round(combined_trust, 3)
-                    metadata["citation_audit"]["claim_survival_rate"] = (
-                        claim_result.valid_claims / max(claim_result.total_claims, 1)
-                    )
-
-        except Exception as e:
-            logger.warning(
-                "Claim evidence validation failed for proposal %d (non-fatal): %s",
-                idx, e,
-            )
-            metadata["claim_evidence_validation"] = {
-                "status": "error",
-                "reason": str(e),
-            }
-
-        # --- Evidence Repair Loop ---
-        try:
-            from backend.pipeline.gateway.evidence_repair import EvidenceRepairLoop, ExportQualityGate
-
-            claim_val = metadata.get("claim_evidence_validation", {})
-            if claim_val.get("total_claims", 0) > 0:
-                # Build corpus for repair search
-                corpus = {}
-                for i, sp in enumerate(source_papers, 1):
-                    corpus[f"SOURCE-{i}"] = sp
-
-                repair = EvidenceRepairLoop(corpus_texts=corpus)
-
-                # Re-run validation to get ClaimEvidenceResult objects
-                from backend.pipeline.gateway.claim_evidence_validator import ClaimEvidenceValidator
-                validator = ClaimEvidenceValidator(corpus_ids=set(corpus.keys()))
-                claim_results = validator.validate_document(
-                    text=proposal_text,
-                    provided_evidence_ids=set(corpus.keys()),
-                    evidence_texts=corpus,
-                )
-
-                repair_report = repair.repair(
-                    validation_results=claim_results.results,
-                    original_text=proposal_text,
-                )
-
-                metadata["evidence_repair"] = repair_report.to_dict()
-
-                # Apply repaired text to full_paper if it exists
-                if repair_report.repaired_text and full_paper and isinstance(full_paper, dict):
-                    full_paper["paper_markdown"] = repair_report.repaired_text
-                    metadata["full_paper"] = full_paper
-
-                # Quality gate classification
-                survival_rate = repair_report.repaired_survival_rate
-                quality_level = ExportQualityGate.classify(survival_rate)
-                quality_banner = ExportQualityGate.get_banner(survival_rate)
-
-                metadata["export_quality"] = {
-                    "level": quality_level,
-                    "survival_rate": round(survival_rate, 3),
-                    "banner": quality_banner,
-                    "original_survival": round(repair_report.original_survival_rate, 3),
-                    "improvement": round(repair_report.repaired_survival_rate - repair_report.original_survival_rate, 3),
-                }
-
-                logger.info(
-                    "Evidence repair for proposal %d: survival %.0f%% → %.0f%% (%s, %s)",
+                    "Typed validation for proposal %d: dsr=%.2f, ear=%.2f, ocr=%.2f, sh=%.2f",
                     idx,
-                    repair_report.original_survival_rate * 100,
-                    repair_report.repaired_survival_rate * 100,
-                    quality_level,
-                    f"+{repair_report.repaired_survival_rate - repair_report.original_survival_rate:.0%}" if repair_report.repaired_survival_rate > repair_report.original_survival_rate else "no improvement",
+                    typed_metrics.direct_support_rate,
+                    typed_metrics.epistemic_acceptability_rate,
+                    typed_metrics.overclaim_rate,
+                    typed_metrics.speculative_honesty,
+                )
+            except Exception as e:
+                logger.warning(
+                    "Typed validation failed for proposal %d (falling back to prose): %s",
+                    idx, e,
                 )
 
-        except Exception as e:
-            logger.warning(
-                "Evidence repair failed for proposal %d (non-fatal): %s",
-                idx, e,
+        # --- If typed validation succeeded, run typed repair ---
+        if typed_metrics and typed_validated:
+            try:
+                self._run_typed_repair_and_quality_gate(
+                    idx, typed_metrics, typed_validated, corpus,
+                    metadata, full_paper, assumption_register,
+                    prose_fallback_count, structured_claims_by_section,
+                )
+            except Exception as e:
+                logger.warning(
+                    "Typed repair failed for proposal %d (non-fatal): %s", idx, e,
+                )
+                metadata["epistemic_metrics"] = typed_metrics.to_dict()
+        else:
+            # --- Fallback: Legacy prose validation + repair ---
+            self._run_legacy_validation_and_repair(
+                idx, proposal_text, corpus, metadata, full_paper,
             )
-            metadata["evidence_repair"] = {
-                "status": "error",
-                "reason": str(e),
-            }
 
         self._set_metadata(proposal, metadata)
 
@@ -1958,6 +1891,312 @@ class CitationAuditStage(PipelineStage):
                 report.context_mismatches,
                 report.quantitative_errors,
             )
+
+    # ── Phase D: Structured claim helpers ────────────────────────────────
+
+    @staticmethod
+    def _collect_structured_claims(metadata: dict) -> dict[str, list[dict]]:
+        """Collect structured claims from section drafts, if available.
+
+        Looks in full_paper -> section_drafts for structured_claims data.
+        Returns {section_id: [claim_dicts]}.
+        """
+        claims_by_section: dict[str, list[dict]] = {}
+
+        full_paper = metadata.get("full_paper")
+        if not isinstance(full_paper, dict):
+            return claims_by_section
+
+        section_drafts = full_paper.get("section_drafts")
+        if not isinstance(section_drafts, list):
+            return claims_by_section
+
+        for draft in section_drafts:
+            if not isinstance(draft, dict):
+                continue
+            section_id = draft.get("section_id", "")
+            structured = draft.get("structured_claims")
+            if isinstance(structured, list) and len(structured) > 0:
+                claims_by_section[section_id] = structured
+
+        return claims_by_section
+
+    @staticmethod
+    def _count_prose_fallbacks(metadata: dict) -> int:
+        """Count how many sections fell back to prose generation."""
+        full_paper = metadata.get("full_paper")
+        if not isinstance(full_paper, dict):
+            return 0
+
+        section_drafts = full_paper.get("section_drafts")
+        if not isinstance(section_drafts, list):
+            return 0
+
+        return sum(
+            1 for d in section_drafts
+            if isinstance(d, dict) and d.get("generation_mode") == "prose_fallback"
+        )
+
+    @staticmethod
+    def _collect_assumptions(metadata: dict) -> list[dict]:
+        """Collect all design assumptions from section drafts."""
+        all_assumptions: list[dict] = []
+
+        full_paper = metadata.get("full_paper")
+        if not isinstance(full_paper, dict):
+            return all_assumptions
+
+        section_drafts = full_paper.get("section_drafts")
+        if not isinstance(section_drafts, list):
+            return all_assumptions
+
+        for draft in section_drafts:
+            if not isinstance(draft, dict):
+                continue
+            assumptions = draft.get("assumptions")
+            if isinstance(assumptions, list):
+                all_assumptions.extend(assumptions)
+
+        return all_assumptions
+
+    @staticmethod
+    def _run_typed_validation(
+        structured_claims_by_section: dict[str, list[dict]],
+        corpus: dict[str, str],
+    ) -> tuple:
+        """Run ClaimTypeValidator on structured claims.
+
+        Returns (EpistemicMetrics, {section: [ValidatedClaim]}).
+        """
+        from backend.pipeline.gateway.claim_type_validator import (
+            ClaimTypeValidator,
+            compute_metrics,
+        )
+        from backend.pipeline.gateway.claim_evidence_validator import (
+            ClaimEvidenceValidator,
+        )
+
+        validator = ClaimTypeValidator()
+        evidence_validator = ClaimEvidenceValidator(
+            corpus_ids=set(corpus.keys()),
+        )
+
+        all_validated: list = []
+        validated_by_section: dict = {}
+
+        for section_id, claims in structured_claims_by_section.items():
+            # Determine support levels for each claim via evidence validator
+            support_levels = {}
+            contradictions = {}
+            for claim in claims:
+                cid = claim.get("claim_id", "UNKNOWN")
+                evidence_ids = claim.get("evidence_ids", [])
+
+                # Check each evidence source
+                has_strong = False
+                has_weak = False
+                has_contradiction = False
+                contradicting = []
+
+                for eid in evidence_ids:
+                    eid_clean = eid.strip("[]()")
+                    if eid_clean in corpus:
+                        # Check if evidence text supports the claim
+                        claim_text = claim.get("text", "").lower()
+                        evidence_text = corpus[eid_clean].lower()
+                        claim_words = set(claim_text.split()) - {"the", "a", "an", "is", "are", "was", "were", "and", "or", "of", "in", "to", "for", "that", "this"}
+                        evidence_words = set(evidence_text.split())
+                        overlap = claim_words & evidence_words
+                        if len(overlap) / max(len(claim_words), 1) >= 0.2:
+                            has_strong = True
+                        elif len(overlap) > 0:
+                            has_weak = True
+                    else:
+                        has_weak = True  # Referenced but not in corpus
+
+                if has_contradiction:
+                    support_levels[cid] = "contradicted"
+                    contradictions[cid] = contradicting
+                elif has_strong:
+                    support_levels[cid] = "strong"
+                elif has_weak:
+                    support_levels[cid] = "weak"
+                else:
+                    support_levels[cid] = "none"
+
+            validated = validator.validate_section(
+                section_id, claims, support_levels, contradictions,
+            )
+            validated_by_section[section_id] = validated
+            all_validated.extend(validated)
+
+        metrics = compute_metrics(all_validated)
+        return metrics, validated_by_section
+
+    @staticmethod
+    def _run_typed_repair_and_quality_gate(
+        idx: int,
+        metrics,
+        validated_by_section: dict,
+        corpus: dict[str, str],
+        metadata: dict,
+        full_paper,
+        assumption_register: list[dict],
+        prose_fallback_count: int,
+        structured_claims_by_section: dict[str, list[dict]],
+    ) -> None:
+        """Run typed repair loop + quality gate, storing full metadata."""
+        from backend.pipeline.gateway.evidence_repair import EvidenceRepairLoop, ExportQualityGate
+        from backend.pipeline.gateway.claim_type_validator import compute_metrics
+
+        # Collect all validated claims for repair
+        all_validated = []
+        for section_claims in validated_by_section.values():
+            all_validated.extend(section_claims)
+
+        # Run repair
+        repair = EvidenceRepairLoop(corpus_texts=corpus)
+        # Build combined text from structured claims
+        combined_text = " ".join(
+            claim.text for claim in all_validated
+        )
+        repair_report = repair.repair(all_validated, combined_text)
+
+        metadata["evidence_repair"] = repair_report.to_dict()
+
+        # Recompute metrics after repair (re-classify repaired claims)
+        # Repair doesn't change the validator's original diagnosis,
+        # but we log post-repair metrics for comparison
+        post_repair_metrics = compute_metrics(all_validated)  # original classification persists
+
+        # Quality gate — consumes validator output, not its own recomputation
+        quality_level = ExportQualityGate.classify_from_metrics(metrics)
+        quality_banner = ExportQualityGate.get_banner_from_metrics(metrics)
+
+        # Per-section breakdown
+        per_section_breakdown = {}
+        for section_id, validated_claims in validated_by_section.items():
+            section_metrics = compute_metrics(validated_claims)
+            per_section_breakdown[section_id] = {
+                **section_metrics.to_dict(),
+                "claim_count": section_metrics.total_claims,
+            }
+
+        # Per-type breakdown
+        per_type_breakdown: dict[str, dict] = {}
+        for vc in all_validated:
+            t = vc.declared_type
+            if t not in per_type_breakdown:
+                per_type_breakdown[t] = {"total": 0, "valid": 0, "overclaim": 0}
+            per_type_breakdown[t]["total"] += 1
+            if vc.is_valid:
+                per_type_breakdown[t]["valid"] += 1
+            if vc.is_overclaim:
+                per_type_breakdown[t]["overclaim"] += 1
+
+        # Store full metadata
+        metadata["epistemic_metrics"] = metrics.to_dict()
+        metadata["export_quality"] = {
+            "level": quality_level,
+            "banner": quality_banner,
+            "direct_support_rate": round(metrics.direct_support_rate, 3),
+            "epistemic_acceptability_rate": round(metrics.epistemic_acceptability_rate, 3),
+            "overclaim_rate": round(metrics.overclaim_rate, 3),
+            "speculative_honesty": round(metrics.speculative_honesty, 3),
+            "prose_fallback_count": prose_fallback_count,
+            "contradiction_count": metrics.contradicted,
+            "assumption_count": len(assumption_register),
+            "per_section_breakdown": per_section_breakdown,
+            "per_type_breakdown": per_type_breakdown,
+            "original_survival": round(repair_report.original_survival_rate, 3),
+            "repaired_survival": round(repair_report.repaired_survival_rate, 3),
+            "improvement": round(repair_report.repaired_survival_rate - repair_report.original_survival_rate, 3),
+        }
+        metadata["assumption_register"] = assumption_register
+
+        logger.info(
+            "Evidence quality for proposal %d: dsr=%.0f%%, ear=%.0f%%, ocr=%.0f%% (%s, "
+            "%d prose fallbacks, %d assumptions, %d contradictions)",
+            idx,
+            metrics.direct_support_rate * 100,
+            metrics.epistemic_acceptability_rate * 100,
+            metrics.overclaim_rate * 100,
+            quality_level,
+            prose_fallback_count,
+            len(assumption_register),
+            metrics.contradicted,
+        )
+
+    @staticmethod
+    def _run_legacy_validation_and_repair(
+        idx: int,
+        proposal_text: str,
+        corpus: dict[str, str],
+        metadata: dict,
+        full_paper,
+    ) -> None:
+        """Fallback: legacy prose-based validation and repair."""
+        try:
+            from backend.pipeline.gateway.claim_evidence_validator import ClaimEvidenceValidator
+            from backend.pipeline.gateway.evidence_repair import EvidenceRepairLoop, ExportQualityGate
+
+            corpus_ids = set(corpus.keys())
+            validator = ClaimEvidenceValidator(corpus_ids=corpus_ids)
+            claim_result = validator.validate_document(
+                text=proposal_text,
+                provided_evidence_ids=corpus_ids,
+                evidence_texts=corpus,
+            )
+
+            metadata["claim_evidence_validation"] = claim_result.to_dict()
+
+            if claim_result.total_claims > 0:
+                logger.info(
+                    "Claim survival (legacy) for proposal %d: %d/%d valid",
+                    idx, claim_result.valid_claims, claim_result.total_claims,
+                )
+
+                repair = EvidenceRepairLoop(corpus_texts=corpus)
+                repair_report = repair.repair(
+                    validation_results=claim_result.results,
+                    original_text=proposal_text,
+                )
+
+                metadata["evidence_repair"] = repair_report.to_dict()
+
+                if repair_report.repaired_text and full_paper and isinstance(full_paper, dict):
+                    full_paper["paper_markdown"] = repair_report.repaired_text
+                    metadata["full_paper"] = full_paper
+
+                survival_rate = repair_report.repaired_survival_rate
+                quality_level = ExportQualityGate.classify(survival_rate)
+                quality_banner = ExportQualityGate.get_banner(survival_rate)
+
+                metadata["export_quality"] = {
+                    "level": quality_level,
+                    "survival_rate": round(survival_rate, 3),
+                    "banner": quality_banner,
+                    "original_survival": round(repair_report.original_survival_rate, 3),
+                    "improvement": round(repair_report.repaired_survival_rate - repair_report.original_survival_rate, 3),
+                }
+
+                logger.info(
+                    "Evidence repair (legacy) for proposal %d: survival %.0f%% → %.0f%% (%s)",
+                    idx,
+                    repair_report.original_survival_rate * 100,
+                    repair_report.repaired_survival_rate * 100,
+                    quality_level,
+                )
+
+        except Exception as e:
+            logger.warning(
+                "Legacy validation/repair failed for proposal %d (non-fatal): %s",
+                idx, e,
+            )
+            metadata["evidence_repair"] = {
+                "status": "error",
+                "reason": str(e),
+            }
 
     @staticmethod
     def _get_metadata(proposal) -> dict:

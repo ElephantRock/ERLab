@@ -640,21 +640,60 @@ class EvidenceRepairLoop:
 
 
 class ExportQualityGate:
-    """Quality gate for export based on claim survival rate.
+    """Quality gate for export based on three-metric epistemic model.
 
-    Thresholds:
-    - draft: any survival rate (always allowed, clearly marked)
-    - reviewable: ≥50% claim survival
-    - submission: ≥75% claim survival
+    CRITICAL INVARIANT: The quality gate consumes validator output (EpistemicMetrics).
+    It NEVER recomputes its own metrics. This prevents drift between
+    validation and export classification.
+
+    Classification rules (in priority order):
+    1. Hard draft gate: overclaim_rate > 0.30 → always "draft"
+    2. submission_candidate: epistemic_acceptability >= 0.75 AND direct_support >= 0.50 AND overclaim <= 0.15
+    3. reviewable: epistemic_acceptability >= 0.55 AND overclaim <= 0.15
+    4. Otherwise: draft
     """
 
-    DRAFT_THRESHOLD = 0.0
-    REVIEWABLE_THRESHOLD = 0.5
-    SUBMISSION_THRESHOLD = 0.75
+    OVERCLAIM_HARD_GATE = 0.30
+    SUBMISSION_EPISTEMIC = 0.75
+    SUBMISSION_DIRECT_SUPPORT = 0.50
+    SUBMISSION_OVERCLAIM = 0.15
+    REVIEWABLE_EPISTEMIC = 0.55
+    REVIEWABLE_OVERCLAIM = 0.15
+
+    @staticmethod
+    def classify_from_metrics(metrics: 'EpistemicMetrics') -> str:
+        """Classify paper quality from pre-computed EpistemicMetrics.
+
+        This is the PRIMARY classification method. It consumes validator output.
+        """
+        # Rule 1: Hard draft gate
+        if metrics.overclaim_rate > ExportQualityGate.OVERCLAIM_HARD_GATE:
+            return "draft"
+
+        # Rule 2: Submission candidate
+        if (
+            metrics.epistemic_acceptability_rate >= ExportQualityGate.SUBMISSION_EPISTEMIC
+            and metrics.direct_support_rate >= ExportQualityGate.SUBMISSION_DIRECT_SUPPORT
+            and metrics.overclaim_rate <= ExportQualityGate.SUBMISSION_OVERCLAIM
+        ):
+            return "submission_candidate"
+
+        # Rule 3: Reviewable
+        if (
+            metrics.epistemic_acceptability_rate >= ExportQualityGate.REVIEWABLE_EPISTEMIC
+            and metrics.overclaim_rate <= ExportQualityGate.REVIEWABLE_OVERCLAIM
+        ):
+            return "reviewable"
+
+        # Rule 4: Default
+        return "draft"
 
     @staticmethod
     def classify(survival_rate: float) -> str:
-        """Classify a paper's export quality level."""
+        """Legacy classify from survival_rate only (backward compatible).
+
+        Prefer classify_from_metrics() for new code.
+        """
         if survival_rate >= ExportQualityGate.SUBMISSION_THRESHOLD:
             return "submission"
         elif survival_rate >= ExportQualityGate.REVIEWABLE_THRESHOLD:
@@ -662,9 +701,44 @@ class ExportQualityGate:
         else:
             return "draft"
 
+    SUBMISSION_THRESHOLD = 0.75
+    REVIEWABLE_THRESHOLD = 0.50
+
+    @staticmethod
+    def get_banner_from_metrics(metrics: 'EpistemicMetrics') -> str:
+        """Get a quality banner with full three-metric reporting."""
+        level = ExportQualityGate.classify_from_metrics(metrics)
+
+        banner_map = {
+            "submission_candidate": (
+                "[SUBMISSION CANDIDATE] "
+                "direct_support={ds:.0%}, epistemic_acceptability={ea:.0%}, "
+                "overclaim={oc:.0%}, speculative_honesty={sh:.0%}"
+            ),
+            "reviewable": (
+                "[REVIEWABLE DRAFT] "
+                "direct_support={ds:.0%}, epistemic_acceptability={ea:.0%}, "
+                "overclaim={oc:.0%}, speculative_honesty={sh:.0%}"
+            ),
+            "draft": (
+                "[DIAGNOSTIC DRAFT] "
+                "direct_support={ds:.0%}, epistemic_acceptability={ea:.0%}, "
+                "overclaim={oc:.0%}, speculative_honesty={sh:.0%}. "
+                "Not suitable for submission without further evidence grounding."
+            ),
+        }
+
+        template = banner_map.get(level, banner_map["draft"])
+        return template.format(
+            ds=metrics.direct_support_rate,
+            ea=metrics.epistemic_acceptability_rate,
+            oc=metrics.overclaim_rate,
+            sh=metrics.speculative_honesty,
+        )
+
     @staticmethod
     def get_banner(survival_rate: float) -> str:
-        """Get a quality banner to prepend to exported papers."""
+        """Legacy banner from survival_rate only."""
         level = ExportQualityGate.classify(survival_rate)
         banners = {
             "submission": "[SUBMISSION GRADE] Claim survival: {rate:.0%}",
