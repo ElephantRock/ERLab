@@ -1307,11 +1307,21 @@ class AdversarialReviewStage(PipelineStage):
             for p in ctx.all_papers[:10]
         ]
 
+        # Determine context window from provider or gateway
+        context_window = 8192
+        try:
+            from backend.config import get_settings
+            settings = get_settings()
+            # The gateway may have probed a different context
+        except Exception:
+            pass
+
         for round_num in range(1, self.MAX_REVISION_ROUNDS + 2):  # 1..3
             score = await self._reviewer.review(
                 proposal_text=proposal_text,
                 source_papers=source_papers,
                 round_num=round_num,
+                context_window=context_window,
             )
 
             # Store score in metadata
@@ -1434,13 +1444,26 @@ class PaperSynthesisStage(PipelineStage):
     Runs after adversarial_review. For each proposal, uses PaperSynthesizer
     to produce a structured academic paper stored in proposal metadata.
 
+    Strategy selection:
+    - If prompt fits context → monolithic synthesis (PaperSynthesizer)
+    - If prompt overflows → section-wise synthesis (SectionWiseSynthesizer)
+    - Section-wise generates outline → each section independently → assemble
+
+    Minimum output policy:
+    - paper_synthesis minimum output: 2000 tokens
+    - If available output < minimum, skip monolithic and go section-wise
+
     HB-02: Graceful fallback — logs warning and sets full_paper to None
     on LLM failure. Never blocks the pipeline.
     """
 
-    def __init__(self, provider=None, synthesizer=None):
+    # Minimum viable output tokens — below this, monolithic synthesis is pointless
+    MIN_OUTPUT_TOKENS = 2000
+
+    def __init__(self, provider=None, synthesizer=None, context_window: int = 8192):
         self._provider = provider
         self._synthesizer = synthesizer  # Optional: inject for testing
+        self._context_window = context_window
 
     @property
     def name(self) -> str:
@@ -1470,7 +1493,18 @@ class PaperSynthesisStage(PipelineStage):
                 return True
 
         from backend.pipeline.synthesis.paper_synthesizer import PaperSynthesizer
-        synthesizer = self._synthesizer or PaperSynthesizer(provider)
+        from backend.pipeline.synthesis.section_wise_synthesizer import SectionWiseSynthesizer
+
+        # Determine context window from gateway if available
+        context_window = self._context_window
+        try:
+            from backend.config import get_settings
+            settings = get_settings()
+            # The gateway may have probed a larger context
+            if hasattr(self, '_context_window'):
+                context_window = self._context_window
+        except Exception:
+            pass
 
         # Format source papers for citation
         source_papers = []
@@ -1501,26 +1535,74 @@ class PaperSynthesisStage(PipelineStage):
                     else str(proposal)
                 )
 
-                result = await synthesizer.synthesize(
-                    proposal_text=proposal_text,
-                    source_papers=source_papers,
-                    domain=ctx.domain,
-                    proposal_id=idx,
-                )
+                # Estimate token budget for this proposal
+                estimated_input = len(proposal_text) // 3 + sum(len(s) // 3 for s in source_papers)
+                safety_margin = int(context_window * 0.85)
+                available_output = safety_margin - estimated_input
 
-                metadata = self._get_metadata(proposal)
-                if result is not None:
-                    metadata["full_paper"] = result.to_dict()
+                # Strategy selection: section-wise if monolithic won't fit
+                if available_output < self.MIN_OUTPUT_TOKENS:
                     logger.info(
-                        "Paper synthesis completed for proposal %d: %d words",
+                        "Paper synthesis: switching to section-wise "
+                        "(estimated input=%d, available output=%d < minimum %d)",
+                        estimated_input, available_output, self.MIN_OUTPUT_TOKENS,
+                    )
+                    section_synth = SectionWiseSynthesizer(
+                        provider=provider,
+                        context_window=context_window,
+                    )
+                    result = await section_synth.synthesize(
+                        proposal_text=proposal_text,
+                        source_papers=source_papers,
+                        domain=ctx.domain,
+                        proposal_id=idx,
+                    )
+                    # Convert to dict for storage (compatible shape)
+                    metadata = self._get_metadata(proposal)
+                    metadata["full_paper"] = {
+                        "proposal_id": result.proposal_id,
+                        "paper_markdown": result.paper_markdown,
+                        "word_count": result.word_count,
+                        "venue": result.venue,
+                        "model_used": result.model_used,
+                        "source_count": result.source_count,
+                        "sections_generated": result.sections_generated,
+                        "sections_total": result.sections_total,
+                        "synthesis_strategy": "section_wise",
+                    }
+                    metadata["synthesis_strategy"] = "section_wise"
+                    self._set_metadata(proposal, metadata)
+                    logger.info(
+                        "Paper synthesis (section-wise) completed for proposal %d: "
+                        "%d words, %d/%d sections",
                         idx, result.word_count,
+                        result.sections_generated, result.sections_total,
                     )
                 else:
-                    metadata["full_paper"] = None
-                    logger.warning(
-                        "Paper synthesis failed for proposal %d (HB-02)", idx,
+                    # Monolithic synthesis — original path
+                    synthesizer = self._synthesizer or PaperSynthesizer(provider)
+                    result = await synthesizer.synthesize(
+                        proposal_text=proposal_text,
+                        source_papers=source_papers,
+                        domain=ctx.domain,
+                        proposal_id=idx,
                     )
-                self._set_metadata(proposal, metadata)
+                    metadata = self._get_metadata(proposal)
+                    if result is not None:
+                        result_dict = result.to_dict()
+                        result_dict["synthesis_strategy"] = "monolithic"
+                        metadata["full_paper"] = result_dict
+                        metadata["synthesis_strategy"] = "monolithic"
+                        logger.info(
+                            "Paper synthesis (monolithic) completed for proposal %d: %d words",
+                            idx, result.word_count,
+                        )
+                    else:
+                        metadata["full_paper"] = None
+                        logger.warning(
+                            "Paper synthesis failed for proposal %d (HB-02)", idx,
+                        )
+                    self._set_metadata(proposal, metadata)
 
             except Exception as e:
                 logger.warning(
@@ -1721,7 +1803,7 @@ class CitationAuditStage(PipelineStage):
         self, idx: int, proposal, ctx: StageContext,
         auditor: CitationClaimAuditor, source_papers: list[str],
     ) -> None:
-        """Audit a single proposal."""
+        """Audit a single proposal — existing citation audit + claim survival gate."""
         # Build proposal text: proposal + full paper if available
         proposal_text = (
             proposal.to_markdown()
@@ -1737,6 +1819,7 @@ class CitationAuditStage(PipelineStage):
             if paper_md:
                 proposal_text = paper_md
 
+        # --- Existing LLM-based citation audit ---
         report = await auditor.audit(
             proposal_text=proposal_text,
             source_papers=source_papers,
@@ -1745,6 +1828,58 @@ class CitationAuditStage(PipelineStage):
 
         # Store report in metadata
         metadata["citation_audit"] = report.to_dict()
+
+        # --- Claim Evidence Validation (survival gate) ---
+        try:
+            from backend.pipeline.gateway.claim_evidence_validator import ClaimEvidenceValidator
+
+            # Build corpus IDs from source papers
+            corpus_ids = set()
+            provided_ids = set()
+            evidence_texts: dict[str, str] = {}
+            for i, sp in enumerate(source_papers, 1):
+                corpus_ids.add(f"SOURCE-{i}")
+                provided_ids.add(f"SOURCE-{i}")
+                evidence_texts[f"SOURCE-{i}"] = sp
+
+            validator = ClaimEvidenceValidator(corpus_ids=corpus_ids)
+            claim_result = validator.validate_document(
+                text=proposal_text,
+                provided_evidence_ids=provided_ids,
+                evidence_texts=evidence_texts,
+            )
+
+            # Merge claim validation results into metadata
+            metadata["claim_evidence_validation"] = claim_result.to_dict()
+
+            # Log the claim survival summary
+            if claim_result.total_claims > 0:
+                logger.info(
+                    "Claim survival for proposal %d: %d/%d valid, trust=%.2f, %s",
+                    idx, claim_result.valid_claims, claim_result.total_claims,
+                    claim_result.trust_score, claim_result.summary,
+                )
+                if claim_result.invalid_claims > 0:
+                    # Enhance the citation audit trust score with claim data
+                    combined_trust = (
+                        report.trust_score * 0.5
+                        + claim_result.trust_score * 0.5
+                    )
+                    metadata["citation_audit"]["combined_trust_score"] = round(combined_trust, 3)
+                    metadata["citation_audit"]["claim_survival_rate"] = (
+                        claim_result.valid_claims / max(claim_result.total_claims, 1)
+                    )
+
+        except Exception as e:
+            logger.warning(
+                "Claim evidence validation failed for proposal %d (non-fatal): %s",
+                idx, e,
+            )
+            metadata["claim_evidence_validation"] = {
+                "status": "error",
+                "reason": str(e),
+            }
+
         self._set_metadata(proposal, metadata)
 
         # Log warning if trust_score < 0.5

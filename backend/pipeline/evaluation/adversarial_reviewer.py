@@ -105,22 +105,40 @@ class AdversarialReviewer:
         proposal_text: str,
         source_papers: list[str] | None = None,
         round_num: int = 1,
+        context_window: int = 8192,
     ) -> AdversarialReviewScore:
         """Run adversarial review on a proposal.
+
+        Uses a compressed review packet instead of passing the full proposal + sources.
+        The critic doesn't need the entire artifact — it needs the core claims,
+        method, and evaluation plan.
 
         Args:
             proposal_text: Full text of the research proposal.
             source_papers: Optional list of source paper abstracts/titles.
             round_num: Review round number (1=initial, 2-3=revisions).
+            context_window: Model's context window for budget estimation.
 
         Returns:
             AdversarialReviewScore with dimension scores and justifications.
             On failure, returns a fallback score with all zeros.
         """
-        papers_text = "\n---\n".join(source_papers) if source_papers else "No source papers provided."
+        # Build a compressed review packet instead of passing raw text
+        review_packet = self._build_review_packet(proposal_text, source_papers)
+
+        # Estimate if review packet fits in context
+        estimated_tokens = len(review_packet) // 3 + 1500  # prompt + output
+        if estimated_tokens > context_window:
+            logger.info(
+                "Adversarial review: compressed review packet (%d est tokens) for ctx=%d",
+                estimated_tokens, context_window,
+            )
+            # Further compress — strip to essentials
+            review_packet = self._build_minimal_review_packet(proposal_text)
+
         prompt = self._prompt_template.format(
-            proposal_text=proposal_text,
-            source_papers=papers_text,
+            proposal_text=review_packet,
+            source_papers="See embedded references in review packet.",
         )
 
         try:
@@ -200,3 +218,114 @@ class AdversarialReviewer:
             round=round_num,
             model_used=getattr(self._provider, "provider_name", type(self._provider).__name__),
         )
+
+    @staticmethod
+    def _build_review_packet(
+        proposal_text: str,
+        source_papers: list[str] | None = None,
+        max_chars: int = 4000,
+    ) -> str:
+        """Build a compressed review packet for the adversarial reviewer.
+
+        Instead of passing the full proposal + all sources, extract:
+        - Title
+        - Core claim list
+        - Method summary
+        - Evaluation plan summary
+        - Top cited evidence cards
+        - Known weak points
+
+        This reduces the prompt from ~9000 tokens to ~3000-4000.
+        """
+        lines = []
+
+        # Extract sections by common headings
+        sections = AdversarialReviewer._extract_sections(proposal_text)
+
+        # Title
+        title = sections.get("title", "")
+        if not title:
+            # Try to get first line as title
+            first_line = proposal_text.strip().split("\n")[0]
+            title = first_line.lstrip("# ").strip()[:200]
+        lines.append(f"# Title: {title}")
+
+        # Core claims / introduction
+        intro = sections.get("introduction", "")
+        if intro:
+            lines.append(f"\n## Introduction (first 500 chars)\n{intro[:500]}")
+
+        # Method summary
+        method = sections.get("proposed_method", sections.get("method", ""))
+        if method:
+            lines.append(f"\n## Proposed Method (first 800 chars)\n{method[:800]}")
+
+        # Evaluation plan
+        eval_plan = sections.get("evaluation_plan", sections.get("evaluation", ""))
+        if eval_plan:
+            lines.append(f"\n## Evaluation Plan (first 500 chars)\n{eval_plan[:500]}")
+
+        # Related work summary (just citations count)
+        related = sections.get("related_work", "")
+        if related:
+            cite_count = len(re.findall(r'\[SOURCE-\d+\]', related))
+            lines.append(f"\n## Related Work: {cite_count} citations referenced")
+
+        # Source paper cards (compressed)
+        if source_papers:
+            lines.append("\n## Referenced Sources (titles only):")
+            for i, paper in enumerate(source_papers[:15]):
+                # Extract just the first line (citation + title)
+                first_line = paper.split("\n")[0][:150]
+                lines.append(f"  {first_line}")
+
+        # Assemble and truncate to max_chars
+        packet = "\n".join(lines)
+        if len(packet) > max_chars:
+            packet = packet[:max_chars] + "\n\n[Review packet truncated to fit context]"
+
+        return packet
+
+    @staticmethod
+    def _build_minimal_review_packet(proposal_text: str, max_chars: int = 2000) -> str:
+        """Ultra-compressed review packet for very small context windows."""
+        lines = []
+
+        # Title (first non-empty line)
+        for line in proposal_text.strip().split("\n"):
+            stripped = line.strip().lstrip("# ")
+            if stripped and len(stripped) > 5:
+                lines.append(f"Title: {stripped[:200]}")
+                break
+
+        # First 1000 chars as summary
+        lines.append(f"\nSummary:\n{proposal_text[:1000]}")
+
+        # Last 500 chars as conclusion
+        if len(proposal_text) > 1500:
+            lines.append(f"\nConclusion:\n{proposal_text[-500:]}")
+
+        return "\n".join(lines)[:max_chars]
+
+    @staticmethod
+    def _extract_sections(text: str) -> dict[str, str]:
+        """Extract sections from markdown text by ## headings."""
+        sections = {}
+        current_heading = "title"
+        current_content: list[str] = []
+
+        for line in text.split("\n"):
+            if line.startswith("## "):
+                # Save previous section
+                if current_content:
+                    sections[current_heading] = "\n".join(current_content).strip()
+                current_heading = line.lstrip("# ").strip().lower().replace(" ", "_")
+                current_content = []
+            else:
+                current_content.append(line)
+
+        # Save last section
+        if current_content:
+            sections[current_heading] = "\n".join(current_content).strip()
+
+        return sections
