@@ -46,6 +46,10 @@ class CapabilityReport:
     known_failure_modes: list[str] = field(default_factory=list)
     router_recommendation: dict[str, Any] = field(default_factory=dict)
 
+    # v0.2 stage evaluation (optional, empty for v0.1 reports)
+    stage_eval: dict[str, dict] | None = None              # stage → StageScoreCard dict
+    stage_eligibility_v2: dict[str, dict] | None = None     # stage → StageEligibilityDecisionV2 dict
+
     # Provenance
     eval_run_id: str = ""
     git_commit: str | None = None
@@ -84,6 +88,8 @@ class CapabilityReport:
             "scores": self.scores,
             "known_failure_modes": self.known_failure_modes,
             "router_recommendation": self.router_recommendation,
+            "stage_eval": self.stage_eval,
+            "stage_eligibility_v2": self.stage_eligibility_v2,
             "provenance": {
                 "git_commit": self.git_commit,
                 "manifest_hash": self.manifest_hash,
@@ -120,6 +126,8 @@ class CapabilityReport:
             scores=data.get("scores", {}),
             known_failure_modes=data.get("known_failure_modes", []),
             router_recommendation=data.get("router_recommendation", {}),
+            stage_eval=data.get("stage_eval"),
+            stage_eligibility_v2=data.get("stage_eligibility_v2"),
             eval_run_id=data.get("eval_run_id", ""),
             git_commit=provenance.get("git_commit"),
             manifest_hash=provenance.get("manifest_hash", ""),
