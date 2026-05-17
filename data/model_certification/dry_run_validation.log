@@ -4242,3 +4242,598 @@ Cross-Domain Transfer Evaluation of LLMs via Sem'
 2026-05-17 17:53:27,978 __main__ INFO ======================================================================
 2026-05-17 17:53:27,978 __main__ INFO Collecting dry-run routing decisions...
 2026-05-17 17:53:27,978 __main__ INFO ======================================================================
+2026-05-18 00:48:27,319 __main__ INFO ======================================================================
+2026-05-18 00:48:27,319 __main__ INFO SmartRouter Dry-Run Validation: dry_run_20260518_004827
+2026-05-18 00:48:27,319 __main__ INFO ======================================================================
+2026-05-18 00:48:43,221 numexpr.utils INFO NumExpr defaulting to 16 threads.
+2026-05-18 00:48:54,296 backend.pipeline.orchestrator._orchestrator WARNING PipelineOrchestrator received Settings as 'provider'; ignoring and creating default
+2026-05-18 00:48:54,846 backend.pipeline.orchestrator._orchestrator INFO Hybrid model routing enabled: thinking=anthropic, generation=anthropic
+2026-05-18 00:48:54,913 backend.pipeline.orchestrator._orchestrator INFO Pipeline strategy: deep_research (from pipeline.yaml)
+2026-05-18 00:48:55,067 backend.pipeline.orchestrator._orchestrator INFO SmartRouter enabled: mode=dry_run
+2026-05-18 00:48:55,097 backend.pipeline.literature.search_service INFO No S2 API key set — S2 excluded to avoid 429 rate limiting. Get a free key: https://www.semanticscholar.org/product/api#api-key
+2026-05-18 00:48:57,047 backend.pipeline.knowledge.bm25_index INFO Loaded BM25 index: 2046 documents
+2026-05-18 00:48:57,963 backend.pipeline.knowledge.versioning INFO Loaded version log: 8917 entries
+2026-05-18 00:48:58,113 backend.pipeline.knowledge.graph INFO Loaded knowledge graph: 2973 entities, 866 relationships
+2026-05-18 00:48:58,145 backend.pipeline.knowledge.world_model INFO Loaded world model v94
+2026-05-18 00:48:58,263 backend.pipeline.observability.manager INFO Observability initialized (processors: 3, otlp: False, metrics: True)
+2026-05-18 00:48:58,263 backend.pipeline.orchestrator.service_registry INFO Observability enabled
+2026-05-18 00:48:58,280 backend.pipeline.orchestrator._orchestrator INFO TreeSearchStage enabled (beam_width=2, max_depth=3)
+2026-05-18 00:48:58,330 backend.pipeline.tools.registry INFO Registered tool: literature_search (trust=trusted)
+2026-05-18 00:48:58,330 backend.pipeline.tools.registry INFO Registered tool: vector_search (trust=trusted)
+2026-05-18 00:48:58,330 backend.pipeline.tools.registry INFO Registered tool: memory_recall (trust=trusted)
+2026-05-18 00:48:58,330 backend.pipeline.tools.registry INFO Registered tool: knowledge_query (trust=trusted)
+2026-05-18 00:48:58,330 __main__ INFO SmartRouter: ENABLED (mode=dry_run)
+2026-05-18 00:48:58,330 __main__ INFO Domain: Tool Use is the Bottleneck in LLM Agent Architectures
+2026-05-18 00:48:58,330 __main__ INFO Starting pipeline run...
+2026-05-18 00:48:58,587 httpx INFO HTTP Request: GET http://100.64.0.1:1234/api/v1/models "HTTP/1.1 200 OK"
+2026-05-18 00:48:58,588 backend.pipeline.gateway.capability_registry INFO Discovered nanbeige-4.1-3b-deepseek-distilled: ctx=262144, loaded=False
+2026-05-18 00:48:58,588 backend.pipeline.gateway.capability_registry INFO Discovered deepseek/deepseek-r1-0528-qwen3-8b: ctx=131072, loaded=False
+2026-05-18 00:48:58,588 backend.pipeline.gateway.capability_registry INFO Probed qwen/qwen3-4b-2507: ctx=65536, loaded=True
+2026-05-18 00:48:58,588 backend.pipeline.gateway.capability_registry INFO Discovered nomic-embed-code: ctx=32768, loaded=False
+2026-05-18 00:48:58,588 backend.pipeline.gateway.capability_registry INFO Discovered sfr-embedding-mistral: ctx=32768, loaded=False
+2026-05-18 00:48:58,588 backend.pipeline.gateway.capability_registry INFO Discovered jina-reranker-v3@bf16: ctx=131072, loaded=False
+2026-05-18 00:48:58,588 backend.pipeline.gateway.capability_registry INFO Discovered jina-reranker-v3@q8_0: ctx=131072, loaded=False
+2026-05-18 00:48:58,588 backend.pipeline.gateway.capability_registry INFO Discovered nuextract-1.5-tiny: ctx=32768, loaded=False
+2026-05-18 00:48:58,588 backend.pipeline.gateway.capability_registry INFO Discovered qwen2.5-7b-instruct: ctx=131072, loaded=False
+2026-05-18 00:48:58,588 backend.pipeline.gateway.capability_registry INFO Probed qwen2.5-14b-instruct: ctx=131072, loaded=False
+2026-05-18 00:48:58,588 backend.pipeline.gateway.capability_registry INFO Discovered google/gemma-4-e4b: ctx=131072, loaded=False
+2026-05-18 00:48:58,588 backend.pipeline.gateway.capability_registry INFO Discovered qwen3-4b-qwen3.6-plus-reasoning-distilled: ctx=262144, loaded=False
+2026-05-18 00:48:58,588 backend.pipeline.gateway.capability_registry INFO Discovered qwen3.6-35b-a3b-apex: ctx=4096, loaded=False
+2026-05-18 00:48:58,588 backend.pipeline.gateway.capability_registry INFO Probed qwen/qwen3.6-27b: ctx=262144, loaded=False
+2026-05-18 00:48:58,588 backend.pipeline.gateway.capability_registry INFO Discovered qwen3.5-27b-claude-4.6-opus-reasoning-distilled-v2: ctx=262144, loaded=False
+2026-05-18 00:48:58,588 backend.pipeline.gateway.capability_registry INFO Discovered nvidia/nemotron-3-nano-4b: ctx=1048576, loaded=False
+2026-05-18 00:48:58,588 backend.pipeline.gateway.capability_registry INFO Discovered qwen3.5-27b-claude-4.6-opus-reasoning-distilled: ctx=262144, loaded=False
+2026-05-18 00:48:58,588 backend.pipeline.gateway.capability_registry INFO Discovered qwen/qwen3.5-9b: ctx=262144, loaded=False
+2026-05-18 00:48:58,588 backend.pipeline.gateway.capability_registry INFO Discovered qwen3.5-0.8b: ctx=262144, loaded=False
+2026-05-18 00:48:58,588 backend.pipeline.gateway.capability_registry INFO Discovered qwen3.5-27b: ctx=262144, loaded=False
+2026-05-18 00:48:58,589 backend.pipeline.gateway.capability_registry INFO Discovered qwen2.5-0.5b-instruct: ctx=32768, loaded=False
+2026-05-18 00:48:58,589 backend.pipeline.gateway.capability_registry INFO Discovered qwen/qwen3.5-35b-a3b: ctx=262144, loaded=False
+2026-05-18 00:48:58,589 backend.pipeline.gateway.capability_registry INFO Discovered qwen3-coder-next: ctx=262144, loaded=False
+2026-05-18 00:48:58,589 backend.pipeline.gateway.capability_registry INFO Discovered essentialai/rnj-1: ctx=32768, loaded=False
+2026-05-18 00:48:58,589 backend.pipeline.gateway.capability_registry INFO Discovered arliai_glm-4.5-air-derestricted: ctx=4096, loaded=False
+2026-05-18 00:48:58,589 backend.pipeline.gateway.capability_registry INFO Discovered prithivmlmods/nanbeige4.1-3b: ctx=262144, loaded=False
+2026-05-18 00:48:58,589 backend.pipeline.gateway.capability_registry INFO Discovered edge-quant/nanbeige4.1-3b@q8_0: ctx=196608, loaded=False
+2026-05-18 00:48:58,589 backend.pipeline.gateway.capability_registry INFO Discovered nanbeige4_1-3b: ctx=262144, loaded=False
+2026-05-18 00:48:58,589 backend.pipeline.gateway.capability_registry INFO Discovered nanbeige4.1-3b@q4_k_m: ctx=196608, loaded=False
+2026-05-18 00:48:58,589 backend.pipeline.gateway.capability_registry INFO Discovered vieneu-tts-0.3b: ctx=4096, loaded=False
+2026-05-18 00:48:58,589 backend.pipeline.gateway.capability_registry INFO Discovered zai-org/glm-4.6v-flash: ctx=131072, loaded=False
+2026-05-18 00:48:58,589 backend.pipeline.gateway.capability_registry INFO Discovered zai-org/glm-4.7-flash: ctx=202752, loaded=False
+2026-05-18 00:48:58,589 backend.pipeline.gateway.capability_registry INFO Discovered qwen/qwen3-vl-4b: ctx=262144, loaded=False
+2026-05-18 00:48:58,589 backend.pipeline.gateway.capability_registry INFO Discovered mistralai/magistral-small-2509: ctx=131072, loaded=False
+2026-05-18 00:48:58,589 backend.pipeline.gateway.capability_registry INFO Discovered qwen/qwen3-30b-a3b-2507: ctx=262144, loaded=False
+2026-05-18 00:48:58,589 backend.pipeline.gateway.capability_registry INFO Discovered openai/gpt-oss-20b: ctx=131072, loaded=False
+2026-05-18 00:48:58,589 backend.pipeline.gateway.capability_registry INFO Discovered qwen/qwen3-4b-thinking-2507: ctx=262144, loaded=False
+2026-05-18 00:48:58,589 backend.pipeline.gateway.capability_registry INFO Discovered qwen/qwen3-coder-30b: ctx=262144, loaded=False
+2026-05-18 00:48:58,589 backend.pipeline.gateway.capability_registry INFO Discovered devstral-small-2507: ctx=131072, loaded=False
+2026-05-18 00:48:58,589 backend.pipeline.gateway.capability_registry INFO Discovered deepseek-coder-v2-lite-instruct: ctx=163840, loaded=False
+2026-05-18 00:48:58,589 backend.pipeline.gateway.capability_registry INFO Discovered rombos-coder-v2.5-qwen-7b_cline: ctx=32768, loaded=False
+2026-05-18 00:48:58,589 backend.pipeline.gateway.capability_registry INFO Probed thudm_glm-4-32b-0414: ctx=32768, loaded=False
+2026-05-18 00:48:58,589 backend.pipeline.orchestrator._orchestrator INFO Gateway ready: model=glm-5.1, ctx=8192, loaded=True
+2026-05-18 00:48:58,613 backend.pipeline.integration_service INFO PipelineIntegrationService: SOUL.md loaded
+2026-05-18 00:49:18,503 httpx INFO HTTP Request: POST http://100.64.0.1:1234/v1/embeddings "HTTP/1.1 200 OK"
+2026-05-18 00:49:18,504 backend.pipeline.knowledge.embedding_service INFO Embedding provider validated: 1024-dim, non-zero vectors
+2026-05-18 00:49:19,580 backend.pipeline.persistence INFO Checkpoint saved: dry_run_20260518_004827
+2026-05-18 00:49:19,580 backend.pipeline.orchestrator._orchestrator INFO === Literature Search ===
+2026-05-18 00:49:19,600 backend.pipeline.tracing.processor INFO SPAN START [stage] literature_search trace=3012249c parent=-
+2026-05-18 00:49:19,607 backend.pipeline.persistence INFO Checkpoint saved: dry_run_20260518_004827
+2026-05-18 00:49:22,164 backend.pipeline.knowledge.embedding_providers ERROR LM Studio embedding batch 0 failed: All connection attempts failed
+2026-05-18 00:49:22,164 backend.pipeline.knowledge.embedding_service ERROR DATA INTEGRITY: Embedding provider returned 1/1 zero vectors in batch 0. Provider may be offline or misconfigured.
+2026-05-18 00:49:22,931 httpx INFO HTTP Request: GET https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=pubmed&term=tool+use+bottleneck+LLM+agent+architectures&retmax=20&retmode=json&sort=relevance "HTTP/1.1 200 OK"
+2026-05-18 00:49:23,047 httpx INFO HTTP Request: GET https://api.crossref.org/works?query=tool+use+bottleneck+LLM+agent+architectures&rows=20&sort=relevance&select=DOI%2Ctitle%2Cauthor%2Cpublished-print%2Cpublished-online%2Cabstract%2Ccontainer-title%2Cis-referenced-by-count "HTTP/1.1 200 OK"
+2026-05-18 00:49:23,182 httpx INFO HTTP Request: GET https://api.crossref.org/works?query=function+calling+limitations+large+language+models&rows=20&sort=relevance&select=DOI%2Ctitle%2Cauthor%2Cpublished-print%2Cpublished-online%2Cabstract%2Ccontainer-title%2Cis-referenced-by-count "HTTP/1.1 200 OK"
+2026-05-18 00:49:23,198 httpx INFO HTTP Request: GET https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=pubmed&term=agentic+AI+tool+selection+overhead&retmax=20&retmode=json&sort=relevance "HTTP/1.1 200 OK"
+2026-05-18 00:49:23,229 httpx INFO HTTP Request: GET https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=pubmed&term=function+calling+limitations+large+language+models&retmax=20&retmode=json&sort=relevance "HTTP/1.1 200 OK"
+2026-05-18 00:49:23,430 httpx INFO HTTP Request: GET https://api.openalex.org/works?search=agentic+AI+tool+selection+overhead&per_page=20 "HTTP/1.1 200 OK"
+2026-05-18 00:49:23,482 httpx INFO HTTP Request: GET https://api.openalex.org/works?search=tool+use+bottleneck+LLM+agent+architectures&per_page=20 "HTTP/1.1 200 OK"
+2026-05-18 00:49:23,514 httpx INFO HTTP Request: GET https://api.openalex.org/works?search=function+calling+limitations+large+language+models&per_page=20 "HTTP/1.1 200 OK"
+2026-05-18 00:49:23,531 httpx INFO HTTP Request: GET https://api.crossref.org/works?query=agentic+AI+tool+selection+overhead&rows=20&sort=relevance&select=DOI%2Ctitle%2Cauthor%2Cpublished-print%2Cpublished-online%2Cabstract%2Ccontainer-title%2Cis-referenced-by-count "HTTP/1.1 200 OK"
+2026-05-18 00:49:23,730 httpx INFO HTTP Request: GET https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=pubmed&id=40909853%2C30267475%2C41271973%2C41673205%2C41071597%2C29059201%2C40715350%2C34010585%2C29689057%2C40235846%2C41632955&retmode=xml "HTTP/1.1 429 Too Many Requests"
+2026-05-18 00:49:23,730 backend.pipeline.literature.pubmed_source WARNING PubMed search failed: Client error '429 Too Many Requests' for url 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=pubmed&id=40909853%2C30267475%2C41271973%2C41673205%2C41071597%2C29059201%2C40715350%2C34010585%2C29689057%2C40235846%2C41632955&retmode=xml'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429
+2026-05-18 00:49:26,081 httpx INFO HTTP Request: GET https://export.arxiv.org/api/query?search_query=all%3A%22agentic+AI+tool+selection+overhead%22&start=0&max_results=20&sortBy=relevance&sortOrder=descending "HTTP/1.1 200 OK"
+2026-05-18 00:49:26,181 httpx INFO HTTP Request: GET https://export.arxiv.org/api/query?search_query=all%3A%22function+calling+limitations+large+language+models%22&start=0&max_results=20&sortBy=relevance&sortOrder=descending "HTTP/1.1 200 OK"
+2026-05-18 00:49:26,181 httpx INFO HTTP Request: GET https://export.arxiv.org/api/query?search_query=all%3A%22tool+use+bottleneck+LLM+agent+architectures%22&start=0&max_results=20&sortBy=relevance&sortOrder=descending "HTTP/1.1 200 OK"
+2026-05-18 00:49:26,181 backend.pipeline.stages INFO Found 40 papers for query: tool use bottleneck LLM agent architectures
+2026-05-18 00:49:26,181 backend.pipeline.stages INFO Found 40 papers for query: function calling limitations large language models
+2026-05-18 00:49:26,181 backend.pipeline.stages INFO Found 40 papers for query: agentic AI tool selection overhead
+2026-05-18 00:49:26,914 backend.pipeline.stages INFO Total unique papers: 107 (from 120 total)
+2026-05-18 00:49:26,914 backend.pipeline.tracing.processor INFO SPAN END [stage] literature_search duration=7313.8ms status=ok
+2026-05-18 00:49:26,947 backend.pipeline.orchestrator.stage_lifecycle ERROR CONTRACT VIOLATION: literature_search — Output papers_found has 0 items, minimum 1
+2026-05-18 00:49:26,954 backend.pipeline.orchestrator.stage_lifecycle INFO CCW: compressed 107 papers (4678 tokens)
+2026-05-18 00:49:48,247 backend.pipeline.knowledge.reranker INFO Remote reranker unavailable (All connection attempts failed), using fallback
+2026-05-18 01:06:40,598 __main__ INFO ======================================================================
+2026-05-18 01:06:40,598 __main__ INFO SmartRouter Dry-Run Validation: dry_run_20260518_010640
+2026-05-18 01:06:40,598 __main__ INFO ======================================================================
+2026-05-18 01:06:42,491 numexpr.utils INFO NumExpr defaulting to 16 threads.
+2026-05-18 01:06:43,956 backend.pipeline.orchestrator._orchestrator WARNING PipelineOrchestrator received Settings as 'provider'; ignoring and creating default
+2026-05-18 01:06:44,426 backend.pipeline.orchestrator._orchestrator INFO Hybrid model routing enabled: thinking=anthropic, generation=anthropic
+2026-05-18 01:06:44,434 backend.pipeline.orchestrator._orchestrator INFO Pipeline strategy: deep_research (from pipeline.yaml)
+2026-05-18 01:06:44,455 backend.pipeline.orchestrator._orchestrator INFO SmartRouter enabled: mode=dry_run
+2026-05-18 01:06:44,457 backend.pipeline.literature.search_service INFO No S2 API key set — S2 excluded to avoid 429 rate limiting. Get a free key: https://www.semanticscholar.org/product/api#api-key
+2026-05-18 01:06:45,857 backend.pipeline.knowledge.bm25_index INFO Loaded BM25 index: 2046 documents
+2026-05-18 01:06:46,067 backend.pipeline.knowledge.versioning INFO Loaded version log: 8917 entries
+2026-05-18 01:06:46,207 backend.pipeline.knowledge.graph INFO Loaded knowledge graph: 2973 entities, 866 relationships
+2026-05-18 01:06:46,214 backend.pipeline.knowledge.world_model INFO Loaded world model v94
+2026-05-18 01:06:46,238 backend.pipeline.observability.manager INFO Observability initialized (processors: 3, otlp: False, metrics: True)
+2026-05-18 01:06:46,238 backend.pipeline.orchestrator.service_registry INFO Observability enabled
+2026-05-18 01:06:46,242 backend.pipeline.orchestrator._orchestrator INFO TreeSearchStage enabled (beam_width=2, max_depth=3)
+2026-05-18 01:06:46,248 backend.pipeline.tools.registry INFO Registered tool: literature_search (trust=trusted)
+2026-05-18 01:06:46,248 backend.pipeline.tools.registry INFO Registered tool: vector_search (trust=trusted)
+2026-05-18 01:06:46,248 backend.pipeline.tools.registry INFO Registered tool: memory_recall (trust=trusted)
+2026-05-18 01:06:46,248 backend.pipeline.tools.registry INFO Registered tool: knowledge_query (trust=trusted)
+2026-05-18 01:06:46,248 __main__ INFO SmartRouter: ENABLED (mode=dry_run)
+2026-05-18 01:06:46,248 __main__ INFO Domain: Tool Use is the Bottleneck in LLM Agent Architectures
+2026-05-18 01:06:46,248 __main__ INFO Starting pipeline run...
+2026-05-18 01:06:46,497 httpx INFO HTTP Request: GET http://100.64.0.1:1234/api/v1/models "HTTP/1.1 200 OK"
+2026-05-18 01:06:46,498 backend.pipeline.gateway.capability_registry INFO Discovered nanbeige-4.1-3b-deepseek-distilled: ctx=262144, loaded=False
+2026-05-18 01:06:46,498 backend.pipeline.gateway.capability_registry INFO Discovered deepseek/deepseek-r1-0528-qwen3-8b: ctx=131072, loaded=False
+2026-05-18 01:06:46,498 backend.pipeline.gateway.capability_registry INFO Probed qwen/qwen3-4b-2507: ctx=262144, loaded=False
+2026-05-18 01:06:46,498 backend.pipeline.gateway.capability_registry INFO Discovered nomic-embed-code: ctx=32768, loaded=False
+2026-05-18 01:06:46,498 backend.pipeline.gateway.capability_registry INFO Discovered sfr-embedding-mistral: ctx=32768, loaded=False
+2026-05-18 01:06:46,498 backend.pipeline.gateway.capability_registry INFO Discovered jina-reranker-v3@bf16: ctx=131072, loaded=False
+2026-05-18 01:06:46,498 backend.pipeline.gateway.capability_registry INFO Discovered jina-reranker-v3@q8_0: ctx=131072, loaded=False
+2026-05-18 01:06:46,498 backend.pipeline.gateway.capability_registry INFO Discovered nuextract-1.5-tiny: ctx=32768, loaded=False
+2026-05-18 01:06:46,498 backend.pipeline.gateway.capability_registry INFO Discovered qwen2.5-7b-instruct: ctx=131072, loaded=False
+2026-05-18 01:06:46,498 backend.pipeline.gateway.capability_registry INFO Probed qwen2.5-14b-instruct: ctx=131072, loaded=False
+2026-05-18 01:06:46,498 backend.pipeline.gateway.capability_registry INFO Discovered google/gemma-4-e4b: ctx=131072, loaded=False
+2026-05-18 01:06:46,498 backend.pipeline.gateway.capability_registry INFO Discovered qwen3-4b-qwen3.6-plus-reasoning-distilled: ctx=262144, loaded=False
+2026-05-18 01:06:46,498 backend.pipeline.gateway.capability_registry INFO Discovered qwen3.6-35b-a3b-apex: ctx=4096, loaded=False
+2026-05-18 01:06:46,498 backend.pipeline.gateway.capability_registry INFO Probed qwen/qwen3.6-27b: ctx=262144, loaded=False
+2026-05-18 01:06:46,498 backend.pipeline.gateway.capability_registry INFO Discovered qwen3.5-27b-claude-4.6-opus-reasoning-distilled-v2: ctx=262144, loaded=False
+2026-05-18 01:06:46,498 backend.pipeline.gateway.capability_registry INFO Discovered nvidia/nemotron-3-nano-4b: ctx=1048576, loaded=False
+2026-05-18 01:06:46,498 backend.pipeline.gateway.capability_registry INFO Discovered qwen3.5-27b-claude-4.6-opus-reasoning-distilled: ctx=262144, loaded=False
+2026-05-18 01:06:46,498 backend.pipeline.gateway.capability_registry INFO Discovered qwen/qwen3.5-9b: ctx=262144, loaded=False
+2026-05-18 01:06:46,498 backend.pipeline.gateway.capability_registry INFO Discovered qwen3.5-0.8b: ctx=262144, loaded=False
+2026-05-18 01:06:46,498 backend.pipeline.gateway.capability_registry INFO Discovered qwen3.5-27b: ctx=262144, loaded=False
+2026-05-18 01:06:46,498 backend.pipeline.gateway.capability_registry INFO Discovered qwen2.5-0.5b-instruct: ctx=32768, loaded=False
+2026-05-18 01:06:46,498 backend.pipeline.gateway.capability_registry INFO Discovered qwen/qwen3.5-35b-a3b: ctx=262144, loaded=False
+2026-05-18 01:06:46,498 backend.pipeline.gateway.capability_registry INFO Discovered qwen3-coder-next: ctx=262144, loaded=False
+2026-05-18 01:06:46,499 backend.pipeline.gateway.capability_registry INFO Discovered essentialai/rnj-1: ctx=32768, loaded=False
+2026-05-18 01:06:46,499 backend.pipeline.gateway.capability_registry INFO Discovered arliai_glm-4.5-air-derestricted: ctx=4096, loaded=False
+2026-05-18 01:06:46,499 backend.pipeline.gateway.capability_registry INFO Discovered prithivmlmods/nanbeige4.1-3b: ctx=262144, loaded=False
+2026-05-18 01:06:46,499 backend.pipeline.gateway.capability_registry INFO Discovered edge-quant/nanbeige4.1-3b@q8_0: ctx=196608, loaded=False
+2026-05-18 01:06:46,499 backend.pipeline.gateway.capability_registry INFO Discovered nanbeige4_1-3b: ctx=262144, loaded=False
+2026-05-18 01:06:46,499 backend.pipeline.gateway.capability_registry INFO Discovered nanbeige4.1-3b@q4_k_m: ctx=196608, loaded=False
+2026-05-18 01:06:46,499 backend.pipeline.gateway.capability_registry INFO Discovered vieneu-tts-0.3b: ctx=4096, loaded=False
+2026-05-18 01:06:46,499 backend.pipeline.gateway.capability_registry INFO Discovered zai-org/glm-4.6v-flash: ctx=131072, loaded=False
+2026-05-18 01:06:46,499 backend.pipeline.gateway.capability_registry INFO Discovered zai-org/glm-4.7-flash: ctx=202752, loaded=False
+2026-05-18 01:06:46,499 backend.pipeline.gateway.capability_registry INFO Discovered qwen/qwen3-vl-4b: ctx=262144, loaded=False
+2026-05-18 01:06:46,499 backend.pipeline.gateway.capability_registry INFO Discovered mistralai/magistral-small-2509: ctx=131072, loaded=False
+2026-05-18 01:06:46,499 backend.pipeline.gateway.capability_registry INFO Discovered qwen/qwen3-30b-a3b-2507: ctx=262144, loaded=False
+2026-05-18 01:06:46,499 backend.pipeline.gateway.capability_registry INFO Discovered openai/gpt-oss-20b: ctx=131072, loaded=False
+2026-05-18 01:06:46,499 backend.pipeline.gateway.capability_registry INFO Discovered qwen/qwen3-4b-thinking-2507: ctx=262144, loaded=False
+2026-05-18 01:06:46,499 backend.pipeline.gateway.capability_registry INFO Discovered qwen/qwen3-coder-30b: ctx=262144, loaded=False
+2026-05-18 01:06:46,499 backend.pipeline.gateway.capability_registry INFO Discovered devstral-small-2507: ctx=131072, loaded=False
+2026-05-18 01:06:46,499 backend.pipeline.gateway.capability_registry INFO Discovered deepseek-coder-v2-lite-instruct: ctx=163840, loaded=False
+2026-05-18 01:06:46,499 backend.pipeline.gateway.capability_registry INFO Discovered rombos-coder-v2.5-qwen-7b_cline: ctx=32768, loaded=False
+2026-05-18 01:06:46,499 backend.pipeline.gateway.capability_registry INFO Probed thudm_glm-4-32b-0414: ctx=32768, loaded=False
+2026-05-18 01:06:46,499 backend.pipeline.orchestrator._orchestrator INFO Gateway ready: model=glm-5.1, ctx=8192, loaded=True
+2026-05-18 01:06:46,503 backend.pipeline.integration_service INFO PipelineIntegrationService: SOUL.md loaded
+2026-05-18 01:06:46,582 httpx INFO HTTP Request: POST http://100.64.0.1:1234/v1/embeddings "HTTP/1.1 200 OK"
+2026-05-18 01:06:46,583 backend.pipeline.knowledge.embedding_service INFO Embedding provider validated: 1024-dim, non-zero vectors
+2026-05-18 01:06:46,781 backend.pipeline.persistence INFO Checkpoint saved: dry_run_20260518_010640
+2026-05-18 01:06:46,781 backend.pipeline.orchestrator._orchestrator INFO === Literature Search ===
+2026-05-18 01:06:46,781 backend.pipeline.tracing.processor INFO SPAN START [stage] literature_search trace=b128a679 parent=-
+2026-05-18 01:06:46,781 backend.pipeline.persistence INFO Checkpoint saved: dry_run_20260518_010640
+2026-05-18 01:06:49,295 backend.pipeline.knowledge.embedding_providers ERROR LM Studio embedding batch 0 failed: All connection attempts failed
+2026-05-18 01:06:49,295 backend.pipeline.knowledge.embedding_service ERROR DATA INTEGRITY: Embedding provider returned 1/1 zero vectors in batch 0. Provider may be offline or misconfigured.
+2026-05-18 01:06:50,046 httpx INFO HTTP Request: GET https://api.crossref.org/works?query=function+calling+limitations+large+language+models&rows=20&sort=relevance&select=DOI%2Ctitle%2Cauthor%2Cpublished-print%2Cpublished-online%2Cabstract%2Ccontainer-title%2Cis-referenced-by-count "HTTP/1.1 200 OK"
+2026-05-18 01:06:50,067 httpx INFO HTTP Request: GET https://api.crossref.org/works?query=agentic+AI+tool+selection+overhead&rows=20&sort=relevance&select=DOI%2Ctitle%2Cauthor%2Cpublished-print%2Cpublished-online%2Cabstract%2Ccontainer-title%2Cis-referenced-by-count "HTTP/1.1 200 OK"
+2026-05-18 01:06:50,068 httpx INFO HTTP Request: GET https://api.crossref.org/works?query=tool+use+bottleneck+LLM+agent+architectures&rows=20&sort=relevance&select=DOI%2Ctitle%2Cauthor%2Cpublished-print%2Cpublished-online%2Cabstract%2Ccontainer-title%2Cis-referenced-by-count "HTTP/1.1 200 OK"
+2026-05-18 01:06:50,325 httpx INFO HTTP Request: GET https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=pubmed&term=function+calling+limitations+large+language+models&retmax=20&retmode=json&sort=relevance "HTTP/1.1 200 OK"
+2026-05-18 01:06:50,362 httpx INFO HTTP Request: GET https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=pubmed&term=agentic+AI+tool+selection+overhead&retmax=20&retmode=json&sort=relevance "HTTP/1.1 200 OK"
+2026-05-18 01:06:50,406 httpx INFO HTTP Request: GET https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=pubmed&term=tool+use+bottleneck+LLM+agent+architectures&retmax=20&retmode=json&sort=relevance "HTTP/1.1 200 OK"
+2026-05-18 01:06:50,548 httpx INFO HTTP Request: GET https://api.openalex.org/works?search=function+calling+limitations+large+language+models&per_page=20 "HTTP/1.1 200 OK"
+2026-05-18 01:06:50,565 httpx INFO HTTP Request: GET https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=pubmed&id=40909853%2C30267475%2C41271973%2C41673205%2C41071597%2C29059201%2C40715350%2C34010585%2C29689057%2C40235846%2C41632955&retmode=xml "HTTP/1.1 429 Too Many Requests"
+2026-05-18 01:06:50,565 backend.pipeline.literature.pubmed_source WARNING PubMed search failed: Client error '429 Too Many Requests' for url 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=pubmed&id=40909853%2C30267475%2C41271973%2C41673205%2C41071597%2C29059201%2C40715350%2C34010585%2C29689057%2C40235846%2C41632955&retmode=xml'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429
+2026-05-18 01:06:50,618 httpx INFO HTTP Request: GET https://api.openalex.org/works?search=agentic+AI+tool+selection+overhead&per_page=20 "HTTP/1.1 200 OK"
+2026-05-18 01:06:50,707 httpx INFO HTTP Request: GET https://api.openalex.org/works?search=tool+use+bottleneck+LLM+agent+architectures&per_page=20 "HTTP/1.1 200 OK"
+2026-05-18 01:06:52,878 httpx INFO HTTP Request: GET https://export.arxiv.org/api/query?search_query=all%3A%22function+calling+limitations+large+language+models%22&start=0&max_results=20&sortBy=relevance&sortOrder=descending "HTTP/1.1 200 OK"
+2026-05-18 01:06:52,878 httpx INFO HTTP Request: GET https://export.arxiv.org/api/query?search_query=all%3A%22tool+use+bottleneck+LLM+agent+architectures%22&start=0&max_results=20&sortBy=relevance&sortOrder=descending "HTTP/1.1 200 OK"
+2026-05-18 01:06:52,878 httpx INFO HTTP Request: GET https://export.arxiv.org/api/query?search_query=all%3A%22agentic+AI+tool+selection+overhead%22&start=0&max_results=20&sortBy=relevance&sortOrder=descending "HTTP/1.1 200 OK"
+2026-05-18 01:06:52,894 backend.pipeline.stages INFO Found 40 papers for query: tool use bottleneck LLM agent architectures
+2026-05-18 01:06:52,894 backend.pipeline.stages INFO Found 40 papers for query: function calling limitations large language models
+2026-05-18 01:06:52,894 backend.pipeline.stages INFO Found 40 papers for query: agentic AI tool selection overhead
+2026-05-18 01:06:53,616 backend.pipeline.stages INFO Total unique papers: 107 (from 120 total)
+2026-05-18 01:06:53,617 backend.pipeline.tracing.processor INFO SPAN END [stage] literature_search duration=6835.8ms status=ok
+2026-05-18 01:06:53,619 backend.pipeline.orchestrator.stage_lifecycle ERROR CONTRACT VIOLATION: literature_search — Output papers_found has 0 items, minimum 1
+2026-05-18 01:06:53,621 backend.pipeline.orchestrator.stage_lifecycle INFO CCW: compressed 107 papers (4678 tokens)
+2026-05-18 01:07:14,895 backend.pipeline.knowledge.reranker INFO Remote reranker unavailable (All connection attempts failed), using fallback
+2026-05-18 01:07:23,082 backend.pipeline.knowledge.reranker INFO Loading jina-reranker-v3 on cpu...
+2026-05-18 01:07:23,764 httpx INFO HTTP Request: HEAD https://huggingface.co/jinaai/jina-reranker-v3/resolve/main/config.json "HTTP/1.1 307 Temporary Redirect"
+2026-05-18 01:07:23,789 httpx INFO HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/jinaai/jina-reranker-v3/10fb694fc21f7a710a563ff1eb977a460f3868e4/config.json "HTTP/1.1 200 OK"
+2026-05-18 01:07:24,059 httpx INFO HTTP Request: HEAD https://huggingface.co/jinaai/jina-reranker-v3/resolve/main/tokenizer_config.json "HTTP/1.1 307 Temporary Redirect"
+2026-05-18 01:07:24,060 huggingface_hub.utils._http WARNING Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+2026-05-18 01:07:24,083 httpx INFO HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/jinaai/jina-reranker-v3/10fb694fc21f7a710a563ff1eb977a460f3868e4/tokenizer_config.json "HTTP/1.1 200 OK"
+2026-05-18 01:07:24,355 httpx INFO HTTP Request: GET https://huggingface.co/api/models/jinaai/jina-reranker-v3/tree/main/additional_chat_templates?recursive=false&expand=false "HTTP/1.1 404 Not Found"
+2026-05-18 01:07:24,609 httpx INFO HTTP Request: GET https://huggingface.co/api/models/jinaai/jina-reranker-v3/tree/main?recursive=true&expand=false "HTTP/1.1 200 OK"
+2026-05-18 01:07:25,332 httpx INFO HTTP Request: GET https://huggingface.co/api/models/jinaai/jina-reranker-v3 "HTTP/1.1 200 OK"
+2026-05-18 01:07:25,596 httpx INFO HTTP Request: HEAD https://huggingface.co/jinaai/jina-reranker-v3/resolve/main/config.json "HTTP/1.1 307 Temporary Redirect"
+2026-05-18 01:07:25,621 httpx INFO HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/jinaai/jina-reranker-v3/10fb694fc21f7a710a563ff1eb977a460f3868e4/config.json "HTTP/1.1 200 OK"
+2026-05-18 01:07:27,519 httpx INFO HTTP Request: HEAD https://huggingface.co/jinaai/jina-reranker-v3/resolve/main/modeling.py "HTTP/1.1 307 Temporary Redirect"
+2026-05-18 01:07:27,531 httpx INFO HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/jinaai/jina-reranker-v3/10fb694fc21f7a710a563ff1eb977a460f3868e4/modeling.py "HTTP/1.1 200 OK"
+2026-05-18 01:07:30,706 httpx INFO HTTP Request: HEAD https://huggingface.co/jinaai/jina-reranker-v3/resolve/main/generation_config.json "HTTP/1.1 307 Temporary Redirect"
+2026-05-18 01:07:30,745 httpx INFO HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/jinaai/jina-reranker-v3/10fb694fc21f7a710a563ff1eb977a460f3868e4/generation_config.json "HTTP/1.1 200 OK"
+2026-05-18 01:07:31,004 httpx INFO HTTP Request: HEAD https://huggingface.co/jinaai/jina-reranker-v3/resolve/main/custom_generate/generate.py "HTTP/1.1 404 Not Found"
+2026-05-18 01:07:31,004 backend.pipeline.knowledge.reranker INFO jina-reranker-v3 loaded on cpu
+2026-05-18 01:07:31,260 httpx INFO HTTP Request: HEAD https://huggingface.co/jinaai/jina-reranker-v3/resolve/main/config.json "HTTP/1.1 307 Temporary Redirect"
+2026-05-18 01:07:31,284 httpx INFO HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/jinaai/jina-reranker-v3/10fb694fc21f7a710a563ff1eb977a460f3868e4/config.json "HTTP/1.1 200 OK"
+2026-05-18 01:07:31,535 httpx INFO HTTP Request: HEAD https://huggingface.co/jinaai/jina-reranker-v3/resolve/main/tokenizer_config.json "HTTP/1.1 307 Temporary Redirect"
+2026-05-18 01:07:31,550 httpx INFO HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/jinaai/jina-reranker-v3/10fb694fc21f7a710a563ff1eb977a460f3868e4/tokenizer_config.json "HTTP/1.1 200 OK"
+2026-05-18 01:07:31,809 httpx INFO HTTP Request: GET https://huggingface.co/api/models/jinaai/jina-reranker-v3/tree/main/additional_chat_templates?recursive=false&expand=false "HTTP/1.1 404 Not Found"
+2026-05-18 01:07:32,064 httpx INFO HTTP Request: GET https://huggingface.co/api/models/jinaai/jina-reranker-v3/tree/main?recursive=true&expand=false "HTTP/1.1 200 OK"
+2026-05-18 01:07:32,796 httpx INFO HTTP Request: GET https://huggingface.co/api/models/jinaai/jina-reranker-v3 "HTTP/1.1 200 OK"
+2026-05-18 01:10:29,177 backend.pipeline.orchestrator.stage_lifecycle INFO Reranked 20 papers, top score=0.119
+2026-05-18 01:10:29,364 backend.pipeline.persistence INFO Checkpoint saved: dry_run_20260518_010640
+2026-05-18 01:10:29,364 backend.pipeline.orchestrator._orchestrator INFO === Ingestion ===
+2026-05-18 01:10:29,370 backend.pipeline.tracing.processor INFO SPAN START [retrieval] retrieve:dry_run_20260518_010640 trace=266532ad parent=-
+2026-05-18 01:10:29,633 httpx INFO HTTP Request: POST http://100.64.0.1:1234/v1/embeddings "HTTP/1.1 200 OK"
+2026-05-18 01:10:29,633 backend.pipeline.knowledge.retriever WARNING Semantic query failed for variant 'dry_run_20260518_010640': Expected where to have exactly one operator, got {'memory_type': 'episodic', 'namespace': 'cross_stage:literature_search'} in query.
+2026-05-18 01:10:29,633 backend.pipeline.tracing.processor INFO SPAN END [retrieval] retrieve:dry_run_20260518_010640 duration=262.7ms status=ok
+2026-05-18 01:10:29,633 backend.pipeline.tracing.processor INFO SPAN START [stage] ingestion trace=a4226e29 parent=-
+2026-05-18 01:10:29,634 backend.pipeline.persistence INFO Checkpoint saved: dry_run_20260518_010640
+2026-05-18 01:10:29,634 backend.pipeline.stages INFO Ingestion: 107 unique papers (from 107 total)
+2026-05-18 01:10:31,531 httpx INFO HTTP Request: POST http://100.64.0.1:1234/v1/embeddings "HTTP/1.1 200 OK"
+2026-05-18 01:10:32,049 httpx INFO HTTP Request: POST http://100.64.0.1:1234/v1/embeddings "HTTP/1.1 200 OK"
+2026-05-18 01:10:33,671 httpx INFO HTTP Request: POST http://100.64.0.1:1234/v1/embeddings "HTTP/1.1 200 OK"
+2026-05-18 01:10:33,786 httpx INFO HTTP Request: POST http://100.64.0.1:1234/v1/embeddings "HTTP/1.1 200 OK"
+2026-05-18 01:10:33,918 httpx INFO HTTP Request: POST http://100.64.0.1:1234/v1/embeddings "HTTP/1.1 200 OK"
+2026-05-18 01:10:34,166 backend.pipeline.knowledge.vector_store INFO Vector store: upserted 107 chunks (deduped from 107)
+2026-05-18 01:10:34,166 backend.pipeline.stages INFO Added 107 chunks to knowledge base
+2026-05-18 01:10:34,352 backend.pipeline.stages INFO Synced 107 documents to BM25 index
+2026-05-18 01:10:34,422 backend.pipeline.stages INFO Added 107 paper entities to Knowledge Graph
+2026-05-18 01:10:34,435 backend.pipeline.gateway.gateway INFO [DRY-RUN] stage=ingestion routed=qwen3-4b-2507/single_call actual=glm-5.1 confidence=0.68
+2026-05-18 01:10:42,820 httpx INFO HTTP Request: POST https://api.z.ai/api/anthropic/v1/messages "HTTP/1.1 401 Unauthorized"
+2026-05-18 01:10:42,821 backend.pipeline.gateway.gateway ERROR Gateway call failed for task 'ingestion': Error code: 401 - {'error': {'message': 'token expired or incorrect', 'type': '401'}}
+2026-05-18 01:10:42,821 backend.pipeline.utils.json_extraction WARNING Empty LLM response — returning empty dict
+2026-05-18 01:10:42,827 backend.pipeline.gateway.gateway INFO [DRY-RUN] stage=ingestion routed=qwen3-4b-2507/single_call actual=glm-5.1 confidence=0.68
+2026-05-18 01:10:43,517 httpx INFO HTTP Request: POST https://api.z.ai/api/anthropic/v1/messages "HTTP/1.1 401 Unauthorized"
+2026-05-18 01:10:43,517 backend.pipeline.gateway.gateway ERROR Gateway call failed for task 'ingestion': Error code: 401 - {'error': {'message': 'token expired or incorrect', 'type': '401'}}
+2026-05-18 01:10:43,517 backend.pipeline.utils.json_extraction WARNING Empty LLM response — returning empty dict
+2026-05-18 01:10:43,523 backend.pipeline.gateway.gateway INFO [DRY-RUN] stage=ingestion routed=qwen3-4b-2507/single_call actual=glm-5.1 confidence=0.68
+2026-05-18 01:10:44,641 httpx INFO HTTP Request: POST https://api.z.ai/api/anthropic/v1/messages "HTTP/1.1 401 Unauthorized"
+2026-05-18 01:10:44,641 backend.pipeline.gateway.gateway ERROR Gateway call failed for task 'ingestion': Error code: 401 - {'error': {'message': 'token expired or incorrect', 'type': '401'}}
+2026-05-18 01:10:44,641 backend.pipeline.utils.json_extraction WARNING Empty LLM response — returning empty dict
+2026-05-18 01:10:44,641 backend.pipeline.gateway.gateway INFO [DRY-RUN] stage=ingestion routed=qwen3-4b-2507/single_call actual=glm-5.1 confidence=0.68
+2026-05-18 01:10:45,760 httpx INFO HTTP Request: POST https://api.z.ai/api/anthropic/v1/messages "HTTP/1.1 401 Unauthorized"
+2026-05-18 01:10:45,767 backend.pipeline.gateway.gateway ERROR Gateway call failed for task 'ingestion': Error code: 401 - {'error': {'message': 'token expired or incorrect', 'type': '401'}}
+2026-05-18 01:10:45,767 backend.pipeline.utils.json_extraction WARNING Empty LLM response — returning empty dict
+2026-05-18 01:10:45,773 backend.pipeline.gateway.gateway INFO [DRY-RUN] stage=ingestion routed=qwen3-4b-2507/single_call actual=glm-5.1 confidence=0.68
+2026-05-18 01:10:47,309 httpx INFO HTTP Request: POST https://api.z.ai/api/anthropic/v1/messages "HTTP/1.1 401 Unauthorized"
+2026-05-18 01:10:47,309 backend.pipeline.gateway.gateway ERROR Gateway call failed for task 'ingestion': Error code: 401 - {'error': {'message': 'token expired or incorrect', 'type': '401'}}
+2026-05-18 01:10:47,309 backend.pipeline.utils.json_extraction WARNING Empty LLM response — returning empty dict
+2026-05-18 01:10:47,309 backend.pipeline.gateway.gateway INFO [DRY-RUN] stage=ingestion routed=qwen3-4b-2507/single_call actual=glm-5.1 confidence=0.68
+2026-05-18 01:10:48,358 httpx INFO HTTP Request: POST https://api.z.ai/api/anthropic/v1/messages "HTTP/1.1 401 Unauthorized"
+2026-05-18 01:10:48,359 backend.pipeline.gateway.gateway ERROR Gateway call failed for task 'ingestion': Error code: 401 - {'error': {'message': 'token expired or incorrect', 'type': '401'}}
+2026-05-18 01:10:48,359 backend.pipeline.utils.json_extraction WARNING Empty LLM response — returning empty dict
+2026-05-18 01:10:48,365 backend.pipeline.gateway.gateway INFO [DRY-RUN] stage=ingestion routed=qwen3-4b-2507/single_call actual=glm-5.1 confidence=0.68
+2026-05-18 01:10:49,467 httpx INFO HTTP Request: POST https://api.z.ai/api/anthropic/v1/messages "HTTP/1.1 401 Unauthorized"
+2026-05-18 01:10:49,468 backend.pipeline.gateway.gateway ERROR Gateway call failed for task 'ingestion': Error code: 401 - {'error': {'message': 'token expired or incorrect', 'type': '401'}}
+2026-05-18 01:10:49,468 backend.pipeline.utils.json_extraction WARNING Empty LLM response — returning empty dict
+2026-05-18 01:10:49,474 backend.pipeline.gateway.gateway INFO [DRY-RUN] stage=ingestion routed=qwen3-4b-2507/single_call actual=glm-5.1 confidence=0.68
+2026-05-18 01:10:50,449 httpx INFO HTTP Request: POST https://api.z.ai/api/anthropic/v1/messages "HTTP/1.1 401 Unauthorized"
+2026-05-18 01:10:50,449 backend.pipeline.gateway.gateway ERROR Gateway call failed for task 'ingestion': Error code: 401 - {'error': {'message': 'token expired or incorrect', 'type': '401'}}
+2026-05-18 01:10:50,449 backend.pipeline.utils.json_extraction WARNING Empty LLM response — returning empty dict
+2026-05-18 01:10:50,455 backend.pipeline.gateway.gateway INFO [DRY-RUN] stage=ingestion routed=qwen3-4b-2507/single_call actual=glm-5.1 confidence=0.68
+2026-05-18 01:10:52,140 httpx INFO HTTP Request: POST https://api.z.ai/api/anthropic/v1/messages "HTTP/1.1 401 Unauthorized"
+2026-05-18 01:10:52,140 backend.pipeline.gateway.gateway ERROR Gateway call failed for task 'ingestion': Error code: 401 - {'error': {'message': 'token expired or incorrect', 'type': '401'}}
+2026-05-18 01:10:52,140 backend.pipeline.utils.json_extraction WARNING Empty LLM response — returning empty dict
+2026-05-18 01:10:52,142 backend.pipeline.gateway.gateway INFO [DRY-RUN] stage=ingestion routed=qwen3-4b-2507/single_call actual=glm-5.1 confidence=0.68
+2026-05-18 01:10:53,189 httpx INFO HTTP Request: POST https://api.z.ai/api/anthropic/v1/messages "HTTP/1.1 401 Unauthorized"
+2026-05-18 01:10:53,189 backend.pipeline.gateway.gateway ERROR Gateway call failed for task 'ingestion': Error code: 401 - {'error': {'message': 'token expired or incorrect', 'type': '401'}}
+2026-05-18 01:10:53,189 backend.pipeline.utils.json_extraction WARNING Empty LLM response — returning empty dict
+2026-05-18 01:10:53,205 backend.pipeline.gateway.gateway INFO [DRY-RUN] stage=ingestion routed=qwen3-4b-2507/single_call actual=glm-5.1 confidence=0.68
+2026-05-18 01:10:54,985 httpx INFO HTTP Request: POST https://api.z.ai/api/anthropic/v1/messages "HTTP/1.1 401 Unauthorized"
+2026-05-18 01:10:54,985 backend.pipeline.gateway.gateway ERROR Gateway call failed for task 'ingestion': Error code: 401 - {'error': {'message': 'token expired or incorrect', 'type': '401'}}
+2026-05-18 01:10:54,985 backend.pipeline.utils.json_extraction WARNING Empty LLM response — returning empty dict
+2026-05-18 01:10:55,004 backend.pipeline.gateway.gateway INFO [DRY-RUN] stage=ingestion routed=qwen3-4b-2507/single_call actual=glm-5.1 confidence=0.68
+2026-05-18 01:10:55,823 httpx INFO HTTP Request: POST https://api.z.ai/api/anthropic/v1/messages "HTTP/1.1 401 Unauthorized"
+2026-05-18 01:10:55,824 backend.pipeline.gateway.gateway ERROR Gateway call failed for task 'ingestion': Error code: 401 - {'error': {'message': 'token expired or incorrect', 'type': '401'}}
+2026-05-18 01:10:55,824 backend.pipeline.utils.json_extraction WARNING Empty LLM response — returning empty dict
+2026-05-18 01:10:55,829 backend.pipeline.gateway.gateway INFO [DRY-RUN] stage=ingestion routed=qwen3-4b-2507/single_call actual=glm-5.1 confidence=0.68
+2026-05-18 01:10:56,652 httpx INFO HTTP Request: POST https://api.z.ai/api/anthropic/v1/messages "HTTP/1.1 401 Unauthorized"
+2026-05-18 01:10:56,653 backend.pipeline.gateway.gateway ERROR Gateway call failed for task 'ingestion': Error code: 401 - {'error': {'message': 'token expired or incorrect', 'type': '401'}}
+2026-05-18 01:10:56,653 backend.pipeline.utils.json_extraction WARNING Empty LLM response — returning empty dict
+2026-05-18 01:10:56,659 backend.pipeline.gateway.gateway INFO [DRY-RUN] stage=ingestion routed=qwen3-4b-2507/single_call actual=glm-5.1 confidence=0.68
+2026-05-18 01:10:58,192 httpx INFO HTTP Request: POST https://api.z.ai/api/anthropic/v1/messages "HTTP/1.1 401 Unauthorized"
+2026-05-18 01:10:58,192 backend.pipeline.gateway.gateway ERROR Gateway call failed for task 'ingestion': Error code: 401 - {'error': {'message': 'token expired or incorrect', 'type': '401'}}
+2026-05-18 01:10:58,193 backend.pipeline.utils.json_extraction WARNING Empty LLM response — returning empty dict
+2026-05-18 01:10:58,196 backend.pipeline.gateway.gateway INFO [DRY-RUN] stage=ingestion routed=qwen3-4b-2507/single_call actual=glm-5.1 confidence=0.68
+2026-05-18 01:10:59,643 backend.pipeline.persistence INFO Checkpoint saved: dry_run_20260518_010640
+2026-05-18 01:10:59,983 httpx INFO HTTP Request: POST https://api.z.ai/api/anthropic/v1/messages "HTTP/1.1 401 Unauthorized"
+2026-05-18 01:10:59,983 backend.pipeline.gateway.gateway ERROR Gateway call failed for task 'ingestion': Error code: 401 - {'error': {'message': 'token expired or incorrect', 'type': '401'}}
+2026-05-18 01:10:59,983 backend.pipeline.utils.json_extraction WARNING Empty LLM response — returning empty dict
+2026-05-18 01:10:59,985 backend.pipeline.gateway.gateway INFO [DRY-RUN] stage=ingestion routed=qwen3-4b-2507/single_call actual=glm-5.1 confidence=0.68
+2026-05-18 01:10:59,985 backend.pipeline.gateway.gateway ERROR Gateway call failed for task 'ingestion': Circuit breaker is open — fast-fail
+2026-05-18 01:10:59,985 backend.pipeline.utils.json_extraction WARNING Empty LLM response — returning empty dict
+2026-05-18 01:10:59,985 backend.pipeline.gateway.gateway INFO [DRY-RUN] stage=ingestion routed=qwen3-4b-2507/single_call actual=glm-5.1 confidence=0.68
+2026-05-18 01:10:59,985 backend.pipeline.gateway.gateway ERROR Gateway call failed for task 'ingestion': Circuit breaker is open — fast-fail
+2026-05-18 01:10:59,985 backend.pipeline.utils.json_extraction WARNING Empty LLM response — returning empty dict
+2026-05-18 01:11:00,008 backend.pipeline.gateway.gateway INFO [DRY-RUN] stage=ingestion routed=qwen3-4b-2507/single_call actual=glm-5.1 confidence=0.68
+2026-05-18 01:11:00,008 backend.pipeline.gateway.gateway ERROR Gateway call failed for task 'ingestion': Circuit breaker is open — fast-fail
+2026-05-18 01:11:00,008 backend.pipeline.utils.json_extraction WARNING Empty LLM response — returning empty dict
+2026-05-18 01:11:00,014 backend.pipeline.gateway.gateway INFO [DRY-RUN] stage=ingestion routed=qwen3-4b-2507/single_call actual=glm-5.1 confidence=0.68
+2026-05-18 01:11:00,014 backend.pipeline.gateway.gateway ERROR Gateway call failed for task 'ingestion': Circuit breaker is open — fast-fail
+2026-05-18 01:11:00,014 backend.pipeline.utils.json_extraction WARNING Empty LLM response — returning empty dict
+2026-05-18 01:11:00,021 backend.pipeline.gateway.gateway INFO [DRY-RUN] stage=ingestion routed=qwen3-4b-2507/single_call actual=glm-5.1 confidence=0.68
+2026-05-18 01:11:00,022 backend.pipeline.gateway.gateway ERROR Gateway call failed for task 'ingestion': Circuit breaker is open — fast-fail
+2026-05-18 01:11:00,022 backend.pipeline.utils.json_extraction WARNING Empty LLM response — returning empty dict
+2026-05-18 01:11:00,028 backend.pipeline.gateway.gateway INFO [DRY-RUN] stage=ingestion routed=qwen3-4b-2507/single_call actual=glm-5.1 confidence=0.68
+2026-05-18 01:11:00,028 backend.pipeline.gateway.gateway ERROR Gateway call failed for task 'ingestion': Circuit breaker is open — fast-fail
+2026-05-18 01:11:00,028 backend.pipeline.utils.json_extraction WARNING Empty LLM response — returning empty dict
+2026-05-18 01:11:00,037 backend.pipeline.gateway.gateway INFO [DRY-RUN] stage=ingestion routed=qwen3-4b-2507/single_call actual=glm-5.1 confidence=0.68
+2026-05-18 01:11:00,037 backend.pipeline.gateway.gateway ERROR Gateway call failed for task 'ingestion': Circuit breaker is open — fast-fail
+2026-05-18 01:11:00,037 backend.pipeline.utils.json_extraction WARNING Empty LLM response — returning empty dict
+2026-05-18 01:11:00,042 backend.pipeline.gateway.gateway INFO [DRY-RUN] stage=ingestion routed=qwen3-4b-2507/single_call actual=glm-5.1 confidence=0.68
+2026-05-18 01:11:00,042 backend.pipeline.gateway.gateway ERROR Gateway call failed for task 'ingestion': Circuit breaker is open — fast-fail
+2026-05-18 01:11:00,042 backend.pipeline.utils.json_extraction WARNING Empty LLM response — returning empty dict
+2026-05-18 01:11:00,049 backend.pipeline.gateway.gateway INFO [DRY-RUN] stage=ingestion routed=qwen3-4b-2507/single_call actual=glm-5.1 confidence=0.68
+2026-05-18 01:11:00,049 backend.pipeline.gateway.gateway ERROR Gateway call failed for task 'ingestion': Circuit breaker is open — fast-fail
+2026-05-18 01:11:00,049 backend.pipeline.utils.json_extraction WARNING Empty LLM response — returning empty dict
+2026-05-18 01:11:00,049 backend.pipeline.knowledge.relationship_extractor INFO Extracted 0 relationships from 10 papers
+2026-05-18 01:11:00,049 backend.pipeline.tracing.processor INFO SPAN END [stage] ingestion duration=30415.9ms status=ok
+2026-05-18 01:11:00,052 backend.pipeline.orchestrator.stage_lifecycle INFO CCW: compressed 107 papers (4678 tokens)
+2026-05-18 01:11:00,053 backend.pipeline.persistence INFO Checkpoint saved: dry_run_20260518_010640
+2026-05-18 01:11:00,053 backend.pipeline.orchestrator._orchestrator INFO === Trimmer ===
+2026-05-18 01:11:00,059 backend.pipeline.tracing.processor INFO SPAN START [stage] trimmer trace=d8c5962e parent=-
+2026-05-18 01:11:00,060 backend.pipeline.persistence INFO Checkpoint saved: dry_run_20260518_010640
+2026-05-18 01:11:00,061 backend.pipeline.dag.trimmer INFO Trimmer: kept top 20/107 papers
+2026-05-18 01:11:00,061 backend.pipeline.dag.trimmer INFO Trimmer: 107 -> 20 papers, 17 abstracts truncated, avg abstract 720 chars
+2026-05-18 01:11:00,061 backend.pipeline.tracing.processor INFO SPAN END [stage] trimmer duration=2.0ms status=ok
+2026-05-18 01:11:00,062 backend.pipeline.persistence INFO Checkpoint saved: dry_run_20260518_010640
+2026-05-18 01:11:00,062 backend.pipeline.orchestrator._orchestrator INFO === Gap Analysis ===
+2026-05-18 01:11:00,068 backend.pipeline.tracing.processor INFO SPAN START [retrieval] retrieve:dry_run_20260518_010640 trace=df343f5e parent=-
+2026-05-18 01:11:00,071 backend.pipeline.knowledge.retriever WARNING Semantic query failed for variant 'dry_run_20260518_010640': Expected where to have exactly one operator, got {'memory_type': 'episodic', 'namespace': 'cross_stage:literature_search'} in query.
+2026-05-18 01:11:00,071 backend.pipeline.tracing.processor INFO SPAN END [retrieval] retrieve:dry_run_20260518_010640 duration=3.0ms status=ok
+2026-05-18 01:11:00,071 backend.pipeline.tracing.processor INFO SPAN START [retrieval] retrieve:dry_run_20260518_010640 trace=a72747b8 parent=-
+2026-05-18 01:11:00,073 backend.pipeline.knowledge.retriever WARNING Semantic query failed for variant 'dry_run_20260518_010640': Expected where to have exactly one operator, got {'memory_type': 'episodic', 'namespace': 'cross_stage:ingestion'} in query.
+2026-05-18 01:11:00,074 backend.pipeline.tracing.processor INFO SPAN END [retrieval] retrieve:dry_run_20260518_010640 duration=3.0ms status=ok
+2026-05-18 01:11:00,074 backend.pipeline.tracing.processor INFO SPAN START [stage] gap_analysis trace=75017a05 parent=-
+2026-05-18 01:11:00,077 backend.pipeline.persistence INFO Checkpoint saved: dry_run_20260518_010640
+2026-05-18 01:11:02,080 backend.pipeline.tracing.processor INFO SPAN START [retrieval] retrieve:AI/NLP research gaps trace=75017a05 parent=208b8781
+2026-05-18 01:11:02,187 httpx INFO HTTP Request: POST http://100.64.0.1:1234/v1/embeddings "HTTP/1.1 200 OK"
+2026-05-18 01:11:02,188 backend.pipeline.knowledge.retriever WARNING Semantic query failed for variant 'AI/NLP research gaps': Expected where to have exactly one operator, got {'memory_type': 'semantic', 'namespace': 'research_facts'} in query.
+2026-05-18 01:11:02,188 backend.pipeline.tracing.processor INFO SPAN END [retrieval] retrieve:AI/NLP research gaps duration=108.0ms status=ok
+2026-05-18 01:11:30,081 backend.pipeline.persistence INFO Checkpoint saved: dry_run_20260518_010640
+2026-05-18 01:11:30,338 httpx INFO HTTP Request: POST http://100.64.0.1:1234/v1/messages "HTTP/1.1 200 OK"
+2026-05-18 01:11:30,350 backend.pipeline.stages INFO Identified 5 research gaps
+2026-05-18 01:11:30,761 backend.pipeline.stages INFO Added 5 gap entities to Knowledge Graph
+2026-05-18 01:11:30,835 backend.pipeline.stages INFO Created 5 research goals from gaps
+2026-05-18 01:11:30,835 backend.pipeline.tracing.processor INFO SPAN END [stage] gap_analysis duration=30760.6ms status=ok
+2026-05-18 01:11:30,835 backend.pipeline.orchestrator.stage_lifecycle INFO CCW: compressed 5 gaps
+2026-05-18 01:11:30,857 backend.pipeline.persistence INFO Revised truth for duplicate gap: Lack of Empirical Evaluation of LLMs in Human Cogn (hash=ce31639a3f33)
+2026-05-18 01:11:30,876 backend.pipeline.persistence INFO Checkpoint saved: dry_run_20260518_010640
+2026-05-18 01:11:30,876 backend.pipeline.orchestrator._orchestrator INFO === Gap Reflection ===
+2026-05-18 01:11:30,876 backend.pipeline.tracing.processor INFO SPAN START [stage] gap_reflection trace=3a94f8d6 parent=-
+2026-05-18 01:11:30,876 backend.pipeline.persistence INFO Checkpoint saved: dry_run_20260518_010640
+2026-05-18 01:11:30,876 backend.pipeline.reflection.reflector WARNING LLM error during reflection: ResilientProvider.complete() got an unexpected keyword argument 'system_prompt' — auto-passing
+2026-05-18 01:11:30,876 backend.pipeline.reflection.reflector INFO Reflection iteration 1: score=1.00 (threshold=0.60) passed=True
+2026-05-18 01:11:30,876 backend.pipeline.stages INFO Gap reflection: score=1.00 passed=True (iteration 1)
+2026-05-18 01:11:30,876 backend.pipeline.tracing.processor INFO SPAN END [stage] gap_reflection duration=0.0ms status=ok
+2026-05-18 01:11:30,876 backend.pipeline.persistence INFO Checkpoint saved: dry_run_20260518_010640
+2026-05-18 01:11:30,876 backend.pipeline.orchestrator._orchestrator INFO === Idea Generation ===
+2026-05-18 01:11:30,876 backend.pipeline.tracing.processor INFO SPAN START [retrieval] retrieve:dry_run_20260518_010640 trace=b63c8f4d parent=-
+2026-05-18 01:11:30,876 backend.pipeline.knowledge.retriever WARNING Semantic query failed for variant 'dry_run_20260518_010640': Expected where to have exactly one operator, got {'memory_type': 'episodic', 'namespace': 'cross_stage:literature_search'} in query.
+2026-05-18 01:11:30,876 backend.pipeline.tracing.processor INFO SPAN END [retrieval] retrieve:dry_run_20260518_010640 duration=0.0ms status=ok
+2026-05-18 01:11:30,892 backend.pipeline.tracing.processor INFO SPAN START [retrieval] retrieve:dry_run_20260518_010640 trace=9798a374 parent=-
+2026-05-18 01:11:30,892 backend.pipeline.knowledge.retriever WARNING Semantic query failed for variant 'dry_run_20260518_010640': Expected where to have exactly one operator, got {'memory_type': 'episodic', 'namespace': 'cross_stage:ingestion'} in query.
+2026-05-18 01:11:30,892 backend.pipeline.tracing.processor INFO SPAN END [retrieval] retrieve:dry_run_20260518_010640 duration=0.0ms status=ok
+2026-05-18 01:11:30,892 backend.pipeline.tracing.processor INFO SPAN START [retrieval] retrieve:dry_run_20260518_010640 trace=4b9b4cf1 parent=-
+2026-05-18 01:11:30,892 backend.pipeline.knowledge.retriever WARNING Semantic query failed for variant 'dry_run_20260518_010640': Expected where to have exactly one operator, got {'memory_type': 'episodic', 'namespace': 'cross_stage:gap_analysis'} in query.
+2026-05-18 01:11:30,892 backend.pipeline.tracing.processor INFO SPAN END [retrieval] retrieve:dry_run_20260518_010640 duration=0.0ms status=ok
+2026-05-18 01:11:30,892 backend.pipeline.tracing.processor INFO SPAN START [stage] idea_generation trace=77800d3c parent=-
+2026-05-18 01:11:30,892 backend.pipeline.persistence INFO Checkpoint saved: dry_run_20260518_010640
+2026-05-18 01:11:30,892 backend.pipeline.stages INFO TreeSearchStage: beam search (depth=3, beam_width=2)
+2026-05-18 01:11:30,892 backend.pipeline.tracing.processor INFO SPAN START [retrieval] retrieve:Lack of Empirical Evaluation of LLMs in Human Cogn trace=77800d3c parent=5ce34a31
+2026-05-18 01:11:34,335 httpx INFO HTTP Request: POST http://100.64.0.1:1234/v1/embeddings "HTTP/1.1 200 OK"
+2026-05-18 01:11:36,933 sentence_transformers.base.model INFO No device provided, using cpu
+2026-05-18 01:11:37,474 httpx INFO HTTP Request: HEAD https://huggingface.co/cross-encoder/ms-marco-MiniLM-L-6-v2/resolve/main/modules.json "HTTP/1.1 307 Temporary Redirect"
+2026-05-18 01:11:37,715 httpx INFO HTTP Request: HEAD https://huggingface.co/cross-encoder/ms-marco-MiniLM-L6-v2/resolve/main/modules.json "HTTP/1.1 404 Not Found"
+2026-05-18 01:11:37,734 sentence_transformers.base.model INFO No modules.json found for cross-encoder/ms-marco-MiniLM-L-6-v2, initializing a new CrossEncoder model.
+2026-05-18 01:11:37,983 httpx INFO HTTP Request: GET https://huggingface.co/api/models/cross-encoder/ms-marco-MiniLM-L-6-v2 "HTTP/1.1 307 Temporary Redirect"
+2026-05-18 01:11:38,243 httpx INFO HTTP Request: GET https://huggingface.co/api/models/cross-encoder/ms-marco-MiniLM-L6-v2 "HTTP/1.1 200 OK"
+2026-05-18 01:11:38,505 httpx INFO HTTP Request: HEAD https://huggingface.co/cross-encoder/ms-marco-MiniLM-L-6-v2/resolve/main/config.json "HTTP/1.1 307 Temporary Redirect"
+2026-05-18 01:11:38,748 httpx INFO HTTP Request: HEAD https://huggingface.co/cross-encoder/ms-marco-MiniLM-L6-v2/resolve/main/config.json "HTTP/1.1 307 Temporary Redirect"
+2026-05-18 01:11:38,776 httpx INFO HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/cross-encoder/ms-marco-MiniLM-L6-v2/c5ee24cb16019beea0893ab7796b1df96625c6b8/config.json "HTTP/1.1 200 OK"
+2026-05-18 01:11:39,041 httpx INFO HTTP Request: HEAD https://huggingface.co/cross-encoder/ms-marco-MiniLM-L-6-v2/resolve/main/adapter_config.json "HTTP/1.1 307 Temporary Redirect"
+2026-05-18 01:11:39,291 httpx INFO HTTP Request: HEAD https://huggingface.co/cross-encoder/ms-marco-MiniLM-L6-v2/resolve/main/adapter_config.json "HTTP/1.1 404 Not Found"
+2026-05-18 01:11:39,550 httpx INFO HTTP Request: HEAD https://huggingface.co/cross-encoder/ms-marco-MiniLM-L-6-v2/resolve/main/config.json "HTTP/1.1 307 Temporary Redirect"
+2026-05-18 01:11:39,807 httpx INFO HTTP Request: HEAD https://huggingface.co/cross-encoder/ms-marco-MiniLM-L6-v2/resolve/main/config.json "HTTP/1.1 307 Temporary Redirect"
+2026-05-18 01:11:39,832 httpx INFO HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/cross-encoder/ms-marco-MiniLM-L6-v2/c5ee24cb16019beea0893ab7796b1df96625c6b8/config.json "HTTP/1.1 200 OK"
+2026-05-18 01:11:40,141 httpx INFO HTTP Request: HEAD https://huggingface.co/cross-encoder/ms-marco-MiniLM-L-6-v2/resolve/main/processor_config.json "HTTP/1.1 307 Temporary Redirect"
+2026-05-18 01:11:40,518 httpx INFO HTTP Request: HEAD https://huggingface.co/cross-encoder/ms-marco-MiniLM-L6-v2/resolve/main/processor_config.json "HTTP/1.1 404 Not Found"
+2026-05-18 01:11:40,774 httpx INFO HTTP Request: HEAD https://huggingface.co/cross-encoder/ms-marco-MiniLM-L-6-v2/resolve/main/preprocessor_config.json "HTTP/1.1 307 Temporary Redirect"
+2026-05-18 01:11:41,026 httpx INFO HTTP Request: HEAD https://huggingface.co/cross-encoder/ms-marco-MiniLM-L6-v2/resolve/main/preprocessor_config.json "HTTP/1.1 404 Not Found"
+2026-05-18 01:11:41,289 httpx INFO HTTP Request: HEAD https://huggingface.co/cross-encoder/ms-marco-MiniLM-L-6-v2/resolve/main/video_preprocessor_config.json "HTTP/1.1 307 Temporary Redirect"
+2026-05-18 01:11:41,545 httpx INFO HTTP Request: HEAD https://huggingface.co/cross-encoder/ms-marco-MiniLM-L6-v2/resolve/main/video_preprocessor_config.json "HTTP/1.1 404 Not Found"
+2026-05-18 01:11:41,794 httpx INFO HTTP Request: HEAD https://huggingface.co/cross-encoder/ms-marco-MiniLM-L-6-v2/resolve/main/preprocessor_config.json "HTTP/1.1 307 Temporary Redirect"
+2026-05-18 01:11:42,041 httpx INFO HTTP Request: HEAD https://huggingface.co/cross-encoder/ms-marco-MiniLM-L6-v2/resolve/main/preprocessor_config.json "HTTP/1.1 404 Not Found"
+2026-05-18 01:11:42,282 httpx INFO HTTP Request: HEAD https://huggingface.co/cross-encoder/ms-marco-MiniLM-L-6-v2/resolve/main/tokenizer_config.json "HTTP/1.1 307 Temporary Redirect"
+2026-05-18 01:11:42,536 httpx INFO HTTP Request: HEAD https://huggingface.co/cross-encoder/ms-marco-MiniLM-L6-v2/resolve/main/tokenizer_config.json "HTTP/1.1 307 Temporary Redirect"
+2026-05-18 01:11:42,563 httpx INFO HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/cross-encoder/ms-marco-MiniLM-L6-v2/c5ee24cb16019beea0893ab7796b1df96625c6b8/tokenizer_config.json "HTTP/1.1 200 OK"
+2026-05-18 01:11:42,827 httpx INFO HTTP Request: HEAD https://huggingface.co/cross-encoder/ms-marco-MiniLM-L-6-v2/resolve/main/config.json "HTTP/1.1 307 Temporary Redirect"
+2026-05-18 01:11:43,080 httpx INFO HTTP Request: HEAD https://huggingface.co/cross-encoder/ms-marco-MiniLM-L6-v2/resolve/main/config.json "HTTP/1.1 307 Temporary Redirect"
+2026-05-18 01:11:43,107 httpx INFO HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/cross-encoder/ms-marco-MiniLM-L6-v2/c5ee24cb16019beea0893ab7796b1df96625c6b8/config.json "HTTP/1.1 200 OK"
+2026-05-18 01:11:43,344 httpx INFO HTTP Request: HEAD https://huggingface.co/cross-encoder/ms-marco-MiniLM-L-6-v2/resolve/main/config.json "HTTP/1.1 307 Temporary Redirect"
+2026-05-18 01:11:43,615 httpx INFO HTTP Request: HEAD https://huggingface.co/cross-encoder/ms-marco-MiniLM-L6-v2/resolve/main/config.json "HTTP/1.1 307 Temporary Redirect"
+2026-05-18 01:11:43,644 httpx INFO HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/cross-encoder/ms-marco-MiniLM-L6-v2/c5ee24cb16019beea0893ab7796b1df96625c6b8/config.json "HTTP/1.1 200 OK"
+2026-05-18 01:11:43,995 httpx INFO HTTP Request: HEAD https://huggingface.co/cross-encoder/ms-marco-MiniLM-L-6-v2/resolve/main/tokenizer_config.json "HTTP/1.1 307 Temporary Redirect"
+2026-05-18 01:11:44,252 httpx INFO HTTP Request: HEAD https://huggingface.co/cross-encoder/ms-marco-MiniLM-L6-v2/resolve/main/tokenizer_config.json "HTTP/1.1 307 Temporary Redirect"
+2026-05-18 01:11:44,283 httpx INFO HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/cross-encoder/ms-marco-MiniLM-L6-v2/c5ee24cb16019beea0893ab7796b1df96625c6b8/tokenizer_config.json "HTTP/1.1 200 OK"
+2026-05-18 01:11:44,546 httpx INFO HTTP Request: GET https://huggingface.co/api/models/cross-encoder/ms-marco-MiniLM-L-6-v2/tree/main/additional_chat_templates?recursive=false&expand=false "HTTP/1.1 307 Temporary Redirect"
+2026-05-18 01:11:44,803 httpx INFO HTTP Request: GET https://huggingface.co/api/models/cross-encoder/ms-marco-MiniLM-L6-v2/tree/main/additional_chat_templates?recursive=false&expand=false "HTTP/1.1 404 Not Found"
+2026-05-18 01:11:45,171 httpx INFO HTTP Request: GET https://huggingface.co/api/models/cross-encoder/ms-marco-MiniLM-L-6-v2/tree/main?recursive=true&expand=false "HTTP/1.1 307 Temporary Redirect"
+2026-05-18 01:11:45,407 httpx INFO HTTP Request: GET https://huggingface.co/api/models/cross-encoder/ms-marco-MiniLM-L6-v2/tree/main?recursive=true&expand=false "HTTP/1.1 200 OK"
+2026-05-18 01:11:48,406 backend.pipeline.tracing.processor INFO SPAN END [retrieval] retrieve:Lack of Empirical Evaluation of LLMs in Human Cogn duration=17513.9ms status=ok
+2026-05-18 01:11:48,406 backend.pipeline.generation.ideator_agent INFO Gap 'Lack of Empirical Evaluation of LLMs in Human Cogn': retrieved 15 results, 13 new papers
+2026-05-18 01:11:48,406 backend.pipeline.tracing.processor INFO SPAN START [retrieval] retrieve:Absence of Theoretical Models Linking LLMs to Huma trace=77800d3c parent=5ce34a31
+2026-05-18 01:11:48,575 httpx INFO HTTP Request: POST http://100.64.0.1:1234/v1/embeddings "HTTP/1.1 200 OK"
+2026-05-18 01:11:51,450 backend.pipeline.tracing.processor INFO SPAN END [retrieval] retrieve:Absence of Theoretical Models Linking LLMs to Huma duration=3043.8ms status=ok
+2026-05-18 01:11:51,451 backend.pipeline.generation.ideator_agent INFO Gap 'Absence of Theoretical Models Linking LLMs to Huma': retrieved 15 results, 8 new papers
+2026-05-18 01:11:51,451 backend.pipeline.tracing.processor INFO SPAN START [retrieval] retrieve:Limited Exploration of LLMs in Interdisciplinary K trace=77800d3c parent=5ce34a31
+2026-05-18 01:11:51,596 httpx INFO HTTP Request: POST http://100.64.0.1:1234/v1/embeddings "HTTP/1.1 200 OK"
+2026-05-18 01:11:54,531 backend.pipeline.tracing.processor INFO SPAN END [retrieval] retrieve:Limited Exploration of LLMs in Interdisciplinary K duration=3079.6ms status=ok
+2026-05-18 01:11:54,531 backend.pipeline.generation.ideator_agent INFO Gap 'Limited Exploration of LLMs in Interdisciplinary K': retrieved 15 results, 15 new papers
+2026-05-18 01:11:54,531 backend.pipeline.tracing.processor INFO SPAN START [retrieval] retrieve:Missing Methodological Frameworks for Evaluating A trace=77800d3c parent=5ce34a31
+2026-05-18 01:11:54,679 httpx INFO HTTP Request: POST http://100.64.0.1:1234/v1/embeddings "HTTP/1.1 200 OK"
+2026-05-18 01:11:57,382 backend.pipeline.tracing.processor INFO SPAN END [retrieval] retrieve:Missing Methodological Frameworks for Evaluating A duration=2851.7ms status=ok
+2026-05-18 01:11:57,382 backend.pipeline.generation.ideator_agent INFO Gap 'Missing Methodological Frameworks for Evaluating A': retrieved 15 results, 14 new papers
+2026-05-18 01:11:57,382 backend.pipeline.tracing.processor INFO SPAN START [retrieval] retrieve:Underexplored Cross-Domain Applications of LLMs in trace=77800d3c parent=5ce34a31
+2026-05-18 01:11:57,526 httpx INFO HTTP Request: POST http://100.64.0.1:1234/v1/embeddings "HTTP/1.1 200 OK"
+2026-05-18 01:12:00,391 backend.pipeline.tracing.processor INFO SPAN END [retrieval] retrieve:Underexplored Cross-Domain Applications of LLMs in duration=3008.8ms status=ok
+2026-05-18 01:12:00,391 backend.pipeline.generation.ideator_agent INFO Gap 'Underexplored Cross-Domain Applications of LLMs in': retrieved 15 results, 9 new papers
+2026-05-18 01:12:00,391 backend.pipeline.generation.ideator_agent INFO RAG augmentation: 20 existing + 59 retrieved = 79 total papers
+2026-05-18 01:12:00,401 backend.pipeline.gateway.gateway INFO [DRY-RUN] stage=idea_generation routed=qwen3-4b-2507/single_call actual=glm-5.1 confidence=0.68
+2026-05-18 01:12:00,908 backend.pipeline.persistence INFO Checkpoint saved: dry_run_20260518_010640
+2026-05-18 01:12:01,563 httpx INFO HTTP Request: POST https://api.z.ai/api/anthropic/v1/messages "HTTP/1.1 401 Unauthorized"
+2026-05-18 01:12:01,563 backend.pipeline.gateway.gateway ERROR Gateway call failed for task 'idea_generation': Error code: 401 - {'error': {'message': 'token expired or incorrect', 'type': '401'}}
+2026-05-18 01:12:01,563 backend.pipeline.gateway.gateway_provider WARNING Structured output was not valid JSON
+2026-05-18 01:12:01,563 backend.pipeline.stages INFO TreeSearchStage: generated 0 ideas via tree search
+2026-05-18 01:12:01,563 backend.pipeline.tracing.processor INFO SPAN END [stage] idea_generation duration=30670.3ms status=ok
+2026-05-18 01:12:01,563 backend.pipeline.orchestrator.stage_lifecycle ERROR CONTRACT VIOLATION: idea_generation — Empty output: ideas; Output ideas has 0 items, minimum 1
+2026-05-18 01:12:01,563 backend.pipeline.persistence INFO Checkpoint saved: dry_run_20260518_010640
+2026-05-18 01:12:01,563 backend.pipeline.orchestrator._orchestrator INFO === Idea Reflection ===
+2026-05-18 01:12:01,563 backend.pipeline.tracing.processor INFO SPAN START [stage] idea_reflection trace=d4922799 parent=-
+2026-05-18 01:12:01,563 backend.pipeline.persistence INFO Checkpoint saved: dry_run_20260518_010640
+2026-05-18 01:12:01,563 backend.pipeline.tracing.processor INFO SPAN END [stage] idea_reflection duration=0.0ms status=ok
+2026-05-18 01:12:01,578 backend.pipeline.persistence INFO Checkpoint saved: dry_run_20260518_010640
+2026-05-18 01:12:01,578 backend.pipeline.orchestrator._orchestrator INFO === Novelty Checking ===
+2026-05-18 01:12:01,578 backend.pipeline.tracing.processor INFO SPAN START [retrieval] retrieve:dry_run_20260518_010640 trace=b4ef4b17 parent=-
+2026-05-18 01:12:01,578 backend.pipeline.knowledge.retriever WARNING Semantic query failed for variant 'dry_run_20260518_010640': Expected where to have exactly one operator, got {'memory_type': 'episodic', 'namespace': 'cross_stage:literature_search'} in query.
+2026-05-18 01:12:01,578 backend.pipeline.tracing.processor INFO SPAN END [retrieval] retrieve:dry_run_20260518_010640 duration=0.0ms status=ok
+2026-05-18 01:12:01,578 backend.pipeline.tracing.processor INFO SPAN START [retrieval] retrieve:dry_run_20260518_010640 trace=eaa85764 parent=-
+2026-05-18 01:12:01,578 backend.pipeline.knowledge.retriever WARNING Semantic query failed for variant 'dry_run_20260518_010640': Expected where to have exactly one operator, got {'memory_type': 'episodic', 'namespace': 'cross_stage:ingestion'} in query.
+2026-05-18 01:12:01,578 backend.pipeline.tracing.processor INFO SPAN END [retrieval] retrieve:dry_run_20260518_010640 duration=0.0ms status=ok
+2026-05-18 01:12:01,578 backend.pipeline.tracing.processor INFO SPAN START [retrieval] retrieve:dry_run_20260518_010640 trace=8ed0888d parent=-
+2026-05-18 01:12:01,578 backend.pipeline.knowledge.retriever WARNING Semantic query failed for variant 'dry_run_20260518_010640': Expected where to have exactly one operator, got {'memory_type': 'episodic', 'namespace': 'cross_stage:gap_analysis'} in query.
+2026-05-18 01:12:01,578 backend.pipeline.tracing.processor INFO SPAN END [retrieval] retrieve:dry_run_20260518_010640 duration=0.0ms status=ok
+2026-05-18 01:12:01,578 backend.pipeline.tracing.processor INFO SPAN START [retrieval] retrieve:dry_run_20260518_010640 trace=f5c8b931 parent=-
+2026-05-18 01:12:01,578 backend.pipeline.knowledge.retriever WARNING Semantic query failed for variant 'dry_run_20260518_010640': Expected where to have exactly one operator, got {'memory_type': 'episodic', 'namespace': 'cross_stage:idea_generation'} in query.
+2026-05-18 01:12:01,578 backend.pipeline.tracing.processor INFO SPAN END [retrieval] retrieve:dry_run_20260518_010640 duration=0.0ms status=ok
+2026-05-18 01:12:01,578 backend.pipeline.tracing.processor INFO SPAN START [stage] novelty_checking trace=81efb717 parent=-
+2026-05-18 01:12:01,578 backend.pipeline.persistence INFO Checkpoint saved: dry_run_20260518_010640
+2026-05-18 01:12:01,578 backend.pipeline.tracing.processor INFO SPAN END [stage] novelty_checking duration=0.0ms status=ok
+2026-05-18 01:12:01,578 backend.pipeline.orchestrator.stage_lifecycle ERROR CONTRACT VIOLATION: novelty_checking — Empty output: novelty_profiles; Empty output: novelty_reports; Empty output: downstream_directives; Output novelty_profiles has 0 items, minimum 1
+2026-05-18 01:12:01,594 backend.pipeline.persistence INFO Checkpoint saved: dry_run_20260518_010640
+2026-05-18 01:12:01,594 backend.pipeline.orchestrator._orchestrator INFO === Feasibility Scoring ===
+2026-05-18 01:12:01,599 backend.pipeline.tracing.processor INFO SPAN START [retrieval] retrieve:dry_run_20260518_010640 trace=1d7290d6 parent=-
+2026-05-18 01:12:01,601 backend.pipeline.knowledge.retriever WARNING Semantic query failed for variant 'dry_run_20260518_010640': Expected where to have exactly one operator, got {'memory_type': 'episodic', 'namespace': 'cross_stage:literature_search'} in query.
+2026-05-18 01:12:01,601 backend.pipeline.tracing.processor INFO SPAN END [retrieval] retrieve:dry_run_20260518_010640 duration=2.0ms status=ok
+2026-05-18 01:12:01,601 backend.pipeline.tracing.processor INFO SPAN START [retrieval] retrieve:dry_run_20260518_010640 trace=22d02e22 parent=-
+2026-05-18 01:12:01,603 backend.pipeline.knowledge.retriever WARNING Semantic query failed for variant 'dry_run_20260518_010640': Expected where to have exactly one operator, got {'memory_type': 'episodic', 'namespace': 'cross_stage:ingestion'} in query.
+2026-05-18 01:12:01,603 backend.pipeline.tracing.processor INFO SPAN END [retrieval] retrieve:dry_run_20260518_010640 duration=2.0ms status=ok
+2026-05-18 01:12:01,603 backend.pipeline.tracing.processor INFO SPAN START [retrieval] retrieve:dry_run_20260518_010640 trace=1449011f parent=-
+2026-05-18 01:12:01,604 backend.pipeline.knowledge.retriever WARNING Semantic query failed for variant 'dry_run_20260518_010640': Expected where to have exactly one operator, got {'memory_type': 'episodic', 'namespace': 'cross_stage:gap_analysis'} in query.
+2026-05-18 01:12:01,604 backend.pipeline.tracing.processor INFO SPAN END [retrieval] retrieve:dry_run_20260518_010640 duration=1.0ms status=ok
+2026-05-18 01:12:01,604 backend.pipeline.tracing.processor INFO SPAN START [retrieval] retrieve:dry_run_20260518_010640 trace=b2e4eddf parent=-
+2026-05-18 01:12:01,605 backend.pipeline.knowledge.retriever WARNING Semantic query failed for variant 'dry_run_20260518_010640': Expected where to have exactly one operator, got {'memory_type': 'episodic', 'namespace': 'cross_stage:idea_generation'} in query.
+2026-05-18 01:12:01,605 backend.pipeline.tracing.processor INFO SPAN END [retrieval] retrieve:dry_run_20260518_010640 duration=1.0ms status=ok
+2026-05-18 01:12:01,605 backend.pipeline.tracing.processor INFO SPAN START [retrieval] retrieve:dry_run_20260518_010640 trace=57433b12 parent=-
+2026-05-18 01:12:01,606 backend.pipeline.knowledge.retriever WARNING Semantic query failed for variant 'dry_run_20260518_010640': Expected where to have exactly one operator, got {'memory_type': 'episodic', 'namespace': 'cross_stage:novelty_checking'} in query.
+2026-05-18 01:12:01,606 backend.pipeline.tracing.processor INFO SPAN END [retrieval] retrieve:dry_run_20260518_010640 duration=1.0ms status=ok
+2026-05-18 01:12:01,606 backend.pipeline.tracing.processor INFO SPAN START [stage] feasibility_scoring trace=caea929f parent=-
+2026-05-18 01:12:01,607 backend.pipeline.persistence INFO Checkpoint saved: dry_run_20260518_010640
+2026-05-18 01:12:01,607 backend.pipeline.tracing.processor INFO SPAN END [stage] feasibility_scoring duration=1.0ms status=ok
+2026-05-18 01:12:01,608 backend.pipeline.orchestrator.stage_lifecycle ERROR CONTRACT VIOLATION: feasibility_scoring — Empty output: feasibility_reports; Output feasibility_reports has 0 items, minimum 1
+2026-05-18 01:12:01,609 backend.pipeline.persistence INFO Checkpoint saved: dry_run_20260518_010640
+2026-05-18 01:12:01,609 backend.pipeline.orchestrator._orchestrator INFO === Mechanical Metrics ===
+2026-05-18 01:12:01,614 backend.pipeline.tracing.processor INFO SPAN START [stage] mechanical_metrics trace=794943f0 parent=-
+2026-05-18 01:12:01,615 backend.pipeline.persistence INFO Checkpoint saved: dry_run_20260518_010640
+2026-05-18 01:12:01,615 backend.pipeline.tracing.processor INFO SPAN END [stage] mechanical_metrics duration=1.0ms status=ok
+2026-05-18 01:12:01,615 backend.pipeline.orchestrator.stage_lifecycle ERROR CONTRACT VIOLATION: mechanical_metrics — Empty output: mechanical_metrics
+2026-05-18 01:12:01,616 backend.pipeline.persistence INFO Checkpoint saved: dry_run_20260518_010640
+2026-05-18 01:12:01,616 backend.pipeline.orchestrator._orchestrator INFO === Proposal Synthesis ===
+2026-05-18 01:12:01,621 backend.pipeline.tracing.processor INFO SPAN START [retrieval] retrieve:dry_run_20260518_010640 trace=42f2f56e parent=-
+2026-05-18 01:12:01,623 backend.pipeline.knowledge.retriever WARNING Semantic query failed for variant 'dry_run_20260518_010640': Expected where to have exactly one operator, got {'memory_type': 'episodic', 'namespace': 'cross_stage:literature_search'} in query.
+2026-05-18 01:12:01,623 backend.pipeline.tracing.processor INFO SPAN END [retrieval] retrieve:dry_run_20260518_010640 duration=2.0ms status=ok
+2026-05-18 01:12:01,623 backend.pipeline.tracing.processor INFO SPAN START [retrieval] retrieve:dry_run_20260518_010640 trace=f3a3594f parent=-
+2026-05-18 01:12:01,625 backend.pipeline.knowledge.retriever WARNING Semantic query failed for variant 'dry_run_20260518_010640': Expected where to have exactly one operator, got {'memory_type': 'episodic', 'namespace': 'cross_stage:ingestion'} in query.
+2026-05-18 01:12:01,625 backend.pipeline.tracing.processor INFO SPAN END [retrieval] retrieve:dry_run_20260518_010640 duration=2.0ms status=ok
+2026-05-18 01:12:01,625 backend.pipeline.tracing.processor INFO SPAN START [retrieval] retrieve:dry_run_20260518_010640 trace=296bb8ea parent=-
+2026-05-18 01:12:01,627 backend.pipeline.knowledge.retriever WARNING Semantic query failed for variant 'dry_run_20260518_010640': Expected where to have exactly one operator, got {'memory_type': 'episodic', 'namespace': 'cross_stage:gap_analysis'} in query.
+2026-05-18 01:12:01,627 backend.pipeline.tracing.processor INFO SPAN END [retrieval] retrieve:dry_run_20260518_010640 duration=2.0ms status=ok
+2026-05-18 01:12:01,627 backend.pipeline.tracing.processor INFO SPAN START [retrieval] retrieve:dry_run_20260518_010640 trace=a5b626d8 parent=-
+2026-05-18 01:12:01,629 backend.pipeline.knowledge.retriever WARNING Semantic query failed for variant 'dry_run_20260518_010640': Expected where to have exactly one operator, got {'memory_type': 'episodic', 'namespace': 'cross_stage:idea_generation'} in query.
+2026-05-18 01:12:01,629 backend.pipeline.tracing.processor INFO SPAN END [retrieval] retrieve:dry_run_20260518_010640 duration=2.0ms status=ok
+2026-05-18 01:12:01,629 backend.pipeline.tracing.processor INFO SPAN START [retrieval] retrieve:dry_run_20260518_010640 trace=ed032a5c parent=-
+2026-05-18 01:12:01,630 backend.pipeline.knowledge.retriever WARNING Semantic query failed for variant 'dry_run_20260518_010640': Expected where to have exactly one operator, got {'memory_type': 'episodic', 'namespace': 'cross_stage:novelty_checking'} in query.
+2026-05-18 01:12:01,630 backend.pipeline.tracing.processor INFO SPAN END [retrieval] retrieve:dry_run_20260518_010640 duration=1.0ms status=ok
+2026-05-18 01:12:01,630 backend.pipeline.tracing.processor INFO SPAN START [retrieval] retrieve:dry_run_20260518_010640 trace=ffb9773c parent=-
+2026-05-18 01:12:01,632 backend.pipeline.knowledge.retriever WARNING Semantic query failed for variant 'dry_run_20260518_010640': Expected where to have exactly one operator, got {'memory_type': 'episodic', 'namespace': 'cross_stage:feasibility_scoring'} in query.
+2026-05-18 01:12:01,632 backend.pipeline.tracing.processor INFO SPAN END [retrieval] retrieve:dry_run_20260518_010640 duration=2.0ms status=ok
+2026-05-18 01:12:01,632 backend.pipeline.tracing.processor INFO SPAN START [stage] proposal_synthesis trace=93941cab parent=-
+2026-05-18 01:12:01,634 backend.pipeline.persistence INFO Checkpoint saved: dry_run_20260518_010640
+2026-05-18 01:12:01,635 backend.pipeline.tracing.processor INFO SPAN END [stage] proposal_synthesis duration=3.0ms status=ok
+2026-05-18 01:12:01,635 backend.pipeline.orchestrator.stage_lifecycle ERROR CONTRACT VIOLATION: proposal_synthesis — Empty output: proposals; Output proposals has 0 items, minimum 1
+2026-05-18 01:12:01,645 backend.pipeline.orchestrator.stage_lifecycle INFO Faithfulness scoring complete for 0 proposals
+2026-05-18 01:12:01,646 backend.pipeline.persistence INFO Checkpoint saved: dry_run_20260518_010640
+2026-05-18 01:12:01,646 backend.pipeline.orchestrator._orchestrator INFO === Adversarial Review ===
+2026-05-18 01:12:01,651 backend.pipeline.tracing.processor INFO SPAN START [stage] adversarial_review trace=3f08175f parent=-
+2026-05-18 01:12:01,652 backend.pipeline.persistence INFO Checkpoint saved: dry_run_20260518_010640
+2026-05-18 01:12:01,652 backend.pipeline.stages INFO Adversarial review: thinking=qwen/qwen3-4b-2507 @ http://100.64.0.1:1234 vs generation=glm-5.1 @  (different providers)
+2026-05-18 01:12:01,652 backend.pipeline.tracing.processor INFO SPAN END [stage] adversarial_review duration=1.0ms status=ok
+2026-05-18 01:12:01,653 backend.pipeline.persistence INFO Checkpoint saved: dry_run_20260518_010640
+2026-05-18 01:12:01,653 backend.pipeline.orchestrator._orchestrator INFO === Evaluation ===
+2026-05-18 01:12:01,658 backend.pipeline.tracing.processor INFO SPAN START [stage] evaluation trace=56876d60 parent=-
+2026-05-18 01:12:01,659 backend.pipeline.persistence INFO Checkpoint saved: dry_run_20260518_010640
+2026-05-18 01:12:01,659 backend.pipeline.tracing.processor INFO SPAN END [stage] evaluation duration=1.0ms status=ok
+2026-05-18 01:12:01,659 backend.pipeline.orchestrator.stage_lifecycle ERROR CONTRACT VIOLATION: evaluation — Empty output: evaluation_reports; Output evaluation_reports has 0 items, minimum 1
+2026-05-18 01:12:01,660 backend.pipeline.persistence INFO Checkpoint saved: dry_run_20260518_010640
+2026-05-18 01:12:01,660 backend.pipeline.orchestrator._orchestrator INFO === Paper Synthesis ===
+2026-05-18 01:12:01,666 backend.pipeline.tracing.processor INFO SPAN START [stage] paper_synthesis trace=fc8b1d2c parent=-
+2026-05-18 01:12:01,667 backend.pipeline.persistence INFO Checkpoint saved: dry_run_20260518_010640
+2026-05-18 01:12:01,667 backend.pipeline.tracing.processor INFO SPAN END [stage] paper_synthesis duration=1.0ms status=ok
+2026-05-18 01:12:01,668 backend.pipeline.persistence INFO Checkpoint saved: dry_run_20260518_010640
+2026-05-18 01:12:01,668 backend.pipeline.orchestrator._orchestrator INFO === Citation Audit ===
+2026-05-18 01:12:01,673 backend.pipeline.tracing.processor INFO SPAN START [stage] citation_audit trace=effbdb5e parent=-
+2026-05-18 01:12:01,673 backend.pipeline.persistence INFO Checkpoint saved: dry_run_20260518_010640
+2026-05-18 01:12:01,673 backend.pipeline.tracing.processor INFO SPAN END [stage] citation_audit duration=0.0ms status=ok
+2026-05-18 01:12:01,673 backend.pipeline.persistence INFO Checkpoint saved: dry_run_20260518_010640
+2026-05-18 01:12:01,673 backend.pipeline.orchestrator._orchestrator INFO === Proposal Deepening ===
+2026-05-18 01:12:01,673 backend.pipeline.tracing.processor INFO SPAN START [stage] proposal_deepening trace=637eed99 parent=-
+2026-05-18 01:12:01,673 backend.pipeline.persistence INFO Checkpoint saved: dry_run_20260518_010640
+2026-05-18 01:12:01,673 backend.pipeline.tracing.processor INFO SPAN END [stage] proposal_deepening duration=0.0ms status=ok
+2026-05-18 01:12:01,673 backend.pipeline.persistence INFO Checkpoint saved: dry_run_20260518_010640
+2026-05-18 01:12:01,673 backend.pipeline.orchestrator._orchestrator INFO === Export ===
+2026-05-18 01:12:01,688 backend.pipeline.tracing.processor INFO SPAN START [retrieval] retrieve:dry_run_20260518_010640 trace=a033e5d2 parent=-
+2026-05-18 01:12:01,690 backend.pipeline.knowledge.retriever WARNING Semantic query failed for variant 'dry_run_20260518_010640': Expected where to have exactly one operator, got {'memory_type': 'episodic', 'namespace': 'cross_stage:literature_search'} in query.
+2026-05-18 01:12:01,690 backend.pipeline.tracing.processor INFO SPAN END [retrieval] retrieve:dry_run_20260518_010640 duration=2.6ms status=ok
+2026-05-18 01:12:01,690 backend.pipeline.tracing.processor INFO SPAN START [retrieval] retrieve:dry_run_20260518_010640 trace=2f693704 parent=-
+2026-05-18 01:12:01,692 backend.pipeline.knowledge.retriever WARNING Semantic query failed for variant 'dry_run_20260518_010640': Expected where to have exactly one operator, got {'memory_type': 'episodic', 'namespace': 'cross_stage:ingestion'} in query.
+2026-05-18 01:12:01,692 backend.pipeline.tracing.processor INFO SPAN END [retrieval] retrieve:dry_run_20260518_010640 duration=2.0ms status=ok
+2026-05-18 01:12:01,692 backend.pipeline.tracing.processor INFO SPAN START [retrieval] retrieve:dry_run_20260518_010640 trace=ae4de3ac parent=-
+2026-05-18 01:12:01,694 backend.pipeline.knowledge.retriever WARNING Semantic query failed for variant 'dry_run_20260518_010640': Expected where to have exactly one operator, got {'memory_type': 'episodic', 'namespace': 'cross_stage:gap_analysis'} in query.
+2026-05-18 01:12:01,694 backend.pipeline.tracing.processor INFO SPAN END [retrieval] retrieve:dry_run_20260518_010640 duration=2.1ms status=ok
+2026-05-18 01:12:01,694 backend.pipeline.tracing.processor INFO SPAN START [retrieval] retrieve:dry_run_20260518_010640 trace=b17ff92e parent=-
+2026-05-18 01:12:01,696 backend.pipeline.knowledge.retriever WARNING Semantic query failed for variant 'dry_run_20260518_010640': Expected where to have exactly one operator, got {'memory_type': 'episodic', 'namespace': 'cross_stage:idea_generation'} in query.
+2026-05-18 01:12:01,696 backend.pipeline.tracing.processor INFO SPAN END [retrieval] retrieve:dry_run_20260518_010640 duration=1.5ms status=ok
+2026-05-18 01:12:01,696 backend.pipeline.tracing.processor INFO SPAN START [retrieval] retrieve:dry_run_20260518_010640 trace=5956b5d9 parent=-
+2026-05-18 01:12:01,697 backend.pipeline.knowledge.retriever WARNING Semantic query failed for variant 'dry_run_20260518_010640': Expected where to have exactly one operator, got {'memory_type': 'episodic', 'namespace': 'cross_stage:novelty_checking'} in query.
+2026-05-18 01:12:01,697 backend.pipeline.tracing.processor INFO SPAN END [retrieval] retrieve:dry_run_20260518_010640 duration=1.0ms status=ok
+2026-05-18 01:12:01,697 backend.pipeline.tracing.processor INFO SPAN START [retrieval] retrieve:dry_run_20260518_010640 trace=d2708374 parent=-
+2026-05-18 01:12:01,697 backend.pipeline.knowledge.retriever WARNING Semantic query failed for variant 'dry_run_20260518_010640': Expected where to have exactly one operator, got {'memory_type': 'episodic', 'namespace': 'cross_stage:feasibility_scoring'} in query.
+2026-05-18 01:12:01,697 backend.pipeline.tracing.processor INFO SPAN END [retrieval] retrieve:dry_run_20260518_010640 duration=0.0ms status=ok
+2026-05-18 01:12:01,697 backend.pipeline.tracing.processor INFO SPAN START [retrieval] retrieve:dry_run_20260518_010640 trace=370085cf parent=-
+2026-05-18 01:12:01,697 backend.pipeline.knowledge.retriever WARNING Semantic query failed for variant 'dry_run_20260518_010640': Expected where to have exactly one operator, got {'memory_type': 'episodic', 'namespace': 'cross_stage:proposal_synthesis'} in query.
+2026-05-18 01:12:01,697 backend.pipeline.tracing.processor INFO SPAN END [retrieval] retrieve:dry_run_20260518_010640 duration=0.0ms status=ok
+2026-05-18 01:12:01,697 backend.pipeline.tracing.processor INFO SPAN START [stage] export trace=dc06888b parent=-
+2026-05-18 01:12:01,697 backend.pipeline.persistence INFO Checkpoint saved: dry_run_20260518_010640
+2026-05-18 01:12:01,697 backend.pipeline.knowledge.integration WARNING Knowledge indexing failed: Object of type Author is not JSON serializable
+2026-05-18 01:12:01,697 backend.pipeline.tracing.processor INFO SPAN END [stage] export duration=0.0ms status=ok
+2026-05-18 01:12:01,697 backend.pipeline.orchestrator.stage_lifecycle ERROR CONTRACT VIOLATION: export — Empty output: export_paths; Output export_paths has 0 items, minimum 1
+2026-05-18 01:12:01,704 backend.pipeline.persistence INFO Checkpoint saved: dry_run_20260518_010640
+2026-05-18 01:12:01,704 backend.pipeline.orchestrator.result_processor INFO Pipeline quality: score=0.45, gap_recall=37.5%, gap_precision=100.0%, idea_novelty=0.0%
+2026-05-18 01:12:01,704 backend.pipeline.orchestrator.result_processor INFO Pipeline quality: score=0.45, gap_recall=37.5%, gap_precision=100.0%, idea_novelty=0.0%
+2026-05-18 01:12:01,704 backend.pipeline.orchestrator.stage_lifecycle INFO === Pipeline Complete ===
+2026-05-18 01:12:01,722 backend.pipeline.journal.writer INFO Journal written to data\runs\dry_run_20260518_010640
+2026-05-18 01:12:01,722 backend.pipeline.orchestrator.stage_lifecycle INFO Research journal written to data\runs\dry_run_20260518_010640\notes.md
+2026-05-18 01:12:01,722 __main__ INFO Pipeline completed successfully: dry_run_20260518_010640
+2026-05-18 01:12:01,722 __main__ INFO Pipeline elapsed: 321.1 seconds
+2026-05-18 01:12:01,723 __main__ INFO ======================================================================
+2026-05-18 01:12:01,723 __main__ INFO Collecting dry-run routing decisions...
+2026-05-18 01:12:01,723 __main__ INFO ======================================================================
+2026-05-18 01:12:01,730 backend.pipeline.gateway.gateway ERROR Gateway call failed for task 'export': Circuit breaker is open — fast-fail
+2026-05-18 01:12:01,730 backend.pipeline.gateway.gateway_provider WARNING Structured output was not valid JSON
+2026-05-18 01:12:01,730 backend.pipeline.memory.extraction INFO Extracted and stored 0 memories from pipeline run
+2026-05-18 01:12:01,730 backend.pipeline.orchestrator.result_processor INFO Background memory extraction: stored 0 memories
