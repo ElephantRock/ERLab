@@ -1,19 +1,21 @@
 {
-  "run_id": "dry_run_20260518_010640",
-  "elapsed_seconds": 321.1,
-  "total_llm_calls": 25,
-  "calls_with_routing": 25,
+  "run_id": "dry_run_20260518_020626",
+  "elapsed_seconds": 990.3,
+  "total_llm_calls": 151,
+  "calls_with_routing": 151,
   "calls_without_routing": 0,
   "stages_without_contract": [
+    "proposal_deepening",
+    "feasibility_scoring",
     "ingestion"
   ],
   "no_candidate_decisions": 0,
   "degraded_routing_decisions": 0,
-  "strategy_changes_recommended": 25,
-  "model_changes_recommended": 25,
+  "strategy_changes_recommended": 151,
+  "model_changes_recommended": 151,
   "key_stages": {
     "literature_search": {
-      "actual_model": "glm-5.1",
+      "actual_model": "qwen/qwen3-4b-2507",
       "routed_model": "qwen3-4b-2507",
       "routed_strategy": "single_call",
       "confidence": 0.677,
@@ -21,139 +23,793 @@
       "reason": "Single call: 1500+2048 tokens (fits)"
     },
     "idea_generation": {
-      "actual_model": "glm-5.1",
+      "actual_model": "qwen/qwen3-4b-2507",
       "routed_model": "qwen3-4b-2507",
       "routed_strategy": "single_call",
       "confidence": 0.677,
       "degraded": false,
       "reason": "Single call: 3000+4096 tokens (fits)"
+    },
+    "proposal_synthesis": {
+      "actual_model": "qwen/qwen3-4b-2507",
+      "routed_model": "qwen3-4b-2507",
+      "routed_strategy": "single_call",
+      "confidence": 0.677,
+      "degraded": false,
+      "reason": "Single call: 6000+8192 tokens (fits)"
+    },
+    "adversarial_review": {
+      "actual_model": "qwen/qwen3-4b-2507",
+      "routed_model": "qwen3-4b-2507",
+      "routed_strategy": "compressed_review_packet",
+      "confidence": 0.677,
+      "degraded": false,
+      "reason": "Compressed review: 2500+2457 (fits)"
+    },
+    "paper_synthesis": {
+      "actual_model": "qwen/qwen3-4b-2507",
+      "routed_model": "qwen3-4b-2507",
+      "routed_strategy": "section_wise",
+      "confidence": 0.677,
+      "degraded": false,
+      "reason": "Section-wise: 2800+4800 per section (fits)"
     }
   },
   "model_changes": [
     {
       "stage": "literature_search",
       "routed": "qwen3-4b-2507",
-      "actual": "glm-5.1"
+      "actual": "qwen/qwen3-4b-2507"
     },
     {
       "stage": "literature_search",
       "routed": "qwen3-4b-2507",
-      "actual": "glm-5.1"
+      "actual": "qwen/qwen3-4b-2507"
     },
     {
       "stage": "literature_search",
       "routed": "qwen3-4b-2507",
-      "actual": "glm-5.1"
+      "actual": "qwen/qwen3-4b-2507"
     },
     {
       "stage": "literature_search",
       "routed": "qwen3-4b-2507",
-      "actual": "glm-5.1"
+      "actual": "qwen/qwen3-4b-2507"
     },
     {
       "stage": "literature_search",
       "routed": "qwen3-4b-2507",
-      "actual": "glm-5.1"
+      "actual": "qwen/qwen3-4b-2507"
     },
     {
       "stage": "literature_search",
       "routed": "qwen3-4b-2507",
-      "actual": "glm-5.1"
+      "actual": "qwen/qwen3-4b-2507"
     },
     {
       "stage": "literature_search",
       "routed": "qwen3-4b-2507",
-      "actual": "glm-5.1"
+      "actual": "qwen/qwen3-4b-2507"
     },
     {
       "stage": "literature_search",
       "routed": "qwen3-4b-2507",
-      "actual": "glm-5.1"
+      "actual": "qwen/qwen3-4b-2507"
     },
     {
       "stage": "literature_search",
       "routed": "qwen3-4b-2507",
-      "actual": "glm-5.1"
+      "actual": "qwen/qwen3-4b-2507"
     },
     {
       "stage": "literature_search",
       "routed": "qwen3-4b-2507",
-      "actual": "glm-5.1"
+      "actual": "qwen/qwen3-4b-2507"
     },
     {
       "stage": "literature_search",
       "routed": "qwen3-4b-2507",
-      "actual": "glm-5.1"
+      "actual": "qwen/qwen3-4b-2507"
     },
     {
       "stage": "literature_search",
       "routed": "qwen3-4b-2507",
-      "actual": "glm-5.1"
+      "actual": "qwen/qwen3-4b-2507"
     },
     {
       "stage": "literature_search",
       "routed": "qwen3-4b-2507",
-      "actual": "glm-5.1"
+      "actual": "qwen/qwen3-4b-2507"
     },
     {
       "stage": "literature_search",
       "routed": "qwen3-4b-2507",
-      "actual": "glm-5.1"
+      "actual": "qwen/qwen3-4b-2507"
     },
     {
       "stage": "literature_search",
       "routed": "qwen3-4b-2507",
-      "actual": "glm-5.1"
+      "actual": "qwen/qwen3-4b-2507"
     },
     {
       "stage": "literature_search",
       "routed": "qwen3-4b-2507",
-      "actual": "glm-5.1"
+      "actual": "qwen/qwen3-4b-2507"
     },
     {
       "stage": "literature_search",
       "routed": "qwen3-4b-2507",
-      "actual": "glm-5.1"
+      "actual": "qwen/qwen3-4b-2507"
     },
     {
       "stage": "literature_search",
       "routed": "qwen3-4b-2507",
-      "actual": "glm-5.1"
+      "actual": "qwen/qwen3-4b-2507"
     },
     {
       "stage": "literature_search",
       "routed": "qwen3-4b-2507",
-      "actual": "glm-5.1"
+      "actual": "qwen/qwen3-4b-2507"
     },
     {
       "stage": "literature_search",
       "routed": "qwen3-4b-2507",
-      "actual": "glm-5.1"
+      "actual": "qwen/qwen3-4b-2507"
     },
     {
       "stage": "literature_search",
       "routed": "qwen3-4b-2507",
-      "actual": "glm-5.1"
+      "actual": "qwen/qwen3-4b-2507"
     },
     {
       "stage": "literature_search",
       "routed": "qwen3-4b-2507",
-      "actual": "glm-5.1"
+      "actual": "qwen/qwen3-4b-2507"
     },
     {
       "stage": "literature_search",
       "routed": "qwen3-4b-2507",
-      "actual": "glm-5.1"
+      "actual": "qwen/qwen3-4b-2507"
     },
     {
       "stage": "literature_search",
       "routed": "qwen3-4b-2507",
-      "actual": "glm-5.1"
+      "actual": "qwen/qwen3-4b-2507"
     },
     {
       "stage": "idea_generation",
       "routed": "qwen3-4b-2507",
-      "actual": "glm-5.1"
+      "actual": "qwen/qwen3-4b-2507"
+    },
+    {
+      "stage": "idea_generation",
+      "routed": "qwen3-4b-2507",
+      "actual": "qwen/qwen3-4b-2507"
+    },
+    {
+      "stage": "idea_generation",
+      "routed": "qwen3-4b-2507",
+      "actual": "qwen/qwen3-4b-2507"
+    },
+    {
+      "stage": "idea_generation",
+      "routed": "qwen3-4b-2507",
+      "actual": "qwen/qwen3-4b-2507"
+    },
+    {
+      "stage": "idea_generation",
+      "routed": "qwen3-4b-2507",
+      "actual": "qwen/qwen3-4b-2507"
+    },
+    {
+      "stage": "idea_generation",
+      "routed": "qwen3-4b-2507",
+      "actual": "qwen/qwen3-4b-2507"
+    },
+    {
+      "stage": "idea_generation",
+      "routed": "qwen3-4b-2507",
+      "actual": "qwen/qwen3-4b-2507"
+    },
+    {
+      "stage": "idea_generation",
+      "routed": "qwen3-4b-2507",
+      "actual": "qwen/qwen3-4b-2507"
+    },
+    {
+      "stage": "idea_generation",
+      "routed": "qwen3-4b-2507",
+      "actual": "qwen/qwen3-4b-2507"
+    },
+    {
+      "stage": "idea_generation",
+      "routed": "qwen3-4b-2507",
+      "actual": "qwen/qwen3-4b-2507"
+    },
+    {
+      "stage": "idea_generation",
+      "routed": "qwen3-4b-2507",
+      "actual": "qwen/qwen3-4b-2507"
+    },
+    {
+      "stage": "idea_generation",
+      "routed": "qwen3-4b-2507",
+      "actual": "qwen/qwen3-4b-2507"
+    },
+    {
+      "stage": "idea_generation",
+      "routed": "qwen3-4b-2507",
+      "actual": "qwen/qwen3-4b-2507"
+    },
+    {
+      "stage": "idea_generation",
+      "routed": "qwen3-4b-2507",
+      "actual": "qwen/qwen3-4b-2507"
+    },
+    {
+      "stage": "idea_generation",
+      "routed": "qwen3-4b-2507",
+      "actual": "qwen/qwen3-4b-2507"
+    },
+    {
+      "stage": "idea_generation",
+      "routed": "qwen3-4b-2507",
+      "actual": "qwen/qwen3-4b-2507"
+    },
+    {
+      "stage": "idea_generation",
+      "routed": "qwen3-4b-2507",
+      "actual": "qwen/qwen3-4b-2507"
+    },
+    {
+      "stage": "idea_generation",
+      "routed": "qwen3-4b-2507",
+      "actual": "qwen/qwen3-4b-2507"
+    },
+    {
+      "stage": "idea_generation",
+      "routed": "qwen3-4b-2507",
+      "actual": "qwen/qwen3-4b-2507"
+    },
+    {
+      "stage": "idea_generation",
+      "routed": "qwen3-4b-2507",
+      "actual": "qwen/qwen3-4b-2507"
+    },
+    {
+      "stage": "idea_generation",
+      "routed": "qwen3-4b-2507",
+      "actual": "qwen/qwen3-4b-2507"
+    },
+    {
+      "stage": "proposal_synthesis",
+      "routed": "qwen3-4b-2507",
+      "actual": "qwen/qwen3-4b-2507"
+    },
+    {
+      "stage": "proposal_synthesis",
+      "routed": "qwen3-4b-2507",
+      "actual": "qwen/qwen3-4b-2507"
+    },
+    {
+      "stage": "proposal_synthesis",
+      "routed": "qwen3-4b-2507",
+      "actual": "qwen/qwen3-4b-2507"
+    },
+    {
+      "stage": "proposal_synthesis",
+      "routed": "qwen3-4b-2507",
+      "actual": "qwen/qwen3-4b-2507"
+    },
+    {
+      "stage": "proposal_synthesis",
+      "routed": "qwen3-4b-2507",
+      "actual": "qwen/qwen3-4b-2507"
+    },
+    {
+      "stage": "proposal_synthesis",
+      "routed": "qwen3-4b-2507",
+      "actual": "qwen/qwen3-4b-2507"
+    },
+    {
+      "stage": "proposal_synthesis",
+      "routed": "qwen3-4b-2507",
+      "actual": "qwen/qwen3-4b-2507"
+    },
+    {
+      "stage": "proposal_synthesis",
+      "routed": "qwen3-4b-2507",
+      "actual": "qwen/qwen3-4b-2507"
+    },
+    {
+      "stage": "proposal_synthesis",
+      "routed": "qwen3-4b-2507",
+      "actual": "qwen/qwen3-4b-2507"
+    },
+    {
+      "stage": "proposal_synthesis",
+      "routed": "qwen3-4b-2507",
+      "actual": "qwen/qwen3-4b-2507"
+    },
+    {
+      "stage": "proposal_synthesis",
+      "routed": "qwen3-4b-2507",
+      "actual": "qwen/qwen3-4b-2507"
+    },
+    {
+      "stage": "proposal_synthesis",
+      "routed": "qwen3-4b-2507",
+      "actual": "qwen/qwen3-4b-2507"
+    },
+    {
+      "stage": "proposal_synthesis",
+      "routed": "qwen3-4b-2507",
+      "actual": "qwen/qwen3-4b-2507"
+    },
+    {
+      "stage": "proposal_synthesis",
+      "routed": "qwen3-4b-2507",
+      "actual": "qwen/qwen3-4b-2507"
+    },
+    {
+      "stage": "proposal_synthesis",
+      "routed": "qwen3-4b-2507",
+      "actual": "qwen/qwen3-4b-2507"
+    },
+    {
+      "stage": "proposal_synthesis",
+      "routed": "qwen3-4b-2507",
+      "actual": "qwen/qwen3-4b-2507"
+    },
+    {
+      "stage": "proposal_synthesis",
+      "routed": "qwen3-4b-2507",
+      "actual": "qwen/qwen3-4b-2507"
+    },
+    {
+      "stage": "proposal_synthesis",
+      "routed": "qwen3-4b-2507",
+      "actual": "qwen/qwen3-4b-2507"
+    },
+    {
+      "stage": "proposal_synthesis",
+      "routed": "qwen3-4b-2507",
+      "actual": "qwen/qwen3-4b-2507"
+    },
+    {
+      "stage": "proposal_synthesis",
+      "routed": "qwen3-4b-2507",
+      "actual": "qwen/qwen3-4b-2507"
+    },
+    {
+      "stage": "proposal_synthesis",
+      "routed": "qwen3-4b-2507",
+      "actual": "qwen/qwen3-4b-2507"
+    },
+    {
+      "stage": "proposal_synthesis",
+      "routed": "qwen3-4b-2507",
+      "actual": "qwen/qwen3-4b-2507"
+    },
+    {
+      "stage": "proposal_synthesis",
+      "routed": "qwen3-4b-2507",
+      "actual": "qwen/qwen3-4b-2507"
+    },
+    {
+      "stage": "proposal_synthesis",
+      "routed": "qwen3-4b-2507",
+      "actual": "qwen/qwen3-4b-2507"
+    },
+    {
+      "stage": "proposal_synthesis",
+      "routed": "qwen3-4b-2507",
+      "actual": "qwen/qwen3-4b-2507"
+    },
+    {
+      "stage": "proposal_synthesis",
+      "routed": "qwen3-4b-2507",
+      "actual": "qwen/qwen3-4b-2507"
+    },
+    {
+      "stage": "proposal_synthesis",
+      "routed": "qwen3-4b-2507",
+      "actual": "qwen/qwen3-4b-2507"
+    },
+    {
+      "stage": "proposal_synthesis",
+      "routed": "qwen3-4b-2507",
+      "actual": "qwen/qwen3-4b-2507"
+    },
+    {
+      "stage": "proposal_synthesis",
+      "routed": "qwen3-4b-2507",
+      "actual": "qwen/qwen3-4b-2507"
+    },
+    {
+      "stage": "proposal_synthesis",
+      "routed": "qwen3-4b-2507",
+      "actual": "qwen/qwen3-4b-2507"
+    },
+    {
+      "stage": "proposal_synthesis",
+      "routed": "qwen3-4b-2507",
+      "actual": "qwen/qwen3-4b-2507"
+    },
+    {
+      "stage": "proposal_synthesis",
+      "routed": "qwen3-4b-2507",
+      "actual": "qwen/qwen3-4b-2507"
+    },
+    {
+      "stage": "proposal_synthesis",
+      "routed": "qwen3-4b-2507",
+      "actual": "qwen/qwen3-4b-2507"
+    },
+    {
+      "stage": "proposal_synthesis",
+      "routed": "qwen3-4b-2507",
+      "actual": "qwen/qwen3-4b-2507"
+    },
+    {
+      "stage": "proposal_synthesis",
+      "routed": "qwen3-4b-2507",
+      "actual": "qwen/qwen3-4b-2507"
+    },
+    {
+      "stage": "proposal_synthesis",
+      "routed": "qwen3-4b-2507",
+      "actual": "qwen/qwen3-4b-2507"
+    },
+    {
+      "stage": "proposal_synthesis",
+      "routed": "qwen3-4b-2507",
+      "actual": "qwen/qwen3-4b-2507"
+    },
+    {
+      "stage": "adversarial_review",
+      "routed": "qwen3-4b-2507",
+      "actual": "qwen/qwen3-4b-2507"
+    },
+    {
+      "stage": "adversarial_review",
+      "routed": "qwen3-4b-2507",
+      "actual": "qwen/qwen3-4b-2507"
+    },
+    {
+      "stage": "adversarial_review",
+      "routed": "qwen3-4b-2507",
+      "actual": "qwen/qwen3-4b-2507"
+    },
+    {
+      "stage": "adversarial_review",
+      "routed": "qwen3-4b-2507",
+      "actual": "qwen/qwen3-4b-2507"
+    },
+    {
+      "stage": "adversarial_review",
+      "routed": "qwen3-4b-2507",
+      "actual": "qwen/qwen3-4b-2507"
+    },
+    {
+      "stage": "adversarial_review",
+      "routed": "qwen3-4b-2507",
+      "actual": "qwen/qwen3-4b-2507"
+    },
+    {
+      "stage": "adversarial_review",
+      "routed": "qwen3-4b-2507",
+      "actual": "qwen/qwen3-4b-2507"
+    },
+    {
+      "stage": "adversarial_review",
+      "routed": "qwen3-4b-2507",
+      "actual": "qwen/qwen3-4b-2507"
+    },
+    {
+      "stage": "adversarial_review",
+      "routed": "qwen3-4b-2507",
+      "actual": "qwen/qwen3-4b-2507"
+    },
+    {
+      "stage": "adversarial_review",
+      "routed": "qwen3-4b-2507",
+      "actual": "qwen/qwen3-4b-2507"
+    },
+    {
+      "stage": "adversarial_review",
+      "routed": "qwen3-4b-2507",
+      "actual": "qwen/qwen3-4b-2507"
+    },
+    {
+      "stage": "adversarial_review",
+      "routed": "qwen3-4b-2507",
+      "actual": "qwen/qwen3-4b-2507"
+    },
+    {
+      "stage": "adversarial_review",
+      "routed": "qwen3-4b-2507",
+      "actual": "qwen/qwen3-4b-2507"
+    },
+    {
+      "stage": "adversarial_review",
+      "routed": "qwen3-4b-2507",
+      "actual": "qwen/qwen3-4b-2507"
+    },
+    {
+      "stage": "adversarial_review",
+      "routed": "qwen3-4b-2507",
+      "actual": "qwen/qwen3-4b-2507"
+    },
+    {
+      "stage": "adversarial_review",
+      "routed": "qwen3-4b-2507",
+      "actual": "qwen/qwen3-4b-2507"
+    },
+    {
+      "stage": "adversarial_review",
+      "routed": "qwen3-4b-2507",
+      "actual": "qwen/qwen3-4b-2507"
+    },
+    {
+      "stage": "adversarial_review",
+      "routed": "qwen3-4b-2507",
+      "actual": "qwen/qwen3-4b-2507"
+    },
+    {
+      "stage": "adversarial_review",
+      "routed": "qwen3-4b-2507",
+      "actual": "qwen/qwen3-4b-2507"
+    },
+    {
+      "stage": "adversarial_review",
+      "routed": "qwen3-4b-2507",
+      "actual": "qwen/qwen3-4b-2507"
+    },
+    {
+      "stage": "adversarial_review",
+      "routed": "qwen3-4b-2507",
+      "actual": "qwen/qwen3-4b-2507"
+    },
+    {
+      "stage": "adversarial_review",
+      "routed": "qwen3-4b-2507",
+      "actual": "qwen/qwen3-4b-2507"
+    },
+    {
+      "stage": "adversarial_review",
+      "routed": "qwen3-4b-2507",
+      "actual": "qwen/qwen3-4b-2507"
+    },
+    {
+      "stage": "adversarial_review",
+      "routed": "qwen3-4b-2507",
+      "actual": "qwen/qwen3-4b-2507"
+    },
+    {
+      "stage": "adversarial_review",
+      "routed": "qwen3-4b-2507",
+      "actual": "qwen/qwen3-4b-2507"
+    },
+    {
+      "stage": "adversarial_review",
+      "routed": "qwen3-4b-2507",
+      "actual": "qwen/qwen3-4b-2507"
+    },
+    {
+      "stage": "adversarial_review",
+      "routed": "qwen3-4b-2507",
+      "actual": "qwen/qwen3-4b-2507"
+    },
+    {
+      "stage": "adversarial_review",
+      "routed": "qwen3-4b-2507",
+      "actual": "qwen/qwen3-4b-2507"
+    },
+    {
+      "stage": "adversarial_review",
+      "routed": "qwen3-4b-2507",
+      "actual": "qwen/qwen3-4b-2507"
+    },
+    {
+      "stage": "adversarial_review",
+      "routed": "qwen3-4b-2507",
+      "actual": "qwen/qwen3-4b-2507"
+    },
+    {
+      "stage": "adversarial_review",
+      "routed": "qwen3-4b-2507",
+      "actual": "qwen/qwen3-4b-2507"
+    },
+    {
+      "stage": "adversarial_review",
+      "routed": "qwen3-4b-2507",
+      "actual": "qwen/qwen3-4b-2507"
+    },
+    {
+      "stage": "adversarial_review",
+      "routed": "qwen3-4b-2507",
+      "actual": "qwen/qwen3-4b-2507"
+    },
+    {
+      "stage": "adversarial_review",
+      "routed": "qwen3-4b-2507",
+      "actual": "qwen/qwen3-4b-2507"
+    },
+    {
+      "stage": "adversarial_review",
+      "routed": "qwen3-4b-2507",
+      "actual": "qwen/qwen3-4b-2507"
+    },
+    {
+      "stage": "adversarial_review",
+      "routed": "qwen3-4b-2507",
+      "actual": "qwen/qwen3-4b-2507"
+    },
+    {
+      "stage": "adversarial_review",
+      "routed": "qwen3-4b-2507",
+      "actual": "qwen/qwen3-4b-2507"
+    },
+    {
+      "stage": "adversarial_review",
+      "routed": "qwen3-4b-2507",
+      "actual": "qwen/qwen3-4b-2507"
+    },
+    {
+      "stage": "adversarial_review",
+      "routed": "qwen3-4b-2507",
+      "actual": "qwen/qwen3-4b-2507"
+    },
+    {
+      "stage": "adversarial_review",
+      "routed": "qwen3-4b-2507",
+      "actual": "qwen/qwen3-4b-2507"
+    },
+    {
+      "stage": "adversarial_review",
+      "routed": "qwen3-4b-2507",
+      "actual": "qwen/qwen3-4b-2507"
+    },
+    {
+      "stage": "adversarial_review",
+      "routed": "qwen3-4b-2507",
+      "actual": "qwen/qwen3-4b-2507"
+    },
+    {
+      "stage": "adversarial_review",
+      "routed": "qwen3-4b-2507",
+      "actual": "qwen/qwen3-4b-2507"
+    },
+    {
+      "stage": "adversarial_review",
+      "routed": "qwen3-4b-2507",
+      "actual": "qwen/qwen3-4b-2507"
+    },
+    {
+      "stage": "adversarial_review",
+      "routed": "qwen3-4b-2507",
+      "actual": "qwen/qwen3-4b-2507"
+    },
+    {
+      "stage": "adversarial_review",
+      "routed": "qwen3-4b-2507",
+      "actual": "qwen/qwen3-4b-2507"
+    },
+    {
+      "stage": "adversarial_review",
+      "routed": "qwen3-4b-2507",
+      "actual": "qwen/qwen3-4b-2507"
+    },
+    {
+      "stage": "adversarial_review",
+      "routed": "qwen3-4b-2507",
+      "actual": "qwen/qwen3-4b-2507"
+    },
+    {
+      "stage": "adversarial_review",
+      "routed": "qwen3-4b-2507",
+      "actual": "qwen/qwen3-4b-2507"
+    },
+    {
+      "stage": "adversarial_review",
+      "routed": "qwen3-4b-2507",
+      "actual": "qwen/qwen3-4b-2507"
+    },
+    {
+      "stage": "adversarial_review",
+      "routed": "qwen3-4b-2507",
+      "actual": "qwen/qwen3-4b-2507"
+    },
+    {
+      "stage": "paper_synthesis",
+      "routed": "qwen3-4b-2507",
+      "actual": "qwen/qwen3-4b-2507"
+    },
+    {
+      "stage": "paper_synthesis",
+      "routed": "qwen3-4b-2507",
+      "actual": "qwen/qwen3-4b-2507"
+    },
+    {
+      "stage": "paper_synthesis",
+      "routed": "qwen3-4b-2507",
+      "actual": "qwen/qwen3-4b-2507"
+    },
+    {
+      "stage": "paper_synthesis",
+      "routed": "qwen3-4b-2507",
+      "actual": "qwen/qwen3-4b-2507"
+    },
+    {
+      "stage": "paper_synthesis",
+      "routed": "qwen3-4b-2507",
+      "actual": "qwen/qwen3-4b-2507"
+    },
+    {
+      "stage": "paper_synthesis",
+      "routed": "qwen3-4b-2507",
+      "actual": "qwen/qwen3-4b-2507"
+    },
+    {
+      "stage": "paper_synthesis",
+      "routed": "qwen3-4b-2507",
+      "actual": "qwen/qwen3-4b-2507"
+    },
+    {
+      "stage": "paper_synthesis",
+      "routed": "qwen3-4b-2507",
+      "actual": "qwen/qwen3-4b-2507"
+    },
+    {
+      "stage": "paper_synthesis",
+      "routed": "qwen3-4b-2507",
+      "actual": "qwen/qwen3-4b-2507"
+    },
+    {
+      "stage": "paper_synthesis",
+      "routed": "qwen3-4b-2507",
+      "actual": "qwen/qwen3-4b-2507"
+    },
+    {
+      "stage": "paper_synthesis",
+      "routed": "qwen3-4b-2507",
+      "actual": "qwen/qwen3-4b-2507"
+    },
+    {
+      "stage": "paper_synthesis",
+      "routed": "qwen3-4b-2507",
+      "actual": "qwen/qwen3-4b-2507"
+    },
+    {
+      "stage": "paper_synthesis",
+      "routed": "qwen3-4b-2507",
+      "actual": "qwen/qwen3-4b-2507"
+    },
+    {
+      "stage": "paper_synthesis",
+      "routed": "qwen3-4b-2507",
+      "actual": "qwen/qwen3-4b-2507"
+    },
+    {
+      "stage": "paper_synthesis",
+      "routed": "qwen3-4b-2507",
+      "actual": "qwen/qwen3-4b-2507"
+    },
+    {
+      "stage": "paper_synthesis",
+      "routed": "qwen3-4b-2507",
+      "actual": "qwen/qwen3-4b-2507"
+    },
+    {
+      "stage": "proposal_synthesis",
+      "routed": "qwen3-4b-2507",
+      "actual": "qwen/qwen3-4b-2507"
+    },
+    {
+      "stage": "proposal_synthesis",
+      "routed": "qwen3-4b-2507",
+      "actual": "qwen/qwen3-4b-2507"
     }
   ],
   "pass_criteria": {

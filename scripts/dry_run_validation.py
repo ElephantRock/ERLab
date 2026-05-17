@@ -40,13 +40,18 @@ async def main():
     logger.info("SmartRouter Dry-Run Validation: %s", run_id)
     logger.info("=" * 70)
 
-    # Import after path setup
-    from backend.config import get_settings
-    settings = get_settings()
-
     # Force LM Studio for all providers (bypass expired Anthropic key)
-    os.environ.setdefault("EROCK_DEFAULT_PROVIDER", "lmstudio")
-    os.environ.setdefault("EROCK_THINKING_MODEL", "lmstudio")
+    # These MUST be set before any settings import
+    os.environ["EROCK_DEFAULT_PROVIDER"] = "lmstudio"
+    os.environ["EROCK_THINKING_MODEL"] = "lmstudio"
+    os.environ["EROCK_GENERATION_MODEL"] = "lmstudio"
+    os.environ["EROCK_ANTHROPIC_MODEL"] = "qwen/qwen3-4b-2507"
+
+    # Import after path setup (settings will be fresh since env is set)
+    from backend.config import get_settings, Settings
+    # Clear lru_cache to ensure fresh settings
+    get_settings.cache_clear()
+    settings = get_settings()
 
     from backend.pipeline.orchestrator._orchestrator import PipelineOrchestrator
 
