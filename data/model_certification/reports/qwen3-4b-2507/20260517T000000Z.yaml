@@ -3,7 +3,7 @@ model_id: qwen3-4b-2507
 eval_version: "0.1"
 tested_at: "2026-05-17T00:00:00Z"
 status: approved_for_limited_use
-safe_context_window: 8192
+safe_context_window: 8000  # hardware-measured: hard ceiling ~8167 on RTX 3080 Ti 12GB
 safe_output_tokens: 2048
 stage_eligibility:
   literature_search: limited_use

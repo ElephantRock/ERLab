@@ -2,16 +2,19 @@
 
 **Date:** 2026-05-17  
 **Evaluator:** Automated certification pipeline (v0.1 admission + v0.2 stage eval)  
-**Hardware:** RTX 3080 Ti (16GB VRAM) via LM Studio  
+**Hardware:** RTX 3080 Ti (12GB GDDR6X) via LM Studio  
 
 ## Model Matrix
 
 | Model | Family | Params | Safe ctx | Smoke | JSON raw | Schema valid |
 |---|---|---:|---:|---|---:|---:|
-| qwen3-4b-2507 | Qwen 3 | 4B | 6,553 | PASS | 100% | 33% |
-| qwen3.5-0.8b | Qwen 3.5 | 0.8B | 26,214 | PASS | 80% | 33% |
-| qwen2.5-14b-instruct | Qwen 2.5 | 14B | 26,214 | PASS | 100% | 33% |
-| google/gemma-4-e4b | Gemma 4 | 4B | 26,214 | PASS | 7% | 33% |
+| qwen3-4b-2507 | Qwen 3 | 4B | 8,000¹ | PASS | 100% | 33% |
+| qwen3.5-0.8b | Qwen 3.5 | 0.8B | 26,214² | PASS | 80% | 33% |
+| qwen2.5-14b-instruct | Qwen 2.5 | 14B | 26,214² | PASS | 100% | 33% |
+| google/gemma-4-e4b | Gemma 4 | 4B | 26,214² | PASS | 7% | 33% |
+
+¹ Hardware-measured: hard ceiling ~8,167 tokens on RTX 3080 Ti 12GB (advertised 8,192)
+² Advertised value; not hardware-measured (model was not hot-loaded during testing)
 
 **Note:** All models received `rejected` admission status due to schema_valid_rate below 95% threshold. This reflects LM Studio's lack of structured JSON output support, not model quality.
 
@@ -78,7 +81,8 @@
 
 5. **Synthesis is weak across the board**: All models score below 0.50, confirming the v0.2 cap is appropriate.
 
-6. **Hardware limitations**: 9B+ models are very slow on RTX 3080 Ti (~2 min per stage eval case). Practical for offline certification but not for runtime routing.
+6. **Hardware limitations**: 9B+ models require model swapping on RTX 3080 Ti 12GB. Cold load causes 2+ min stalls per request. Practical for offline certification only when pre-loaded.
+7. **Context headroom**: qwen3-4b-2507 measured safe context is 8,000 tokens (derated from 8,192), not the previously assumed 6,553.
 
 ## Next Steps
 

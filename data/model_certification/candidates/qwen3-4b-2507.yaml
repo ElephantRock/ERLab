@@ -5,7 +5,7 @@ model_family: qwen
 parameter_count: 4b
 quantization: unknown
 engine: lmstudio
-advertised_context_window: 8192
+advertised_context_window: 8192  # hardware-measured max: ~8167 on RTX 3080 Ti 12GB
 advertised_max_output_tokens: 4096
 supports_json_mode: false
 supports_tool_calling: false

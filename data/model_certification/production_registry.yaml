@@ -3,6 +3,7 @@ models:
     model_id: qwen3-4b-2507
     provider: lmstudio
     status: approved_for_limited_use
+    hardware_notes: RTX 3080 Ti 12GB; measured safe_context=8000 (hard ceiling ~8167)
     allowed_stages:
       literature_search: limited_use
       idea_generation: limited_use
