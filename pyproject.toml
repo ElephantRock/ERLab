@@ -91,7 +91,7 @@ select = ["E", "F", "I", "N", "UP", "B", "SIM"]
 [tool.pytest.ini_options]
 testpaths = ["backend/tests"]
 addopts = ""
-markers = ["slow: marks tests as slow (deselect with '-m \"not slow\"')", "integration: marks tests requiring external APIs"]
+markers = ["slow: marks tests as slow (deselect with '-m \"not slow\"')", "integration: marks tests requiring external APIs", "live: marks tests requiring live LM Studio", "requires_lmstudio: marks tests requiring LM Studio at runtime"]
 
 [tool.coverage.run]
 source = ["backend"]

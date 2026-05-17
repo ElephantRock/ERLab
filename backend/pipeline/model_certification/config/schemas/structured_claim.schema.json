@@ -1,0 +1,15 @@
+{
+  "type": "object",
+  "properties": {
+    "claim_type": {"type": "string"},
+    "claim_text": {"type": "string"},
+    "section": {"type": "string"},
+    "evidence_level": {"type": "string", "enum": ["strong", "moderate", "weak", "none"]},
+    "source_citations": {
+      "type": "array",
+      "items": {"type": "string"}
+    }
+  },
+  "required": ["claim_type", "claim_text", "section", "evidence_level"],
+  "additionalProperties": true
+}

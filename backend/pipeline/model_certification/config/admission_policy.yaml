@@ -1,0 +1,21 @@
+# Admission policy for model certification v0.1
+
+hard_reject:
+  smoke_test_passed: false
+  hardware_stable: false
+  crash_rate_gt: 0.02
+
+production_required:
+  schema_valid_rate_gte: 0.95
+  valid_json_rate_gte: 0.95
+  safe_context_window_gte: 4096
+
+limited_use_allowed:
+  schema_valid_rate_gte: 0.85
+  valid_json_rate_gte: 0.90
+  safe_context_window_gte: 4096
+
+repair_only_allowed:
+  schema_valid_rate_gte: 0.70
+  valid_json_rate_gte: 0.75
+  safe_context_window_gte: 4096

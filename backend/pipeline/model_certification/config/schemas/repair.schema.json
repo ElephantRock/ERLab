@@ -1,0 +1,12 @@
+{
+  "type": "object",
+  "properties": {
+    "action": {"type": "string", "enum": ["keep", "remove", "mark_speculative", "reclassify", "split"]},
+    "claim_id": {"type": "string"},
+    "reason": {"type": "string"},
+    "new_type": {"type": ["string", "null"]},
+    "confidence": {"type": "number", "minimum": 0, "maximum": 1}
+  },
+  "required": ["action", "claim_id", "reason"],
+  "additionalProperties": true
+}
