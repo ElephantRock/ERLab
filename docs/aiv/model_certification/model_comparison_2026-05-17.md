@@ -8,12 +8,12 @@
 
 | Model | Family | Params | Safe ctx | Smoke | JSON raw | Schema valid |
 |---|---|---:|---:|---|---:|---:|
-| qwen3-4b-2507 | Qwen 3 | 4B | 8,000¹ | PASS | 100% | 33% |
+| qwen3-4b-2507 | Qwen 3 | 4B | **65,536**¹ | PASS | 100% | 33% |
 | qwen3.5-0.8b | Qwen 3.5 | 0.8B | 26,214² | PASS | 80% | 33% |
 | qwen2.5-14b-instruct | Qwen 2.5 | 14B | 26,214² | PASS | 100% | 33% |
 | google/gemma-4-e4b | Gemma 4 | 4B | 26,214² | PASS | 7% | 33% |
 
-¹ Hardware-measured: hard ceiling ~8,167 tokens on RTX 3080 Ti 12GB (advertised 8,192)
+¹ **VRAM-measured**: loaded at ctx=65,792 on RTX 3080 Ti 12GB (flash_attn=true, kv_gpu=true). Hard ceiling 65,793+ OOM. Inference verified at 65,717 tokens. Previous 8,192 was the LM Studio default load-time setting, not the hardware limit.
 ² Advertised value; not hardware-measured (model was not hot-loaded during testing)
 
 **Note:** All models received `rejected` admission status due to schema_valid_rate below 95% threshold. This reflects LM Studio's lack of structured JSON output support, not model quality.
@@ -82,7 +82,7 @@
 5. **Synthesis is weak across the board**: All models score below 0.50, confirming the v0.2 cap is appropriate.
 
 6. **Hardware limitations**: 9B+ models require model swapping on RTX 3080 Ti 12GB. Cold load causes 2+ min stalls per request. Practical for offline certification only when pre-loaded.
-7. **Context headroom**: qwen3-4b-2507 measured safe context is 8,000 tokens (derated from 8,192), not the previously assumed 6,553.
+7. **Context headroom**: qwen3-4b-2507 was originally loaded at ctx=8192 (LM Studio default). After reload at ctx=65536 with flash_attention=true, VRAM ceiling is 65,792 tokens — an **8x improvement** over the original setting. The previous 6,553-token derated value was based on the default load config, not hardware limits.
 
 ## Next Steps
 

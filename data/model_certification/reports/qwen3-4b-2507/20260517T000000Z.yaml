@@ -3,7 +3,10 @@ model_id: qwen3-4b-2507
 eval_version: "0.1"
 tested_at: "2026-05-17T00:00:00Z"
 status: approved_for_limited_use
-safe_context_window: 8000  # hardware-measured: hard ceiling ~8167 on RTX 3080 Ti 12GB
+safe_context_window: 65536  # VRAM-measured max load: 65792 on RTX 3080 Ti 12GB (flash_attn=true, kv_gpu=true)
+                                    # Hard VRAM ceiling: 65793+ fails to load
+                                    # Inference verified: 65717 tokens OK
+                                    # Safe production: 65536 (power-of-2, ~0.4% margin)
 safe_output_tokens: 2048
 stage_eligibility:
   literature_search: limited_use

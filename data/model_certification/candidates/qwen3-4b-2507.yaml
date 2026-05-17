@@ -5,7 +5,10 @@ model_family: qwen
 parameter_count: 4b
 quantization: unknown
 engine: lmstudio
-advertised_context_window: 8192  # hardware-measured max: ~8167 on RTX 3080 Ti 12GB
+advertised_context_window: 8192  # Model architecture limit
+                                    # VRAM-measured: loads up to ctx=65792 on RTX 3080 Ti 12GB
+                                    # Hard ceiling: 65793+ fails (OOM)
+                                    # Production safe: 65536 (flash_attn=true, kv_gpu=true)
 advertised_max_output_tokens: 4096
 supports_json_mode: false
 supports_tool_calling: false
