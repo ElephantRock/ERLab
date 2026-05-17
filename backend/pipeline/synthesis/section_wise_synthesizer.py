@@ -49,12 +49,17 @@ class SectionDraft:
 
     section_id: str
     title: str
-    content: str
+    content: str                        # Rendered prose
     word_count: int
     citations_used: list[str]
     model_used: str
     tokens_used: int = 0
     truncated: bool = False
+    sidecar: dict = None                # Machine-readable audit trail
+    structured_claims: list = None       # Original typed claims
+    assumptions: list = None             # Design assumptions
+    claim_types_present: list = None     # What claim types appeared
+    generation_mode: str = "prose"       # "structured" | "prose" | "prose_fallback"
 
 
 @dataclass
@@ -282,15 +287,81 @@ class SectionWiseSynthesizer:
         proposal_summary: str,
         relevant_sources: str,
         domain: str,
+        proposal_id: int = 0,
     ) -> SectionDraft:
-        """Generate a single section with evidence-first closed-set citations.
+        """Generate a single section with contract-aware structured output.
 
-        Instead of asking the model to write freely and cite later, we:
-        1. Present available evidence cards explicitly
-        2. Instruct the model to only cite from the provided set
-        3. Request each claim be tied to an evidence card
+        Flow:
+        1. Look up section contract
+        2. Try structured output (typed claims as JSON)
+        3. If valid → ClaimRenderer → prose + sidecar
+        4. If invalid → retry once → prose fallback
         """
-        prompt = (
+        from backend.pipeline.synthesis.section_contracts import get_section_prompt
+        from backend.pipeline.synthesis.claim_renderer import (
+            ClaimRenderer, ClaimIDGenerator, InvalidStructuredOutput,
+        )
+
+        # Build the contract-aware prompt
+        contract_prompt = get_section_prompt(section_id)
+        evidence_section = (
+            f"## Available Evidence (cite ONLY these):\n{relevant_sources}"
+        )
+        context = (
+            f"Paper outline:\n{outline[:500]}\n\n"
+            f"Proposal summary:\n{proposal_summary[:1000]}\n\n"
+            f"{evidence_section}\n\n"
+            f"Domain: {domain}. Target: {target_words} words."
+        )
+
+        max_output = max(MIN_SECTION_OUTPUT_TOKENS, target_words * 2)
+
+        # --- Attempt 1: Structured output ---
+        try:
+            result = await self._provider.structured_output(
+                messages=[
+                    {"role": "system", "content": contract_prompt},
+                    {"role": "user", "content": context},
+                ],
+                schema={"type": "object"},  # Accept any JSON structure
+                temperature=0.4,
+                max_tokens=min(max_output, 4096),
+            )
+
+            if isinstance(result, dict) and result.get("claims"):
+                id_gen = ClaimIDGenerator(proposal_id)
+                renderer = ClaimRenderer()
+
+                # Inject section_id into structured output
+                result["section"] = section_id
+
+                # Validate and render
+                if renderer._validate_schema(result):
+                    prose, sidecar = renderer.render_section(section_id, result, id_gen)
+
+                    claims = result.get("claims", [])
+                    assumptions = result.get("assumptions", [])
+                    citations = re.findall(r'\[SOURCE-\d+\]', prose)
+                    types_present = list({c.get("type", "unknown") for c in claims})
+
+                    return SectionDraft(
+                        section_id=section_id,
+                        title=section_title,
+                        content=prose,
+                        word_count=len(prose.split()),
+                        citations_used=citations,
+                        model_used=self._get_model_name(),
+                        sidecar=sidecar,
+                        structured_claims=claims,
+                        assumptions=assumptions,
+                        claim_types_present=types_present,
+                        generation_mode="structured",
+                    )
+        except Exception as e:
+            logger.info("Structured output for '%s' failed (%s), trying prose fallback", section_id, e)
+
+        # --- Attempt 2: Prose fallback ---
+        prose_prompt = (
             f"Write the '{section_title}' section ({target_words} target words) "
             f"for a research paper in '{domain}'.\n\n"
             f"Paper outline:\n{outline[:500]}\n\n"
@@ -306,14 +377,11 @@ class SectionWiseSynthesizer:
             f"Every factual claim must have a citation from the evidence above."
         )
 
-        # Calculate output tokens for this section
-        max_output = max(MIN_SECTION_OUTPUT_TOKENS, target_words * 2)  # rough tokens
-
         try:
-            result = await self._provider.complete(
+            result_text = await self._provider.complete(
                 messages=[
                     {"role": "system", "content": self._system_prompt},
-                    {"role": "user", "content": prompt},
+                    {"role": "user", "content": prose_prompt},
                 ],
                 temperature=0.4,
                 max_tokens=min(max_output, 4096),
@@ -327,12 +395,11 @@ class SectionWiseSynthesizer:
                 word_count=0,
                 citations_used=[],
                 model_used=self._get_model_name(),
+                generation_mode="prose_fallback",
             )
 
-        content = result.strip() if result else ""
+        content = result_text.strip() if result_text else ""
         word_count = len(content.split())
-
-        # Extract citations used
         citations = re.findall(r'\[SOURCE-\d+\]', content)
 
         return SectionDraft(
@@ -342,6 +409,7 @@ class SectionWiseSynthesizer:
             word_count=word_count,
             citations_used=citations,
             model_used=self._get_model_name(),
+            generation_mode="prose_fallback",
         )
 
     def _assemble_paper(
