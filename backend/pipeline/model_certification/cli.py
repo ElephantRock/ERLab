@@ -191,6 +191,7 @@ def _create_provider(manifest: CandidateModelManifest, base_url: str | None) -> 
             def __init__(self, client, model_id):
                 self._client = client
                 self._model_id = model_id
+                self.supports_structured_output = True
 
             @property
             def default_model(self):
@@ -207,6 +208,35 @@ def _create_provider(manifest: CandidateModelManifest, base_url: str | None) -> 
                     messages=messages,
                     max_tokens=max_tokens,
                     temperature=temperature,
+                )
+                return resp.choices[0].message.content or ""
+
+            async def structured_complete(
+                self,
+                prompt: str,
+                schema_name: str,
+                schema: dict,
+                max_tokens: int = 4096,
+                temperature: float = 0.3,
+            ) -> str:
+                """Call LM Studio with response_format json_schema for guaranteed schema compliance."""
+                if isinstance(prompt, str):
+                    messages = [{"role": "user", "content": prompt}]
+                else:
+                    messages = prompt
+                resp = await self._client.chat.completions.create(
+                    model=self._model_id,
+                    messages=messages,
+                    max_tokens=max_tokens,
+                    temperature=temperature,
+                    response_format={
+                        "type": "json_schema",
+                        "json_schema": {
+                            "name": schema_name,
+                            "schema": schema,
+                            "strict": True,
+                        },
+                    },
                 )
                 return resp.choices[0].message.content or ""
 

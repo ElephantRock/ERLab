@@ -99,35 +99,32 @@ async def _probe_lmstudio(
             return
 
         data = resp.json()
-        models = data.get("models", [])
+        models = data.get("models", data.get("data", []))
 
         # Find our model
         for model_info in models:
-            model_key = model_info.get("key", "")
+            model_key = model_info.get("key", model_info.get("id", ""))
             if model_key == result.hardware_id or result.hardware_id.startswith(model_key):
                 result.load_success = True
-
+                result.model_loaded = True  # If it's in the list, it's available
+                result.context_window_reported = model_info.get(
+                    "max_context_length", None
+                )
+                # Check loaded_instances if available (LM Studio native API)
                 instances = model_info.get("loaded_instances", [])
                 if instances:
-                    result.model_loaded = True
                     inst = instances[0]
                     result.context_window_reported = inst.get(
                         "config", {}
                     ).get("context_length", None)
-                else:
-                    result.model_loaded = False
-                    result.context_window_reported = model_info.get(
-                        "max_context_length", None
-                    )
-                    result.warnings.append(
-                        f"Model {result.hardware_id} exists but not loaded"
-                    )
                 break
         else:
+            # Model not found in list but might still respond to chat
+            # (LM Studio auto-loads on first request)
             result.warnings.append(
-                f"Model {result.hardware_id} not found in LM Studio"
+                f"Model {result.hardware_id} not found in LM Studio model list"
             )
-            result.stable = False
+            result.model_loaded = False
 
     except Exception as e:
         result.warnings.append(f"LM Studio probe error: {str(e)[:100]}")

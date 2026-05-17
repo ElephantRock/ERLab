@@ -46,6 +46,11 @@ class SchemaEvalResult:
     # Native JSON mode support (from manifest, not tested)
     native_json_mode_support: bool = False
 
+    # Structured output (response_format json_schema) results
+    structured_schema_valid_rate: float = 0.0
+    structured_total_cases: int = 0
+    structured_failures: list[dict[str, Any]] = field(default_factory=list)
+
     # Per-schema breakdown
     per_schema: dict[str, dict[str, float]] = field(default_factory=dict)
 
@@ -67,6 +72,7 @@ async def run_schema_eval(
       2. Generate N prompts asking the model to produce matching JSON
       3. Evaluate raw JSON validity, recoverability, and schema compliance
       4. Track repair-adjusted metrics
+      5. If provider supports structured output, also run structured eval
     """
     schema_dir = Path(schema_dir)
     result = SchemaEvalResult(
@@ -86,6 +92,11 @@ async def run_schema_eval(
         has_jsonschema = False
         logger.warning("jsonschema not installed — schema validation skipped")
 
+    # Check for structured output support
+    has_structured = hasattr(provider, "structured_complete") and hasattr(provider, "supports_structured_output")
+    if has_structured:
+        logger.info("Provider supports structured output — running both prompted and structured eval")
+
     total_raw_valid = 0
     total_recoverable = 0
     total_schema_valid = 0
@@ -97,6 +108,12 @@ async def run_schema_eval(
     total_repair_attempted = 0
     total_repair_success = 0
 
+    # Structured-output counters
+    structured_total = 0
+    structured_parse_valid = 0
+    structured_schema_valid = 0
+    structured_failures: list[dict[str, Any]] = []
+
     for schema_file in schema_files:
         schema_name = schema_file.stem.replace(".schema", "")
         schema = json.loads(schema_file.read_text(encoding="utf-8"))
@@ -105,6 +122,10 @@ async def run_schema_eval(
         schema_recoverable = 0
         schema_valid = 0
         schema_cases = 0
+
+        # Structured per-schema
+        struct_schema_cases = 0
+        struct_schema_valid = 0
 
         prompt = _build_schema_prompt(schema, schema_name)
 
@@ -202,7 +223,50 @@ async def run_schema_eval(
             if "error" in case_result:
                 result.failures.append(case_result)
 
-        # Per-schema breakdown
+            # --- Structured output eval ---
+            if has_structured:
+                structured_total += 1
+                struct_schema_cases += 1
+                try:
+                    struct_text = await provider.structured_complete(
+                        prompt=prompt,
+                        schema_name=schema_name,
+                        schema=schema,
+                        max_tokens=2000,
+                        temperature=0.3,
+                    )
+                    if struct_text and struct_text.strip():
+                        try:
+                            json.loads(struct_text)
+                            structured_parse_valid += 1
+                            # Schema validation
+                            try:
+                                parsed = json.loads(struct_text)
+                                if has_jsonschema:
+                                    _js.validate(instance=parsed, schema=schema)
+                                else:
+                                    missing = [f for f in schema.get("required", []) if f not in parsed]
+                                    if missing:
+                                        raise ValueError(f"Missing: {missing}")
+                                structured_schema_valid += 1
+                                struct_schema_valid += 1
+                            except Exception as e:
+                                structured_failures.append({
+                                    "schema": schema_name, "case": case_idx,
+                                    "mode": "structured", "error": str(e)[:100],
+                                })
+                        except json.JSONDecodeError:
+                            structured_failures.append({
+                                "schema": schema_name, "case": case_idx,
+                                "mode": "structured", "error": "JSON parse error",
+                            })
+                except Exception as e:
+                    structured_failures.append({
+                        "schema": schema_name, "case": case_idx,
+                        "mode": "structured", "error": f"Request error: {str(e)[:100]}",
+                    })
+
+        # Per-schema breakdown (prompted)
         if schema_cases > 0:
             result.per_schema[schema_name] = {
                 "raw_json_valid_rate": schema_raw / schema_cases,
@@ -210,8 +274,13 @@ async def run_schema_eval(
                 "schema_valid_rate": schema_valid / schema_cases,
                 "cases": schema_cases,
             }
+            if has_structured and struct_schema_cases > 0:
+                result.per_schema[schema_name]["structured_schema_valid_rate"] = (
+                    struct_schema_valid / struct_schema_cases
+                )
+                result.per_schema[schema_name]["structured_cases"] = struct_schema_cases
 
-    # Aggregate
+    # Aggregate (prompted)
     result.total_cases = total_cases
     if total_cases > 0:
         result.raw_json_valid_rate = total_raw_valid / total_cases
@@ -230,6 +299,17 @@ async def run_schema_eval(
         result.schema_valid_after_repair_rate = result.schema_valid_rate
 
     result.repair_attempted_count = total_repair_attempted
+
+    # Structured output results
+    if has_structured and structured_total > 0:
+        result.structured_schema_valid_rate = structured_schema_valid / structured_total
+        result.structured_total_cases = structured_total
+        result.structured_failures = structured_failures
+        logger.info(
+            "Structured output eval: %d/%d schema valid (%.1f%%)",
+            structured_schema_valid, structured_total,
+            result.structured_schema_valid_rate * 100,
+        )
 
     return result
 

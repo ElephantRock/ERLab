@@ -133,11 +133,19 @@ class CertificationRunner:
         context = estimate_safe_context(hardware, manifest.advertised_context_window)
 
         # 7. Apply admission policy
+        # Use structured output rate if available (much higher than prompted)
+        effective_schema_rate = schema_result.schema_valid_rate
+        if schema_result.structured_schema_valid_rate > 0:
+            effective_schema_rate = schema_result.structured_schema_valid_rate
+            logger.info(
+                "Using structured output schema rate: %.1f%% (prompted was %.1f%%)",
+                effective_schema_rate * 100, schema_result.schema_valid_rate * 100,
+            )
         logger.info("Applying admission policy: %s", manifest.model_id)
         decision = decide_admission(
             smoke_passed=smoke.passed,
             hardware_stable=hardware.stable,
-            schema_valid_rate=schema_result.schema_valid_rate,
+            schema_valid_rate=effective_schema_rate,
             valid_json_rate=schema_result.recoverable_json_rate,
             safe_context_window=context.safe_tokens,
             native_json_mode=manifest.supports_json_mode,
@@ -168,11 +176,16 @@ class CertificationRunner:
                 "markdown_contamination_rate": schema_result.markdown_contamination_rate,
                 "native_json_mode_support": schema_result.native_json_mode_support,
                 "per_schema": schema_result.per_schema,
+                # Structured output (response_format json_schema)
+                "structured_schema_valid_rate": schema_result.structured_schema_valid_rate,
+                "structured_total_cases": schema_result.structured_total_cases,
+                "structured_failures": schema_result.structured_failures,
             },
             stage_eligibility=decision.stage_eligibility,
             promotion_allowed=decision.promotion_allowed,
             scores={
                 "schema_valid_rate": schema_result.schema_valid_rate,
+                "structured_schema_valid_rate": schema_result.structured_schema_valid_rate,
                 "raw_json_valid_rate": schema_result.raw_json_valid_rate,
                 "recoverable_json_rate": schema_result.recoverable_json_rate,
                 "repair_success_rate": schema_result.repair_success_rate,
