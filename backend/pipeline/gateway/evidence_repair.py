@@ -29,6 +29,9 @@ class RepairAction(str, Enum):
     QUALIFY_LANGUAGE = "qualify"            # Weakened claim to match evidence
     REWRITE = "rewrite"                     # Rewrote claim around evidence
     REMOVE = "remove"                       # No evidence found, claim removed
+    MARK_SPECULATIVE = "mark_speculative"   # Added speculative marker to unmarked claim
+    RECLASSIFY = "reclassify"               # Changed claim type (e.g., mechanism→hypothesis)
+    SPLIT = "split"                         # Split mechanism+benefit into two claims
 
 
 @dataclass
@@ -76,6 +79,10 @@ class RepairReport:
     repaired_survival_rate: float
     repaired_text: str
     claims: list[RepairedClaim] = field(default_factory=list)
+    # Type-aware repair counts
+    marked_speculative: int = 0
+    reclassified: int = 0
+    split: int = 0
 
     def to_dict(self) -> dict:
         return {
@@ -85,6 +92,9 @@ class RepairReport:
             "qualified": self.qualified,
             "rewritten": self.rewritten,
             "removed": self.removed,
+            "marked_speculative": self.marked_speculative,
+            "reclassified": self.reclassified,
+            "split": self.split,
             "original_survival_rate": round(self.original_survival_rate, 3),
             "repaired_survival_rate": round(self.repaired_survival_rate, 3),
             "improvement": round(self.repaired_survival_rate - self.original_survival_rate, 3),
@@ -122,7 +132,7 @@ class EvidenceRepairLoop:
 
     def repair(
         self,
-        validation_results: list,  # list[ClaimEvidenceResult]
+        validation_results: list,  # list[ClaimEvidenceResult] or list[ValidatedClaim]
         original_text: str,
     ) -> RepairReport:
         """Run the repair loop on validation results.
@@ -137,10 +147,11 @@ class EvidenceRepairLoop:
         Returns:
             RepairReport with per-claim repairs and updated text.
         """
-        from backend.pipeline.gateway.claim_evidence_validator import (
-            ClaimAction,
-            ClaimEvidenceResult,
-            SupportLevel,
+        # Import both old (ClaimEvidenceResult) and new (ValidatedClaim) types
+        from backend.pipeline.gateway.claim_type_validator import (
+            ValidatedClaim,
+            RepairRecommendation,
+            ClaimClassification,
         )
 
         repaired_claims: list[RepairedClaim] = []
@@ -149,10 +160,43 @@ class EvidenceRepairLoop:
         qualified = 0
         rewritten = 0
         removed = 0
+        marked_speculative = 0
+        reclassified = 0
+        split = 0
 
         text = original_text
 
         for result in validation_results:
+            # ── Handle ValidatedClaim (type-aware path) ──
+            if isinstance(result, ValidatedClaim):
+                rc = self._repair_validated_claim(result, text)
+                if rc is not None:
+                    repaired_claims.append(rc)
+                    text = self._apply_repair_to_text(text, result, rc)
+                    # Track action counts
+                    action = rc.action
+                    if action == RepairAction.KEEP:
+                        kept += 1
+                    elif action == RepairAction.MARK_SPECULATIVE:
+                        marked_speculative += 1
+                    elif action == RepairAction.RECLASSIFY:
+                        reclassified += 1
+                    elif action == RepairAction.SPLIT:
+                        split += 1
+                    elif action == RepairAction.QUALIFY_LANGUAGE:
+                        qualified += 1
+                    elif action == RepairAction.REMOVE:
+                        removed += 1
+                    elif action == RepairAction.REWRITE:
+                        rewritten += 1
+                continue
+
+            # ── Handle legacy ClaimEvidenceResult ──
+            from backend.pipeline.gateway.claim_evidence_validator import (
+                ClaimAction,
+                ClaimEvidenceResult,
+            )
+
             if not isinstance(result, ClaimEvidenceResult):
                 continue
 
@@ -179,7 +223,6 @@ class EvidenceRepairLoop:
             )
 
             if result.recommended_action == ClaimAction.KEEP_WITH_WARNING:
-                # Qualify language
                 qualified_text = self._qualify_language(result.claim_text)
                 qualified += 1
                 repaired_claims.append(RepairedClaim(
@@ -195,11 +238,9 @@ class EvidenceRepairLoop:
                     new_confidence=min(result.confidence + 0.1, 0.7),
                     repair_reason="Qualified claim language to match evidence strength",
                 ))
-                # Replace in text
                 text = text.replace(result.claim_text, qualified_text)
 
             elif better_source and better_text:
-                # Found better evidence — rewrite claim with new citation
                 rewritten_text = self._rewrite_with_evidence(
                     result.claim_text, better_source, better_text,
                 )
@@ -220,7 +261,6 @@ class EvidenceRepairLoop:
                     ))
                     text = text.replace(result.claim_text, rewritten_text)
                 else:
-                    # Rewrite didn't help — remove
                     text = self._remove_claim(text, result.claim_text)
                     removed += 1
                     repaired_claims.append(RepairedClaim(
@@ -237,7 +277,6 @@ class EvidenceRepairLoop:
                         repair_reason="No supporting evidence found after rewrite attempt",
                     ))
             elif result.recommended_action == ClaimAction.REWRITE:
-                # No better evidence but could try with qualified language
                 qualified_text = self._qualify_language(result.claim_text)
                 if qualified_text != result.claim_text:
                     qualified += 1
@@ -272,7 +311,6 @@ class EvidenceRepairLoop:
                         repair_reason="No supporting evidence found, could not qualify",
                     ))
             else:
-                # REMOVE or REGENERATE — remove the claim
                 text = self._remove_claim(text, result.claim_text)
                 removed += 1
                 repaired_claims.append(RepairedClaim(
@@ -291,8 +329,11 @@ class EvidenceRepairLoop:
 
         # Calculate survival rates
         total = max(len(validation_results), 1)
-        original_valid = sum(1 for r in validation_results if hasattr(r, 'is_valid') and r.is_valid)
-        repaired_valid = kept + replaced + qualified + rewritten  # everything not removed
+        original_valid = sum(
+            1 for r in validation_results
+            if hasattr(r, 'is_valid') and r.is_valid
+        )
+        repaired_valid = kept + replaced + qualified + rewritten + marked_speculative + reclassified
 
         return RepairReport(
             total_claims=total,
@@ -306,6 +347,165 @@ class EvidenceRepairLoop:
             repaired_text=text,
             claims=repaired_claims,
         )
+
+    def _repair_validated_claim(
+        self,
+        vc: 'ValidatedClaim',
+        text: str,
+    ) -> RepairedClaim | None:
+        """Repair a ValidatedClaim based on its recommendation.
+
+        The validator classified and recommended. This method acts.
+        """
+        from backend.pipeline.gateway.claim_type_validator import (
+            RepairRecommendation,
+            ClaimClassification,
+        )
+
+        base = RepairedClaim(
+            original_claim_id=vc.claim_id,
+            original_text=vc.text,
+            repaired_text=vc.text,
+            action=RepairAction.KEEP,
+            original_citations=vc.evidence_ids,
+            new_citations=vc.evidence_ids,
+            original_support=vc.support_level,
+            new_support=vc.support_level,
+            original_confidence=0.5,
+            new_confidence=0.5,
+            repair_reason="",
+        )
+
+        rec = vc.recommendation
+
+        if rec == RepairRecommendation.KEEP:
+            base.repair_reason = "Valid claim"
+            base.new_confidence = 0.8 if vc.is_valid else 0.5
+            return base
+
+        elif rec == RepairRecommendation.MARK_SPECULATIVE:
+            base.action = RepairAction.MARK_SPECULATIVE
+            base.repaired_text = self._add_speculative_marker(vc.text, vc.declared_type)
+            base.new_support = "speculative"
+            base.new_confidence = 0.4
+            base.repair_reason = (
+                f"Marked as speculative (type={vc.declared_type}, section={vc.section})"
+            )
+            return base
+
+        elif rec == RepairRecommendation.RECLASSIFY:
+            base.action = RepairAction.RECLASSIFY
+            # Default reclassification: downgrade to hypothesis
+            base.repaired_text = f"We hypothesize that {vc.text[0].lower()}{vc.text[1:]}"
+            base.new_support = "reclassified"
+            base.new_confidence = 0.3
+            base.repair_reason = (
+                f"Reclassified from {vc.declared_type} — type not allowed in {vc.section}"
+            )
+            return base
+
+        elif rec == RepairRecommendation.SPLIT:
+            base.action = RepairAction.SPLIT
+            if vc.split_claims and len(vc.split_claims) >= 2:
+                mechanism = vc.split_claims[0]
+                benefit = vc.split_claims[1]
+                base.repaired_text = (
+                    f"{mechanism['text']} "
+                    f"We hypothesize that {benefit['text'][0].lower()}{benefit['text'][1:]}"
+                )
+            else:
+                base.repaired_text = self._add_speculative_marker(vc.text, vc.declared_type)
+            base.new_support = "split"
+            base.new_confidence = 0.5
+            base.repair_reason = "Split mechanism+benefit into separate claims"
+            return base
+
+        elif rec == RepairRecommendation.ADD_CITATION:
+            # Try to find a citation
+            better_source, better_text = self._find_supporting_evidence(
+                vc.text, vc.evidence_ids,
+            )
+            if better_source:
+                base.action = RepairAction.REPLACE_CITATION
+                base.repaired_text = f"{vc.text} [{better_source}]"
+                base.new_citations = [better_source]
+                base.new_support = "weak"
+                base.new_confidence = 0.5
+                base.repair_reason = f"Added citation: {better_source}"
+            else:
+                base.action = RepairAction.QUALIFY_LANGUAGE
+                base.repaired_text = self._qualify_language(vc.text)
+                base.new_support = "qualified"
+                base.new_confidence = 0.3
+                base.repair_reason = "No citation found; qualified language instead"
+            return base
+
+        elif rec == RepairRecommendation.QUALIFY_LANGUAGE:
+            base.action = RepairAction.QUALIFY_LANGUAGE
+            base.repaired_text = self._qualify_language(vc.text)
+            base.new_support = "qualified"
+            base.new_confidence = 0.4
+            base.repair_reason = "Qualified language to match evidence strength"
+            return base
+
+        elif rec == RepairRecommendation.REMOVE:
+            base.action = RepairAction.REMOVE
+            base.repaired_text = "[removed]"
+            base.new_citations = []
+            base.new_support = "none"
+            base.new_confidence = 0.0
+            reason = "Removed: "
+            if vc.classification == ClaimClassification.CONTRADICTED:
+                reason += f"contradicted by {vc.contradicted_by}"
+            elif vc.classification == ClaimClassification.UNSUPPORTED_OVERCLAIM:
+                reason += "unsupported overclaim, no evidence found"
+            else:
+                reason += "cannot be repaired"
+            base.repair_reason = reason
+            return base
+
+        else:
+            # NONE or unknown
+            base.repair_reason = "No action needed"
+            return base
+
+    @staticmethod
+    def _add_speculative_marker(text: str, claim_type: str) -> str:
+        """Add appropriate speculative marker based on claim type."""
+        from backend.pipeline.gateway.claim_types import ClaimType
+
+        prefix_map = {
+            ClaimType.METHOD_CLAIMED_BENEFIT.value: "We hypothesize that",
+            ClaimType.HYPOTHESIS.value: "We hypothesize that",
+            ClaimType.EXPECTED_CONTRIBUTION.value: "We aim to",
+        }
+
+        prefix = prefix_map.get(claim_type, "We hypothesize that")
+
+        # Don't double-prefix
+        if text.lower().startswith(prefix.lower()):
+            return text
+
+        # Strip existing sentence-starting words
+        text = text.strip()
+        if text and text[0].isupper():
+            text = text[0].lower() + text[1:]
+
+        return f"{prefix} {text}"
+
+    @staticmethod
+    def _apply_repair_to_text(
+        text: str,
+        vc: 'ValidatedClaim',
+        rc: RepairedClaim,
+    ) -> str:
+        """Apply a repair to the full text."""
+        if rc.action == RepairAction.REMOVE:
+            return EvidenceRepairLoop._remove_claim(text, vc.text)
+        elif rc.action == RepairAction.KEEP:
+            return text
+        else:
+            return text.replace(vc.text, rc.repaired_text)
 
     def _find_supporting_evidence(
         self,
