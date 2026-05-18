@@ -274,6 +274,30 @@ class PipelineOrchestrator:
         inner_provider = self._provider
         async def _gateway_provider_fn(*, messages, temperature, max_tokens, schema=None, tools=None):
             if schema:
+                # Try LM Studio native structured output (response_format json_schema)
+                # if the inner provider has an LM Studio client
+                if hasattr(inner_provider, '_client') and hasattr(inner_provider._client, 'chat'):
+                    try:
+                        import json as _json
+                        # OpenAI-compat endpoint with response_format
+                        resp = await inner_provider._client.chat.completions.create(
+                            model=inner_provider._model,
+                            messages=messages,
+                            max_tokens=max_tokens,
+                            temperature=temperature,
+                            response_format={
+                                "type": "json_schema",
+                                "json_schema": {
+                                    "name": "structured_output",
+                                    "schema": schema,
+                                    "strict": True,
+                                },
+                            },
+                        )
+                        text = resp.choices[0].message.content or ""
+                        return _json.loads(text)
+                    except Exception:
+                        pass  # Fall through to Anthropic tool_choice path
                 return await inner_provider.structured_output(messages, schema, temperature)
             if tools:
                 resp = await inner_provider.complete_with_tools(messages, tools, temperature, max_tokens)

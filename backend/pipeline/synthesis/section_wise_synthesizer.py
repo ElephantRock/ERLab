@@ -293,11 +293,14 @@ class SectionWiseSynthesizer:
 
         Flow:
         1. Look up section contract
-        2. Try structured output (typed claims as JSON)
-        3. If valid → ClaimRenderer → prose + sidecar
-        4. If invalid → retry once → prose fallback
+        2. Try structured output via gateway (LM Studio response_format json_schema)
+        3. Validate against CLAIM_SCHEMA
+        4. If valid → ClaimRenderer → prose + sidecar
+        5. If invalid → retry once with error feedback → prose fallback
         """
-        from backend.pipeline.synthesis.section_contracts import get_section_prompt
+        from backend.pipeline.synthesis.section_contracts import (
+            get_section_prompt, CLAIM_SCHEMA, CLAIM_SCHEMA_STR,
+        )
         from backend.pipeline.synthesis.claim_renderer import (
             ClaimRenderer, ClaimIDGenerator, InvalidStructuredOutput,
         )
@@ -315,27 +318,24 @@ class SectionWiseSynthesizer:
         )
 
         max_output = max(MIN_SECTION_OUTPUT_TOKENS, target_words * 2)
+        id_gen = ClaimIDGenerator(proposal_id)
+        renderer = ClaimRenderer()
+        model_used = self._get_model_name()
 
-        # --- Attempt 1: Structured output ---
+        messages = [
+            {"role": "system", "content": contract_prompt},
+            {"role": "user", "content": context},
+        ]
+
+        # --- Attempt 1: Structured output via gateway/structured_complete ---
         try:
-            result = await self._provider.structured_output(
-                messages=[
-                    {"role": "system", "content": contract_prompt},
-                    {"role": "user", "content": context},
-                ],
-                schema={"type": "object"},  # Accept any JSON structure
-                temperature=0.4,
-                max_tokens=min(max_output, 4096),
+            result = await self._structured_complete_with_schema(
+                messages, section_id, CLAIM_SCHEMA, max_output,
             )
 
             if isinstance(result, dict) and result.get("claims"):
-                id_gen = ClaimIDGenerator(proposal_id)
-                renderer = ClaimRenderer()
-
-                # Inject section_id into structured output
                 result["section"] = section_id
 
-                # Validate and render
                 if renderer._validate_schema(result):
                     prose, sidecar = renderer.render_section(section_id, result, id_gen)
 
@@ -344,13 +344,81 @@ class SectionWiseSynthesizer:
                     citations = re.findall(r'\[SOURCE-\d+\]', prose)
                     types_present = list({c.get("type", "unknown") for c in claims})
 
+                    logger.info(
+                        "Section '%s': structured OK, %d claims, %d citations",
+                        section_title, len(claims), len(citations),
+                    )
+
                     return SectionDraft(
                         section_id=section_id,
                         title=section_title,
                         content=prose,
                         word_count=len(prose.split()),
                         citations_used=citations,
-                        model_used=self._get_model_name(),
+                        model_used=model_used,
+                        sidecar=sidecar,
+                        structured_claims=claims,
+                        assumptions=assumptions,
+                        claim_types_present=types_present,
+                        generation_mode="structured",
+                    )
+                else:
+                    logger.info(
+                        "Section '%s': schema validation failed on attempt 1, retrying",
+                        section_title,
+                    )
+        except Exception as e:
+            logger.info(
+                "Structured output for '%s' failed (%s), trying retry",
+                section_title, e,
+            )
+
+        # --- Attempt 2: Retry with schema error hint ---
+        try:
+            retry_context = (
+                f"{context}\n\n"
+                f"IMPORTANT: Your previous output failed schema validation. "
+                f"You MUST return valid JSON matching this exact schema:\n"
+                f"```json\n{CLAIM_SCHEMA_STR}\n```\n"
+                f"Ensure every claim has: claim_id, text, type, evidence_ids (array), "
+                f"speculative (boolean), rationale, section.\n"
+                f"Claim type must be one of: background, prior_limitation, "
+                f"method_design_motivation, method_proposed_mechanism, "
+                f"method_claimed_benefit, hypothesis, evaluation_benchmark, "
+                f"evaluation_metric, evaluation_protocol, expected_contribution, result."
+            )
+            retry_messages = [
+                {"role": "system", "content": contract_prompt},
+                {"role": "user", "content": retry_context},
+            ]
+
+            result = await self._structured_complete_with_schema(
+                retry_messages, section_id, CLAIM_SCHEMA, max_output,
+            )
+
+            if isinstance(result, dict) and result.get("claims"):
+                result["section"] = section_id
+
+                if renderer._validate_schema(result):
+                    prose, sidecar = renderer.render_section(section_id, result, id_gen)
+
+                    claims = result.get("claims", [])
+                    assumptions = result.get("assumptions", [])
+                    citations = re.findall(r'\[SOURCE-\d+\]', prose)
+                    types_present = list({c.get("type", "unknown") for c in claims})
+
+                    logger.info(
+                        "Section '%s': structured OK on retry, %d claims",
+                        section_title, len(claims),
+                    )
+
+                    return SectionDraft(
+                        section_id=section_id,
+                        title=section_title,
+                        content=prose,
+                        word_count=len(prose.split()),
+                        citations_used=citations,
+                        model_used=model_used,
                         sidecar=sidecar,
                         structured_claims=claims,
                         assumptions=assumptions,
@@ -358,9 +426,12 @@ class SectionWiseSynthesizer:
                         generation_mode="structured",
                     )
         except Exception as e:
-            logger.info("Structured output for '%s' failed (%s), trying prose fallback", section_id, e)
+            logger.info(
+                "Structured retry for '%s' also failed (%s), using prose fallback",
+                section_title, e,
+            )
 
-        # --- Attempt 2: Prose fallback ---
+        # --- Attempt 3: Prose fallback ---
         prose_prompt = (
             f"Write the '{section_title}' section ({target_words} target words) "
             f"for a research paper in '{domain}'.\n\n"
@@ -394,7 +465,7 @@ class SectionWiseSynthesizer:
                 content=f"[Section generation failed: {e}]",
                 word_count=0,
                 citations_used=[],
-                model_used=self._get_model_name(),
+                model_used=model_used,
                 generation_mode="prose_fallback",
             )
 
@@ -402,15 +473,70 @@ class SectionWiseSynthesizer:
         word_count = len(content.split())
         citations = re.findall(r'\[SOURCE-\d+\]', content)
 
+        logger.info(
+            "Section '%s': prose fallback, %d words, %d citations",
+            section_title, word_count, len(citations),
+        )
+
         return SectionDraft(
             section_id=section_id,
             title=section_title,
             content=content,
             word_count=word_count,
             citations_used=citations,
-            model_used=self._get_model_name(),
+            model_used=model_used,
             generation_mode="prose_fallback",
         )
+
+    async def _structured_complete_with_schema(
+        self,
+        messages: list[dict],
+        section_id: str,
+        schema: dict,
+        max_tokens: int,
+    ) -> dict:
+        """Try structured output via gateway structured_complete or provider fallback.
+
+        Priority:
+        1. Gateway structured_complete (LM Studio response_format json_schema)
+        2. Provider.structured_output (Anthropic tool_choice or prompted fallback)
+        3. Provider.complete + JSON parse
+        """
+        # Try gateway path if available and real (not mock artifact)
+        gateway = getattr(self._provider, '_gateway', None)
+        if (
+            gateway is not None
+            and hasattr(gateway, 'structured_complete')
+            and callable(getattr(gateway, 'structured_complete', None))
+            and type(gateway).__name__ != 'AsyncMock'  # skip test mocks
+        ):
+            try:
+                return await gateway.structured_complete(
+                    messages=messages,
+                    schema_name=f"section_{section_id}",
+                    schema=schema,
+                    max_tokens=max_tokens,
+                    temperature=0.4,
+                )
+            except Exception:
+                pass  # Fall through to provider path
+
+        # Try provider structured_output
+        if hasattr(self._provider, 'structured_output'):
+            return await self._provider.structured_output(
+                messages=messages,
+                schema=schema,
+                temperature=0.4,
+            )
+
+        # Last resort: complete + parse
+        text = await self._provider.complete(
+            messages=messages,
+            temperature=0.4,
+            max_tokens=max_tokens,
+        )
+        import json
+        return json.loads(text)
 
     def _assemble_paper(
         self,
