@@ -1,0 +1,14 @@
+model_id: qwen3.5-27b
+provider: lmstudio
+source: local
+model_family: qwen
+parameter_count: 27b
+quantization: unknown
+engine: lmstudio
+advertised_context_window: 131072
+advertised_max_output_tokens: 8192
+supports_json_mode: false
+supports_tool_calling: false
+supports_streaming: true
+candidate_status: untested
+allowed_for_pipeline: false
