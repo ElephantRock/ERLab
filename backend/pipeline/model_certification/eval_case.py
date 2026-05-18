@@ -26,6 +26,17 @@ class GoldAnswer:
     planted_errors: list[dict[str, Any]] = field(default_factory=list)  # for adversarial
     notes: str = ""
 
+    # --- Corpus-backed grounding fields (v0.2) ---
+    # Each claim has a support_label: supported | weakly_supported | unsupported |
+    # wrong_citation | fabricated_citation | contradicted
+    claims: list[dict[str, Any]] = field(default_factory=list)
+
+    # Known corpus sources (source_id → metadata)
+    corpus_sources: list[dict[str, Any]] = field(default_factory=list)
+
+    # Expected contradiction info
+    contradictions: list[dict[str, Any]] = field(default_factory=list)
+
 
 @dataclass
 class StageEvalCase:

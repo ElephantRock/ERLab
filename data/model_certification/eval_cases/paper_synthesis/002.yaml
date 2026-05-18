@@ -1,0 +1,75 @@
+case_id: paper_synthesis-002
+stage: paper_synthesis
+requires_grounding: true
+difficulty: hard
+input_token_budget: 4096
+output_token_budget: 4096
+input_context:
+  corpus:
+    - source_id: "S1"
+      title: "Retrieval-Augmented Generation (Lewis et al., 2020)"
+      abstract: "Combines parametric memory with non-parametric retrieval. Achieves SOTA on Natural Questions, WebQuestions, CuratedTrec."
+      key_claims:
+        - "RAG combines parametric and non-parametric memory"
+        - "RAG achieves SOTA on open-domain QA"
+      limitations:
+        - "Retrieval quality limits generation quality"
+    - source_id: "S2"
+      title: "REALM: Retrieval-Augmented Language Model Pre-Training (Guu et al., 2020)"
+      abstract: "Integrates neural knowledge retrieval into language model pre-training. Improments on open-domain QA benchmarks."
+      key_claims:
+        - "Knowledge retrieval during pre-training improves QA"
+        - "REALM outperforms retrieval-free baselines"
+      limitations:
+        - "Retrieval index must be updated during training"
+    - source_id: "S3"
+      title: "DPR: Dense Passage Retrieval (Karpukhin et al., 2020)"
+      abstract: "Dual-encoder architecture for dense passage retrieval. Outperforms BM25 on open-domain QA benchmarks."
+      key_claims:
+        - "Dense retrieval outperforms sparse retrieval (BM25)"
+        - "Dual-encoder is effective for passage encoding"
+      limitations:
+        - "Requires large-scale QA training data"
+  allowed_evidence_ids: ["S1", "S2", "S3"]
+
+prompt_template: |
+  Write a brief "Related Work" section (3 paragraphs) for a paper on "Retrieval-Augmented Methods for NLP".
+  Use ONLY these evidence sources: S1 (Lewis et al.), S2 (Guu et al.), S3 (Karpukhin et al.).
+  Mark each factual claim with [S1], [S2], or [S3]. Do NOT cite any other sources.
+  If you wish to claim something beyond what these sources state, explicitly mark it as hypothesis.
+
+gold:
+  corpus_sources:
+    - source_id: "S1"
+    - source_id: "S2"
+    - source_id: "S3"
+  claims:
+    - claim_id: "expected-1"
+      support_label: "supported"
+      supporting_sources: ["S1"]
+      rationale: "RAG parametric+non-parametric from S1."
+    - claim_id: "expected-2"
+      support_label: "supported"
+      supporting_sources: ["S2"]
+      rationale: "REALM knowledge retrieval from S2."
+    - claim_id: "expected-3"
+      support_label: "supported"
+      supporting_sources: ["S3"]
+      rationale: "DPR dense retrieval from S3."
+    - claim_id: "forbidden-1"
+      support_label: "fabricated_citation"
+      cited_sources: ["SX"]
+      rationale: "Any citation not in {S1,S2,S3} is fabricated."
+    - claim_id: "hypothesis-check"
+      support_label: "unsupported"
+      rationale: "Method claims stated as facts without citation should be flagged as overclaims or hypotheses."
+  expected_fields:
+    topic: "Retrieval-Augmented Methods"
+  expected_keys:
+    - "S1"
+    - "S2"
+    - "S3"
+    - "Lewis"
+    - "Guu"
+    - "Karpukhin"
+  notes: "paper_synthesis: 3 corpus sources. Overclaim check: method claims as facts without evidence should be flagged."

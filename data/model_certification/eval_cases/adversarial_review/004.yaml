@@ -1,0 +1,85 @@
+case_id: adversarial_review-004
+stage: adversarial_review
+requires_grounding: true
+difficulty: hard
+input_token_budget: 4096
+output_token_budget: 2048
+input_context:
+  corpus:
+    - source_id: "P1"
+      title: "LoRA: Low-Rank Adaptation of Large Language Models"
+      abstract: "We propose LoRA which freezes pre-trained model weights and injects trainable rank decomposition matrices. LoRA reduces trainable parameters by 10,000x while matching or exceeding fine-tuning quality on GPT-3."
+      key_claims:
+        - "LoRA reduces trainable parameters by 10,000x"
+        - "LoRA matches fine-tuning quality on GPT-3"
+      limitations:
+        - "Only evaluated on GPT-3 175B"
+        - "Rank selection affects quality"
+    - source_id: "P2"
+      title: "QLoRA: Efficient Finetuning of LLMs"
+      abstract: "We introduce QLoRA which combines quantization with LoRA. QLoRA enables finetuning a 65B model on a single 48GB GPU while preserving full 16-bit finetuning task performance."
+      key_claims:
+        - "QLoRA enables 65B model finetuning on single 48GB GPU"
+        - "Preserves 16-bit task performance"
+      limitations:
+        - "Quantization may degrade performance on some tasks"
+        - "Training speed slower than full fine-tuning per step"
+
+prompt_template: |
+  Review this paragraph and identify problems against the corpus.
+  
+  Corpus:
+    P1: "LoRA" — Low-rank adaptation, 10,000x fewer parameters, matches fine-tuning on GPT-3, only tested on GPT-3 175B.
+    P2: "QLoRA" — Quantization + LoRA, 65B on 48GB GPU, preserves 16-bit performance, may degrade some tasks, slower per step.
+  
+  Paragraph:
+  "Our method extends LoRA (P1) with 4-bit quantization following QLoRA (P2). We achieve identical
+  performance to full fine-tuning on every benchmark we tested, including tasks where QLoRA degrades.
+  LoRA reduces training time by 100x compared to full fine-tuning, and our method further reduces it
+  to 1000x speedup. We evaluated on GPT-3 175B only, following P1's evaluation protocol, and achieved
+  state-of-the-art on all NLP tasks ever proposed. Our method requires only 1GB of GPU memory for
+  a 65B parameter model."
+
+gold:
+  corpus_sources:
+    - source_id: "P1"
+    - source_id: "P2"
+  claims:
+    - claim_id: "A1"
+      text: "identical performance to full fine-tuning on every benchmark"
+      support_label: "unsupported"
+      rationale: "P1 says 'matches or exceeding' on GPT-3, not 'every benchmark'. P2 says quantization may degrade some tasks."
+    - claim_id: "A2"
+      text: "including tasks where QLoRA degrades"
+      support_label: "contradicted"
+      rationale: "Claiming identical performance on tasks where QLoRA degrades contradicts P2's limitation about quantization degradation."
+    - claim_id: "A3"
+      text: "LoRA reduces training time by 100x"
+      support_label: "unsupported"
+      rationale: "P1 mentions reduced parameters, not 100x training time reduction. P2 says QLoRA is slower per step."
+    - claim_id: "A4"
+      text: "1000x speedup"
+      support_label: "unsupported"
+      rationale: "No source supports 1000x speedup. P2 says slower per step."
+    - claim_id: "A5"
+      text: "state-of-the-art on all NLP tasks ever proposed"
+      support_label: "unsupported"
+      rationale: "Massive overclaim. Neither P1 nor P2 makes this claim."
+    - claim_id: "A6"
+      text: "requires only 1GB of GPU memory for a 65B parameter model"
+      support_label: "unsupported"
+      rationale: "P2 says 48GB GPU for 65B model. 1GB is not supported."
+  planted_errors:
+    - type: overclaim
+      indicator: "identical performance on every benchmark"
+    - type: contradiction
+      indicator: "tasks where QLoRA degrades"
+    - type: unsupported
+      indicator: "100x training time reduction"
+    - type: unsupported
+      indicator: "1000x speedup"
+    - type: overclaim
+      indicator: "all NLP tasks ever proposed"
+    - type: unsupported
+      indicator: "1GB of GPU memory"
+  notes: "Planted: overclaim (A1,A5), contradiction (A2), unsupported (A3,A4,A6). 6 defects."

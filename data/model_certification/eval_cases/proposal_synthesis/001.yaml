@@ -1,0 +1,79 @@
+case_id: proposal_synthesis-001
+stage: proposal_synthesis
+requires_grounding: true
+difficulty: hard
+input_token_budget: 4096
+output_token_budget: 4096
+input_context:
+  corpus:
+    - source_id: "S1"
+      title: "FlashAttention (Dao et al., 2022)"
+      abstract: "We propose FlashAttention that computes exact attention with IO-awareness. Achieves 2-4x speedup on GPT-2 and BERT. Reduces memory reads/writes to GPU HBM."
+      key_claims:
+        - "IO-aware exact attention achieves 2-4x wall-clock speedup"
+        - "FlashAttention is memory-efficient without approximation"
+      limitations:
+        - "Optimized for GPU; limited benefit on CPU"
+    - source_id: "S2"
+      title: "PagedAttention (Kwon et al., 2023)"
+      abstract: "We propose PagedAttention for efficient KV-cache management in LLM serving. vLLM achieves 2-4x higher throughput than Orca and FasterTransformer."
+      key_claims:
+        - "PagedAttention enables efficient memory management for KV-cache"
+        - "vLLM achieves 2-4x throughput improvement"
+      limitations:
+        - "Focuses on serving throughput, not training"
+    - source_id: "S3"
+      title: "Speculative Decoding (Leviathan et al., 2023)"
+      abstract: "We propose speculative decoding using a draft model to accelerate LLM inference. Achieves 2-3x speedup without quality degradation."
+      key_claims:
+        - "Draft model speculation accelerates inference"
+        - "No quality degradation from speculative decoding"
+      limitations:
+        - "Speedup depends on draft model quality"
+  allowed_evidence_ids: ["S1", "S2", "S3"]
+
+prompt_template: |
+  Write a brief proposal for "Unified Efficient Inference for Large Language Models" covering:
+  1. Method section: combine FlashAttention with PagedAttention and speculative decoding
+  2. Evaluation plan: benchmarks, baselines, metrics
+  
+  Use ONLY these evidence sources: S1 (FlashAttention), S2 (PagedAttention), S3 (Speculative Decoding).
+  Mark each factual claim with [S1], [S2], or [S3].
+  Method proposals that go BEYOND what the sources state must be marked as hypotheses.
+  Do NOT cite any other sources. Do NOT state method proposals as established facts.
+
+gold:
+  corpus_sources:
+    - source_id: "S1"
+    - source_id: "S2"
+    - source_id: "S3"
+  claims:
+    - claim_id: "expected-1"
+      support_label: "supported"
+      supporting_sources: ["S1"]
+      rationale: "FlashAttention IO-aware exact attention from S1."
+    - claim_id: "expected-2"
+      support_label: "supported"
+      supporting_sources: ["S2"]
+      rationale: "PagedAttention KV-cache management from S2."
+    - claim_id: "expected-3"
+      support_label: "supported"
+      supporting_sources: ["S3"]
+      rationale: "Speculative decoding speedup from S3."
+    - claim_id: "hypothesis-check"
+      support_label: "unsupported"
+      rationale: "Claim that combining all three methods is superior must be stated as hypothesis, not fact."
+    - claim_id: "forbidden-1"
+      support_label: "fabricated_citation"
+      cited_sources: ["SX"]
+      rationale: "Any citation not in {S1,S2,S3} is fabricated."
+    - claim_id: "overclaim-check"
+      support_label: "unsupported"
+      rationale: "Claiming the combined method achieves X% speedup without evidence is overclaim."
+  expected_fields:
+    topic: "Efficient LLM Inference"
+  expected_keys:
+    - "S1"
+    - "S2"
+    - "S3"
+  notes: "proposal_synthesis: method claims beyond sources must be hypotheses. Fabricated citations forbidden."
