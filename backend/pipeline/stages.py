@@ -77,9 +77,10 @@ class PipelineStage(ABC):
 
 
 class LiteratureSearchStage(PipelineStage):
-    def __init__(self, search, hooks):
+    def __init__(self, search, hooks, gateway=None):
         self._search = search
         self._hooks = hooks
+        self._gateway = gateway
 
     @property
     def name(self) -> str:
@@ -136,6 +137,70 @@ class LiteratureSearchStage(PipelineStage):
             f"{ctx.domain} recent advances",
             f"{ctx.domain} open problems",
         ]
+
+        # LLM query expansion: generate additional search queries
+        query_gen_log = {
+            "query_generation_attempted": False,
+            "generated_query_count": 0,
+            "accepted_query_count": 0,
+            "rejected_query_count": 0,
+            "enforcement_applied": False,
+            "routed_model": "",
+            "actual_model": "",
+            "degraded": False,
+        }
+        if self._gateway is not None:
+            try:
+                from backend.pipeline.gateway.llm_repair_and_query import LLMQueryGenerator
+
+                query_gen_log["query_generation_attempted"] = True
+                gen = LLMQueryGenerator(self._gateway)
+                expanded = await gen.generate_queries(
+                    domain=str(ctx.domain),
+                    topic=str(ctx.domain),
+                    n_queries=3,
+                    run_id=ctx.run_id or "",
+                )
+                query_gen_log["generated_query_count"] = len(expanded)
+
+                # Filter and deduplicate
+                original_lower = {q.lower().strip() for q in queries}
+                for eq in expanded:
+                    eq_stripped = eq.strip()
+                    if not eq_stripped or len(eq_stripped) < 5:
+                        query_gen_log["rejected_query_count"] += 1
+                        continue
+                    if len(eq_stripped) > 200:
+                        query_gen_log["rejected_query_count"] += 1
+                        continue
+                    if eq_stripped.lower() in original_lower:
+                        query_gen_log["rejected_query_count"] += 1
+                        continue
+                    queries.append(eq_stripped)
+                    original_lower.add(eq_stripped.lower())
+                    query_gen_log["accepted_query_count"] += 1
+
+                # Capture enforcement fields
+                call_log = self._gateway.get_call_log(limit=5)
+                qg_calls = [c for c in call_log if c.get("stage") == "query_generation"]
+                if qg_calls:
+                    last = qg_calls[-1]
+                    query_gen_log["enforcement_applied"] = last.get("enforcement_applied", False)
+                    query_gen_log["routed_model"] = last.get("routed_model", "")
+                    query_gen_log["actual_model"] = last.get("model", "")
+                    query_gen_log["degraded"] = last.get("degraded", False)
+
+                logger.info(
+                    "LLM query expansion: %d generated, %d accepted, %d rejected (enforced=%s)",
+                    query_gen_log["generated_query_count"],
+                    query_gen_log["accepted_query_count"],
+                    query_gen_log["rejected_query_count"],
+                    query_gen_log["enforcement_applied"],
+                )
+            except Exception as e:
+                logger.debug("LLM query expansion failed (non-fatal): %s", e)
+        else:
+            logger.debug("LLM query expansion skipped (no gateway available)")
         # Parallel query fan-out — all queries fire concurrently
         query_results = await asyncio.gather(
             *(self._search.search_all(q, limit_per_source=20) for q in queries),

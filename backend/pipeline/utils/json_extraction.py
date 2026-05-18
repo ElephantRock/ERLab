@@ -4,17 +4,28 @@ LLM providers frequently return JSON wrapped in markdown code fences
 (```json ... ```) or with leading/trailing text. This module provides
 a single, well-tested extraction function that handles all known patterns.
 
+Repair flow (in order):
+    1. Direct json.loads
+    2. Fence stripping / mechanical normalization
+    3. Bracket matching
+    4. (async) LLMRepairService — only after deterministic repair fails
+    5. Schema validation on repaired output
+
 Usage:
     from backend.pipeline.utils.json_extraction import extract_json
 
     data = extract_json(llm_response_text)
     # Returns dict or list; raises JsonExtractionError on failure.
+
+    # Async version with LLM repair fallback:
+    data = await extract_json_with_llm_repair(text, gateway, run_id=...)
 """
 from __future__ import annotations
 
 import json
 import logging
 import re
+from dataclasses import dataclass, field
 from typing import Any
 
 logger = logging.getLogger(__name__)
@@ -29,6 +40,21 @@ class JsonExtractionError(ValueError):
             f"Could not extract JSON from LLM response: {reason}. "
             f"Text preview: {text[:100]!r}..."
         )
+
+
+@dataclass
+class RepairLog:
+    """Tracks repair attempt details for observability."""
+    repair_attempted: bool = False
+    repair_method: str = ""  # "mechanical" | "llm_repair" | "failed" | ""
+    enforcement_applied: bool = False
+    routed_model: str = ""
+    actual_model: str = ""
+    schema_valid_after_repair: bool = False
+    degraded: bool = False
+    repair_error: str = ""
+    original_invalid_json: str = ""
+    llm_repair_log_fields: dict = field(default_factory=dict)
 
 
 def extract_json(text: str, *, strict: bool = False) -> dict | list:
@@ -175,3 +201,162 @@ def _extract_by_brackets(text: str) -> dict | list | None:
                         break  # Try next start_char
 
     return None
+
+
+async def extract_json_with_llm_repair(
+    text: str,
+    gateway: Any = None,
+    *,
+    schema: dict | None = None,
+    schema_hint: str = "",
+    run_id: str = "",
+    strict: bool = False,
+) -> tuple[dict | list, RepairLog]:
+    """Extract JSON with LLM repair as final fallback.
+
+    Flow:
+        raw LLM output
+          → extract_json (mechanical: direct parse, fence, brackets)
+          → if mechanical succeeds: return with repair_method="mechanical"
+          → if mechanical fails AND gateway provided:
+              → LLMRepairService.repair_json (gateway-backed, stage=repair)
+              → if schema provided, validate repaired output
+              → return repaired result with repair_method="llm_repair"
+          → if all fail: return ({} or raise) with repair_method="failed"
+
+    Args:
+        text: Raw LLM response text.
+        gateway: LLMGateway instance for LLM repair. If None, skips LLM repair.
+        schema: Optional JSON schema for validation after repair.
+        schema_hint: Human-readable schema description for the LLM.
+        run_id: Pipeline run ID for tracing.
+        strict: If True, raise JsonExtractionError on total failure.
+
+    Returns:
+        Tuple of (parsed_data, RepairLog) for observability.
+    """
+    log = RepairLog(original_invalid_json=text[:500])
+
+    # Step 1: Try mechanical extraction first
+    try:
+        result = extract_json(text, strict=True)
+        log.repair_method = "mechanical"
+        log.schema_valid_after_repair = True  # mechanical extraction always returns parseable JSON
+        return result, log
+    except (JsonExtractionError, Exception):
+        pass  # Fall through to LLM repair
+
+    # Step 2: LLM repair (if gateway provided)
+    if gateway is not None:
+        log.repair_attempted = True
+        try:
+            from backend.pipeline.gateway.llm_repair_and_query import LLMRepairService
+
+            repair_svc = LLMRepairService(gateway)
+            repaired = await repair_svc.repair_json(
+                broken_json=text,
+                schema_hint=schema_hint,
+                run_id=run_id,
+            )
+
+            if repaired is not None:
+                # Schema validation (if provided)
+                schema_ok = True
+                if schema:
+                    schema_ok = _validate_against_schema(repaired, schema)
+
+                log.repair_method = "llm_repair"
+                log.schema_valid_after_repair = schema_ok
+
+                # Capture enforcement fields from gateway call log
+                call_log = gateway.get_call_log(limit=5)
+                repair_calls = [c for c in call_log if c.get("stage") == "repair"]
+                if repair_calls:
+                    last = repair_calls[-1]
+                    log.enforcement_applied = last.get("enforcement_applied", False)
+                    log.routed_model = last.get("routed_model", "")
+                    log.actual_model = last.get("model", "")
+                    log.degraded = last.get("degraded", False)
+                    log.llm_repair_log_fields = {
+                        "enforcement_applied": log.enforcement_applied,
+                        "routed_model": log.routed_model,
+                        "actual_model": log.actual_model,
+                        "certification_status": last.get("certification_status", ""),
+                        "stage_eligibility": last.get("stage_eligibility", ""),
+                        "hard_gate_failures": last.get("hard_gate_failures", []),
+                        "degraded": log.degraded,
+                    }
+
+                if schema_ok:
+                    logger.info(
+                        "LLM repair succeeded (enforced=%s, model=%s)",
+                        log.enforcement_applied, log.routed_model,
+                    )
+                    return repaired, log
+                else:
+                    logger.warning("LLM repair output failed schema validation")
+                    log.repair_error = "schema_validation_failed"
+            else:
+                log.degraded = True
+                log.repair_error = "llm_repair_returned_none"
+                logger.warning("LLM repair returned None (possibly degraded)")
+
+        except Exception as e:
+            log.repair_error = f"llm_repair_exception: {e}"
+            logger.warning("LLM repair failed: %s", e)
+    else:
+        log.repair_error = "no_gateway_provided"
+
+    # Step 3: Total failure
+    log.repair_method = "failed"
+    if strict:
+        raise JsonExtractionError(text, "All repair methods failed")
+    logger.warning("All JSON repair methods failed, returning empty dict")
+    return {}, log
+
+
+def _validate_against_schema(data: dict | list, schema: dict) -> bool:
+    """Basic schema validation. Returns True if data matches expected structure.
+
+    This is NOT a full JSON Schema validator — it checks:
+    - Type matches (object/array)
+    - Required properties exist
+    - Property types match
+    """
+    try:
+        schema_type = schema.get("type", "object")
+
+        # Type check
+        if schema_type == "object" and not isinstance(data, dict):
+            return False
+        if schema_type == "array" and not isinstance(data, list):
+            return False
+
+        # Required properties
+        if isinstance(data, dict):
+            required = schema.get("required", [])
+            for prop in required:
+                if prop not in data:
+                    logger.debug("Schema validation: missing required property '%s'", prop)
+                    return False
+
+            # Property type checks
+            properties = schema.get("properties", {})
+            for prop_name, prop_schema in properties.items():
+                if prop_name in data:
+                    expected_type = prop_schema.get("type")
+                    if expected_type == "string" and not isinstance(data[prop_name], str):
+                        return False
+                    elif expected_type == "number" and not isinstance(data[prop_name], (int, float)):
+                        return False
+                    elif expected_type == "boolean" and not isinstance(data[prop_name], bool):
+                        return False
+                    elif expected_type == "array" and not isinstance(data[prop_name], list):
+                        return False
+                    elif expected_type == "object" and not isinstance(data[prop_name], dict):
+                        return False
+
+        return True
+    except Exception as e:
+        logger.debug("Schema validation error: %s", e)
+        return False
