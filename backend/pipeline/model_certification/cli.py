@@ -209,6 +209,8 @@ def _create_provider(manifest: CandidateModelManifest, base_url: str | None) -> 
                     max_tokens=max_tokens,
                     temperature=temperature,
                 )
+                if not resp.choices:
+                    return ""
                 return resp.choices[0].message.content or ""
 
             async def structured_complete(
@@ -238,6 +240,8 @@ def _create_provider(manifest: CandidateModelManifest, base_url: str | None) -> 
                         },
                     },
                 )
+                if not resp.choices:
+                    return ""
                 return resp.choices[0].message.content or ""
 
         return _LMStudioProvider(client, manifest.model_id)

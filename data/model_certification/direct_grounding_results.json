@@ -1,0 +1,302 @@
+{
+  "qwen2.5-14b-instruct": {
+    "model_id": "qwen2.5-14b-instruct",
+    "timestamp": "2026-05-18T14:34:40",
+    "cases": {
+      "evidence_table_001": {
+        "elapsed_seconds": 4.4,
+        "output_length": 846,
+        "json_valid": true,
+        "grounding_metrics": {},
+        "output_preview": "Here is the requested evidence table in JSON format:\n\n```json\n[\n    {\n        \"text\": \"RAG reduces hallucination by grounding generation in retrieved documents\",\n        \"source\": \"Lewis et al., 2020\""
+      },
+      "evidence_table_002": {
+        "elapsed_seconds": 6.4,
+        "output_length": 1253,
+        "json_valid": true,
+        "grounding_metrics": {
+          "claim_support_rate": 0.4,
+          "unsupported_claim_rate": 0.2,
+          "citation_precision": 0.75,
+          "citation_fabrication_rate": 0.25,
+          "contradiction_handling_score": 1.0
+        },
+        "output_preview": "```json\n[\n    {\n        \"claim_id\": \"C1\",\n        \"support_label\": \"unsupported\",\n        \"correct_source\": \"\",\n        \"notes\": \"P1 does not mention recurrent architectures or machine translation ben"
+      },
+      "evidence_table_003": {
+        "elapsed_seconds": 20.9,
+        "output_length": 3842,
+        "json_valid": true,
+        "grounding_metrics": {
+          "claim_support_rate": 0.5,
+          "unsupported_claim_rate": 0.0,
+          "citation_precision": 0.3,
+          "citation_fabrication_rate": 0.7,
+          "contradiction_handling_score": 1.0
+        },
+        "output_preview": "Here is the evaluation of each candidate claim based on the provided corpus:\n\n1. **Claim C1:** \"BERT achieves state-of-the-art results on GLUE and SQuAD\" (cited: P1)\n   - **Evaluation:** The citation "
+      },
+      "evidence_table_004": {
+        "elapsed_seconds": 9.6,
+        "output_length": 1794,
+        "json_valid": true,
+        "grounding_metrics": {
+          "claim_support_rate": 0.333,
+          "unsupported_claim_rate": 0.333,
+          "citation_precision": 0.5,
+          "citation_fabrication_rate": 0.5,
+          "contradiction_handling_score": 1.0
+        },
+        "output_preview": "Here is the evaluation of each claim against the provided corpus:\n\n```json\n[\n    {\n        \"claim_id\": \"C1\",\n        \"support_label\": \"SUPPORTS\",\n        \"correct_source\": \"P1\",\n        \"notes\": \"The "
+      },
+      "adversarial_review_001": {
+        "elapsed_seconds": 9.8,
+        "output_length": 2516,
+        "json_valid": false,
+        "grounding_metrics": {},
+        "output_preview": "The paragraph contains several issues:\n\n1. **Overclaim**: \"Our revolutionary method achieves 99.9% accuracy on all NLP benchmarks (Smith et al., 2024)\" - This is an overstatement because achieving suc"
+      },
+      "adversarial_review_002": {
+        "elapsed_seconds": 9.0,
+        "output_length": 2041,
+        "json_valid": false,
+        "grounding_metrics": {
+          "claim_support_rate": 0.0,
+          "unsupported_claim_rate": 0.833,
+          "citation_precision": 0.4,
+          "citation_fabrication_rate": 0.6,
+          "contradiction_handling_score": 1.0
+        },
+        "output_preview": "Here are the identified issues within the paragraph:\n\n1. **Overclaim**: The claim that the method achieves \"99.9% accuracy on ImageNet classification\" is an overstatement, especially considering that "
+      },
+      "adversarial_review_003": {
+        "elapsed_seconds": 8.7,
+        "output_length": 2275,
+        "json_valid": false,
+        "grounding_metrics": {
+          "claim_support_rate": 0.0,
+          "unsupported_claim_rate": 0.833,
+          "citation_precision": 0.5,
+          "citation_fabrication_rate": 0.5,
+          "contradiction_handling_score": 1.0
+        },
+        "output_preview": "The paragraph contains several issues that need to be addressed:\n\n1. **Overclaiming Perfect Generalization**: The statement \"achieving perfect generalization on all datasets we tested\" is an overclaim"
+      },
+      "adversarial_review_004": {
+        "elapsed_seconds": 7.5,
+        "output_length": 1679,
+        "json_valid": false,
+        "grounding_metrics": {
+          "claim_support_rate": 0.0,
+          "unsupported_claim_rate": 0.833,
+          "citation_precision": 0.4,
+          "citation_fabrication_rate": 0.6,
+          "contradiction_handling_score": 1.0
+        },
+        "output_preview": "The paragraph contains several issues when compared against the provided corpus:\n\n1. **Performance Claim**: The paragraph states that \"Our method achieves identical performance to full fine-tuning on "
+      },
+      "paper_synthesis_001": {
+        "elapsed_seconds": 8.2,
+        "output_length": 1991,
+        "json_valid": false,
+        "grounding_metrics": {
+          "claim_support_rate": 0.75,
+          "unsupported_claim_rate": 0.0,
+          "citation_precision": 0.5,
+          "citation_fabrication_rate": 0.5,
+          "contradiction_handling_score": 1.0
+        },
+        "output_preview": "In recent years, pre-training methods have emerged as a cornerstone in advancing the field of Natural Language Processing (NLP). These techniques leverage large amounts of text data to learn general l"
+      },
+      "paper_synthesis_002": {
+        "elapsed_seconds": 7.7,
+        "output_length": 2083,
+        "json_valid": false,
+        "grounding_metrics": {
+          "claim_support_rate": 0.6,
+          "unsupported_claim_rate": 0.2,
+          "citation_precision": 0.6,
+          "citation_fabrication_rate": 0.4,
+          "contradiction_handling_score": 1.0
+        },
+        "output_preview": "The field of Natural Language Processing (NLP) has seen significant advancements through the integration of retrieval-based methods, which leverage large-scale text corpora to enhance model performanc"
+      },
+      "proposal_synthesis_001": {
+        "elapsed_seconds": 10.1,
+        "output_length": 2584,
+        "json_valid": false,
+        "grounding_metrics": {
+          "claim_support_rate": 0.5,
+          "unsupported_claim_rate": 0.333,
+          "citation_precision": 0.3,
+          "citation_fabrication_rate": 0.7,
+          "contradiction_handling_score": 1.0
+        },
+        "output_preview": "### Proposal for \"Unified Efficient Inference for Large Language Models\"\n\n#### Method Section\n\nThe proposed methodology aims to combine FlashAttention, PagedAttention, and speculative decoding techniq"
+      },
+      "proposal_synthesis_002": {
+        "elapsed_seconds": 11.4,
+        "output_length": 2899,
+        "json_valid": false,
+        "grounding_metrics": {
+          "claim_support_rate": 0.5,
+          "unsupported_claim_rate": 0.333,
+          "citation_precision": 0.429,
+          "citation_fabrication_rate": 0.571,
+          "contradiction_handling_score": 1.0
+        },
+        "output_preview": "### Proposal for \"Automated AI Safety via Self-Improving Red Teaming\"\n\n#### 1. Method\n\nThe proposed method aims to enhance the safety of artificial intelligence systems through a combination of Consti"
+      }
+    }
+  },
+  "qwen/qwen3.5-9b": {
+    "model_id": "qwen/qwen3.5-9b",
+    "timestamp": "2026-05-18T14:39:44",
+    "cases": {
+      "evidence_table_001": {
+        "elapsed_seconds": 16.9,
+        "output_length": 777,
+        "json_valid": true,
+        "grounding_metrics": {},
+        "output_preview": "\n\n[\n  {\n    \"text\": \"RAG reduces hallucination by grounding generation in retrieved documents\",\n    \"source\": \"Lewis et al., 2020\",\n    \"supported\": true,\n    \"notes\": \"Core mechanism described in the"
+      },
+      "evidence_table_002": {
+        "elapsed_seconds": 20.7,
+        "output_length": 0,
+        "json_valid": false,
+        "grounding_metrics": {
+          "claim_support_rate": 0.0,
+          "unsupported_claim_rate": 0.6,
+          "citation_precision": 0.0,
+          "citation_fabrication_rate": 0.0,
+          "contradiction_handling_score": 1.0
+        },
+        "output_preview": ""
+      },
+      "evidence_table_003": {
+        "elapsed_seconds": 20.9,
+        "output_length": 0,
+        "json_valid": false,
+        "grounding_metrics": {
+          "claim_support_rate": 0.0,
+          "unsupported_claim_rate": 0.5,
+          "citation_precision": 0.0,
+          "citation_fabrication_rate": 0.0,
+          "contradiction_handling_score": 1.0
+        },
+        "output_preview": ""
+      },
+      "evidence_table_004": {
+        "elapsed_seconds": 20.9,
+        "output_length": 0,
+        "json_valid": false,
+        "grounding_metrics": {
+          "claim_support_rate": 0.0,
+          "unsupported_claim_rate": 0.667,
+          "citation_precision": 0.0,
+          "citation_fabrication_rate": 0.0,
+          "contradiction_handling_score": 1.0
+        },
+        "output_preview": ""
+      },
+      "adversarial_review_001": {
+        "elapsed_seconds": 20.9,
+        "output_length": 0,
+        "json_valid": false,
+        "grounding_metrics": {},
+        "output_preview": ""
+      },
+      "adversarial_review_002": {
+        "elapsed_seconds": 21.3,
+        "output_length": 0,
+        "json_valid": false,
+        "grounding_metrics": {
+          "claim_support_rate": 0.0,
+          "unsupported_claim_rate": 0.833,
+          "citation_precision": 0.0,
+          "citation_fabrication_rate": 0.0,
+          "contradiction_handling_score": 1.0
+        },
+        "output_preview": ""
+      },
+      "adversarial_review_003": {
+        "elapsed_seconds": 21.4,
+        "output_length": 0,
+        "json_valid": false,
+        "grounding_metrics": {
+          "claim_support_rate": 0.0,
+          "unsupported_claim_rate": 0.833,
+          "citation_precision": 0.0,
+          "citation_fabrication_rate": 0.0,
+          "contradiction_handling_score": 1.0
+        },
+        "output_preview": ""
+      },
+      "adversarial_review_004": {
+        "elapsed_seconds": 21.5,
+        "output_length": 0,
+        "json_valid": false,
+        "grounding_metrics": {
+          "claim_support_rate": 0.0,
+          "unsupported_claim_rate": 0.833,
+          "citation_precision": 0.0,
+          "citation_fabrication_rate": 0.0,
+          "contradiction_handling_score": 1.0
+        },
+        "output_preview": ""
+      },
+      "paper_synthesis_001": {
+        "elapsed_seconds": 41.9,
+        "output_length": 0,
+        "json_valid": false,
+        "grounding_metrics": {
+          "claim_support_rate": 0.0,
+          "unsupported_claim_rate": 0.75,
+          "citation_precision": 0.0,
+          "citation_fabrication_rate": 0.0,
+          "contradiction_handling_score": 1.0
+        },
+        "output_preview": ""
+      },
+      "paper_synthesis_002": {
+        "elapsed_seconds": 41.6,
+        "output_length": 0,
+        "json_valid": false,
+        "grounding_metrics": {
+          "claim_support_rate": 0.0,
+          "unsupported_claim_rate": 0.8,
+          "citation_precision": 0.0,
+          "citation_fabrication_rate": 0.0,
+          "contradiction_handling_score": 1.0
+        },
+        "output_preview": ""
+      },
+      "proposal_synthesis_001": {
+        "elapsed_seconds": 41.8,
+        "output_length": 0,
+        "json_valid": false,
+        "grounding_metrics": {
+          "claim_support_rate": 0.0,
+          "unsupported_claim_rate": 0.833,
+          "citation_precision": 0.0,
+          "citation_fabrication_rate": 0.0,
+          "contradiction_handling_score": 1.0
+        },
+        "output_preview": ""
+      },
+      "proposal_synthesis_002": {
+        "elapsed_seconds": 41.9,
+        "output_length": 0,
+        "json_valid": false,
+        "grounding_metrics": {
+          "claim_support_rate": 0.0,
+          "unsupported_claim_rate": 0.833,
+          "citation_precision": 0.0,
+          "citation_fabrication_rate": 0.0,
+          "contradiction_handling_score": 1.0
+        },
+        "output_preview": ""
+      }
+    }
+  }
+}
