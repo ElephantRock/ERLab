@@ -5,8 +5,12 @@
 
 smart_router:
   enabled: true
-  mode: dry_run              # disabled | dry_run | enforce
-  require_certified_models: false
+  mode: enforce             # disabled | dry_run | enforce
+  require_certified_models: true
+  enforced_stages:          # Only these stages use enforce mode
+    - repair
+    - query_generation
+    - literature_search
   ranking_weights:
     stage_score: 0.35
     grounding_score: 0.25

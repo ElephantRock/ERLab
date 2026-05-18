@@ -327,8 +327,13 @@ class PipelineOrchestrator:
                     smart_router,
                     mode=router_config.get("mode", "dry_run"),
                     dry_run_logger=dry_run_logger,
+                    enforced_stages=router_config.get("enforced_stages", []),
                 )
-                logger.info("SmartRouter enabled: mode=%s", router_config.get("mode", "dry_run"))
+                logger.info(
+                    "SmartRouter enabled: mode=%s, enforced_stages=%s",
+                    router_config.get("mode", "dry_run"),
+                    router_config.get("enforced_stages", []),
+                )
         except Exception as e:
             logger.warning("SmartRouter initialization failed (non-fatal): %s", e)
 

@@ -89,6 +89,10 @@ class GatewayCallLog:
     routing_confidence: float = 0.0
     routing_degraded: bool = False
     routing_reason: str = ""
+    enforcement_applied: bool = False
+    certification_status: str = ""
+    stage_eligibility: str = ""
+    hard_gate_failures: list[str] = field(default_factory=list)
 
 
 class LLMGateway:
@@ -128,17 +132,20 @@ class LLMGateway:
         """
         self._provider_fn = fn
 
-    def set_smart_router(self, router, mode: str = "dry_run", dry_run_logger=None) -> None:
+    def set_smart_router(self, router, mode: str = "dry_run", dry_run_logger=None, enforced_stages: list[str] | None = None) -> None:
         """Set the SmartRouter for routing decisions.
 
         Args:
             router: SmartRouter instance.
             mode: "disabled", "dry_run", or "enforce".
             dry_run_logger: DryRunLogger instance for logging decisions.
+            enforced_stages: List of stage names to enforce routing for.
+                Other stages will be dry-run or legacy even in enforce mode.
         """
         self._smart_router = router
         self._routing_mode = mode
         self._dry_run_logger = dry_run_logger
+        self._enforced_stages = set(enforced_stages) if enforced_stages else set()
 
     async def call(self, request: LLMRequest) -> LLMResponse:
         """Execute an LLM call through the full gateway pipeline."""
@@ -148,11 +155,73 @@ class LLMGateway:
         response = None
 
         try:
-            # 0. SmartRouter dry-run (if enabled)
+            # 0. SmartRouter routing (if enabled)
             routing_decision = None
+            enforcement_applied = False
             if self._smart_router and self._routing_mode != "disabled":
                 routing_decision = self._route_request(request)
                 request._routing_decision = routing_decision  # attach for logging
+
+                # Determine if this stage should be enforced
+                stage = request.stage or request.task or ""
+                is_enforced = stage in self._enforced_stages
+
+                if is_enforced and routing_decision:
+                    if self._routing_mode == "enforce":
+                        enforcement_applied = True
+                        # Check if routing decision is degraded (no valid candidate)
+                        if routing_decision.degraded:
+                            logger.warning(
+                                "[ENFORCE] stage=%s DEGRADED: %s",
+                                stage, routing_decision.reason,
+                            )
+                            # Return degraded result explicitly
+                            elapsed_ms = (time.monotonic() - t0) * 1000
+                            return LLMResponse(
+                                content="",
+                                confidence=0.0,
+                                degraded=True,
+                                warnings=[
+                                    f"SmartRouter enforcement: no certified candidate for '{stage}'",
+                                    f"Reason: {routing_decision.reason}",
+                                ],
+                                latency_ms=elapsed_ms,
+                            )
+                        else:
+                            logger.info(
+                                "[ENFORCE] stage=%s model=%s strategy=%s confidence=%.2f",
+                                stage, routing_decision.model_id,
+                                routing_decision.strategy, routing_decision.confidence,
+                            )
+                    elif self._routing_mode == "dry_run" and self._dry_run_logger:
+                        self._dry_run_logger.log(
+                            routing_decision,
+                            actual_model_used=self._default_model,
+                            actual_strategy="legacy",
+                            actual_provider="default",
+                            run_id=request.run_id,
+                        )
+                        logger.info(
+                            "[DRY-RUN] stage=%s routed=%s/%s actual=%s confidence=%.2f",
+                            stage, routing_decision.model_id, routing_decision.strategy,
+                            self._default_model, routing_decision.confidence,
+                        )
+                elif not is_enforced and routing_decision and self._dry_run_logger:
+                    # Non-enforced stage: dry-run logging only
+                    self._dry_run_logger.log(
+                        routing_decision,
+                        actual_model_used=self._default_model,
+                        actual_strategy="legacy",
+                        actual_provider="default",
+                        run_id=request.run_id,
+                    )
+                    logger.info(
+                        "[DRY-RUN] stage=%s routed=%s/%s actual=%s confidence=%.2f",
+                        stage, routing_decision.model_id, routing_decision.strategy,
+                        self._default_model, routing_decision.confidence,
+                    )
+
+            request._enforcement_applied = enforcement_applied
 
             # 1. Resolve model capabilities
             model_id = self._default_model
@@ -306,21 +375,6 @@ class LLMGateway:
                 run_id=request.run_id,
             )
             decision = self._smart_router.route(contract, ctx)
-
-            if self._routing_mode == "dry_run" and self._dry_run_logger:
-                self._dry_run_logger.log(
-                    decision,
-                    actual_model_used=self._default_model,
-                    actual_strategy="legacy",
-                    actual_provider="default",
-                    run_id=request.run_id,
-                )
-                logger.info(
-                    "[DRY-RUN] stage=%s routed=%s/%s actual=%s confidence=%.2f",
-                    stage, decision.model_id, decision.strategy,
-                    self._default_model, decision.confidence,
-                )
-
             return decision
 
         except Exception as e:
@@ -404,6 +458,10 @@ class LLMGateway:
         routing_confidence = 0.0
         routing_degraded = False
         routing_reason = ""
+        enforcement_applied = getattr(request, '_enforcement_applied', False)
+        certification_status = ""
+        stage_eligibility = ""
+        hard_gate_failures = []
 
         if hasattr(request, '_routing_decision') and request._routing_decision:
             rd = request._routing_decision
@@ -412,6 +470,15 @@ class LLMGateway:
             routing_confidence = rd.confidence
             routing_degraded = rd.degraded
             routing_reason = rd.reason
+            stage_eligibility = getattr(rd, 'eligibility', '')
+            hard_gate_failures = getattr(rd, 'warnings', [])
+            # Certification status from routing decision
+            if routing_degraded:
+                certification_status = "no_certified_candidate"
+            elif routed_model:
+                certification_status = "certified"
+            else:
+                certification_status = "unknown"
 
         entry = GatewayCallLog(
             timestamp=time.time(),
@@ -433,6 +500,10 @@ class LLMGateway:
             routing_confidence=round(routing_confidence, 3),
             routing_degraded=routing_degraded,
             routing_reason=routing_reason,
+            enforcement_applied=enforcement_applied,
+            certification_status=certification_status,
+            stage_eligibility=stage_eligibility,
+            hard_gate_failures=hard_gate_failures,
         )
         self._call_log.append(entry)
 
@@ -470,6 +541,10 @@ class LLMGateway:
                 "routing_confidence": e.routing_confidence,
                 "routing_degraded": e.routing_degraded,
                 "routing_reason": e.routing_reason,
+                "enforcement_applied": e.enforcement_applied,
+                "certification_status": e.certification_status,
+                "stage_eligibility": e.stage_eligibility,
+                "hard_gate_failures": e.hard_gate_failures,
             }
             for e in entries
         ]
