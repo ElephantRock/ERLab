@@ -171,6 +171,8 @@ class TestRoutingConfigParsing:
         assert isinstance(enforced, list)
         assert "repair" in enforced
         assert "query_generation" in enforced
+        assert "idea_generation" in enforced
+        assert "feasibility_scoring" in enforced
         # literature_search removed: tool-only, no LLM calls
         assert "literature_search" not in enforced
 

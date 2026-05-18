@@ -293,7 +293,7 @@ class TestRoutingContractEnforcement:
         from backend.pipeline.routing.stage_contract import get_smart_router_config
         config = get_smart_router_config()
         enforced = config.get("enforced_stages", [])
-        assert set(enforced) == {"repair", "query_generation"}
+        assert set(enforced) == {"repair", "query_generation", "idea_generation", "feasibility_scoring"}
 
     @pytest.mark.asyncio
     async def test_high_risk_stages_dry_run(self):
