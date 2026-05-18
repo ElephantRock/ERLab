@@ -171,14 +171,15 @@ class TestRoutingConfigParsing:
         assert isinstance(enforced, list)
         assert "repair" in enforced
         assert "query_generation" in enforced
-        assert "literature_search" in enforced
+        # literature_search removed: tool-only, no LLM calls
+        assert "literature_search" not in enforced
 
     def test_high_risk_stages_not_in_enforced(self):
         from backend.pipeline.routing.stage_contract import get_smart_router_config
         config = get_smart_router_config()
         enforced = config.get("enforced_stages", [])
         high_risk = ["evidence_table", "citation_audit", "adversarial_review",
-                     "paper_synthesis", "proposal_synthesis"]
+                     "paper_synthesis", "proposal_synthesis", "literature_search"]
         for stage in high_risk:
             assert stage not in enforced, f"{stage} should NOT be in enforced_stages"
 
@@ -191,3 +192,133 @@ class TestRoutingConfigParsing:
         from backend.pipeline.routing.stage_contract import get_smart_router_config
         config = get_smart_router_config()
         assert config.get("require_certified_models") is True
+
+
+# ── Test: LLMRepairService and LLMQueryGenerator ────────────────────
+
+class TestLLMRepairService:
+    """Test LLMRepairService routes through gateway with stage='repair'."""
+
+    @pytest.mark.asyncio
+    async def test_repair_routes_through_gateway(self):
+        """Repair calls go through gateway with stage='repair'."""
+        from backend.pipeline.gateway.llm_repair_and_query import LLMRepairService
+        from backend.pipeline.gateway.gateway import LLMResponse
+
+        gateway = _make_gateway(enforced_stages=["repair"], mode="enforce")
+        # Mock provider to return valid JSON
+        gateway._provider_fn = AsyncMock(return_value='{"title": "Fixed", "authors": []}')
+
+        svc = LLMRepairService(gateway)
+        result = await svc.repair_json(
+            broken_json='{"title": "Test", missing',
+            run_id="test",
+        )
+
+        assert result is not None
+        assert result["title"] == "Fixed"
+
+        # Verify enforcement was applied
+        call_log = gateway.get_call_log(limit=5)
+        repair_calls = [c for c in call_log if c.get("stage") == "repair"]
+        assert len(repair_calls) >= 1
+        assert repair_calls[0]["enforcement_applied"] is True
+
+    @pytest.mark.asyncio
+    async def test_repair_returns_none_on_degraded(self):
+        """Repair returns None when gateway returns degraded."""
+        from backend.pipeline.gateway.llm_repair_and_query import LLMRepairService
+
+        gateway = _make_gateway(enforced_stages=["repair"], mode="enforce")
+        # Create a degraded response scenario
+        gateway._provider_fn = AsyncMock(side_effect=Exception("LLM failed"))
+
+        svc = LLMRepairService(gateway)
+        result = await svc.repair_json(
+            broken_json='{broken',
+            run_id="test",
+        )
+
+        # Gateway returns degraded response, repair service returns None
+        assert result is None
+
+
+class TestLLMQueryGenerator:
+    """Test LLMQueryGenerator routes through gateway with stage='query_generation'."""
+
+    @pytest.mark.asyncio
+    async def test_query_gen_routes_through_gateway(self):
+        """Query generation calls go through gateway with stage='query_generation'."""
+        from backend.pipeline.gateway.llm_repair_and_query import LLMQueryGenerator
+
+        gateway = _make_gateway(enforced_stages=["query_generation"], mode="enforce")
+        gateway._provider_fn = AsyncMock(
+            return_value='["query 1", "query 2", "query 3"]'
+        )
+
+        gen = LLMQueryGenerator(gateway)
+        queries = await gen.generate_queries(
+            domain="CS", topic="test", run_id="test",
+        )
+
+        assert len(queries) == 3
+        assert "query 1" in queries
+
+        # Verify enforcement was applied
+        call_log = gateway.get_call_log(limit=5)
+        qg_calls = [c for c in call_log if c.get("stage") == "query_generation"]
+        assert len(qg_calls) >= 1
+        assert qg_calls[0]["enforcement_applied"] is True
+
+    @pytest.mark.asyncio
+    async def test_query_gen_returns_empty_on_degraded(self):
+        """Query generation returns [] when gateway returns degraded."""
+        from backend.pipeline.gateway.llm_repair_and_query import LLMQueryGenerator
+
+        gateway = _make_gateway(enforced_stages=["query_generation"], mode="enforce")
+        gateway._provider_fn = AsyncMock(side_effect=Exception("LLM failed"))
+
+        gen = LLMQueryGenerator(gateway)
+        queries = await gen.generate_queries(
+            domain="CS", topic="test", run_id="test",
+        )
+
+        assert queries == []
+
+
+# ── Test: Degraded result for empty certified candidates ─────────────
+
+class TestDegradedEnforcement:
+    """Test degraded result path when no certified candidates available."""
+
+    @pytest.mark.asyncio
+    async def test_degraded_when_no_certified_candidates(self):
+        """Enforced stage with empty lookup returns degraded LLMResponse."""
+        from backend.pipeline.routing.certified_lookup import CertifiedCapabilityLookup
+        from backend.pipeline.routing.smart_router import SmartRouter
+
+        gateway = _make_gateway(enforced_stages=["repair"], mode="enforce")
+        gateway._provider_fn = AsyncMock(return_value='{"result": "ok"}')
+
+        # Replace with empty lookup
+        empty_lookup = CertifiedCapabilityLookup()
+        empty_lookup.get_candidates_for_stage = lambda stage: []
+        empty_router = SmartRouter(empty_lookup, mode="enforce")
+
+        gateway.set_smart_router(
+            empty_router,
+            mode="enforce",
+            dry_run_logger=gateway._dry_run_logger,
+            enforced_stages=["repair"],
+        )
+
+        request = LLMRequest(
+            task="repair",
+            messages=[{"role": "user", "content": "fix json"}],
+            stage="repair",
+            max_output_tokens=512,
+        )
+
+        response = await gateway.call(request)
+        assert response.degraded is True
+        assert any("no certified candidate" in w.lower() for w in response.warnings)

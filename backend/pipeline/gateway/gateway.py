@@ -355,6 +355,8 @@ class LLMGateway:
                     "paper_synthesis": "paper_synthesis",
                     "citation_audit": "citation_audit",
                     "evidence_repair": "repair",
+                    "repair": "repair",
+                    "query_generation": "query_generation",
                     "proposal_deepening": "proposal_synthesis",
                     "evaluation": "adversarial_review",
                     "export": None,

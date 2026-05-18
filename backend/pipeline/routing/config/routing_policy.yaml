@@ -10,7 +10,7 @@ smart_router:
   enforced_stages:          # Only these stages use enforce mode
     - repair
     - query_generation
-    - literature_search
+    # literature_search removed: tool-only stage, no LLM calls through gateway
   ranking_weights:
     stage_score: 0.35
     grounding_score: 0.25
