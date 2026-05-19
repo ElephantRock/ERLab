@@ -159,6 +159,12 @@ class GatewayProvider(LLMProvider):
                 try:
                     return json.loads(gw_response.content)
                 except json.JSONDecodeError:
+                    # Try aggressive JSON extraction from LLM output
+                    from backend.pipeline.utils.json_extraction import extract_json
+                    extracted = extract_json(gw_response.content)
+                    if extracted:
+                        logger.info("Recovered structured output via extract_json")
+                        return extracted
                     logger.warning("Structured output was not valid JSON")
                     return {"raw": gw_response.content}
             return {"raw": str(gw_response.content)}
