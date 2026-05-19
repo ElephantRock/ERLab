@@ -138,7 +138,7 @@ class GatewayProvider(LLMProvider):
         messages: list[dict],
         schema: dict,
         temperature: float = 0.3,
-        max_tokens: int = 1200,
+        max_tokens: int = 8192,
     ) -> dict:
         """Structured output via gateway with schema validation."""
         try:

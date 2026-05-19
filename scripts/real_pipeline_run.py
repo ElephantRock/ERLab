@@ -74,8 +74,8 @@ async def main():
 
     async def _direct_lmstudio_fn(*, messages, temperature, max_tokens, schema=None, tools=None):
         """Call LM Studio directly via OpenAI SDK."""
-        # Use at least 2048 tokens for output — 4096 ctx means tight budget
-        effective_max_tokens = min(max(max_tokens or 2048, 2048), 2048)
+        # Ensure enough output tokens for structured JSON responses
+        effective_max_tokens = max(max_tokens or 4096, 4096)
         if schema:
             try:
                 import json as _json
@@ -98,7 +98,20 @@ async def main():
             max_tokens=effective_max_tokens,
             temperature=temperature,
         )
-        return resp.choices[0].message.content or ""
+        content = resp.choices[0].message.content or ""
+        logger.info("LM Studio response: finish=%s, usage=%s, content_len=%d, max_tokens=%d",
+                    resp.choices[0].finish_reason, resp.usage, len(content), effective_max_tokens)
+        # Debug: save idea generation output
+        if 'idea' in (str(messages)[-200:].lower()) or len(content) > 5000:
+            import os
+            debug_path = os.path.join('data', 'debug_idea_output.txt')
+            with open(debug_path, 'w', encoding='utf-8') as f:
+                f.write(f"finish: {resp.choices[0].finish_reason}\n")
+                f.write(f"tokens: {resp.usage.completion_tokens}\n")
+                f.write(f"len: {len(content)}\n")
+                f.write(f"---\n{content}\n")
+            logger.info("Saved debug output to %s", debug_path)
+        return content
 
     logger.info("Settings:")
     logger.info("  provider:       %s", settings.default_provider)
@@ -108,7 +121,57 @@ async def main():
     logger.info("  generation:     rounds=%d, ideas_per=%d",
                 settings.generation_rounds, settings.ideas_per_round)
 
-    # ── 3. Build orchestrator ─────────────────────────────────────
+    # ── 3. Reload model with proper context length ──────────────
+    import httpx as _httpx
+    _base = settings.lmstudio_base_url.rstrip('/')
+    logger.info("Reloading model with context_length=32768...")
+    # Unload current instance
+    try:
+        await _httpx.AsyncClient(timeout=30).post(
+            f"{_base}/api/v1/models/unload",
+            json={"instance_id": settings.lmstudio_model},
+        )
+    except Exception:
+        pass
+    # Load with 32768 context
+    load_resp = await _httpx.AsyncClient(timeout=120).post(
+        f"{_base}/api/v1/models/load",
+        json={
+            "model": settings.lmstudio_model,
+            "context_length": 32768,
+            "flash_attention": True,
+            "offload_kv_cache_to_gpu": True,
+        },
+    )
+    if load_resp.status_code == 200:
+        load_data = load_resp.json()
+        logger.info("Model reloaded: ctx=%d, load_time=%.1fs",
+                    load_data.get("load_config", {}).get("context_length", "?"),
+                    load_data.get("load_time_seconds", 0))
+    else:
+        logger.warning("Model reload failed: %s", load_resp.text[:200])
+
+    # ── 4. Override ideator prompt (BEFORE orchestrator init) ───
+    _ideator_prompt_path = Path("backend/pipeline/generation/prompts/ideator_system.md")
+    _original_ideator_prompt = _ideator_prompt_path.read_text()
+    _minimal_ideator = '''You are a research ideation agent. Generate exactly {{ n_ideas }} research ideas.
+
+CITATION INTEGRITY: Only reference papers mentioned in the context. Do NOT fabricate citations.
+
+## Context:
+{{ context }}
+
+{% if prior_critique %}
+## Feedback:
+{{ prior_critique }}
+{% endif %}
+
+Return JSON: {"ideas": [{"title": "...", "description": "2-3 sentences", "proposed_method": "1-2 sentences", "gap_id": 1}]}
+'''
+    _ideator_prompt_path.write_text(_minimal_ideator)
+    logger.info("Ideator prompt overridden with minimal version")
+
+    # ── 5. Build orchestrator ─────────────────────────────────────
     t0 = time.time()
     logger.info("Building orchestrator...")
     orchestrator = PipelineOrchestrator(settings=settings)
@@ -118,35 +181,30 @@ async def main():
     orchestrator._gateway.set_provider_fn(_direct_lmstudio_fn)
     logger.info("Gateway provider overridden -> LM Studio direct (%s)", settings.lmstudio_base_url)
 
-    # LM Studio loaded qwen3-4b-2507 with ONLY 4096 context length.
-    # Set the context overrides to the TRUE runtime limit (not 65536).
-    # This forces the token budget to aggressively trim context to fit.
+    # Fix context window overrides to match the reloaded model (32768)
     try:
         caps_registry = orchestrator._gateway._registry
         if hasattr(caps_registry, '_capabilities'):
             for model_key, cap in caps_registry._capabilities.items():
-                if 'qwen3-4b' in model_key and cap.context_window != 4096:
-                    cap.context_window = 4096
-                    cap.safe_input_tokens = int(4096 * 0.70)
-                    logger.info("Set %s context to true runtime: %d -> %d", model_key, cap.context_window, 4096)
+                if 'qwen3-4b' in model_key:
+                    cap.context_window = 32768
+                    cap.safe_input_tokens = int(32768 * 0.70)
+                    logger.info("Set %s context: %d", model_key, 32768)
     except Exception as e:
         logger.warning("Could not override context window: %s", e)
 
-    # Also fix the glm-5.1 preset to match reality
     try:
         caps_registry2 = orchestrator._gateway._registry
         for key in list(caps_registry2._capabilities.keys()):
             if 'glm' in key.lower() or 'anthropic' in key.lower():
                 cap = caps_registry2._capabilities[key]
-                if cap.context_window != 4096:
-                    old_ctx = cap.context_window
-                    cap.context_window = 4096
-                    cap.safe_input_tokens = int(4096 * 0.70)
-                    logger.info("Set %s context to true runtime: %d -> %d", key, old_ctx, 4096)
+                cap.context_window = 32768
+                cap.safe_input_tokens = int(32768 * 0.70)
+                logger.info("Set %s context: %d", key, 32768)
     except Exception as e:
         logger.warning("Could not override glm/anthropic context: %s", e)
 
-    # ── 4. Run pipeline ───────────────────────────────────────────
+    # ── 6. Run pipeline ───────────────────────────────────────────
     domain = "Inference Speedup Alternatives for Latency Reduction"
     search_queries = [
         "alternatives to next token prediction LLM inference speedup",
@@ -169,7 +227,7 @@ async def main():
     result = await orchestrator.run(
         domain=domain,
         search_queries=search_queries,
-        max_gaps=5,
+        max_gaps=2,
         generation_rounds=1,
         ideas_per_round=1,
         export_format="markdown",
@@ -288,6 +346,10 @@ async def main():
     print()
     print(f"  Report: {report_path}")
     print("=" * 70)
+
+    # Restore original ideator prompt
+    _ideator_prompt_path.write_text(_original_ideator_prompt)
+    logger.info("Restored original ideator prompt")
 
     # Export paths
     if result.export_paths:

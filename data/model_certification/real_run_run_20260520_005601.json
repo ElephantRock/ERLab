@@ -1,0 +1,178 @@
+{
+  "run_id": "run_20260520_005601",
+  "domain": "Inference Speedup Alternatives for Latency Reduction",
+  "elapsed_seconds": 1791.3,
+  "papers_found": 341,
+  "gaps_found": 2,
+  "ideas_generated": 2,
+  "proposals_generated": 2,
+  "stage_report": [
+    {
+      "name": "literature_search",
+      "status": "executed",
+      "elapsed_s": 14.028,
+      "error": null,
+      "retries": 0
+    },
+    {
+      "name": "ingestion",
+      "status": "executed",
+      "elapsed_s": 22.705,
+      "error": null,
+      "retries": 0
+    },
+    {
+      "name": "trimmer",
+      "status": "executed",
+      "elapsed_s": 0.005,
+      "error": null,
+      "retries": 0
+    },
+    {
+      "name": "gap_analysis",
+      "status": "executed",
+      "elapsed_s": 21.728,
+      "error": null,
+      "retries": 0
+    },
+    {
+      "name": "gap_reflection",
+      "status": "executed",
+      "elapsed_s": 0.001,
+      "error": null,
+      "retries": 0
+    },
+    {
+      "name": "idea_generation",
+      "status": "executed",
+      "elapsed_s": 31.339,
+      "error": null,
+      "retries": 0
+    },
+    {
+      "name": "idea_reflection",
+      "status": "executed",
+      "elapsed_s": 0.002,
+      "error": null,
+      "retries": 0
+    },
+    {
+      "name": "novelty_checking",
+      "status": "executed",
+      "elapsed_s": 11.087,
+      "error": null,
+      "retries": 0
+    },
+    {
+      "name": "feasibility_scoring",
+      "status": "executed",
+      "elapsed_s": 4.088,
+      "error": null,
+      "retries": 0
+    },
+    {
+      "name": "mechanical_metrics",
+      "status": "executed",
+      "elapsed_s": 0.017,
+      "error": null,
+      "retries": 0
+    },
+    {
+      "name": "proposal_synthesis",
+      "status": "executed",
+      "elapsed_s": 216.711,
+      "error": null,
+      "retries": 0
+    },
+    {
+      "name": "adversarial_review",
+      "status": "executed",
+      "elapsed_s": 352.519,
+      "error": null,
+      "retries": 0
+    },
+    {
+      "name": "evaluation",
+      "status": "executed",
+      "elapsed_s": 14.576,
+      "error": null,
+      "retries": 0
+    },
+    {
+      "name": "paper_synthesis",
+      "status": "executed",
+      "elapsed_s": 144.04,
+      "error": null,
+      "retries": 0
+    },
+    {
+      "name": "citation_audit",
+      "status": "executed",
+      "elapsed_s": 21.081,
+      "error": null,
+      "retries": 0
+    },
+    {
+      "name": "proposal_deepening",
+      "status": "executed",
+      "elapsed_s": 48.142,
+      "error": null,
+      "retries": 0
+    },
+    {
+      "name": "export",
+      "status": "executed",
+      "elapsed_s": 0.03,
+      "error": null,
+      "retries": 0
+    }
+  ],
+  "enforcement_summary": {
+    "total_calls": 100,
+    "enforced_calls": 21,
+    "degraded_calls": 0,
+    "stages_seen": [
+      "feasibility_scoring",
+      "adversarial_review",
+      "proposal_synthesis",
+      "ingestion",
+      "idea_generation",
+      "proposal_deepening",
+      "paper_synthesis"
+    ],
+    "enforced_stages": [
+      "feasibility_scoring",
+      "idea_generation"
+    ]
+  },
+  "gaps": [
+    {
+      "title": "Lack of End-to-End Latency Optimization Frameworks for Edge-Cloud Heterogeneous Inference",
+      "gap_type": "methodological",
+      "confidence": 0.92,
+      "description": "While several papers explore token-level compression (e.g., TCRA-LLM), adaptive routing (e.g., Adaptive Token Routing), and edge-cloud collaboration (e.g., Adaptive Token Routing), there is no research that integrates these techniques into a unified, end-to-end latency optimization framework that dy"
+    },
+    {
+      "title": "Missing Empirical Validation of Latency Prediction Models in Real-World, Dynamic Environments",
+      "gap_type": "empirical",
+      "confidence": 0.9,
+      "description": "Although ELPG and other papers propose latency prediction models (e.g., ELPG, Accurate Deep Learning Inference Latency Prediction), there is a lack of empirical validation of these models under real-world, dynamic conditions such as variable network bandwidth, fluctuating device performance, or chan"
+    }
+  ],
+  "ideas": [
+    {
+      "title": "End-to-End Latency-Aware Inference Pipeline for Edge-Cloud Heterogeneous LLMs",
+      "score": 1.0,
+      "proposed_method": "We propose a reinforcement learning-based controller that jointly optimizes token routing, model selection, and inference scheduling in real time, using real-time hardware telemetry and network metrics as inputs. The controller dynamically adjusts the inference chain across edge and cloud nodes to m",
+      "novelty_score": 0.0,
+      "feasibility_score": 6.5
+    },
+    {
+      "title": "Runtime-Adaptive Inference Scheduling in Edge-Cloud Continuum Using State-Space Modeling",
+      "score": 0.7692307692307693,
+      "proposed_method": "We apply a state-space model to track the temporal evolution of device performance and network latency, then use this model to predict optimal inference scheduling decisions. The framework dynamically shifts tasks between edge and cloud nodes based on predicted latency and resource availability, ins",
+      "novelty_score": 0.8710459217429161,
+      "feasibility_score": 7.7
+    }
+  ]
+}
