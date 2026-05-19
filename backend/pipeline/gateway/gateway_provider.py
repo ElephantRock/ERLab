@@ -138,13 +138,14 @@ class GatewayProvider(LLMProvider):
         messages: list[dict],
         schema: dict,
         temperature: float = 0.3,
+        max_tokens: int = 1200,
     ) -> dict:
         """Structured output via gateway with schema validation."""
         try:
             gw_response = await self._gateway.call(LLMRequest(
                 task=self._stage or "structured_output",
                 messages=messages,
-                max_output_tokens=4096,
+                max_output_tokens=max_tokens,
                 temperature=temperature,
                 schema=schema,
                 stage=self._stage,

@@ -119,6 +119,11 @@ def extract_json(text: str, *, strict: bool = False) -> dict | list:
     if bracket_result is not None:
         return bracket_result
 
+    # Strategy 4.5: Try to repair truncated JSON by adding closing brackets
+    repaired = _repair_truncated_json(text)
+    if repaired is not None:
+        return repaired
+
     # Strategy 5: Failure
     if strict:
         raise JsonExtractionError(text, "No JSON found via any strategy")
@@ -144,6 +149,101 @@ def _extract_code_fence(text: str, lang: str | None) -> str | None:
     match = re.search(pattern, text, re.DOTALL)
     if match:
         return match.group(1).strip()
+    return None
+
+
+def _repair_truncated_json(text: str) -> dict | list | None:
+    """Try to repair truncated JSON by adding missing closing brackets.
+
+    Finds the start of a JSON object/array and attempts to balance brackets.
+    """
+    import json
+    # Find first { or [
+    start_idx = -1
+    for i, c in enumerate(text):
+        if c in '{[':
+            start_idx = i
+            break
+    if start_idx < 0:
+        return None
+
+    snippet = text[start_idx:].strip()
+
+    # Count open vs close brackets
+    open_braces = snippet.count('{')
+    close_braces = snippet.count('}')
+    open_brackets = snippet.count('[')
+    close_brackets = snippet.count(']')
+
+    # Try progressively adding closing characters
+    for fix in ["]}" * max(0, open_braces - close_braces + max(0, open_brackets - close_brackets)),
+                "\n}" + "\n]" * max(0, open_brackets - close_brackets),
+                "\n}]\n}",
+                "\n}\n]",
+                "\n}]\n}",
+    ]:
+        # Actually, let's be smarter: add exactly what's missing
+        pass
+
+    # Simple approach: find the last complete value and close from there
+    # Try adding brackets from the end
+    suffixes = []
+    missing_braces = open_braces - close_braces
+    missing_brackets = open_brackets - close_brackets
+
+    # Build suffix: close any open strings, arrays, objects
+    # First close any unclosed string
+    in_string = False
+    escape_next = False
+    for c in snippet:
+        if escape_next:
+            escape_next = False
+            continue
+        if c == '\\':
+            escape_next = True
+            continue
+        if c == '"':
+            in_string = not in_string
+
+    if in_string:
+        suffixes.append('"')
+    for _ in range(max(0, missing_brackets)):
+        suffixes.append(']')
+    for _ in range(max(0, missing_braces)):
+        suffixes.append('}')
+
+    trial = snippet + ''.join(suffixes)
+    try:
+        result = json.loads(trial)
+        if isinstance(result, (dict, list)):
+            return result
+    except (json.JSONDecodeError, Exception):
+        pass
+
+    # Last resort: try to find the last complete key-value pair
+    # Find last `}` before truncation and add outer closing brackets
+    last_close = snippet.rfind('}')
+    if last_close > 0:
+        # Find what brackets are still open at that point
+        sub = snippet[:last_close + 1]
+        sub_open_b = sub.count('{')
+        sub_close_b = sub.count('}')
+        sub_open_sq = sub.count('[')
+        sub_close_sq = sub.count(']')
+        fix = ''
+        if in_string:
+            # Find if there's a string boundary issue
+            pass
+        fix += ']' * max(0, sub_open_sq - sub_close_sq)
+        fix += '}' * max(0, sub_open_b - sub_close_b)
+        trial2 = sub + fix
+        try:
+            result = json.loads(trial2)
+            if isinstance(result, (dict, list)):
+                return result
+        except (json.JSONDecodeError, Exception):
+            pass
+
     return None
 
 

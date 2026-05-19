@@ -74,17 +74,18 @@ async def main():
 
     async def _direct_lmstudio_fn(*, messages, temperature, max_tokens, schema=None, tools=None):
         """Call LM Studio directly via OpenAI SDK."""
+        # Use at least 2048 tokens for output — 4096 ctx means tight budget
+        effective_max_tokens = min(max(max_tokens or 2048, 2048), 2048)
         if schema:
             try:
                 import json as _json
                 resp = await _lmstudio_client.chat.completions.create(
                     model=_lmstudio_model,
                     messages=messages,
-                    max_tokens=max_tokens,
+                    max_tokens=effective_max_tokens,
                     temperature=temperature,
                     response_format={
-                        "type": "json_schema",
-                        "json_schema": {"name": "structured_output", "schema": schema, "strict": True},
+                        "type": "json_object",
                     },
                 )
                 text = resp.choices[0].message.content or ""
@@ -94,7 +95,7 @@ async def main():
         resp = await _lmstudio_client.chat.completions.create(
             model=_lmstudio_model,
             messages=messages,
-            max_tokens=max_tokens,
+            max_tokens=effective_max_tokens,
             temperature=temperature,
         )
         return resp.choices[0].message.content or ""
@@ -115,7 +116,35 @@ async def main():
 
     # Override gateway to use LM Studio directly
     orchestrator._gateway.set_provider_fn(_direct_lmstudio_fn)
-    logger.info("Gateway provider overridden → LM Studio direct (%s)", settings.lmstudio_base_url)
+    logger.info("Gateway provider overridden -> LM Studio direct (%s)", settings.lmstudio_base_url)
+
+    # LM Studio loaded qwen3-4b-2507 with ONLY 4096 context length.
+    # Set the context overrides to the TRUE runtime limit (not 65536).
+    # This forces the token budget to aggressively trim context to fit.
+    try:
+        caps_registry = orchestrator._gateway._registry
+        if hasattr(caps_registry, '_capabilities'):
+            for model_key, cap in caps_registry._capabilities.items():
+                if 'qwen3-4b' in model_key and cap.context_window != 4096:
+                    cap.context_window = 4096
+                    cap.safe_input_tokens = int(4096 * 0.70)
+                    logger.info("Set %s context to true runtime: %d -> %d", model_key, cap.context_window, 4096)
+    except Exception as e:
+        logger.warning("Could not override context window: %s", e)
+
+    # Also fix the glm-5.1 preset to match reality
+    try:
+        caps_registry2 = orchestrator._gateway._registry
+        for key in list(caps_registry2._capabilities.keys()):
+            if 'glm' in key.lower() or 'anthropic' in key.lower():
+                cap = caps_registry2._capabilities[key]
+                if cap.context_window != 4096:
+                    old_ctx = cap.context_window
+                    cap.context_window = 4096
+                    cap.safe_input_tokens = int(4096 * 0.70)
+                    logger.info("Set %s context to true runtime: %d -> %d", key, old_ctx, 4096)
+    except Exception as e:
+        logger.warning("Could not override glm/anthropic context: %s", e)
 
     # ── 4. Run pipeline ───────────────────────────────────────────
     domain = "Inference Speedup Alternatives for Latency Reduction"
@@ -142,7 +171,7 @@ async def main():
         search_queries=search_queries,
         max_gaps=5,
         generation_rounds=1,
-        ideas_per_round=2,
+        ideas_per_round=1,
         export_format="markdown",
     )
 
