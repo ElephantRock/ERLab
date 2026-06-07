@@ -49,6 +49,7 @@ class PreflightResult:
     max_context_length: int
     had_to_reload: bool = False
     had_to_load: bool = False
+    evicted_models: list[str] = field(default_factory=list)
     errors: list[str] = field(default_factory=list)
 
 
@@ -166,18 +167,58 @@ class LMStudioManager:
 
     # ── Preflight ────────────────────────────────────────────────
 
+    def _evict_foreign_models(self, keep_model_id: str) -> list[str]:
+        """Unload models that are NOT the target to free VRAM.
+
+        LM Studio loads models into GPU memory. If multiple models are loaded
+        simultaneously, they compete for VRAM and the pipeline model may OOM
+        or run with degraded performance. This method unloads everything that
+        isn't the target model before the pipeline starts.
+
+        Args:
+            keep_model_id: Model ID to keep loaded (the pipeline model).
+
+        Returns:
+            List of evicted model IDs.
+        """
+        loaded = self.get_loaded_models()
+        foreign = [m for m in loaded if m.model_id != keep_model_id]
+
+        if not foreign:
+            return []
+
+        evicted = []
+        for m in foreign:
+            try:
+                logger.info(
+                    "Evicting foreign model '%s' (ctx=%d) to free VRAM for '%s'",
+                    m.model_id, m.loaded_context_length, keep_model_id,
+                )
+                self.unload_model(m.instance_id)
+                evicted.append(m.model_id)
+            except Exception as exc:
+                logger.warning(
+                    "Failed to evict '%s': %s — proceeding anyway",
+                    m.model_id, exc,
+                )
+
+        return evicted
+
     def preflight_check(
         self,
         model_id: str = "",
         required_context: int = 0,
         auto_fix: bool = False,
+        evict_foreign: bool = True,
     ) -> PreflightResult:
         """Check if model is loaded with adequate context. Optionally fix.
 
         Args:
             model_id: Override model ID (default: from config).
-            required_context: Override min context_length (default: 4x lmstudio_max_tokens).
-            auto_fix: If True, reload the model with required_context when inadequate.
+            required_context: Override min context_length (default: from config).
+            auto_fix: If True, load/reload the model with required_context when needed.
+            evict_foreign: If True (default), unload OTHER models before loading
+                to free VRAM. Prevents multi-model contention on single-GPU.
 
         Returns:
             PreflightResult with ready=True if the model is usable.
@@ -185,6 +226,12 @@ class LMStudioManager:
         target = model_id or self._model_id
         req_ctx = required_context or self._required_context
         errors: list[str] = []
+
+        # 0. Evict foreign models to free VRAM.
+        if evict_foreign:
+            evicted = self._evict_foreign_models(target)
+        else:
+            evicted = []
 
         # 1. Check if model is loaded.
         instance = self.find_model(target)
@@ -202,6 +249,7 @@ class LMStudioManager:
                         context_length=req_ctx,
                         max_context_length=0,
                         had_to_load=True,
+                        evicted_models=evicted,
                     )
                 except Exception as exc:
                     errors.append(f"Failed to load model: {exc}")
@@ -226,6 +274,7 @@ class LMStudioManager:
                         context_length=req_ctx,
                         max_context_length=instance.max_context_length,
                         had_to_load=True,
+                        evicted_models=evicted,
                     )
                 except Exception as exc:
                     errors.append(f"Failed to load: {exc}")
@@ -255,6 +304,7 @@ class LMStudioManager:
                 instance_id=instance.instance_id,
                 context_length=current_ctx,
                 max_context_length=max_ctx,
+                evicted_models=evicted,
             )
 
         # Context too small — reload if auto_fix.
@@ -273,6 +323,7 @@ class LMStudioManager:
                     context_length=req_ctx,
                     max_context_length=max_ctx,
                     had_to_reload=True,
+                    evicted_models=evicted,
                 )
             except Exception as exc:
                 errors.append(f"Failed to reload: {exc}")
