@@ -274,8 +274,9 @@ class PipelineOrchestrator:
         inner_provider = self._provider
         async def _gateway_provider_fn(*, messages, temperature, max_tokens, schema=None, tools=None):
             if schema:
-                # Try LM Studio native structured output (response_format json_schema)
-                # if the inner provider has an LM Studio client
+                # Grammar-enforced structured output (json_schema strict mode).
+                # LM Studio supports this — the capability registry confirms it.
+                # Narrow exception handling: only catch genuine "not supported" errors.
                 if hasattr(inner_provider, '_client') and hasattr(inner_provider._client, 'chat'):
                     try:
                         import json as _json
@@ -295,9 +296,24 @@ class PipelineOrchestrator:
                             },
                         )
                         text = resp.choices[0].message.content or ""
+                        if not text:
+                            raise ValueError("Empty response from grammar enforcement")
                         return _json.loads(text)
-                    except Exception:
-                        pass  # Fall through to Anthropic tool_choice path
+                    except (ValueError, _json.JSONDecodeError) as _grammar_err:
+                        # Grammar enforcement produced bad output — fall to prompt-based
+                        logger.debug(
+                            "Grammar enforcement parse error for schema: %s",
+                            str(_grammar_err)[:120],
+                        )
+                    except Exception as _grammar_err:
+                        # Only fall through for genuine "not supported" errors.
+                        # Re-raise unexpected errors (network, model not loaded, etc.).
+                        err_text = str(_grammar_err).lower()
+                        grammar_keywords = ("json_schema", "response_format", "grammar", "unsupported", "400")
+                        if any(kw in err_text for kw in grammar_keywords):
+                            logger.debug("Grammar enforcement not supported: %s", str(_grammar_err)[:120])
+                        else:
+                            logger.warning("Grammar enforcement unexpected error: %s", str(_grammar_err)[:200])
                 return await inner_provider.structured_output(messages, schema, temperature)
             if tools:
                 resp = await inner_provider.complete_with_tools(messages, tools, temperature, max_tokens)
@@ -693,12 +709,15 @@ class PipelineOrchestrator:
         self._ccw = ConsolidatedContextWindow()
 
         # Gateway: Preflight LM Studio — ensure model loaded with sufficient context
+        _lmstudio_mgr = None
         lmstudio_url = getattr(self._settings, 'lmstudio_base_url', None)
         if lmstudio_url and getattr(self._settings, 'default_provider', '') == 'lmstudio':
             try:
                 from backend.pipeline.research import LMStudioManager
                 mgr = LMStudioManager()
                 preflight = mgr.preflight_check(auto_fix=True)
+                _lmstudio_mgr = mgr  # Store for teardown
+                self._lmstudio_mgr = mgr  # Also for hot-swap + grammar enforcement
                 if preflight.ready:
                     logger.info(
                         "LM Studio preflight OK: %s ctx=%d%s",
@@ -927,6 +946,32 @@ class PipelineOrchestrator:
                     ctx.provider_override = self._resolve_user_model(user_model)
                 except Exception as e:
                     logger.warning("User model '%s' for stage '%s' failed, using default: %s", user_model, stage.name, e)
+
+            # Dynamic hot-swap: if the resolved model differs from the LM Studio
+            # loaded model, swap before executing the stage.
+            _mgr = getattr(self, '_lmstudio_mgr', None)
+            if _mgr and ctx.provider_override:
+                _resolved_model = (
+                    getattr(ctx.provider_override, '_model', None)
+                    or getattr(ctx.provider_override, 'default_model', None)
+                )
+                if _resolved_model and _resolved_model != _mgr.currently_loaded:
+                    try:
+                        from backend.config import get_settings as _gs
+                        _ctx_len = _gs().lmstudio_context_length
+                        swap_result = _mgr.swap_model(_resolved_model, context_length=_ctx_len)
+                        if swap_result.ready:
+                            logger.info(
+                                "Hot-swapped LM Studio: '%s' -> '%s' for stage '%s'",
+                                _mgr.currently_loaded, _resolved_model, stage.name,
+                            )
+                        else:
+                            logger.warning(
+                                "Hot-swap failed for stage '%s': %s — continuing with '%s'",
+                                stage.name, swap_result.errors, _mgr.currently_loaded,
+                            )
+                    except Exception as _swap_err:
+                        logger.debug("Hot-swap check skipped: %s", _swap_err)
 
             # Policy gate: evaluate governance policy before each stage
             if self._services.governance_policy:

@@ -1435,3 +1435,40 @@ async def run_report(run_id: str):
         "stages_completed_list": stages_raw,
         "stage_details": stage_details,
     }
+
+
+# ── LM Studio Telemetry ──────────────────────────────────────────
+
+
+@router.get("/lm-studio/telemetry")
+async def lm_studio_telemetry():
+    """Return recent LM Studio performance telemetry samples."""
+    try:
+        from backend.pipeline.research import LMStudioManager
+
+        mgr = LMStudioManager()
+        samples = mgr.telemetry.get_recent(n=50)
+
+        return {
+            "samples": [
+                {
+                    "model_id": s.model_id,
+                    "tps": s.tps,
+                    "ttft_seconds": s.ttft_seconds,
+                    "generation_time_seconds": s.generation_time_seconds,
+                    "input_tokens": s.input_tokens,
+                    "output_tokens": s.output_tokens,
+                    "context_length": s.context_length,
+                    "schema_enforced": s.schema_enforced,
+                    "timestamp": s.timestamp,
+                }
+                for s in samples
+            ],
+            "summary": {
+                "total_samples": mgr.telemetry.count,
+                "avg_tps": mgr.telemetry.get_average_tps(),
+                "avg_ttft": mgr.telemetry.get_average_ttft(),
+            },
+        }
+    except Exception as e:
+        return {"error": str(e), "samples": [], "summary": {}}

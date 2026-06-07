@@ -61,10 +61,10 @@ _STATIC_DEFAULTS: dict[str, dict[str, Any]] = {
         "provider": "lmstudio",
         "context_window": 4096,  # overridden by probe
         "roles": {"draft", "reason"},
-        "supports_json_schema": False,
+        "supports_json_schema": True,  # verified: grammar enforcement works on qwen3-4b
         "supports_tools": True,
         "reliability": {
-            "schema_following": 0.4,
+            "schema_following": 0.85,  # grammar enforcement is deterministic
             "citation_grounding": 0.2,
             "long_synthesis": 0.3,
             "scoring": 0.3,
@@ -277,6 +277,43 @@ class ModelCapabilityRegistry:
             and caps.context_window >= min_context
         ]
         return sorted(candidates, key=lambda c: c.context_window, reverse=True)
+
+    def update_from_telemetry(self, model_id: str, telemetry_log: Any) -> None:
+        """Update reliability scores from empirical telemetry data.
+
+        Replaces hardcoded reliability values with measured averages.
+        """
+        caps = self._capabilities.get(model_id)
+        if not caps:
+            return
+
+        avg_tps = telemetry_log.get_average_tps(model_id)
+        avg_ttft = telemetry_log.get_average_ttft(model_id)
+        samples = telemetry_log.get_recent(model_id, n=20)
+
+        if not samples:
+            return
+
+        # Schema following: if grammar enforcement is used and succeeding,
+        # reliability is very high. Count schema_enforced=True samples.
+        schema_successes = sum(1 for s in samples if s.schema_enforced and s.output_tokens > 0)
+        schema_total = sum(1 for s in samples if s.schema_enforced)
+        if schema_total > 0:
+            caps.reliability["schema_following"] = schema_successes / schema_total
+
+        # Latency class update based on TPS
+        if avg_tps > 100:
+            caps.latency_class = "local_fast"
+        elif avg_tps > 30:
+            caps.latency_class = "local_medium"
+        else:
+            caps.latency_class = "local_slow"
+
+        caps.source = "empirical"
+        logger.info(
+            "Updated telemetry for %s: tps=%.1f, ttft=%.3fs, schema=%.2f",
+            model_id, avg_tps, avg_ttft, caps.reliability.get("schema_following", 0),
+        )
 
     def get_largest_context(self, loaded_only: bool = True) -> ModelCapabilities | None:
         """Get the model with the largest context window."""

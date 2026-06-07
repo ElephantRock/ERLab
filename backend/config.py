@@ -82,6 +82,11 @@ class Settings(BaseSettings):
     lmstudio_max_tokens: int = 2048
     lmstudio_context_length: int = 32768  # Preflight target context for model reload
     lmstudio_temperature: float = 0.1
+    lmstudio_auto_download: bool = False  # Auto-download missing models from Hugging Face
+    lmstudio_download_timeout: int = 600  # Max seconds to wait for model download
+
+    # GPU Hardware
+    gpu_vram_mb: int = 12288  # GPU VRAM in MB. Used for pre-load safety checks (default: RTX 3080 Ti)
 
     # Pipeline Defaults
     generation_rounds: int = 2

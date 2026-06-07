@@ -46,6 +46,7 @@ class StageContract:
     input_tokens_estimate: int = 2000
     output_tokens_requested: int = 4096
     min_context_window: int = 4096
+    recommended_context_length: int = 8192  # suggested per-request context for v1 chat
     latency_budget_seconds: float | None = None
     cost_sensitivity: str = "medium"
     allowed_strategies: list[str] = field(default_factory=lambda: ["single_call"])
