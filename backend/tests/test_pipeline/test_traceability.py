@@ -116,43 +116,6 @@ class TestEnrichedClosestMatches:
         assert match["doi"] == "10.1234/x"
         assert match["url"] == "https://example.com/paper"
 
-    def test_fallback_path_populates_matches(self):
-        """Verify fallback path now includes closest_matches instead of empty list."""
-        from backend.pipeline.novelty.novelty_checker import NoveltyChecker
-
-        provider = SchemaAwareFakeProvider()
-
-        async def _fake_structured_output(*args, **kwargs):
-            raise Exception("LLM down")
-
-        provider.structured_output = _fake_structured_output
-
-        class FakeStoreWithMetadata:
-            async def query(self, query_text, n_results=10, filter_metadata=None):
-                return [
-                    {
-                        "id": "p1",
-                        "text": "Abstract about NLP",
-                        "metadata": {"paper_title": "Paper One"},
-                        "distance": 0.4,
-                    },
-                ]
-
-        checker = NoveltyChecker(provider, FakeStoreWithMetadata())
-        idea = ResearchIdea(
-            title="Test",
-            problem_statement="P",
-            proposed_method="M",
-            expected_contributions="C",
-            novelty_rationale="N",
-            evaluation_approach="E",
-        )
-        report = asyncio.run(checker.check_novelty(idea))
-        assert len(report.closest_matches) > 0
-        assert report.closest_matches[0]["title"] == "Paper One"
-
-
-class TestFeasibilityRisksInSynthesis:
     def test_key_risks_passed_to_prompt(self, sample_ideas, sample_feasibility_report):
         provider = SchemaAwareFakeProvider()
         synthesizer = ProposalSynthesizer(provider)

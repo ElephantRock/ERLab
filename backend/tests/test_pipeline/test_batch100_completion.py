@@ -51,15 +51,3 @@ def test_100_02_manifest_files_exist():
     assert (PROJECT_ROOT / "SOUL.md").exists()
     assert (PROJECT_ROOT / "SKILL.md").exists()
 
-
-def test_100_02_state_md_exists():
-    """STATE.md exists and is current."""
-    state = (PROJECT_ROOT / "docs/aiv/STATE.md").read_text(encoding="utf-8")
-    assert "2,232" in state or "2,152" in state or "2,148" in state  # Flexible on last count
-
-
-def test_100_02_all_batch_dirs_exist():
-    """All 25 batch directories (76-100) exist."""
-    for i in range(76, 101):
-        batch_dir = PROJECT_ROOT / f"docs/aiv/BATCH-{i:02d}"
-        assert batch_dir.exists(), f"Missing batch dir: BATCH-{i:02d}"

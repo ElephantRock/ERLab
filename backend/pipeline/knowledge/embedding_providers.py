@@ -16,6 +16,15 @@ from abc import ABC, abstractmethod
 logger = logging.getLogger(__name__)
 
 
+def _get_default_lmstudio_url() -> str:
+    """Read LM Studio base URL from config, falling back to localhost."""
+    try:
+        from backend.config import get_settings
+        return get_settings().lmstudio_base_url
+    except Exception:
+        return "http://localhost:1234/v1"
+
+
 class EmbeddingProvider(ABC):
     """Abstract embedding provider."""
 
@@ -161,7 +170,7 @@ class LMStudioEmbeddingProvider(EmbeddingProvider):
     Supports all embedding models loaded in LM Studio on the GPU machine.
     Uses the standard OpenAI embeddings API format.
 
-    Available models on 100.64.0.1:1234:
+    Available models on the configured LM Studio instance.
       - text-embedding-nomic-embed-text-v2-moe  (768d, general text)
       - text-embedding-bge-m3                  (1024d, multilingual)
       - sfr-embedding-mistral                   (1024d, high-quality English)
@@ -183,7 +192,7 @@ class LMStudioEmbeddingProvider(EmbeddingProvider):
     def __init__(
         self,
         model: str = "text-embedding-bge-m3",
-        base_url: str = "http://100.64.0.1:1234/v1",
+        base_url: str = "",
         dimension_override: int | None = None,
         batch_size: int = 32,
     ):
@@ -380,7 +389,7 @@ def create_embedding_provider(
     elif name == "lmstudio":
         provider = LMStudioEmbeddingProvider(
             model=model or "text-embedding-bge-m3",
-            base_url=base_url or "http://100.64.0.1:1234/v1",
+            base_url=base_url or _get_default_lmstudio_url(),
             dimension_override=dimension,
         )
         return CachedEmbeddingProvider(provider)

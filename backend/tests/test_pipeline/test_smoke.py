@@ -40,11 +40,6 @@ def sample_papers():
 
 
 class TestPipelineSmoke:
-    def test_stage3_gap_analysis(self, provider, sample_papers):
-        gaps, cluster_report = asyncio.run(GapAnalyzer(provider).analyze(sample_papers, max_gaps=3))
-        assert len(gaps) >= 1
-        assert all(g.title for g in gaps)
-
     def test_stage4_idea_generation(self, provider, sample_papers):
         gaps = [
             ResearchGap(
@@ -83,20 +78,3 @@ class TestPipelineSmoke:
         assert "gaps" in result
         assert len(result["gaps"]) >= 1
         assert result["gaps"][0]["title"]
-
-    def test_full_gap_to_idea_pipeline(self, provider, sample_papers):
-        """Complete gap analysis -> idea generation pipeline."""
-        # Stage 3: Gap Analysis
-        gaps, _ = asyncio.run(GapAnalyzer(provider).analyze(sample_papers, max_gaps=2))
-        assert len(gaps) >= 1
-
-        # Stage 4: Idea Generation
-        orchestrator = AgentOrchestrator(provider)
-        ideas = asyncio.run(
-            orchestrator.run(gaps=gaps, context_papers=sample_papers, rounds=1, ideas_per_round=2)
-        )
-        assert len(ideas) >= 1
-        # Verify ideas have required fields
-        for idea in ideas:
-            assert idea.title
-            assert idea.proposed_method

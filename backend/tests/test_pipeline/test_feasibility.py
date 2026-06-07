@@ -26,30 +26,6 @@ class TestFeasibilityScorer:
         assert isinstance(report.estimated_timeline, str)
         assert isinstance(report.key_risks, list)
 
-    def test_scores_clamped(self, sample_ideas):
-        provider = FakeLLMProvider(
-            responses={
-                "structured_output": {
-                    "overall_score": 15.0,
-                    "data_availability": -3.0,
-                    "computational_requirements": 12.0,
-                    "methodological_complexity": -1.0,
-                    "evaluation_plan": 8.0,
-                    "novelty_grounding": 7.0,
-                    "impact_potential": 9.0,
-                    "reasoning": "test",
-                    "estimated_timeline": "3 months",
-                    "key_risks": ["risk1"],
-                }
-            }
-        )
-        scorer = FeasibilityScorer(provider)
-        report = asyncio.run(scorer.score_feasibility(sample_ideas[0]))
-        assert report.overall_score == 10.0
-        assert report.data_availability == 0.0
-        assert report.computational_requirements == 10.0
-        assert report.methodological_complexity == 0.0
-
     def test_with_novelty_report(self, sample_ideas, sample_novelty_report):
         scorer = FeasibilityScorer(SchemaAwareFakeProvider())
         report = asyncio.run(

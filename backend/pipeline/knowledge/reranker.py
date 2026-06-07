@@ -236,7 +236,7 @@ class LMStudioReranker(Reranker):
 
     def __init__(
         self,
-        api_base: str = "http://100.64.0.1:1234/v1",
+        api_base: str = "",
         model: str = "qwen/qwen3-4b-2507",
     ):
         self._api_base = api_base
@@ -435,10 +435,10 @@ class RemoteReranker(Reranker):
     Parameters
     ----------
     base_url:
-        URL of the reranker microservice (e.g., http://100.64.0.1:8100).
+        URL of the reranker microservice (loaded from config if not provided).
     """
 
-    def __init__(self, base_url: str = "http://100.64.0.1:8100"):
+    def __init__(self, base_url: str = ""):
         self._base_url = base_url.rstrip("/")
         self._fallback: Reranker | None = None
 
@@ -510,9 +510,9 @@ class RemoteReranker(Reranker):
 
 def create_reranker(
     method: str = "auto",
-    api_base: str = "http://100.64.0.1:1234/v1",
+    api_base: str = "",
     model: str = "jina-reranker-v3@bf16",
-    reranker_url: str = "http://100.64.0.1:8100",
+    reranker_url: str = "",
     provider: Any = None,
 ) -> Reranker:
     """Factory function to create the best available reranker.

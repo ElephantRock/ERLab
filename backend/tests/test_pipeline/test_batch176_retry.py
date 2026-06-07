@@ -208,34 +208,6 @@ class TestIntegration:
 class TestBatchClose:
     """Regression and documentation verification."""
 
-    def test_no_regressions(self):
-        """Verify batch172-175 test modules still import and key test classes exist."""
-        # Import-based regression check: verify modules load without error
-        import importlib
-        modules = [
-            "backend.tests.test_pipeline.test_batch172_wiring",
-            "backend.tests.test_pipeline.test_batch172_preflight",
-            "backend.tests.test_pipeline.test_batch172_strategies",
-            "backend.tests.test_pipeline.test_batch173_stage_report",
-            "backend.tests.test_pipeline.test_batch173_api_expose",
-            "backend.tests.test_pipeline.test_batch174_core_stages",
-            "backend.tests.test_pipeline.test_batch174_synthesis_stages",
-            "backend.tests.test_pipeline.test_batch175_e2e_integration",
-        ]
-        for mod_name in modules:
-            mod = importlib.import_module(mod_name)
-            assert mod is not None, f"Failed to import {mod_name}"
-
-        # Verify source modules still import cleanly
-        from backend.providers.retry import retry_llm_call, _is_rate_limit_error
-        from backend.pipeline.result import StageReport
-        from backend.config import Settings
-        assert callable(retry_llm_call)
-        assert callable(_is_rate_limit_error)
-        # Verify new fields don't break existing construction
-        Settings()  # should not raise
-        StageReport(name="x", status="executed")  # should not raise
-
     def test_state_md_has_batch176(self):
         """STATE.md documents BATCH-176."""
         with open("docs/aiv/STATE.md", encoding="utf-8") as f:

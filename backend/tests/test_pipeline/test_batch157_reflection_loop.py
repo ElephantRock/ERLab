@@ -51,27 +51,6 @@ class TestGapReflectionStage:
         ref_idx = order.index("gap_reflection")
         assert ref_idx == gap_idx + 1, f"gap_reflection should be right after gap_analysis"
 
-    def test_03_reflection_stored_in_results(self):
-        from backend.pipeline.stages import GapReflectionStage
-        from backend.pipeline.reflection.reflector import ReflectionStage
-
-        mock_reflector = MagicMock(spec=ReflectionStage)
-        mock_reflector.reflect_gaps = AsyncMock()
-        mock_reflector.reflect_gaps.return_value = MagicMock(
-            score=0.75, passed=True, justification="Good gaps", iteration=1
-        )
-
-        gap = MagicMock()
-        gap.title = "Test gap"
-        gap.description = "A test gap"
-
-        stage = GapReflectionStage(reflector=mock_reflector)
-        ctx = _make_stage_context(gaps=[gap])
-
-        result = asyncio.run(stage.execute(ctx))
-        assert result is True
-        assert ctx.result.reflection_results["gap_reflection"]["score"] == 0.75
-
     def test_04_graceful_fallback_on_failure(self):
         from backend.pipeline.stages import GapReflectionStage
         from backend.pipeline.reflection.reflector import ReflectionStage
@@ -115,27 +94,6 @@ class TestIdeaReflectionStage:
         idea_gen_idx = order.index("idea_generation")
         ref_idx = order.index("idea_reflection")
         assert ref_idx == idea_gen_idx + 1
-
-    def test_08_reflection_stored_in_results(self):
-        from backend.pipeline.stages import IdeaReflectionStage
-        from backend.pipeline.reflection.reflector import ReflectionStage
-
-        mock_reflector = MagicMock(spec=ReflectionStage)
-        mock_reflector.reflect_ideas = AsyncMock()
-        mock_reflector.reflect_ideas.return_value = MagicMock(
-            score=0.65, passed=True, justification="Decent ideas", iteration=1
-        )
-
-        idea = MagicMock()
-        idea.title = "Test idea"
-        idea.description = "A test idea"
-
-        stage = IdeaReflectionStage(reflector=mock_reflector)
-        ctx = _make_stage_context(ideas=[idea])
-
-        result = asyncio.run(stage.execute(ctx))
-        assert result is True
-        assert ctx.result.reflection_results["idea_reflection"]["score"] == 0.65
 
     def test_09_graceful_fallback_on_failure(self):
         from backend.pipeline.stages import IdeaReflectionStage

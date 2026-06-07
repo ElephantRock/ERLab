@@ -45,7 +45,7 @@ def main() -> None:
     )
     cert.add_argument(
         "--lmstudio-url", default=None,
-        help="LM Studio base URL (e.g., http://100.64.0.1:1234)",
+        help="LM Studio base URL (e.g., http://localhost:1234)",
     )
     cert.add_argument(
         "--production-registry", default=None,

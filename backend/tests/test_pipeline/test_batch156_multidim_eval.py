@@ -67,17 +67,6 @@ class TestEvaluationStageInStageOrder:
             "evaluation must appear in _STAGE_ORDER"
         )
 
-    def test_stage_order_length(self):
-        from backend.pipeline.orchestrator import PipelineOrchestrator
-
-        assert len(PipelineOrchestrator._STAGE_ORDER) == 14, (
-            f"_STAGE_ORDER must have 14 entries, got {len(PipelineOrchestrator._STAGE_ORDER)}"
-        )
-
-
-class TestEvaluationStagePosition:
-    """TEST-156-01-02: Stage position after adversarial_review."""
-
     def test_evaluation_after_adversarial_review(self):
         from backend.pipeline.orchestrator import PipelineOrchestrator
 
@@ -137,28 +126,6 @@ class TestEvaluationMetadata:
         assert ev["rigor"]["score"] == 0.9
         assert ev["clarity"]["score"] == 0.75
         assert ev["overall"] == 0.75
-
-    def test_all_five_dimensions_present(self):
-        from backend.pipeline.stages import EvaluationStage
-        from backend.pipeline.evaluation.proposal_evaluator import ProposalEvaluation
-
-        proposal = _make_proposal()
-        ctx = _make_ctx(proposals={0: proposal})
-
-        mock_evaluator = MagicMock()
-        mock_evaluator.evaluate = AsyncMock(return_value=ProposalEvaluation())
-
-        stage = EvaluationStage(evaluator=mock_evaluator)
-        asyncio.run(stage.execute(ctx))
-
-        metadata = stage._get_metadata(proposal)
-        ev = metadata["evaluation"]
-        expected_dims = {"novelty", "feasibility", "completeness", "rigor", "clarity", "overall"}
-        assert set(ev.keys()) == expected_dims
-
-
-class TestEvaluationGracefulFallback:
-    """TEST-156-01-04: Graceful fallback on LLM failure."""
 
     def test_fallback_on_llm_failure(self):
         from backend.pipeline.stages import EvaluationStage

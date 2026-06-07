@@ -170,7 +170,7 @@ class ModelCapabilityRegistry:
         """Refresh capabilities by probing live providers.
 
         Args:
-            lmstudio_url: LM Studio base URL (e.g., "http://100.64.0.1:1234").
+            lmstudio_url: LM Studio base URL (e.g., "http://localhost:1234").
                          If None, skips LM Studio probing.
         """
         if lmstudio_url:

@@ -105,6 +105,9 @@ class GapAnalyzer:
             # Handle both dict and list returns from different providers
             raw_gaps = result.get("gaps", []) if isinstance(result, dict) else (result if isinstance(result, list) else [])
             for g in raw_gaps:
+                # Guard: LLM may return non-dict items (ints, strings, None)
+                if not isinstance(g, dict):
+                    continue
                 # Normalize related_clusters: local LLMs may return strings instead of ints
                 clusters_raw = g.get("related_clusters", [])
                 clusters_normalized: list[int] = []

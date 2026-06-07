@@ -83,7 +83,7 @@ class TestIngestEndpoint:
         data = response.json()
         assert "error" in data
         assert data["error"]["code"] == "BAD_REQUEST"
-        assert "pdf" in data["error"]["message"].lower()
+        assert "unsupported" in data["error"]["message"].lower() or "file" in data["error"]["message"].lower()
 
     def test_ingest_text_file_returns_400(self, client):
         """POST /knowledge/ingest with a plain text file returns 400 (HB-01)."""

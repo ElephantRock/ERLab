@@ -1303,7 +1303,10 @@ class AdversarialReviewStage(PipelineStage):
         def _unwrap(provider):
             """Unwrap ResilientProvider or CircuitBreakerProxy to get the real provider."""
             visited = set()
-            while hasattr(provider, "_wrapped"):
+            max_depth = 10
+            for _ in range(max_depth):
+                if not hasattr(provider, "_wrapped"):
+                    break
                 if id(provider) in visited:
                     break
                 visited.add(id(provider))

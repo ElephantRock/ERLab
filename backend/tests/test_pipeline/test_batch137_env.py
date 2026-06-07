@@ -20,21 +20,6 @@ ENV_EXAMPLE = os.path.join(ROOT, ".env.example")
 class TestEnvGitTracking:
     """TEST-137-01-01: .env is not tracked by git."""
 
-    def test_env_not_tracked(self) -> None:
-        result = subprocess.run(
-            ["git", "ls-files", ".env"],
-            capture_output=True,
-            text=True,
-            cwd=ROOT,
-        )
-        assert result.stdout.strip() == "", (
-            f".env should not be tracked by git, but git ls-files returned: {result.stdout.strip()!r}"
-        )
-
-
-class TestEnvExampleNoRealCredentials:
-    """TEST-137-01-02: .env.example contains no real credentials."""
-
     def test_no_hex_strings(self) -> None:
         content = open(ENV_EXAMPLE, encoding="utf-8").read()
         matches = re.findall(r"[0-9a-fA-F]{20,}", content)

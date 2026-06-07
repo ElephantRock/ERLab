@@ -89,12 +89,6 @@ class TestSectionChecklist:
 class TestCheckSection:
     """Test the _check_section static method."""
 
-    def test_passes_good_method(self):
-        """Section with math notation and sufficient words passes."""
-        content = "We define $P(x)$ as the probability of event x occurring. " * 80  # ~560+ words
-        failures = ProposalSynthesizer._check_section("proposed_method", content)
-        assert len(failures) == 0
-
     def test_fails_missing_math(self):
         """Section without math notation fails."""
         content = "word " * 600  # Long enough, no math

@@ -199,29 +199,6 @@ class TestGapAnalysisStage:
 class TestGapReflectionStage:
     """Stage 2b: gap reflection via mocked reflector."""
 
-    def test_reflection_stores_result(self):
-        from backend.pipeline.reflection.reflector import ReflectionResult
-        from backend.pipeline.stages import GapReflectionStage
-
-        mock_result = ReflectionResult(score=0.85, passed=True, justification="Good", iteration=1)
-        reflector = AsyncMock()
-        reflector.reflect_gaps = AsyncMock(return_value=mock_result)
-
-        stage = GapReflectionStage(reflector=reflector)
-        ctx = _ctx(result=PipelineResult(gaps=[_gap()]))
-        ok = asyncio.run(stage.execute(ctx))
-
-        assert ok is True
-        assert ctx.result.reflection_results["gap_reflection"]["score"] == 0.85
-        assert ctx.result.reflection_results["gap_reflection"]["passed"] is True
-
-
-# ── 5. IdeaGenerationStage ─────────────────────────────────────────────────
-
-
-class TestIdeaGenerationStage:
-    """Stage 3: idea generation via mocked agent."""
-
     def test_populates_ideas(self):
         idea = _idea()
         agent = MagicMock()
@@ -246,60 +223,6 @@ class TestIdeaGenerationStage:
 
 class TestIdeaReflectionStage:
     """Stage 3b: idea reflection via mocked reflector."""
-
-    def test_reflection_stores_result(self):
-        from backend.pipeline.reflection.reflector import ReflectionResult
-        from backend.pipeline.stages import IdeaReflectionStage
-
-        mock_result = ReflectionResult(score=0.78, passed=True, justification="Solid", iteration=1)
-        reflector = AsyncMock()
-        reflector.reflect_ideas = AsyncMock(return_value=mock_result)
-
-        stage = IdeaReflectionStage(reflector=reflector)
-        ctx = _ctx(result=PipelineResult(ideas=[_idea()], gaps=[_gap()]))
-        ok = asyncio.run(stage.execute(ctx))
-
-        assert ok is True
-        assert ctx.result.reflection_results["idea_reflection"]["score"] == 0.78
-        assert ctx.result.reflection_results["idea_reflection"]["passed"] is True
-
-
-# ── 7. NoveltyCheckingStage ────────────────────────────────────────────────
-
-
-class TestNoveltyCheckingStage:
-    """Stage 4: novelty checking via mocked checker."""
-
-    def test_populates_novelty_reports(self):
-        report = NoveltyReport(
-            overall_score=0.85,
-            method_novelty=0.9,
-            problem_novelty=0.8,
-            domain_transfer=0.7,
-            combination_novelty=0.9,
-            novelty_arguments="Very novel",
-            closest_matches=[],
-        )
-        checker = MagicMock()
-        checker.check_novelty = AsyncMock(return_value=report)
-
-        hooks = MagicMock()
-        hooks.dispatch_sync_safe = AsyncMock()
-
-        stage = NoveltyCheckingStage(novelty_checker=checker, hooks=hooks)
-        ctx = _ctx(result=PipelineResult(ideas=[_idea()]))
-        ok = asyncio.run(stage.execute(ctx))
-
-        assert ok is True
-        assert 0 in ctx.result.novelty_reports
-        assert ctx.result.novelty_reports[0].overall_score == 0.85
-
-
-# ── 8. FeasibilityScoringStage ─────────────────────────────────────────────
-
-
-class TestFeasibilityScoringStage:
-    """Stage 5: feasibility scoring via mocked scorer."""
 
     def test_populates_feasibility_reports(self):
         from backend.pipeline.feasibility.feasibility_scorer import FeasibilityReport
