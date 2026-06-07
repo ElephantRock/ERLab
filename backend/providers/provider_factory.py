@@ -40,8 +40,8 @@ class ProviderRegistry:
             ("gemini", "backend.providers.gemini_provider", "GeminiProvider"),
             ("ollama", "backend.providers.ollama_provider", "OllamaProvider"),
             ("litellm", "backend.providers.litellm_provider", "LiteLLMProvider"),
-            # LM Studio reuses AnthropicProvider (supports custom base_url)
-            ("lmstudio", "backend.providers.anthropic_provider", "AnthropicProvider"),
+            # LM Studio uses OpenAI-compatible /v1/chat/completions endpoint
+            ("lmstudio", "backend.providers.openai_provider", "OpenAIProvider"),
         ]
         for name, module_path, cls_name in _BUILTIN_IMPORTS:
             try:
@@ -165,12 +165,16 @@ class ProviderRegistry:
                 api_key=settings.openai_api_key,
             )
         elif name == "lmstudio":
-            # LM Studio — Anthropic SDK pointed at local server
+            # LM Studio — OpenAI SDK pointed at local server
+            # OpenAI SDK needs /v1 suffix; LM Studio serves at root
+            base = settings.lmstudio_base_url.rstrip("/")
+            if not base.endswith("/v1"):
+                base += "/v1"
             return cls(
-                api_key="lmstudio",
+                api_key="lm-studio",
                 model=settings.lmstudio_model,
                 embedding_model=settings.embedding_model,
-                base_url=settings.lmstudio_base_url,
+                base_url=base,
             )
         else:
             return cls()
@@ -367,6 +371,7 @@ class CostTracker:
         "anthropic": {"input": 0.003, "output": 0.015},
         "gemini": {"input": 0.00125, "output": 0.005},
         "ollama": {"input": 0.0, "output": 0.0},
+        "lmstudio": {"input": 0.0, "output": 0.0},
         "litellm": {"input": 0.0025, "output": 0.01},
     }
 

@@ -14,9 +14,13 @@ class OpenAIProvider(LLMProvider):
         api_key: str,
         model: str = "gpt-4o",
         embedding_model: str = "text-embedding-3-small",
+        base_url: str | None = None,
     ):
         super().__init__()
-        self._client = openai.AsyncOpenAI(api_key=api_key)
+        kwargs = {"api_key": api_key}
+        if base_url:
+            kwargs["base_url"] = base_url
+        self._client = openai.AsyncOpenAI(**kwargs)
         self._model = model
         self._embedding_model = embedding_model
 
@@ -87,14 +91,18 @@ class OpenAIProvider(LLMProvider):
         schema: dict,
         temperature: float = 0.3,
     ) -> dict:
-        response = await self._client.chat.completions.create(  # type: ignore[call-overload]
-            model=self._model,
-            messages=messages,
-            temperature=temperature,
-            response_format={"type": "json_object"},
-        )
-        content = response.choices[0].message.content  # type: ignore[union-attr]
-        return json.loads(content)
+        try:
+            response = await self._client.chat.completions.create(  # type: ignore[call-overload]
+                model=self._model,
+                messages=messages,
+                temperature=temperature,
+                response_format={"type": "json_object"},
+            )
+            content = response.choices[0].message.content  # type: ignore[union-attr]
+            return json.loads(content)
+        except Exception:
+            # Fallback: plain completion + extract JSON (for LM Studio)
+            return await self._structured_output_fallback(messages, schema, temperature)
 
     async def structured_output_with_usage(
         self,
@@ -102,23 +110,67 @@ class OpenAIProvider(LLMProvider):
         schema: dict,
         temperature: float = 0.3,
     ) -> LLMResponse:
-        response = await self._client.chat.completions.create(  # type: ignore[call-overload]
-            model=self._model,
-            messages=messages,
-            temperature=temperature,
-            response_format={"type": "json_object"},
-        )
-        usage = response.usage
-        inp = usage.prompt_tokens if usage else 0
-        out = usage.completion_tokens if usage else 0
-        self._report_cost(inp, out)
-        content = response.choices[0].message.content or "{}"
-        return LLMResponse(
-            content="",
-            structured=json.loads(content),
-            input_tokens=inp,
-            output_tokens=out,
-        )
+        try:
+            response = await self._client.chat.completions.create(  # type: ignore[call-overload]
+                model=self._model,
+                messages=messages,
+                temperature=temperature,
+                response_format={"type": "json_object"},
+            )
+            usage = response.usage
+            inp = usage.prompt_tokens if usage else 0
+            out = usage.completion_tokens if usage else 0
+            self._report_cost(inp, out)
+            content = response.choices[0].message.content or "{}"
+            return LLMResponse(
+                content="",
+                structured=json.loads(content),
+                input_tokens=inp,
+                output_tokens=out,
+            )
+        except Exception:
+            result = await self._structured_output_fallback(messages, schema, temperature)
+            return LLMResponse(content="", structured=result)
+
+    async def _structured_output_fallback(
+        self,
+        messages: list[dict],
+        schema: dict,
+        temperature: float = 0.3,
+    ) -> dict:
+        """Fallback for providers that don't support response_format (e.g. LM Studio)."""
+        import re
+
+        schema_hint = json.dumps(schema, indent=2)
+        augmented = messages + [{"role": "user", "content": (
+            f"Return a JSON object matching this schema:\n"
+            f"```json\n{schema_hint}\n```\n\n"
+            f"Return ONLY the JSON object, no markdown fences."
+        )}]
+        text = await self.complete(augmented, temperature=temperature)
+        text = text.strip()
+
+        # Strip markdown fences
+        if text.startswith("```"):
+            text = text.split("\n", 1)[-1]
+        if text.endswith("```"):
+            text = text.rsplit("```", 1)[0]
+        text = text.strip()
+
+        try:
+            return json.loads(text)
+        except json.JSONDecodeError:
+            pass
+
+        # Extract first {...} block
+        m = re.search(r"\{.*\}", text, re.DOTALL)
+        if m:
+            try:
+                return json.loads(m.group())
+            except json.JSONDecodeError:
+                pass
+
+        return {}
 
     async def complete_with_tools(
         self,
