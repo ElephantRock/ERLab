@@ -80,6 +80,7 @@ class Settings(BaseSettings):
     lmstudio_model: str = "qwen/qwen3-4b-2507"
     lmstudio_enabled: bool = False  # Set True to use for thinking tasks
     lmstudio_max_tokens: int = 2048
+    lmstudio_context_length: int = 32768  # Preflight target context for model reload
     lmstudio_temperature: float = 0.1
 
     # Pipeline Defaults

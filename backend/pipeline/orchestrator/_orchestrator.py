@@ -692,9 +692,30 @@ class PipelineOrchestrator:
         from backend.pipeline.monitoring.ccw import ConsolidatedContextWindow
         self._ccw = ConsolidatedContextWindow()
 
+        # Gateway: Preflight LM Studio — ensure model loaded with sufficient context
+        lmstudio_url = getattr(self._settings, 'lmstudio_base_url', None)
+        if lmstudio_url and getattr(self._settings, 'default_provider', '') == 'lmstudio':
+            try:
+                from backend.pipeline.research import LMStudioManager
+                mgr = LMStudioManager()
+                preflight = mgr.preflight_check(auto_fix=True)
+                if preflight.ready:
+                    logger.info(
+                        "LM Studio preflight OK: %s ctx=%d%s",
+                        preflight.model_id, preflight.context_length,
+                        " (auto-loaded)" if preflight.had_to_load else
+                        " (reloaded)" if preflight.had_to_reload else "",
+                    )
+                else:
+                    logger.warning(
+                        "LM Studio preflight failed: %s — proceeding with static defaults",
+                        preflight.errors,
+                    )
+            except Exception as e:
+                logger.warning("LM Studio preflight error (non-fatal): %s", str(e)[:100])
+
         # Gateway: Probe LM Studio for live model capabilities
         if hasattr(self, '_capability_registry') and self._capability_registry:
-            lmstudio_url = getattr(self._settings, 'lmstudio_base_url', None)
             if lmstudio_url:
                 try:
                     await self._capability_registry.refresh(lmstudio_url)
