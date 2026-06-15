@@ -35,7 +35,7 @@ class PipelinePersistence:
     def get_warnings(self) -> list[str]:
         return self.warnings.copy()
 
-    def create_run_record(self, domain: str, params: dict, session_id: str | None = None) -> int | None:
+    def create_run_record(self, domain: str, params: dict, session_id: str | None = None, run_id: str | None = None) -> int | None:
         try:
             from backend.db import crud
             from backend.db.database import get_session
@@ -48,6 +48,7 @@ class PipelinePersistence:
                     current_stage="initializing",
                     config_json=json.dumps(params),
                     session_id=session_id,
+                    run_id_str=run_id,
                 )
                 return db_run.id
         except Exception as e:
@@ -410,11 +411,12 @@ class PipelinePersistence:
             logger.warning("Failed to mark DB run as completed: %s", e)
             self.warnings.append(f"mark_run_completed: {e}")
 
-    def find_stale_runs(self, max_age: timedelta) -> list:
+    def find_stale_runs(self, max_age: timedelta, exclude_run_id: str | None = None) -> list:
         """Find runs stuck in 'running' longer than max_age.
 
         Args:
             max_age: Maximum time a run should be in 'running' state.
+            exclude_run_id: If set, skip this run_id_str (e.g. the just-started run).
 
         Returns:
             List of PipelineRun objects that are stale.
@@ -431,6 +433,16 @@ class PipelinePersistence:
                 ).all()
                 result = []
                 for run in stale:
+                    # Skip the just-started run
+                    if exclude_run_id and run.run_id_str == exclude_run_id:
+                        continue
+                    # Also skip if DB id matches
+                    if exclude_run_id:
+                        try:
+                            if run.id == int(exclude_run_id):
+                                continue
+                        except (ValueError, TypeError):
+                            pass
                     last_active = run.updated_at or run.created_at
                     if last_active:
                         # Handle both tz-aware and tz-naive datetimes
@@ -507,16 +519,24 @@ class PipelinePersistence:
     # ---- State Reconstruction for Resume ----
 
     def get_run_by_uuid(self, run_id: str) -> Any | None:
-        """Look up a PipelineRun by its UUID string."""
-        from backend.db.crud import list_pipeline_runs
+        """Look up a PipelineRun by its string run ID."""
         from backend.db.database import get_session
+        from backend.db.models import PipelineRun
 
         with get_session() as session:
-            runs = list_pipeline_runs(session, limit=100)
-            for run in runs:
-                if str(run.id) == run_id or run_id.endswith(str(run.id)):
-                    return run
-        return None
+            # Direct lookup by run_id_str column
+            run = session.query(PipelineRun).filter(
+                PipelineRun.run_id_str == run_id
+            ).first()
+            if run:
+                return run
+            # Fallback: try numeric ID for backwards compat
+            try:
+                return session.query(PipelineRun).filter(
+                    PipelineRun.id == int(run_id)
+                ).first()
+            except (ValueError, TypeError):
+                return None
 
     def load_gaps(self, run_db_id: int) -> list:
         """Load ResearchGap objects from database for a pipeline run."""

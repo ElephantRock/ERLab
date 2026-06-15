@@ -77,18 +77,35 @@ class StageLifecycle:
         strategy: str,
     ) -> None:
         """Run common post-stage processing: contracts, compaction, hooks, doom, CCW, notifications."""
-        # Contract verification
+        # Contract verification — Phase 3: wire violations into StageReport
         try:
             from backend.pipeline.monitoring.contracts import STAGE_CONTRACTS, verify_contract
             contract = STAGE_CONTRACTS.get(stage.name)
             if contract:
                 violation = verify_contract(stage.name, result, contract)
                 if violation:
+                    # Populate StageReport with violations
+                    latest_report = result.stage_report[-1] if result.stage_report else None
+                    if latest_report and latest_report.name == stage.name:
+                        latest_report.contract_violations = violation.violations
+                        latest_report.data_quality = {
+                            "is_error": violation.is_error,
+                            "contract_name": contract.stage_name,
+                        }
+
                     if violation.is_error:
                         logger.error(
                             "CONTRACT VIOLATION: %s — %s",
                             stage.name, "; ".join(violation.violations),
                         )
+                        # Phase 3: Hard enforcement mode
+                        enforcement = getattr(self._settings, "contract_enforcement_mode", "warn")
+                        if enforcement == "enforce" and latest_report:
+                            latest_report.status = "contract_violation"
+                            logger.warning(
+                                "Contract enforcement: stage '%s' marked as contract_violation",
+                                stage.name,
+                            )
                     else:
                         logger.warning(
                             "CONTRACT WARNING: %s — %s",
@@ -213,30 +230,31 @@ class StageLifecycle:
         self._processor.collect_warnings(result)
 
         # Rerank papers using cross-encoder
-        try:
-            from backend.pipeline.knowledge.reranker import create_reranker
-            reranker = create_reranker("auto")
-            if ctx.all_papers and ctx.domain:
-                docs = [
-                    {"id": str(p.id), "text": f"{p.title} {p.abstract or ''}"}
-                    for p in ctx.all_papers
-                    if p.abstract
-                ]
-                if docs:
-                    ranked = await reranker.rerank(ctx.domain, docs, top_k=min(20, len(docs)))
-                    ranked_ids = {r.id: r.score for r in ranked}
-                    scored_papers = []
-                    for p in ctx.all_papers:
-                        score = ranked_ids.get(str(p.id), 0.0)
-                        scored_papers.append((score, p))
-                    scored_papers.sort(key=lambda x: x[0], reverse=True)
-                    ctx.all_papers = [p for _, p in scored_papers]
-                    logger.info(
-                        "Reranked %d papers, top score=%.3f",
-                        len(ranked), ranked[0].score if ranked else 0.0,
-                    )
-        except Exception as e:
-            logger.debug("Reranking skipped: %s", str(e)[:100])
+        if self._settings.reranker_enabled:
+            try:
+                from backend.pipeline.knowledge.reranker import create_reranker
+                reranker = create_reranker("auto")
+                if ctx.all_papers and ctx.domain:
+                    docs = [
+                        {"id": str(p.id), "text": f"{p.title} {p.abstract or ''}"}
+                        for p in ctx.all_papers
+                        if p.abstract
+                    ]
+                    if docs:
+                        ranked = await reranker.rerank(ctx.domain, docs, top_k=min(20, len(docs)))
+                        ranked_ids = {r.id: r.score for r in ranked}
+                        scored_papers = []
+                        for p in ctx.all_papers:
+                            score = ranked_ids.get(str(p.id), 0.0)
+                            scored_papers.append((score, p))
+                        scored_papers.sort(key=lambda x: x[0], reverse=True)
+                        ctx.all_papers = [p for _, p in scored_papers]
+                        logger.info(
+                            "Reranked %d papers, top score=%.3f",
+                            len(ranked), ranked[0].score if ranked else 0.0,
+                        )
+            except Exception as e:
+                logger.debug("Reranking skipped: %s", str(e)[:100])
 
         # Compute retrieval metrics
         try:
@@ -312,7 +330,7 @@ class StageLifecycle:
                 if plateau.is_plateau:
                     logger.warning("Metacognitive plateau: %s", plateau.reason)
 
-        # Quality backloop (Gap 12)
+        # Quality backloop (Gap 12) + Phase 7: abandonment tracking
         if getattr(self._settings, "quality_backloop_enabled", False) and result.ideas:
             avg_score = sum(i.score for i in result.ideas) / len(result.ideas)
             min_composite = getattr(self._settings, "quality_backloop_min_composite", 0.4)
@@ -321,6 +339,27 @@ class StageLifecycle:
                     "Quality backloop: avg score %.3f < %.3f, regenerating ideas",
                     avg_score, min_composite,
                 )
+                # Phase 7: Record abandoned ideas before removing
+                if getattr(self._settings, "abandonment_tracking_enabled", True):
+                    removed = [i for i in result.ideas if i.score < min_composite]
+                    if removed:
+                        try:
+                            from backend.pipeline.research.abandonment import AbandonmentTracker
+                            tracker = AbandonmentTracker(
+                                getattr(self._settings, "abandonment_tracking_path",
+                                       "./data/abandoned_directions.jsonl")
+                            )
+                            for idea in removed:
+                                tracker.record(
+                                    direction=getattr(idea, "title", "Untitled idea"),
+                                    reason=f"Low composite score ({idea.score:.2f} < {min_composite})",
+                                    evidence=f"Novelty/feasibility scores below viable threshold",
+                                    run_id=getattr(result, 'run_id', 'unknown'),
+                                    reopen_condition="Higher-quality literature or different angle",
+                                )
+                            logger.info("Recorded %d abandoned ideas", len(removed))
+                        except Exception as e:
+                            logger.warning("Failed to record abandoned ideas: %s", e)
                 result.ideas = [i for i in result.ideas if i.score >= min_composite]
 
     async def _post_proposal_synthesis(self, result, ctx) -> None:
@@ -350,6 +389,47 @@ class StageLifecycle:
             logger.info("Faithfulness scoring complete for %d proposals", len(result.proposals))
         except Exception as e:
             logger.debug("Faithfulness scoring skipped: %s", str(e)[:100])
+
+        # Phase 4: Evidence provenance checking
+        if getattr(self._settings, "provenance_check_enabled", True):
+            try:
+                from backend.pipeline.verification.provenance_checker import ProvenanceChecker
+                provenance_checker = ProvenanceChecker(provider=self._provider)
+
+                corpus_dicts = [
+                    {"title": getattr(p, 'title', ''), "abstract": getattr(p, 'abstract', '') or ''}
+                    for p in ctx.all_papers[:50]
+                ]
+
+                provenance_results = {}
+                for idx, proposal in result.proposals.items():
+                    text = (
+                        getattr(proposal, 'content_md', '')
+                        or getattr(proposal, 'methodology', '')
+                        or str(proposal)
+                    )
+                    report = provenance_checker.check(text, corpus_dicts)
+                    provenance_results[idx] = report.to_dict()
+
+                    logger.info(
+                        "Provenance proposal %d: %d/%d claims supported (%.0f%% coverage)",
+                        idx, report.supported_claims, report.total_claims,
+                        report.coverage_ratio * 100,
+                    )
+
+                    if report.is_low_coverage:
+                        logger.warning(
+                            "Low provenance coverage (%.0f%%) for proposal %d",
+                            report.coverage_ratio * 100, idx,
+                        )
+
+                # Store in quality_report for decision gate
+                if not hasattr(result, 'quality_report') or result.quality_report is None:
+                    result.quality_report = {}
+                result.quality_report["provenance"] = provenance_results
+
+            except Exception as e:
+                logger.warning("Provenance check failed (non-fatal): %s", str(e)[:200])
 
     async def post_pipeline_finalize(
         self,
@@ -489,7 +569,23 @@ class StageLifecycle:
         )
 
         logger.info("=== Pipeline Complete ===")
-        self._persistence.mark_run_completed(db_run_id)
+
+        # Determine if pipeline produced meaningful output
+        n_gaps = len(result.gaps) if result.gaps else 0
+        n_ideas = len(result.ideas) if result.ideas else 0
+        n_proposals = len(result.proposals) if result.proposals else 0
+
+        if n_gaps == 0 and n_ideas == 0 and n_proposals == 0:
+            # Pipeline ran but produced nothing — mark as failed, not completed
+            logger.warning(
+                "Pipeline produced 0 gaps, 0 ideas, 0 proposals — marking as failed"
+            )
+            self._persistence.mark_run_failed(
+                db_run_id,
+                "Pipeline completed without producing any gaps, ideas, or proposals",
+            )
+        else:
+            self._persistence.mark_run_completed(db_run_id)
 
         # Run completed notification
         if self._notifier:
@@ -529,3 +625,22 @@ class StageLifecycle:
             notes_path, readme_path = self._integration.journal_write()
             if notes_path:
                 logger.info("Research journal written to %s", notes_path)
+
+        # Phase 5: Durable run artifact export
+        if getattr(self._settings, "run_artifacts_enabled", True):
+            try:
+                from backend.pipeline.export.run_artifacts import RunArtifactExporter
+                artifact_exporter = RunArtifactExporter(
+                    output_root=getattr(self._settings, "run_artifacts_dir", "./data/runs")
+                )
+                run_dir = await artifact_exporter.export_run(
+                    run_id=run_id,
+                    result=result,
+                    ctx=ctx,
+                    params=params,
+                    domain=domain,
+                    strategy=strategy,
+                )
+                logger.info("Run artifacts exported to %s", run_dir)
+            except Exception as e:
+                logger.warning("Run artifact export failed (non-fatal): %s", str(e)[:200])

@@ -327,6 +327,19 @@ async def startup():
         set_approval_manager(manager)
         _log.info("Governance approval manager initialized")
 
+    # Initialize Universal Model Manager (dynamic model discovery + routing)
+    try:
+        from backend.providers.model_manager import get_model_manager
+        mm = get_model_manager()
+        await mm.initialize(settings)
+        _log.info("Universal Model Manager initialized")
+    except Exception as e:
+        _log.warning(
+            "Model Manager initialization failed (non-fatal): %s. "
+            "Pipeline will use legacy provider factory.",
+            e,
+        )
+
 
 @app.get("/health", summary="Health check", description="Returns platform health status and version.")
 async def health():

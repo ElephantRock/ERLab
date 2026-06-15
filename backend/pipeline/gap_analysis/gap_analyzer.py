@@ -173,7 +173,51 @@ class GapAnalyzer:
                     )
 
                 gaps.append(new_gap)
-            return sorted(gaps, key=lambda g: g.confidence, reverse=True), cluster_report
+
+            # Phase 7: Exclude abandoned directions from prior runs
+            try:
+                from backend.config import get_settings
+                _s = get_settings()
+                if getattr(_s, "abandonment_tracking_enabled", True):
+                    from backend.pipeline.research.abandonment import AbandonmentTracker
+                    tracker = AbandonmentTracker(
+                        getattr(_s, "abandonment_tracking_path", "./data/abandoned_directions.jsonl")
+                    )
+                    if tracker.count() > 0:
+                        before = len(gaps)
+                        gaps = [g for g in gaps if not tracker.is_abandoned(g.title)]
+                        excluded_count = before - len(gaps)
+                        if excluded_count:
+                            logger.info(
+                                "Abandonment tracking: excluded %d gaps from prior abandoned directions",
+                                excluded_count,
+                            )
+            except Exception as e:
+                logger.debug("Abandonment exclusion failed (non-fatal): %s", e)
+
+            sorted_gaps = sorted(gaps, key=lambda g: g.confidence, reverse=True)
+
+            # Phase 2: Incumbent + Frontier classification
+            try:
+                from backend.pipeline.research.incumbent import IncumbentFrontierSelector
+                selector = IncumbentFrontierSelector()
+                directions = selector.select(sorted_gaps, papers)
+                # Map classifications back to gap objects
+                for direction in directions:
+                    direction.gap.is_incumbent = direction.is_incumbent
+                    direction.gap.frontier_rank = direction.frontier_rank
+                    direction.gap.evidence_strength = direction.evidence_strength
+                incumbent_count = sum(1 for d in directions if d.is_incumbent)
+                frontier_count = sum(1 for d in directions if d.frontier_rank is not None)
+                logger.info(
+                    "Incumbent/Frontier: %d incumbent, %d frontier, %d background",
+                    incumbent_count, frontier_count,
+                    len(directions) - incumbent_count - frontier_count,
+                )
+            except Exception as e:
+                logger.debug("Incumbent classification failed (non-fatal): %s", e)
+
+            return sorted_gaps, cluster_report
 
         except Exception as e:
             logger.error("Gap analysis LLM call failed: %s", e, exc_info=True)

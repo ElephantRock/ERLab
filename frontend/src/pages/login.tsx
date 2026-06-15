@@ -113,13 +113,13 @@ export default function LoginPage() {
             )}
 
             {error && (
-              <p className="text-sm text-red-500" data-testid="auth-error">
+              <p className="text-sm text-destructive" data-testid="auth-error">
                 {error}
               </p>
             )}
 
             {success && (
-              <p className="text-sm text-green-600" data-testid="auth-success">
+              <p className="text-sm text-success" data-testid="auth-success">
                 {success}
               </p>
             )}

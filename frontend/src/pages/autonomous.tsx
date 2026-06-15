@@ -163,7 +163,7 @@ export default function AutonomousPage() {
                 type="text"
                 value={domain}
                 onChange={(e) => setDomain(e.target.value)}
-                className="mt-1 w-full rounded-md border px-3 py-2 text-sm"
+                className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 data-testid="domain-input"
               />
             </div>
@@ -175,7 +175,7 @@ export default function AutonomousPage() {
                 onChange={(e) => setMaxRuns(Number(e.target.value))}
                 min={1}
                 max={20}
-                className="mt-1 w-full rounded-md border px-3 py-2 text-sm"
+                className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 data-testid="max-runs-input"
               />
             </div>

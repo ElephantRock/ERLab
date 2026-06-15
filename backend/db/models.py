@@ -109,6 +109,10 @@ class PipelineRun(Base):
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    run_id_str: Mapped[str | None] = mapped_column(
+        String(50), unique=True, index=True, nullable=True,
+        comment="String run ID (e.g. run_20260611_153000) for URL-safe lookups",
+    )
     status: Mapped[str] = mapped_column(
         String(20), default="pending"
     )  # pending, running, completed, failed

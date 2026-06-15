@@ -37,7 +37,7 @@ export function cancelRun(runId: string): Promise<{ status: string; run_id: stri
   return apiFetch(`/pipeline/runs/${runId}`, { method: "DELETE" });
 }
 
-export function getRunIdeas(runId: number): Promise<{ ideas: IdeaSummary[]; total: number }> {
+export function getRunIdeas(runId: string): Promise<{ ideas: IdeaSummary[]; total: number }> {
   return apiFetch(`/pipeline/runs/${runId}/ideas`);
 }
 

@@ -216,6 +216,26 @@ class PipelineOrchestrator:
         self._settings = settings
         self._last_stage_retries = 0
 
+        # ── Universal Model Manager (Phase 2) ────────────────────
+        self._model_manager = None
+        try:
+            from backend.providers.model_manager import get_model_manager
+            mm = get_model_manager()
+            if mm.is_initialized:
+                self._model_manager = mm
+                assignments = mm.get_assignments()
+                logger.info(
+                    "Universal Model Manager wired to orchestrator (%d stages assigned)",
+                    len(assignments),
+                )
+        except Exception as e:
+            logger.debug("ModelManager not available, using legacy routing: %s", e)
+
+        # Stage name aliases: orchestrator uses different names than selector
+        self._mm_stage_aliases = {
+            "proposal_deepening": "deepening",
+        }
+
         # Hybrid model routing: local for thinking tasks, cloud for generation
         self._model_selector = None
         self._thinking_provider = None
@@ -355,6 +375,14 @@ class PipelineOrchestrator:
 
         # Wrap provider through gateway
         self._provider = GatewayProvider(self._gateway, inner_provider)
+
+        # ── Stage-Aware Provider (Phase 3) ────────────────────────
+        # All 88 LLM call sites automatically route to the right model
+        # via contextvars — no service-file edits needed.
+        if self._model_manager:
+            from backend.providers.stage_context import StageAwareProvider
+            self._provider = StageAwareProvider(self._provider, model_manager=self._model_manager)
+            logger.info("StageAwareProvider active: all LLM calls route via ModelManager")
 
         # ── Service Registry ──────────────────────────────────────
         from backend.pipeline.orchestrator.service_registry import ServiceRegistry
@@ -517,7 +545,14 @@ class PipelineOrchestrator:
                     f"Available: {', '.join(strategies.keys())}"
                 )
             strat_yaml = strategies[strategy_name]
-            stages = {}
+            # Default ALL known stages to disabled, then enable only those listed
+            ALL_KNOWN_STAGES = [
+                "literature_search", "ingestion", "gap_analysis", "gap_reflection",
+                "idea_generation", "idea_reflection", "novelty_checking", "feasibility_scoring",
+                "mechanical_metrics", "proposal_synthesis", "adversarial_review", "evaluation",
+                "paper_synthesis", "citation_audit", "proposal_deepening", "export", "trimmer",
+            ]
+            stages = {name: StageConfig(enabled=False) for name in ALL_KNOWN_STAGES}
             for name in strat_yaml.get("stages", []):
                 stages[name] = StageConfig(enabled=True)
             return StrategyConfig(
@@ -553,6 +588,17 @@ class PipelineOrchestrator:
 
     def _resolve_user_model(self, model_id: str):
         """Resolve a user-selected model ID to a provider instance."""
+        # Try ModelManager first (knows all discovered models)
+        if self._model_manager:
+            try:
+                catalog = self._model_manager.get_catalog()
+                for model in catalog.get_all():
+                    if model.model_id == model_id or model.display_name == model_id:
+                        return self._model_manager._get_or_create_provider(model)
+            except Exception:
+                pass
+
+        # Legacy fallback
         from backend.providers.provider_factory import create_provider
         from backend.config import get_settings
         settings = get_settings()
@@ -569,17 +615,33 @@ class PipelineOrchestrator:
     ) -> AdversarialReviewStage:
         """Build the adversarial review stage with cross-model provider resolution.
 
-        Uses the thinking provider (local LM Studio) for review,
-        while the synthesizer uses the generation provider (cloud).
+        Uses ModelManager's adversarial_review assignment if available,
+        otherwise falls back to the thinking provider for review while
+        the synthesizer uses the generation provider.
         """
         from backend.pipeline.evaluation.adversarial_reviewer import AdversarialReviewer
 
-        reviewer = AdversarialReviewer(thinking_provider or self._provider)
+        # Try ModelManager for a dedicated adversarial review model
+        mm_review_provider = None
+        if self._model_manager:
+            try:
+                mm_review_provider = self._model_manager.get_provider("adversarial_review")
+                mm_model = self._model_manager.get_stage_model("adversarial_review")
+                if mm_model:
+                    logger.info(
+                        "Adversarial review using ModelManager: '%s' (from %s)",
+                        mm_model.model_id, mm_model.endpoint_url,
+                    )
+            except Exception as e:
+                logger.debug("ModelManager adversarial_review failed, using legacy: %s", e)
+                mm_review_provider = None
+
+        reviewer = AdversarialReviewer(mm_review_provider or thinking_provider or self._provider)
         return AdversarialReviewStage(
             reviewer=reviewer,
             synthesizer=synthesizer,
             generation_provider=self._provider,
-            thinking_provider=thinking_provider,
+            thinking_provider=mm_review_provider or thinking_provider,
         )
 
     def _build_stages(self) -> list[PipelineStage]:
@@ -753,7 +815,7 @@ class PipelineOrchestrator:
         # BATCH-190: Initialize notification gateway
         try:
             from backend.pipeline.notifications.gateway import create_notifier
-            webhook_url = getattr(settings, 'notification_webhook_url', None)
+            webhook_url = getattr(self._settings, 'notification_webhook_url', None)
             self._notifier = create_notifier(webhook_url)
         except Exception:
             self._notifier = None
@@ -764,8 +826,8 @@ class PipelineOrchestrator:
                 from backend.pipeline.notifications.gateway import Notification, PipelineEvent
                 await self._notifier.send(Notification(
                     event=PipelineEvent.RUN_STARTED,
-                    run_id=run_id, strategy=strategy, domain=domain,
-                    message=f"Pipeline started: {strategy} on '{domain}'",
+                    run_id=run_id, strategy=self._strategy_name, domain=domain,
+                    message=f"Pipeline started: {self._strategy_name} on '{domain}'",
                 ))
             except Exception:
                 pass
@@ -808,7 +870,7 @@ class PipelineOrchestrator:
             from backend.pipeline.execution.watchdog import PipelineWatchdog
             from datetime import timedelta as _td
             watchdog = PipelineWatchdog(self._persistence, timeout=_td(minutes=30))
-            stale_count = watchdog.check_sync()
+            stale_count = watchdog.check_sync(exclude_run_id=run_id)
             if stale_count > 0:
                 logger.info("Watchdog: marked %d stale runs as failed before starting new run", stale_count)
         except Exception as e:
@@ -851,7 +913,7 @@ class PipelineOrchestrator:
         result.params_used = params
 
         # Create DB run record
-        db_run_id = self._persistence.create_run_record(domain, params, session_id=session_id)
+        db_run_id = self._persistence.create_run_record(domain, params, session_id=session_id, run_id=run_id)
 
         # Budget: validate plan and start tracking
         if self._services.budget and self._services.plan_verifier:
@@ -893,6 +955,23 @@ class PipelineOrchestrator:
             export_format=export_format,
         )
 
+        # Phase 6: Memory warm-start — load lessons from prior runs
+        if getattr(self._settings, "warm_start_enabled", True) and self._services.memory:
+            try:
+                from backend.pipeline.memory.warm_start import WarmStartLoader
+                loader = WarmStartLoader(self._services.memory)
+                warm_hints = await loader.load_hints(domain)
+                if warm_hints.has_hints:
+                    ctx.params["warm_start_hints"] = warm_hints.to_dict()
+                    logger.info(
+                        "Warm-start: %d lessons, %d effective params, %d avoided directions",
+                        len(warm_hints.lessons),
+                        len(warm_hints.effective_params),
+                        len(warm_hints.avoided_directions),
+                    )
+            except Exception as e:
+                logger.warning("Warm-start failed (non-fatal): %s", e)
+
         # Create run checkpoint for durable execution
         checkpoint = RunCheckpoint.create_new(
             run_id=run_id,
@@ -905,7 +984,7 @@ class PipelineOrchestrator:
         for stage in self._stages:
             # Strategy: skip stages disabled in the current strategy config
             strategy_stage = self._strategy_config.stages.get(stage.name)
-            if strategy_stage is not None and not strategy_stage.enabled:
+            if strategy_stage is None or not strategy_stage.enabled:
                 logger.info("Strategy '%s' skips stage: %s", self._strategy_name, stage.name)
                 result.stage_report.append(StageReport(
                     name=stage.name,
@@ -934,18 +1013,34 @@ class PipelineOrchestrator:
             if db_run_id:
                 self._persistence.advance_stage(db_run_id, stage.name)
 
-            # Per-stage model routing
-            if self._task_router:
+            # Per-stage model routing — Universal Model Manager takes priority
+            if self._model_manager:
+                try:
+                    mm_stage = self._mm_stage_aliases.get(stage.name, stage.name)
+                    ctx.provider_override = self._model_manager.get_provider(mm_stage)
+                    model_info = self._model_manager.get_stage_model(mm_stage)
+                    if model_info:
+                        logger.debug(
+                            "ModelManager: stage '%s' -> '%s' (from %s)",
+                            stage.name, model_info.model_id, model_info.endpoint_url,
+                        )
+                except Exception as e:
+                    logger.warning("ModelManager failed for stage '%s': %s", stage.name, e)
+                    ctx.provider_override = None  # Reset so fallback can kick in
+
+            # Legacy: TaskRouter (disabled in most configs)
+            if self._task_router and not ctx.provider_override:
                 ctx.provider_override = self._task_router.get_provider(stage.name, run_id)
 
-            # User-configured per-stage model override (UI model selector)
-            from backend.api.routes.model_config import get_stage_model
-            user_model = get_stage_model(stage.name)
-            if user_model and user_model != "auto":
-                try:
-                    ctx.provider_override = self._resolve_user_model(user_model)
-                except Exception as e:
-                    logger.warning("User model '%s' for stage '%s' failed, using default: %s", user_model, stage.name, e)
+            # Legacy: User-configured per-stage model override (UI model selector)
+            if not ctx.provider_override:
+                from backend.api.routes.model_config import get_stage_model
+                user_model = get_stage_model(stage.name)
+                if user_model and user_model != "auto":
+                    try:
+                        ctx.provider_override = self._resolve_user_model(user_model)
+                    except Exception as e:
+                        logger.warning("User model '%s' for stage '%s' failed, using default: %s", user_model, stage.name, e)
 
             # Dynamic hot-swap: if the resolved model differs from the LM Studio
             # loaded model, swap before executing the stage.
@@ -955,23 +1050,34 @@ class PipelineOrchestrator:
                     getattr(ctx.provider_override, '_model', None)
                     or getattr(ctx.provider_override, 'default_model', None)
                 )
-                if _resolved_model and _resolved_model != _mgr.currently_loaded:
-                    try:
-                        from backend.config import get_settings as _gs
-                        _ctx_len = _gs().lmstudio_context_length
-                        swap_result = _mgr.swap_model(_resolved_model, context_length=_ctx_len)
-                        if swap_result.ready:
+                if _resolved_model:
+                    _loaded = _mgr.currently_loaded
+                    if _resolved_model == _loaded:
+                        logger.debug(
+                            "Hot-swap skipped for stage '%s': '%s' already loaded",
+                            stage.name, _resolved_model,
+                        )
+                    else:
+                        try:
+                            from backend.config import get_settings as _gs
+                            _ctx_len = _gs().lmstudio_context_length
                             logger.info(
-                                "Hot-swapped LM Studio: '%s' -> '%s' for stage '%s'",
-                                _mgr.currently_loaded, _resolved_model, stage.name,
+                                "Hot-swap needed for stage '%s': '%s' -> '%s'",
+                                stage.name, _loaded, _resolved_model,
                             )
-                        else:
-                            logger.warning(
-                                "Hot-swap failed for stage '%s': %s — continuing with '%s'",
-                                stage.name, swap_result.errors, _mgr.currently_loaded,
-                            )
-                    except Exception as _swap_err:
-                        logger.debug("Hot-swap check skipped: %s", _swap_err)
+                            swap_result = _mgr.swap_model(_resolved_model, context_length=_ctx_len)
+                            if swap_result.ready:
+                                logger.info(
+                                    "Hot-swapped LM Studio: '%s' -> '%s' for stage '%s'",
+                                    _loaded, _resolved_model, stage.name,
+                                )
+                            else:
+                                logger.warning(
+                                    "Hot-swap failed for stage '%s': %s — continuing with '%s'",
+                                    stage.name, swap_result.errors, _mgr.currently_loaded,
+                                )
+                        except Exception as _swap_err:
+                            logger.debug("Hot-swap check skipped: %s", _swap_err)
 
             # Policy gate: evaluate governance policy before each stage
             if self._services.governance_policy:
@@ -1051,9 +1157,15 @@ class PipelineOrchestrator:
                         self._provider._stage = stage.name
                     if hasattr(self._provider, '_run_id'):
                         self._provider._run_id = run_id
-                    should_continue = await self._execute_stage_with_retry(
-                        stage, prepared_ctx, checkpoint
-                    )
+                    # Set async context var so all nested LLM calls route correctly
+                    from backend.providers.stage_context import set_stage, reset_stage
+                    _stage_token = set_stage(stage.name)
+                    try:
+                        should_continue = await self._execute_stage_with_retry(
+                            stage, prepared_ctx, checkpoint
+                        )
+                    finally:
+                        reset_stage(_stage_token)
                     elapsed = time.time() - t0
                     result.stage_report.append(StageReport(
                         name=stage.name,
@@ -1171,6 +1283,80 @@ class PipelineOrchestrator:
                     name=stage_name,
                     status="not_reached",
                 ))
+
+        # Phase 1: Decision Gate — retry targeted stages if quality is low
+        if getattr(self._settings, "decision_gate_enabled", True):
+            try:
+                from backend.pipeline.orchestrator.decision_gate import DecisionGate
+                decision_gate = DecisionGate(
+                    quality_threshold=getattr(self._settings, "decision_gate_quality_threshold", 0.45),
+                    abort_threshold=getattr(self._settings, "decision_gate_abort_threshold", 0.15),
+                    max_retries=getattr(self._settings, "decision_gate_max_retries", 1),
+                    provenance_min_coverage=getattr(self._settings, "provenance_min_coverage", 0.4),
+                )
+
+                for retry_attempt in range(decision_gate._max_retries + 1):
+                    decision = decision_gate.evaluate(result, retry_attempt)
+
+                    if decision.action != "retry":
+                        logger.info(
+                            "Decision Gate: %s (score=%.2f, reason=%s)",
+                            decision.action, decision.quality_score, decision.reason,
+                        )
+                        break
+
+                    logger.info(
+                        "Decision Gate: retry %d/%d — re-running %s (score=%.2f)",
+                        retry_attempt + 1, decision_gate._max_retries,
+                        decision.target_stages, decision.quality_score,
+                    )
+
+                    # Re-execute target stages directly
+                    for target_name in decision.target_stages:
+                        target_stage = next(
+                            (s for s in self._stages if s.name == target_name), None
+                        )
+                        if target_stage is None:
+                            logger.warning("Decision Gate: target stage '%s' not found", target_name)
+                            continue
+
+                        logger.info("Decision Gate: re-running stage '%s'", target_name)
+                        t0 = time.time()
+                        try:
+                            # Reset stage-specific state
+                            if target_name == "proposal_synthesis":
+                                result.proposals = {}
+                            elif target_name == "idea_generation":
+                                result.ideas = []
+
+                            retry_should_continue = await self._execute_stage_with_retry(
+                                target_stage, ctx, checkpoint,
+                            )
+                            elapsed = time.time() - t0
+
+                            # Post-stage processing for the retried stage
+                            await self._lifecycle.post_stage_common(
+                                target_stage, result, ctx, elapsed, run_id, domain,
+                                strategy=self._strategy_name,
+                            )
+                            await self._lifecycle.post_stage_specific(
+                                target_stage, result, ctx, run_id, db_run_id, domain,
+                                strategy=self._strategy_name,
+                                should_continue=retry_should_continue,
+                            )
+
+                            logger.info(
+                                "Decision Gate: stage '%s' re-run completed (%.1fs)",
+                                target_name, elapsed,
+                            )
+                        except Exception as e:
+                            logger.error(
+                                "Decision Gate: stage '%s' retry failed: %s",
+                                target_name, e,
+                            )
+            except Exception as e:
+                logger.warning("Decision Gate failed (non-fatal): %s", e)
+
         # Persist stage report to DB
         self._persist_stage_report(result, db_run_id)
 

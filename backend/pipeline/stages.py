@@ -354,9 +354,11 @@ class LiteratureSearchStage(PipelineStage):
                 pass
 
         if not all_papers:
-            logger.warning("No papers found. Proceeding with domain knowledge only.")
-            # Don't halt — gap analysis can work from domain alone
-            return True
+            logger.warning(
+                "No papers found from any source. Halting pipeline — "
+                "gap analysis requires paper abstracts as input."
+            )
+            return False  # should_continue=False → triggers early-exit abort
         return True
 
 

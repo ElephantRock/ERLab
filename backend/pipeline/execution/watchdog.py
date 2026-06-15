@@ -42,12 +42,12 @@ class PipelineWatchdog:
         self._persistence = persistence
         self._timeout = timeout
 
-    async def check_and_mark_stale_runs(self) -> int:
+    async def check_and_mark_stale_runs(self, exclude_run_id: str | None = None) -> int:
         """Find and mark stale runs. Returns count of runs marked as failed.
 
         Only affects runs with status='running' (HB-02).
         """
-        stale_runs = self._persistence.find_stale_runs(max_age=self._timeout)
+        stale_runs = self._persistence.find_stale_runs(max_age=self._timeout, exclude_run_id=exclude_run_id)
 
         if not stale_runs:
             logger.debug("No stale pipeline runs found")
@@ -75,9 +75,9 @@ class PipelineWatchdog:
         logger.info("Watchdog: marked %d/%d stale runs as failed", marked, len(stale_runs))
         return marked
 
-    def check_sync(self) -> int:
+    def check_sync(self, exclude_run_id: str | None = None) -> int:
         """Synchronous version of check_and_mark_stale_runs."""
-        stale_runs = self._persistence.find_stale_runs(max_age=self._timeout)
+        stale_runs = self._persistence.find_stale_runs(max_age=self._timeout, exclude_run_id=exclude_run_id)
 
         if not stale_runs:
             return 0

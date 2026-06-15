@@ -90,32 +90,83 @@ class OpenAIProvider(LLMProvider):
         messages: list[dict],
         schema: dict,
         temperature: float = 0.3,
+        max_tokens: int = 8192,
     ) -> dict:
+        import re as _re
+
+        # Primary path: use json_schema response_format (LM Studio native support)
         try:
             response = await self._client.chat.completions.create(  # type: ignore[call-overload]
                 model=self._model,
                 messages=messages,
                 temperature=temperature,
-                response_format={"type": "json_object"},
+                max_tokens=max_tokens,
+                response_format={
+                    "type": "json_schema",
+                    "json_schema": {
+                        "name": "response",
+                        "schema": schema,
+                        "strict": False,
+                    },
+                },
             )
             content = response.choices[0].message.content  # type: ignore[union-attr]
-            return json.loads(content)
-        except Exception:
-            # Fallback: plain completion + extract JSON (for LM Studio)
-            return await self._structured_output_fallback(messages, schema, temperature)
+            if content:
+                # Strip markdown fences if present
+                text = content.strip()
+                if text.startswith("```"):
+                    text = text.split("\n", 1)[-1]
+                if text.endswith("```"):
+                    text = text.rsplit("```", 1)[0]
+                text = text.strip()
+
+                try:
+                    return json.loads(text)
+                except json.JSONDecodeError:
+                    # Repair trailing commas
+                    repaired = _re.sub(r',\s*([}\]])', r'\1', text)
+                    try:
+                        return json.loads(repaired)
+                    except json.JSONDecodeError:
+                        # Extract first {...} block
+                        m = _re.search(r'\{.*\}', text, _re.DOTALL)
+                        if m:
+                            try:
+                                return json.loads(m.group())
+                            except json.JSONDecodeError:
+                                repaired2 = _re.sub(r',\s*([}\]])', r'\1', m.group())
+                                try:
+                                    return json.loads(repaired2)
+                                except json.JSONDecodeError:
+                                    pass
+                        logger.warning("structured_output: json_schema returned %d chars but failed all parse attempts", len(content))
+        except Exception as e:
+            logger.debug("structured_output: json_schema path failed: %s", str(e)[:200])
+
+        # Fallback: plain completion + extract JSON (for providers that don't support json_schema)
+        return await self._structured_output_fallback(messages, schema, temperature, max_tokens)
 
     async def structured_output_with_usage(
         self,
         messages: list[dict],
         schema: dict,
         temperature: float = 0.3,
+        max_tokens: int = 8192,
     ) -> LLMResponse:
         try:
             response = await self._client.chat.completions.create(  # type: ignore[call-overload]
                 model=self._model,
                 messages=messages,
                 temperature=temperature,
-                response_format={"type": "json_object"},
+                max_tokens=max_tokens,
+                response_format={
+                    "type": "json_schema",
+                    "json_schema": {
+                        "name": "response",
+                        "schema": schema,
+                        "strict": False,
+                    },
+                },
             )
             usage = response.usage
             inp = usage.prompt_tokens if usage else 0
@@ -137,6 +188,7 @@ class OpenAIProvider(LLMProvider):
         messages: list[dict],
         schema: dict,
         temperature: float = 0.3,
+        max_tokens: int = 8192,
     ) -> dict:
         """Fallback for providers that don't support response_format (e.g. LM Studio)."""
         import re
@@ -147,7 +199,7 @@ class OpenAIProvider(LLMProvider):
             f"```json\n{schema_hint}\n```\n\n"
             f"Return ONLY the JSON object, no markdown fences."
         )}]
-        text = await self.complete(augmented, temperature=temperature)
+        text = await self.complete(augmented, temperature=temperature, max_tokens=max_tokens)
         text = text.strip()
 
         # Strip markdown fences
@@ -159,6 +211,15 @@ class OpenAIProvider(LLMProvider):
 
         try:
             return json.loads(text)
+        except json.JSONDecodeError:
+            pass
+
+        # Attempt JSON repair: fix trailing commas and truncated content
+        import re as _re
+        # Remove trailing commas before } or ]
+        repaired = _re.sub(r',\s*([}\]])', r'\1', text)
+        try:
+            return json.loads(repaired)
         except json.JSONDecodeError:
             pass
 

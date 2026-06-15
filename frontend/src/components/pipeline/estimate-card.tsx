@@ -75,7 +75,7 @@ export function EstimateCard({ strategy }: EstimateCardProps) {
             </div>
           )}
           {estimate.local_cost_usd === 0 && (
-            <div className="flex items-center gap-1.5 text-xs text-green-600 dark:text-green-400">
+            <div className="flex items-center gap-1.5 text-xs text-success">
               <Server className="h-3.5 w-3.5" />
               <span>Local compute: Free</span>
             </div>

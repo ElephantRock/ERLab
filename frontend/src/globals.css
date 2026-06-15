@@ -69,6 +69,22 @@ body {
   font-family: system-ui, -apple-system, sans-serif;
 }
 
+/* ── Form Element Reset ────────────────────────────────────────────── */
+/* Prevent browser-default white backgrounds on inputs in dark mode. */
+/* Every input/textarea/select inherits the theme colors unless overridden. */
+input,
+textarea,
+select,
+button {
+  background-color: transparent;
+  color: inherit;
+}
+
+select option {
+  background-color: hsl(var(--popover));
+  color: hsl(var(--popover-foreground));
+}
+
 /* ── Responsive Breakpoints (BATCH-31) ───────────────────────────── */
 
 /* Mobile: < 768px — sidebar hidden, bottom nav shown */

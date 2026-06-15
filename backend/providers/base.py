@@ -113,6 +113,7 @@ class LLMProvider(ABC):
         messages: list[dict],
         schema: dict,
         temperature: float = 0.3,
+        max_tokens: int = 4096,
     ) -> dict:
         """Return a JSON object conforming to the given JSON schema."""
         ...

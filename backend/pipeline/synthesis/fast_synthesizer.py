@@ -46,28 +46,51 @@ class FastProposalSynthesizer:
 
     async def synthesize(
         self,
-        ideas: list[Any],
-        gaps: list[Any],
+        ideas: list[Any] | Any | None = None,
+        gaps: list[Any] | None = None,
         papers: list[Any] | None = None,
+        # Accept single-idea kwargs for compatibility with ProposalSynthesisStage
+        idea: Any | None = None,
+        novelty_report: Any | None = None,
+        feasibility_report: Any | None = None,
+        supporting_papers: list[Any] | None = None,
+        framing_directive: str = "",
     ) -> list[ResearchProposal]:
         """Generate brief proposals for each idea.
 
+        Accepts both list-based (ideas=) and single-idea (idea=) calling
+        conventions for compatibility with different stage callers.
+
         Args:
-            ideas: List of idea objects (IdeaCandidate or ResearchIdea).
+            ideas: List of idea objects, or a single idea object.
             gaps: List of research gap objects.
             papers: Optional list of paper objects for context.
+            idea: Single idea object (alternative to ideas=).
+            supporting_papers: Alias for papers.
+            framing_directive: Strategic framing hint (used by governance).
 
         Returns:
             List of ResearchProposal objects with 3 sections each.
         """
+        # Normalize to list regardless of calling convention
+        single_mode = idea is not None  # caller expects single ResearchProposal back
+        if idea is not None and not ideas:
+            ideas = [idea]
+        elif idea is not None and isinstance(ideas, list):
+            ideas = [idea]  # single-idea mode takes precedence
+        if not isinstance(ideas, list):
+            ideas = [ideas]
         if not ideas:
             return []
+
+        # Use supporting_papers as alias for papers
+        ctx_papers = papers or supporting_papers or []
 
         proposals: list[ResearchProposal] = []
 
         # Build context from gaps and papers
-        gap_text = self._summarize_gaps(gaps)
-        paper_text = self._summarize_papers(papers or [])
+        gap_text = self._summarize_gaps(gaps or [])
+        paper_text = self._summarize_papers(ctx_papers)
 
         for idea in ideas:
             try:
@@ -78,6 +101,9 @@ class FastProposalSynthesizer:
                 # Graceful degradation: return a minimal proposal
                 proposals.append(self._fallback_proposal(idea))
 
+        # Return single proposal in single-idea mode for ProposalSynthesisStage compat
+        if single_mode:
+            return proposals[0] if proposals else self._fallback_proposal(idea)
         return proposals
 
     async def _synthesize_one(

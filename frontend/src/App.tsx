@@ -35,7 +35,10 @@ function LoadingScreen() {
   );
 }
 
-/** Redirects to /login if not authenticated (BATCH-28). */
+/** Redirects to /login if not authenticated (BATCH-28).
+ *  When auth is disabled, the backend returns a dev user automatically,
+ *  so the login page is never shown.
+ */
 function ProtectedRoute({ children }: { children: ReactNode }) {
   const { user, loading } = useAuth();
   if (loading) {

@@ -56,7 +56,7 @@ export function RunStats({ stats, loading }: RunStatsProps) {
       {cards.map((card) => (
         <div
           key={card.label}
-          className="bg-white dark:bg-muted rounded-lg border border-border dark:border-border p-4"
+          className="bg-card rounded-lg border p-4"
         >
           <div className="text-xs text-muted-foreground dark:text-muted-foreground uppercase tracking-wide">
             {card.label}

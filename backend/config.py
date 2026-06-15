@@ -85,8 +85,13 @@ class Settings(BaseSettings):
     lmstudio_auto_download: bool = False  # Auto-download missing models from Hugging Face
     lmstudio_download_timeout: int = 600  # Max seconds to wait for model download
 
+    # vLLM / OpenAI-compatible local server
+    vllm_base_url: str = ""  # e.g. "http://localhost:8000"
+
     # GPU Hardware
     gpu_vram_mb: int = 12288  # GPU VRAM in MB. Used for pre-load safety checks (default: RTX 3080 Ti)
+    gpu_auto_detect: bool = True  # Auto-detect GPU VRAM; overrides gpu_vram_mb if True
+    gpu_override_vram_mb: int = 0  # If >0, force this VRAM value (for remote inference servers)
 
     # Pipeline Defaults
     generation_rounds: int = 2
@@ -432,6 +437,32 @@ class Settings(BaseSettings):
     experiment_enabled: bool = False
     experiment_default_timeout: float = 30.0
     experiment_max_code_size: int = 10000
+
+    # ── Research Loop Improvements (Phase 1-7) ────────────────────
+
+    # Phase 1: Decision Gate Loop
+    decision_gate_enabled: bool = True
+    decision_gate_quality_threshold: float = 0.45
+    decision_gate_abort_threshold: float = 0.15
+    decision_gate_max_retries: int = 1
+
+    # Phase 3: Contract Enforcement
+    contract_enforcement_mode: str = "warn"  # "warn" | "enforce"
+
+    # Phase 4: Evidence Provenance
+    provenance_check_enabled: bool = True
+    provenance_min_coverage: float = 0.4
+
+    # Phase 5: Durable Run Export
+    run_artifacts_enabled: bool = True
+    run_artifacts_dir: str = "./data/runs"
+
+    # Phase 6: Memory Warm-Start
+    warm_start_enabled: bool = True
+
+    # Phase 7: Abandonment Tracking
+    abandonment_tracking_enabled: bool = True
+    abandonment_tracking_path: str = "./data/abandoned_directions.jsonl"
 
 
     # ── Environment-aware security properties ────────────────────

@@ -28,3 +28,7 @@ class ResearchGap(BaseModel):
     potential_impact: str = ""
     confidence: float = 0.5
     truth: TruthValue = Field(default_factory=TruthValue.initial)
+    # Phase 2: Incumbent + Frontier classification
+    is_incumbent: bool = False
+    frontier_rank: int | None = None  # 1, 2, 3 for frontier; None for incumbent/background
+    evidence_strength: float | None = None  # confidence * paper_support_factor

@@ -68,6 +68,10 @@ def verify_contract(
                     f"Output {output_name} has {actual} items, minimum {min_size}"
                 )
 
+    # Phase 3: Content quality checks (catch empty LLM responses)
+    quality_violations = _check_content_quality(stage_name, result)
+    violations.extend(quality_violations)
+
     if not violations:
         return None
 
@@ -77,6 +81,59 @@ def verify_contract(
         violations=violations,
         severity=severity,
     )
+
+
+def _check_content_quality(stage_name: str, result) -> list[str]:
+    """Check content quality beyond just existence.
+
+    Catches issues like:
+    - Gaps with very low confidence (< 0.2)
+    - Ideas with very low scores (< 0.2)
+    - Proposals with very short content (< 100 chars, indicating empty LLM response)
+    """
+    violations = []
+
+    if stage_name == "gap_analysis":
+        gaps = getattr(result, "gaps", None)
+        if gaps and len(gaps) > 0:
+            max_conf = max((g.confidence for g in gaps if hasattr(g, 'confidence')), default=0)
+            if max_conf < 0.2:
+                violations.append(
+                    f"All gaps have very low confidence (max={max_conf:.2f}) "
+                    "— possible LLM quality issue"
+                )
+
+    elif stage_name == "idea_generation":
+        ideas = getattr(result, "ideas", None)
+        if ideas and len(ideas) > 0:
+            scores = [i.score for i in ideas if hasattr(i, 'score')]
+            if scores:
+                max_score = max(scores)
+                if max_score < 0.2:
+                    violations.append(
+                        f"All ideas have very low scores (max={max_score:.2f}) "
+                        "— possible LLM quality issue"
+                    )
+
+    elif stage_name == "proposal_synthesis":
+        proposals = getattr(result, "proposals", None)
+        if proposals and len(proposals) > 0:
+            short_count = 0
+            for prop in proposals.values():
+                text = (
+                    getattr(prop, 'content_md', '')
+                    or getattr(prop, 'methodology', '')
+                    or str(prop)
+                )
+                if len(text) < 100:
+                    short_count += 1
+            if short_count == len(proposals):
+                violations.append(
+                    f"All {short_count} proposals have very short content (<100 chars) "
+                    "— likely empty LLM responses"
+                )
+
+    return violations
 
 
 # ── Contracts for all 17 stages ──────────────────────────────────

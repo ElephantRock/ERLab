@@ -151,12 +151,12 @@ export default function Settings() {
               }
             />
             {connState === "error" && (
-              <span className="text-sm text-red-500" data-testid="connection-error">
+              <span className="text-sm text-destructive" data-testid="connection-error">
                 {connError}
               </span>
             )}
             {connState === "connected" && (
-              <span className="text-sm text-green-600" data-testid="connection-success">
+              <span className="text-sm text-success" data-testid="connection-success">
                 Connected
               </span>
             )}

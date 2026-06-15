@@ -63,7 +63,7 @@ export default function PipelineNew() {
       setIdeasLoading(true);
       setIdeasError(null);
       try {
-        const ideasData = await getRunIdeas(Number(runId));
+        const ideasData = await getRunIdeas(runId);
         setIdeas(ideasData.ideas);
       } catch (err) {
         setIdeas([]);

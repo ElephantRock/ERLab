@@ -6,6 +6,7 @@ from pathlib import Path
 from backend.pipeline.export.latex_exporter import LatexExporter
 from backend.pipeline.export.markdown_exporter import MarkdownExporter
 from backend.pipeline.synthesis.proposal_synthesizer import ResearchProposal
+from backend.pipeline.utils import safe_filename
 
 logger = logging.getLogger(__name__)
 
@@ -46,8 +47,7 @@ class ExportService:
         _, ext = EXPORTERS[format]
 
         if output_path is None:
-            slug = proposal.title.lower().replace(" ", "-")[:50]
-            slug = "".join(c for c in slug if c.isalnum() or c == "-")
+            slug = safe_filename(proposal.title.lower().replace(" ", "-"), max_length=50)
             output_path = str(Path(self._output_dir) / f"{slug}{ext}")
 
         exporter.export(proposal, output_path=output_path)  # type: ignore[attr-defined]

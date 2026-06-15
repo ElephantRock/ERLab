@@ -1,35 +1,58 @@
+# Python
 __pycache__/
 *.py[cod]
 *$py.class
 *.egg-info/
 dist/
 build/
-.env
-data/chroma/
-data/papers/
-data/exports/
-data/memory/
-data/self_improve/
-data/knowledge_graph.json
-data/world_model.json
-data/governance_audit.jsonl
-data/goals.json
 *.db
+
+# Virtual environments
 .venv/
+venv/
+
+# Frontend
 node_modules/
 .next/
 frontend/.next/
 frontend/node_modules/
+
+# Runtime data — NEVER commit
+data/
+sessions/
+exports/
+logs/
+events.jsonl
+*.log
+
+# Test/cache artifacts
 .ruff_cache/
 .mypy_cache/
 .pytest_cache/
 htmlcov/
 .coverage
 .benchmarks/
+
+# Design drafts and notes — do not carry into new repo
+AIV_FRAMEWORK_v*.md
+SOUL.md
+STATE.md
+THIRTEEN_FIXES.md
+SKILL.md
+reference-patterns-report.md
+research_proposal_generation_patterns.md
+
+# IDE
 .idea/
 .vscode/
 *.swp
 *.swo
 *~
+
+# OS
 Thumbs.db
 .DS_Store
+nul
+
+# Misc
+.claude-plugin/

@@ -168,7 +168,11 @@ class VectorStore:
             "n_results": n_results,
         }
         if filter_metadata:
-            kwargs["where"] = filter_metadata
+            # ChromaDB requires $and operator for compound filters
+            if len(filter_metadata) > 1:
+                kwargs["where"] = {"$and": [{k: v} for k, v in filter_metadata.items()]}
+            else:
+                kwargs["where"] = filter_metadata
 
         results = self._collection.query(**kwargs)
 
