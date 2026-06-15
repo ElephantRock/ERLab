@@ -11,12 +11,18 @@ from typing import Any, Callable
 
 @dataclass
 class LLMResponse:
-    """Wraps LLM output with token usage metadata."""
+    """Wraps LLM output with token usage metadata.
+
+    ``served_model`` is a compatibility field that allows the conformance
+    layer to extract receipt information from provider responses during
+    migration. The real conformance unit is ``ModelReceipt``, not this field.
+    """
 
     content: str
     structured: dict | None = None
     input_tokens: int = 0
     output_tokens: int = 0
+    served_model: str | None = None
 
     @property
     def total_tokens(self) -> int:
@@ -126,9 +132,19 @@ class LLMProvider(ABC):
         stage: str = "",
         run_id: str | None = None,
     ) -> LLMResponse:
-        """Same as structured_output() but returns token usage and reports cost."""
+        """Same as structured_output() but returns token usage and reports cost.
+
+        Override in concrete providers to capture real usage from the API
+        response. The base implementation delegates to structured_output()
+        and reports zero usage — subclasses MUST override for real receipts.
+        """
         result = await self.structured_output(messages, schema, temperature)
-        return LLMResponse(content="", structured=result)
+        self._report_cost(0, 0, stage=stage, run_id=run_id)
+        return LLMResponse(
+            content="",
+            structured=result,
+            served_model=self.default_model,
+        )
 
     @abstractmethod
     async def embed(self, texts: list[str]) -> list[list[float]]:

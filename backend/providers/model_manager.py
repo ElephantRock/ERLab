@@ -233,7 +233,9 @@ class ModelManager:
     ) -> Any:
         """Route structured output with usage to the right model for a stage."""
         provider = self.get_provider(stage)
-        result = await provider.structured_output_with_usage(messages, schema, temperature)
+        result = await provider.structured_output_with_usage(
+            messages, schema, temperature, stage=stage,
+        )
         self._record_call(stage, success=True, json_success=True)
         return result
 

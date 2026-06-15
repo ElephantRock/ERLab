@@ -108,6 +108,7 @@ class GatewayProvider(LLMProvider):
                 content=content,
                 input_tokens=gw_response.input_tokens,
                 output_tokens=gw_response.output_tokens,
+                served_model=self._inner.default_model,
             )
 
         except PromptTooLargeError:
@@ -115,7 +116,9 @@ class GatewayProvider(LLMProvider):
         except Exception as e:
             logger.warning("Gateway failed, falling back to inner provider: %s", str(e)[:100])
             return await self._inner.complete_with_usage(
-                messages, temperature, max_tokens, stage, run_id,
+                messages, temperature, max_tokens,
+                stage=stage or self._stage,
+                run_id=run_id or self._run_id,
             )
 
     def complete_stream(
@@ -208,6 +211,7 @@ class GatewayProvider(LLMProvider):
                 content=str(content),
                 input_tokens=gw_response.input_tokens,
                 output_tokens=gw_response.output_tokens,
+                served_model=self._inner.default_model,
             )
 
         except PromptTooLargeError:
@@ -215,7 +219,9 @@ class GatewayProvider(LLMProvider):
         except Exception as e:
             logger.warning("Gateway failed, falling back to inner provider: %s", str(e)[:100])
             return await self._inner.structured_output_with_usage(
-                messages, schema, temperature, stage, run_id,
+                messages, schema, temperature,
+                stage=stage or self._stage,
+                run_id=run_id or self._run_id,
             )
 
     async def complete_with_tools(

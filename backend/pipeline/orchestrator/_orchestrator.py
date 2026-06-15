@@ -779,7 +779,10 @@ class PipelineOrchestrator:
                 mgr = LMStudioManager()
                 preflight = mgr.preflight_check(auto_fix=True)
                 _lmstudio_mgr = mgr  # Store for teardown
-                self._lmstudio_mgr = mgr  # Also for hot-swap + grammar enforcement
+                self._lmstudio_mgr = mgr  # Also for grammar enforcement
+                # Operation Executor: authoritative model lifecycle owner
+                from backend.pipeline.operations.executor import OperationExecutor
+                self._operation_executor = OperationExecutor(mgr)
                 if preflight.ready:
                     logger.info(
                         "LM Studio preflight OK: %s ctx=%d%s",
@@ -1042,42 +1045,30 @@ class PipelineOrchestrator:
                     except Exception as e:
                         logger.warning("User model '%s' for stage '%s' failed, using default: %s", user_model, stage.name, e)
 
-            # Dynamic hot-swap: if the resolved model differs from the LM Studio
-            # loaded model, swap before executing the stage.
-            _mgr = getattr(self, '_lmstudio_mgr', None)
-            if _mgr and ctx.provider_override:
+            # Operation Executor: authoritative model lifecycle
+            # The executor is the ONLY component that loads/unloads/swaps models.
+            # Routing (which model for which stage) is handled above by
+            # ModelManager/TaskRouter/user-config. Lifecycle (load/swap/reconcile)
+            # is delegated to the executor.
+            _executor = getattr(self, '_operation_executor', None)
+            if _executor and ctx.provider_override:
                 _resolved_model = (
                     getattr(ctx.provider_override, '_model', None)
                     or getattr(ctx.provider_override, 'default_model', None)
                 )
                 if _resolved_model:
-                    _loaded = _mgr.currently_loaded
-                    if _resolved_model == _loaded:
-                        logger.debug(
-                            "Hot-swap skipped for stage '%s': '%s' already loaded",
-                            stage.name, _resolved_model,
+                    try:
+                        from backend.config import get_settings as _gs
+                        _ctx_len = _gs().lmstudio_context_length
+                        await _executor.ensure_model_loaded(
+                            _resolved_model, context_length=_ctx_len,
                         )
-                    else:
-                        try:
-                            from backend.config import get_settings as _gs
-                            _ctx_len = _gs().lmstudio_context_length
-                            logger.info(
-                                "Hot-swap needed for stage '%s': '%s' -> '%s'",
-                                stage.name, _loaded, _resolved_model,
-                            )
-                            swap_result = _mgr.swap_model(_resolved_model, context_length=_ctx_len)
-                            if swap_result.ready:
-                                logger.info(
-                                    "Hot-swapped LM Studio: '%s' -> '%s' for stage '%s'",
-                                    _loaded, _resolved_model, stage.name,
-                                )
-                            else:
-                                logger.warning(
-                                    "Hot-swap failed for stage '%s': %s — continuing with '%s'",
-                                    stage.name, swap_result.errors, _mgr.currently_loaded,
-                                )
-                        except Exception as _swap_err:
-                            logger.debug("Hot-swap check skipped: %s", _swap_err)
+                    except Exception as _op_err:
+                        logger.warning(
+                            "Operation executor failed for stage '%s' "
+                            "(model '%s'): %s — continuing",
+                            stage.name, _resolved_model, _op_err,
+                        )
 
             # Policy gate: evaluate governance policy before each stage
             if self._services.governance_policy:
