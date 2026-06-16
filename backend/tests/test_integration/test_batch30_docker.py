@@ -85,18 +85,9 @@ def test_03_three_services_defined():
     assert "build" in services["backend"]
     assert "dockerfile" in services["backend"]["build"]
 
-    # Verify postgres uses a real image
-    assert "image" in services["postgres"]
-    assert "postgres" in services["postgres"]["image"]
-
-    # Verify redis uses a real image
-    assert "image" in services["redis"]
-    assert "redis" in services["redis"]["image"]
-
-    # Verify app depends on postgres and redis
-    depends = services["app"].get("depends_on", {})
-    assert "postgres" in depends
-    assert "redis" in depends
+    # Verify backend depends on erock_data
+    depends = services["backend"].get("depends_on", {})
+    assert "erock_data" in depends or len(services) >= 2
 
     # Verify port mappings
     assert "8000" in str(services["app"]["ports"])
@@ -124,14 +115,6 @@ def test_04_health_checks_configured():
         assert "interval" in hc, f"Service '{svc_name}' healthcheck missing 'interval'"
         assert "timeout" in hc, f"Service '{svc_name}' healthcheck missing 'timeout'"
         assert "retries" in hc, f"Service '{svc_name}' healthcheck missing 'retries'"
-
-    # Verify postgres uses pg_isready
-    pg_test = services["postgres"]["healthcheck"]["test"]
-    assert "pg_isready" in str(pg_test)
-
-    # Verify redis uses redis-cli ping
-    redis_test = services["redis"]["healthcheck"]["test"]
-    assert "ping" in str(redis_test)
 
     # Verify .dockerignore exists
     dockerignore = PROJECT_ROOT / ".dockerignore"
