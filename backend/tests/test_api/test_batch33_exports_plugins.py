@@ -6,6 +6,15 @@ from io import BytesIO
 from unittest.mock import MagicMock, patch
 
 import pytest
+
+try:
+    import weasyprint  # noqa: F401
+    HAS_WEASYPRINT = True
+except (ImportError, OSError):
+    HAS_WEASYPRINT = False
+
+pytestmark = pytest.mark.skipif(not HAS_WEASYPRINT, reason='WeasyPrint not installed')
+
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
