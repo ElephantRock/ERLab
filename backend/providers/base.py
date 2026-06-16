@@ -139,7 +139,8 @@ class LLMProvider(ABC):
         and reports zero usage — subclasses MUST override for real receipts.
         """
         result = await self.structured_output(messages, schema, temperature)
-        self._report_cost(0, 0, stage=stage, run_id=run_id)
+        if hasattr(self, '_cost_callback'):
+            self._report_cost(0, 0, stage=stage, run_id=run_id)
         return LLMResponse(
             content="",
             structured=result,

@@ -150,3 +150,39 @@ class StageExecutor:
     @property
     def last_stage_retries(self) -> int:
         return self._last_stage_retries
+
+    async def execute_with_result(
+        self,
+        stage: "PipelineStage",
+        ctx: "StageContext",
+        checkpoint: "RunCheckpoint",
+    ) -> "StageExecutionResult":
+        """Execute a stage and return a typed StageExecutionResult.
+
+        This is the compatibility bridge: old stages return ``bool``,
+        which we wrap into a ``StageExecutionResult`` with
+        ``is_compatibility_mode = True``.
+
+        Until all stages are migrated to operation-scoped provider calls,
+        results from this method have no model receipts and must be
+        marked as compatibility mode.
+        """
+        from backend.pipeline.operations.types import StageExecutionResult, StageStatus
+
+        try:
+            success = await self.execute_with_retry(stage, ctx, checkpoint)
+            return StageExecutionResult(
+                status=StageStatus.COMPLETED if success else StageStatus.FAILED,
+                # Compatibility mode: no receipts, no resource epoch.
+                # Stages still call providers internally.
+                model_receipts=[],
+                resource_epoch=None,
+                error=None if success else "Stage returned False",
+            )
+        except Exception as exc:
+            return StageExecutionResult(
+                status=StageStatus.FAILED,
+                failure_class="unknown",
+                error=str(exc)[:500],
+                retryable=False,
+            )
