@@ -217,6 +217,7 @@ def test_14_01_06_gaps_include_idea_count():
          patch("backend.db.crud.count_gaps_by_run", return_value=1), \
          patch("backend.db.crud.search_gaps", return_value=mock_gaps), \
          patch("backend.db.crud.count_search_gaps", return_value=1), \
+         patch("backend.db.crud.batch_count_ideas_for_gaps", return_value={"Gap A": 3}), \
          patch("backend.db.crud.count_ideas_for_gap", return_value=3):
         client = TestClient(_make_app())
         resp = client.get("/gaps/")

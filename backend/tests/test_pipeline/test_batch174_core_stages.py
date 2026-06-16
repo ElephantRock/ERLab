@@ -123,7 +123,9 @@ class TestLiteratureSearchStage:
         ctx = _ctx(search_queries=["empty query"])
         ok = asyncio.run(stage.execute(ctx))
 
-        assert ok is True
+        # Stage returns False (halt) when no papers found — pipeline should not
+        # continue to gap analysis without paper abstracts.
+        assert ok is False
         assert ctx.result.papers_found == 0
 
 

@@ -19,6 +19,30 @@ depends_on = None
 
 
 def upgrade() -> None:
+    # Add columns to pipeline_runs and ideas that were added to the model without
+    # corresponding migrations (schema drift fix).
+    with op.batch_alter_table("pipeline_runs") as batch_op:
+        batch_op.add_column(
+            sa.Column(
+                "run_id_str",
+                sa.String(50),
+                nullable=True,
+                comment="String run ID for URL-safe lookups",
+            )
+        )
+        batch_op.add_column(
+            sa.Column("stage_report_json", sa.Text(), nullable=True, comment="Per-stage observability report (BATCH-173)"),
+        )
+        batch_op.add_column(
+            sa.Column("tree_data_json", sa.Text(), nullable=True, comment="Serialized search tree data"),
+        )
+        batch_op.create_index("ix_pipeline_runs_run_id_str", ["run_id_str"], unique=True)
+
+    with op.batch_alter_table("ideas") as batch_op:
+        batch_op.add_column(
+            sa.Column("parent_idea_ids", sa.Text(), nullable=True, comment="JSON array of parent idea IDs for tree-based ideation"),
+        )
+
     # Run events — append-only outbox for SSE/WS progress streaming.
     # seq is per-run monotonic, used for Last-Event-ID replay.
     op.create_table(
@@ -63,3 +87,12 @@ def downgrade() -> None:
     op.drop_table("run_workers")
     op.drop_table("run_cancellations")
     op.drop_table("run_events")
+
+    with op.batch_alter_table("ideas") as batch_op:
+        batch_op.drop_column("parent_idea_ids")
+
+    with op.batch_alter_table("pipeline_runs") as batch_op:
+        batch_op.drop_index("ix_pipeline_runs_run_id_str")
+        batch_op.drop_column("tree_data_json")
+        batch_op.drop_column("stage_report_json")
+        batch_op.drop_column("run_id_str")
