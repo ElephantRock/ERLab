@@ -1,8 +1,20 @@
 """Application configuration via environment variables."""
 
 import functools
+import logging
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+logger = logging.getLogger(__name__)
+
+
+class ProductionConfigError(Exception):
+    """Raised when production configuration has insecure defaults."""
+
+
+class ProductionConfigWarning(Exception):
+    """Warning for production configuration that is risky but not fatal."""
+
 
 
 class Settings(BaseSettings):
@@ -494,7 +506,81 @@ class Settings(BaseSettings):
         return self.debug
 
 
+    # ── Production validation ────────────────────────────────────
+
+    def validate_production(self) -> None:
+        """Validate configuration for production deployments.
+
+        Raises ProductionConfigError if any setting has an insecure default
+        that must not run in production. This is called automatically by
+        get_settings() when env == "production".
+
+        Calling this method in development mode is a no-op.
+
+        Also logs warnings for risky-but-not-fatal settings.
+        """
+        if not self.is_production:
+            return
+
+        errors: list[str] = []
+        warnings: list[str] = []
+
+        # 1. JWT secret must not be the default
+        if self.jwt_secret == "dev-secret-change-in-production":
+            errors.append(
+                "jwt_secret is set to the default value. "
+                "Set EROCK_JWT_SECRET to a strong, unique secret."
+            )
+
+        # 2. CORS must not be wildcard
+        if self.cors_origins == ["*"]:
+            errors.append(
+                "cors_origins is set to wildcard '*' (or not set). "
+                "Set EROCK_CORS_ORIGINS to an explicit list of allowed origins."
+            )
+
+        # 3. Auth must be enabled
+        if not self.auth_enabled:
+            errors.append(
+                "auth_enabled is False. "
+                "Set EROCK_AUTH_ENABLED=true for production deployments."
+            )
+
+        # 4. Sandbox must not silently fall back to subprocess
+        if self.sandboxing_enabled and self.sandbox_backend == "auto":
+            warnings.append(
+                "sandbox_backend is 'auto' in production. "
+                "This will silently fall back to subprocess if Docker is unavailable. "
+                "Set EROCK_SANDBOX_BACKEND explicitly (e.g. 'docker' or 'subprocess')."
+            )
+        if self.sandboxing_enabled and self.sandbox_backend == "noop":
+            errors.append(
+                "sandbox_backend is 'noop' in production. "
+                "Noop sandbox provides zero isolation. "
+                "Use 'docker' or 'subprocess' explicitly."
+            )
+
+        # 5. API key must not be empty when auth is enabled
+        if self.auth_enabled and not self.api_key:
+            warnings.append(
+                "auth_enabled is True but api_key is not set. "
+                "JWT-based auth will work, but API key auth will be unavailable."
+            )
+
+        for w in warnings:
+            logger.warning("Production config warning: %s", w)
+
+        if errors:
+            raise ProductionConfigError(
+                "Production configuration has insecure defaults:\n"
+                + "\n".join(f"  - {e}" for e in errors)
+            )
+
+
 @functools.lru_cache()
 def get_settings() -> Settings:
     """Return a cached Settings instance."""
-    return Settings()
+    settings = Settings()
+    if settings.is_production:
+        settings.validate_production()
+    return settings

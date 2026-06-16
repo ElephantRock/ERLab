@@ -4,10 +4,22 @@ interface UseWebSocketOptions {
   channel?: string;
   onMessage?: (data: any) => void;
   autoReconnect?: boolean;
+  /** JWT or API key token. When provided, sent as first message for auth. */
+  token?: string | null;
 }
 
+/**
+ * WebSocket hook with first-message authentication.
+ *
+ * Phase 5: Query-string token auth (?token=...) has been removed server-side
+ * to prevent token leakage. When a token is provided, it is sent as the
+ * first message: {"action": "auth", "token": "..."}.
+ *
+ * In dev mode (auth_enabled=False server-side), the server accepts
+ * connections without auth and sends {"type": "auth_ok", "dev_mode": true}.
+ */
 export function useWebSocket(options: UseWebSocketOptions = {}) {
-  const { channel, onMessage, autoReconnect = true } = options;
+  const { channel, onMessage, autoReconnect = true, token = null } = options;
   const [connected, setConnected] = useState(false);
   const [messages, setMessages] = useState<any[]>([]);
   const wsRef = useRef<WebSocket | null>(null);
@@ -21,21 +33,32 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
     wsRef.current = ws;
 
     ws.onopen = () => {
-      setConnected(true);
-      reconnectAttemptsRef.current = 0;
+      // Send auth as first message if token is available
+      if (token) {
+        ws.send(JSON.stringify({ action: "auth", token }));
+      }
+      // Subscribe to channel (server accepts immediately in dev mode,
+      // or after auth_ok in production mode)
       if (channel) {
         ws.send(JSON.stringify({ action: "subscribe", channel }));
       }
+      setConnected(true);
+      reconnectAttemptsRef.current = 0;
     };
 
     ws.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
         if (data.type === "subscribed") return; // ack
+        if (data.type === "auth_ok") return; // auth confirmed
+        if (data.type === "error") {
+          console.error("WebSocket error:", data.message);
+          return;
+        }
         setMessages((prev) => [...prev.slice(-99), data]);
         onMessage?.(data);
       } catch {
-        /* ignore */
+        /* ignore parse errors */
       }
     };
 
@@ -49,7 +72,7 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
         }, delay);
       }
     };
-  }, [channel, onMessage, autoReconnect]);
+  }, [channel, onMessage, autoReconnect, token]);
 
   useEffect(() => {
     connect();

@@ -22,14 +22,17 @@ class TestPipelineSmoke:
 
     def test_embedding_service_returns_vectors(self):
         """TEST-74-04-02: Embedding service returns vectors of correct dimension."""
-        provider = DummyEmbeddingProvider(dimension=1536)
+        from unittest.mock import AsyncMock
+
+        provider = MagicMock()
+        provider.dimension = 1536
+        # Non-zero vectors — fail-closed behavior rejects zeros
+        provider.embed = AsyncMock(return_value=[[0.01] * 1536])
         service = EmbeddingService(provider)
 
         result = asyncio.run(service.embed_single("test embedding input"))
 
         assert len(result) == 1536
-        # DummyEmbeddingProvider returns zero vectors by design — this tests the
-        # pipeline plumbing, not the embedding quality
         assert isinstance(result, list)
         assert all(isinstance(v, float) for v in result)
 

@@ -1,15 +1,16 @@
 """WebSocket endpoint for real-time bidirectional communication (BATCH-50).
 
-Security: JWT authentication required on connection. Clients must provide
-a valid token via query parameter (?token=...) or as the first message
-with action "auth".
+Security: JWT authentication required on connection. Clients must send
+a first message with action "auth" and a valid token. Query-string
+token auth has been removed to prevent token leakage in logs, proxies,
+and browser history.
 """
 import asyncio
 import json
 import logging
 from typing import Any
 
-from fastapi import APIRouter, Query, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
 from backend.config import get_settings
 
@@ -43,7 +44,7 @@ class ConnectionManager:
         for ws in self.active[channel]:
             try:
                 await ws.send_json(message)
-            except Exception:
+            except (WebSocketDisconnect, RuntimeError, OSError):
                 dead.append(ws)
         for ws in dead:
             self.disconnect(ws, channel)
@@ -74,7 +75,7 @@ def _validate_ws_token(token: str | None) -> bool:
         if payload.get("sub"):
             return True
     except Exception:
-        pass
+        pass  # Invalid token — return False, not crash
 
     # Fallback: API key
     if settings.api_key and token == settings.api_key:
@@ -86,16 +87,17 @@ def _validate_ws_token(token: str | None) -> bool:
 @router.websocket("/ws")
 async def websocket_endpoint(
     websocket: WebSocket,
-    token: str | None = Query(default=None),
 ):
     """Main WebSocket endpoint. Requires JWT or API key authentication.
 
-    Auth methods (any one suffices):
-    1. Query parameter: ws://host/ws?token=<jwt_or_api_key>
-    2. First message: {"action": "auth", "token": "<jwt_or_api_key>"}
+    Auth method: first message must be:
+        {"action": "auth", "token": "<jwt_or_api_key>"}
+
+    Query-string token auth (?token=...) has been removed to prevent
+    token leakage in server logs, proxy logs, and browser history.
 
     After auth, clients subscribe to channels via:
-    {"action": "subscribe", "channel": "<name>"}
+        {"action": "subscribe", "channel": "<name>"}
     """
     settings = get_settings()
     if not settings.websocket_enabled:
@@ -105,10 +107,14 @@ async def websocket_endpoint(
     # Phase 1: Accept and authenticate
     await websocket.accept()
 
-    # Check query parameter token first
-    authenticated = _validate_ws_token(token)
+    # Dev mode: skip auth entirely when auth_enabled is False
+    if not settings.auth_enabled:
+        await websocket.send_json({"type": "auth_ok", "dev_mode": True})
+        authenticated = True
+    else:
+        authenticated = False
 
-    # If not authenticated via query param, wait for auth message
+    # No query-string token — first message must be auth (when auth enabled)
     if not authenticated:
         try:
             # Give client 5 seconds to send auth message
@@ -126,7 +132,7 @@ async def websocket_endpoint(
             await websocket.send_json({"type": "error", "message": "Auth timeout"})
             await websocket.close(code=4001, reason="Authentication timeout")
             return
-        except (json.JSONDecodeError, Exception):
+        except (json.JSONDecodeError, WebSocketDisconnect):
             await websocket.close(code=4002, reason="Invalid auth message")
             return
 

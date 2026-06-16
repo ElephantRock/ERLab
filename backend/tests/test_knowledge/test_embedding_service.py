@@ -1,14 +1,17 @@
-"""Tests for EmbeddingService batch_size and fallback wiring."""
+"""Tests for EmbeddingService batch_size and fail-closed behavior."""
 
 import asyncio
 
 import pytest
 
-from backend.pipeline.knowledge.embedding_service import EmbeddingService
+from backend.pipeline.knowledge.embedding_service import (
+    EmbeddingService,
+    EmbeddingProviderError,
+)
 
 
 class MockProvider:
-    """Mock embedding provider for testing."""
+    """Mock embedding provider for testing — returns non-zero vectors."""
 
     def __init__(self, dim=10):
         self._dim = dim
@@ -18,7 +21,8 @@ class MockProvider:
     async def embed(self, texts):
         self.call_count += 1
         self.batch_sizes.append(len(texts))
-        return [[float(i)] * self._dim for i in range(len(texts))]
+        # Non-zero vectors: use index+1 to avoid all-zeros
+        return [[float(i + 1)] * self._dim for i in range(len(texts))]
 
     @property
     def dimension(self):
@@ -76,8 +80,12 @@ class TestEmbeddingServiceBatchSize:
         service = EmbeddingService(provider, batch_size=2)
         result = asyncio.run(service.embed_single("hello"))
         assert len(result) == provider.dimension
+        # Fail-closed: result should be non-zero
+        assert any(v != 0.0 for v in result)
 
-    def test_fallback_on_failure(self):
+    def test_provider_failure_raises_not_fallback(self):
+        """Phase 5: Provider failure raises EmbeddingProviderError, not zero-vector fallback."""
+
         class FailProvider:
             async def embed(self, texts):
                 raise RuntimeError("API down")
@@ -87,6 +95,20 @@ class TestEmbeddingServiceBatchSize:
                 return 5
 
         service = EmbeddingService(FailProvider(), batch_size=2)
-        results = asyncio.run(service.embed_texts(["a", "b"]))
-        assert len(results) == 2
-        assert all(r == [0.0] * 5 for r in results)
+        with pytest.raises(EmbeddingProviderError, match="API down"):
+            asyncio.run(service.embed_texts(["a", "b"]))
+
+    def test_zero_vector_from_provider_raises(self):
+        """Phase 5: Zero vectors from provider raise, not silent fallback."""
+
+        class ZeroProvider:
+            async def embed(self, texts):
+                return [[0.0] * 5 for _ in texts]
+
+            @property
+            def dimension(self):
+                return 5
+
+        service = EmbeddingService(ZeroProvider(), batch_size=2)
+        with pytest.raises(EmbeddingProviderError, match="zero vectors"):
+            asyncio.run(service.embed_texts(["a", "b"]))

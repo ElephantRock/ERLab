@@ -1,7 +1,13 @@
 """Embedding generation service.
 
-Wraps an EmbeddingProvider with batching, error handling, and zero-vector
-fallback. Accepts either the new EmbeddingProvider or the legacy LLMProvider
+Wraps an EmbeddingProvider with batching and error handling.
+
+Fail-closed behavior (Phase 5):
+- Provider failures raise EmbeddingProviderError, not zero-vector fallback.
+- Zero vectors returned by the provider raise EmbeddingProviderError.
+- The only path to a zero vector is the explicit empty-input case.
+
+Accepts either the new EmbeddingProvider or the legacy LLMProvider
 for backward compatibility.
 """
 
@@ -16,6 +22,22 @@ if TYPE_CHECKING:
     from backend.providers.base import LLMProvider
 
 logger = logging.getLogger(__name__)
+
+
+class EmbeddingProviderError(Exception):
+    """Typed error for embedding provider failures.
+
+    Raised when:
+    - The embedding provider raises an exception
+    - The provider returns zero vectors (offline or misconfigured)
+    """
+
+
+def _is_zero_vector(vec: list[float]) -> bool:
+    """Check if an embedding vector is all zeros."""
+    if not vec:
+        return True
+    return all(v == 0.0 for v in vec)
 
 
 class EmbeddingService:
@@ -35,8 +57,10 @@ class EmbeddingService:
     async def embed_texts(self, texts: list[str]) -> list[list[float]]:
         """Generate embeddings for a list of texts, batching for efficiency.
 
-        If the provider fails, logs an error and returns zero vectors (which
-        will be rejected by VectorStore.add_papers write guard).
+        Fail-closed behavior (Phase 5):
+        - Provider failures raise EmbeddingProviderError.
+        - Zero vectors from the provider raise EmbeddingProviderError.
+        - No silent fallback to zero vectors.
         """
         if not texts:
             return []
@@ -46,27 +70,29 @@ class EmbeddingService:
             batch = texts[i : i + self._batch_size]
             try:
                 embeddings = await self._provider.embed(batch)
-                # Phase C: Log if batch contains zero vectors
-                zero_count = sum(1 for e in embeddings if all(v == 0.0 for v in e))
-                if zero_count > 0:
-                    logger.error(
-                        "DATA INTEGRITY: Embedding provider returned %d/%d zero vectors "
-                        "in batch %d. Provider may be offline or misconfigured.",
-                        zero_count, len(batch), i // self._batch_size,
-                    )
-                all_embeddings.extend(embeddings)
             except Exception as e:
-                logger.error("Embedding batch %d failed: %s", i // self._batch_size, e)
-                dim = self.dimension
-                all_embeddings.extend([[0.0] * dim for _ in batch])
+                raise EmbeddingProviderError(
+                    f"Embedding provider failed on batch {i // self._batch_size}: {e}"
+                ) from e
+
+            # Check for zero vectors — provider is offline or misconfigured
+            zero_count = sum(1 for e in embeddings if _is_zero_vector(e))
+            if zero_count > 0:
+                raise EmbeddingProviderError(
+                    f"Embedding provider returned {zero_count}/{len(batch)} zero vectors "
+                    f"in batch {i // self._batch_size}. Provider may be offline or misconfigured."
+                )
+            all_embeddings.extend(embeddings)
 
         return all_embeddings
 
     async def embed_single(self, text: str) -> list[float]:
-        """Generate embedding for a single text."""
+        """Generate embedding for a single text.
+
+        Raises EmbeddingProviderError if the provider fails.
+        """
         results = await self.embed_texts([text])
-        dim = self.dimension
-        return results[0] if results else [0.0] * dim
+        return results[0]
 
     @property
     def dimension(self) -> int:
@@ -78,11 +104,20 @@ class EmbeddingService:
     async def validate_startup(self) -> bool:
         """Test-embed a string to confirm the provider returns non-zero vectors.
 
-        Returns True if the embedding is real, False if it's all zeros.
+        Returns True if the embedding is real.
+        Returns False if the provider fails or returns zero vectors.
         Call this once after constructing EmbeddingService. If it returns
         False, novelty checking will produce garbage and should be skipped.
         """
-        test = await self.embed_single("test")
+        try:
+            test = await self.embed_single("test")
+        except EmbeddingProviderError as e:
+            logger.error(
+                "Embedding provider failed during startup validation: %s. "
+                "Novelty checking will produce meaningless scores.",
+                e,
+            )
+            return False
         if not test:
             logger.error("Embedding provider returned empty vector — novelty will be fake")
             return False

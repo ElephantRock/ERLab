@@ -252,8 +252,8 @@ class RunCoordinator:
             if run_svc:
                 try:
                     cancelled = run_svc.is_cancelled(run_id)
-                except Exception:
-                    pass
+                except (RuntimeError, ValueError, OSError):
+                    pass  # RunService unavailable — fall through to legacy check
             if not should_continue or self._orch._should_stop() or cancelled:
                 reported_names = {r.name for r in result.stage_report}
                 for stage_name in self._orch._STAGE_ORDER:
@@ -333,7 +333,7 @@ class RunCoordinator:
                     await _executor.ensure_model_loaded(
                         _resolved_model, context_length=_ctx_len,
                     )
-                except Exception as _op_err:
+                except (RuntimeError, OSError, ConnectionError) as _op_err:
                     logger.warning(
                         "Operation executor failed for stage '%s' "
                         "(model '%s'): %s — continuing",
