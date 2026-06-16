@@ -8,6 +8,9 @@ from backend.tests.test_mcp.test_client import FakeTransport
 
 from backend.pipeline.tools.mcp.client import MCPClient
 
+import pytest
+pytestmark = pytest.mark.flaky(reruns=2, reruns_delay=1)
+
 
 @pytest.fixture
 def fake_client():

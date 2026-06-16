@@ -101,3 +101,8 @@ omit = ["backend/tests/*", "backend/cli/*"]
 fail_under = 72
 show_missing = true
 exclude_lines = ["pragma: no cover", "if TYPE_CHECKING:", "raise NotImplementedError"]
+
+[dependency-groups]
+dev = [
+    "pytest-rerunfailures>=16.3",
+]

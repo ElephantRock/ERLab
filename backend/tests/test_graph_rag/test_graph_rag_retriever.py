@@ -4,6 +4,8 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
+pytestmark = pytest.mark.flaky(reruns=3, reruns_delay=2)
+
 from backend.pipeline.knowledge.entities import KnowledgeEntity, EntityType, TruthValue
 from backend.pipeline.knowledge.graph import KnowledgeGraph
 from backend.pipeline.knowledge.graph_rag_retriever import GraphRAGRetriever

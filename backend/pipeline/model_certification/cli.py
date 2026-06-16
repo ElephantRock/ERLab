@@ -26,6 +26,79 @@ from backend.pipeline.model_certification.registries import ProductionModelRegis
 logger = logging.getLogger(__name__)
 
 
+async def _certify(args) -> None:
+    """Run the certification pipeline for a candidate model."""
+    manifest_path = Path(args.manifest)
+    if not manifest_path.exists():
+        print(f"Error: manifest not found: {manifest_path}")
+        sys.exit(1)
+
+    manifest = CandidateModelManifest.from_yaml(
+        manifest_path.read_text(encoding="utf-8")
+    )
+
+    # Build provider from manifest
+    from backend.providers.provider_factory import create_provider
+    from backend.config import get_settings
+    settings = get_settings()
+
+    if manifest.provider == "lmstudio":
+        provider = create_provider("lmstudio", settings=settings)
+    else:
+        provider = create_provider(manifest.provider, settings=settings)
+
+    # Optional production registry
+    prod_registry = None
+    if args.production_registry:
+        prod_registry = ProductionModelRegistry(path=args.production_registry)
+    elif args.auto_promote == "true":
+        prod_registry = ProductionModelRegistry()
+
+    runner = CertificationRunner(
+        provider=provider,
+        reports_dir=args.out,
+        production_registry=prod_registry,
+        lmstudio_base_url=args.lmstudio_url,
+    )
+
+    report = await runner.certify(
+        manifest,
+        auto_promote=(args.auto_promote == "true"),
+        cases_per_schema=args.cases_per_schema,
+    )
+
+    # Print summary
+    print(f"\n{'='*60}")
+    print(f"Certification Summary: {report.model_id}")
+    print(f"{'='*60}")
+    print(f"  Status: {report.status}")
+    print(f"  Safe context window: {report.safe_context_window}")
+    print(f"  Safe output tokens: {report.safe_output_tokens}")
+    print(f"  Schema valid rate: {report.scores.get('schema_valid_rate', 'N/A')}")
+    print(f"  Promotion allowed: {report.promotion_allowed}")
+    if report.known_failure_modes:
+        print(f"  Failure modes: {', '.join(report.known_failure_modes)}")
+    print(f"{'='*60}")
+
+
+async def _profile(args) -> None:
+    """Run 3-tier token profiling for a model."""
+    from backend.pipeline.model_certification.token_profiler import TokenProfiler
+
+    profiler = TokenProfiler(
+        model_id=args.model,
+        base_url=args.base_url,
+        api_key=args.api_key,
+    )
+    results = await profiler.run_all_tiers()
+
+    out_dir = Path(args.out)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    report_path = out_dir / f"{args.model.replace('/', '_')}_profile.yaml"
+    profiler.save(results, report_path)
+    print(f"Profile saved to {report_path}")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(
         description="Model Certification Pipeline v0.1"
@@ -100,8 +173,6 @@ def main() -> None:
         format="%(asctime)s %(name)s %(levelname)s %(message)s",
     )
 
-    if args.command == "profile":
-        asyncio.run(_profile(args))
     if args.command == "profile":
         asyncio.run(_profile(args))
     elif args.command == "certify":
