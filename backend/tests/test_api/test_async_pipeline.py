@@ -111,16 +111,17 @@ def test_cancel_run_unknown_returns_404():
 
 def test_progress_endpoint_returns_sse():
     """GET /runs/{id}/progress returns text/event-stream content type."""
-    import asyncio
+    # Use the durable RunService to create a run and append a done event
+    from backend.api.run_service import get_run_service, reset_run_service
+    reset_run_service()
+    run_svc = get_run_service()
 
-    # Pre-populate a progress queue with a done signal so the SSE stream terminates
-    done_queue = asyncio.Queue()
-    done_queue.put_nowait({"done": True})
-
-    with patch.dict(
-        "backend.api.routes.pipeline._progress_queues",
-        {"test-run-123": done_queue},
-    ):
+    with patch.object(run_svc, 'create_run', return_value='test-run-123'), \
+         patch.object(run_svc, 'append_event', return_value=1), \
+         patch.object(run_svc, 'get_latest_seq', return_value=1), \
+         patch.object(run_svc, 'get_events_since', return_value=[
+            {"seq": 1, "event_type": "done", "payload": {"done": True}, "created_at": None},
+         ]):
         client = TestClient(_make_app())
         resp = client.get("/runs/test-run-123/progress")
         assert resp.status_code == 200

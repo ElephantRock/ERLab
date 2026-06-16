@@ -65,41 +65,47 @@ async def trigger_run(request: PipelineRunRequest):
         {"run_id": "run_20260502_143000", "status": "running"}
     """
     from backend.pipeline.orchestrator import PipelineOrchestrator
+    from backend.api.run_service import get_run_service
 
-    # Pre-generate run_id so SSE/cancel can work from t=0
-    run_id = datetime.now().strftime("run_%Y%m%d_%H%M%S")
+    run_svc = get_run_service()
 
-    # Register progress queue and cancel event before starting
-    _progress_queues[run_id] = asyncio.Queue()
-    cancel_event = threading.Event()
-    _cancel_events[run_id] = cancel_event
+    # Durable run ID — UUID-based, stored in DB
+    run_id = run_svc.create_run(
+        domain=request.domain,
+        strategy=request.strategy,
+        session_id=request.session_id,
+        config={
+            "max_gaps": request.max_gaps,
+            "generation_rounds": request.generation_rounds,
+            "ideas_per_round": request.ideas_per_round,
+        },
+    )
 
     def _stage_callback(stage_name: str, index: int, total: int, elapsed: float):
-        if run_id in _progress_queues:
-            progress_data = {
-                "stage": stage_name,
-                "index": index,
-                "total": total,
-                "elapsed": round(elapsed, 2),
-            }
-            with contextlib.suppress(Exception):
-                _progress_queues[run_id].put_nowait(progress_data)
-            # Also broadcast via WebSocket if enabled (BATCH-50)
-            with contextlib.suppress(Exception):
-                import asyncio as _asyncio
-                from backend.api.ws import manager as ws_manager
-                from backend.config import get_settings as _get_settings
-                _settings = _get_settings()
-                if _settings.websocket_enabled:
-                    try:
-                        loop = asyncio.get_running_loop()
-                    except RuntimeError:
-                        loop = None
-                    if loop and loop.is_running():
-                        loop.create_task(ws_manager.broadcast(f"pipeline:{run_id}", {
-                            "type": "pipeline.progress",
-                            "data": progress_data,
-                        }))
+        progress_data = {
+            "stage": stage_name,
+            "index": index,
+            "total": total,
+            "elapsed": round(elapsed, 2),
+        }
+        # Durable event append (replaces process-local queue)
+        with contextlib.suppress(Exception):
+            run_svc.append_event(run_id, "stage_progress", progress_data)
+        # Also broadcast via WebSocket if enabled (BATCH-50)
+        with contextlib.suppress(Exception):
+            from backend.api.ws import manager as ws_manager
+            from backend.config import get_settings as _get_settings
+            _settings = _get_settings()
+            if _settings.websocket_enabled:
+                try:
+                    loop = asyncio.get_running_loop()
+                except RuntimeError:
+                    loop = None
+                if loop and loop.is_running():
+                    loop.create_task(ws_manager.broadcast(f"pipeline:{run_id}", {
+                        "type": "pipeline.progress",
+                        "data": progress_data,
+                    }))
 
     async def _run_pipeline():
         # Apply per-stage model overrides for this run
@@ -109,11 +115,15 @@ async def trigger_run(request: PipelineRunRequest):
             existing.update(request.model_overrides)
             _save_config(existing)
 
+        # Acquire durable worker lease
+        worker_id = run_svc.acquire_worker(run_id)
+
         orchestrator = PipelineOrchestrator(stage_callback=_stage_callback, strategy=request.strategy)
         original_should_stop = orchestrator._should_stop
 
         def _should_stop_with_cancel():
-            if cancel_event.is_set():
+            # Check durable cancellation state (replaces process-local Event)
+            if run_svc.is_cancelled(run_id):
                 return True
             return original_should_stop()
 
@@ -187,10 +197,12 @@ async def trigger_run(request: PipelineRunRequest):
             except Exception:
                 logger.warning("Notification failed for run %s", run_id, exc_info=True)
         finally:
-            # Signal completion to SSE listeners
-            if run_id in _progress_queues:
-                with contextlib.suppress(Exception):
-                    _progress_queues[run_id].put_nowait({"done": True})
+            # Signal completion to durable event outbox
+            with contextlib.suppress(Exception):
+                run_svc.append_event(run_id, "done", {"done": True})
+            # Release worker if not already released
+            with contextlib.suppress(Exception):
+                run_svc.release_worker(run_id, worker_id)
             _background_tasks.discard(asyncio.current_task())
 
     # Preflight validation (BATCH-172)
@@ -516,10 +528,14 @@ async def cancel_run(run_id_str: str):
     Example response:
         {"status": "cancelling", "run_id": "run_20260502_143000"}
     """
-    event = _cancel_events.get(run_id_str)
-    if not event:
-        raise NotFoundError("Run not found or not cancellable")
-    event.set()
+    from backend.api.run_service import get_run_service
+    run_svc = get_run_service()
+
+    result = run_svc.request_cancellation(run_id_str, reason="user requested")
+    if not result:
+        # Already cancelled or not found — check if it exists
+        if not run_svc.is_cancelled(run_id_str):
+            raise NotFoundError("Run not found or not cancellable")
     return {"status": "cancelling", "run_id": run_id_str}
 
 
@@ -563,25 +579,51 @@ async def run_progress(run_id_str: str, request: Request):
                 hint="Pass a Bearer token via the Authorization header",
             )
 
-    queue = _progress_queues.get(run_id_str)
-    if not queue:
-        queue = asyncio.Queue()
-        _progress_queues[run_id_str] = queue
+    from backend.api.run_service import get_run_service
+    run_svc = get_run_service()
+
+    # Last-Event-ID header for SSE replay
+    last_event_id = request.headers.get("Last-Event-ID", "")
+    try:
+        last_seq = int(last_event_id) if last_event_id else 0
+    except ValueError:
+        last_seq = 0
+
+    # Check if the run has any events at all — if not and no events arrive
+    # within a short window, close the stream.
+    has_history = run_svc.get_latest_seq(run_id_str) > 0
 
     async def _stream():
         try:
-            while True:
-                try:
-                    data = await asyncio.wait_for(queue.get(), timeout=30.0)
-                    yield f"data: {json.dumps(data)}\n\n"
-                    if data.get("done"):
+            current_seq = last_seq
+            done = False
+            empty_polls = 0
+            max_empty_polls = 3 if not has_history else 60  # 3s for unknown, 60s for active
+            while not done:
+                # Read events from durable outbox since last_seq
+                events = run_svc.get_events_since(run_id_str, last_seq=current_seq)
+                for event in events:
+                    current_seq = event["seq"]
+                    payload = event["payload"] or {}
+                    payload["seq"] = current_seq
+                    yield f"id: {current_seq}\n"
+                    yield f"data: {json.dumps(payload)}\n\n"
+                    if payload.get("done") or event["event_type"] == "done":
+                        done = True
                         break
-                except asyncio.TimeoutError:
+                if done:
+                    break
+                if not events:
+                    empty_polls += 1
+                    if empty_polls > max_empty_polls:
+                        break
+                    # No new events — send heartbeat
                     yield f"data: {json.dumps({'heartbeat': True})}\n\n"
+                    await asyncio.sleep(1.0)
+                else:
+                    empty_polls = 0
         except asyncio.CancelledError:
             pass
-        finally:
-            _progress_queues.pop(run_id_str, None)
 
     return StreamingResponse(_stream(), media_type="text/event-stream")
 

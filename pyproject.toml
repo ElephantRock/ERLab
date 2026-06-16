@@ -95,7 +95,7 @@ markers = ["slow: marks tests as slow (deselect with '-m \"not slow\"')", "integ
 
 [tool.coverage.run]
 source = ["backend"]
-omit = ["backend/tests/*", "backend/cli/*", "backend/api/*"]
+omit = ["backend/tests/*", "backend/cli/*"]
 
 [tool.coverage.report]
 fail_under = 72

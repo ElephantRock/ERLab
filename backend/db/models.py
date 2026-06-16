@@ -286,3 +286,65 @@ class ExperimentResult(Base):
     execution_time_seconds: Mapped[float] = mapped_column(Float, default=0.0)
     error: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
+
+
+class RunEvent(Base):
+    """Append-only event outbox for SSE/WS progress streaming.
+
+    Replaces process-local ``_progress_queues``. Events are durable:
+    a reconnecting SSE client can replay from ``Last-Event-ID``.
+    """
+
+    __tablename__ = "run_events"
+    __table_args__ = (
+        Index("uq_run_events_run_id_seq", "run_id", "seq", unique=True),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    run_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("pipeline_runs.id"), nullable=False, index=True
+    )
+    seq: Mapped[int] = mapped_column(Integer, nullable=False, comment="Per-run monotonic sequence")
+    event_type: Mapped[str] = mapped_column(String(50), nullable=False)
+    payload: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
+
+
+class RunCancellation(Base):
+    """Durable cancellation request.
+
+    Replaces process-local ``_cancel_events``. A cancellation survives
+    process restart so a cancelled run stays cancelled.
+    """
+
+    __tablename__ = "run_cancellations"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    run_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("pipeline_runs.id"), nullable=False, index=True
+    )
+    run_id_str: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
+    requested_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
+    reason: Mapped[str | None] = mapped_column(String(500), nullable=True)
+
+
+class RunWorker(Base):
+    """Durable worker lease tracking.
+
+    Replaces process-local ``_background_tasks``. A run becomes running
+    only if no active owner exists. Stale heartbeat marks the worker
+    orphaned so the run can resume from checkpoint.
+    """
+
+    __tablename__ = "run_workers"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    run_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("pipeline_runs.id"), nullable=False, index=True
+    )
+    run_id_str: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
+    worker_id: Mapped[str] = mapped_column(String(100), nullable=False)
+    status: Mapped[str] = mapped_column(String(20), default="active")  # active|orphaned|completed
+    started_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
+    last_heartbeat: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
