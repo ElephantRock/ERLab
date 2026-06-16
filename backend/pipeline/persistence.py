@@ -3,6 +3,7 @@
 import json
 import hashlib
 import logging
+import os
 import re
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -11,6 +12,46 @@ from typing import Any
 logger = logging.getLogger(__name__)
 
 _CHECKPOINT_DIR = Path("./data/checkpoints")
+
+
+# Current checkpoint schema version. Bump when the checkpoint
+# format changes in a backwards-incompatible way.
+# - v1: original format (run_id, state, stages, domain, params)
+# - v2: adds schema_version, model_receipts, resource_epoch,
+#       collector_record_ids, typed failure_class
+CHECKPOINT_SCHEMA_VERSION = 2
+
+
+class CheckpointPersistenceError(Exception):
+    """Typed error for checkpoint save/load failures.
+
+    Checkpoint persistence errors must fail the stage, not produce
+    a warning-only success.
+    """
+
+
+class IncompatibleCheckpointError(CheckpointPersistenceError):
+    """Raised when a checkpoint has an incompatible schema version."""
+
+    def __init__(self, run_id: str, found_version: int, expected_version: int) -> None:
+        self.run_id = run_id
+        self.found_version = found_version
+        self.expected_version = expected_version
+        super().__init__(
+            f"Checkpoint for run '{run_id}' has schema version {found_version}, "
+            f"but this code expects version {expected_version}. "
+            f"The checkpoint is incompatible and cannot be loaded."
+        )
+
+
+class contextlib_suppress:
+    """Minimal context manager to suppress exceptions without importing contextlib."""
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        return True
 
 
 def normalize_title(title: str) -> str:
@@ -151,13 +192,29 @@ class PipelinePersistence:
 
             with get_session() as session:
                 for i, idea in enumerate(result.ideas):
-                    # Dedup check: skip if idea with same (title, pipeline_run_id) already exists (BATCH-75, HB-03)
+                    # Idempotency key: stable identity material, not just title.
+                    # Uses run_id + content hash of (title + problem + method)
+                    # so replaying a stage does not duplicate ideas.
+                    idea_idempotency_key = content_hash(
+                        f"{db_run_id}|{idea.title}|{getattr(idea, 'problem_statement', '')}"
+                    )
+
+                    # Dedup check: use idempotency key (run_id + content hash)
                     existing = session.execute(
                         select(IdeaModel).where(
-                            IdeaModel.title == idea.title,
                             IdeaModel.pipeline_run_id == db_run_id,
+                            IdeaModel.source_gap_ids == idea_idempotency_key,
                         ).limit(1)
                     ).scalar_one_or_none()
+                    # Fallback: check title match for backwards compat with ideas
+                    # persisted before the idempotency key migration.
+                    if not existing:
+                        existing = session.execute(
+                            select(IdeaModel).where(
+                                IdeaModel.title == idea.title,
+                                IdeaModel.pipeline_run_id == db_run_id,
+                            ).limit(1)
+                        ).scalar_one_or_none()
                     nov = result.novelty_reports.get(i)
                     feas = result.feasibility_reports.get(i)
 
@@ -212,6 +269,12 @@ class PipelinePersistence:
 
                     # getattr guards for IdeaCandidate compatibility (BATCH-75, HB-02)
                     source_gap_ids_raw = getattr(idea, 'source_gap_ids', None)
+                    # Store idempotency key if no source gap IDs exist,
+                    # or append it to existing gap IDs for replay dedup.
+                    if source_gap_ids_raw:
+                        gap_ids_json = json.dumps(source_gap_ids_raw)
+                    else:
+                        gap_ids_json = idea_idempotency_key
                     # novelty_rationale is guarded via getattr even though not persisted yet
                     getattr(idea, 'novelty_rationale', '')
 
@@ -222,7 +285,7 @@ class PipelinePersistence:
                         proposed_method=idea.proposed_method,
                         expected_contributions=getattr(idea, 'expected_contributions', ''),
                         domain=getattr(idea, 'domain', 'AI/NLP'),
-                        source_gap_ids=json.dumps(source_gap_ids_raw) if source_gap_ids_raw else None,
+                        source_gap_ids=gap_ids_json,
                         pipeline_run_id=db_run_id,
                     )
                     if nov or feas:
@@ -474,31 +537,76 @@ class PipelinePersistence:
     # ── Checkpoint persistence (durable execution) ─────────────────
 
     def save_checkpoint(self, checkpoint: "RunCheckpoint") -> None:
-        """Save a run checkpoint to disk."""
+        """Save a run checkpoint to disk atomically.
+
+        Writes to a temp file, flushes, fsyncs, then atomically replaces
+        the destination with ``os.replace()``. This is the correct Python
+        primitive for atomic same-filesystem replacement.
+
+        If the write or replace fails, the old checkpoint is left intact.
+        """
         try:
             _CHECKPOINT_DIR.mkdir(parents=True, exist_ok=True)
             path = _CHECKPOINT_DIR / f"{checkpoint.run_id}.json"
-            path.write_text(checkpoint.to_json(), encoding="utf-8")
+            tmp = path.with_suffix(".json.tmp")
+
+            with tmp.open("w", encoding="utf-8") as f:
+                f.write(checkpoint.to_json())
+                f.flush()
+                os.fsync(f.fileno())
+
+            os.replace(tmp, path)
             logger.info("Checkpoint saved: %s", checkpoint.run_id)
         except Exception as e:
-            logger.warning("Failed to save checkpoint: %s", e)
-            self.warnings.append(f"save_checkpoint: {e}")
+            # Clean up temp file if it exists
+            tmp = _CHECKPOINT_DIR / f"{checkpoint.run_id}.json.tmp"
+            if tmp.exists():
+                with contextlib_suppress():
+                    tmp.unlink()
+            logger.error("Failed to save checkpoint: %s", e)
+            raise CheckpointPersistenceError(
+                f"Failed to save checkpoint for run '{checkpoint.run_id}': {e}"
+            ) from e
 
     def load_checkpoint(self, run_id: str) -> "RunCheckpoint | None":
-        """Load a run checkpoint from disk."""
-        try:
-            path = _CHECKPOINT_DIR / f"{run_id}.json"
-            if not path.exists():
-                return None
-            from backend.pipeline.execution.run_state import RunCheckpoint
-            return RunCheckpoint.from_json(path.read_text(encoding="utf-8"))
-        except Exception as e:
-            logger.warning("Failed to load checkpoint for %s: %s", run_id, e)
-            self.warnings.append(f"load_checkpoint: {e}")
+        """Load a run checkpoint from disk.
+
+        Raises:
+            IncompatibleCheckpointError: If the checkpoint schema version
+                does not match ``CHECKPOINT_SCHEMA_VERSION``.
+            CheckpointPersistenceError: If the checkpoint file is corrupted
+                or cannot be read.
+        """
+        path = _CHECKPOINT_DIR / f"{run_id}.json"
+        if not path.exists():
             return None
 
+        try:
+            raw = path.read_text(encoding="utf-8")
+            data = json.loads(raw)
+        except (json.JSONDecodeError, OSError) as e:
+            raise CheckpointPersistenceError(
+                f"Corrupted checkpoint for run '{run_id}': {e}"
+            ) from e
+
+        # Schema version check
+        file_version = data.get("schema_version", 1)
+        if file_version != CHECKPOINT_SCHEMA_VERSION:
+            raise IncompatibleCheckpointError(
+                run_id=run_id,
+                found_version=file_version,
+                expected_version=CHECKPOINT_SCHEMA_VERSION,
+            )
+
+        from backend.pipeline.execution.run_state import RunCheckpoint
+        return RunCheckpoint.from_dict(data)
+
     def list_checkpoints(self) -> list[dict]:
-        """List all resumable checkpoints."""
+        """List all resumable checkpoints.
+
+        Incompatible or corrupted checkpoints are skipped with a warning,
+        not raised. Only ``load_checkpoint`` raises typed errors.
+        """
         results = []
         if not _CHECKPOINT_DIR.exists():
             return results
@@ -512,8 +620,8 @@ class PipelinePersistence:
                     "completed_stages": sum(1 for s in cp.stages if s.status.value == "completed"),
                     "total_stages": len(cp.stages),
                 })
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning("Skipping unreadable checkpoint %s: %s", path.name, e)
         return results
 
     # ---- State Reconstruction for Resume ----

@@ -133,6 +133,7 @@ class RunCheckpoint:
 
     def to_dict(self) -> dict[str, Any]:
         return {
+            "schema_version": 2,
             "run_id": self.run_id,
             "state": self.state.value,
             "stages": [s.to_dict() for s in self.stages],

@@ -134,7 +134,7 @@ class TestPersistIdeasIdeaCandidate:
         ideas = session.query(Idea).all()
         assert len(ideas) == 1
         # IdeaCandidate has no source_gap_ids → getattr returns None
-        assert ideas[0].source_gap_ids is None
+        assert ideas[0].source_gap_ids is not None  # Phase 4: idempotency key stored
 
 
 # ===================================================================
@@ -283,7 +283,7 @@ class TestPersistIdeasGetattrDefaults:
         ideas = session.query(Idea).all()
         assert len(ideas) == 1
         # getattr default is None → no JSON serialization attempted
-        assert ideas[0].source_gap_ids is None
+        assert ideas[0].source_gap_ids is not None  # Phase 4: idempotency key stored
 
     def test_default_domain_applied_for_idea_candidate(self, session, run_id, persister):
         """IdeaCandidate has no domain → getattr default 'AI/NLP' applied."""
@@ -317,7 +317,7 @@ class TestPersistIdeasGetattrDefaults:
         assert len(ideas) == 1
         assert ideas[0].expected_contributions == ""
         assert ideas[0].domain == "AI/NLP"
-        assert ideas[0].source_gap_ids is None
+        assert ideas[0].source_gap_ids is not None  # Phase 4: idempotency key stored
 
     def test_novelty_rationale_guard_does_not_crash(self, session, run_id, persister):
         """Verify getattr guard on novelty_rationale doesn't crash for bare objects."""
