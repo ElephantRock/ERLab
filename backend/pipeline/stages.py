@@ -6,9 +6,8 @@ import asyncio
 import json
 import logging
 from abc import ABC, abstractmethod
-from contextlib import contextmanager
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, Generator
+from typing import TYPE_CHECKING, Any
 
 from backend.pipeline.generation.models import ResearchIdea
 from backend.pipeline.ingestion.chunker import DocumentChunk  # noqa: F401 — re-exported by stages
@@ -25,22 +24,6 @@ if TYPE_CHECKING:
     from backend.pipeline.result import PipelineResult
 
 logger = logging.getLogger(__name__)
-
-
-@contextmanager
-def _override_provider(
-    service: object, override: LLMProvider | None
-) -> Generator[None, None, None]:
-    """Temporarily swap a service's _provider with the override."""
-    if not override or not hasattr(service, "_provider"):
-        yield
-        return
-    saved = service._provider  # type: ignore[attr-defined]
-    try:
-        service._provider = override  # type: ignore[attr-defined]
-        yield
-    finally:
-        service._provider = saved  # type: ignore[attr-defined]
 
 
 @dataclass
@@ -477,10 +460,9 @@ class GapAnalysisStage(PipelineStage):
         return "gap_analysis"
 
     async def execute(self, ctx: StageContext) -> bool:
-        with _override_provider(self._gap_analyzer, ctx.provider_override):
-            return await self._execute_gap_analysis(ctx)
+        return await self._execute_gap_analysis(ctx, provider=ctx.provider_override)
 
-    async def _execute_gap_analysis(self, ctx: StageContext) -> bool:
+    async def _execute_gap_analysis(self, ctx: StageContext, *, provider=None) -> bool:
         # Brief pause to let API rate limiter cool after ingestion burst
         # Reduced from 15s to 2s since gap analysis now uses local LM Studio
         await asyncio.sleep(2.0)
@@ -491,6 +473,7 @@ class GapAnalysisStage(PipelineStage):
             domain=ctx.domain,
             max_gaps=ctx.max_gaps,
             prior_gaps=prior_gaps,
+            provider=provider,
         )
         ctx.result.gaps = gaps
         ctx.result.cluster_report = cluster_report
@@ -612,18 +595,18 @@ class IdeaGenerationStage(PipelineStage):
 
     async def execute(self, ctx: StageContext) -> bool:
         provider = ctx.provider_override or self._provider
-        with _override_provider(self._agent, provider):
-            if self._dag_executor is not None:
-                return await self._execute_dag(ctx, provider)
-            return await self._execute_sequential(ctx)
+        if self._dag_executor is not None:
+            return await self._execute_dag(ctx, provider)
+        return await self._execute_sequential(ctx, provider=provider)
 
-    async def _execute_sequential(self, ctx: StageContext) -> bool:
+    async def _execute_sequential(self, ctx: StageContext, *, provider=None) -> bool:
         logger.info("Idea Generation (%d rounds, %d ideas/round)", ctx.rounds, ctx.ideas_per)
         ideas = await self._agent.run(
             gaps=ctx.result.gaps,
             context_papers=ctx.all_papers[:30],
             rounds=ctx.rounds,
             ideas_per_round=ctx.ideas_per,
+            provider=provider,
         )
         ctx.result.ideas = ideas
         ctx.result.critique_history = self._agent.last_critique_history
@@ -816,10 +799,9 @@ class FeasibilityScoringStage(PipelineStage):
         return "feasibility_scoring"
 
     async def execute(self, ctx: StageContext) -> bool:
-        with _override_provider(self._feasibility, ctx.provider_override):
-            return await self._execute_feasibility(ctx)
+        return await self._execute_feasibility(ctx, provider=ctx.provider_override)
 
-    async def _execute_feasibility(self, ctx: StageContext) -> bool:
+    async def _execute_feasibility(self, ctx: StageContext, *, provider=None) -> bool:
         ideas = ctx.result.ideas
         if not ideas:
             return True
@@ -834,6 +816,7 @@ class FeasibilityScoringStage(PipelineStage):
             report = await self._feasibility.score_feasibility(
                 idea, novelty,
                 weight_overrides=weight_overrides,
+                provider=provider,
             )
             # Counterfactual analysis (Gap 14)
             if settings.counterfactual_enabled:
@@ -859,10 +842,9 @@ class ProposalSynthesisStage(PipelineStage):
         return "proposal_synthesis"
 
     async def execute(self, ctx: StageContext) -> bool:
-        with _override_provider(self._synthesizer, ctx.provider_override):
-            return await self._execute_synthesis(ctx)
+        return await self._execute_synthesis(ctx, provider=ctx.provider_override)
 
-    async def _execute_synthesis(self, ctx: StageContext) -> bool:
+    async def _execute_synthesis(self, ctx: StageContext, *, provider=None) -> bool:
         ideas = ctx.result.ideas
         if not ideas:
             return True
@@ -889,6 +871,7 @@ class ProposalSynthesisStage(PipelineStage):
                         supporting_papers=ctx.all_papers[:30],
                         gaps=ctx.result.gaps,
                         framing_directive=framing,
+                        provider=provider,
                     ),
                     timeout=timeout,
                 )
@@ -1459,37 +1442,37 @@ class AdversarialReviewStage(PipelineStage):
         idx: int,
     ):
         """Re-synthesize proposal using revision notes as the ONLY input (A-02)."""
-        with _override_provider(self._synthesizer, ctx.provider_override):
-            # Build minimal idea from proposal for re-synthesis
-            from backend.pipeline.generation.models import ResearchIdea
-            idea = ResearchIdea(
-                title=proposal.title if hasattr(proposal, "title") else f"Proposal {idx}",
-                problem_statement=proposal.sections.get("introduction", "")[:500]
-                if hasattr(proposal, "sections") and isinstance(proposal.sections, dict)
-                else "",
-                proposed_method=proposal.sections.get("proposed_method", "")[:500]
-                if hasattr(proposal, "sections") and isinstance(proposal.sections, dict)
-                else "",
-                expected_contributions=revision_notes,  # A-02: only revision notes
-                novelty_rationale="",
-                evaluation_approach="",
-                domain=ctx.domain,
-                round_generated=1,
-                score=0.0,
-                supporting_papers=[],
-                source_gap_ids=[],
-            )
-            new_proposal = await self._synthesizer.synthesize(
-                idea=idea,
-                novelty_report=None,
-                feasibility_report=None,
-                supporting_papers=ctx.all_papers[:30],
-                gaps=ctx.result.gaps,
-            )
-            # Copy over sections from re-synthesized proposal
-            if hasattr(new_proposal, "sections") and hasattr(proposal, "sections"):
-                proposal.sections.update(new_proposal.sections)
-            return proposal
+        # Build minimal idea from proposal for re-synthesis
+        from backend.pipeline.generation.models import ResearchIdea
+        idea = ResearchIdea(
+            title=proposal.title if hasattr(proposal, "title") else f"Proposal {idx}",
+            problem_statement=proposal.sections.get("introduction", "")[:500]
+            if hasattr(proposal, "sections") and isinstance(proposal.sections, dict)
+            else "",
+            proposed_method=proposal.sections.get("proposed_method", "")[:500]
+            if hasattr(proposal, "sections") and isinstance(proposal.sections, dict)
+            else "",
+            expected_contributions=revision_notes,  # A-02: only revision notes
+            novelty_rationale="",
+            evaluation_approach="",
+            domain=ctx.domain,
+            round_generated=1,
+            score=0.0,
+            supporting_papers=[],
+            source_gap_ids=[],
+        )
+        new_proposal = await self._synthesizer.synthesize(
+            idea=idea,
+            novelty_report=None,
+            feasibility_report=None,
+            supporting_papers=ctx.all_papers[:30],
+            gaps=ctx.result.gaps,
+            provider=ctx.provider_override,
+        )
+        # Copy over sections from re-synthesized proposal
+        if hasattr(new_proposal, "sections") and hasattr(proposal, "sections"):
+            proposal.sections.update(new_proposal.sections)
+        return proposal
 
     @staticmethod
     def _get_metadata(proposal) -> dict:

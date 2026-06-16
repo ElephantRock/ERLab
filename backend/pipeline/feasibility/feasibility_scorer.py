@@ -77,6 +77,8 @@ class FeasibilityScorer:
         idea: ResearchIdea,
         novelty_report: NoveltyReport | None = None,
         weight_overrides: dict[str, float] | None = None,
+        *,
+        provider: LLMProvider | None = None,
     ) -> FeasibilityReport:
         """Evaluate idea feasibility across 6 dimensions.
 
@@ -98,7 +100,8 @@ class FeasibilityScorer:
         )
 
         try:
-            result = await self._provider.structured_output(
+            llm = provider or self._provider
+            result = await llm.structured_output(
                 messages=[
                     {
                         "role": "system",

@@ -109,6 +109,8 @@ class AgentOrchestrator:
         rounds: int = 2,
         ideas_per_round: int = 3,
         use_borda: bool = False,
+        *,
+        provider: LLMProvider | None = None,
     ) -> list[ResearchIdea]:
         """Run multi-agent ideation loop.
 
@@ -127,6 +129,18 @@ class AgentOrchestrator:
         last_converged = False
         tournament = BordaTournament() if use_borda else None
         gap_ids = [g.title for g in gaps]
+
+        # When a provider override is given, create scoped sub-agents so the
+        # original sub-agents' providers are never mutated.  When no override,
+        # use the default sub-agents.
+        if provider is not None:
+            ideator = IdeatorAgent(provider, retriever=self._retriever)
+            critic = CriticAgent(provider)
+            refiner = RefinerAgent(provider)
+        else:
+            ideator = self._ideator
+            critic = self._critic
+            refiner = self._refiner
 
         # Accumulators for traceability
         self.last_critique_history = {}
@@ -160,7 +174,7 @@ class AgentOrchestrator:
             )
 
             with create_span(SpanKind.AGENT, "ideator.generate", round=round_num) as _span:
-                raw_ideas = await self._ideator.generate_ideas(
+                raw_ideas = await ideator.generate_ideas(
                 gaps=gaps,
                 context_papers=context_papers,
                 prior_critique=prior_critiques if prior_critiques else None,
@@ -176,7 +190,7 @@ class AgentOrchestrator:
             # Step 2: Critique with strategy-aware evaluation
             logger.info("Critiquing ideas (strategy: %s)...", strategy.value)
             with create_span(SpanKind.AGENT, "critic.evaluate", strategy=strategy.value) as _cspan:
-                critiques = await self._critic.critique_ideas(
+                critiques = await critic.critique_ideas(
                 ideas=raw_ideas,
                 context_papers=context_papers,
                 strategy=strategy,
@@ -190,7 +204,7 @@ class AgentOrchestrator:
                     "Switching to META_REFLECTION strategy."
                 )
                 strategy = CriticStrategy.META_REFLECTION
-                critiques = await self._critic.critique_ideas(
+                critiques = await critic.critique_ideas(
                     ideas=raw_ideas,
                     context_papers=context_papers,
                     strategy=strategy,
@@ -208,7 +222,7 @@ class AgentOrchestrator:
             # Step 3: Refine
             logger.info("Refining ideas based on critiques...")
             with create_span(SpanKind.AGENT, "refiner.refine", round=round_num) as _rspan:
-                refined = await self._refiner.refine_ideas(
+                refined = await refiner.refine_ideas(
                 ideas=raw_ideas,
                 critiques=critiques,
                 context_papers=context_papers,

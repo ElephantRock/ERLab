@@ -163,6 +163,8 @@ class ProposalSynthesizer:
         supporting_papers: list[Paper] | None = None,
         gaps: list | None = None,
         framing_directive: str = "",
+        *,
+        provider: LLMProvider | None = None,
     ) -> ResearchProposal:
         """Generate a full-length research proposal section by section."""
         literature = self._format_literature(supporting_papers or [])
@@ -213,7 +215,8 @@ class ProposalSynthesizer:
 
         # Pass 1: Generate all sections in one call (efficient)
         try:
-            raw_text = await self._provider.complete(
+            llm = provider or self._provider
+            raw_text = await llm.complete(
                 messages=[
                     {
                         "role": "system",
@@ -237,7 +240,8 @@ class ProposalSynthesizer:
             if not content or (isinstance(content, str) and len(content.split()) < MIN_WORDS.get(key, 50)):
                 try:
                     section_text = await self._generate_single_section(
-                        section_name, idea, novelty_report, feasibility_report, literature, gaps
+                        section_name, idea, novelty_report, feasibility_report, literature, gaps,
+                        provider=provider,
                     )
                     if section_text and len(section_text.split()) > len(content.split() if isinstance(content, str) else ""):
                         sections[key] = section_text
@@ -252,6 +256,7 @@ class ProposalSynthesizer:
         proposal = await self._refine_sections(
             proposal, idea, novelty_report, feasibility_report, literature, gaps,
             supporting_papers=supporting_papers,
+            provider=provider,
         )
 
         # Ensemble review
@@ -283,6 +288,8 @@ class ProposalSynthesizer:
         feasibility_report: FeasibilityReport | None,
         literature: str,
         gaps: list | None,
+        *,
+        provider: LLMProvider | None = None,
     ) -> str:
         """Generate a single section independently."""
         min_words = MIN_WORDS.get(section_name.lower().replace(" ", "_"), 100)
@@ -314,7 +321,8 @@ class ProposalSynthesizer:
         if feasibility_report:
             prompt += f"\nFeasibility: {feasibility_report.reasoning[:300]}\n"
 
-        return await self._provider.complete(
+        llm = provider or self._provider
+        return await llm.complete(
             messages=[
                 {"role": "system", "content": f"You are writing the {section_name} section of a research proposal. Produce full-length, publication-quality prose."},
                 {"role": "user", "content": prompt},
@@ -332,6 +340,8 @@ class ProposalSynthesizer:
         literature: str = "",
         gaps: list | None = None,
         supporting_papers: list | None = None,
+        *,
+        provider: LLMProvider | None = None,
     ) -> ResearchProposal:
         """Check each section against a quality checklist and re-generate failures.
 
@@ -649,6 +659,8 @@ class ProposalSynthesizer:
         proposal: ResearchProposal,
         short_sections: list[str],
         idea: ResearchIdea,
+        *,
+        provider: LLMProvider | None = None,
     ) -> ResearchProposal:
         """Expand sections that are too short via a follow-up LLM call."""
         expand_prompt = (
@@ -671,7 +683,8 @@ class ProposalSynthesizer:
         )
 
         try:
-            expansion = await self._provider.complete(
+            llm = provider or self._provider
+            expansion = await llm.complete(
                 messages=[
                     {
                         "role": "system",

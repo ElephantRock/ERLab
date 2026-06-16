@@ -63,6 +63,8 @@ class GapAnalyzer:
         domain: str = "AI/NLP",
         max_gaps: int = 5,
         prior_gaps: list[ResearchGap] | None = None,
+        *,
+        provider: LLMProvider | None = None,
     ) -> tuple[list[ResearchGap], ClusterReport]:
         """Identify research gaps from a collection of papers.
 
@@ -89,7 +91,8 @@ class GapAnalyzer:
         try:
             # Use complete() instead of structured_output() to avoid tool_use timeout
             # through the z.ai proxy
-            raw_response = await self._provider.complete(
+            llm = provider or self._provider
+            raw_response = await llm.complete(
                 messages=[
                     {"role": "system", "content": f"You are a {domain} research analyst. Respond with valid JSON only."},
                     {"role": "user", "content": prompt},
