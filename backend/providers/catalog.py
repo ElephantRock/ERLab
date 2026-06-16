@@ -668,6 +668,10 @@ class ModelCatalog:
                 setattr(m.measured, key, value)
         m.measured.last_measured = datetime.now()
 
+    def get_model(self, model_id: str) -> ModelInfo | None:
+        """Get a model by ID, or None if not in catalog."""
+        return self._models.get(model_id)
+
     def __len__(self) -> int:
         return len(self._models)
 

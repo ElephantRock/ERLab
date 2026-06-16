@@ -80,8 +80,24 @@ class PipelinePersistence:
         try:
             from backend.db import crud
             from backend.db.database import get_session
+            from sqlalchemy import select as sa_select, update as sa_update
+            from backend.db.models import PipelineRun as _PR
 
             with get_session() as session:
+                # Check if record already exists (created by run_svc.create_run)
+                if run_id:
+                    existing = session.execute(
+                        sa_select(_PR).where(_PR.run_id_str == run_id)
+                    ).scalar_one_or_none()
+                    if existing:
+                        # Update existing record to 'running'
+                        existing.status = "running"
+                        existing.current_stage = "initializing"
+                        existing.config_json = json.dumps(params)
+                        session.commit()
+                        return existing.id
+
+                # No existing record — create new
                 db_run = crud.create_pipeline_run(
                     session,
                     domain=domain,

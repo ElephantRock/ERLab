@@ -140,6 +140,25 @@ async def trigger_run(request: PipelineRunRequest):
                 run_id=run_id,
                 session_id=request.session_id,
             )
+            # Mark DB record as completed
+            try:
+                from backend.db.database import get_session as _get_session_ctx
+                from backend.db.models import PipelineRun as _PipelineRun
+                from sqlalchemy import select as _sa_select
+                from datetime import datetime as _dt, timezone as _tz
+                with _get_session_ctx() as sess:
+                    record = sess.execute(
+                        _sa_select(_PipelineRun).where(
+                            _PipelineRun.run_id_str == run_id
+                        )
+                    ).scalar_one_or_none()
+                    if record:
+                        record.status = "completed"
+                        record.completed_at = _dt.now(_tz.utc)
+                        sess.commit()
+                        logger.info("Marked run %s as completed", run_id)
+            except Exception:
+                logger.warning("Failed to mark run %s as completed in DB", run_id, exc_info=True)
             # Fire completion webhook (BATCH-32)
             try:
                 from backend.notifications import fire_webhook

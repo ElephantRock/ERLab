@@ -228,6 +228,35 @@ class ModelSelector:
         if req.quality_tier == 0:
             return None
 
+        # ── Preferred model override ────────────────────────────────
+        # When a preferred_model is configured and meets the stage's
+        # requirements, use it directly. This gives the operator an
+        # explicit, predictable choice instead of relying on the
+        # fitness-score heuristic.
+        if self._preferred_model and not exclude_models:
+            pm = self._catalog.get_model(self._preferred_model)
+            if pm and pm.health_status != "unreachable":
+                meets_ctx = pm.context_length >= req.min_context
+                meets_tools = (not req.requires_tools) or pm.supports_tools
+                meets_thinking = (not req.requires_thinking) or pm.supports_thinking
+                if meets_ctx and meets_tools and meets_thinking:
+                    logger.debug(
+                        "Preferred model '%s' used for stage '%s'",
+                        pm.model_id, stage,
+                    )
+                    self._assignments[stage] = pm.model_id
+                    return pm
+                else:
+                    logger.info(
+                        "Preferred model '%s' does not meet requirements "
+                        "for stage '%s' (ctx=%d/%d, tools=%s/%s, thinking=%s/%s) "
+                        "— falling back to fitness selection",
+                        pm.model_id, stage,
+                        pm.context_length, req.min_context,
+                        pm.supports_tools, req.requires_tools,
+                        pm.supports_thinking, req.requires_thinking,
+                    )
+
         # Get candidates that meet requirements
         candidates = self._catalog.get_models_for_stage(
             min_context=req.min_context,
