@@ -1,5 +1,5 @@
-import { useState, useEffect, useRef } from "react";
-import { apiFetch } from "@/api/client";
+import { useState, useEffect, useRef, useCallback } from "react";
+import { apiFetch, sseFetch } from "@/api/client";
 import { PIPELINE_STAGES } from "@/lib/constants";
 
 export interface StageProgress {
@@ -19,14 +19,14 @@ interface RunDetail {
 }
 
 /**
- * usePipelineProgress — tracks pipeline stage progress via REST polling.
+ * usePipelineProgress — tracks pipeline stage progress.
  *
- * Previously used SSE (Server-Sent Events) but the Vite dev proxy doesn't
- * reliably stream SSE responses. Polling the run detail endpoint every 2s
- * is simpler, more reliable, and works through any proxy.
+ * Phase 6: Uses SSE with Last-Event-ID replay when available, with REST
+ * polling fallback. The SSE transport enables durable reconnect: if the
+ * connection drops, we resume from the last received event ID.
  *
- * The run-detail page already uses TanStack Query with refetchInterval=3000
- * for the same purpose. This hook serves the pipeline-new page.
+ * The REST poll fallback ensures the hook works through any proxy and
+ * covers runs that predate the SSE endpoint.
  */
 export function usePipelineProgress(runId: string | null) {
   const [stages, setStages] = useState<StageProgress[]>(
@@ -36,104 +36,190 @@ export function usePipelineProgress(runId: string | null) {
   const [isConnected, setIsConnected] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const startTimeRef = useRef<number | null>(null);
+  const lastEventIdRef = useRef<string | undefined>(undefined);
+  const sseControllerRef = useRef<AbortController | null>(null);
+  const cancelledRef = useRef(false);
 
-  // Initialize start time when runId first appears
+  // Reset state when runId changes
   useEffect(() => {
     if (runId && !startTimeRef.current) {
       startTimeRef.current = Date.now();
-      setIsConnected(true);
       setError(null);
     }
     if (!runId) {
       startTimeRef.current = null;
+      lastEventIdRef.current = undefined;
       setIsConnected(false);
       setIsComplete(false);
       setError(null);
       setStages(PIPELINE_STAGES.map((s) => ({ key: s.key, label: s.label, status: "pending" as const, elapsed: 0 })));
     }
+    cancelledRef.current = false;
   }, [runId]);
 
-  // Poll run detail endpoint every 2 seconds
-  useEffect(() => {
-    if (!runId) return;
+  // ── SSE connection with Last-Event-ID replay ───────────────
+  const connectSSE = useCallback(() => {
+    if (!runId || cancelledRef.current) return;
 
-    let cancelled = false;
-    let timeout: ReturnType<typeof setTimeout>;
+    // Clean up any existing connection
+    sseControllerRef.current?.abort();
 
-    async function poll() {
-      if (cancelled) return;
-      try {
-        // Try UUID-based detail endpoint first, then numeric
-        let data: RunDetail | null = null;
-        try {
-          data = await apiFetch<RunDetail>(`/pipeline/runs/detail/${runId}`);
-        } catch {
-          // Fallback: try listing recent runs
+    const controller = sseFetch(
+      `/pipeline/runs/${runId}/progress`,
+      {
+        onEvent: (data: string) => {
           try {
-            const list = await apiFetch<{ runs: RunDetail[] }>(`/pipeline/runs?limit=5`);
-            data = list.runs.find((r: RunDetail) => String(r.id) === runId) ?? null;
+            const evt = JSON.parse(data);
+            // Handle progress events
+            if (evt.type === "progress" || evt.stage || evt.current_stage) {
+              const completedKeys = new Set(evt.stages_completed || []);
+              const currentKey = evt.current_stage || evt.stage;
+              setStages((prev) =>
+                prev.map((s) => {
+                  const elapsed = startTimeRef.current
+                    ? (Date.now() - startTimeRef.current) / 1000
+                    : 0;
+                  if (completedKeys.has(s.key)) {
+                    return { ...s, status: "completed" as const, elapsed };
+                  }
+                  if (s.key === currentKey) {
+                    return { ...s, status: "running" as const, elapsed };
+                  }
+                  return s;
+                }),
+              );
+            }
+            // Handle completion
+            if (evt.type === "complete" || evt.status === "completed" || evt.status === "failed") {
+              if (evt.status === "completed" || evt.type === "complete") {
+                setStages((prev) =>
+                  prev.map((s) =>
+                    s.status !== "completed" ? { ...s, status: "completed" as const } : s
+                  ),
+                );
+              }
+              setIsComplete(true);
+              setIsConnected(false);
+            }
           } catch {
-            // Both failed
+            // Non-JSON SSE data — ignore
           }
-        }
-
-        if (cancelled || !data) return;
-
-        setIsConnected(true);
-
-        // Update stages based on current_stage and stages_completed
-        const completedKeys = new Set(data.stages_completed || []);
-        const currentKey = data.current_stage;
-
-        setStages((prev) =>
-          prev.map((s) => {
-            const elapsed = startTimeRef.current
-              ? (Date.now() - startTimeRef.current) / 1000
-              : 0;
-            if (completedKeys.has(s.key)) {
-              return { ...s, status: "completed" as const, elapsed };
-            }
-            if (s.key === currentKey) {
-              return { ...s, status: "running" as const, elapsed };
-            }
-            return s;
-          }),
-        );
-
-        // Check completion
-        if (data.status === "completed" || data.status === "failed") {
-          setIsComplete(true);
-          setIsConnected(false);
-          // Mark all stages as completed on finish
-          if (data.status === "completed") {
-            setStages((prev) =>
-              prev.map((s) =>
-                s.status !== "completed" ? { ...s, status: "completed" as const } : s
-              ),
-            );
+        },
+        onEventId: (id: string) => {
+          lastEventIdRef.current = id;
+        },
+        onOpen: () => {
+          setIsConnected(true);
+          setError(null);
+        },
+        onError: (err: Error) => {
+          // SSE failed — fall back to polling
+          if (!cancelledRef.current) {
+            setIsConnected(false);
+            // Don't set error if it's just a connection issue — poll will retry
           }
-          return; // Stop polling
-        }
-      } catch (err) {
-        if (!cancelled) {
-          setError(err instanceof Error ? err.message : "Failed to fetch progress");
+        },
+        shouldReconnect: () => {
+          return !cancelledRef.current;
+        },
+      },
+      { lastEventId: lastEventIdRef.current },
+    );
+    sseControllerRef.current = controller;
+  }, [runId]);
+
+  // ── REST polling fallback ──────────────────────────────────
+  const pollOnce = useCallback(async (): Promise<boolean> => {
+    if (!runId || cancelledRef.current) return false;
+    try {
+      let data: RunDetail | null = null;
+      try {
+        data = await apiFetch<RunDetail>(`/pipeline/runs/detail/${runId}`);
+      } catch {
+        try {
+          const list = await apiFetch<{ runs: RunDetail[] }>(`/pipeline/runs?limit=5`);
+          data = list.runs.find((r: RunDetail) => String(r.id) === runId) ?? null;
+        } catch {
+          // Both failed
         }
       }
 
-      // Schedule next poll
-      if (!cancelled) {
-        timeout = setTimeout(poll, 2000);
+      if (cancelledRef.current || !data) return false;
+
+      setIsConnected(true);
+
+      const completedKeys = new Set(data.stages_completed || []);
+      const currentKey = data.current_stage;
+
+      setStages((prev) =>
+        prev.map((s) => {
+          const elapsed = startTimeRef.current
+            ? (Date.now() - startTimeRef.current) / 1000
+            : 0;
+          if (completedKeys.has(s.key)) {
+            return { ...s, status: "completed" as const, elapsed };
+          }
+          if (s.key === currentKey) {
+            return { ...s, status: "running" as const, elapsed };
+          }
+          return s;
+        }),
+      );
+
+      if (data.status === "completed" || data.status === "failed") {
+        setIsComplete(true);
+        setIsConnected(false);
+        if (data.status === "completed") {
+          setStages((prev) =>
+            prev.map((s) =>
+              s.status !== "completed" ? { ...s, status: "completed" as const } : s
+            ),
+          );
+        }
+        return false; // Stop polling
+      }
+      return true; // Continue polling
+    } catch (err) {
+      if (!cancelledRef.current) {
+        setError(err instanceof Error ? err.message : "Failed to fetch progress");
+      }
+      return true; // Continue polling on error
+    }
+  }, [runId]);
+
+  // ── Combined SSE + poll effect ─────────────────────────────
+  useEffect(() => {
+    if (!runId) return;
+    cancelledRef.current = false;
+
+    // Try SSE first
+    connectSSE();
+
+    // Polling fallback: every 3s for resilience
+    let pollTimeout: ReturnType<typeof setTimeout>;
+    let stopPolling = false;
+
+    async function pollLoop() {
+      while (!stopPolling && !cancelledRef.current) {
+        await new Promise<void>((resolve) => {
+          pollTimeout = setTimeout(resolve, 3000);
+        });
+        if (stopPolling || cancelledRef.current) break;
+        const shouldContinue = await pollOnce();
+        if (!shouldContinue) break;
       }
     }
 
-    // Start polling immediately
-    poll();
+    pollLoop();
 
     return () => {
-      cancelled = true;
-      clearTimeout(timeout);
+      stopPolling = true;
+      cancelledRef.current = true;
+      clearTimeout(pollTimeout);
+      sseControllerRef.current?.abort();
+      sseControllerRef.current = null;
     };
-  }, [runId]);
+  }, [runId, connectSSE, pollOnce]);
 
   const currentStage = stages.find((s) => s.status === "running")?.label ?? null;
 

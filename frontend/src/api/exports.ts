@@ -1,4 +1,4 @@
-import { apiFetch } from "./client";
+import { apiFetch, apiFetchBlob } from "./client";
 
 // --- Export ---
 
@@ -11,43 +11,21 @@ export interface BulkExportRequest {
   format?: "pdf" | "markdown";
 }
 
+/** Export a single idea as PDF. Returns a Blob for download. */
 export function exportPdf(req: ExportPdfRequest): Promise<Blob> {
-  return apiFetch(`/export/pdf`, {
+  return apiFetchBlob("/export/pdf", {
     method: "POST",
     body: JSON.stringify(req),
     headers: { Accept: "application/pdf" },
-  }).then(() => {
-    // apiFetch returns JSON, but we need a blob for file download
-    // Use raw fetch for binary responses
-    return rawExportFetch("/export/pdf", JSON.stringify(req));
   });
 }
 
+/** Bulk export multiple ideas. Returns a Blob (zip or markdown). */
 export function bulkExport(req: BulkExportRequest): Promise<Blob> {
-  return rawExportFetch("/export/bulk", JSON.stringify(req));
-}
-
-async function rawExportFetch(path: string, body: string): Promise<Blob> {
-  const { API_PREFIX } = await import("@/lib/constants");
-  const baseUrl = localStorage.getItem("erock_api_url") || "";
-  const key = localStorage.getItem("erock_api_key") || "";
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-  };
-  if (key) headers["X-API-Key"] = key;
-
-  const res = await fetch(`${baseUrl}${API_PREFIX}${path}`, {
+  return apiFetchBlob("/export/bulk", {
     method: "POST",
-    headers,
-    body,
+    body: JSON.stringify(req),
   });
-
-  if (!res.ok) {
-    const errBody = await res.json().catch(() => ({ detail: res.statusText }));
-    throw new Error(errBody.detail || errBody.error || res.statusText);
-  }
-
-  return res.blob();
 }
 
 // --- Plugins ---

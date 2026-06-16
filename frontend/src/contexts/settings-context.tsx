@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from "react";
+import { getApiUrl, getApiKey } from "@/api/client";
 
 interface Settings {
   apiUrl: string;
@@ -16,8 +17,8 @@ const SettingsContext = createContext<SettingsContextValue | null>(null);
 
 function loadSettings(): Settings {
   return {
-    apiUrl: localStorage.getItem("erock_api_url") || "",
-    apiKey: localStorage.getItem("erock_api_key") || "",
+    apiUrl: getApiUrl(),
+    apiKey: getApiKey(),
     theme: (localStorage.getItem("erock_theme") as "light" | "dark") || "light",
   };
 }
