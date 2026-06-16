@@ -43,6 +43,16 @@ class StageContext:
     export_format: str | None = "markdown"
     provider_override: Any = None  # LLMProvider override for model routing
     journal: Any = None  # B162: Optional JournalWriter or callback
+    receipts: list = field(default_factory=list)  # ModelReceipts collected during this stage
+
+
+# Stages that do NOT use LLM models — no receipt required.
+# All other stages are model-backed and should produce receipts.
+NON_MODEL_STAGES: frozenset[str] = frozenset({
+    "literature_search",
+    "mechanical_metrics",
+    "export",
+})
 
 
 class PipelineStage(ABC):
@@ -460,9 +470,9 @@ class GapAnalysisStage(PipelineStage):
         return "gap_analysis"
 
     async def execute(self, ctx: StageContext) -> bool:
-        return await self._execute_gap_analysis(ctx, provider=ctx.provider_override)
+        return await self._execute_gap_analysis(ctx, provider=ctx.provider_override, receipts=ctx.receipts)
 
-    async def _execute_gap_analysis(self, ctx: StageContext, *, provider=None) -> bool:
+    async def _execute_gap_analysis(self, ctx: StageContext, *, provider=None, receipts=None) -> bool:
         # Brief pause to let API rate limiter cool after ingestion burst
         # Reduced from 15s to 2s since gap analysis now uses local LM Studio
         await asyncio.sleep(2.0)
@@ -474,6 +484,7 @@ class GapAnalysisStage(PipelineStage):
             max_gaps=ctx.max_gaps,
             prior_gaps=prior_gaps,
             provider=provider,
+            receipts=receipts,
         )
         ctx.result.gaps = gaps
         ctx.result.cluster_report = cluster_report
@@ -599,7 +610,7 @@ class IdeaGenerationStage(PipelineStage):
             return await self._execute_dag(ctx, provider)
         return await self._execute_sequential(ctx, provider=provider)
 
-    async def _execute_sequential(self, ctx: StageContext, *, provider=None) -> bool:
+    async def _execute_sequential(self, ctx: StageContext, *, provider=None, receipts=None) -> bool:
         logger.info("Idea Generation (%d rounds, %d ideas/round)", ctx.rounds, ctx.ideas_per)
         ideas = await self._agent.run(
             gaps=ctx.result.gaps,
@@ -607,6 +618,7 @@ class IdeaGenerationStage(PipelineStage):
             rounds=ctx.rounds,
             ideas_per_round=ctx.ideas_per,
             provider=provider,
+            receipts=ctx.receipts if receipts is None else receipts,
         )
         ctx.result.ideas = ideas
         ctx.result.critique_history = self._agent.last_critique_history
@@ -799,9 +811,9 @@ class FeasibilityScoringStage(PipelineStage):
         return "feasibility_scoring"
 
     async def execute(self, ctx: StageContext) -> bool:
-        return await self._execute_feasibility(ctx, provider=ctx.provider_override)
+        return await self._execute_feasibility(ctx, provider=ctx.provider_override, receipts=ctx.receipts)
 
-    async def _execute_feasibility(self, ctx: StageContext, *, provider=None) -> bool:
+    async def _execute_feasibility(self, ctx: StageContext, *, provider=None, receipts=None) -> bool:
         ideas = ctx.result.ideas
         if not ideas:
             return True
@@ -817,6 +829,7 @@ class FeasibilityScoringStage(PipelineStage):
                 idea, novelty,
                 weight_overrides=weight_overrides,
                 provider=provider,
+                receipts=receipts,
             )
             # Counterfactual analysis (Gap 14)
             if settings.counterfactual_enabled:
@@ -842,9 +855,9 @@ class ProposalSynthesisStage(PipelineStage):
         return "proposal_synthesis"
 
     async def execute(self, ctx: StageContext) -> bool:
-        return await self._execute_synthesis(ctx, provider=ctx.provider_override)
+        return await self._execute_synthesis(ctx, provider=ctx.provider_override, receipts=ctx.receipts)
 
-    async def _execute_synthesis(self, ctx: StageContext, *, provider=None) -> bool:
+    async def _execute_synthesis(self, ctx: StageContext, *, provider=None, receipts=None) -> bool:
         ideas = ctx.result.ideas
         if not ideas:
             return True
@@ -872,6 +885,7 @@ class ProposalSynthesisStage(PipelineStage):
                         gaps=ctx.result.gaps,
                         framing_directive=framing,
                         provider=provider,
+                        receipts=receipts,
                     ),
                     timeout=timeout,
                 )
@@ -1468,6 +1482,7 @@ class AdversarialReviewStage(PipelineStage):
             supporting_papers=ctx.all_papers[:30],
             gaps=ctx.result.gaps,
             provider=ctx.provider_override,
+            receipts=ctx.receipts,
         )
         # Copy over sections from re-synthesized proposal
         if hasattr(new_proposal, "sections") and hasattr(proposal, "sections"):

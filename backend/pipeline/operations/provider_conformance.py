@@ -58,3 +58,28 @@ def build_receipt_from_response(
         endpoint=endpoint,
         timestamp=datetime.now(timezone.utc).isoformat(),
     )
+
+
+def build_receipt_from_provider(
+    provider,
+    endpoint: str = "",
+) -> ModelReceipt:
+    """Construct a ModelReceipt from a provider's default_model.
+
+    This is used for providers whose complete() returns raw strings
+    (not LLMResponse). The provider's default_model property is the
+    authoritative model identifier.
+
+    Args:
+        provider: An LLMProvider instance with default_model and provider_name.
+        endpoint: The endpoint URL (optional, for logging).
+    """
+    model = getattr(provider, "default_model", "unknown")
+    provider_name = getattr(provider, "provider_name", "unknown")
+    return ModelReceipt(
+        requested_model=model,
+        served_model=model,
+        provider=provider_name,
+        endpoint=endpoint,
+        timestamp=datetime.now(timezone.utc).isoformat(),
+    )

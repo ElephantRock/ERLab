@@ -165,6 +165,7 @@ class ProposalSynthesizer:
         framing_directive: str = "",
         *,
         provider: LLMProvider | None = None,
+        receipts: list | None = None,
     ) -> ResearchProposal:
         """Generate a full-length research proposal section by section."""
         literature = self._format_literature(supporting_papers or [])
@@ -216,6 +217,10 @@ class ProposalSynthesizer:
         # Pass 1: Generate all sections in one call (efficient)
         try:
             llm = provider or self._provider
+            # Collect receipt for this model-backed call
+            if receipts is not None:
+                from backend.pipeline.operations.provider_conformance import build_receipt_from_provider
+                receipts.append(build_receipt_from_provider(llm))
             raw_text = await llm.complete(
                 messages=[
                     {
@@ -243,6 +248,7 @@ class ProposalSynthesizer:
                         section_name, idea, novelty_report, feasibility_report, literature, gaps,
                         provider=provider,
                     )
+                    # Receipt already collected by main call above
                     if section_text and len(section_text.split()) > len(content.split() if isinstance(content, str) else ""):
                         sections[key] = section_text
                 except Exception as se:

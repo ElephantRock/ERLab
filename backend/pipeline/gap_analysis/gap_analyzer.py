@@ -65,6 +65,7 @@ class GapAnalyzer:
         prior_gaps: list[ResearchGap] | None = None,
         *,
         provider: LLMProvider | None = None,
+        receipts: list | None = None,
     ) -> tuple[list[ResearchGap], ClusterReport]:
         """Identify research gaps from a collection of papers.
 
@@ -92,6 +93,10 @@ class GapAnalyzer:
             # Use complete() instead of structured_output() to avoid tool_use timeout
             # through the z.ai proxy
             llm = provider or self._provider
+            # Collect receipt for this model-backed call
+            if receipts is not None:
+                from backend.pipeline.operations.provider_conformance import build_receipt_from_provider
+                receipts.append(build_receipt_from_provider(llm))
             raw_response = await llm.complete(
                 messages=[
                     {"role": "system", "content": f"You are a {domain} research analyst. Respond with valid JSON only."},

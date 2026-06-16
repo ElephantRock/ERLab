@@ -159,27 +159,34 @@ class StageExecutor:
     ) -> "StageExecutionResult":
         """Execute a stage and return a typed StageExecutionResult.
 
-        This is the compatibility bridge: old stages return ``bool``,
-        which we wrap into a ``StageExecutionResult`` with
-        ``is_compatibility_mode = True``.
-
-        Until all stages are migrated to operation-scoped provider calls,
-        results from this method have no model receipts and must be
-        marked as compatibility mode.
+        Collects ModelReceipts from ctx.receipts after execution.
+        Non-model stages (in NON_MODEL_STAGES) are not expected to
+        produce receipts — they complete cleanly without them.
+        Model-backed stages that produce no receipts are marked
+        compatibility mode.
         """
         from backend.pipeline.operations.types import StageExecutionResult, StageStatus
+        from backend.pipeline.stages import NON_MODEL_STAGES
+
+        # Clear any receipts from previous stage
+        ctx.receipts.clear()
 
         try:
             success = await self.execute_with_retry(stage, ctx, checkpoint)
+
+            # Collect receipts produced during execution
+            receipts = list(ctx.receipts)
+            ctx.receipts.clear()  # Reset for next stage
+
             return StageExecutionResult(
                 status=StageStatus.COMPLETED if success else StageStatus.FAILED,
-                # Compatibility mode: no receipts, no resource epoch.
-                # Stages still call providers internally.
-                model_receipts=[],
+                model_receipts=receipts,
                 resource_epoch=None,
                 error=None if success else "Stage returned False",
+                metadata={"requires_receipts": stage.name not in NON_MODEL_STAGES},
             )
         except Exception as exc:
+            ctx.receipts.clear()
             return StageExecutionResult(
                 status=StageStatus.FAILED,
                 failure_class="unknown",

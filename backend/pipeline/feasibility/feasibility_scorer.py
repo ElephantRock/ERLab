@@ -79,6 +79,7 @@ class FeasibilityScorer:
         weight_overrides: dict[str, float] | None = None,
         *,
         provider: LLMProvider | None = None,
+        receipts: list | None = None,
     ) -> FeasibilityReport:
         """Evaluate idea feasibility across 6 dimensions.
 
@@ -101,6 +102,10 @@ class FeasibilityScorer:
 
         try:
             llm = provider or self._provider
+            # Collect receipt for this model-backed call
+            if receipts is not None:
+                from backend.pipeline.operations.provider_conformance import build_receipt_from_provider
+                receipts.append(build_receipt_from_provider(llm))
             result = await llm.structured_output(
                 messages=[
                     {

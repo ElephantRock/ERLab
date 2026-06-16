@@ -111,6 +111,7 @@ class AgentOrchestrator:
         use_borda: bool = False,
         *,
         provider: LLMProvider | None = None,
+        receipts: list | None = None,
     ) -> list[ResearchIdea]:
         """Run multi-agent ideation loop.
 
@@ -137,10 +138,18 @@ class AgentOrchestrator:
             ideator = IdeatorAgent(provider, retriever=self._retriever)
             critic = CriticAgent(provider)
             refiner = RefinerAgent(provider)
+            # Collect receipt for the provider used in this run
+            if receipts is not None:
+                from backend.pipeline.operations.provider_conformance import build_receipt_from_provider
+                receipts.append(build_receipt_from_provider(provider))
         else:
             ideator = self._ideator
             critic = self._critic
             refiner = self._refiner
+            # Collect receipt for the default provider
+            if receipts is not None:
+                from backend.pipeline.operations.provider_conformance import build_receipt_from_provider
+                receipts.append(build_receipt_from_provider(self._provider))
 
         # Accumulators for traceability
         self.last_critique_history = {}
