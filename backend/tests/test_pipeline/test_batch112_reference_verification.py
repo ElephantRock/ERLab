@@ -55,10 +55,10 @@ def _make_ctx(all_papers=None):
 # ── TEST-112-01-01: _verify_references exists ──────────────────────
 
 def test_112_01_01_verify_references_exists():
-    """_verify_references method exists on PipelineOrchestrator."""
-    from backend.pipeline.orchestrator import PipelineOrchestrator
-    assert hasattr(PipelineOrchestrator, '_verify_references'), \
-        "PipelineOrchestrator must have _verify_references method"
+    """verify_references method exists on ResultProcessor (used by orchestrator)."""
+    from backend.pipeline.orchestrator.result_processor import ResultProcessor
+    assert hasattr(ResultProcessor, 'verify_references'), \
+        "ResultProcessor must have verify_references method"
 
 
 # ── TEST-112-01-02: Verification runs without crashing on empty input ──

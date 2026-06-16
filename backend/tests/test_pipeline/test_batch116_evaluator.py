@@ -32,10 +32,10 @@ def test_116_01_02_ai_nlp_5plus_gaps():
 # ── TEST-116-01-03: _evaluate_pipeline exists on orchestrator ──────
 
 def test_116_01_03_evaluate_pipeline_exists():
-    """_evaluate_pipeline method exists on PipelineOrchestrator."""
-    from backend.pipeline.orchestrator import PipelineOrchestrator
-    assert hasattr(PipelineOrchestrator, '_evaluate_pipeline'), \
-        "PipelineOrchestrator must have _evaluate_pipeline method"
+    """evaluate_pipeline method exists on ResultProcessor (used by orchestrator)."""
+    from backend.pipeline.orchestrator.result_processor import ResultProcessor
+    assert hasattr(ResultProcessor, 'evaluate_pipeline'), \
+        "ResultProcessor must have evaluate_pipeline method"
 
 
 # ── TEST-116-01-04: Evaluation produces quality score ──────────────

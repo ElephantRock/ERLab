@@ -523,7 +523,7 @@ class PipelineOrchestrator:
                 description=strat_yaml.get("description", ""),
                 stages=stages,
             )
-        except Exception as e:
+        except (FileNotFoundError, KeyError, ValueError, TypeError) as e:
             logger.warning("YAML strategy load failed, falling back to presets: %s", e)
             from backend.pipeline.strategies import StrategyRegistry, register_presets
             registry = StrategyRegistry()
@@ -558,7 +558,7 @@ class PipelineOrchestrator:
                 for model in catalog.get_all():
                     if model.model_id == model_id or model.display_name == model_id:
                         return self._model_manager._get_or_create_provider(model)
-            except Exception:
+            except (KeyError, ValueError, RuntimeError):
                 pass
 
         # Legacy fallback
@@ -1043,10 +1043,10 @@ class PipelineOrchestrator:
                 logger.warning("Decision Gate failed (non-fatal): %s", e)
 
         # Persist stage report to DB
-        self._persist_stage_report(result, db_run_id)
+        self._processor.persist_stage_report(result, db_run_id)
 
         # Phase 8: Pipeline quality evaluation
-        self._evaluate_pipeline(result, ctx)
+        self._processor.evaluate_pipeline(result, ctx)
 
         # ── Post-pipeline finalization (delegated) ───────────
         await self._lifecycle.post_pipeline_finalize(
@@ -1073,128 +1073,18 @@ class PipelineOrchestrator:
     ) -> PipelineResult | None:
         """Resume a previously failed/interrupted pipeline run from checkpoint.
 
-        Loads the checkpoint, skips completed stages, and continues from the
-        next unfinished stage. Returns None if no checkpoint found.
+        Delegates to RunCoordinator.resume_from_checkpoint().
         """
-        checkpoint = self._persistence.load_checkpoint(run_id)
-        if not checkpoint:
-            logger.warning("No checkpoint found for run %s", run_id)
-            return None
-
-        completed_names = {s.stage_name for s in checkpoint.stages if s.status == StageStatus.COMPLETED}
-        logger.info(
-            "Resuming run %s: %d/%d stages already completed",
-            run_id,
-            len(completed_names),
-            len(checkpoint.stages),
-        )
-
-        result = PipelineResult()
-        result.run_id = run_id
-        params = {}
-        db_run_id = None
-
-        # State reconstruction: load prior outputs from database
-        db_run = self._persistence.get_run_by_uuid(run_id)
-        if db_run:
-            db_run_id = db_run.id
-            try:
-                loaded_gaps = self._persistence.load_gaps(db_run_id)
-                if loaded_gaps:
-                    result.gaps = loaded_gaps
-                    logger.info("Reconstructed %d gaps from database", len(loaded_gaps))
-            except Exception as exc:
-                logger.warning("Failed to reconstruct gaps: %s", exc)
-            try:
-                loaded_ideas = self._persistence.load_ideas(db_run_id)
-                if loaded_ideas:
-                    result.ideas = loaded_ideas
-                    logger.info("Reconstructed %d ideas from database", len(loaded_ideas))
-            except Exception as exc:
-                logger.warning("Failed to reconstruct ideas: %s", exc)
-
-        # Cross-stage context: load additional persisted outputs
-        if self._services.cross_stage_ctx:
-            try:
-                prior = await self._services.cross_stage_ctx.load_prior_context(run_id, "export")
-                if prior:
-                    ctx_params = {"reconstructed_context": prior}
-                    params.update(ctx_params)
-                    logger.info("Loaded cross-stage context with %d stages", len(prior))
-            except Exception as exc:
-                logger.warning("Failed to load cross-stage context: %s", exc)
-
-        ctx = StageContext(
-            result=result,
-            domain=domain,
+        from backend.pipeline.orchestrator.run_coordinator import RunCoordinator
+        coordinator = RunCoordinator(self)
+        return await coordinator.resume_from_checkpoint(
             run_id=run_id,
-            db_run_id=db_run_id,
-            params=params,
+            domain=domain,
             search_queries=search_queries,
             max_gaps=max_gaps,
-            rounds=self._settings.generation_rounds,
-            ideas_per=self._settings.ideas_per_round,
             export_format=export_format,
+            max_stage_retries=max_stage_retries,
         )
-
-        for stage in self._stages:
-            if stage.name in completed_names:
-                logger.info("Skipping completed stage: %s", stage.name)
-                continue
-
-            logger.info("=== [RESUME] %s ===", stage.name.replace("_", " ").title())
-
-            # Retry logic with exponential backoff
-            for attempt in range(max_stage_retries + 1):
-                try:
-                    t0 = time.time()
-                    checkpoint.mark_stage_running(stage.name)
-                    self._persistence.save_checkpoint(checkpoint)
-
-                    with create_span(SpanKind.STAGE, f"{stage.name} (resume)", run_id=run_id):
-                        prepared_ctx = await self._compaction.prepare_context(ctx, stage.name)
-                        should_continue = await stage.execute(prepared_ctx)
-
-                    elapsed = time.time() - t0
-                    self._record_stage(stage.name, t0)
-                    await self._services.hooks.dispatch_sync_safe(
-                        "pipeline.stage.complete",
-                        {"stage": stage.name, "elapsed": elapsed, "run_id": run_id},
-                    )
-
-                    checkpoint.mark_stage_completed(stage.name)
-                    self._persistence.save_checkpoint(checkpoint)
-                    break  # Success, exit retry loop
-                except Exception as e:
-                    logger.error(
-                        "Stage %s failed (attempt %d/%d): %s",
-                        stage.name, attempt + 1, max_stage_retries + 1, e,
-                    )
-                    if attempt == max_stage_retries:
-                        checkpoint.mark_stage_failed(stage.name, str(e))
-                        self._persistence.save_checkpoint(checkpoint)
-                        logger.error("Stage %s exhausted retries. Checkpoint saved.", stage.name)
-                        return result
-                    # Exponential backoff
-                    await asyncio.sleep(2 ** attempt)
-
-            # Persistence (same as normal run)
-            if stage.name == "literature_search":
-                self._persistence.persist_papers(ctx.all_papers, db_run_id)
-            elif stage.name == "gap_analysis":
-                self._persistence.persist_gaps(result, db_run_id)
-            elif stage.name == "feasibility_scoring":
-                self._persistence.persist_ideas(result, db_run_id)
-            elif stage.name == "proposal_synthesis":
-                self._persistence.persist_proposals(result, db_run_id)
-
-            self._collect_warnings(result)
-            if not should_continue:
-                return result
-
-        logger.info("=== Resumed Pipeline Complete ===")
-        self._persistence.mark_run_completed(db_run_id)
-        return result
 
     # ── Autonomous Cycle ─────────────────────────────────────────────
 
@@ -1308,42 +1198,20 @@ class PipelineOrchestrator:
         """Delegate to StageExecutor."""
         self._executor.record_stage(stage_name, start_time, self._STAGE_ORDER)
 
-    def _verify_references(self, result: PipelineResult, ctx: StageContext) -> None:
-        """Delegate to ResultProcessor."""
-        self._processor.verify_references(result, ctx)
-
-    @staticmethod
-    def _extract_stage_fingerprint(stage_name: str, result: PipelineResult) -> str:
-        """Delegate to ResultProcessor."""
-        return ResultProcessor.extract_stage_fingerprint(stage_name, result)
-
-    def _evaluate_pipeline(self, result: PipelineResult, ctx: StageContext) -> None:
-        """Delegate to ResultProcessor."""
-        self._processor.evaluate_pipeline(result, ctx)
-
     def _should_stop(self) -> bool:
-        """Delegate to ResultProcessor."""
+        """Delegate to ResultProcessor. Kept because pipeline.py patches this for cancellation."""
         return self._processor.should_stop(
             self._services.budget, self._cost_tracker, self._settings)
 
-    async def _persist_stage_context(
-        self, run_id: str, stage_name: str, ctx: StageContext, result: PipelineResult
-    ) -> None:
-        """Delegate to ResultProcessor."""
-        await self._processor.persist_stage_context(run_id, stage_name, ctx, result)
-
-    def _collect_warnings(self, result: PipelineResult) -> None:
-        """Delegate to ResultProcessor."""
-        self._processor.collect_warnings(result)
-
-    def _persist_stage_report(self, result: PipelineResult, db_run_id: int | None) -> None:
-        """Delegate to ResultProcessor."""
-        self._processor.persist_stage_report(result, db_run_id)
-
-    async def _background_memory_extraction(self, result: PipelineResult, run_id: str) -> None:
-        """Delegate to ResultProcessor."""
-        await self._processor.background_memory_extraction(
-            result, run_id, self._provider, self._services.memory)
+    # The following ResultProcessor methods are called directly via self._processor
+    # from run() and the coordinator. Delegates removed to reduce indirection:
+    # - verify_references(result, ctx)
+    # - extract_stage_fingerprint(stage_name, result)
+    # - evaluate_pipeline(result, ctx)
+    # - persist_stage_context(run_id, stage_name, ctx, result)
+    # - collect_warnings(result)
+    # - persist_stage_report(result, db_run_id)
+    # - background_memory_extraction(result, run_id, ...)
 
     async def start_scheduler(self) -> dict | None:
         """Start the autonomous scheduler."""

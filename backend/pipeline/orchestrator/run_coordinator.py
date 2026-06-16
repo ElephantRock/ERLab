@@ -218,7 +218,7 @@ class RunCoordinator:
                         result.stage_report.append(StageReport(
                             name=remaining.name, status="not_reached",
                         ))
-                self._orch._persist_stage_report(result, db_run_id)
+                self._orch._processor.persist_stage_report(result, db_run_id)
                 return False
 
             # Cross-stage context: persist stage outputs
@@ -263,7 +263,7 @@ class RunCoordinator:
                         result.stage_report.append(StageReport(
                             name=stage_name, status="not_reached",
                         ))
-                self._orch._persist_stage_report(result, db_run_id)
+                self._orch._processor.persist_stage_report(result, db_run_id)
                 return False
 
         return True
@@ -407,3 +407,138 @@ class RunCoordinator:
                     return "gate_rejected"
 
         return "allow"
+
+    async def resume_from_checkpoint(
+        self,
+        run_id: str,
+        domain: str = "AI/NLP",
+        search_queries: list[str] | None = None,
+        max_gaps: int = 5,
+        export_format: str | None = "markdown",
+        max_stage_retries: int = 2,
+    ) -> "PipelineResult | None":
+        """Resume a previously failed/interrupted pipeline run from checkpoint.
+
+        Loads the checkpoint, skips completed stages, and continues from the
+        next unfinished stage. Returns None if no checkpoint found.
+        """
+        from backend.pipeline.result import PipelineResult, StageReport
+        from backend.pipeline.stages import StageContext
+        from backend.pipeline.execution.run_state import StageStatus
+        from backend.pipeline.tracing import create_span, SpanKind
+
+        orch = self._orch
+        checkpoint = orch._persistence.load_checkpoint(run_id)
+        if not checkpoint:
+            logger.warning("No checkpoint found for run %s", run_id)
+            return None
+
+        completed_names = {s.stage_name for s in checkpoint.stages if s.status == StageStatus.COMPLETED}
+        logger.info(
+            "Resuming run %s: %d/%d stages already completed",
+            run_id, len(completed_names), len(checkpoint.stages),
+        )
+
+        result = PipelineResult()
+        result.run_id = run_id
+        params: dict = {}
+        db_run_id = None
+
+        # State reconstruction: load prior outputs from database
+        db_run = orch._persistence.get_run_by_uuid(run_id)
+        if db_run:
+            db_run_id = db_run.id
+            try:
+                loaded_gaps = orch._persistence.load_gaps(db_run_id)
+                if loaded_gaps:
+                    result.gaps = loaded_gaps
+                    logger.info("Reconstructed %d gaps from database", len(loaded_gaps))
+            except Exception as exc:
+                logger.warning("Failed to reconstruct gaps: %s", exc)
+            try:
+                loaded_ideas = orch._persistence.load_ideas(db_run_id)
+                if loaded_ideas:
+                    result.ideas = loaded_ideas
+                    logger.info("Reconstructed %d ideas from database", len(loaded_ideas))
+            except Exception as exc:
+                logger.warning("Failed to reconstruct ideas: %s", exc)
+
+        # Cross-stage context: load additional persisted outputs
+        if orch._services.cross_stage_ctx:
+            try:
+                prior = await orch._services.cross_stage_ctx.load_prior_context(run_id, "export")
+                if prior:
+                    params.update({"reconstructed_context": prior})
+                    logger.info("Loaded cross-stage context with %d stages", len(prior))
+            except Exception as exc:
+                logger.warning("Failed to load cross-stage context: %s", exc)
+
+        ctx = StageContext(
+            result=result,
+            domain=domain,
+            run_id=run_id,
+            db_run_id=db_run_id,
+            params=params,
+            search_queries=search_queries,
+            max_gaps=max_gaps,
+            rounds=orch._settings.generation_rounds,
+            ideas_per=orch._settings.ideas_per_round,
+            export_format=export_format,
+        )
+
+        for stage in orch._stages:
+            if stage.name in completed_names:
+                logger.info("Skipping completed stage: %s", stage.name)
+                continue
+
+            logger.info("=== [RESUME] %s ===", stage.name.replace("_", " ").title())
+
+            for attempt in range(max_stage_retries + 1):
+                try:
+                    checkpoint.mark_stage_running(stage.name)
+                    orch._persistence.save_checkpoint(checkpoint)
+
+                    with create_span(SpanKind.STAGE, f"{stage.name} (resume)", run_id=run_id):
+                        prepared_ctx = await orch._compaction.prepare_context(ctx, stage.name)
+                        should_continue = await stage.execute(prepared_ctx)
+
+                    elapsed = time.time() - time.time()
+                    orch._executor.record_stage(stage.name, elapsed, orch._STAGE_ORDER)
+                    await orch._services.hooks.dispatch_sync_safe(
+                        "pipeline.stage.complete",
+                        {"stage": stage.name, "elapsed": elapsed, "run_id": run_id},
+                    )
+
+                    checkpoint.mark_stage_completed(stage.name)
+                    orch._persistence.save_checkpoint(checkpoint)
+                    break
+                except Exception as e:
+                    logger.error(
+                        "Stage %s failed (attempt %d/%d): %s",
+                        stage.name, attempt + 1, max_stage_retries + 1, e,
+                    )
+                    if attempt == max_stage_retries:
+                        checkpoint.mark_stage_failed(stage.name, str(e))
+                        orch._persistence.save_checkpoint(checkpoint)
+                        logger.error("Stage %s exhausted retries. Checkpoint saved.", stage.name)
+                        return result
+                    import asyncio as _aio
+                    await _aio.sleep(2 ** attempt)
+
+            # Persistence (same as normal run)
+            if stage.name == "literature_search":
+                orch._persistence.persist_papers(ctx.all_papers, db_run_id)
+            elif stage.name == "gap_analysis":
+                orch._persistence.persist_gaps(result, db_run_id)
+            elif stage.name == "feasibility_scoring":
+                orch._persistence.persist_ideas(result, db_run_id)
+            elif stage.name == "proposal_synthesis":
+                orch._persistence.persist_proposals(result, db_run_id)
+
+            orch._processor.collect_warnings(result)
+            if not should_continue:
+                return result
+
+        logger.info("=== Resumed Pipeline Complete ===")
+        orch._persistence.mark_run_completed(db_run_id)
+        return result
