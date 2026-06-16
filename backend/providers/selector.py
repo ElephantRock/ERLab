@@ -341,6 +341,21 @@ class ModelSelector:
 
             exclude = {generator_model_id} if generator_model_id else set()
             model = self.select(stage_name, exclude_models=exclude)
+
+            # If excluding the generator leaves only unloaded models,
+            # skip the exclusion — using the same (loaded) model is
+            # better than hot-swapping to a cold model that causes
+            # multi-minute load delays.
+            if model and not model.is_loaded and generator_model_id:
+                gen_model = self._catalog.get_model(generator_model_id)
+                if gen_model and gen_model.is_loaded:
+                    logger.info(
+                        "Adversarial review: using same model as generator "
+                        "(%s) — no loaded alternative available",
+                        generator_model_id,
+                    )
+                    model = gen_model
+
             if model:
                 assignments[stage_name] = model
                 self._model_used_by[model.model_id] = stage_name

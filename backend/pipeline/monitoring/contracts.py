@@ -62,7 +62,13 @@ def verify_contract(
     for output_name, min_size in contract.min_output_size.items():
         value = getattr(result, output_name, None)
         if value is not None:
-            actual = len(value) if hasattr(value, '__len__') else 0
+            # Ints/floats are scalar counts — use directly, not len()
+            if isinstance(value, (int, float)):
+                actual = value
+            elif hasattr(value, '__len__'):
+                actual = len(value)
+            else:
+                actual = 0
             if actual < min_size:
                 violations.append(
                     f"Output {output_name} has {actual} items, minimum {min_size}"
