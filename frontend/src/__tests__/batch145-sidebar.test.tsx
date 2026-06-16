@@ -4,7 +4,7 @@
 import { describe, it, expect } from "vitest";
 import * as fs from "fs";
 
-const content = fs.readFileSync("frontend/src/components/layout/sidebar.tsx", "utf-8");
+const content = fs.readFileSync("src/components/layout/sidebar.tsx", "utf-8");
 
 describe("TEST-145: Sidebar restructure", () => {
   it("TEST-145-01: has 3 groups (Primary, Research Tools, System)", () => {

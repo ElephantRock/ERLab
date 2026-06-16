@@ -2,8 +2,8 @@ import { describe, it, expect } from "vitest";
 import { PIPELINE_STAGES, API_PREFIX } from "@/lib/constants";
 
 describe("PIPELINE_STAGES", () => {
-  it("has 8 stages", () => {
-    expect(PIPELINE_STAGES).toHaveLength(8);
+  it("has 10 stages", () => {
+    expect(PIPELINE_STAGES).toHaveLength(10);
   });
 
   it("each stage has key, label, and icon", () => {

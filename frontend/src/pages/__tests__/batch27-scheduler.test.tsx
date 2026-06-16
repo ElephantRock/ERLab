@@ -77,6 +77,10 @@ vi.mock("@/api/client", () => ({
   apiFetch: vi.fn(),
   ApiError: class extends Error {},
   sseUrl: vi.fn(),
+  getApiUrl: () => "",
+  getApiKey: () => "",
+  buildUrl: (p: string) => p,
+  buildAuthHeaders: () => ({}),
 }));
 
 function setupAutonomousMocks() {

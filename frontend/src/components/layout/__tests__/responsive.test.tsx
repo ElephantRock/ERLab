@@ -3,9 +3,14 @@ import { render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { Sidebar, MobileBottomNav } from "@/components/layout/sidebar";
 import { AppShell } from "@/components/layout/app-shell";
+import { SettingsProvider } from "@/contexts/settings-context";
 
 function renderWithRouter(ui: React.ReactElement) {
-  return render(<MemoryRouter>{ui}</MemoryRouter>);
+  return render(
+    <MemoryRouter>
+      <SettingsProvider>{ui}</SettingsProvider>
+    </MemoryRouter>,
+  );
 }
 
 // ── TEST-31-02-01: Sidebar collapses on mobile viewport ──────────

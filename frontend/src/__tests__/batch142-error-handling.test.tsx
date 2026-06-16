@@ -12,6 +12,27 @@ vi.mock("sonner", () => ({
   },
 }));
 
+// Mock API modules so vi.mocked().mockRejectedValueOnce works
+vi.mock("@/api/gaps", () => ({
+  listGaps: vi.fn(),
+  getGap: vi.fn(),
+  submitGapFeedback: vi.fn(),
+  updateGapStatus: vi.fn(),
+}));
+vi.mock("@/api/memory", () => ({
+  getMemoryStats: vi.fn(),
+  recallMemories: vi.fn(),
+  deleteMemory: vi.fn(),
+}));
+vi.mock("@/api/notifications", () => ({
+  getNotifications: vi.fn(),
+  markRead: vi.fn(),
+  markAllRead: vi.fn(),
+}));
+vi.mock("@/api/search", () => ({
+  globalSearch: vi.fn(),
+}));
+
 // Mock console.warn
 const mockConsoleWarn = vi.spyOn(console, "warn").mockImplementation(() => {});
 
@@ -175,7 +196,7 @@ describe("TEST-142-03: Excluded files unchanged", () => {
   it("TEST-142-03-01: error-boundary catch is unchanged", async () => {
     // Read the file content and verify the catch block doesn't have toast
     const fs = await import("fs");
-    const content = fs.readFileSync("frontend/src/components/error-boundary.tsx", "utf-8");
+    const content = fs.readFileSync("src/components/error-boundary.tsx", "utf-8");
     expect(content).not.toContain("toast.error");
     expect(content).not.toContain("console.warn");
     expect(content).toContain("componentDidCatch");
@@ -183,7 +204,7 @@ describe("TEST-142-03: Excluded files unchanged", () => {
 
   it("TEST-142-03-02: sessions date fallback is unchanged", async () => {
     const fs = await import("fs");
-    const content = fs.readFileSync("frontend/src/pages/sessions.tsx", "utf-8");
+    const content = fs.readFileSync("src/pages/sessions.tsx", "utf-8");
     expect(content).not.toContain("toast.error");
     // The date formatting catch should still return dateStr as fallback
     expect(content).toMatch(/catch\s*\{[^}]*return\s+dateStr/);

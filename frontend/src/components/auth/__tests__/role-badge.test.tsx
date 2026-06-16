@@ -22,6 +22,11 @@ vi.mock("@/api/auth", () => ({
 vi.mock("@/api/client", () => ({
   testConnection: vi.fn().mockResolvedValue({ ok: true, version: "0.1.0" }),
   getDetailedStatus: vi.fn().mockRejectedValue("not available"),
+  getApiUrl: () => "",
+  getApiKey: () => "",
+  buildUrl: (p: string) => p,
+  buildAuthHeaders: () => ({}),
+  apiFetch: vi.fn(),
 }));
 
 vi.mock("@/api/autonomous", () => ({

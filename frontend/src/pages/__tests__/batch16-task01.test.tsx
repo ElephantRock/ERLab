@@ -29,7 +29,7 @@ function renderRoute(path: string) {
 }
 
 describe("BATCH-16/TASK-01: Phase 2 Navigation", () => {
-  // ── TEST-16-01-01: Sidebar renders all 12 nav items ─────────────
+  // ── TEST-16-01-01: Sidebar renders all nav items ─────────────
   it("TEST-16-01-01: sidebar renders all 15 nav items", () => {
     renderSidebar();
 
@@ -37,68 +37,64 @@ describe("BATCH-16/TASK-01: Phase 2 Navigation", () => {
     expect(links).toHaveLength(15);
 
     const labels = links.map((l) => l.textContent?.trim());
+    // Sidebar is grouped: Primary, Research Tools, System
     expect(labels).toEqual([
+      // Primary
       "Dashboard",
       "Pipeline",
       "Ideas",
       "Gaps",
+      // Research Tools
+      "Literature",
       "Knowledge",
-      "Settings",
-      "Costs",
+      "Graph",
       "Memory",
+      "Autonomous",
+      "Sessions",
+      // System
+      "Costs",
       "Governance",
       "Traces",
-      "Sessions",
-      "Literature",
-      "Graph",
-      "Autonomous",
       "Plugins",
+      "Settings",
     ]);
   });
 
-  // ── TEST-16-01-02: Existing nav items unchanged ─────────────────
-  it("TEST-16-01-02: existing nav items unchanged in order and label", () => {
+  // ── TEST-16-01-02: Primary nav items have correct hrefs ────────
+  it("TEST-16-01-02: primary nav items have correct hrefs", () => {
     renderSidebar();
 
     const links = screen.getAllByRole("link");
-    const existingLabels = links.slice(0, 6).map((l) => l.textContent?.trim());
-    expect(existingLabels).toEqual([
-      "Dashboard",
-      "Pipeline",
-      "Ideas",
-      "Gaps",
-      "Knowledge",
-      "Settings",
-    ]);
 
-    // Verify hrefs are unchanged
+    // Primary group (first 4)
     expect(links[0]).toHaveAttribute("href", "/");
     expect(links[1]).toHaveAttribute("href", "/pipeline/new");
     expect(links[2]).toHaveAttribute("href", "/ideas");
     expect(links[3]).toHaveAttribute("href", "/gaps");
-    expect(links[4]).toHaveAttribute("href", "/knowledge");
-    expect(links[5]).toHaveAttribute("href", "/settings");
   });
 
-  // ── TEST-16-01-03: New nav items use correct Lucide icons ───────
-  it("TEST-16-01-03: new nav items use correct Lucide icons", () => {
+  // ── TEST-16-01-03: All nav links have icons ────────────────────
+  it("TEST-16-01-03: all nav links contain SVG icons", () => {
     renderSidebar();
 
     const links = screen.getAllByRole("link");
 
-    // Verify Phase 2 item hrefs
-    expect(links[6]).toHaveAttribute("href", "/costs");
-    expect(links[7]).toHaveAttribute("href", "/memory");
-    expect(links[8]).toHaveAttribute("href", "/governance");
-    expect(links[9]).toHaveAttribute("href", "/traces");
-    expect(links[10]).toHaveAttribute("href", "/sessions");
-    expect(links[11]).toHaveAttribute("href", "/literature");
-
-    // Each link contains an SVG icon
-    const phase2Links = links.slice(6);
-    for (const link of phase2Links) {
+    // Every link should contain an SVG icon
+    for (const link of links) {
       const svg = link.querySelector("svg");
       expect(svg).toBeTruthy();
+    }
+
+    // Verify all expected routes are present
+    const hrefs = links.map((l) => l.getAttribute("href"));
+    const expectedRoutes = [
+      "/", "/pipeline/new", "/ideas", "/gaps",
+      "/literature", "/knowledge", "/knowledge-graph", "/memory",
+      "/autonomous", "/sessions",
+      "/costs", "/governance", "/traces", "/plugins", "/settings",
+    ];
+    for (const route of expectedRoutes) {
+      expect(hrefs).toContain(route);
     }
   });
 

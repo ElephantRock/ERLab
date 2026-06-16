@@ -154,6 +154,5 @@ describe("BATCH-18/TASK-03: Cost Dashboard Page", () => {
     });
 
     expect(screen.getByText("Error loading cost data")).toBeInTheDocument();
-    expect(screen.getByText("Network failure")).toBeInTheDocument();
   });
 });

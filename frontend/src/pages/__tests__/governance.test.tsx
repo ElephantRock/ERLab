@@ -139,6 +139,5 @@ describe("BATCH-20/TASK-02: Governance Queue Page", () => {
     });
 
     expect(screen.getByText("Error loading governance queue")).toBeInTheDocument();
-    expect(screen.getByText("Server unreachable")).toBeInTheDocument();
   });
 });

@@ -81,7 +81,7 @@ describe("PipelineNew", () => {
   it("TEST-11-01-06: renders without crashing", () => {
     renderPipelineNew();
 
-    expect(screen.getByText("Pipeline")).toBeInTheDocument();
+    expect(screen.getByText("Pipelines")).toBeInTheDocument();
     expect(
       screen.getByText("Configure and launch a research pipeline."),
     ).toBeInTheDocument();
@@ -107,7 +107,7 @@ describe("PipelineNew", () => {
     await user.click(submitBtn);
 
     await waitFor(() => {
-      expect(screen.getByText("Connection refused")).toBeInTheDocument();
+      expect(screen.getByText("Failed to start pipeline")).toBeInTheDocument();
     });
   });
 });

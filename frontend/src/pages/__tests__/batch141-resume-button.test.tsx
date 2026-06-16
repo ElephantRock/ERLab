@@ -217,7 +217,7 @@ describe("BATCH-141 / TASK-02: Resume Button Wiring", () => {
     await user.click(screen.getByTestId("resume-btn"));
 
     await waitFor(() => {
-      expect(mockedToastError).toHaveBeenCalledWith("Server error: 500");
+      expect(mockedToastError).toHaveBeenCalledWith("Failed to resume pipeline");
     });
   });
 

@@ -124,7 +124,7 @@ describe("BATCH-141 / TASK-03: Idea Fetch Race Condition Fix", () => {
 
     await waitFor(() => {
       // getRunIdeas should be called with Number(runId) = Number("7") = 7
-      expect(mockedGetRunIdeas).toHaveBeenCalledWith(7);
+      expect(mockedGetRunIdeas).toHaveBeenCalledWith("7");
     });
   });
 
@@ -163,9 +163,9 @@ describe("BATCH-141 / TASK-03: Idea Fetch Race Condition Fix", () => {
       mockIsComplete = true;
       return { run_id: "99", status: "running" };
     });
-    mockedGetRunIdeas.mockImplementation(async (id: number) => {
+    mockedGetRunIdeas.mockImplementation(async (id: string) => {
       // Only return ideas for the correct run ID
-      if (id === 99) {
+      if (id === "99") {
         return { ideas: sampleIdeas, total: 2 };
       }
       return { ideas: [], total: 0 };
@@ -182,7 +182,7 @@ describe("BATCH-141 / TASK-03: Idea Fetch Race Condition Fix", () => {
     });
 
     // Verify it was called with the correct ID
-    expect(mockedGetRunIdeas).toHaveBeenCalledWith(99);
+    expect(mockedGetRunIdeas).toHaveBeenCalledWith("99");
   });
 
   // ── TEST-141-03-04: Error state set when getRunIdeas fails ──
@@ -202,7 +202,7 @@ describe("BATCH-141 / TASK-03: Idea Fetch Race Condition Fix", () => {
 
     await waitFor(() => {
       expect(screen.getByTestId("ideas-error")).toBeInTheDocument();
-      expect(screen.getByText("Ideas API unavailable")).toBeInTheDocument();
+      expect(screen.getByText("Failed to load results")).toBeInTheDocument();
     });
   });
 

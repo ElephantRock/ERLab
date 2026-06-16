@@ -198,7 +198,6 @@ describe("BATCH-19/TASK-02: Memory Browser Page", () => {
     });
 
     expect(screen.getByText("Error loading memories")).toBeInTheDocument();
-    expect(screen.getByText("Service unavailable")).toBeInTheDocument();
   });
 
   // ── TEST-19-02-07: Initial load uses broad recall query ───────

@@ -235,6 +235,7 @@ describe("PipelineNew - Results Display (BATCH-12/TASK-02)", () => {
       return { run_id: "run_1", status: "running" };
     });
     mockedListRuns.mockRejectedValue(new Error("Network error"));
+    mockedGetRunIdeas.mockRejectedValue(new Error("Network error"));
 
     renderPipelineNew();
 
@@ -243,7 +244,7 @@ describe("PipelineNew - Results Display (BATCH-12/TASK-02)", () => {
 
     await waitFor(() => {
       expect(screen.getByTestId("ideas-error")).toBeInTheDocument();
-      expect(screen.getByText("Network error")).toBeInTheDocument();
+      expect(screen.getByText("Failed to load results")).toBeInTheDocument();
     });
   });
 });

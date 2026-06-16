@@ -80,6 +80,10 @@ vi.mock("@/api/client", () => ({
   testConnection: vi.fn().mockResolvedValue({ ok: true }),
   getDetailedStatus: vi.fn().mockResolvedValue(null),
   apiFetch: vi.fn().mockResolvedValue({ clusters: [], total_papers: 0 }),
+  getApiUrl: () => "",
+  getApiKey: () => "",
+  buildUrl: (p: string) => p,
+  buildAuthHeaders: () => ({}),
 }));
 
 vi.mock("@/api/autonomous", () => ({

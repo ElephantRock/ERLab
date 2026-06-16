@@ -18,6 +18,10 @@ vi.mock("@/api/client", () => ({
   testConnection: (...args: unknown[]) => mockTestConnection(...args),
   getDetailedStatus: (...args: unknown[]) => mockGetDetailedStatus(...args),
   apiFetch: vi.fn(),
+  getApiUrl: () => "",
+  getApiKey: () => "",
+  buildUrl: (path: string) => `/api/v1${path}`,
+  buildAuthHeaders: () => ({}),
 }));
 
 vi.mock("@/api/autonomous", () => ({

@@ -64,7 +64,7 @@ describe("TEST-143-01: Source gap IDs clickable", () => {
 
   it("TEST-143-01-02: source gap IDs are not plain text", async () => {
     const fs = await import("fs");
-    const content = fs.readFileSync("frontend/src/pages/idea-detail.tsx", "utf-8");
+    const content = fs.readFileSync("src/pages/idea-detail.tsx", "utf-8");
     // Should have a clickable element with data-testid
     expect(content).toContain("source-gap-link");
     // Should navigate to /gaps/ with the gapId
@@ -77,7 +77,7 @@ describe("TEST-143-01: Source gap IDs clickable", () => {
 describe("TEST-143-02: Literature page auto-searches from URL param", () => {
   it("TEST-143-02-01: literature page reads ?q= from URL params", async () => {
     const fs = await import("fs");
-    const content = fs.readFileSync("frontend/src/pages/literature.tsx", "utf-8");
+    const content = fs.readFileSync("src/pages/literature.tsx", "utf-8");
     expect(content).toContain("useSearchParams");
     expect(content).toContain("urlParams.get");
     expect(content).toContain("setSubmittedQuery");
@@ -85,13 +85,13 @@ describe("TEST-143-02: Literature page auto-searches from URL param", () => {
 
   it("TEST-143-02-02: global search paper results navigate with query", async () => {
     const fs = await import("fs");
-    const content = fs.readFileSync("frontend/src/components/search/global-search-dialog.tsx", "utf-8");
+    const content = fs.readFileSync("src/components/search/global-search-dialog.tsx", "utf-8");
     expect(content).toMatch(/navigate.*literature\?q=.*encodeURIComponent.*query/);
   });
 
   it("TEST-143-02-03: global search paper results don't navigate to bare /literature", async () => {
     const fs = await import("fs");
-    const content = fs.readFileSync("frontend/src/components/search/global-search-dialog.tsx", "utf-8");
+    const content = fs.readFileSync("src/components/search/global-search-dialog.tsx", "utf-8");
     // Should NOT have: navigate("/literature") without query param
     expect(content).not.toMatch(/case.*papers.*navigate\("\/literature"\)/s);
   });
@@ -100,30 +100,30 @@ describe("TEST-143-02: Literature page auto-searches from URL param", () => {
 // ── TASK-03: Back Button Targets ─────────────────────────────
 
 describe("TEST-143-03: Run-detail back button targets", () => {
-  it("TEST-143-03-01: run-detail back buttons go to /pipeline not /", async () => {
+  it("TEST-143-03-01: run-detail back buttons go to pipeline page not /", async () => {
     const fs = await import("fs");
-    const content = fs.readFileSync("frontend/src/pages/run-detail.tsx", "utf-8");
+    const content = fs.readFileSync("src/pages/run-detail.tsx", "utf-8");
     // Should NOT have navigate("/")
     expect(content).not.toContain('navigate("/")');
-    // Should have navigate("/pipeline")
-    expect(content).toContain('navigate("/pipeline")');
+    // Should navigate to the pipeline page
+    expect(content).toContain('navigate("/pipeline/new")');
   });
 
   it("TEST-143-03-02: gap-detail back button goes to /gaps", async () => {
     const fs = await import("fs");
-    const content = fs.readFileSync("frontend/src/pages/gap-detail.tsx", "utf-8");
+    const content = fs.readFileSync("src/pages/gap-detail.tsx", "utf-8");
     expect(content).toContain('navigate("/gaps")');
   });
 
   it("TEST-143-03-03: idea-detail back button goes to /ideas", async () => {
     const fs = await import("fs");
-    const content = fs.readFileSync("frontend/src/pages/idea-detail.tsx", "utf-8");
+    const content = fs.readFileSync("src/pages/idea-detail.tsx", "utf-8");
     expect(content).toContain('navigate("/ideas")');
   });
 
   it("TEST-143-03-04: no run-detail page navigates to bare /", async () => {
     const fs = await import("fs");
-    const content = fs.readFileSync("frontend/src/pages/run-detail.tsx", "utf-8");
+    const content = fs.readFileSync("src/pages/run-detail.tsx", "utf-8");
     const bareRootMatches = content.match(/navigate\(["']\/["']\)/g);
     expect(bareRootMatches).toBeNull();
   });

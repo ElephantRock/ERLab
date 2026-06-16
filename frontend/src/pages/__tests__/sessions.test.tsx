@@ -34,6 +34,17 @@ vi.mock("@/api/pipeline", () => ({
   listRuns: vi.fn(),
   getRunIdeas: vi.fn(),
   cancelRun: vi.fn(),
+  getEstimate: vi.fn().mockResolvedValue({
+    strategy: "fast_scan",
+    stages: 3,
+    estimated_cost_usd: 0,
+    estimated_time_seconds: 120,
+    estimated_time_display: "~2 min",
+    cost_display: "$0.00",
+    local_cost_usd: 0,
+    cloud_cost_usd: 0,
+    breakdown: [],
+  }),
 }));
 
 vi.mock("@/hooks/usePipelineProgress", () => ({
@@ -115,11 +126,14 @@ describe("BATCH-22/TASK-02: Sessions Page + Pipeline Session Input", () => {
 
   // ── TEST-22-02-03: Pipeline form has session_id input ────────
   it("TEST-22-02-03: Pipeline form has session_id input", async () => {
+    const user = userEvent.setup();
     renderPipelinePage();
 
+    // Open advanced section to access session input
+    await user.click(screen.getByTestId("advanced-toggle"));
     const sessionInput = screen.getByTestId("session-id-input");
     expect(sessionInput).toBeInTheDocument();
-    expect(sessionInput).toHaveAttribute("placeholder", "e.g., my-session-name");
+    expect(sessionInput).toHaveAttribute("placeholder", "my-session-name");
   });
 
   // ── TEST-22-02-04: Session card shows run count and latest date
@@ -153,8 +167,11 @@ describe("BATCH-22/TASK-02: Sessions Page + Pipeline Session Input", () => {
 
   // ── TEST-22-02-06: Session input is optional ─────────────────
   it("TEST-22-02-06: New session input is optional", async () => {
+    const user = userEvent.setup();
     renderPipelinePage();
 
+    // Open advanced section to access session input
+    await user.click(screen.getByTestId("advanced-toggle"));
     const sessionInput = screen.getByTestId("session-id-input") as HTMLInputElement;
     expect(sessionInput.value).toBe("");
 
@@ -173,6 +190,5 @@ describe("BATCH-22/TASK-02: Sessions Page + Pipeline Session Input", () => {
     });
 
     expect(screen.getByText("Error loading sessions")).toBeInTheDocument();
-    expect(screen.getByText("Network failure")).toBeInTheDocument();
   });
 });

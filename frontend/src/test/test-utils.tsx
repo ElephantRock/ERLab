@@ -2,6 +2,8 @@ import { render, type RenderOptions } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { SettingsProvider } from "@/contexts/settings-context";
+import { AuthProvider } from "@/contexts/auth-context";
+import { MemoryRouter } from "react-router-dom";
 import type { ReactNode } from "react";
 
 function createTestQueryClient() {
@@ -17,7 +19,11 @@ function TestProviders({ children }: { children: ReactNode }) {
   const queryClient = createTestQueryClient();
   return (
     <QueryClientProvider client={queryClient}>
-      <SettingsProvider>{children}</SettingsProvider>
+    <MemoryRouter>
+      <SettingsProvider>
+        <AuthProvider>{children}</AuthProvider>
+      </SettingsProvider>
+    </MemoryRouter>
     </QueryClientProvider>
   );
 }

@@ -7,7 +7,7 @@ import { fs } from "fs";
 
 // Read the source file for structural assertions
 const fsModule = await import("fs");
-const content = fsModule.default.readFileSync("frontend/src/components/pipeline/run-config-form.tsx", "utf-8");
+const content = fsModule.default.readFileSync("src/components/pipeline/run-config-form.tsx", "utf-8");
 
 describe("TEST-144: Form density reduction", () => {
   it("TEST-144-01: domain input is at top-level (not inside advanced)", () => {

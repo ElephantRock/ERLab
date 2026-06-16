@@ -38,7 +38,7 @@ describe("BATCH-20/TASK-01: ApprovalCard Component", () => {
     expect(screen.getByTestId("amendment-input-gap_001")).toBeInTheDocument();
     expect(screen.getByTestId("amendment-input-gap_001")).toHaveAttribute(
       "placeholder",
-      "Optional amendment…",
+      "Optional amendment...",
     );
 
     // Deny button text changes to "Confirm Deny"

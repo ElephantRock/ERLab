@@ -7,11 +7,28 @@ import { renderWithProviders } from "@/test/test-utils";
 import { RunConfigForm, VALIDATION } from "@/components/pipeline/run-config-form";
 import type { PipelineRunRequest } from "@/api/types";
 
+// Mock the estimate endpoint used by EstimateCard inside RunConfigForm
+vi.mock("@/api/pipeline", () => ({
+  getEstimate: vi.fn().mockResolvedValue({
+    strategy: "fast_scan",
+    stages: 3,
+    estimated_cost_usd: 0,
+    estimated_time_seconds: 120,
+    estimated_time_display: "~2 min",
+    cost_display: "$0.00",
+    local_cost_usd: 0,
+    cloud_cost_usd: 0,
+    breakdown: [],
+  }),
+}));
+
 // ── TEST-13-01-01: generation_rounds input renders with range 1-10 ─────
-it("TEST-13-01-01: generation_rounds input renders with range 1-10", () => {
-  const { getByTestId } = renderWithProviders(
+it("TEST-13-01-01: generation_rounds input renders with range 1-10", async () => {
+  const { user, getByTestId } = renderWithProviders(
     <RunConfigForm onSubmit={vi.fn()} />,
   );
+  // Open advanced section first
+  await user.click(getByTestId("advanced-toggle"));
   const input = getByTestId("generation-rounds-input") as HTMLInputElement;
   expect(input).toBeInTheDocument();
   expect(input.type).toBe("number");
@@ -21,10 +38,12 @@ it("TEST-13-01-01: generation_rounds input renders with range 1-10", () => {
 });
 
 // ── TEST-13-01-02: export_format dropdown renders with 2 options ──────
-it("TEST-13-01-02: export_format dropdown renders with 2 options", () => {
-  const { getByTestId } = renderWithProviders(
+it("TEST-13-01-02: export_format dropdown renders with 2 options", async () => {
+  const { user, getByTestId } = renderWithProviders(
     <RunConfigForm onSubmit={vi.fn()} />,
   );
+  // Open advanced section first
+  await user.click(getByTestId("advanced-toggle"));
   const select = getByTestId("export-format-select") as HTMLSelectElement;
   expect(select).toBeInTheDocument();
   const options = Array.from(select.options);
@@ -70,10 +89,12 @@ it("TEST-13-01-04: toggles for novelty/feasibility/synthesis render in advanced 
 });
 
 // ── TEST-13-01-05: max_gaps range is 1-20 (not 1-50) ──────────────────
-it("TEST-13-01-05: max_gaps range is 1-20 (not 1-50)", () => {
-  const { getByTestId } = renderWithProviders(
+it("TEST-13-01-05: max_gaps range is 1-20 (not 1-50)", async () => {
+  const { user, getByTestId } = renderWithProviders(
     <RunConfigForm onSubmit={vi.fn()} />,
   );
+  // Open advanced section first
+  await user.click(getByTestId("advanced-toggle"));
   const input = getByTestId("max-gaps-input") as HTMLInputElement;
   expect(input).toBeInTheDocument();
   expect(Number(input.min)).toBe(VALIDATION.max_gaps.min);

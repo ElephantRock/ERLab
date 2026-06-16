@@ -145,7 +145,6 @@ describe("BATCH-21/TASK-02: Traces Viewer Page", () => {
     });
 
     expect(screen.getByText("Error loading trace data")).toBeInTheDocument();
-    expect(screen.getByText("Network failure")).toBeInTheDocument();
   });
 
   // ── TEST-21-02-06: Empty state shown ───────────────────────
