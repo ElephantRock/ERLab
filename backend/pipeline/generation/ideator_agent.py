@@ -94,6 +94,7 @@ class IdeatorAgent:
                     "required": ["ideas"],
                 },
                 temperature=0.8,
+                max_tokens=12288,
             )
 
             ideas = []
