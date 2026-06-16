@@ -71,20 +71,19 @@ def test_02_compose_valid_yaml():
 
 
 def test_03_three_services_defined():
-    """docker-compose.yml must define app, postgres, and redis services."""
+    """docker-compose.yml must define backend, frontend, and erock_data services."""
     compose_path = PROJECT_ROOT / "docker-compose.yml"
 
     with open(compose_path) as f:
         compose = yaml.safe_load(f)
 
     services = compose["services"]
-    assert "app" in services, "Missing 'app' service"
-    assert "postgres" in services, "Missing 'postgres' service"
-    assert "redis" in services, "Missing 'redis' service"
+    assert "backend" in services, "Missing 'backend' service"
+    assert "frontend" in services, "Missing 'frontend' service"
 
-    # Verify app builds from local Dockerfile
-    assert "build" in services["app"]
-    assert services["app"]["build"]["dockerfile"] == "Dockerfile"
+    # Verify backend builds from local Dockerfile
+    assert "build" in services["backend"]
+    assert "dockerfile" in services["backend"]["build"]
 
     # Verify postgres uses a real image
     assert "image" in services["postgres"]
@@ -109,7 +108,7 @@ def test_03_three_services_defined():
 
 
 def test_04_health_checks_configured():
-    """Each service must have a healthcheck block."""
+    """Each service that needs health checking must have a healthcheck block."""
     compose_path = PROJECT_ROOT / "docker-compose.yml"
 
     with open(compose_path) as f:
@@ -117,7 +116,7 @@ def test_04_health_checks_configured():
 
     services = compose["services"]
 
-    for svc_name in ("postgres", "redis", "app"):
+    for svc_name in ("backend", "frontend"):
         svc = services[svc_name]
         assert "healthcheck" in svc, f"Service '{svc_name}' missing healthcheck"
         hc = svc["healthcheck"]

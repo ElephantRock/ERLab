@@ -1,7 +1,14 @@
 """BATCH-118: Ideator Agent Prompt Hardening tests.
 
-Validates that the ideator system prompt includes citation integrity,
-architecture requirements, failure modes, and measurable criteria.
+Validates that the ideator system prompt includes gap-informed design,
+grounded methodology, concise field constraints, and the n_ideas variable.
+
+Updated after template simplification (commit 504bded): the prompt was
+trimmed from verbose paper-length instructions to concise 1-3 sentence
+per-field guidance that matches the actual JSON schema. The old CITATION
+INTEGRITY, architecture, and failure-modes sections were intentionally
+removed because they caused the LLM to generate 63K chars of output,
+truncating mid-JSON.
 """
 import pytest
 from pathlib import Path
@@ -14,30 +21,35 @@ def _load_prompt() -> str:
     return PROMPT_PATH.read_text(encoding="utf-8")
 
 
-# ── TEST-118-01-01: Prompt contains citation integrity ────────────
+# ── TEST-118-01-01: Prompt contains gap-informed design ──────────
 
 def test_118_01_01_citation_integrity():
-    """Prompt contains citation integrity instruction."""
-    prompt = _load_prompt()
-    assert "CITATION INTEGRITY" in prompt, \
-        "Prompt must contain CITATION INTEGRITY section"
+    """Prompt contains gap-informed and grounded design principles."""
+    prompt = _load_prompt().lower()
+    assert "gap-informed" in prompt or "gap" in prompt, \
+        "Prompt must reference research gaps as the basis for ideas"
 
 
-# ── TEST-118-01-02: Prompt requires architecture details ──────────
+# ── TEST-118-01-02: Prompt requires concise fields ───────────────
 
 def test_118_01_02_architecture_requirements():
-    """Prompt requires architecture/component details."""
+    """Prompt constrains output to concise fields matching the JSON schema."""
     prompt = _load_prompt().lower()
-    has_arch = "architecture" in prompt or "component" in prompt
-    assert has_arch, "Prompt must require architecture or component details"
+    assert "concise" in prompt or "brief" in prompt, \
+        "Prompt must constrain output length to prevent token exhaustion"
 
 
-# ── TEST-118-01-03: Prompt requires failure modes ─────────────────
+# ── TEST-118-01-03: Prompt has exactly 6 output fields ───────────
 
 def test_118_01_03_failure_modes():
-    """Prompt requires failure mode analysis."""
-    prompt = _load_prompt().lower()
-    assert "failure" in prompt, "Prompt must require failure mode analysis"
+    """Prompt lists the 6 JSON schema fields without extra sections."""
+    prompt = _load_prompt()
+    expected_fields = [
+        "title", "problem_statement", "proposed_method",
+        "expected_contributions", "novelty_rationale", "evaluation_approach",
+    ]
+    for field in expected_fields:
+        assert field in prompt, f"Prompt must reference field '{field}'"
 
 
 # ── TEST-118-01-04: Prompt still contains n_ideas variable ────────

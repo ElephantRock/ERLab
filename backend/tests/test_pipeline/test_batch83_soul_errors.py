@@ -22,7 +22,7 @@ from backend.pipeline.knowledge.error_store import ErrorKnowledgeStore, FailureE
 def test_83_01_01_soul_md_exists():
     """SOUL.md exists in project root."""
     from pathlib import Path
-    soul_path = Path("C:/Next-Era/elephant-rock-platform/SOUL.md")
+    soul_path = Path(__file__).resolve().parents[3] / "SOUL.md"
     assert soul_path.exists()
 
 

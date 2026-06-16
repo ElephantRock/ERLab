@@ -8,7 +8,7 @@ from __future__ import annotations
 import pytest
 from pathlib import Path
 
-PROJECT_ROOT = Path("C:/Next-Era/elephant-rock-platform")
+PROJECT_ROOT = Path(__file__).resolve().parents[3]
 
 
 # ══════════════════════════════════════════════════════════
@@ -145,7 +145,7 @@ def test_109_04_all_phase7_modules_on_disk():
         "backend/pipeline/prompts/domains/biology.md",
         "backend/pipeline/prompts/domains/social_science.md",
         "backend/api/routes/export.py",
-        "frontend/src/hooks/useDarkMode.ts",
+        "frontend/src/contexts/settings-context.tsx",
         "frontend/src/hooks/useKeyboardShortcuts.ts",
     ]
     for f in files:

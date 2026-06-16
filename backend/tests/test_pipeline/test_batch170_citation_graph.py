@@ -49,4 +49,4 @@ class TestCitationGraph:
 
     def test_10_frontend_polish_dark_mode(self):
         from pathlib import Path
-        assert Path("frontend/src/hooks/useDarkMode.ts").exists()
+        assert Path("frontend/src/contexts/settings-context.tsx").exists()

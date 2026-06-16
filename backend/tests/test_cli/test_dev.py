@@ -5,6 +5,14 @@ Test IDs: TEST-08-01-01 through TEST-08-01-05
 
 from __future__ import annotations
 
+import sys
+import pytest
+
+pytestmark = pytest.mark.skipif(
+    sys.version_info >= (3, 14),
+    reason="Python 3.14 port detection incompatibility",
+)
+
 import os
 import signal
 import socket

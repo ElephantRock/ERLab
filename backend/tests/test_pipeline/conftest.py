@@ -108,7 +108,7 @@ class SchemaAwareFakeProvider(LLMProvider):
                 return text
         return f"Generated {key}"
 
-    async def structured_output(self, messages, schema, temperature=0.3) -> dict:
+    async def structured_output(self, messages, schema, temperature=0.3, **kwargs) -> dict:
         self._call_log.append({"method": "structured_output", "schema": schema})
         return self._generate_from_schema(schema)
 

@@ -80,17 +80,19 @@ class TestOrchestratorYAML:
             assert config is not None
             assert len(config.stages) > 0, f"{strat} has no stages"
 
-    def test_02_fast_scan_has_6_stages(self):
-        """fast_scan strategy has exactly 6 stages from YAML."""
+    def test_02_fast_scan_has_6_enabled_stages(self):
+        """fast_scan strategy has exactly 6 enabled stages."""
         from backend.pipeline.orchestrator import PipelineOrchestrator
         config = PipelineOrchestrator._load_yaml_strategy("fast_scan")
-        assert len(config.stages) == 6
+        enabled = {k: v for k, v in config.stages.items() if v.enabled}
+        assert len(enabled) == 6
 
-    def test_03_deep_research_has_16_stages(self):
-        """deep_research strategy has all 16 stages from YAML."""
+    def test_03_deep_research_has_16_enabled_stages(self):
+        """deep_research strategy has all 16 enabled stages (17 total incl. trimmer)."""
         from backend.pipeline.orchestrator import PipelineOrchestrator
         config = PipelineOrchestrator._load_yaml_strategy("deep_research")
-        assert len(config.stages) == 16
+        enabled = {k: v for k, v in config.stages.items() if v.enabled}
+        assert len(enabled) == 16
 
     def test_04_unknown_strategy_raises(self):
         """Unknown strategy name raises ValueError."""
@@ -101,12 +103,11 @@ class TestOrchestratorYAML:
     def test_05_dry_run_produces_output(self):
         """dry_run() produces output without full construction."""
         from backend.pipeline.orchestrator import PipelineOrchestrator
-        # dry_run is static-like — doesn't need VectorStore init
-        # Test via _load_yaml_strategy instead (dry_run calls ConfigLoader directly)
         config = PipelineOrchestrator._load_yaml_strategy("fast_scan")
         assert "literature_search" in config.stages
         assert "export" in config.stages
-        assert len(config.stages) == 6
+        enabled = {k: v for k, v in config.stages.items() if v.enabled}
+        assert len(enabled) == 6
 
 
 # ── DAG API Endpoint ─────────────────────────────────────────────────

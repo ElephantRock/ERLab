@@ -9,34 +9,38 @@ from __future__ import annotations
 import pytest
 from pathlib import Path
 
-PROJECT_ROOT = Path("C:/Next-Era/elephant-rock-platform")
+PROJECT_ROOT = Path(__file__).resolve().parents[3]
+
+# Dark mode is now implemented in settings-context.tsx (useSettings),
+# not a standalone useDarkMode.ts hook. The toggle, persistence, and
+# class manipulation are all in the settings context.
+DARK_MODE_FILE = PROJECT_ROOT / "frontend/src/contexts/settings-context.tsx"
 
 
 def test_107_01_dark_mode_hook_exists():
-    """useDarkMode hook file exists."""
-    assert (PROJECT_ROOT / "frontend/src/hooks/useDarkMode.ts").exists()
+    """Dark mode implementation file exists."""
+    assert DARK_MODE_FILE.exists()
 
 
 def test_107_01_dark_mode_has_toggle():
-    """useDarkMode exports toggle function."""
-    content = (PROJECT_ROOT / "frontend/src/hooks/useDarkMode.ts").read_text(encoding="utf-8")
-    assert "toggle" in content
-    assert "isDark" in content
-    assert "localStorage" in content
+    """Settings context exports theme toggle."""
+    content = DARK_MODE_FILE.read_text(encoding="utf-8")
+    assert "setTheme" in content
+    assert '"dark"' in content
+    assert 'localStorage' in content
 
 
 def test_107_01_dark_mode_uses_class():
-    """useDarkMode adds dark/light class to document."""
-    content = (PROJECT_ROOT / "frontend/src/hooks/useDarkMode.ts").read_text(encoding="utf-8")
-    assert "classList.add" in content
+    """Settings context toggles dark/light class on document."""
+    content = DARK_MODE_FILE.read_text(encoding="utf-8")
+    assert "classList" in content
     assert '"dark"' in content
-    assert '"light"' in content
 
 
 def test_107_01_dark_mode_has_persistence():
-    """useDarkMode persists theme choice."""
-    content = (PROJECT_ROOT / "frontend/src/hooks/useDarkMode.ts").read_text(encoding="utf-8")
-    assert "elephant-rock-theme" in content
+    """Settings context persists theme choice."""
+    content = DARK_MODE_FILE.read_text(encoding="utf-8")
+    assert "erock_theme" in content
     assert "setItem" in content
     assert "getItem" in content
 

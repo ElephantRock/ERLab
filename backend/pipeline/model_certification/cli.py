@@ -1,9 +1,9 @@
 """CLI for model certification.
 
 Usage:
-    python -m backend.pipeline.model_certification.cli profile \n        --model google/gemma-4-12b \n        --base-url http://100.64.0.1:1234/v1
-
-    python -m backend.pipeline.model_certification.cli profile \n        --model google/gemma-4-12b \n        --base-url http://100.64.0.1:1234/v1
+    python -m backend.pipeline.model_certification.cli profile 
+        --model google/gemma-4-12b 
+        --base-url http://your-server:1234/v1
 
     python -m backend.pipeline.model_certification.cli certify \\
         --manifest data/model_certification/candidates/qwen3-4b-2507.yaml \\

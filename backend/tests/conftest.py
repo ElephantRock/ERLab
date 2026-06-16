@@ -26,7 +26,7 @@ class FakeLLMProvider(LLMProvider):
         self._call_log.append({"method": "complete_stream", "messages": messages})
         yield "Test"
 
-    async def structured_output(self, messages, schema, temperature=0.3) -> dict:
+    async def structured_output(self, messages, schema, temperature=0.3, **kwargs) -> dict:
         self._call_log.append(
             {
                 "method": "structured_output",
