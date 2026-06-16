@@ -29,6 +29,8 @@ import time
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING
 
+from backend.pipeline.operations.types import OperationError
+
 if TYPE_CHECKING:
     from backend.pipeline.orchestrator._orchestrator import PipelineOrchestrator
     from backend.pipeline.result import PipelineResult
@@ -333,7 +335,7 @@ class RunCoordinator:
                     await _executor.ensure_model_loaded(
                         _resolved_model, context_length=_ctx_len,
                     )
-                except (RuntimeError, OSError, ConnectionError) as _op_err:
+                except (RuntimeError, OSError, ConnectionError, OperationError) as _op_err:
                     logger.warning(
                         "Operation executor failed for stage '%s' "
                         "(model '%s'): %s — continuing",

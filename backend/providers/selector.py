@@ -196,9 +196,15 @@ class ModelSelector:
     routing logic. One simple question: "What's the best model for this stage?"
     """
 
-    def __init__(self, catalog: ModelCatalog, gpu: GPUInfo | None = None) -> None:
+    def __init__(
+        self,
+        catalog: ModelCatalog,
+        gpu: GPUInfo | None = None,
+        preferred_model: str | None = None,
+    ) -> None:
         self._catalog = catalog
         self._gpu = gpu
+        self._preferred_model = preferred_model
         self._assignments: dict[str, str] = {}  # stage → model_id (cached)
         self._model_used_by: dict[str, str] = {}  # model_id → stage (for adversarial exclusion)
 
@@ -246,9 +252,21 @@ class ModelSelector:
                 req.requires_thinking,
                 exclude_models,
             )
-            # Graceful degradation: return any healthy model
+            # Graceful degradation: prefer loaded models, then configured model
             fallback = self._catalog.get_healthy_models()
             if fallback:
+                # 1. Prefer already-loaded models (no hot-swap needed)
+                loaded = [m for m in fallback if m.is_loaded]
+                if loaded:
+                    fallback = loaded
+                # 2. Among those, prefer the configured default model
+                if self._preferred_model:
+                    match = [
+                        m for m in fallback
+                        if m.model_id == self._preferred_model
+                    ]
+                    if match:
+                        fallback = match
                 logger.info(
                     "Graceful degradation: using %s for stage '%s'",
                     fallback[0].model_id,

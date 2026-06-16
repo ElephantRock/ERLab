@@ -117,7 +117,10 @@ class ModelManager:
             return
 
         # 4. Assign stages
-        self._selector = ModelSelector(self._catalog, self._gpu)
+        self._selector = ModelSelector(
+            self._catalog, self._gpu,
+            preferred_model=getattr(self._settings, "lmstudio_model", None),
+        )
         self._stage_assignments = self._selector.assign_all()
 
         # 5. Log the plan

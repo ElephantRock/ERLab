@@ -45,13 +45,21 @@ class ServiceRegistry:
 
         from backend.pipeline.knowledge.embedding_providers import create_embedding_provider
 
+        # Resolve embedding base URL: explicit override > provider-specific default
+        if settings.embedding_base_url:
+            embedding_base = settings.embedding_base_url.rstrip('/')
+            if not embedding_base.endswith('/v1'):
+                embedding_base += '/v1'
+        elif settings.embedding_provider == "lmstudio":
+            embedding_base = settings.lmstudio_base_url.rstrip('/') + '/v1'
+        else:
+            embedding_base = settings.ollama_base_url
+
         embedding_provider = create_embedding_provider(
             provider_name=settings.embedding_provider,
             model=settings.embedding_model,
             api_key=settings.openai_api_key,
-            base_url=(settings.lmstudio_base_url.rstrip('/') + '/v1'
-                      if settings.embedding_provider == "lmstudio"
-                      else settings.ollama_base_url),
+            base_url=embedding_base,
             dimension=settings.embedding_dimension or None,
         )
 

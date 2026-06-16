@@ -63,6 +63,7 @@ class Settings(BaseSettings):
     embedding_dimension: int = 1536
     embedding_batch_size: int = 100
     embedding_fallback_enabled: bool = False
+    embedding_base_url: str = ""  # Override for embedding endpoint (defaults to lmstudio_base_url)
     chunk_size: int = 1000
     chunk_overlap: int = 200
 

@@ -257,7 +257,7 @@ async def probe_lmstudio(base_url: str, api_key: str | None = None) -> list[Mode
         caps = m.get("capabilities") or {}
         # LM Studio loaded_instances indicates if model is in VRAM
         loaded_instances = m.get("loaded_instances", [])
-        is_loaded = bool(loaded_instances)
+        is_loaded = bool(loaded_instances) or m.get("is_loaded", False)
 
         # Extract parameter count from various fields
         metadata = m.get("metadata", {})
@@ -428,23 +428,55 @@ async def probe_openai_compatible(
 
     models: list[ModelInfo] = []
     for m in data.get("data", []):
+        # Opportunistically read extended metadata if present.
+        # Many OpenAI-compatible servers (LM Studio proxy, vLLM, LocalAI)
+        # return richer fields than a stock OpenAI endpoint.
+        caps = m.get("capabilities") or {}
+        if not isinstance(caps, dict):
+            caps = {}
+
+        ctx_len = (
+            m.get("max_model_len")
+            or m.get("max_context_length")
+            or m.get("context_length")
+            or 8192
+        )
+
+        size_bytes = m.get("size_bytes", 0)
+        if not size_bytes and m.get("size_gb"):
+            try:
+                size_bytes = int(float(m["size_gb"]) * 1e9)
+            except (ValueError, TypeError):
+                pass
+
+        # Normalise quantization: may be string or dict
+        quant_raw = m.get("quantization", "unknown")
+        if isinstance(quant_raw, dict):
+            quant_name = quant_raw.get("name", "unknown")
+        else:
+            quant_name = str(quant_raw) if quant_raw else "unknown"
+
         model = ModelInfo(
             model_id=m.get("id", "unknown"),
             provider_type="openai_compatible",
             endpoint_url=f"{url}/v1",
-            parameter_count="?",
-            context_length=m.get("max_model_len", 8192),
-            quantization="unknown",
-            size_bytes=0,
-            supports_json_mode=True,
-            supports_tools=True,
-            supports_vision=False,
-            supports_thinking=False,
-            is_loaded=True,
-            vram_required_bytes=0,
+            parameter_count=str(m.get("parameter_count", "?")),
+            context_length=int(ctx_len),
+            quantization=quant_name,
+            size_bytes=int(size_bytes),
+            supports_json_mode=bool(caps.get("json_mode", True)),
+            supports_tools=bool(
+                caps.get("trained_for_tool_use", caps.get("tools", True))
+            ),
+            supports_vision=bool(caps.get("vision", False)),
+            supports_thinking=bool(
+                caps.get("reasoning", caps.get("thinking", False))
+            ),
+            is_loaded=bool(m.get("is_loaded", True)),
+            vram_required_bytes=int(size_bytes),
             health_status="healthy",
             api_key=api_key,
-            display_name=m.get("id", None),
+            display_name=m.get("display_name", m.get("id", None)),
         )
         models.append(model)
 

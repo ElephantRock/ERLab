@@ -112,11 +112,19 @@ class LiteratureSearchStage(PipelineStage):
             from backend.pipeline.knowledge.vector_store import VectorStore
 
             settings = get_settings()
+            if settings.embedding_base_url:
+                _emb_base = settings.embedding_base_url.rstrip('/')
+                if not _emb_base.endswith('/v1'):
+                    _emb_base += '/v1'
+            elif settings.embedding_provider == "lmstudio":
+                _emb_base = settings.lmstudio_base_url.rstrip('/') + '/v1'
+            else:
+                _emb_base = settings.ollama_base_url
             embedding_provider = create_embedding_provider(
                 provider_name=settings.embedding_provider,
                 model=settings.embedding_model,
                 api_key=settings.openai_api_key,
-                base_url=settings.ollama_base_url,
+                base_url=_emb_base,
                 dimension=settings.embedding_dimension or None,
             )
             embedding = EmbeddingService(embedding_provider, batch_size=settings.embedding_batch_size)
