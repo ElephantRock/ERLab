@@ -38,7 +38,7 @@ def test_autonomous_returns_202_with_cycle_id():
         body = resp.json()
         assert "cycle_id" in body
         assert body["status"] == "running"
-        assert body["cycle_id"].startswith("auto_")
+        assert body["cycle_id"].startswith("run_")  # RunService generates run_ prefixed IDs
 
 
 def test_autonomous_accepts_request_body():

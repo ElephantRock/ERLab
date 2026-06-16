@@ -4,7 +4,6 @@ import asyncio
 import contextlib
 import json
 import logging
-import threading
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Query, Request, Depends
@@ -17,9 +16,9 @@ from backend.api.schemas import AutonomousCycleRequest, PipelineRunRequest, Sess
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
-# Module-level state for cancellation and progress streaming
-_cancel_events: dict[str, threading.Event] = {}
-_progress_queues: dict[str, asyncio.Queue] = {}
+# Ephemeral set of currently-running asyncio tasks in this process.
+# NOT lifecycle state — does not survive restart, does not affect correctness.
+# Used only for task cleanup within the current event loop.
 _background_tasks: set[asyncio.Task] = set()
 
 
@@ -656,6 +655,8 @@ async def start_autonomous_cycle(request: AutonomousCycleRequest):
     """Start an autonomous research cycle.
 
     Returns 202 immediately with a cycle_id. The cycle runs asynchronously.
+    Cancellation and progress are durable — backed by RunService and the
+    event outbox, not process-local state.
 
     Example request:
         {"domain": "AI/NLP", "max_runs": 3}
@@ -664,27 +665,40 @@ async def start_autonomous_cycle(request: AutonomousCycleRequest):
         {"cycle_id": "auto_20260502_143000", "status": "running", "domain": "AI/NLP", "max_runs": 3}
     """
     from backend.pipeline.orchestrator import PipelineOrchestrator
+    from backend.api.run_service import get_run_service
 
-    cycle_id = f"auto_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+    run_svc = get_run_service()
+    cycle_id = run_svc.generate_run_id()  # Reuse RunService ID generation
 
-    _progress_queues[cycle_id] = asyncio.Queue()
-    cancel_event = threading.Event()
-    _cancel_events[cycle_id] = cancel_event
+    # Create a DB record for this autonomous cycle
+    run_svc.create_run(
+        domain=request.domain,
+        strategy="autonomous",
+        session_id=cycle_id,
+        config={"max_runs": request.max_runs, "type": "autonomous"},
+        run_id_override=cycle_id,
+    )
 
     def _stage_callback(stage_name: str, index: int, total: int, elapsed: float):
-        if cycle_id in _progress_queues:
-            with contextlib.suppress(Exception):
-                _progress_queues[cycle_id].put_nowait(
-                    {
-                        "stage": stage_name,
-                        "index": index,
-                        "total": total,
-                        "elapsed": round(elapsed, 2),
-                    }
-                )
+        with contextlib.suppress(Exception):
+            run_svc.append_event(cycle_id, "stage_progress", {
+                "stage": stage_name,
+                "index": index,
+                "total": total,
+                "elapsed": round(elapsed, 2),
+            })
 
     async def _run_cycle():
+        worker_id = run_svc.acquire_worker(cycle_id)
         orchestrator = PipelineOrchestrator(stage_callback=_stage_callback, strategy="deep_research")
+        # Check durable cancellation instead of threading.Event
+        original_should_stop = orchestrator._should_stop
+        def _should_stop_with_cancel():
+            if run_svc.is_cancelled(cycle_id):
+                return True
+            return original_should_stop()
+        orchestrator._should_stop = _should_stop_with_cancel
+
         try:
             results = await orchestrator.autonomous_cycle(
                 domain=request.domain,
@@ -697,30 +711,17 @@ async def start_autonomous_cycle(request: AutonomousCycleRequest):
                 len(results),
                 total_ideas,
             )
-            # Update history entry to completed
-            for entry in _autonomous_history:
-                if entry["cycle_id"] == cycle_id:
-                    entry["status"] = "completed"
-                    entry["runs"] = len(results)
-                    break
         except Exception as e:
             logger.error("Autonomous cycle %s failed: %s", cycle_id, e)
         finally:
-            if cycle_id in _progress_queues:
-                with contextlib.suppress(Exception):
-                    _progress_queues[cycle_id].put_nowait({"done": True})
+            with contextlib.suppress(Exception):
+                run_svc.append_event(cycle_id, "done", {"done": True})
+            with contextlib.suppress(Exception):
+                run_svc.release_worker(cycle_id, worker_id)
             _background_tasks.discard(asyncio.current_task())
 
     task = asyncio.create_task(_run_cycle())
     _background_tasks.add(task)
-
-    # Record in history
-    _autonomous_history.append({
-        "cycle_id": cycle_id,
-        "domain": request.domain,
-        "runs": 0,
-        "status": "running",
-    })
 
     return {
         "cycle_id": cycle_id,
@@ -730,9 +731,7 @@ async def start_autonomous_cycle(request: AutonomousCycleRequest):
     }
 
 
-# ── Autonomous Cycle History ────────────────────────────────────────────
-
-_autonomous_history: list[dict] = []
+# ── Autonomous Cycle Control ─────────────────────────────────────────
 
 
 @router.post(
@@ -744,6 +743,7 @@ async def stop_autonomous_cycle(cycle_id: str = Query(..., max_length=200)):
     """Stop a running autonomous cycle.
 
     HB-01: Requires explicit cycle_id confirmation — no silent termination.
+    Cancellation is durable — stored in DB via RunService.
 
     Args:
         cycle_id: The autonomous cycle identifier to stop.
@@ -754,18 +754,24 @@ async def stop_autonomous_cycle(cycle_id: str = Query(..., max_length=200)):
     Example response:
         {"status": "stopped", "cycle_id": "auto_20260502_143000"}
     """
-    # Check cancel event for this cycle
-    event = _cancel_events.get(cycle_id)
-    if not event:
-        raise NotFoundError(f"Cycle {cycle_id} not found or not running")
+    from backend.api.run_service import get_run_service
+    run_svc = get_run_service()
 
-    event.set()
-
-    # Update history entry
-    for entry in _autonomous_history:
-        if entry["cycle_id"] == cycle_id:
-            entry["status"] = "stopped"
-            break
+    # Check if cycle exists in DB
+    if not run_svc.is_cancelled(cycle_id):
+        # Try to request cancellation (returns False if run not found)
+        cancelled = run_svc.request_cancellation(cycle_id, reason="user requested stop")
+        if not cancelled:
+            # Check if the run exists at all
+            from backend.db.database import get_session as _get_session_ctx
+            from backend.db.models import PipelineRun
+            from sqlalchemy import select as _sa_select
+            with _get_session_ctx() as sess:
+                record = sess.execute(
+                    _sa_select(PipelineRun).where(PipelineRun.run_id_str == cycle_id)
+                ).scalar_one_or_none()
+            if not record:
+                raise NotFoundError(f"Cycle {cycle_id} not found or not running")
 
     return {"status": "stopped", "cycle_id": cycle_id}
 
@@ -778,13 +784,38 @@ async def stop_autonomous_cycle(cycle_id: str = Query(..., max_length=200)):
 async def autonomous_history():
     """Get history of all autonomous cycles.
 
+    Reads from DB-backed PipelineRun records, not a process-local list.
+
     Returns:
         {"cycles": [{"cycle_id": "...", "domain": "...", "runs": N, "status": "..."}]}
 
     Example response:
         {"cycles": [{"cycle_id": "auto_20260502_143000", "domain": "AI/NLP", "runs": 3, "status": "completed"}]}
     """
-    return {"cycles": list(_autonomous_history)}
+    from backend.db.database import get_session as _get_session_ctx
+    from backend.db.models import PipelineRun
+    from sqlalchemy import select as _sa_select
+
+    with _get_session_ctx() as sess:
+        stmt = (
+            _sa_select(PipelineRun)
+            .where(PipelineRun.session_id.like("run_%"))
+            .order_by(PipelineRun.created_at.desc())
+            .limit(50)
+        )
+        runs = sess.execute(stmt).scalars().all()
+
+    return {
+        "cycles": [
+            {
+                "cycle_id": r.run_id_str or str(r.id),
+                "domain": r.domain,
+                "runs": 0,  # Not tracked at this level
+                "status": r.status,
+            }
+            for r in runs
+        ]
+    }
 
 
 # ── Scheduler Control ──────────────────────────────────────────────────
@@ -1320,33 +1351,41 @@ async def trigger_dag_run(request: PipelineRunRequest, skip_preflight: bool = Fa
     """
     from backend.pipeline.dag.runner import DAGRunner
     from backend.pipeline.dag.stage_log import StageLogger
+    from backend.api.run_service import get_run_service
 
-    run_id = datetime.now().strftime("run_%Y%m%d_%H%M%S")
+    run_svc = get_run_service()
+    run_id = run_svc.generate_run_id()
 
-    # Progress tracking (same pattern as old endpoint)
-    _progress_queues[run_id] = asyncio.Queue()
-    cancel_event = threading.Event()
-    _cancel_events[run_id] = cancel_event
+    # Create DB-backed run record
+    run_svc.create_run(
+        domain=request.domain,
+        strategy=request.strategy or "deep_research",
+        session_id=request.session_id,
+        run_id_override=run_id,
+    )
 
     async def _run_dag():
+        worker_id = run_svc.acquire_worker(run_id)
         try:
             from backend.pipeline.orchestrator import PipelineOrchestrator
 
-            # Create orchestrator with YAML strategy (BATCH-184)
-            orchestrator = PipelineOrchestrator(
-                stage_callback=lambda name, idx, total, elapsed: (
-                    _progress_queues[run_id].put_nowait({
+            # Create orchestrator — progress via durable event outbox
+            def _stage_callback(name, idx, total, elapsed):
+                with contextlib.suppress(Exception):
+                    run_svc.append_event(run_id, "stage_progress", {
                         "stage": name, "index": idx,
                         "total": total, "elapsed": round(elapsed, 2),
-                    }) if run_id in _progress_queues else None
-                ),
+                    })
+
+            orchestrator = PipelineOrchestrator(
+                stage_callback=_stage_callback,
                 strategy=request.strategy or "deep_research",
             )
 
-            # Override _should_stop to respect cancel event
+            # Check durable cancellation instead of threading.Event
             original_should_stop = orchestrator._should_stop
             def _should_stop_with_cancel():
-                if cancel_event.is_set():
+                if run_svc.is_cancelled(run_id):
                     return True
                 return original_should_stop()
             orchestrator._should_stop = _should_stop_with_cancel
@@ -1369,9 +1408,10 @@ async def trigger_dag_run(request: PipelineRunRequest, skip_preflight: bool = Fa
         except Exception as e:
             logger.error("DAG run %s failed: %s", run_id, e)
         finally:
-            if run_id in _progress_queues:
-                with contextlib.suppress(Exception):
-                    _progress_queues[run_id].put_nowait({"done": True})
+            with contextlib.suppress(Exception):
+                run_svc.append_event(run_id, "done", {"done": True})
+            with contextlib.suppress(Exception):
+                run_svc.release_worker(run_id, worker_id)
             _background_tasks.discard(asyncio.current_task())
 
     # Preflight (optional — can be skipped for testing)

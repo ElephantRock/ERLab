@@ -86,13 +86,15 @@ class RunService:
         strategy: str = "deep_research",
         session_id: str | None = None,
         config: dict | None = None,
+        *,
+        run_id_override: str | None = None,
     ) -> str:
         """Create a new pipeline run record and return the run_id string.
 
         The run starts in 'pending' status. A worker must acquire it
         via ``acquire_worker`` before execution begins.
         """
-        run_id_str = self.generate_run_id()
+        run_id_str = run_id_override or self.generate_run_id()
 
         with get_session() as session:
             run = PipelineRun(
