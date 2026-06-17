@@ -2,8 +2,11 @@ import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { listGaps } from "@/api/gaps";
 import { GapCard } from "@/components/gaps/gap-card";
+import { ErrorCard } from "@/components/ui/error-card";
+import { EmptyState } from "@/components/ui/empty-state";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Select,
@@ -41,6 +44,7 @@ export default function GapsExplorer() {
   const [minConfidence, setMinConfidence] = useState(0);
   const [page, setPage] = useState(0);
   const [activeTab, setActiveTab] = useState<"gaps" | "clusters">("gaps");
+  const [clusterFilter, setClusterFilter] = useState<number | null>(null);
   const limit = 20;
 
   const queryParams = useMemo(
@@ -56,7 +60,7 @@ export default function GapsExplorer() {
     [searchText, gapTypeFilter, sortBy, minConfidence, page, limit],
   );
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError } = useQuery({
     queryKey: ["gaps", queryParams],
     queryFn: () => listGaps(queryParams),
   });
@@ -69,6 +73,12 @@ export default function GapsExplorer() {
 
   const handleIdeaCountClick = (gap: ResearchGap) => {
     navigate(`/ideas?search=${encodeURIComponent(gap.title)}`);
+  };
+
+  const handleClusterClick = (clusterId: number) => {
+    setClusterFilter(clusterFilter === clusterId ? null : clusterId);
+    setActiveTab("gaps");
+    setPage(0);
   };
 
   const resetFilters = () => {
@@ -111,6 +121,20 @@ export default function GapsExplorer() {
 
       {activeTab === "gaps" ? (
       <>
+      {clusterFilter !== null && (
+        <div className="flex items-center gap-2">
+          <Badge variant="secondary" data-testid="cluster-filter-badge">
+            Cluster {clusterFilter}
+          </Badge>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setClusterFilter(null)}
+          >
+            Clear
+          </Button>
+        </div>
+      )}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -207,6 +231,8 @@ export default function GapsExplorer() {
             <Skeleton key={i} className="h-24 w-full" />
           ))}
         </div>
+      ) : isError ? (
+        <ErrorCard message="Failed to load research gaps" testId="gaps-error" />
       ) : data?.gaps.length ? (
         <>
           <p className="text-sm text-muted-foreground">
@@ -248,16 +274,22 @@ export default function GapsExplorer() {
           )}
         </>
       ) : (
-        <div className="text-center py-12 text-muted-foreground">
-          <GitBranch className="h-8 w-8 mx-auto mb-2 opacity-50" />
-          <p>No research gaps found{searchText ? ` for "${searchText}"` : ""}.</p>
-        </div>
+        <EmptyState
+          icon={GitBranch}
+          title="No research gaps found"
+          message={searchText ? `No gaps match "${searchText}".` : "No gaps have been identified yet."}
+          testId="gaps-empty"
+        />
       )}
       </>
       ) : (
         <div>
           {clusterData?.clusters?.length ? (
-            <ClusterScatterPlot clusters={clusterData.clusters} />
+            <ClusterScatterPlot
+              clusters={clusterData.clusters}
+              onClusterClick={handleClusterClick}
+              selectedClusterId={clusterFilter}
+            />
           ) : (
             <p className="text-sm text-muted-foreground py-4">No cluster data available.</p>
           )}

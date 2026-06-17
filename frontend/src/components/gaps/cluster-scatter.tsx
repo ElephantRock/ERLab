@@ -8,9 +8,11 @@ interface ClusterData {
 
 interface ClusterScatterPlotProps {
   clusters: ClusterData[];
+  onClusterClick?: (clusterId: number) => void;
+  selectedClusterId?: number | null;
 }
 
-export function ClusterScatterPlot({ clusters }: ClusterScatterPlotProps) {
+export function ClusterScatterPlot({ clusters, onClusterClick, selectedClusterId }: ClusterScatterPlotProps) {
   if (!clusters.length) {
     return <p className="text-sm text-muted-foreground py-4">No cluster data available.</p>;
   }
@@ -36,15 +38,28 @@ export function ClusterScatterPlot({ clusters }: ClusterScatterPlotProps) {
           const hue = (i * 137.5) % 360; // Golden angle for color spread
 
           return (
-            <g key={cluster.cluster_id}>
+            <g
+              key={cluster.cluster_id}
+              onClick={() => onClusterClick?.(cluster.cluster_id)}
+              className={onClusterClick ? "cursor-pointer" : undefined}
+              role={onClusterClick ? "button" : undefined}
+              tabIndex={onClusterClick ? 0 : undefined}
+              onKeyDown={(e) => {
+                if (onClusterClick && (e.key === "Enter" || e.key === " ")) {
+                  e.preventDefault();
+                  onClusterClick(cluster.cluster_id);
+                }
+              }}
+              aria-label={`Cluster ${cluster.cluster_id}: ${cluster.label || ""}, ${cluster.paper_count} papers`}
+            >
               <circle
                 cx={cx}
                 cy={cy}
                 r={r}
                 fill={`hsl(${hue}, 60%, 70%)`}
-                stroke={`hsl(${hue}, 60%, 40%)`}
-                strokeWidth={2}
-                opacity={0.85}
+                stroke={selectedClusterId === cluster.cluster_id ? "#000" : `hsl(${hue}, 60%, 40%)`}
+                strokeWidth={selectedClusterId === cluster.cluster_id ? 4 : 2}
+                opacity={selectedClusterId == null || selectedClusterId === cluster.cluster_id ? 0.85 : 0.3}
               />
               <text
                 x={cx}

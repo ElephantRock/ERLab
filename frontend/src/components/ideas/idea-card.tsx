@@ -10,7 +10,19 @@ interface IdeaCardProps {
 
 export function IdeaCard({ idea, onClick }: IdeaCardProps) {
   return (
-    <Card className="cursor-pointer transition-colors hover:bg-accent/50" onClick={onClick}>
+    <Card
+      className="cursor-pointer transition-colors hover:bg-accent/50 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+      onClick={onClick}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onClick?.();
+        }
+      }}
+      role="button"
+      tabIndex={0}
+      aria-label={`View idea: ${idea.title}`}
+    >
       <CardContent className="p-4">
         <div className="flex items-start gap-3">
           <div className="flex-shrink-0 mt-0.5">

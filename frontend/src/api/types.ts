@@ -104,6 +104,16 @@ export interface IdeaSummary {
   created_at: string;
 }
 
+export interface ExperimentResult {
+  id: number;
+  success: boolean;
+  exit_code: number;
+  execution_time_seconds: number;
+  stdout: string | null;
+  error: string | null;
+  created_at: string;
+}
+
 export interface IdeaDetail extends IdeaSummary {
   problem_statement: string;
   proposed_method: string;
@@ -115,15 +125,7 @@ export interface IdeaDetail extends IdeaSummary {
   proposal_latex: string | null;
   proposal_sections: Record<string, unknown> | null;
   mechanical_metrics: Record<string, number> | null;
-  experiment_results: {
-    id: number;
-    success: boolean;
-    exit_code: number;
-    execution_time_seconds: number;
-    stdout: string | null;
-    error: string | null;
-    created_at: string;
-  } | null;
+  experiment_results: ExperimentResult[] | null;
 }
 
 export interface IdeaListResponse {

@@ -14,14 +14,17 @@ import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, RefreshCw, Loader2, GitBranch, CheckCircle2, AlertTriangle } from "lucide-react";
+import { ArrowLeft, RefreshCw, Loader2, GitBranch, CheckCircle2, AlertTriangle, Copy, Check } from "lucide-react";
 import { toast } from "sonner";
+import { useState } from "react";
+import type { ExperimentResult } from "@/api/types";
 
 export default function IdeaDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const ideaId = Number(id);
+  const [copiedSection, setCopiedSection] = useState<string | null>(null);
 
   const { data, isLoading } = useQuery({
     queryKey: ["idea", ideaId],
@@ -39,6 +42,16 @@ export default function IdeaDetail() {
       toast.error("Refinement failed");
     },
   });
+
+  function handleCopySection(sectionKey: string, content: string) {
+    navigator.clipboard.writeText(content).then(() => {
+      setCopiedSection(sectionKey);
+      toast.success("Copied to clipboard");
+      setTimeout(() => setCopiedSection(null), 2000);
+    }).catch(() => {
+      toast.error("Failed to copy");
+    });
+  }
 
   if (isLoading) {
     return (
@@ -228,9 +241,24 @@ export default function IdeaDetail() {
                       <div className="space-y-8">
                         {Object.entries(idea.proposal_sections).map(([key, value]) => (
                           <div key={key} id={`section-${key}`}>
-                            <h3 className="text-lg font-semibold mb-3">
-                              {key.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}
-                            </h3>
+                            <div className="flex items-center justify-between mb-3">
+                              <h3 className="text-lg font-semibold">
+                                {key.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}
+                              </h3>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleCopySection(key, typeof value === "string" ? value : JSON.stringify(value, null, 2))}
+                                data-testid={`copy-section-${key}`}
+                                className="text-muted-foreground hover:text-foreground"
+                              >
+                                {copiedSection === key ? (
+                                  <Check className="h-3 w-3" />
+                                ) : (
+                                  <Copy className="h-3 w-3" />
+                                )}
+                              </Button>
+                            </div>
                             {typeof value === "string" ? (
                               <MarkdownRenderer content={value} />
                             ) : Array.isArray(value) ? (
@@ -336,7 +364,7 @@ export default function IdeaDetail() {
           {idea.experiment_results && idea.experiment_results.length > 0 && (
             <TabsContent value="experiments">
               <div className="space-y-4">
-                {idea.experiment_results.map((exp: { id: number; success: boolean; exit_code: number; execution_time_seconds: number; stdout?: string | null; error?: string | null; created_at: string }) => (
+                {idea.experiment_results.map((exp: ExperimentResult) => (
                   <Card key={exp.id}>
                     <CardContent className="pt-4">
                       <div className="flex items-center justify-between mb-2">

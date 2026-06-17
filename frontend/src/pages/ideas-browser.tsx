@@ -3,6 +3,8 @@ import { useQuery } from "@tanstack/react-query";
 import { listIdeas } from "@/api/ideas";
 import { IdeaCard } from "@/components/ideas/idea-card";
 import { ExportDialog } from "@/components/export/export-dialog";
+import { ErrorCard } from "@/components/ui/error-card";
+import { EmptyState } from "@/components/ui/empty-state";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -46,7 +48,7 @@ export default function IdeasBrowser() {
     [domainFilter, searchText, sortBy, minScore, page, limit],
   );
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError } = useQuery({
     queryKey: ["ideas", queryParams],
     queryFn: () => listIdeas(queryParams),
   });
@@ -136,6 +138,8 @@ export default function IdeasBrowser() {
             <Skeleton key={i} className="h-28 w-full" />
           ))}
         </div>
+      ) : isError ? (
+        <ErrorCard message="Failed to load ideas" testId="ideas-error" />
       ) : data?.ideas.length ? (
         <>
           <p className="text-sm text-muted-foreground">
@@ -221,9 +225,12 @@ export default function IdeasBrowser() {
           )}
         </>
       ) : (
-        <div className="text-center py-12 text-muted-foreground">
-          <p>No ideas found{searchText ? ` for "${searchText}"` : domainFilter ? ` for "${domainFilter}"` : ""}.</p>
-        </div>
+        <EmptyState
+          icon={Search}
+          title="No ideas found"
+          message={searchText || domainFilter ? `No ideas match your filters.` : "No ideas have been generated yet."}
+          testId="ideas-empty"
+        />
       )}
     </div>
   );
