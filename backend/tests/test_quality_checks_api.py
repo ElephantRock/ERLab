@@ -152,3 +152,75 @@ class TestComputeQualityChecks:
         ec_check = next(r for r in result if r["section"] == "expected_contributions")
         assert ec_check["word_count"] > 0
         assert ec_check["present"]
+
+    # --- DOTALL fix: multi-line $$...$$ must match ---
+
+    def test_multiline_display_equation_matches(self):
+        """proposed_method with dollar-dollar on separate lines must pass.
+
+        Regression test: the old pattern r'[$][$].*[$][$]' without re.DOTALL
+        failed to match display equations where the delimiter is on its own line.
+        """
+        sections = {
+            "proposed_method": (
+                "We optimize the model. The loss function is:\n"
+                "$$\n"
+                "L = \\sum_{i=1}^{N} x_i^2\n"
+                "$$\n"
+                "We use $w$ as weights on GPU A100. "
+            ) * 10,
+        }
+        result = compute_quality_checks(sections)
+        assert result is not None
+        method_check = next(r for r in result if r["section"] == "proposed_method")
+        checks_by_name = {c["name"]: c["passed"] for c in method_check["checks"]}
+        assert checks_by_name.get("formal loss function ($$...$$ display equation)") is True
+
+    def test_inline_math_notation_matches_across_newlines(self):
+        """proposed_method with $...$ notation spanning lines must match."""
+        sections = {
+            "proposed_method": (
+                "The value $x$ is computed as $y = f(x)$\n"
+                "where loss is minimized with GPU A100 compute. "
+            ) * 20,
+        }
+        result = compute_quality_checks(sections)
+        assert result is not None
+        method_check = next(r for r in result if r["section"] == "proposed_method")
+        checks_by_name = {c["name"]: c["passed"] for c in method_check["checks"]}
+        assert checks_by_name.get("mathematical notation ($...$)") is True
+
+    # --- Citation pattern broadening: [SOURCE-N] ---
+
+    def test_source_n_citation_markers_accepted(self):
+        """related_work with [SOURCE-N] markers must pass the citation check.
+
+        [SOURCE-N] is the pipeline's internal citation format before
+        sanitization replaces unverifiable citations.
+        """
+        sections = {
+            "related_work": (
+                "Prior work [SOURCE-1] demonstrated this approach. "
+                "Other methods [SOURCE-3] use different techniques. "
+            ) * 30,
+        }
+        result = compute_quality_checks(sections)
+        assert result is not None
+        rw_check = next(r for r in result if r["section"] == "related_work")
+        checks_by_name = {c["name"]: c["passed"] for c in rw_check["checks"]}
+        assert checks_by_name.get(
+            "citation markers ([1], [SOURCE-N], or Author, Year)"
+        ) is True
+
+    def test_traditional_numbered_citations_still_accepted(self):
+        """Standard [1] numbered citations must still pass."""
+        sections = {
+            "related_work": "Important work [1] showed results. See also [2]. " * 30,
+        }
+        result = compute_quality_checks(sections)
+        assert result is not None
+        rw_check = next(r for r in result if r["section"] == "related_work")
+        checks_by_name = {c["name"]: c["passed"] for c in rw_check["checks"]}
+        assert checks_by_name.get(
+            "citation markers ([1], [SOURCE-N], or Author, Year)"
+        ) is True

@@ -90,7 +90,7 @@ def compute_quality_checks(
         # Pattern checklist (only for present string sections)
         for pattern, description in SECTION_CHECKLIST.get(key, []):
             text = value if isinstance(value, str) else str(value)
-            passed = bool(re.search(pattern, text, re.IGNORECASE))
+            passed = bool(re.search(pattern, text, re.IGNORECASE | re.DOTALL))
             check_results.append({"name": description, "passed": passed})
             if present and not passed:
                 failures.append(f"missing {description}")

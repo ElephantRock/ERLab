@@ -47,13 +47,13 @@ MIN_WORDS = {
 # re-generates sections that fail any check, plus the word-count check.
 SECTION_CHECKLIST: dict[str, list[tuple[str, str]]] = {
     "proposed_method": [
-        (r"\$\$.*\$\$", "formal loss function ($$...$$ display equation)"),
+        (r"\$\$.*?\$\$", "formal loss function ($$...$$ display equation)"),
         (r"\bloss\b|\bobjective\b|\boptimiz", "training objective or loss function"),
-        (r"\$.*\$", "mathematical notation ($...$)"),
+        (r"\$.*?\$", "mathematical notation ($...$)"),
         (r"\bGPU\b|\bcompute\b|\bA100\b|\bGPU-hours\b", "computational requirements estimate"),
     ],
     "related_work": [
-        (r"\[\d+\]|\(\w+,\s*\d{4}\)", "citation markers ([1] or Author, Year)"),
+        (r"\[\d+\]|\[SOURCE-\d+\]|\(\w+,?\s*\d{4}\)", "citation markers ([1], [SOURCE-N], or Author, Year)"),
     ],
     "introduction": [
         (r"contribut|novelt|our ", "contributions statement"),
@@ -389,7 +389,7 @@ class ProposalSynthesizer:
             # Check 2: pattern checklist
             checklist = SECTION_CHECKLIST.get(key, [])
             for pattern, description in checklist:
-                if not re.search(pattern, content, re.IGNORECASE):
+                if not re.search(pattern, content, re.IGNORECASE | re.DOTALL):
                     failures.append(f"missing {description}")
 
             if failures:
@@ -543,7 +543,7 @@ class ProposalSynthesizer:
         if len(content.split()) < min_words:
             failures.append(f"word count {len(content.split())} < {min_words}")
         for pattern, description in SECTION_CHECKLIST.get(key, []):
-            if not re.search(pattern, content, re.IGNORECASE):
+            if not re.search(pattern, content, re.IGNORECASE | re.DOTALL):
                 failures.append(f"missing {description}")
         return failures
 
