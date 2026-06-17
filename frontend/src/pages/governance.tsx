@@ -10,7 +10,11 @@ import { useEffect, useState, useCallback } from "react";
 import { getPending, approveDecision, denyDecision } from "@/api/governance";
 import type { PendingApproval } from "@/api/governance";
 import { ApprovalCard } from "@/components/governance/approval-card";
+import { ErrorCard } from "@/components/ui/error-card";
+import { EmptyState } from "@/components/ui/empty-state";
 import { Skeleton } from "@/components/ui/skeleton";
+import { toast } from "sonner";
+import { ShieldCheck } from "lucide-react";
 
 export default function GovernancePage() {
   const [items, setItems] = useState<PendingApproval[]>([]);
@@ -51,13 +55,23 @@ export default function GovernancePage() {
   }, []);
 
   async function handleApprove(id: string) {
-    await approveDecision(id);
-    setItems((prev) => prev.filter((item) => item.id !== id));
+    try {
+      await approveDecision(id);
+      toast.success("Approved");
+      setItems((prev) => prev.filter((item) => item.id !== id));
+    } catch {
+      toast.error("Failed to approve");
+    }
   }
 
   async function handleDeny(id: string, amendment?: string) {
-    await denyDecision(id, amendment);
-    setItems((prev) => prev.filter((item) => item.id !== id));
+    try {
+      await denyDecision(id, amendment);
+      toast.success("Denied");
+      setItems((prev) => prev.filter((item) => item.id !== id));
+    } catch {
+      toast.error("Failed to deny");
+    }
   }
 
   if (loading) {
@@ -77,13 +91,7 @@ export default function GovernancePage() {
     return (
       <div className="space-y-6" data-testid="governance-page">
         <h1 className="text-2xl font-bold tracking-tight">Governance Queue</h1>
-        <div
-          className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-destructive"
-          data-testid="governance-error"
-        >
-          <p className="font-medium">Error loading governance queue</p>
-          <p className="text-sm">{error}</p>
-        </div>
+        <ErrorCard message="Failed to load pending approvals" testId="governance-error" />
       </div>
     );
   }
@@ -93,9 +101,12 @@ export default function GovernancePage() {
       <h1 className="text-2xl font-bold tracking-tight">Governance Queue</h1>
 
       {items.length === 0 ? (
-        <div className="rounded-lg border bg-card p-6 text-center" data-testid="governance-empty">
-          <p className="text-muted-foreground">No pending approvals</p>
-        </div>
+        <EmptyState
+          icon={ShieldCheck}
+          title="No pending approvals"
+          message="The governance queue is empty. New approvals will appear here."
+          testId="governance-empty"
+        />
       ) : (
         <div className="space-y-3" data-testid="governance-list">
           {items.map((item) => (

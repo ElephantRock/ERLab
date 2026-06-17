@@ -138,6 +138,6 @@ describe("BATCH-20/TASK-02: Governance Queue Page", () => {
       expect(screen.getByTestId("governance-error")).toBeInTheDocument();
     });
 
-    expect(screen.getByText("Error loading governance queue")).toBeInTheDocument();
+    expect(screen.getByText("Failed to load pending approvals")).toBeInTheDocument();
   });
 });

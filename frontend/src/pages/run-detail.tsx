@@ -20,9 +20,13 @@ import {
   Clock,
   GitBranch,
   Timer,
+  Download,
+  FileText,
 } from "lucide-react";
 import type { IdeaSummary } from "@/api/types";
 import { TreeVisualization } from "@/components/pipeline/tree-visualization";
+import { IdeaListItem } from "@/components/ideas/idea-list-item";
+import { apiFetchBlob } from "@/api/client";
 
 const statusColors: Record<string, string> = {
   pending: "bg-warning/10 text-warning",
@@ -48,6 +52,7 @@ export default function RunDetail() {
 
   // Resume state
   const [isResuming, setIsResuming] = useState(false);
+  const [exporting, setExporting] = useState<string | null>(null);
 
   // Tick every second for live elapsed timer
   const [tick, setTick] = useState(0);
@@ -97,6 +102,24 @@ export default function RunDetail() {
     const created = new Date(run.created_at).getTime();
     return Date.now() - created > 5 * 60 * 1000;
   }, [run, tick]);
+
+  async function handleRunExport(format: "markdown" | "bibtex" | "latex") {
+    setExporting(format);
+    try {
+      const blob = await apiFetchBlob(`/export/${format}/${runId}`);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `run_${runId}.${format === "bibtex" ? "bib" : format === "latex" ? "tex" : "md"}`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success(`Exported as ${format}`);
+    } catch {
+      toast.error(`Export failed`);
+    } finally {
+      setExporting(null);
+    }
+  }
 
   if (runError) {
     return (
@@ -257,6 +280,55 @@ export default function RunDetail() {
         </CardContent>
       </Card>
 
+      {/* Run-level export (completed runs only) */}
+      {run.status === "completed" && (
+        <Card data-testid="run-export-section">
+          <CardHeader>
+            <CardTitle className="text-sm font-medium flex items-center gap-2">
+              <Download className="h-4 w-4" />
+              Export Run
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={exporting !== null}
+                onClick={() => handleRunExport("markdown")}
+                data-testid="export-markdown-btn"
+              >
+                {exporting === "markdown" ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <FileText className="h-4 w-4 mr-1" />}
+                Markdown
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={exporting !== null}
+                onClick={() => handleRunExport("latex")}
+                data-testid="export-latex-btn"
+              >
+                {exporting === "latex" ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <FileText className="h-4 w-4 mr-1" />}
+                LaTeX
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={exporting !== null}
+                onClick={() => handleRunExport("bibtex")}
+                data-testid="export-bibtex-btn"
+              >
+                {exporting === "bibtex" ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <FileText className="h-4 w-4 mr-1" />}
+                BibTeX
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground mt-2">
+              Export all proposals and references from this run.
+            </p>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Stages Timeline */}
       <Card data-testid="stages-timeline">
         <CardHeader>
@@ -381,25 +453,7 @@ export default function RunDetail() {
           ) : (
             <div className="space-y-3">
               {ideas.map((idea: IdeaSummary) => (
-                <Card
-                  key={idea.id}
-                  className="cursor-pointer hover:bg-accent/50 transition-colors"
-                  onClick={() => navigate(`/ideas/${idea.id}`)}
-                >
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between">
-                      <div className="min-w-0 flex-1">
-                        <p className="text-sm font-medium line-clamp-1">{idea.title}</p>
-                        <p className="text-xs text-muted-foreground">{idea.domain}</p>
-                      </div>
-                      {idea.overall_score !== null && (
-                        <Badge variant="secondary" className="ml-2">
-                          {(idea.overall_score * 100).toFixed(0)}%
-                        </Badge>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
+                <IdeaListItem key={idea.id} idea={idea} />
               ))}
             </div>
           )}
