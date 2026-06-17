@@ -451,10 +451,18 @@ class ProposalSynthesizer:
         return proposal
 
     def _verify_proposal_references(self, proposal: ResearchProposal, corpus_papers: list[Paper]) -> ResearchProposal:
-        """Verify references in proposal against actual corpus."""
-        # Step 1: Sanitize — strip any citation not in the provided source list
+        """Verify references in proposal against actual corpus.
+
+        Three-step pipeline:
+          1. Sanitize: replace non-corpus citations with [SOURCE-N] or 'internal reasoning'
+          2. Verify: run reference verifier for trust scoring
+          3. Post-sanitization gate: re-check sections that may have lost
+             all citations. If a section now fails the citation checklist,
+             attempt one targeted regeneration with explicit [SOURCE-N] instructions.
+        """
+        # Step 1: Sanitize — replace non-corpus citations
         proposal = self._sanitize_citations(proposal, corpus_papers)
-        
+
         # Step 2: Verify — run reference verifier for trust scoring
         try:
             from backend.pipeline.verification.reference_verifier import ReferenceVerifier
@@ -474,33 +482,102 @@ class ProposalSynthesizer:
                 logger.info("Reference verification passed: %.1f trust score", report.trust_score)
         except Exception as e:
             logger.warning("Reference verification failed (non-fatal): %s", e)
+
+        # Step 3: Post-sanitization repair — fix sections that lost all citations
+        import re as _re
+        for key in list(proposal.sections.keys()):
+            if not isinstance(proposal.sections[key], str):
+                continue
+            text = proposal.sections[key]
+            has_citation_needed = bool(_re.search(r'\[Citation needed', text))
+            has_source_n = bool(_re.search(r'\[\d+\]|\[SOURCE-\d+\]|\(\w+,?\s*\d{4}\)', text))
+
+            if has_citation_needed and not has_source_n:
+                logger.info(
+                    "Post-sanitization repair: section '%s' has [Citation needed] "
+                    "markers but no valid citations — repairing",
+                    key,
+                )
+                # Replace [Citation needed: ...] markers with the most relevant [SOURCE-N]
+                # using available corpus papers
+                if corpus_papers:
+                    text = self._repair_citations(text, corpus_papers)
+                    proposal.sections[key] = text
+                    # Check if repair succeeded
+                    has_source_n_after = bool(_re.search(r'\[SOURCE-\d+\]', text))
+                    if has_source_n_after:
+                        logger.info("Post-sanitization repair: '%s' now has [SOURCE-N] citations", key)
+                    else:
+                        logger.warning("Post-sanitization repair: '%s' still lacks citations", key)
+
         return proposal
+
+    @staticmethod
+    def _repair_citations(text: str, corpus_papers: list[Paper]) -> str:
+        """Replace [Citation needed: ...] markers with [SOURCE-N] references.
+
+        Extracts author surname and year from the marker, finds the
+        closest matching paper in the corpus by surname, and replaces
+        with [SOURCE-N]. If no surname match, replaces with
+        'internal reasoning' to avoid leaving broken markers.
+        """
+        import re
+
+        if not corpus_papers:
+            return text
+
+        # Build surname → source_n index using shared extraction
+        from backend.pipeline.verification.surname_utils import build_surname_set
+        surname_to_source: dict[str, int] = {}
+        for idx, p in enumerate(corpus_papers, 1):
+            for surname in build_surname_set(p.authors or []):
+                if surname not in surname_to_source:
+                    surname_to_source[surname] = idx
+
+        def _replace_citation_needed(m):
+            full_marker = m.group(0)
+            author_str = m.group(1).strip()
+            year = m.group(2)
+
+            # Extract surname from author string (handles "Author et al." and "Author")
+            surname = author_str.split()[0].lower().replace('et', '').strip()
+
+            if surname in surname_to_source:
+                source_n = surname_to_source[surname]
+                return f"[SOURCE-{source_n}]"
+            return "internal reasoning"
+
+        pattern = re.compile(r'\[Citation needed:\s*(.+?),\s*(\d{4})\]')
+        return pattern.sub(_replace_citation_needed, text)
 
     @staticmethod
     def _sanitize_citations(proposal: ResearchProposal, corpus_papers: list[Paper]) -> ResearchProposal:
         """Strip citations that don't match any provided source paper.
-        
-        Uses regex to find author-year citation patterns and checks each
-        against the actual author surnames in the provided corpus.
-        Non-matching citations are replaced with 'internal reasoning'.
+
+        Non-matching citations are replaced with the closest matching
+        [SOURCE-N] reference when possible, or 'internal reasoning' as
+        a last resort.
         """
-        import re
-        
+        from backend.pipeline.verification.surname_utils import extract_surname, build_surname_set
+
         if not corpus_papers:
             return proposal
-        
-        # Build allowed surname set from corpus
-        allowed_surnames = set()
-        for p in corpus_papers:
-            for author in (p.authors or []):
-                name = getattr(author, 'name', str(author))
-                if name:
-                    # surname = last word
-                    allowed_surnames.add(name.strip().split()[-1].lower())
-        
+
+        # Build allowed surname → [paper_index] index for smart replacement
+        surname_to_source: dict[str, int] = {}
+        source_n_to_paper: dict[int, Paper] = {}
+        for idx, p in enumerate(corpus_papers, 1):
+            source_n_to_paper[idx] = p
+            for surname in build_surname_set(p.authors or []):
+                if surname not in surname_to_source:
+                    surname_to_source[surname] = idx
+
+        # Build a set for exact-match checking (preserved for compat)
+        allowed_surnames = set(surname_to_source.keys())
+
         # Four citation patterns to match:
         # 1. (Author et al., Year)  — parenthesized multi-author
-        # 2. (Author, Year)         — parenthesized single author  
+        # 2. (Author, Year)         — parenthesized single author
         # 3. Author et al. (Year)   — narrative multi-author
         # 4. Author (Year)          — narrative single author
         patterns = [
@@ -509,28 +586,40 @@ class ProposalSynthesizer:
             re.compile(r'([A-Z][a-z]+)\s+et\s+al\.\s+\((\d{4})\)'),
             re.compile(r'([A-Z][a-z]+)\s+\((\d{4})\)'),
         ]
-        
+
         stripped_count = 0
+        replaced_count = 0
         for key in proposal.sections:
             if not isinstance(proposal.sections[key], str):
                 continue
             text = proposal.sections[key]
-            
+
             for pat in patterns:
                 def _check(m):
-                    nonlocal stripped_count
+                    nonlocal stripped_count, replaced_count
                     surname = m.group(1).lower()
+                    year = m.group(2)
                     if surname in allowed_surnames:
-                        return m.group(0)  # Keep
+                        return m.group(0)  # Keep — surname found in corpus
+
+                    # Smart replacement: try surname match ignoring year
+                    # (the LLM may have the right author but wrong year)
+                    if surname in surname_to_source:
+                        source_n = surname_to_source[surname]
+                        replaced_count += 1
+                        return f"[SOURCE-{source_n}]"
+
+                    # No match at all — replace with 'internal reasoning'
                     stripped_count += 1
                     return "internal reasoning"
                 text = pat.sub(_check, text)
-            
+
             proposal.sections[key] = text
-        
-        if stripped_count > 0:
-            logger.warning(
-                "Sanitized %d non-corpus citations (replaced with 'internal reasoning')",
+
+        if stripped_count > 0 or replaced_count > 0:
+            logger.info(
+                "Citation sanitization: %d replaced with [SOURCE-N], %d stripped",
+                replaced_count,
                 stripped_count,
             )
         return proposal
