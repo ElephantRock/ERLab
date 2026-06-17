@@ -31,23 +31,8 @@ function clearToken(): void {
   localStorage.removeItem(TOKEN_KEY);
 }
 
-// ── Intercept apiFetch to include JWT token ────────────────────────
-
-// Monkey-patch apiFetch to add Authorization header when JWT token exists.
-// We do this at module level so it applies globally.
-const originalFetch = window.fetch;
-window.fetch = function patchedFetch(input, init) {
-  const token = getToken();
-  if (token && typeof input === "string" && input.includes("/api/v1/")) {
-    const headers = new Headers(init?.headers);
-    // Don't override if already set
-    if (!headers.has("Authorization")) {
-      headers.set("Authorization", `Bearer ${token}`);
-    }
-    init = { ...init, headers };
-  }
-  return originalFetch.call(this, input, init);
-};
+// Note: JWT injection into API calls is handled centrally by
+// buildAuthHeaders() in client.ts — no global fetch patch needed.
 
 // ── Context Types ──────────────────────────────────────────────────
 

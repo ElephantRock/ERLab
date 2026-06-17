@@ -10,9 +10,10 @@ export class ApiError extends Error {
   }
 }
 
-// ── Single source of truth for API URL and API key ──────────────
-// All localStorage reads for erock_api_url / erock_api_key go through
-// these functions. No other module should read these keys directly.
+// ── Single source of truth for API URL, API key, and JWT token ───
+// All localStorage reads for erock_api_url / erock_api_key / erock_jwt_token
+// go through these functions. No other module should read these keys
+// directly.
 
 export function getApiUrl(): string {
   return localStorage.getItem("erock_api_url") || "";
@@ -22,17 +23,31 @@ export function getApiKey(): string {
   return localStorage.getItem("erock_api_key") || "";
 }
 
+export function getJwtToken(): string {
+  return localStorage.getItem("erock_jwt_token") || "";
+}
+
 /** Build a full URL from a path, using the configured base URL. */
 export function buildUrl(path: string): string {
   return `${getApiUrl()}${API_PREFIX}${path}`;
 }
 
-/** Build auth headers with API key if present. */
+/** Build auth headers with API key and JWT token if present.
+ *
+ * Merges (in priority order — last wins for overlapping keys):
+ * 1. API key via X-API-Key header
+ * 2. JWT token via Authorization: Bearer header
+ * 3. Caller-provided extra headers (can override either)
+ */
 export function buildAuthHeaders(extra?: Record<string, string>): Record<string, string> {
   const headers: Record<string, string> = { ...extra };
   const key = getApiKey();
-  if (key) {
+  if (key && !("X-API-Key" in headers)) {
     headers["X-API-Key"] = key;
+  }
+  const token = getJwtToken();
+  if (token && !("Authorization" in headers)) {
+    headers["Authorization"] = `Bearer ${token}`;
   }
   return headers;
 }
@@ -185,6 +200,10 @@ export function sseFetch(
   const key = getApiKey();
   if (key) {
     headers["X-API-Key"] = key;
+  }
+  const token = getJwtToken();
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
   }
   // Last-Event-ID for durable replay
   const lastEventId = options?.lastEventId;
