@@ -281,57 +281,68 @@ export default function RunDetail() {
       </Card>
 
       {/* Quality Settings */}
-      {run.config?.quality && (
-        <Card data-testid="quality-settings">
-          <CardHeader>
-            <CardTitle className="text-sm font-medium">Quality Settings</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-              <div>
-                <dt className="text-muted-foreground text-xs uppercase tracking-wide">Proposal Depth</dt>
-                <dd className="font-medium capitalize" data-testid="quality-proposal-depth">
-                  {(run.config.quality as Record<string, unknown>).proposal_depth as string}
-                </dd>
+      {(() => {
+        const q = run.config?.quality ?? run.config?.quality_settings;
+        if (!q || typeof q !== "object") return null;
+        const quality = q as Record<string, unknown>;
+        // Two possible shapes: route's structured `quality` or orchestrator's flat `quality_settings`
+        const proposalDepth = quality.proposal_depth as string | undefined;
+        const noveltyDepth = quality.novelty_depth as string | undefined;
+        const ideaDiversity = quality.idea_diversity as string | undefined;
+        // Effective values: nested in `effective` (route) or flat with `effective_*` keys (orchestrator)
+        const effNested = quality.effective as Record<string, unknown> | undefined;
+        const topK = (effNested?.novelty_top_k as number) ?? (quality.effective_novelty_top_k as number);
+        const temp = (effNested?.ideator_temperature as number) ?? (quality.effective_ideator_temperature as number);
+        const minWords = (effNested?.min_words as Record<string, number>) ?? (quality.effective_min_words as Record<string, number>);
+        return (
+          <Card data-testid="quality-settings">
+            <CardHeader>
+              <CardTitle className="text-sm font-medium">Quality Settings</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                <div>
+                  <dt className="text-muted-foreground text-xs uppercase tracking-wide">Proposal Depth</dt>
+                  <dd className="font-medium capitalize" data-testid="quality-proposal-depth">
+                    {proposalDepth ?? "—"}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-muted-foreground text-xs uppercase tracking-wide">Novelty Depth</dt>
+                  <dd className="font-medium capitalize" data-testid="quality-novelty-depth">
+                    {noveltyDepth ?? "—"}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-muted-foreground text-xs uppercase tracking-wide">Idea Diversity</dt>
+                  <dd className="font-medium capitalize" data-testid="quality-idea-diversity">
+                    {ideaDiversity ?? "—"}
+                  </dd>
+                </div>
               </div>
-              <div>
-                <dt className="text-muted-foreground text-xs uppercase tracking-wide">Novelty Depth</dt>
-                <dd className="font-medium capitalize" data-testid="quality-novelty-depth">
-                  {(run.config.quality as Record<string, unknown>).novelty_depth as string}
-                </dd>
-              </div>
-              <div>
-                <dt className="text-muted-foreground text-xs uppercase tracking-wide">Idea Diversity</dt>
-                <dd className="font-medium capitalize" data-testid="quality-idea-diversity">
-                  {(run.config.quality as Record<string, unknown>).idea_diversity as string}
-                </dd>
-              </div>
-            </div>
-            {/* Effective values */}
-            {(() => {
-              const eff = (run.config.quality as Record<string, unknown>).effective as
-                | { min_words?: Record<string, number>; novelty_top_k?: number; ideator_temperature?: number }
-                | undefined;
-              if (!eff) return null;
-              return (
+              {(topK !== undefined || temp !== undefined || minWords) && (
                 <div className="mt-4 pt-4 border-t space-y-1 text-xs text-muted-foreground">
-                  <p data-testid="quality-effective-topk">
-                    Novelty comparison: <span className="font-mono text-foreground">{eff.novelty_top_k} papers</span>
-                  </p>
-                  <p data-testid="quality-effective-temp">
-                    Ideator temperature: <span className="font-mono text-foreground">{eff.ideator_temperature?.toFixed(2)}</span>
-                  </p>
-                  {eff.min_words && (
+                  {topK !== undefined && (
+                    <p data-testid="quality-effective-topk">
+                      Novelty comparison: <span className="font-mono text-foreground">{topK} papers</span>
+                    </p>
+                  )}
+                  {temp !== undefined && (
+                    <p data-testid="quality-effective-temp">
+                      Ideator temperature: <span className="font-mono text-foreground">{temp.toFixed(2)}</span>
+                    </p>
+                  )}
+                  {minWords && (
                     <p data-testid="quality-effective-minwords">
-                      Method section minimum: <span className="font-mono text-foreground">{eff.min_words.proposed_method ?? eff.min_words.method ?? "—"} words</span>
+                      Method section minimum: <span className="font-mono text-foreground">{minWords.proposed_method ?? minWords.method ?? "—"} words</span>
                     </p>
                   )}
                 </div>
-              );
-            })()}
-          </CardContent>
-        </Card>
-      )}
+              )}
+            </CardContent>
+          </Card>
+        );
+      })()}
 
       {/* Run-level export (completed runs only) */}
       {run.status === "completed" && (

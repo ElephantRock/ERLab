@@ -272,7 +272,38 @@ describe("RunDetail (BATCH-12/TASK-03)", () => {
 
   // ── Quality Settings panel tests ──
 
-  it("shows quality settings panel when config.quality is present", async () => {
+  it("shows quality settings panel when config.quality_settings is present (orchestrator shape)", async () => {
+    const runWithQuality: PipelineRunDetail = {
+      ...sampleRun,
+      config: {
+        quality_settings: {
+          proposal_depth: "detailed",
+          novelty_depth: "thorough",
+          idea_diversity: "exploratory",
+          effective_min_words: { abstract: 225, proposed_method: 900 },
+          effective_novelty_top_k: 50,
+          effective_ideator_temperature: 1.1,
+        },
+      },
+    };
+    mockedGetRunDetail.mockResolvedValue(runWithQuality);
+    mockedGetRunIdeas.mockResolvedValue({ ideas: sampleIdeas, total: 2 });
+
+    renderRunDetail("1");
+
+    await waitFor(() => {
+      expect(screen.getByTestId("quality-settings")).toBeInTheDocument();
+    });
+
+    expect(screen.getByTestId("quality-proposal-depth")).toHaveTextContent("detailed");
+    expect(screen.getByTestId("quality-novelty-depth")).toHaveTextContent("thorough");
+    expect(screen.getByTestId("quality-idea-diversity")).toHaveTextContent("exploratory");
+    expect(screen.getByTestId("quality-effective-topk")).toHaveTextContent("50");
+    expect(screen.getByTestId("quality-effective-temp")).toHaveTextContent("1.10");
+    expect(screen.getByTestId("quality-effective-minwords")).toHaveTextContent("900");
+  });
+
+  it("shows quality settings panel when config.quality is present (route shape)", async () => {
     const runWithQuality: PipelineRunDetail = {
       ...sampleRun,
       config: {

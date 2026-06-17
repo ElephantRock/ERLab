@@ -728,7 +728,6 @@ class PipelineOrchestrator:
         # Resolve quality parameters into effective values
         from backend.pipeline.quality.quality_params import resolve_all
         quality_settings = resolve_all(proposal_depth, novelty_depth, idea_diversity)
-        params["quality_settings"] = quality_settings
         result = PipelineResult()
         rounds = generation_rounds or self._settings.generation_rounds
         ideas_per = ideas_per_round or self._settings.ideas_per_round
