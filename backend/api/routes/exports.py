@@ -260,7 +260,10 @@ async def bulk_export(request: BulkExportRequest):
                     from backend.db.models import IdeaPaperLink as _IPL, Paper as _PaperModel
                     from sqlalchemy import select as _sel
 
-                    raw_gids = json.loads(idea.source_gap_ids) if idea.source_gap_ids else []
+                    try:
+                        raw_gids = json.loads(idea.source_gap_ids) if idea.source_gap_ids else []
+                    except (json.JSONDecodeError, TypeError):
+                        raw_gids = []
                     sg_list = _resolve(session, raw_gids, idea.pipeline_run_id)
 
                     # Supporting papers via junction table
@@ -404,7 +407,10 @@ async def export_run_markdown(run_id: int):
                     sections.append("")
 
                 # Evidence Trace (Phase C: Source Traceability)
-                raw_gap_ids = json.loads(idea.source_gap_ids) if idea.source_gap_ids else []
+                try:
+                    raw_gap_ids = json.loads(idea.source_gap_ids) if idea.source_gap_ids else []
+                except (json.JSONDecodeError, TypeError):
+                    raw_gap_ids = []
                 source_gaps = resolve_source_gaps(
                     session, raw_gap_ids, idea.pipeline_run_id,
                 )

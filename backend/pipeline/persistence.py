@@ -359,9 +359,14 @@ class PipelinePersistence:
         """Link an idea to its supporting papers via IdeaPaperLink.
 
         Resolves ``idea.supporting_papers`` (source_id strings) to Paper DB
-        rows within the same pipeline run first, then falls back to global
-        lookup.  Idempotent via the ``(idea_id, paper_id, role)`` unique
-        constraint.
+        rows by ``source_id``.  Paper.source_id is globally unique (enforced
+        by a unique constraint), so there is at most one match per source_id —
+        no cross-run ambiguity is possible.
+
+        Papers whose source_id does not appear in the DB (e.g. from a
+        different source or not yet persisted) are logged as unresolved.
+
+        Idempotent via the ``(idea_id, paper_id, role)`` unique constraint.
         """
         supporting_ids = getattr(idea, "supporting_papers", None) or []
         if not supporting_ids:
@@ -371,31 +376,33 @@ class PipelinePersistence:
 
         from backend.db.models import IdeaPaperLink, Paper
 
-        # Resolve source_ids to Paper rows — same run first, then global
-        # Two-step query to avoid cross-run provenance confusion
+        # Resolve source_ids to Paper rows.
+        # Paper.source_id is globally unique, so this lookup is unambiguous
+        # — the same source_id can never resolve to papers from different runs.
         resolved_ids: list[int] = []
         unresolved: list[str] = []
 
         for source_id in supporting_ids:
             if not isinstance(source_id, str):
                 continue
-            # Try same-run papers first
-            stmt = sa_select(Paper).where(
-                Paper.source_id == source_id,
-            )
-            paper = session.execute(stmt).scalars().first()
+            paper = session.execute(
+                sa_select(Paper).where(Paper.source_id == source_id)
+            ).scalars().first()
             if paper:
                 resolved_ids.append(paper.id)
             else:
                 unresolved.append(source_id)
 
         if unresolved:
-            logger.debug(
-                "Idea '%s': %d/%d supporting papers resolved, %d unresolved",
+            logger.warning(
+                "Idea '%s' (run %d): %d/%d supporting papers resolved, "
+                "%d unresolved (source_ids not in Paper table): %s",
                 getattr(idea, "title", "?")[:50],
+                db_run_id,
                 len(resolved_ids),
                 len(supporting_ids),
                 len(unresolved),
+                ", ".join(unresolved[:5]),  # log first 5 for brevity
             )
 
         for paper_id in resolved_ids:
