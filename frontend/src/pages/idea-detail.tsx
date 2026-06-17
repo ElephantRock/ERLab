@@ -9,6 +9,7 @@ import { NoveltyReportView } from "@/components/ideas/novelty-report-view";
 import { FeasibilityReportView } from "@/components/ideas/feasibility-report-view";
 import { MarkdownRenderer } from "@/components/markdown/markdown-renderer";
 import { EvidencePanel } from "@/components/ideas/evidence-panel";
+import { ProposalReviewPanel } from "@/components/ideas/proposal-review-panel";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
@@ -170,6 +171,8 @@ export default function IdeaDetail() {
         mechanicalMetrics={idea.mechanical_metrics ?? null}
       />
 
+      <ProposalReviewPanel proposalSections={idea.proposal_sections} />
+
       {(idea.proposal_md || idea.novelty_report || idea.feasibility_report || idea.mechanical_metrics) && (
         <Tabs defaultValue={idea.proposal_md ? "proposal" : idea.novelty_report ? "novelty" : idea.feasibility_report ? "feasibility" : "metrics"}>
           <TabsList>
@@ -192,7 +195,9 @@ export default function IdeaDetail() {
                     </CardHeader>
                     <CardContent>
                       <nav className="space-y-1">
-                        {Object.keys(idea.proposal_sections).map((key) => (
+                        {Object.keys(idea.proposal_sections)
+                          .filter((key) => key !== "ensemble_review")
+                          .map((key) => (
                           <a
                             key={key}
                             href={`#section-${key}`}
@@ -219,7 +224,9 @@ export default function IdeaDetail() {
                     {idea.proposal_sections && typeof idea.proposal_sections === "object" ? (
                       /* Structured section rendering */
                       <div className="space-y-8">
-                        {Object.entries(idea.proposal_sections).map(([key, value]) => (
+                        {Object.entries(idea.proposal_sections)
+                          .filter(([key]) => key !== "ensemble_review")
+                          .map(([key, value]) => (
                           <div key={key} id={`section-${key}`}>
                             <div className="flex items-center justify-between mb-3">
                               <h3 className="text-lg font-semibold">

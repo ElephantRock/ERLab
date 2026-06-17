@@ -117,6 +117,25 @@ export interface ExperimentResult {
   created_at: string;
 }
 
+export interface PerspectiveReview {
+  perspective: string;
+  score: number;
+  strengths: string[];
+  weaknesses: string[];
+  suggestions: string[];
+}
+
+export interface EnsembleReview {
+  overall_score: number;
+  methodology: PerspectiveReview | null;
+  novelty: PerspectiveReview | null;
+  clarity: PerspectiveReview | null;
+  consensus_strengths: string[];
+  critical_weaknesses: string[];
+  actionable_suggestions: string[];
+  summary: string;
+}
+
 export interface IdeaDetail extends IdeaSummary {
   problem_statement: string;
   proposed_method: string;
