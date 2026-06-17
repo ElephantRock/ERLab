@@ -4,14 +4,17 @@ import { RunConfigForm } from "@/components/pipeline/run-config-form";
 import { AutonomousForm } from "@/components/pipeline/autonomous-form";
 import { StageProgress } from "@/components/pipeline/stage-progress";
 import { usePipelineProgress } from "@/hooks/usePipelineProgress";
+import { useSession } from "@/hooks/useSession";
 import { triggerRun, getRunIdeas, cancelRun } from "@/api/pipeline";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { ErrorCard } from "@/components/ui/error-card";
+import { IdeaListItem } from "@/components/ideas/idea-list-item";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import type { PipelineRunRequest, IdeaSummary } from "@/api/types";
-import { CheckCircle2, Lightbulb, AlertCircle, XCircle } from "lucide-react";
+import { CheckCircle2, Lightbulb, AlertCircle, XCircle, ExternalLink } from "lucide-react";
 
 export default function PipelineNew() {
   const navigate = useNavigate();
@@ -23,7 +26,7 @@ export default function PipelineNew() {
   const [ideas, setIdeas] = useState<IdeaSummary[]>([]);
   const [ideasError, setIdeasError] = useState<string | null>(null);
   const [ideasLoading, setIdeasLoading] = useState(false);
-  const [sessionId, setSessionId] = useState<string>("");
+  const { sessionId, setSessionId } = useSession();
   const { stages, isComplete, isConnected } = usePipelineProgress(runId);
 
   // ── Cancel run state ──────────────────────────────────────────
@@ -127,7 +130,7 @@ export default function PipelineNew() {
               <TabsTrigger value="autonomous">Autonomous Cycle</TabsTrigger>
             </TabsList>
             <TabsContent value="single">
-              <RunConfigForm onSubmit={handleStart} isLoading={isLoading} sessionId={sessionId} onSessionIdChange={setSessionId} initialDomain={initialTopic} />
+              <RunConfigForm onSubmit={handleStart} isLoading={isLoading} initialDomain={initialTopic} />
             </TabsContent>
             <TabsContent value="autonomous">
               <AutonomousForm onCycleStarted={setRunId} />
@@ -137,9 +140,7 @@ export default function PipelineNew() {
       )}
 
       {error && (
-        <Card className="border-destructive">
-          <CardContent className="p-4 text-sm text-destructive">{error}</CardContent>
-        </Card>
+        <ErrorCard message={error} testId="trigger-error" />
       )}
 
       {runId && (
@@ -273,10 +274,7 @@ export default function PipelineNew() {
             </CardHeader>
             <CardContent>
               {ideasError && (
-                <div className="flex items-center gap-2 text-destructive" data-testid="ideas-error">
-                  <AlertCircle className="h-4 w-4" />
-                  <span className="text-sm">{ideasError}</span>
-                </div>
+                <ErrorCard message={ideasError} testId="ideas-error" />
               )}
 
               {ideasLoading && (
@@ -294,30 +292,22 @@ export default function PipelineNew() {
               {!ideasLoading && ideas.length > 0 && (
                 <div className="space-y-3">
                   {ideas.map((idea) => (
-                    <Card
-                      key={idea.id}
-                      className="cursor-pointer hover:bg-accent/50 transition-colors"
-                      onClick={() => navigate(`/ideas/${idea.id}`)}
-                    >
-                      <CardContent className="p-4">
-                        <div className="flex items-center justify-between">
-                          <div className="min-w-0 flex-1">
-                            <p className="text-sm font-medium line-clamp-1">{idea.title}</p>
-                            <p className="text-xs text-muted-foreground">{idea.domain}</p>
-                          </div>
-                          {idea.overall_score !== null && (
-                            <Badge variant="secondary" className="ml-2">
-                              {(idea.overall_score * 100).toFixed(0)}%
-                            </Badge>
-                          )}
-                        </div>
-                      </CardContent>
-                    </Card>
+                    <IdeaListItem key={idea.id} idea={idea} />
                   ))}
                 </div>
               )}
 
               <div className="flex items-center gap-3 mt-4 pt-4 border-t">
+                {isComplete && runId && (
+                  <Button
+                    variant="outline"
+                    onClick={() => navigate(`/runs/${runId}`)}
+                    data-testid="view-run-detail"
+                  >
+                    <ExternalLink className="h-4 w-4 mr-1" />
+                    View Run Details
+                  </Button>
+                )}
                 <Button variant="outline" onClick={() => navigate("/ideas")} data-testid="view-all-ideas">
                   View All Ideas
                 </Button>

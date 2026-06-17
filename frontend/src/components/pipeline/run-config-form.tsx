@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { StageModelSelector } from "./stage-model-selector";
 import { EstimateCard } from "./estimate-card";
+import { useSession } from "@/hooks/useSession";
 import type { PipelineRunRequest } from "@/api/types";
 import { Search, Loader2, ChevronDown, ChevronRight } from "lucide-react";
 
@@ -24,12 +25,11 @@ export { VALIDATION };
 interface RunConfigFormProps {
   onSubmit: (config: PipelineRunRequest) => void;
   isLoading?: boolean;
-  sessionId?: string;
-  onSessionIdChange?: (value: string) => void;
   initialDomain?: string;
 }
 
-export function RunConfigForm({ onSubmit, isLoading, sessionId = "", onSessionIdChange, initialDomain = "" }: RunConfigFormProps) {
+export function RunConfigForm({ onSubmit, isLoading, initialDomain = "" }: RunConfigFormProps) {
+  const { sessionId, setSessionId } = useSession();
   const [domain, setDomain] = useState(initialDomain);
   const [maxGaps, setMaxGaps] = useState(VALIDATION.max_gaps.default);
   const [ideasPerRound, setIdeasPerRound] = useState(VALIDATION.ideas_per_round.default);
@@ -214,7 +214,7 @@ export function RunConfigForm({ onSubmit, isLoading, sessionId = "", onSessionId
                     type="text"
                     placeholder="my-session-name"
                     value={sessionId}
-                    onChange={(e) => onSessionIdChange?.(e.target.value)}
+                    onChange={(e) => setSessionId(e.target.value)}
                     data-testid="session-id-input"
                     className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                     maxLength={200}
