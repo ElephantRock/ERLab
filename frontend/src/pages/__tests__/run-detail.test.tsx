@@ -269,4 +269,52 @@ describe("RunDetail (BATCH-12/TASK-03)", () => {
 
     consoleSpy.mockRestore();
   });
+
+  // ── Quality Settings panel tests ──
+
+  it("shows quality settings panel when config.quality is present", async () => {
+    const runWithQuality: PipelineRunDetail = {
+      ...sampleRun,
+      config: {
+        quality: {
+          proposal_depth: "detailed",
+          novelty_depth: "thorough",
+          idea_diversity: "exploratory",
+          effective: {
+            min_words: { abstract: 225, proposed_method: 900 },
+            novelty_top_k: 50,
+            ideator_temperature: 1.1,
+          },
+        },
+      },
+    };
+    mockedGetRunDetail.mockResolvedValue(runWithQuality);
+    mockedGetRunIdeas.mockResolvedValue({ ideas: sampleIdeas, total: 2 });
+
+    renderRunDetail("1");
+
+    await waitFor(() => {
+      expect(screen.getByTestId("quality-settings")).toBeInTheDocument();
+    });
+
+    expect(screen.getByTestId("quality-proposal-depth")).toHaveTextContent("detailed");
+    expect(screen.getByTestId("quality-novelty-depth")).toHaveTextContent("thorough");
+    expect(screen.getByTestId("quality-idea-diversity")).toHaveTextContent("exploratory");
+    expect(screen.getByTestId("quality-effective-topk")).toHaveTextContent("50");
+    expect(screen.getByTestId("quality-effective-temp")).toHaveTextContent("1.10");
+    expect(screen.getByTestId("quality-effective-minwords")).toHaveTextContent("900");
+  });
+
+  it("does not show quality settings panel when config.quality is absent", async () => {
+    mockedGetRunDetail.mockResolvedValue(sampleRun);
+    mockedGetRunIdeas.mockResolvedValue({ ideas: sampleIdeas, total: 2 });
+
+    renderRunDetail("1");
+
+    await waitFor(() => {
+      expect(screen.getByTestId("run-detail")).toBeInTheDocument();
+    });
+
+    expect(screen.queryByTestId("quality-settings")).not.toBeInTheDocument();
+  });
 });

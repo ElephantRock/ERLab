@@ -280,6 +280,59 @@ export default function RunDetail() {
         </CardContent>
       </Card>
 
+      {/* Quality Settings */}
+      {run.config?.quality && (
+        <Card data-testid="quality-settings">
+          <CardHeader>
+            <CardTitle className="text-sm font-medium">Quality Settings</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+              <div>
+                <dt className="text-muted-foreground text-xs uppercase tracking-wide">Proposal Depth</dt>
+                <dd className="font-medium capitalize" data-testid="quality-proposal-depth">
+                  {(run.config.quality as Record<string, unknown>).proposal_depth as string}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-muted-foreground text-xs uppercase tracking-wide">Novelty Depth</dt>
+                <dd className="font-medium capitalize" data-testid="quality-novelty-depth">
+                  {(run.config.quality as Record<string, unknown>).novelty_depth as string}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-muted-foreground text-xs uppercase tracking-wide">Idea Diversity</dt>
+                <dd className="font-medium capitalize" data-testid="quality-idea-diversity">
+                  {(run.config.quality as Record<string, unknown>).idea_diversity as string}
+                </dd>
+              </div>
+            </div>
+            {/* Effective values */}
+            {(() => {
+              const eff = (run.config.quality as Record<string, unknown>).effective as
+                | { min_words?: Record<string, number>; novelty_top_k?: number; ideator_temperature?: number }
+                | undefined;
+              if (!eff) return null;
+              return (
+                <div className="mt-4 pt-4 border-t space-y-1 text-xs text-muted-foreground">
+                  <p data-testid="quality-effective-topk">
+                    Novelty comparison: <span className="font-mono text-foreground">{eff.novelty_top_k} papers</span>
+                  </p>
+                  <p data-testid="quality-effective-temp">
+                    Ideator temperature: <span className="font-mono text-foreground">{eff.ideator_temperature?.toFixed(2)}</span>
+                  </p>
+                  {eff.min_words && (
+                    <p data-testid="quality-effective-minwords">
+                      Method section minimum: <span className="font-mono text-foreground">{eff.min_words.proposed_method ?? eff.min_words.method ?? "—"} words</span>
+                    </p>
+                  )}
+                </div>
+              );
+            })()}
+          </CardContent>
+        </Card>
+      )}
+
       {/* Run-level export (completed runs only) */}
       {run.status === "completed" && (
         <Card data-testid="run-export-section">

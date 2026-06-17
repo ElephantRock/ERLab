@@ -69,6 +69,14 @@ async def trigger_run(request: PipelineRunRequest):
     run_svc = get_run_service()
 
     # Durable run ID — UUID-based, stored in DB
+    # Resolve effective quality settings for storage and visibility
+    from backend.pipeline.quality.quality_params import resolve_all
+    quality = resolve_all(
+        request.proposal_depth,
+        request.novelty_depth,
+        request.idea_diversity,
+    )
+
     run_id = run_svc.create_run(
         domain=request.domain,
         strategy=request.strategy,
@@ -77,9 +85,16 @@ async def trigger_run(request: PipelineRunRequest):
             "max_gaps": request.max_gaps,
             "generation_rounds": request.generation_rounds,
             "ideas_per_round": request.ideas_per_round,
-            "proposal_depth": request.proposal_depth,
-            "novelty_depth": request.novelty_depth,
-            "idea_diversity": request.idea_diversity,
+            "quality": {
+                "proposal_depth": quality["proposal_depth"],
+                "novelty_depth": quality["novelty_depth"],
+                "idea_diversity": quality["idea_diversity"],
+                "effective": {
+                    "min_words": quality["effective_min_words"],
+                    "novelty_top_k": quality["effective_novelty_top_k"],
+                    "ideator_temperature": quality["effective_ideator_temperature"],
+                },
+            },
         },
     )
 

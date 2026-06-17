@@ -165,3 +165,52 @@ class TestPipelineRunRequestAccepts:
 
         with pytest.raises(ValidationError):
             PipelineRunRequest(idea_diversity="wild")
+
+
+class TestQualitySettingsVisibility:
+    """Effective quality settings are resolvable and structured for run detail."""
+
+    def test_resolve_all_provides_effective_values(self):
+        """resolve_all returns a dict with effective_* keys for run detail."""
+        result = resolve_all("detailed", "thorough", "exploratory")
+        # Effective values present
+        assert "effective_min_words" in result
+        assert "effective_novelty_top_k" in result
+        assert "effective_ideator_temperature" in result
+        # Effective values match the semantic intent
+        assert result["effective_novelty_top_k"] == 50
+        assert result["effective_ideator_temperature"] == pytest.approx(1.1)
+
+    def test_resolve_all_effective_min_words_are_concrete(self):
+        """Effective min_words are concrete numbers, not multipliers."""
+        result = resolve_all("concise")
+        effective = result["effective_min_words"]
+        for section, words in effective.items():
+            assert isinstance(words, int)
+            assert words >= 50, f"{section} floored at 50"
+
+    def test_resolve_all_standard_matches_base(self):
+        """Standard/balanced effective values match immutable base constants."""
+        result = resolve_all(None, None, None)
+        assert result["effective_min_words"] == BASE_MIN_WORDS
+        assert result["effective_novelty_top_k"] == BASE_NOVELTY_TOP_K
+        assert result["effective_ideator_temperature"] == BASE_IDEATOR_TEMPERATURE
+
+    def test_quality_config_shape_for_run_detail(self):
+        """The quality dict shape stored in config_json has the right structure."""
+        quality = resolve_all("standard", "standard", "balanced")
+        config_quality = {
+            "proposal_depth": quality["proposal_depth"],
+            "novelty_depth": quality["novelty_depth"],
+            "idea_diversity": quality["idea_diversity"],
+            "effective": {
+                "min_words": quality["effective_min_words"],
+                "novelty_top_k": quality["effective_novelty_top_k"],
+                "ideator_temperature": quality["effective_ideator_temperature"],
+            },
+        }
+        # Shape checks
+        assert config_quality["proposal_depth"] == "standard"
+        assert config_quality["effective"]["novelty_top_k"] == 20
+        assert "abstract" in config_quality["effective"]["min_words"]
+        assert isinstance(config_quality["effective"]["ideator_temperature"], float)
