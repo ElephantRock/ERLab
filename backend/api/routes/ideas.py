@@ -9,6 +9,7 @@ from backend.api.errors import APIError, NotFoundError
 from backend.api.schemas import IdeaFeedbackRequest
 from backend.api.traceability import resolve_source_gaps, extract_proposal_references
 from backend.api.quality_checks import compute_quality_checks
+from backend.pipeline.provenance.reference_resolver import resolve_references
 
 router = APIRouter()
 
@@ -156,10 +157,53 @@ async def get_idea(idea_id: int):
             raw_gap_ids = []
         source_gaps = resolve_source_gaps(session, raw_gap_ids, idea.pipeline_run_id)
 
-        # Extract structured proposal references
+        # Extract structured proposal references — try new resolver first
         proposal_references = None
         if proposal:
-            proposal_references = extract_proposal_references(proposal)
+            raw_refs = extract_proposal_references(proposal)
+            if raw_refs:
+                # Use the domain-layer resolver for structured matching
+                resolved = resolve_references(raw_refs, session, idea.pipeline_run_id)
+                proposal_references = [
+                    {
+                        "raw": r.raw,
+                        "number": r.number,
+                        "authors": r.authors,
+                        "year": r.year,
+                        "title": r.title,
+                        "venue": r.venue,
+                        "resolved": r.resolved,
+                        "paper": r.paper,
+                        "match_method": r.match_method,
+                        "match_confidence": r.match_confidence,
+                    }
+                    for r in resolved
+                ]
+
+        # Fetch supporting papers via junction table (schema-backed provenance)
+        from backend.db.models import IdeaPaperLink, Paper as PaperModel
+        supporting_papers_raw = session.execute(
+            select(IdeaPaperLink).where(IdeaPaperLink.idea_id == idea.id)
+        ).scalars().all()
+        supporting_papers = None
+        if supporting_papers_raw:
+            enriched = []
+            for link in supporting_papers_raw:
+                paper = session.get(PaperModel, link.paper_id)
+                if paper:
+                    enriched.append({
+                        "id": paper.id,
+                        "title": paper.title,
+                        "year": paper.year,
+                        "venue": paper.venue,
+                        "citation_count": paper.citation_count,
+                        "doi": paper.doi,
+                        "arxiv_id": paper.arxiv_id,
+                        "url": paper.url,
+                        "role": link.role,
+                    })
+            if enriched:
+                supporting_papers = enriched
 
         return {
             "idea": {
@@ -187,6 +231,7 @@ async def get_idea(idea_id: int):
                     else None
                 ),
                 "proposal_references": proposal_references,
+                "supporting_papers": supporting_papers,
                 "quality_checks": compute_quality_checks(
                     json.loads(proposal.sections_json)
                     if proposal and proposal.sections_json

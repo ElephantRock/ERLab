@@ -168,6 +168,7 @@ export default function IdeaDetail() {
 
       <EvidencePanel
         sourceGaps={idea.source_gaps ?? null}
+        supportingPapers={idea.supporting_papers ?? null}
         proposalReferences={idea.proposal_references ?? null}
         mechanicalMetrics={idea.mechanical_metrics ?? null}
       />

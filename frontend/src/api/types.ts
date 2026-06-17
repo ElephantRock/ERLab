@@ -148,7 +148,8 @@ export interface IdeaDetail extends IdeaSummary {
   proposal_md: string | null;
   proposal_latex: string | null;
   proposal_sections: Record<string, unknown> | null;
-  proposal_references: ProposalReference[] | string | null;
+  proposal_references: ResolvedReference[] | string | null;
+  supporting_papers: SupportingPaper[] | null;
   quality_checks: QualityCheckResult[] | null;
   mechanical_metrics: Record<string, number> | null;
   experiment_results: ExperimentResult[] | null;
@@ -186,6 +187,31 @@ export interface QualityCheckResult {
   checks: QualityCheckEntry[];
   passed: boolean;
   failures: string[];
+}
+
+export interface SupportingPaper {
+  id: number;
+  title: string;
+  year: number | null;
+  venue: string | null;
+  citation_count: number | null;
+  doi: string | null;
+  arxiv_id: string | null;
+  url: string | null;
+  role: string;
+}
+
+export interface ResolvedReference {
+  raw: string;
+  number: number | null;
+  authors: string | null;
+  year: string | null;
+  title: string | null;
+  venue: string | null;
+  resolved: boolean;
+  paper: { id: number; title: string; year: number | null; venue: string | null; doi: string | null; arxiv_id: string | null; url: string | null } | null;
+  match_method: string | null;
+  match_confidence: number;
 }
 
 export interface IdeaListResponse {

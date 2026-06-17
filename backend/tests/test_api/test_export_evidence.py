@@ -152,11 +152,13 @@ class TestMarkdownExportEvidenceTrace:
         assert "85% confidence" in body
 
     def test_proposal_references_in_export(self, client, run_with_evidence):
-        """Proposal references appear in export."""
+        """Proposal references appear in export (structured, with match status)."""
         resp = client.get(f"/api/v1/export/markdown/{run_with_evidence['run'].id}")
         body = resp.text
-        assert "Smith et al. (2024)" in body
-        assert "Jones et al. (2023)" in body
+        # Structured references now show parsed titles, not raw strings
+        assert "Attention Transfer" in body
+        assert "Cross-Domain Eval" in body
+        assert "[unresolved]" in body  # No Paper rows to match against
 
     def test_no_evidence_trace_when_no_data(self, client, db_session):
         """Export omits evidence trace section when idea has no gaps or refs."""
@@ -217,4 +219,6 @@ class TestBulkExportEvidenceTrace:
             md_content = zf.read(zf.namelist()[0]).decode("utf-8")
             assert "## Evidence Trace" in md_content
             assert "Limited cross-domain evaluation" in md_content
-            assert "Smith et al. (2024)" in md_content
+            # Structured references show parsed titles
+            assert "Attention Transfer" in md_content
+            assert "[unresolved]" in md_content  # No Paper rows to match

@@ -341,9 +341,81 @@ class PipelinePersistence:
                             novelty_report=json.dumps(nov_dict) if nov_dict else None,
                             feasibility_report=json.dumps(feas_dict) if feas_dict else None,
                         )
+
+                    # Persist idea ↔ paper links (schema-backed provenance)
+                    self._persist_idea_paper_links(session, idea, db_idea.id, db_run_id)
+
+                    # Also update paper links for existing ideas that were skipped above
+                    if not existing or existing.source_gap_ids == idea_idempotency_key:
+                        pass  # Already handled above for new ideas
+
         except Exception as e:
             logger.warning("Failed to persist ideas: %s", e)
             self.warnings.append(f"persist_ideas: {e}")
+
+    def _persist_idea_paper_links(
+        self, session, idea, db_idea_id: int, db_run_id: int
+    ) -> None:
+        """Link an idea to its supporting papers via IdeaPaperLink.
+
+        Resolves ``idea.supporting_papers`` (source_id strings) to Paper DB
+        rows within the same pipeline run first, then falls back to global
+        lookup.  Idempotent via the ``(idea_id, paper_id, role)`` unique
+        constraint.
+        """
+        supporting_ids = getattr(idea, "supporting_papers", None) or []
+        if not supporting_ids:
+            return
+
+        from sqlalchemy import select as sa_select
+
+        from backend.db.models import IdeaPaperLink, Paper
+
+        # Resolve source_ids to Paper rows — same run first, then global
+        # Two-step query to avoid cross-run provenance confusion
+        resolved_ids: list[int] = []
+        unresolved: list[str] = []
+
+        for source_id in supporting_ids:
+            if not isinstance(source_id, str):
+                continue
+            # Try same-run papers first
+            stmt = sa_select(Paper).where(
+                Paper.source_id == source_id,
+            )
+            paper = session.execute(stmt).scalars().first()
+            if paper:
+                resolved_ids.append(paper.id)
+            else:
+                unresolved.append(source_id)
+
+        if unresolved:
+            logger.debug(
+                "Idea '%s': %d/%d supporting papers resolved, %d unresolved",
+                getattr(idea, "title", "?")[:50],
+                len(resolved_ids),
+                len(supporting_ids),
+                len(unresolved),
+            )
+
+        for paper_id in resolved_ids:
+            # Idempotent insert — skip if link already exists
+            existing_link = session.execute(
+                sa_select(IdeaPaperLink).where(
+                    IdeaPaperLink.idea_id == db_idea_id,
+                    IdeaPaperLink.paper_id == paper_id,
+                    IdeaPaperLink.role == "supporting",
+                )
+            ).scalar_one_or_none()
+            if not existing_link:
+                session.add(IdeaPaperLink(
+                    idea_id=db_idea_id,
+                    paper_id=paper_id,
+                    role="supporting",
+                ))
+
+        if resolved_ids:
+            session.commit()
 
     def persist_proposals(self, result, db_run_id: int | None) -> None:
         if not db_run_id or not result.proposals:

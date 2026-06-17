@@ -2,7 +2,7 @@
 
 from datetime import datetime, timezone
 
-from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Index, Integer, String, Text
+from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Index, Integer, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from backend.db.database import Base
@@ -83,8 +83,35 @@ class Idea(Base):
 
     proposal: Mapped["Proposal | None"] = relationship(back_populates="idea")
     pipeline_run: Mapped["PipelineRun | None"] = relationship(back_populates="ideas")
+    paper_links: Mapped[list["IdeaPaperLink"]] = relationship(back_populates="idea", cascade="all, delete-orphan")
 
     created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
+
+
+class IdeaPaperLink(Base):
+    """Junction table linking ideas to supporting/cited papers.
+
+    Provides explicit many-to-many provenance: which papers were used to
+    generate or are cited by a given idea.  The ``role`` field distinguishes
+    between papers selected by the pipeline as supporting evidence and
+    references that appear in the final proposal text.
+    """
+
+    __tablename__ = "idea_paper_links"
+    __table_args__ = (
+        UniqueConstraint("idea_id", "paper_id", "role", name="uq_idea_paper_role"),
+        Index("ix_idea_paper_links_idea_id", "idea_id"),
+        Index("ix_idea_paper_links_paper_id", "paper_id"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    idea_id: Mapped[int] = mapped_column(Integer, ForeignKey("ideas.id"), nullable=False)
+    paper_id: Mapped[int] = mapped_column(Integer, ForeignKey("papers.id"), nullable=False)
+    role: Mapped[str] = mapped_column(String(30), nullable=False, default="supporting")
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
+
+    idea: Mapped["Idea"] = relationship(back_populates="paper_links")
+    paper: Mapped["Paper"] = relationship()
 
 
 class Proposal(Base):

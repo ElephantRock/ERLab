@@ -256,12 +256,44 @@ async def bulk_export(request: BulkExportRequest):
                         resolve_source_gaps as _resolve,
                         extract_proposal_references as _extract_refs,
                     )
+                    from backend.pipeline.provenance.reference_resolver import resolve_references as _resolve_refs
+                    from backend.db.models import IdeaPaperLink as _IPL, Paper as _PaperModel
+                    from sqlalchemy import select as _sel
+
                     raw_gids = json.loads(idea.source_gap_ids) if idea.source_gap_ids else []
                     sg_list = _resolve(session, raw_gids, idea.pipeline_run_id)
-                    p_refs = _extract_refs(proposal) if proposal else None
 
-                    if sg_list or p_refs:
+                    # Supporting papers via junction table
+                    _bulk_links = session.execute(
+                        _sel(_IPL).where(_IPL.idea_id == idea.id)
+                    ).scalars().all()
+                    _bulk_papers = []
+                    for _link in _bulk_links:
+                        _bp = session.get(_PaperModel, _link.paper_id)
+                        if _bp:
+                            _bulk_papers.append((_bp, _link.role))
+
+                    # Structured references
+                    _bulk_raw_refs = _extract_refs(proposal) if proposal else None
+                    _bulk_resolved = (
+                        _resolve_refs(_bulk_raw_refs, session, idea.pipeline_run_id)
+                        if _bulk_raw_refs else []
+                    )
+
+                    if sg_list or _bulk_papers or _bulk_resolved:
                         md_content += "\n## Evidence Trace\n\n"
+
+                        if _bulk_papers:
+                            md_content += "**Supporting Papers:**\n\n"
+                            for _bp, _brole in _bulk_papers:
+                                _pline = f"- {_bp.title}"
+                                if _bp.year:
+                                    _pline += f" ({_bp.year})"
+                                if _bp.venue:
+                                    _pline += f". {_bp.venue}"
+                                _pline += f" [{_brole}]\n"
+                                md_content += _pline
+                            md_content += "\n"
 
                         if sg_list:
                             md_content += "**Source Research Gaps:**\n\n"
@@ -275,14 +307,17 @@ async def bulk_export(request: BulkExportRequest):
                                     md_content += f"- [unresolved] {sg['raw']}\n"
                             md_content += "\n"
 
-                        if p_refs:
-                            md_content += "**References:**\n\n"
-                            if isinstance(p_refs, str):
-                                md_content += f"{p_refs}\n\n"
-                            else:
-                                for ref in p_refs:
-                                    raw = ref.get("raw", str(ref)) if isinstance(ref, dict) else str(ref)
-                                    md_content += f"- {raw}\n"
+                        if _bulk_resolved:
+                            md_content += "**Proposal References:**\n\n"
+                            for _br in _bulk_resolved:
+                                _bmark = "\u2705" if _br.resolved else "\u2753"
+                                _bline = f"- {_bmark} {_br.title or _br.raw}"
+                                if _br.resolved and _br.paper:
+                                    _bline += f" \u2192 matched: \"{_br.paper.get('title', '')}\""
+                                    _bline += f" [{_br.match_method}, {round(_br.match_confidence * 100)}%]"
+                                elif not _br.resolved:
+                                    _bline += " [unresolved]"
+                                md_content += f"{_bline}\n"
                             md_content += "\n"
 
                     zf.writestr(f"{safe_title}.md", md_content.encode("utf-8"))
@@ -309,6 +344,8 @@ async def export_run_markdown(run_id: int):
     from backend.db.crud import get_ideas_for_run, get_proposal_by_idea
     from backend.api.traceability import resolve_source_gaps, extract_proposal_references
     from backend.api.quality_checks import compute_quality_checks
+    from backend.pipeline.provenance.reference_resolver import resolve_references
+    from backend.db.models import IdeaPaperLink, Paper as PaperModel
 
     try:
         with get_session() as session:
@@ -371,11 +408,40 @@ async def export_run_markdown(run_id: int):
                 source_gaps = resolve_source_gaps(
                     session, raw_gap_ids, idea.pipeline_run_id,
                 )
-                proposal_refs = extract_proposal_references(proposal) if proposal else None
 
-                has_evidence = bool(source_gaps) or proposal_refs
+                # Supporting papers via junction table
+                from sqlalchemy import select as _sel
+                _links = session.execute(
+                    _sel(IdeaPaperLink).where(IdeaPaperLink.idea_id == idea.id)
+                ).scalars().all()
+                _papers = []
+                for _link in _links:
+                    _p = session.get(PaperModel, _link.paper_id)
+                    if _p:
+                        _papers.append((_p, _link.role))
+
+                # Structured proposal references
+                _raw_refs = extract_proposal_references(proposal) if proposal else None
+                _resolved_refs = (
+                    resolve_references(_raw_refs, session, idea.pipeline_run_id)
+                    if _raw_refs else []
+                )
+
+                has_evidence = bool(source_gaps) or _papers or _resolved_refs
                 if has_evidence:
                     sections.append("### Evidence Trace\n")
+
+                    if _papers:
+                        sections.append("**Supporting Papers:**\n")
+                        for _p, _role in _papers:
+                            _line = f"- {_p.title}"
+                            if _p.year:
+                                _line += f" ({_p.year})"
+                            if _p.venue:
+                                _line += f". {_p.venue}"
+                            _line += f" [{_role}]"
+                            sections.append(f"{_line}\n")
+                        sections.append("")
 
                     if source_gaps:
                         sections.append("**Source Research Gaps:**\n")
@@ -391,14 +457,17 @@ async def export_run_markdown(run_id: int):
                                 )
                         sections.append("")
 
-                    if proposal_refs:
-                        sections.append("**References:**\n")
-                        if isinstance(proposal_refs, str):
-                            sections.append(f"{proposal_refs}\n")
-                        else:
-                            for ref in proposal_refs:
-                                raw = ref.get("raw", str(ref)) if isinstance(ref, dict) else str(ref)
-                                sections.append(f"- {raw}\n")
+                    if _resolved_refs:
+                        sections.append("**Proposal References:**\n")
+                        for _r in _resolved_refs:
+                            _mark = "\u2705" if _r.resolved else "\u2753"
+                            _line = f"- {_mark} {_r.title or _r.raw}"
+                            if _r.resolved and _r.paper:
+                                _line += f" \u2192 matched: \"{_r.paper.get('title', '')}\""
+                                _line += f" [{_r.match_method}, {round(_r.match_confidence * 100)}%]"
+                            elif not _r.resolved:
+                                _line += " [unresolved]"
+                            sections.append(f"{_line}\n")
                         sections.append("")
 
             return PlainTextResponse("\n".join(sections), media_type="text/markdown")

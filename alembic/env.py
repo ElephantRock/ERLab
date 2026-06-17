@@ -23,6 +23,7 @@ if _PROJECT_ROOT not in sys.path:
 from backend.db.database import Base  # noqa: E402
 from backend.db.models import (  # noqa: E402
     Idea,
+    IdeaPaperLink,
     Paper,
     PipelineRun,
     Proposal,
