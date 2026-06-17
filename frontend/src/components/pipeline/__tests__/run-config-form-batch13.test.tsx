@@ -66,26 +66,28 @@ it("TEST-13-01-03: Advanced section is collapsed by default", () => {
   expect(toggle.getAttribute("aria-expanded")).toBe("false");
 });
 
-// ── TEST-13-01-04: Toggles for novelty/feasibility/synthesis render ───
-it("TEST-13-01-04: toggles for novelty/feasibility/synthesis render in advanced section", async () => {
+// ── TEST-13-01-04: Quality control selectors render in advanced section ───
+it("TEST-13-01-04: quality control selectors render in advanced section", async () => {
   const { user, getByTestId } = renderWithProviders(
     <RunConfigForm onSubmit={vi.fn()} />,
   );
   // Open advanced section first
   await user.click(getByTestId("advanced-toggle"));
 
-  const noveltyToggle = getByTestId("run-novelty-toggle") as HTMLInputElement;
-  const feasibilityToggle = getByTestId("run-feasibility-toggle") as HTMLInputElement;
-  const synthesisToggle = getByTestId("run-synthesis-toggle") as HTMLInputElement;
+  // Proposal depth buttons
+  expect(getByTestId("proposal-depth-concise")).toBeInTheDocument();
+  expect(getByTestId("proposal-depth-standard")).toBeInTheDocument();
+  expect(getByTestId("proposal-depth-detailed")).toBeInTheDocument();
 
-  expect(noveltyToggle).toBeInTheDocument();
-  expect(feasibilityToggle).toBeInTheDocument();
-  expect(synthesisToggle).toBeInTheDocument();
+  // Novelty depth buttons
+  expect(getByTestId("novelty-depth-light")).toBeInTheDocument();
+  expect(getByTestId("novelty-depth-standard")).toBeInTheDocument();
+  expect(getByTestId("novelty-depth-thorough")).toBeInTheDocument();
 
-  // Default should be checked (true)
-  expect(noveltyToggle.checked).toBe(true);
-  expect(feasibilityToggle.checked).toBe(true);
-  expect(synthesisToggle.checked).toBe(true);
+  // Idea diversity buttons
+  expect(getByTestId("idea-diversity-focused")).toBeInTheDocument();
+  expect(getByTestId("idea-diversity-balanced")).toBeInTheDocument();
+  expect(getByTestId("idea-diversity-exploratory")).toBeInTheDocument();
 });
 
 // ── TEST-13-01-05: max_gaps range is 1-20 (not 1-50) ──────────────────
@@ -115,9 +117,8 @@ it("TEST-13-01-06: form submission includes all new fields", async () => {
   // Set domain
   await user.type(getByPlaceholderText(/machine learning/), "quantum computing");
 
-  // Open advanced section and toggle off novelty
+  // Open advanced section
   await user.click(getByTestId("advanced-toggle"));
-  await user.click(getByTestId("run-novelty-toggle"));
 
   // Change export format to latex
   const select = getByTestId("export-format-select") as HTMLSelectElement;
@@ -128,18 +129,23 @@ it("TEST-13-01-06: form submission includes all new fields", async () => {
   await user.clear(genRoundsInput);
   await user.type(genRoundsInput, "5");
 
+  // Set quality controls
+  await user.click(getByTestId("proposal-depth-detailed"));
+  await user.click(getByTestId("novelty-depth-thorough"));
+  await user.click(getByTestId("idea-diversity-exploratory"));
+
   // Submit
   await user.click(getByText("Start Pipeline"));
 
   expect(onSubmit).toHaveBeenCalledOnce();
   const config = onSubmit.mock.calls[0][0] as PipelineRunRequest;
 
-  // Verify all new fields are present
+  // Verify all fields are present
   expect(config.domain).toBe("quantum computing");
   expect(config.generation_rounds).toBe(5);
   expect(config.export_format).toBe("latex");
-  expect(config.run_novelty).toBe(false);
-  expect(config.run_feasibility).toBe(true);
-  expect(config.run_synthesis).toBe(true);
+  expect(config.proposal_depth).toBe("detailed");
+  expect(config.novelty_depth).toBe("thorough");
+  expect(config.idea_diversity).toBe("exploratory");
   expect(config.max_gaps).toBe(VALIDATION.max_gaps.default);
 });

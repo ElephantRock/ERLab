@@ -35,10 +35,10 @@ export function RunConfigForm({ onSubmit, isLoading, initialDomain = "" }: RunCo
   const [ideasPerRound, setIdeasPerRound] = useState(VALIDATION.ideas_per_round.default);
   const [generationRounds, setGenerationRounds] = useState(VALIDATION.generation_rounds.default);
   const [exportFormat, setExportFormat] = useState<string>(VALIDATION.export_formats[0]);
-  const [runNovelty, setRunNovelty] = useState(true);
-  const [runFeasibility, setRunFeasibility] = useState(true);
-  const [runSynthesis, setRunSynthesis] = useState(true);
   const [searchQueries, setSearchQueries] = useState("");
+  const [proposalDepth, setProposalDepth] = useState<string>("standard");
+  const [noveltyDepth, setNoveltyDepth] = useState<string>("standard");
+  const [ideaDiversity, setIdeaDiversity] = useState<string>("balanced");
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const [strategy, setStrategy] = useState<string>("fast_scan");
   const [modelOverrides, setModelOverrides] = useState<Record<string, string>>({});
@@ -59,12 +59,15 @@ export function RunConfigForm({ onSubmit, isLoading, initialDomain = "" }: RunCo
       search_queries: searchQueries
         ? searchQueries.split(",").map((q) => q.trim()).filter(Boolean)
         : undefined,
-      run_novelty: runNovelty,
-      run_feasibility: runFeasibility,
-      run_synthesis: runSynthesis,
+      run_novelty: true,
+      run_feasibility: true,
+      run_synthesis: true,
       export_format: exportFormat,
       strategy,
       model_overrides: Object.keys(modelOverrides).length > 0 ? modelOverrides : undefined,
+      proposal_depth: proposalDepth,
+      novelty_depth: noveltyDepth,
+      idea_diversity: ideaDiversity,
     };
     onSubmit(config);
   }
@@ -224,45 +227,90 @@ export function RunConfigForm({ onSubmit, isLoading, initialDomain = "" }: RunCo
                   </p>
                 </div>
 
-                {/* Run Toggles */}
-                <div className="flex items-center justify-between">
-                  <label className="text-sm font-medium" htmlFor="run-novelty-toggle">
-                    Run Novelty Check
-                  </label>
-                  <input
-                    id="run-novelty-toggle"
-                    type="checkbox"
-                    checked={runNovelty}
-                    onChange={(e) => setRunNovelty(e.target.checked)}
-                    data-testid="run-novelty-toggle"
-                    className="h-4 w-4 rounded border-input"
-                  />
-                </div>
-                <div className="flex items-center justify-between">
-                  <label className="text-sm font-medium" htmlFor="run-feasibility-toggle">
-                    Run Feasibility Scoring
-                  </label>
-                  <input
-                    id="run-feasibility-toggle"
-                    type="checkbox"
-                    checked={runFeasibility}
-                    onChange={(e) => setRunFeasibility(e.target.checked)}
-                    data-testid="run-feasibility-toggle"
-                    className="h-4 w-4 rounded border-input"
-                  />
-                </div>
-                <div className="flex items-center justify-between">
-                  <label className="text-sm font-medium" htmlFor="run-synthesis-toggle">
-                    Run Proposal Synthesis
-                  </label>
-                  <input
-                    id="run-synthesis-toggle"
-                    type="checkbox"
-                    checked={runSynthesis}
-                    onChange={(e) => setRunSynthesis(e.target.checked)}
-                    data-testid="run-synthesis-toggle"
-                    className="h-4 w-4 rounded border-input"
-                  />
+                {/* Quality Controls */}
+                <div className="space-y-3 pt-2 border-t">
+                  <label className="text-sm font-medium">Quality Controls</label>
+
+                  {/* Proposal Depth */}
+                  <div className="space-y-1">
+                    <label className="text-xs text-muted-foreground">Proposal Depth</label>
+                    <div className="flex gap-2">
+                      {(["concise", "standard", "detailed"] as const).map((level) => (
+                        <button
+                          key={level}
+                          type="button"
+                          onClick={() => setProposalDepth(level)}
+                          className={`flex-1 px-3 py-1.5 text-xs rounded-md border transition-colors ${
+                            proposalDepth === level
+                              ? "border-primary bg-primary/10 text-primary font-medium"
+                              : "border-input text-muted-foreground hover:bg-muted/50"
+                          }`}
+                          data-testid={`proposal-depth-${level}`}
+                        >
+                          {level.charAt(0).toUpperCase() + level.slice(1)}
+                        </button>
+                      ))}
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      {proposalDepth === "concise" && "Shorter proposals with essential sections only."}
+                      {proposalDepth === "standard" && "Balanced section length for general use."}
+                      {proposalDepth === "detailed" && "Longer, more thorough section depth."}
+                    </p>
+                  </div>
+
+                  {/* Novelty Depth */}
+                  <div className="space-y-1">
+                    <label className="text-xs text-muted-foreground">Novelty Check Depth</label>
+                    <div className="flex gap-2">
+                      {(["light", "standard", "thorough"] as const).map((level) => (
+                        <button
+                          key={level}
+                          type="button"
+                          onClick={() => setNoveltyDepth(level)}
+                          className={`flex-1 px-3 py-1.5 text-xs rounded-md border transition-colors ${
+                            noveltyDepth === level
+                              ? "border-primary bg-primary/10 text-primary font-medium"
+                              : "border-input text-muted-foreground hover:bg-muted/50"
+                          }`}
+                          data-testid={`novelty-depth-${level}`}
+                        >
+                          {level.charAt(0).toUpperCase() + level.slice(1)}
+                        </button>
+                      ))}
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      {noveltyDepth === "light" && "Compare against 10 papers for quick checks."}
+                      {noveltyDepth === "standard" && "Compare against 20 papers (default)."}
+                      {noveltyDepth === "thorough" && "Compare against 50 papers for comprehensive novelty."}
+                    </p>
+                  </div>
+
+                  {/* Idea Diversity */}
+                  <div className="space-y-1">
+                    <label className="text-xs text-muted-foreground">Idea Diversity</label>
+                    <div className="flex gap-2">
+                      {(["focused", "balanced", "exploratory"] as const).map((level) => (
+                        <button
+                          key={level}
+                          type="button"
+                          onClick={() => setIdeaDiversity(level)}
+                          className={`flex-1 px-3 py-1.5 text-xs rounded-md border transition-colors ${
+                            ideaDiversity === level
+                              ? "border-primary bg-primary/10 text-primary font-medium"
+                              : "border-input text-muted-foreground hover:bg-muted/50"
+                          }`}
+                          data-testid={`idea-diversity-${level}`}
+                        >
+                          {level.charAt(0).toUpperCase() + level.slice(1)}
+                        </button>
+                      ))}
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      {ideaDiversity === "focused" && "Conservative, closer to existing literature."}
+                      {ideaDiversity === "balanced" && "Mix of conventional and creative ideas."}
+                      {ideaDiversity === "exploratory" && "Wide-ranging, highly diverse ideas."}
+                    </p>
+                  </div>
                 </div>
 
                 {/* Model Selection per Stage */}

@@ -13,6 +13,9 @@ export interface PipelineRunRequest {
   session_id?: string | null;
   strategy?: string;
   model_overrides?: Record<string, string> | null;
+  proposal_depth?: "concise" | "standard" | "detailed";
+  novelty_depth?: "light" | "standard" | "thorough";
+  idea_diversity?: "focused" | "balanced" | "exploratory";
 }
 
 export interface PipelineRunSummary {
