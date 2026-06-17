@@ -119,13 +119,32 @@ export interface IdeaDetail extends IdeaSummary {
   proposed_method: string;
   expected_contributions: string;
   source_gap_ids: string[] | null;
+  source_gaps: SourceGap[] | null;
   novelty_report: Record<string, unknown> | null;
   feasibility_report: Record<string, unknown> | null;
   proposal_md: string | null;
   proposal_latex: string | null;
   proposal_sections: Record<string, unknown> | null;
+  proposal_references: ProposalReference[] | string | null;
   mechanical_metrics: Record<string, number> | null;
   experiment_results: ExperimentResult[] | null;
+}
+
+export interface SourceGap {
+  id: number;
+  title: string;
+  gap_type: string;
+  confidence: number;
+  resolved: true;
+}
+
+export interface UnresolvedSourceGap {
+  raw: string;
+  resolved: false;
+}
+
+export interface ProposalReference {
+  raw: string;
 }
 
 export interface IdeaListResponse {
@@ -141,6 +160,21 @@ export interface IdeaFeedbackRequest {
 
 // --- Gaps ---
 
+export interface RelatedIdea {
+  id: number;
+  title: string;
+  overall_score: number | null;
+}
+
+export interface MatchedPaper {
+  id: number;
+  title: string;
+  abstract: string | null;
+  year: number | null;
+  venue: string | null;
+  citation_count: number | null;
+}
+
 export interface ResearchGap {
   id: number;
   title: string;
@@ -151,6 +185,8 @@ export interface ResearchGap {
   idea_count: number;
   truth?: { frequency: number; confidence: number; evidence_count: number };
   related_clusters?: number[] | null;
+  related_ideas?: RelatedIdea[] | null;
+  matched_papers_preview?: MatchedPaper[] | null;
   status?: string;
   user_rating?: number | null;
   user_notes?: string | null;

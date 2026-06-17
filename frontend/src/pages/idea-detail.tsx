@@ -8,13 +8,14 @@ import { ShareDialog } from "@/components/idea/share-dialog";
 import { NoveltyReportView } from "@/components/ideas/novelty-report-view";
 import { FeasibilityReportView } from "@/components/ideas/feasibility-report-view";
 import { MarkdownRenderer } from "@/components/markdown/markdown-renderer";
+import { EvidencePanel } from "@/components/ideas/evidence-panel";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, RefreshCw, Loader2, GitBranch, CheckCircle2, AlertTriangle, Copy, Check } from "lucide-react";
+import { ArrowLeft, RefreshCw, Loader2, CheckCircle2, AlertTriangle, Copy, Check } from "lucide-react";
 import { toast } from "sonner";
 import { useState } from "react";
 import type { ExperimentResult } from "@/api/types";
@@ -163,32 +164,11 @@ export default function IdeaDetail() {
         </CardContent>
       </Card>
 
-      {idea.source_gap_ids && idea.source_gap_ids.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <GitBranch className="h-4 w-4" />
-              Source Research Gaps
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ul className="space-y-2">
-              {idea.source_gap_ids.map((gapId, idx) => (
-                <li key={idx} className="flex items-center gap-2 text-sm">
-                  <span className="inline-block h-2 w-2 rounded-full bg-warning flex-shrink-0" />
-                  <Button
-                    variant="link"
-                    onClick={() => navigate(`/gaps/${gapId}`)}
-                    data-testid="source-gap-link"
-                  >
-                    {gapId}
-                  </Button>
-                </li>
-              ))}
-            </ul>
-          </CardContent>
-        </Card>
-      )}
+      <EvidencePanel
+        sourceGaps={idea.source_gaps ?? null}
+        proposalReferences={idea.proposal_references ?? null}
+        mechanicalMetrics={idea.mechanical_metrics ?? null}
+      />
 
       {(idea.proposal_md || idea.novelty_report || idea.feasibility_report || idea.mechanical_metrics) && (
         <Tabs defaultValue={idea.proposal_md ? "proposal" : idea.novelty_report ? "novelty" : idea.feasibility_report ? "feasibility" : "metrics"}>

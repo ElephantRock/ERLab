@@ -65,6 +65,13 @@ const sampleGap: ResearchGap = {
   idea_count: 3,
   truth: { frequency: 0.75, confidence: 0.82, evidence_count: 5 },
   related_clusters: [1, 3],
+  related_ideas: [
+    { id: 10, title: "Cross-Domain Transfer via Attention", overall_score: 0.78 },
+    { id: 11, title: "Multi-Task Domain Adaptation", overall_score: 0.65 },
+  ],
+  matched_papers_preview: [
+    { id: 1, title: "Cross-domain attention for NLP", abstract: "Abstract...", year: 2024, venue: "NeurIPS", citation_count: 42 },
+  ],
 };
 
 beforeEach(() => {
@@ -113,8 +120,26 @@ describe("GapDetailPage", () => {
     mockedGetGap.mockResolvedValue({ gap: sampleGap });
     renderGapDetail();
     await waitFor(() => {
-      expect(screen.getByText(/3 ideas linked/)).toBeInTheDocument();
-      expect(screen.getByText("View Related Ideas")).toBeInTheDocument();
+      expect(screen.getByText("Related Ideas")).toBeInTheDocument();
+      expect(screen.getByText("Cross-Domain Transfer via Attention")).toBeInTheDocument();
+      expect(screen.getByText("Multi-Task Domain Adaptation")).toBeInTheDocument();
+    });
+  });
+
+  it("TEST-40-01-05b: related idea links navigate to idea detail", async () => {
+    mockedGetGap.mockResolvedValue({ gap: sampleGap });
+    renderGapDetail();
+    await waitFor(() => {
+      expect(screen.getByTestId("related-idea-10")).toBeInTheDocument();
+    });
+  });
+
+  it("TEST-40-01-05c: matched papers section displays with honest label", async () => {
+    mockedGetGap.mockResolvedValue({ gap: sampleGap });
+    renderGapDetail();
+    await waitFor(() => {
+      expect(screen.getByText("Matched Papers")).toBeInTheDocument();
+      expect(screen.getByText(/keyword overlap/i)).toBeInTheDocument();
     });
   });
 

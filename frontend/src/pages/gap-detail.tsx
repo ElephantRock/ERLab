@@ -3,12 +3,11 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { getGap, updateGapStatus } from "@/api/gaps";
-import { listIdeas } from "@/api/ideas";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowLeft, BookOpen, GitBranch, Lightbulb, BarChart3 } from "lucide-react";
+import { ArrowLeft, ArrowRight, BookOpen, GitBranch, Lightbulb, BarChart3, FileText } from "lucide-react";
 import { GapFeedbackForm } from "@/components/gaps/gap-feedback-form";
-import type { ResearchGap } from "@/api/types";
+import type { ResearchGap, RelatedIdea, MatchedPaper } from "@/api/types";
 
 /** Gap type badge color mapping. */
 const GAP_TYPE_COLORS: Record<string, string> = {
@@ -31,16 +30,9 @@ export default function GapDetailPage() {
 
   const gap: ResearchGap | undefined = data?.gap;
 
-  // Fetch related ideas (ideas that reference this gap's title)
-  const { data: relatedIdeasData } = useQuery({
-    queryKey: ["ideas-for-gap", gap?.title],
-    queryFn: () =>
-      listIdeas({ search: gap?.title, limit: 5 }).catch(() => ({
-        ideas: [],
-        total: 0,
-      })),
-    enabled: !!gap?.title,
-  });
+  // Related ideas and matched papers come inline from the gap detail API
+  const relatedIdeas: RelatedIdea[] | null = gap?.related_ideas ?? null;
+  const matchedPapers: MatchedPaper[] | null = gap?.matched_papers_preview ?? null;
 
   if (isLoading) {
     return (
@@ -179,23 +171,73 @@ export default function GapDetailPage() {
         </div>
       )}
 
-      {/* Related Ideas */}
-      {gap.idea_count != null && gap.idea_count > 0 && (
+      {/* Related Ideas (from API, not heuristic search) */}
+      {relatedIdeas && relatedIdeas.length > 0 && (
         <div className="bg-card border rounded-lg p-4">
           <h2 className="text-lg font-semibold mb-3 flex items-center gap-2">
             <Lightbulb className="h-5 w-5" />
             Related Ideas
           </h2>
-          <p className="text-sm text-muted-foreground">
-            {gap.idea_count} idea{gap.idea_count !== 1 ? "s" : ""} linked to this gap.
+          <ul className="space-y-2">
+            {relatedIdeas.map((idea) => (
+              <li key={idea.id}>
+                <button
+                  type="button"
+                  role="link"
+                  onClick={() => navigate(`/ideas/${idea.id}`)}
+                  className="flex items-center gap-2 text-sm hover:text-primary text-left w-full"
+                  data-testid={`related-idea-${idea.id}`}
+                >
+                  <ArrowRight className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+                  <span className="truncate">{idea.title}</span>
+                  {idea.overall_score != null && (
+                    <span className="text-xs text-muted-foreground ml-auto">
+                      {idea.overall_score.toFixed(2)}
+                    </span>
+                  )}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {/* Matched Papers (heuristic keyword overlap) */}
+      {matchedPapers && matchedPapers.length > 0 && (
+        <div className="bg-card border rounded-lg p-4">
+          <h2 className="text-lg font-semibold mb-3 flex items-center gap-2">
+            <FileText className="h-5 w-5" />
+            Matched Papers
+          </h2>
+          <p className="text-xs text-muted-foreground mb-3">
+            Papers matched by keyword overlap. Not a guaranteed provenance link.
           </p>
+          <ul className="space-y-2">
+            {matchedPapers.map((paper) => (
+              <li key={paper.id} className="text-sm border-l-2 border-muted pl-3">
+                <p className="font-medium">{paper.title}</p>
+                <div className="flex items-center gap-3 text-xs text-muted-foreground mt-1">
+                  {paper.year && <span>{paper.year}</span>}
+                  {paper.venue && <span>{paper.venue}</span>}
+                  {paper.citation_count != null && (
+                    <span>{paper.citation_count} citations</span>
+                  )}
+                </div>
+                {paper.abstract && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {paper.abstract}
+                  </p>
+                )}
+              </li>
+            ))}
+          </ul>
           <Button
             variant="outline"
             size="sm"
-            className="mt-2"
-            onClick={() => navigate(`/ideas?search=${encodeURIComponent(gap.title)}`)}
+            className="mt-3"
+            onClick={() => navigate(`/gaps/${gapId}/papers`)}
           >
-            View Related Ideas
+            View All Matched Papers
           </Button>
         </div>
       )}
