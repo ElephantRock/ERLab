@@ -1,8 +1,12 @@
-"""Tests for backend.api.quality_checks.compute_quality_checks."""
+"""Tests for backend.api.quality_checks — quality checks, remediation hints, citation audit."""
 
 import pytest
 
-from backend.api.quality_checks import compute_quality_checks
+from backend.api.quality_checks import (
+    compute_quality_checks,
+    compute_remediation_hints,
+    audit_citations,
+)
 
 
 class TestComputeQualityChecks:
@@ -224,3 +228,155 @@ class TestComputeQualityChecks:
         assert checks_by_name.get(
             "citation markers ([1], [SOURCE-N], or Author, Year)"
         ) is True
+
+
+# ---------------------------------------------------------------------------
+# compute_remediation_hints
+# ---------------------------------------------------------------------------
+
+_PASSING_SECTIONS = {
+    "abstract": " ".join(["word"] * 200),
+    "introduction": " ".join(["word"] * 500) + " Our contributions are novel.",
+    "related_work": " ".join(["word"] * 400) + " [1] [2] (Smith, 2020)",
+    "proposed_method": " ".join(["word"] * 700) + " $$L = loss$$ $x$ GPU A100",
+    "expected_contributions": " ".join(["word"] * 200),
+    "evaluation_plan": " ".join(["word"] * 400) + " baseline ablation accuracy cross-domain without alignment",
+    "timeline": " ".join(["word"] * 150) + " A100 GPU 7B",
+    "risk_mitigation": " ".join(["word"] * 200),
+}
+
+
+class TestRemediationHints:
+    """Tests for deterministic remediation hint generation."""
+
+    def test_returns_none_for_no_sections(self):
+        assert compute_remediation_hints(None) is None
+
+    def test_returns_none_when_all_checks_pass(self):
+        assert compute_remediation_hints(dict(_PASSING_SECTIONS)) is None
+
+    def test_word_count_hint(self):
+        sections = dict(_PASSING_SECTIONS)
+        sections["abstract"] = "short text"
+        hints = compute_remediation_hints(sections)
+        assert hints is not None
+        wc_hints = [h for h in hints if h["issue_type"] == "word_count"]
+        assert len(wc_hints) == 1
+        assert wc_hints[0]["section"] == "abstract"
+        assert "Expand" in wc_hints[0]["suggestion"]
+        assert "150" in wc_hints[0]["suggestion"]
+
+    def test_missing_pattern_hint_citations(self):
+        sections = dict(_PASSING_SECTIONS)
+        sections["related_work"] = " ".join(["word"] * 400)
+        hints = compute_remediation_hints(sections)
+        assert hints is not None
+        citation_hints = [
+            h for h in hints
+            if h["section"] == "related_work" and h["issue_type"] == "missing_pattern"
+        ]
+        assert len(citation_hints) == 1
+        assert "reference" in citation_hints[0]["suggestion"].lower()
+
+    def test_missing_section_hint(self):
+        sections = dict(_PASSING_SECTIONS)
+        del sections["risk_mitigation"]
+        hints = compute_remediation_hints(sections)
+        assert hints is not None
+        missing_hints = [h for h in hints if h["issue_type"] == "missing_section"]
+        assert len(missing_hints) == 1
+        assert missing_hints[0]["section"] == "risk_mitigation"
+        assert missing_hints[0]["severity"] == "error"
+
+    def test_all_hints_have_required_fields(self):
+        sections = {k: "short" for k in _PASSING_SECTIONS}
+        hints = compute_remediation_hints(sections)
+        assert hints is not None
+        for h in hints:
+            assert "section" in h
+            assert "label" in h
+            assert "issue_type" in h
+            assert "severity" in h
+            assert "message" in h
+            assert "suggestion" in h
+            assert "refinement_available" in h
+            assert h["refinement_available"] is True
+
+    def test_accepts_precomputed_quality_checks(self):
+        qc = compute_quality_checks({"abstract": "short text"})
+        hints = compute_remediation_hints(None, qc)
+        assert hints is not None
+        assert all(h["section"] == "abstract" for h in hints if h["issue_type"] == "word_count")
+
+    def test_multiple_failure_types_for_one_section(self):
+        sections = dict(_PASSING_SECTIONS)
+        sections["related_work"] = "short no citations"
+        hints = compute_remediation_hints(sections)
+        rw_hints = [h for h in hints if h["section"] == "related_work"]
+        assert len(rw_hints) == 2
+        issue_types = {h["issue_type"] for h in rw_hints}
+        assert "word_count" in issue_types
+        assert "missing_pattern" in issue_types
+
+
+# ---------------------------------------------------------------------------
+# audit_citations
+# ---------------------------------------------------------------------------
+
+class TestAuditCitations:
+    """Tests for citation health auditing."""
+
+    def test_returns_none_for_no_sections(self):
+        assert audit_citations(None) is None
+
+    def test_detects_citation_needed_markers(self):
+        sections = dict(_PASSING_SECTIONS)
+        sections["related_work"] = "Some text [Citation needed: Liu et al., 2023] here. " * 30
+        result = audit_citations(sections)
+        rw = [e for e in result if e["section"] == "related_work"][0]
+        assert rw["citation_needed_count"] == 30
+        assert rw["has_citation_issues"] is True
+
+    def test_counts_valid_citations(self):
+        sections = dict(_PASSING_SECTIONS)
+        sections["related_work"] = "Text with [1], [2], [SOURCE-3], and (Smith, 2020) refs. " * 20
+        result = audit_citations(sections)
+        rw = [e for e in result if e["section"] == "related_work"][0]
+        assert rw["valid_citation_count"] == 80  # 4 per repeat × 20 repeats
+        assert rw["citation_needed_count"] == 0
+        assert rw["has_citation_issues"] is False
+
+    def test_summary_entry(self):
+        sections = dict(_PASSING_SECTIONS)
+        sections["related_work"] = "Text [Citation needed: X, 2020] and [1]. " * 20
+        sections["introduction"] = "More [Citation needed: Y, 2021] text [2]. " * 20
+        result = audit_citations(sections)
+        summary = [e for e in result if e["section"] == "_summary"][0]
+        assert summary["citation_needed_count"] == 40  # 2 per repeat × 20
+        assert summary["valid_citation_count"] == 40  # 2 per repeat × 20
+        assert summary["has_citation_issues"] is True
+
+    def test_includes_reference_resolution_counts(self):
+        sections = dict(_PASSING_SECTIONS)
+        refs = [
+            {"raw": "ref1", "resolved": True},
+            {"raw": "ref2", "resolved": True},
+            {"raw": "ref3", "resolved": False},
+        ]
+        result = audit_citations(sections, proposal_references=refs)
+        rw = [e for e in result if e["section"] == "related_work"][0]
+        assert rw["resolved_reference_count"] == 2
+        assert rw["unresolved_reference_count"] == 1
+
+    def test_no_reference_resolution_without_refs_param(self):
+        result = audit_citations(dict(_PASSING_SECTIONS))
+        rw = [e for e in result if e["section"] == "related_work"][0]
+        assert "resolved_reference_count" not in rw
+        assert "unresolved_reference_count" not in rw
+
+    def test_clean_sections_report_zero_issues(self):
+        result = audit_citations(dict(_PASSING_SECTIONS))
+        summary = [e for e in result if e["section"] == "_summary"][0]
+        assert summary["citation_needed_count"] == 0
+        assert summary["valid_citation_count"] == 3  # [1], [2], (Smith, 2020)
+        assert summary["has_citation_issues"] is False

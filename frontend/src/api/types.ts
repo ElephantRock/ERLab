@@ -151,6 +151,8 @@ export interface IdeaDetail extends IdeaSummary {
   proposal_references: ResolvedReference[] | string | null;
   supporting_papers: SupportingPaper[] | null;
   quality_checks: QualityCheckResult[] | null;
+  remediation_hints: RemediationHint[] | null;
+  citation_audit: CitationAuditEntry[] | null;
   mechanical_metrics: Record<string, number> | null;
   experiment_results: ExperimentResult[] | null;
 }
@@ -187,6 +189,26 @@ export interface QualityCheckResult {
   checks: QualityCheckEntry[];
   passed: boolean;
   failures: string[];
+}
+
+export interface RemediationHint {
+  section: string;
+  label: string;
+  issue_type: "word_count" | "missing_pattern" | "missing_section";
+  severity: "error" | "warning";
+  message: string;
+  suggestion: string;
+  refinement_available: boolean;
+}
+
+export interface CitationAuditEntry {
+  section: string;
+  label: string;
+  citation_needed_count: number;
+  valid_citation_count: number;
+  has_citation_issues: boolean;
+  resolved_reference_count?: number;
+  unresolved_reference_count?: number;
 }
 
 export interface SupportingPaper {

@@ -8,7 +8,7 @@ from sqlalchemy import select
 from backend.api.errors import APIError, NotFoundError
 from backend.api.schemas import IdeaFeedbackRequest
 from backend.api.traceability import resolve_source_gaps, extract_proposal_references
-from backend.api.quality_checks import compute_quality_checks
+from backend.api.quality_checks import compute_quality_checks, compute_remediation_hints, audit_citations
 from backend.pipeline.provenance.reference_resolver import resolve_references
 
 router = APIRouter()
@@ -205,6 +205,14 @@ async def get_idea(idea_id: int):
             if enriched:
                 supporting_papers = enriched
 
+        # Compute sections dict once for reuse
+        sections_dict = (
+            json.loads(proposal.sections_json)
+            if proposal and proposal.sections_json
+            else None
+        )
+        quality_checks = compute_quality_checks(sections_dict)
+
         return {
             "idea": {
                 "id": idea.id,
@@ -225,18 +233,12 @@ async def get_idea(idea_id: int):
                 "mechanical_metrics": mechanical_metrics,
                 "proposal_md": proposal.content_md if proposal else None,
                 "proposal_latex": proposal.content_latex if proposal else None,
-                "proposal_sections": (
-                    json.loads(proposal.sections_json)
-                    if proposal and proposal.sections_json
-                    else None
-                ),
+                "proposal_sections": sections_dict,
                 "proposal_references": proposal_references,
                 "supporting_papers": supporting_papers,
-                "quality_checks": compute_quality_checks(
-                    json.loads(proposal.sections_json)
-                    if proposal and proposal.sections_json
-                    else None
-                ),
+                "quality_checks": quality_checks,
+                "remediation_hints": compute_remediation_hints(sections_dict, quality_checks),
+                "citation_audit": audit_citations(sections_dict, proposal_references),
                 "experiment_results": experiment_results if experiment_results else None,
                 "created_at": str(idea.created_at),
             },

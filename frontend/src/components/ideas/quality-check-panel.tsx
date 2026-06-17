@@ -4,6 +4,9 @@
  * Displays which sections pass/fail word-count and pattern checks, computed
  * at read time from persisted sections_json. This is the same checklist that
  * ProposalSynthesizer._refine_sections enforces at generation time.
+ *
+ * When remediation hints are available, failed checks show actionable
+ * suggestions inline.
  */
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,14 +17,17 @@ import {
   XCircle,
   AlertTriangle,
   ClipboardCheck,
+  Lightbulb,
 } from "lucide-react";
-import type { QualityCheckResult } from "@/api/types";
+import type { QualityCheckResult, RemediationHint } from "@/api/types";
 import { cn } from "@/lib/utils";
 
 export function QualityCheckPanel({
   qualityChecks,
+  remediationHints,
 }: {
   qualityChecks: QualityCheckResult[] | null;
+  remediationHints?: RemediationHint[] | null;
 }) {
   if (!qualityChecks || qualityChecks.length === 0) return null;
 
@@ -29,6 +35,16 @@ export function QualityCheckPanel({
   const totalCount = qualityChecks.length;
   const allPassed = passedCount === totalCount;
   const missingCount = qualityChecks.filter((c) => !c.present).length;
+
+  // Build a lookup: section → hints for that section
+  const hintsBySection = new Map<string, RemediationHint[]>();
+  if (remediationHints) {
+    for (const hint of remediationHints) {
+      const existing = hintsBySection.get(hint.section) ?? [];
+      existing.push(hint);
+      hintsBySection.set(hint.section, existing);
+    }
+  }
 
   return (
     <Card data-testid="quality-check-panel">
@@ -131,6 +147,26 @@ export function QualityCheckPanel({
                 <p className="text-xs text-muted-foreground mt-1">
                   {check.failures.join("; ")}
                 </p>
+              )}
+
+              {/* Remediation hints for this section */}
+              {!check.passed && hintsBySection.has(check.section) && (
+                <div
+                  className="mt-2 space-y-1.5"
+                  data-testid={`remediation-inline-${check.section}`}
+                >
+                  {hintsBySection.get(check.section)!.map((hint, hIdx) => (
+                    <div
+                      key={hIdx}
+                      className="flex items-start gap-1.5 rounded bg-warning/5 border border-warning/10 px-2 py-1.5"
+                    >
+                      <Lightbulb className="h-3 w-3 text-info flex-shrink-0 mt-0.5" />
+                      <span className="text-xs text-muted-foreground">
+                        {hint.suggestion}
+                      </span>
+                    </div>
+                  ))}
+                </div>
               )}
 
               {!check.present && (
