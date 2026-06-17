@@ -6,6 +6,7 @@ from fastapi import APIRouter, Query
 from fastapi.responses import Response
 
 from backend.api.errors import NotFoundError
+from backend.api.traceability import find_related_ideas
 
 router = APIRouter()
 
@@ -334,11 +335,46 @@ async def get_gap(gap_id: int):
     """
     from backend.db.crud import count_ideas_for_gap, get_gap as db_get_gap
     from backend.db.database import get_session
+    from backend.db.models import Paper
+    from sqlalchemy import select as sa_select
 
     with get_session() as session:
         gap = db_get_gap(session, gap_id)
         if not gap:
             raise NotFoundError("Gap not found")
+
+        # Find related ideas whose source_gap_ids reference this gap
+        related_ideas = find_related_ideas(
+            session, gap.title, gap.pipeline_run_id, limit=10,
+        )
+
+        # Matched papers preview (top 5) — heuristic keyword overlap
+        matched_papers_preview: list[dict] = []
+        if gap.pipeline_run_id:
+            papers = session.execute(
+                sa_select(Paper).limit(50)
+            ).scalars().all()
+            gap_terms = set(gap.title.lower().split()) - {
+                "of", "the", "a", "an", "in", "for", "and", "to", "with", "from", "by",
+            }
+            scored = []
+            for p in papers:
+                kw = json.loads(p.keywords) if p.keywords and p.keywords not in ("[]", "") else []
+                title_words = set(p.title.lower().split())
+                overlap = len(gap_terms & (set(k.lower() for k in kw) | title_words))
+                if overlap > 0:
+                    scored.append((overlap, p))
+            scored.sort(key=lambda x: -x[0])
+            for _, p in scored[:5]:
+                matched_papers_preview.append({
+                    "id": p.id,
+                    "title": p.title,
+                    "abstract": p.abstract[:200] if p.abstract else None,
+                    "year": p.year,
+                    "venue": p.venue,
+                    "citation_count": p.citation_count,
+                })
+
         return {
             "gap": {
                 "id": gap.id,
@@ -352,6 +388,8 @@ async def get_gap(gap_id: int):
                 "created_at": str(gap.created_at),
                 "truth": _build_truth(gap),
                 "related_clusters": _build_related_clusters(gap),
+                "related_ideas": related_ideas if related_ideas else None,
+                "matched_papers_preview": matched_papers_preview if matched_papers_preview else None,
                 "status": getattr(gap, "status", "identified"),
                 "user_rating": getattr(gap, "user_rating", None),
                 "user_notes": getattr(gap, "user_notes", None),

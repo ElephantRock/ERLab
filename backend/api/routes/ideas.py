@@ -7,6 +7,7 @@ from sqlalchemy import select
 
 from backend.api.errors import APIError, NotFoundError
 from backend.api.schemas import IdeaFeedbackRequest
+from backend.api.traceability import resolve_source_gaps, extract_proposal_references
 
 router = APIRouter()
 
@@ -145,6 +146,15 @@ async def get_idea(idea_id: int):
         if isinstance(novelty_report_raw, dict):
             mechanical_metrics = novelty_report_raw.pop("mechanical_metrics", None)
 
+        # Resolve source_gap_ids (titles or idempotency keys) to real gap records
+        raw_gap_ids = json.loads(idea.source_gap_ids) if idea.source_gap_ids else []
+        source_gaps = resolve_source_gaps(session, raw_gap_ids, idea.pipeline_run_id)
+
+        # Extract structured proposal references
+        proposal_references = None
+        if proposal:
+            proposal_references = extract_proposal_references(proposal)
+
         return {
             "idea": {
                 "id": idea.id,
@@ -156,7 +166,8 @@ async def get_idea(idea_id: int):
                 "novelty_score": idea.novelty_score,
                 "feasibility_score": idea.feasibility_score,
                 "overall_score": idea.overall_score,
-                "source_gap_ids": json.loads(idea.source_gap_ids) if idea.source_gap_ids else None,
+                "source_gap_ids": raw_gap_ids if raw_gap_ids else None,
+                "source_gaps": source_gaps if source_gaps else None,
                 "novelty_report": novelty_report_raw,
                 "feasibility_report": json.loads(idea.feasibility_report)
                 if idea.feasibility_report
@@ -169,6 +180,7 @@ async def get_idea(idea_id: int):
                     if proposal and proposal.sections_json
                     else None
                 ),
+                "proposal_references": proposal_references,
                 "experiment_results": experiment_results if experiment_results else None,
                 "created_at": str(idea.created_at),
             },
