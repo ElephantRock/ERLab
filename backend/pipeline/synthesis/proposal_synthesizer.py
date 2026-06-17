@@ -149,10 +149,19 @@ class ResearchProposal:
 
 
 class ProposalSynthesizer:
-    def __init__(self, provider: LLMProvider, ensemble_reviewer=None, verify_references: bool = True):
+    def __init__(
+        self,
+        provider: LLMProvider,
+        ensemble_reviewer=None,
+        verify_references: bool = True,
+        min_words: dict[str, int] | None = None,
+    ):
+        from backend.pipeline.quality.quality_params import BASE_MIN_WORDS
         self._provider = provider
         self._ensemble_reviewer = ensemble_reviewer
         self._verify_references = verify_references
+        # Effective per-section minimum word counts (defaults to immutable base)
+        self._effective_min_words = dict(min_words) if min_words else dict(BASE_MIN_WORDS)
         self._prompt_template = (PROMPT_DIR / "synthesis_system.md").read_text()
 
     async def synthesize(
@@ -242,7 +251,7 @@ class ProposalSynthesizer:
         for section_name in REQUIRED_SECTIONS:
             key = section_name.lower().replace(" ", "_")
             content = sections.get(key, "")
-            if not content or (isinstance(content, str) and len(content.split()) < MIN_WORDS.get(key, 50)):
+            if not content or (isinstance(content, str) and len(content.split()) < self._effective_min_words.get(key, 50)):
                 try:
                     section_text = await self._generate_single_section(
                         section_name, idea, novelty_report, feasibility_report, literature, gaps,
@@ -298,7 +307,7 @@ class ProposalSynthesizer:
         provider: LLMProvider | None = None,
     ) -> str:
         """Generate a single section independently."""
-        min_words = MIN_WORDS.get(section_name.lower().replace(" ", "_"), 100)
+        min_words = self._effective_min_words.get(section_name.lower().replace(" ", "_"), 100)
         tips = {
             "Abstract": "150-250 words. State problem, approach, expected result. No first person.",
             "Introduction": "400+ words. 3-4 paragraphs: context, limitations, approach, contributions.",
@@ -372,7 +381,7 @@ class ProposalSynthesizer:
             failures: list[str] = []
 
             # Check 1: word count
-            min_words = MIN_WORDS.get(key, 50)
+            min_words = self._effective_min_words.get(key, 50)
             word_count = len(content.split())
             if word_count < min_words:
                 failures.append(f"word count {word_count} < {min_words}")

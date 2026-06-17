@@ -709,6 +709,9 @@ class PipelineOrchestrator:
         run_id: str | None = None,
         session_id: str | None = None,
         skip_stages: set[str] | None = None,
+        proposal_depth: str | None = None,
+        novelty_depth: str | None = None,
+        idea_diversity: str | None = None,
     ) -> PipelineResult:
         """Execute the full pipeline from literature search to export.
 
@@ -718,7 +721,14 @@ class PipelineOrchestrator:
         Args:
             skip_stages: Set of stage names to skip (used by --resume to avoid
                 re-running already-completed stages).
+            proposal_depth: "concise" | "standard" | "detailed"
+            novelty_depth: "light" | "standard" | "thorough"
+            idea_diversity: "focused" | "balanced" | "exploratory"
         """
+        # Resolve quality parameters into effective values
+        from backend.pipeline.quality.quality_params import resolve_all
+        quality_settings = resolve_all(proposal_depth, novelty_depth, idea_diversity)
+        params["quality_settings"] = quality_settings
         result = PipelineResult()
         rounds = generation_rounds or self._settings.generation_rounds
         ideas_per = ideas_per_round or self._settings.ideas_per_round
@@ -876,6 +886,39 @@ class PipelineOrchestrator:
                 self._services.novelty._top_k = int(evolved["novelty_top_k"])
 
             params.update(evolved)  # type: ignore[arg-type]
+
+        # Apply user-specified quality parameters (override evolved defaults)
+        # Quality params were already resolved at the top of run()
+        # Now apply them to the pipeline components:
+        effective_temp = quality_settings["effective_ideator_temperature"]
+        effective_top_k = quality_settings["effective_novelty_top_k"]
+
+        # Wire ideator temperature (only if user explicitly set diversity)
+        if idea_diversity and self._services.agent:
+            self._services.agent.set_temperature_overrides({
+                "ideator_temperature": effective_temp,
+            })
+            logger.info("Idea diversity '%s' → temperature=%.2f", idea_diversity, effective_temp)
+
+        # Wire novelty top_k (only if user explicitly set depth)
+        if novelty_depth and hasattr(self, '_services') and self._services.novelty:
+            self._services.novelty._top_k = effective_top_k
+            logger.info("Novelty depth '%s' → top_k=%d", novelty_depth, effective_top_k)
+
+        # Wire proposal depth into synthesizer effective min_words
+        if proposal_depth and hasattr(self, '_services') and self._services.synthesizer:
+            from backend.pipeline.quality.quality_params import resolve_min_words
+            self._services.synthesizer._effective_min_words = resolve_min_words(proposal_depth)
+            logger.info(
+                "Proposal depth '%s' → abstract min=%d words, method min=%d words",
+                proposal_depth,
+                self._services.synthesizer._effective_min_words.get('abstract', 150),
+                self._services.synthesizer._effective_min_words.get('proposed_method', 600),
+            )
+
+        # Store effective quality settings in params for visibility
+        params["quality_settings"] = quality_settings
+
         result.params_used = params
 
         # Create DB run record

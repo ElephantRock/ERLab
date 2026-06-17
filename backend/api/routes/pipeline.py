@@ -77,6 +77,9 @@ async def trigger_run(request: PipelineRunRequest):
             "max_gaps": request.max_gaps,
             "generation_rounds": request.generation_rounds,
             "ideas_per_round": request.ideas_per_round,
+            "proposal_depth": request.proposal_depth,
+            "novelty_depth": request.novelty_depth,
+            "idea_diversity": request.idea_diversity,
         },
     )
 
@@ -138,6 +141,9 @@ async def trigger_run(request: PipelineRunRequest):
                 export_format=request.export_format,
                 run_id=run_id,
                 session_id=request.session_id,
+                proposal_depth=request.proposal_depth,
+                novelty_depth=request.novelty_depth,
+                idea_diversity=request.idea_diversity,
             )
             # Mark DB record as completed
             try:

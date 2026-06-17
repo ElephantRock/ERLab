@@ -16,6 +16,10 @@ class PipelineRunRequest(BaseModel):
     session_id: str | None = None
     strategy: str = Field(default="deep_research", pattern="^(fast_scan|deep_research|academic_proposal|literature_review)$")
     model_overrides: dict[str, str] | None = Field(default=None, description="Per-stage model ID overrides, e.g. {\"gap_analysis\": \"local\", \"proposal_synthesis\": \"cloud\"}")
+    # Quality controls (intent-based)
+    proposal_depth: str = Field(default="standard", pattern="^(concise|standard|detailed)$", description="Controls proposal section minimum word counts")
+    novelty_depth: str = Field(default="standard", pattern="^(light|standard|thorough)$", description="Controls how many papers novelty checking compares against")
+    idea_diversity: str = Field(default="balanced", pattern="^(focused|balanced|exploratory)$", description="Controls ideator temperature for idea diversity")
 
 
 class SearchRequest(BaseModel):
