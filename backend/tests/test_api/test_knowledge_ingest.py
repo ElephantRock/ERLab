@@ -94,18 +94,35 @@ class TestIngestEndpoint:
         assert data["error"]["code"] == "BAD_REQUEST"
         assert "unsupported" in data["error"]["message"].lower() or "file" in data["error"]["message"].lower()
 
-    def test_ingest_text_file_returns_400(self, client):
-        """POST /knowledge/ingest with a plain text file returns 400 (HB-01)."""
-        text_file = io.BytesIO(TEXT_BYTES)
-        response = client.post(
-            "/api/v1/knowledge/ingest",
-            files={"file": ("notes.txt", text_file, "text/plain")},
-        )
+    def test_ingest_text_file_returns_success(self, client):
+        """POST /knowledge/ingest with a plain text file returns 200 (B160: TXT is supported)."""
+        from unittest.mock import AsyncMock, MagicMock, patch
 
-        assert response.status_code == 400
-        data = response.json()
-        assert "error" in data
-        assert data["error"]["code"] == "BAD_REQUEST"
+        text_file = io.BytesIO(TEXT_BYTES)
+
+        mock_parser = AsyncMock()
+        mock_parser.parse_and_chunk = AsyncMock(return_value=[])
+
+        with patch(
+            "backend.pipeline.ingestion.document_parser.DocumentParser",
+            return_value=mock_parser,
+        ), patch(
+            "backend.pipeline.knowledge.vector_store.VectorStore",
+            return_value=_make_mock_store(chunk_count=0),
+        ), patch(
+            "backend.providers.provider_factory.create_provider",
+        ), patch(
+            "backend.pipeline.knowledge.embedding_service.EmbeddingService",
+        ):
+            response = client.post(
+                "/api/v1/knowledge/ingest",
+                files={"file": ("notes.txt", text_file, "text/plain")},
+            )
+
+            assert response.status_code == 200
+            data = response.json()
+            assert data["status"] == "ingested"
+            assert data["filename"] == "notes.txt"
 
     # ── TEST-24-01-03: POST /ingest with no file returns 422 ──
     def test_ingest_no_file_returns_422(self, client):

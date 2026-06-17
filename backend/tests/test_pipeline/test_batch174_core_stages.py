@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import asyncio
 import sys
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -121,7 +121,17 @@ class TestLiteratureSearchStage:
 
         stage = LiteratureSearchStage(search=search, hooks=hooks)
         ctx = _ctx(search_queries=["empty query"])
-        ok = asyncio.run(stage.execute(ctx))
+
+        # Mock knowledge integration to prevent pollution from
+        # shared ChromaDB state when running in the full suite
+        with patch("backend.pipeline.knowledge.integration.KnowledgeIntegrationService") as mock_ki:
+            mock_instance = MagicMock()
+            mock_instance.query_existing_knowledge.return_value = {"has_knowledge": False}
+            mock_ki.return_value = mock_instance
+
+            with patch("backend.config.get_settings") as mock_settings:
+                mock_settings.return_value = MagicMock(embedding_base_url=None)
+                ok = asyncio.run(stage.execute(ctx))
 
         # Stage returns False (halt) when no papers found — pipeline should not
         # continue to gap analysis without paper abstracts.
