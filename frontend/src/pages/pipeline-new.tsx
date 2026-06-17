@@ -8,6 +8,7 @@ import { triggerRun, getRunIdeas, cancelRun } from "@/api/pipeline";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import type { PipelineRunRequest, IdeaSummary } from "@/api/types";
 import { CheckCircle2, Lightbulb, AlertCircle, XCircle } from "lucide-react";
@@ -178,49 +179,44 @@ export default function PipelineNew() {
           </CardContent>
 
           {/* Cancel confirmation dialog (AR-01) */}
-          {showCancelConfirm && (
-            <div
-              className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
-              data-testid="cancel-confirm-dialog"
-            >
-              <Card className="w-full max-w-md mx-4">
-                <CardHeader>
-                  <div className="flex items-center gap-2">
-                    <AlertCircle className="h-5 w-5 text-destructive" />
-                    <CardTitle>Cancel Pipeline Run?</CardTitle>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <p className="text-sm text-muted-foreground">
-                    This will abort the running pipeline. Any stages that have already
-                    completed will be preserved, but no further stages will execute.
+          <Dialog open={showCancelConfirm} onOpenChange={(open) => { if (!open) handleCancelDismiss(); }}>
+            <CardContent className="max-w-md mx-4" data-testid="cancel-confirm-dialog">
+              <CardHeader>
+                <div className="flex items-center gap-2">
+                  <AlertCircle className="h-5 w-5 text-destructive" />
+                  <CardTitle>Cancel Pipeline Run?</CardTitle>
+                </div>
+              </CardHeader>
+              <div className="space-y-4">
+                <p className="text-sm text-muted-foreground">
+                  This will abort the running pipeline. Any stages that have already
+                  completed will be preserved, but no further stages will execute.
+                </p>
+                {cancelError && (
+                  <p className="text-sm text-destructive" data-testid="cancel-error">
+                    {cancelError}
                   </p>
-                  {cancelError && (
-                    <p className="text-sm text-destructive" data-testid="cancel-error">
-                      {cancelError}
-                    </p>
-                  )}
-                  <div className="flex justify-end gap-2">
-                    <Button
-                      variant="outline"
-                      onClick={handleCancelDismiss}
-                      data-testid="cancel-dismiss-btn"
-                    >
-                      No, Continue
-                    </Button>
-                    <Button
-                      variant="destructive"
-                      onClick={handleCancelConfirm}
-                      disabled={isCancelling}
-                      data-testid="cancel-confirm-btn"
-                    >
-                      {isCancelling ? "Cancelling..." : "Yes, Cancel Run"}
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          )}
+                )}
+                <div className="flex justify-end gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={handleCancelDismiss}
+                    data-testid="cancel-dismiss-btn"
+                  >
+                    No, Continue
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    onClick={handleCancelConfirm}
+                    disabled={isCancelling}
+                    data-testid="cancel-confirm-btn"
+                  >
+                    {isCancelling ? "Cancelling..." : "Yes, Cancel Run"}
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Dialog>
 
           {isComplete && (
             <CardContent className="border-t pt-4">
