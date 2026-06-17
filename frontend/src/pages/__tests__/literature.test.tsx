@@ -119,7 +119,7 @@ describe("BATCH-23/TASK-02: LiteraturePage", () => {
       expect(screen.getByTestId("no-results")).toBeInTheDocument();
     });
 
-    expect(screen.getByText(/No papers found for/)).toBeInTheDocument();
+    expect(screen.getByText(/No papers found/)).toBeInTheDocument();
   });
 
   // ── TEST-23-02-06: Search error handled ──

@@ -19,6 +19,8 @@ import type {
 import { TraceSummary } from "@/components/traces/trace-summary";
 import { SpanDetail } from "@/components/traces/span-detail";
 import { Skeleton } from "@/components/ui/skeleton";
+import { EmptyState } from "@/components/ui/empty-state";
+import { Activity } from "lucide-react";
 
 export default function TracesPage() {
   const [summary, setSummary] = useState<TraceSummaryData | null>(null);
@@ -153,9 +155,12 @@ export default function TracesPage() {
 
       {/* Empty state */}
       {isEmpty && (
-        <div className="rounded-lg border bg-card p-6 text-center" data-testid="traces-empty">
-          <p className="text-muted-foreground">No traces recorded yet. Run a pipeline to generate traces.</p>
-        </div>
+        <EmptyState
+          icon={Activity}
+          title="No traces recorded yet"
+          message="Run a pipeline to generate traces."
+          testId="traces-empty"
+        />
       )}
 
       {/* Trace list — shows active + recent traces */}

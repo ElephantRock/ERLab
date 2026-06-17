@@ -25,6 +25,7 @@ import { CostSummaryCard } from "@/components/costs/cost-summary-card";
 import { CostBreakdownTable } from "@/components/costs/cost-breakdown-table";
 import { BudgetBar } from "@/components/costs/budget-bar";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ErrorCard } from "@/components/ui/error-card";
 
 /** Default budget limit in USD (matches backend budget_max_cost_usd default) */
 const DEFAULT_BUDGET_LIMIT = 10.0;
@@ -96,10 +97,7 @@ export default function CostsPage() {
     return (
       <div className="space-y-6" data-testid="costs-page">
         <h1 className="text-2xl font-bold tracking-tight">Cost Dashboard</h1>
-        <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-destructive" data-testid="cost-error">
-          <p className="font-medium">Error loading cost data</p>
-          <p className="text-sm">{error}</p>
-        </div>
+        <ErrorCard message="Failed to load cost data" testId="cost-error" />
       </div>
     );
   }

@@ -16,6 +16,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Cpu, Loader2, AlertCircle, Play, StopCircle, Clock, Activity } from "lucide-react";
+import { ErrorCard } from "@/components/ui/error-card";
+import { EmptyState } from "@/components/ui/empty-state";
 import type { AutonomousCycleHistoryEntry, ConsciousnessState } from "@/api/autonomous";
 
 export default function AutonomousPage() {
@@ -142,12 +144,7 @@ export default function AutonomousPage() {
       </div>
 
       {error && (
-        <Card className="border-destructive" data-testid="autonomous-error">
-          <CardContent className="p-4 flex items-center gap-2">
-            <AlertCircle className="h-4 w-4 text-destructive" />
-            <span className="text-sm text-destructive">{error}</span>
-          </CardContent>
-        </Card>
+        <ErrorCard message={error} testId="autonomous-error" />
       )}
 
       {/* Start Cycle Form */}
@@ -305,12 +302,12 @@ export default function AutonomousPage() {
       <div>
         <h2 className="text-lg font-semibold mb-3" data-testid="history-heading">Cycle History</h2>
         {cycles.length === 0 ? (
-          <Card data-testid="autonomous-empty">
-            <CardContent className="p-8 flex flex-col items-center gap-4">
-              <Cpu className="h-12 w-12 text-muted-foreground" />
-              <p className="text-muted-foreground">No autonomous cycles yet. Start one above.</p>
-            </CardContent>
-          </Card>
+          <EmptyState
+            icon={Cpu}
+            title="No autonomous cycles yet"
+            message="Start one above to begin automated research."
+            testId="autonomous-empty"
+          />
         ) : (
           <div className="space-y-3" data-testid="autonomous-history-list">
             {cycles.map((cycle) => (

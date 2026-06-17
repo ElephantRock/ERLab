@@ -50,6 +50,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             size="icon"
             className="h-8 w-8"
             onClick={() => setCollapsed(!collapsed)}
+            aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
           >
             {collapsed ? <PanelLeft className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}
           </Button>

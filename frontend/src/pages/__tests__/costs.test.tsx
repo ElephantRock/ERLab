@@ -153,6 +153,6 @@ describe("BATCH-18/TASK-03: Cost Dashboard Page", () => {
       expect(screen.getByTestId("cost-error")).toBeInTheDocument();
     });
 
-    expect(screen.getByText("Error loading cost data")).toBeInTheDocument();
+    expect(screen.getByText("Failed to load cost data")).toBeInTheDocument();
   });
 });

@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import type { SessionGroup, PipelineRunSummary } from "@/api/types";
 import { Layers, Loader2, AlertCircle, ChevronRight } from "lucide-react";
+import { EmptyState } from "@/components/ui/empty-state";
 
 export default function SessionsPage() {
   const navigate = useNavigate();
@@ -73,10 +74,14 @@ export default function SessionsPage() {
 
   if (sessions.length === 0 && !selectedSession) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4" data-testid="sessions-empty">
-        <Layers className="h-12 w-12 text-muted-foreground" />
-        <h1 className="text-2xl font-bold tracking-tight">Sessions</h1>
-        <p className="text-muted-foreground">No sessions yet. Start a pipeline run with a session ID to see grouped results here.</p>
+      <div data-testid="sessions-empty-wrapper">
+        <h1 className="text-2xl font-bold tracking-tight mb-4">Sessions</h1>
+        <EmptyState
+          icon={Layers}
+          title="No sessions yet"
+          message="Start a pipeline run with a session ID to see grouped results here."
+          testId="sessions-empty"
+        />
       </div>
     );
   }

@@ -6,6 +6,8 @@ import { PaperCard } from "@/components/literature/paper-card";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Search, BookOpen, AlertCircle, Inbox } from "lucide-react";
+import { ErrorCard } from "@/components/ui/error-card";
+import { EmptyState } from "@/components/ui/empty-state";
 import type { Paper } from "@/api/literature";
 
 export default function LiteraturePage() {
@@ -80,15 +82,14 @@ export default function LiteraturePage() {
           ))}
         </div>
       ) : isError ? (
-        <div className="text-center py-12 text-destructive">
-          <AlertCircle className="h-8 w-8 mx-auto mb-2 opacity-70" />
-          <p data-testid="search-error">Search failed. Please try again.</p>
-        </div>
+        <ErrorCard message="Search failed. Please try again." testId="search-error" />
       ) : submittedQuery && papers.length === 0 ? (
-        <div className="text-center py-12 text-muted-foreground">
-          <Inbox className="h-8 w-8 mx-auto mb-2 opacity-50" />
-          <p data-testid="no-results">No papers found for &quot;{submittedQuery}&quot;.</p>
-        </div>
+        <EmptyState
+          icon={Inbox}
+          title="No papers found"
+          message={`No matches for "${submittedQuery}".`}
+          testId="no-results"
+        />
       ) : papers.length > 0 ? (
         <div className="space-y-3">
           <p className="text-sm text-muted-foreground">

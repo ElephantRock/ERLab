@@ -6,6 +6,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Search, Database, AlertCircle, FileText, Layers } from "lucide-react";
+import { ErrorCard } from "@/components/ui/error-card";
+import { EmptyState } from "@/components/ui/empty-state";
 import { cn } from "@/lib/utils";
 import { UploadZone } from "@/components/knowledge/upload-zone";
 
@@ -99,15 +101,14 @@ export default function KnowledgeSearch() {
           ))}
         </div>
       ) : isError ? (
-        <div className="text-center py-12 text-destructive">
-          <AlertCircle className="h-8 w-8 mx-auto mb-2 opacity-70" />
-          <p>Search failed. Please try again.</p>
-        </div>
+        <ErrorCard message="Search failed. Please try again." testId="knowledge-search-error" />
       ) : submittedQuery && results.length === 0 ? (
-        <div className="text-center py-12 text-muted-foreground">
-          <Database className="h-8 w-8 mx-auto mb-2 opacity-50" />
-          <p>No results found for "{submittedQuery}".</p>
-        </div>
+        <EmptyState
+          icon={Database}
+          title="No results found"
+          message={`No matches for "${submittedQuery}".`}
+          testId="knowledge-search-empty"
+        />
       ) : results.length > 0 ? (
         <div className="space-y-3">
           <p className="text-sm text-muted-foreground">
