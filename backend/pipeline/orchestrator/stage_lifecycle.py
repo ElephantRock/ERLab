@@ -213,10 +213,10 @@ class StageLifecycle:
                 self._processor.collect_warnings(result)
 
         elif stage.name == "feasibility_scoring":
-            await self._post_feasibility_scoring(result)
+            await self._post_feasibility_scoring(result, db_run_id)
 
         elif stage.name == "proposal_synthesis":
-            await self._post_proposal_synthesis(result, ctx)
+            await self._post_proposal_synthesis(result, ctx, db_run_id)
 
         return None
 
@@ -302,9 +302,9 @@ class StageLifecycle:
 
         return None
 
-    async def _post_feasibility_scoring(self, result) -> None:
+    async def _post_feasibility_scoring(self, result, db_run_id: int | None = None) -> None:
         """Post-processing for feasibility_scoring: evaluate, quality backloop."""
-        self._persistence.persist_ideas(result, None)
+        self._persistence.persist_ideas(result, db_run_id)
         self._processor.collect_warnings(result)
 
         # Unified evaluation (WP-02)
@@ -362,9 +362,9 @@ class StageLifecycle:
                             logger.warning("Failed to record abandoned ideas: %s", e)
                 result.ideas = [i for i in result.ideas if i.score >= min_composite]
 
-    async def _post_proposal_synthesis(self, result, ctx) -> None:
+    async def _post_proposal_synthesis(self, result, ctx, db_run_id: int | None = None) -> None:
         """Post-processing for proposal_synthesis: persist, verify references, faithfulness."""
-        self._persistence.persist_proposals(result, None)
+        self._persistence.persist_proposals(result, db_run_id)
         self._processor.collect_warnings(result)
         self._processor.verify_references(result, ctx)
 
@@ -445,6 +445,12 @@ class StageLifecycle:
         rounds: int,
     ) -> None:
         """Run all post-pipeline finalization: self-improve, lessons, world model, cleanup."""
+        # Re-persist proposals with all post-synthesis modifications (adversarial review,
+        # paper synthesis, deepening) captured in the final proposal state
+        if result.proposals and db_run_id:
+            self._persistence.persist_proposals(result, db_run_id)
+            self._processor.collect_warnings(result)
+
         # Pipeline quality evaluation
         self._processor.evaluate_pipeline(result, ctx)
 

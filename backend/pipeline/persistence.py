@@ -353,7 +353,7 @@ class PipelinePersistence:
 
             from backend.db import crud
             from backend.db.database import get_session
-            from backend.db.models import Idea
+            from backend.db.models import Idea, Proposal
 
             with get_session() as session:
                 for i, proposal in result.proposals.items():
@@ -382,13 +382,27 @@ class PipelinePersistence:
                             if not isinstance(refs, (list, dict, str)):
                                 refs = str(refs)
 
-                            crud.create_proposal(
-                                session,
-                                idea_id=db_idea_row.id,
-                                content_md=proposal.to_markdown(),
-                                references_json=json.dumps(refs),
-                                sections_json=json.dumps(sections_to_store),
-                            )
+                            # Upsert: update existing proposal or create new
+                            existing = session.execute(
+                                select(Proposal).where(
+                                    Proposal.idea_id == db_idea_row.id
+                                ).limit(1)
+                            ).scalar_one_or_none()
+                            if existing:
+                                existing.content_md = proposal.to_markdown()
+                                existing.references_json = json.dumps(refs)
+                                existing.sections_json = json.dumps(sections_to_store)
+                                if hasattr(proposal, 'content_latex') and proposal.content_latex:
+                                    existing.content_latex = proposal.content_latex
+                                session.commit()
+                            else:
+                                crud.create_proposal(
+                                    session,
+                                    idea_id=db_idea_row.id,
+                                    content_md=proposal.to_markdown(),
+                                    references_json=json.dumps(refs),
+                                    sections_json=json.dumps(sections_to_store),
+                                )
         except Exception as e:
             logger.warning("Failed to persist proposals: %s", e)
             self.warnings.append(f"persist_proposals: {e}")
