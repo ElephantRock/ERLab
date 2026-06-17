@@ -205,6 +205,41 @@ async def bulk_export(request: BulkExportRequest):
                         md_content += f"- **Overall Score:** {idea.overall_score:.2f}\n"
                     if proposal_md:
                         md_content += f"\n## Proposal\n\n{proposal_md}\n"
+
+                    # Evidence Trace (Phase C)
+                    from backend.api.traceability import (
+                        resolve_source_gaps as _resolve,
+                        extract_proposal_references as _extract_refs,
+                    )
+                    raw_gids = json.loads(idea.source_gap_ids) if idea.source_gap_ids else []
+                    sg_list = _resolve(session, raw_gids, idea.pipeline_run_id)
+                    p_refs = _extract_refs(proposal) if proposal else None
+
+                    if sg_list or p_refs:
+                        md_content += "\n## Evidence Trace\n\n"
+
+                        if sg_list:
+                            md_content += "**Source Research Gaps:**\n\n"
+                            for sg in sg_list:
+                                if sg["resolved"]:
+                                    md_content += (
+                                        f"- [{sg['gap_type']}] {sg['title']} "
+                                        f"({sg['confidence']:.0%} confidence)\n"
+                                    )
+                                else:
+                                    md_content += f"- [unresolved] {sg['raw']}\n"
+                            md_content += "\n"
+
+                        if p_refs:
+                            md_content += "**References:**\n\n"
+                            if isinstance(p_refs, str):
+                                md_content += f"{p_refs}\n\n"
+                            else:
+                                for ref in p_refs:
+                                    raw = ref.get("raw", str(ref)) if isinstance(ref, dict) else str(ref)
+                                    md_content += f"- {raw}\n"
+                            md_content += "\n"
+
                     zf.writestr(f"{safe_title}.md", md_content.encode("utf-8"))
 
     buffer.seek(0)
@@ -227,6 +262,7 @@ async def export_run_markdown(run_id: int):
     """Export a pipeline run's proposals as Markdown."""
     from backend.db.database import get_session
     from backend.db.crud import get_ideas_for_run, get_proposal_by_idea
+    from backend.api.traceability import resolve_source_gaps, extract_proposal_references
 
     try:
         with get_session() as session:
@@ -240,6 +276,41 @@ async def export_run_markdown(run_id: int):
                 title = getattr(idea, "title", f"Idea {i}")
                 content = getattr(proposal, "content_md", "") if proposal else ""
                 sections.append(f"## {i}. {title}\n\n{content}\n")
+
+                # Evidence Trace (Phase C: Source Traceability)
+                raw_gap_ids = json.loads(idea.source_gap_ids) if idea.source_gap_ids else []
+                source_gaps = resolve_source_gaps(
+                    session, raw_gap_ids, idea.pipeline_run_id,
+                )
+                proposal_refs = extract_proposal_references(proposal) if proposal else None
+
+                has_evidence = bool(source_gaps) or proposal_refs
+                if has_evidence:
+                    sections.append("### Evidence Trace\n")
+
+                    if source_gaps:
+                        sections.append("**Source Research Gaps:**\n")
+                        for sg in source_gaps:
+                            if sg["resolved"]:
+                                sections.append(
+                                    f"- [{sg['gap_type']}] {sg['title']} "
+                                    f"({sg['confidence']:.0%} confidence)\n"
+                                )
+                            else:
+                                sections.append(
+                                    f"- [unresolved] {sg['raw']}\n"
+                                )
+                        sections.append("")
+
+                    if proposal_refs:
+                        sections.append("**References:**\n")
+                        if isinstance(proposal_refs, str):
+                            sections.append(f"{proposal_refs}\n")
+                        else:
+                            for ref in proposal_refs:
+                                raw = ref.get("raw", str(ref)) if isinstance(ref, dict) else str(ref)
+                                sections.append(f"- {raw}\n")
+                        sections.append("")
 
             return PlainTextResponse("\n".join(sections), media_type="text/markdown")
     except Exception as e:
