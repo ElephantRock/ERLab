@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { ErrorCard } from "@/components/ui/error-card";
 import { ModelStatusPanel } from "@/components/settings/model-status-panel";
+import { StageModelEditor } from "@/components/settings/stage-model-editor";
 import { testConnection, getDetailedStatus, type DetailedStatus } from "@/api/client";
 import { getEvolutionStatus, type EvolutionStatus } from "@/api/autonomous";
 import { listUsers, type AuthUser } from "@/api/auth";
@@ -58,6 +59,9 @@ function SettingsModelSection() {
   return (
     <QueryClientProvider client={queryClientRef.current}>
       <ModelStatusPanel />
+      <div className="mt-4">
+        <StageModelEditor />
+      </div>
     </QueryClientProvider>
   );
 }

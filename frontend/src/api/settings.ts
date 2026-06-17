@@ -69,3 +69,99 @@ export function getCatalog(): Promise<CatalogResponse> {
 export function getAssignments(): Promise<AssignmentsResponse> {
   return apiFetch<AssignmentsResponse>("/settings/assignments");
 }
+
+// ── Stage Metadata (GET /settings/stages) ──────────────────────
+
+export interface StageInfo {
+  name: string;
+  label: string;
+  category: "thinking" | "generation" | "passthrough";
+  needs_llm: boolean;
+}
+
+export interface StagesResponse {
+  stages: StageInfo[];
+  total: number;
+}
+
+export function getStages(): Promise<StagesResponse> {
+  return apiFetch<StagesResponse>("/settings/stages");
+}
+
+// ── Certification (GET /settings/certification) ─────────────────
+
+export interface CertificationEntry {
+  model_id: string;
+  provider: string;
+  status: string;
+  allowed_stages: Record<string, string>;
+}
+
+export interface CertificationResponse {
+  certifications: CertificationEntry[];
+  total: number;
+  error?: string;
+}
+
+export function getCertification(): Promise<CertificationResponse> {
+  return apiFetch<CertificationResponse>("/settings/certification");
+}
+
+// ── Model Overrides (GET/PUT/DELETE /settings/overrides) ───────
+
+export interface OverrideWarning {
+  code: string;
+  stage: string;
+  model_id: string;
+  message: string;
+}
+
+export interface OverridesResponse {
+  overrides: Record<string, string>;
+  total: number;
+}
+
+export interface OverrideUpdateResponse {
+  overrides: Record<string, string>;
+  warnings: OverrideWarning[];
+  message?: string;
+  dry_run?: boolean;
+}
+
+export interface OverrideValidateResponse {
+  valid: boolean;
+  overrides: Record<string, string>;
+  warnings: OverrideWarning[];
+}
+
+export function getOverrides(): Promise<OverridesResponse> {
+  return apiFetch<OverridesResponse>("/settings/overrides");
+}
+
+export function updateOverrides(
+  body: Record<string, string>,
+  dryRun?: boolean,
+): Promise<OverrideUpdateResponse> {
+  const qs = dryRun ? "?dry_run=true" : "";
+  return apiFetch<OverrideUpdateResponse>(`/settings/overrides${qs}`, {
+    method: "PUT",
+    body: JSON.stringify(body),
+  });
+}
+
+export function validateOverrides(
+  body: Record<string, string>,
+): Promise<OverrideValidateResponse> {
+  return apiFetch<OverrideValidateResponse>("/settings/overrides/validate", {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}
+
+export function removeOverride(stage: string): Promise<{ message: string; overrides: Record<string, string> }> {
+  return apiFetch(`/settings/overrides/${stage}`, { method: "DELETE" });
+}
+
+export function clearAllOverrides(): Promise<{ message: string; overrides: Record<string, string> }> {
+  return apiFetch("/settings/overrides", { method: "DELETE" });
+}
