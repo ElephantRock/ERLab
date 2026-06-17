@@ -366,3 +366,269 @@ async def reload_model_catalog():
     except Exception as e:
         logger.error("Error reloading model catalog: %s", e)
         raise APIError(500, "RELOAD_ERROR", f"Failed to reload: {e}")
+
+
+# ── Real model assignment overrides (model_assignments.json) ────
+
+
+@router.get(
+    "/stages",
+    summary="Get pipeline stage metadata",
+    description="Returns all pipeline stages with category and default model info.",
+)
+async def get_stage_metadata():
+    """Get all pipeline stages with their categories.
+
+    This is the authoritative source for stage metadata — the UI should
+    use this rather than hardcoding stage names.
+    """
+    stages = []
+    for stage in STAGES:
+        if stage in THINKING_STAGES:
+            category = "thinking"
+        elif stage in GENERATION_STAGES:
+            category = "generation"
+        else:
+            category = "passthrough"
+        stages.append({
+            "name": stage,
+            "label": stage.replace("_", " ").title(),
+            "category": category,
+            "needs_llm": stage not in PASSTHROUGH_STAGES,
+        })
+    return {"stages": stages, "total": len(stages)}
+
+
+@router.get(
+    "/certification",
+    summary="Get model certification status",
+    description="Returns per-model certification data from the production registry.",
+)
+async def get_certification():
+    """Get model certification data from the production registry.
+
+    Returns:
+        List of certifications with model_id, provider, status, and
+        allowed_stages mapping.
+    """
+    try:
+        from backend.pipeline.routing.certified_lookup import CertifiedCapabilityLookup
+        lookup = CertifiedCapabilityLookup()
+        if not lookup.production_models:
+            return {"certifications": [], "total": 0}
+
+        certs = []
+        for model_id, entry in lookup.production_models.items():
+            if not isinstance(entry, dict):
+                continue
+            allowed = entry.get("allowed_stages", {})
+            if not isinstance(allowed, dict):
+                allowed = {}
+            certs.append({
+                "model_id": model_id,
+                "provider": entry.get("provider", "unknown"),
+                "status": entry.get("status", "unknown"),
+                "allowed_stages": {
+                    s: lvl for s, lvl in allowed.items()
+                    if isinstance(s, str) and isinstance(lvl, str)
+                },
+            })
+
+        return {"certifications": certs, "total": len(certs)}
+    except Exception as e:
+        logger.warning("Error getting certification data: %s", e)
+        return {"certifications": [], "total": 0, "error": str(e)}
+
+
+def _validate_assignments(
+    assignments: dict[str, str],
+) -> tuple[dict[str, str], list[dict[str, str]]]:
+    """Validate stage→model assignments against catalog and certification.
+
+    Returns:
+        (cleaned_assignments, warnings)
+    """
+    from backend.api.model_assignments import load_assignments
+    from backend.providers.model_manager import get_model_manager
+
+    warnings: list[dict[str, str]] = []
+    cleaned: dict[str, str] = {}
+
+    # Build valid stage set
+    valid_stages = set(STAGES)
+
+    # Build valid model set from catalog
+    valid_model_ids: set[str] = set()
+    try:
+        mm = get_model_manager()
+        if mm.is_initialized:
+            for m in mm.get_catalog().get_all():
+                valid_model_ids.add(m.model_id)
+    except Exception:
+        pass
+
+    # Load certification for warnings
+    cert_data: dict[str, set[str]] = {}  # model_id → set of certified stages
+    try:
+        from backend.pipeline.routing.certified_lookup import CertifiedCapabilityLookup
+        lookup = CertifiedCapabilityLookup()
+        for model_id, entry in lookup.production_models.items():
+            allowed = entry.get("allowed_stages", {})
+            if isinstance(allowed, dict):
+                cert_data[model_id] = {
+                    s for s, lvl in allowed.items()
+                    if isinstance(lvl, str) and lvl not in ("not_approved", "blocked")
+                }
+    except Exception:
+        pass
+
+    for stage, model_id in assignments.items():
+        # Validate stage
+        if stage not in valid_stages:
+            warnings.append({
+                "code": "UNKNOWN_STAGE",
+                "stage": stage,
+                "model_id": model_id,
+                "message": f"Unknown stage '{stage}'. Valid stages: {', '.join(sorted(valid_stages))}",
+            })
+            continue
+
+        # Validate model exists in catalog (warn if catalog unavailable)
+        if valid_model_ids and model_id not in valid_model_ids:
+            warnings.append({
+                "code": "UNKNOWN_MODEL",
+                "stage": stage,
+                "model_id": model_id,
+                "message": f"Model '{model_id}' not found in catalog. It may need to be loaded first.",
+            })
+            continue
+
+        # Check certification
+        certified_stages = cert_data.get(model_id)
+        if certified_stages is not None and stage not in certified_stages:
+            warnings.append({
+                "code": "NOT_CERTIFIED",
+                "stage": stage,
+                "model_id": model_id,
+                "message": (
+                    f"Model '{model_id}' is not certified for stage '{stage}'. "
+                    "The pipeline will run, but output quality is not guaranteed."
+                ),
+            })
+
+        cleaned[stage] = model_id
+
+    return cleaned, warnings
+
+
+@router.get(
+    "/overrides",
+    summary="Get per-stage model overrides",
+    description="Returns real-model per-stage overrides from model_assignments.json.",
+)
+async def get_model_overrides():
+    """Get current real-model per-stage overrides.
+
+    These are explicit user overrides stored separately from the
+    auto-assigned routing plan. See runtime precedence in docs.
+    """
+    from backend.api.model_assignments import load_assignments
+    overrides = load_assignments()
+    return {
+        "overrides": overrides,
+        "total": len(overrides),
+    }
+
+
+@router.put(
+    "/overrides",
+    summary="Update per-stage model overrides",
+    description=(
+        "Set which real model to use for each pipeline stage. "
+        "Accepts real catalog model IDs. Warnings (not blocks) are returned "
+        "for uncertified assignments. Use ?dry_run=true to preview warnings."
+    ),
+)
+async def update_model_overrides(
+    body: dict[str, str],
+    dry_run: bool = False,
+):
+    """Update per-stage real-model overrides.
+
+    Args:
+        body: Map of stage name → real model ID.
+        dry_run: If true, validate only — do not persist.
+
+    Returns:
+        Updated overrides and any warnings.
+    """
+    from backend.api.model_assignments import load_assignments, save_assignments
+
+    cleaned, warnings = _validate_assignments(body)
+
+    if dry_run:
+        return {
+            "overrides": cleaned,
+            "warnings": warnings,
+            "dry_run": True,
+        }
+
+    # Merge with existing (PUT replaces only the stages provided)
+    existing = load_assignments()
+    existing.update(cleaned)
+    save_assignments(existing)
+
+    return {
+        "overrides": existing,
+        "warnings": warnings,
+        "message": f"Saved {len(cleaned)} stage override(s)",
+    }
+
+
+@router.post(
+    "/overrides/validate",
+    summary="Validate assignments without saving",
+    description="Preview which warnings would apply for a set of assignments.",
+)
+async def validate_model_overrides(body: dict[str, str]):
+    """Dry-run validation of stage→model assignments.
+
+    Same validation as PUT /overrides but never persists.
+    """
+    cleaned, warnings = _validate_assignments(body)
+    return {
+        "valid": len(warnings) == 0,
+        "overrides": cleaned,
+        "warnings": warnings,
+    }
+
+
+@router.delete(
+    "/overrides/{stage}",
+    summary="Remove a single stage override",
+    description="Clear the real-model override for one stage, reverting to auto-routing.",
+)
+async def remove_stage_override(stage: str):
+    """Remove one stage's real-model override."""
+    if stage not in STAGES:
+        raise APIError(400, "INVALID_STAGE", f"Unknown stage: '{stage}'")
+
+    from backend.api.model_assignments import load_assignments, save_assignments
+    current = load_assignments()
+    if stage not in current:
+        return {"message": f"No override for stage '{stage}'", "overrides": current}
+    del current[stage]
+    save_assignments(current)
+    return {"message": f"Removed override for stage '{stage}'", "overrides": current}
+
+
+@router.delete(
+    "/overrides",
+    summary="Clear all stage overrides",
+    description="Remove all real-model per-stage overrides, reverting to auto-routing.",
+)
+async def clear_all_overrides():
+    """Clear all real-model per-stage overrides."""
+    from backend.api.model_assignments import clear_assignments
+    clear_assignments()
+    return {"message": "All stage overrides cleared", "overrides": {}}

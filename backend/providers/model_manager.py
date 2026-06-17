@@ -139,6 +139,11 @@ class ModelManager:
         should use this instead of create_provider() or direct
         provider.complete() calls.
 
+        Runtime precedence:
+        1. Per-stage real model override (model_assignments.json)
+        2. Auto-assigned stage model (selector fitness scoring)
+        3. Default/fallback model
+
         Args:
             stage: Pipeline stage name, e.g. "proposal_synthesis"
 
@@ -153,9 +158,28 @@ class ModelManager:
                 "ModelManager not initialized. Call await model_manager.initialize() first."
             )
 
+        # 1. Check explicit per-stage override first
+        from backend.api.model_assignments import get_stage_override
+        override_id = get_stage_override(stage)
+        if override_id:
+            override_model = self._catalog.get_model(override_id)
+            if override_model and override_model.health_status != "unreachable":
+                logger.info(
+                    "Using override model '%s' for stage '%s'",
+                    override_model.model_id, stage,
+                )
+                return self._get_or_create_provider(override_model)
+            else:
+                logger.warning(
+                    "Override model '%s' for stage '%s' not available, "
+                    "falling back to auto-assignment",
+                    override_id, stage,
+                )
+
+        # 2. Auto-assigned model from selector
         model = self._stage_assignments.get(stage)
         if model is None:
-            # Fallback: try to get any healthy model
+            # 3. Fallback: try to get any healthy model
             model = self._get_default_model()
             if model is None:
                 raise RuntimeError(
