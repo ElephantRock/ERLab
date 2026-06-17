@@ -134,6 +134,7 @@ export interface EnsembleReview {
   critical_weaknesses: string[];
   actionable_suggestions: string[];
   summary: string;
+  risk_flags?: string[];
 }
 
 export interface IdeaDetail extends IdeaSummary {
@@ -148,6 +149,7 @@ export interface IdeaDetail extends IdeaSummary {
   proposal_latex: string | null;
   proposal_sections: Record<string, unknown> | null;
   proposal_references: ProposalReference[] | string | null;
+  quality_checks: QualityCheckResult[] | null;
   mechanical_metrics: Record<string, number> | null;
   experiment_results: ExperimentResult[] | null;
 }
@@ -167,6 +169,23 @@ export interface UnresolvedSourceGap {
 
 export interface ProposalReference {
   raw: string;
+}
+
+export interface QualityCheckEntry {
+  name: string;
+  passed: boolean;
+}
+
+export interface QualityCheckResult {
+  section: string;
+  label: string;
+  present: boolean;
+  word_count: number;
+  min_words: number;
+  meets_word_count: boolean;
+  checks: QualityCheckEntry[];
+  passed: boolean;
+  failures: string[];
 }
 
 export interface IdeaListResponse {

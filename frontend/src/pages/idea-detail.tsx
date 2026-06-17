@@ -10,6 +10,7 @@ import { FeasibilityReportView } from "@/components/ideas/feasibility-report-vie
 import { MarkdownRenderer } from "@/components/markdown/markdown-renderer";
 import { EvidencePanel } from "@/components/ideas/evidence-panel";
 import { ProposalReviewPanel } from "@/components/ideas/proposal-review-panel";
+import { QualityCheckPanel } from "@/components/ideas/quality-check-panel";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
@@ -172,6 +173,8 @@ export default function IdeaDetail() {
       />
 
       <ProposalReviewPanel proposalSections={idea.proposal_sections} />
+
+      <QualityCheckPanel qualityChecks={idea.quality_checks} />
 
       {(idea.proposal_md || idea.novelty_report || idea.feasibility_report || idea.mechanical_metrics) && (
         <Tabs defaultValue={idea.proposal_md ? "proposal" : idea.novelty_report ? "novelty" : idea.feasibility_report ? "feasibility" : "metrics"}>

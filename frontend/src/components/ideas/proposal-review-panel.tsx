@@ -68,6 +68,7 @@ export function ProposalReviewPanel({
     if (!proposalSections) return null;
     const raw = proposalSections.ensemble_review;
     if (!raw || typeof raw !== "object") return null;
+    if (Array.isArray(raw)) return null;  // arrays are objects in JS
     return raw as EnsembleReview;
   }, [proposalSections]);
 
@@ -183,6 +184,24 @@ export function ProposalReviewPanel({
                 <li key={i} className="text-sm flex items-start gap-2">
                   <AlertTriangle className="h-4 w-4 text-destructive flex-shrink-0 mt-0.5" />
                   <span>{w}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {/* Risk Flags */}
+        {review.risk_flags && review.risk_flags.length > 0 && (
+          <div className="space-y-2 p-3 rounded-lg border border-destructive/30 bg-destructive/5" data-testid="review-risk-flags">
+            <h4 className="text-xs font-semibold text-destructive uppercase tracking-wide flex items-center gap-1">
+              <Shield className="h-3 w-3" />
+              Risk Flags
+            </h4>
+            <ul className="space-y-1">
+              {review.risk_flags.map((flag, i) => (
+                <li key={i} className="text-sm flex items-start gap-2 text-destructive">
+                  <Shield className="h-4 w-4 flex-shrink-0 mt-0.5" />
+                  <span>{flag}</span>
                 </li>
               ))}
             </ul>

@@ -8,6 +8,7 @@ from sqlalchemy import select
 from backend.api.errors import APIError, NotFoundError
 from backend.api.schemas import IdeaFeedbackRequest
 from backend.api.traceability import resolve_source_gaps, extract_proposal_references
+from backend.api.quality_checks import compute_quality_checks
 
 router = APIRouter()
 
@@ -186,6 +187,11 @@ async def get_idea(idea_id: int):
                     else None
                 ),
                 "proposal_references": proposal_references,
+                "quality_checks": compute_quality_checks(
+                    json.loads(proposal.sections_json)
+                    if proposal and proposal.sections_json
+                    else None
+                ),
                 "experiment_results": experiment_results if experiment_results else None,
                 "created_at": str(idea.created_at),
             },

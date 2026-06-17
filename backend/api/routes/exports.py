@@ -206,6 +206,51 @@ async def bulk_export(request: BulkExportRequest):
                     if proposal_md:
                         md_content += f"\n## Proposal\n\n{proposal_md}\n"
 
+                    # Review Summary + Quality Checks
+                    from backend.api.quality_checks import compute_quality_checks as _qc
+                    _sections_json = (
+                        json.loads(proposal.sections_json)
+                        if proposal and proposal.sections_json
+                        else None
+                    )
+                    if _sections_json and isinstance(_sections_json.get("ensemble_review"), dict):
+                        rv = _sections_json["ensemble_review"]
+                        md_content += "\n## Proposal Review\n\n"
+                        if rv.get("overall_score") is not None:
+                            md_content += f"**Overall Score:** {rv['overall_score']:.0%}\n\n"
+                        if rv.get("summary"):
+                            md_content += f"{rv['summary']}\n\n"
+                        if rv.get("consensus_strengths"):
+                            md_content += "**Strengths:**\n\n"
+                            for s in rv["consensus_strengths"]:
+                                md_content += f"- {s}\n"
+                            md_content += "\n"
+                        if rv.get("critical_weaknesses"):
+                            md_content += "**Weaknesses:**\n\n"
+                            for w in rv["critical_weaknesses"]:
+                                md_content += f"- {w}\n"
+                            md_content += "\n"
+                        if rv.get("actionable_suggestions"):
+                            md_content += "**Suggestions:**\n\n"
+                            for s in rv["actionable_suggestions"]:
+                                md_content += f"- {s}\n"
+                            md_content += "\n"
+
+                    _qc_result = _qc(_sections_json)
+                    if _qc_result:
+                        _passed = sum(1 for c in _qc_result if c["passed"])
+                        _total = len(_qc_result)
+                        md_content += f"\n## Quality Checks ({_passed}/{_total} sections passed)\n\n"
+                        for c in _qc_result:
+                            if c["present"]:
+                                mark = "\u2705" if c["passed"] else "\u274c"
+                                wc_note = f" ({c['word_count']}/{c['min_words']} words)" if not c["meets_word_count"] else ""
+                                fail_note = f" \u2014 {'; '.join(c['failures'])}" if c["failures"] else ""
+                                md_content += f"- {mark} {c['label']}{wc_note}{fail_note}\n"
+                            else:
+                                md_content += f"- \u26a0\ufe0f {c['label']} (missing)\n"
+                        md_content += "\n"
+
                     # Evidence Trace (Phase C)
                     from backend.api.traceability import (
                         resolve_source_gaps as _resolve,
@@ -263,6 +308,7 @@ async def export_run_markdown(run_id: int):
     from backend.db.database import get_session
     from backend.db.crud import get_ideas_for_run, get_proposal_by_idea
     from backend.api.traceability import resolve_source_gaps, extract_proposal_references
+    from backend.api.quality_checks import compute_quality_checks
 
     try:
         with get_session() as session:
@@ -276,6 +322,49 @@ async def export_run_markdown(run_id: int):
                 title = getattr(idea, "title", f"Idea {i}")
                 content = getattr(proposal, "content_md", "") if proposal else ""
                 sections.append(f"## {i}. {title}\n\n{content}\n")
+
+                # Review Summary (if ensemble review exists in persisted sections)
+                sections_json = (
+                    json.loads(proposal.sections_json)
+                    if proposal and proposal.sections_json
+                    else None
+                )
+                if sections_json and isinstance(sections_json.get("ensemble_review"), dict):
+                    rv = sections_json["ensemble_review"]
+                    sections.append("### Proposal Review\n")
+                    if rv.get("overall_score") is not None:
+                        sections.append(f"**Overall Score:** {rv['overall_score']:.0%}\n")
+                    if rv.get("summary"):
+                        sections.append(f"{rv['summary']}\n")
+                    if rv.get("consensus_strengths"):
+                        sections.append("**Strengths:**\n")
+                        for s in rv["consensus_strengths"]:
+                            sections.append(f"- {s}\n")
+                    if rv.get("critical_weaknesses"):
+                        sections.append("**Weaknesses:**\n")
+                        for w in rv["critical_weaknesses"]:
+                            sections.append(f"- {w}\n")
+                    if rv.get("actionable_suggestions"):
+                        sections.append("**Suggestions:**\n")
+                        for s in rv["actionable_suggestions"]:
+                            sections.append(f"- {s}\n")
+                    sections.append("")
+
+                # Quality Checks (deterministic, computed at export time)
+                qc = compute_quality_checks(sections_json)
+                if qc:
+                    passed = sum(1 for c in qc if c["passed"])
+                    total = len(qc)
+                    sections.append(f"### Quality Checks ({passed}/{total} sections passed)\n")
+                    for c in qc:
+                        mark = "\u2705" if c["passed"] else "\u274c"
+                        wc_note = f" ({c['word_count']}/{c['min_words']} words)" if not c["meets_word_count"] else ""
+                        fail_note = f" — {'; '.join(c['failures'])}" if c["failures"] else ""
+                        if c["present"]:
+                            sections.append(f"- {mark} {c['label']}{wc_note}{fail_note}\n")
+                        else:
+                            sections.append(f"- \u26a0\ufe0f {c['label']} (missing)\n")
+                    sections.append("")
 
                 # Evidence Trace (Phase C: Source Traceability)
                 raw_gap_ids = json.loads(idea.source_gap_ids) if idea.source_gap_ids else []

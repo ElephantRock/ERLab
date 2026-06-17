@@ -189,4 +189,112 @@ describe("ProposalReviewPanel", () => {
     expect(scoreEl).toHaveTextContent("30");
     expect(scoreEl.className).toContain("text-destructive");
   });
+
+  // --- Malformed review payload tests ---
+
+  it("handles ensemble_review as a non-object string gracefully", () => {
+    renderPanel({
+      proposalSections: { abstract: "...", ensemble_review: "not an object" },
+    });
+
+    // Should show "No review data" since the review is not a valid object
+    expect(screen.getByText("No review data")).toBeInTheDocument();
+  });
+
+  it("handles ensemble_review as null", () => {
+    renderPanel({
+      proposalSections: { abstract: "...", ensemble_review: null },
+    });
+
+    expect(screen.getByText("No review data")).toBeInTheDocument();
+  });
+
+  it("handles ensemble_review as an array", () => {
+    renderPanel({
+      proposalSections: { abstract: "...", ensemble_review: [1, 2, 3] },
+    });
+
+    // Arrays are not valid EnsembleReview objects
+    expect(screen.getByText("No review data")).toBeInTheDocument();
+  });
+
+  it("handles review with missing overall_score", () => {
+    const noScore = { ...mockReview } as Record<string, unknown>;
+    delete noScore.overall_score;
+    renderPanel({
+      proposalSections: { ensemble_review: noScore },
+    });
+
+    // Should still render without crashing — overall score shows NaN as 0
+    expect(screen.getByTestId("proposal-review-panel")).toBeInTheDocument();
+  });
+
+  it("handles review with wrong types in arrays", () => {
+    const wrongTypes: EnsembleReview = {
+      ...mockReview,
+      consensus_strengths: ["valid", 123 as unknown as string, null as unknown as string],
+    };
+    renderPanel({
+      proposalSections: { ensemble_review: wrongTypes },
+    });
+
+    // Should not crash — strengths section still renders
+    expect(screen.getByTestId("review-strengths")).toBeInTheDocument();
+  });
+
+  it("handles review with perspective missing strengths/weaknesses arrays", () => {
+    const partialPerspective: EnsembleReview = {
+      ...mockReview,
+      methodology: {
+        perspective: "methodology",
+        score: 0.8,
+        strengths: [],
+        weaknesses: [],
+        suggestions: [],
+      },
+    };
+    renderPanel({
+      proposalSections: { ensemble_review: partialPerspective },
+    });
+
+    // Methodology label should still show
+    expect(screen.getByText("Methodology")).toBeInTheDocument();
+  });
+
+  // --- Risk flags tests ---
+
+  it("renders risk flags when present in review data", () => {
+    const withRisks: EnsembleReview = {
+      ...mockReview,
+      risk_flags: ["Potential hallucination risk", "Unverified claims"],
+    };
+    renderPanel({
+      proposalSections: { ensemble_review: withRisks },
+    });
+
+    const riskSection = screen.getByTestId("review-risk-flags");
+    expect(riskSection).toBeInTheDocument();
+    expect(screen.getByText("Potential hallucination risk")).toBeInTheDocument();
+    expect(screen.getByText("Unverified claims")).toBeInTheDocument();
+  });
+
+  it("does not render risk flags section when risk_flags is absent", () => {
+    renderPanel({
+      proposalSections: { ensemble_review: mockReview },
+    });
+
+    expect(screen.queryByTestId("review-risk-flags")).not.toBeInTheDocument();
+  });
+
+  it("does not render risk flags section when risk_flags is empty", () => {
+    const emptyRisks: EnsembleReview = {
+      ...mockReview,
+      risk_flags: [],
+    };
+    renderPanel({
+      proposalSections: { ensemble_review: emptyRisks },
+    });
+
+    expect(screen.queryByTestId("review-risk-flags")).not.toBeInTheDocument();
+  });
 });
