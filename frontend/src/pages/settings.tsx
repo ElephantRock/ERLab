@@ -1,77 +1,149 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useSettings } from "@/contexts/settings-context";
 import { useAuth } from "@/contexts/auth-context";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import { ErrorCard } from "@/components/ui/error-card";
+import { ModelStatusPanel } from "@/components/settings/model-status-panel";
 import { testConnection, getDetailedStatus, type DetailedStatus } from "@/api/client";
 import { getEvolutionStatus, type EvolutionStatus } from "@/api/autonomous";
 import { listUsers, type AuthUser } from "@/api/auth";
 import { RoleBadge } from "@/components/auth/role-badge";
+import {
+  Server,
+  Cpu,
+  Settings2,
+  Palette,
+  HelpCircle,
+  FlaskConical,
+  Users,
+  ChevronDown,
+  ChevronRight,
+  Activity,
+} from "lucide-react";
 
 type ConnectionState = "idle" | "testing" | "connected" | "error";
+
+/** Section header with icon + collapsible state for Advanced. */
+function SectionHeader({
+  icon: Icon,
+  title,
+  action,
+}: {
+  icon: React.ElementType;
+  title: string;
+  action?: React.ReactNode;
+}) {
+  return (
+    <div className="flex items-center gap-2">
+      <Icon className="h-5 w-5 text-muted-foreground" />
+      <h2 className="text-lg font-semibold">{title}</h2>
+      {action && <div className="ml-auto">{action}</div>}
+    </div>
+  );
+}
+
+/** Model status panel with its own query client. */
+function SettingsModelSection() {
+  const queryClientRef = useRef<QueryClient>();
+  if (!queryClientRef.current) {
+    queryClientRef.current = new QueryClient({
+      defaultOptions: { queries: { retry: false, staleTime: 30000 } },
+    });
+  }
+  return (
+    <QueryClientProvider client={queryClientRef.current}>
+      <ModelStatusPanel />
+    </QueryClientProvider>
+  );
+}
 
 export default function Settings() {
   const { apiUrl, apiKey, theme, setApiUrl, setApiKey, setTheme } = useSettings();
 
-  // Connection test state
+  // ── Connection state ────────────────────────────────────────────
   const [connState, setConnState] = useState<ConnectionState>("idle");
   const [connError, setConnError] = useState<string>("");
+  const [connLatency, setConnLatency] = useState<number | null>(null);
+  const [connVersion, setConnVersion] = useState<string>("");
 
-  // Version / detailed status
+  // ── Backend info ────────────────────────────────────────────────
   const [detailedStatus, setDetailedStatus] = useState<DetailedStatus | null>(null);
 
-  // Evolution status (READ-ONLY per HB-01)
+  // ── Evolution (read-only) ───────────────────────────────────────
   const [evolutionStatus, setEvolutionStatus] = useState<EvolutionStatus | null>(null);
 
-  // User management (admin only)
+  // ── User management ─────────────────────────────────────────────
   const { user: currentUser } = useAuth();
   const [users, setUsers] = useState<AuthUser[]>([]);
+
+  // ── Defaults ────────────────────────────────────────────────────
+  const [defaultDomain, setDefaultDomain] = useState(() => {
+    return localStorage.getItem("erock_default_domain") || "";
+  });
+  const [advancedOpen, setAdvancedOpen] = useState(false);
+
+  // ── Auto-test connection on mount ──────────────────────────────
+  useEffect(() => {
+    let cancelled = false;
+
+    async function autoTest() {
+      setConnState("testing");
+      const start = performance.now();
+      const result = await testConnection(apiUrl || undefined);
+      const latency = performance.now() - start;
+      if (cancelled) return;
+
+      setConnLatency(Math.round(latency));
+      if (result.ok) {
+        setConnState("connected");
+        setConnVersion(result.ok ? result.version : "");
+      } else {
+        setConnState("error");
+        setConnError(result.ok ? "" : result.error);
+      }
+    }
+
+    autoTest();
+
+    // Fetch detailed status + evolution in parallel
+    getDetailedStatus()
+      .then((data) => !cancelled && setDetailedStatus(data))
+      .catch(() => {});
+
+    getEvolutionStatus()
+      .then((data) => !cancelled && setEvolutionStatus(data))
+      .catch(() => {});
+
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Fetch users on mount if admin
   useEffect(() => {
     if (currentUser?.role === "admin") {
       listUsers()
         .then((data) => setUsers(data))
-        .catch(() => {
-          // Non-critical
-        });
+        .catch(() => {});
     }
   }, [currentUser?.role]);
-
-  // Default domain
-  const [defaultDomain, setDefaultDomain] = useState(() => {
-    return localStorage.getItem("erock_default_domain") || "";
-  });
-
-  // Fetch version + evolution status on mount
-  useEffect(() => {
-    let cancelled = false;
-    getDetailedStatus()
-      .then((data) => {
-        if (!cancelled) setDetailedStatus(data);
-      })
-      .catch(() => {
-        // Version unavailable is non-fatal; just leave it null
-      });
-    getEvolutionStatus()
-      .then((data) => {
-        if (!cancelled) setEvolutionStatus(data);
-      })
-      .catch(() => {
-        // Evolution unavailable is non-fatal
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
 
   const handleTestConnection = useCallback(async () => {
     setConnState("testing");
     setConnError("");
+    const start = performance.now();
     const result = await testConnection(apiUrl || undefined);
+    const latency = performance.now() - start;
+    setConnLatency(Math.round(latency));
     if (result.ok) {
       setConnState("connected");
+      setConnVersion(result.version);
     } else {
       setConnState("error");
       setConnError(result.error);
@@ -100,10 +172,10 @@ export default function Settings() {
         <p className="text-muted-foreground">Configure your API connection and preferences.</p>
       </div>
 
-      {/* API Connection */}
+      {/* ── Connection ───────────────────────────────────────────── */}
       <Card>
         <CardHeader>
-          <CardTitle>API Connection</CardTitle>
+          <SectionHeader icon={Server} title="API Connection" />
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
@@ -128,7 +200,7 @@ export default function Settings() {
             />
           </div>
 
-          {/* Test Connection */}
+          {/* Connection health */}
           <div className="flex items-center gap-3">
             <Button
               onClick={handleTestConnection}
@@ -150,47 +222,65 @@ export default function Settings() {
                     : "Not tested"
               }
             />
+            {connState === "connected" && (
+              <div className="flex items-center gap-3">
+                <span className="text-sm text-success" data-testid="connection-success">
+                  Connected
+                </span>
+                {connLatency !== null && (
+                  <span className="text-xs text-muted-foreground flex items-center gap-1">
+                    <Activity className="h-3 w-3" />
+                    {connLatency}ms
+                  </span>
+                )}
+              </div>
+            )}
             {connState === "error" && (
               <span className="text-sm text-destructive" data-testid="connection-error">
                 {connError}
               </span>
             )}
-            {connState === "connected" && (
-              <span className="text-sm text-success" data-testid="connection-success">
-                Connected
+            {connState === "testing" && (
+              <span className="text-sm text-muted-foreground" data-testid="connection-testing">
+                Checking...
               </span>
             )}
           </div>
-        </CardContent>
-      </Card>
 
-      {/* Backend Info */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Backend Info</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-2 text-sm">
-            <div className="flex items-center gap-2">
-              <span className="font-medium">Version:</span>
-              <span data-testid="backend-version">
-                {detailedStatus?.version ?? "—"}
+          {/* Backend info inline with connection */}
+          <Separator />
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 text-sm">
+            <div>
+              <span className="text-xs text-muted-foreground block">Version</span>
+              <span className="font-medium" data-testid="backend-version">
+                {detailedStatus?.version ?? connVersion ?? "—"}
               </span>
             </div>
-            <div className="flex items-center gap-2">
-              <span className="font-medium">Provider:</span>
-              <span data-testid="backend-provider">
+            <div>
+              <span className="text-xs text-muted-foreground block">Provider</span>
+              <span className="font-medium" data-testid="backend-provider">
                 {detailedStatus?.provider ?? "—"}
+              </span>
+            </div>
+            <div>
+              <span className="text-xs text-muted-foreground block">Database</span>
+              <span className="font-medium" data-testid="backend-db-status">
+                {detailedStatus?.db_status ?? "—"}
               </span>
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Default Domain */}
+      {/* ── Models ───────────────────────────────────────────────── */}
+      <div data-testid="models-section">
+        <SettingsModelSection />
+      </div>
+
+      {/* ── Defaults ─────────────────────────────────────────────── */}
       <Card>
         <CardHeader>
-          <CardTitle>Defaults</CardTitle>
+          <SectionHeader icon={Settings2} title="Defaults" />
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
@@ -205,95 +295,32 @@ export default function Settings() {
               Pre-fills the domain field in new pipeline runs. Saved in your browser.
             </p>
           </div>
-        </CardContent>
-      </Card>
 
-      {/* Self-Improvement — READ-ONLY per HB-01 */}
-      <Card data-testid="self-improve-section">
-        <CardHeader>
-          <CardTitle>Self-Improvement</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-2 text-sm">
+          <Separator />
+
+          {/* Session info (read-only from localStorage) */}
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Current Session</label>
             <div className="flex items-center gap-2">
-              <span className="font-medium">Evolution:</span>
-              <span data-testid="evolution-enabled-status">
-                {evolutionStatus?.enabled ? "Enabled" : "Disabled"}
-              </span>
+              <Input
+                readOnly
+                aria-label="Current session ID"
+                value={localStorage.getItem("erock_session_id") || "(none)"}
+                className="text-muted-foreground"
+                data-testid="current-session"
+              />
             </div>
-            <div className="flex items-center gap-2">
-              <span className="font-medium">Overlays Generated:</span>
-              <span data-testid="evolution-overlay-count">
-                {evolutionStatus?.overlays_generated ?? "—"}
-              </span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="font-medium">Recent Outcomes:</span>
-              <span data-testid="evolution-outcome-count">
-                {evolutionStatus?.recent_outcomes?.length ?? 0}
-              </span>
-            </div>
-            {evolutionStatus?.recent_outcomes && evolutionStatus.recent_outcomes.length > 0 && (
-              <div className="mt-2 space-y-1" data-testid="evolution-outcomes-list">
-                {evolutionStatus.recent_outcomes.map((outcome, idx) => (
-                  <div key={idx} className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <span className="font-mono">{outcome.stage_name}</span>
-                    <span>score: {outcome.score.toFixed(2)}</span>
-                    <span>({outcome.run_id})</span>
-                  </div>
-                ))}
-              </div>
-            )}
-            <p className="text-xs text-muted-foreground mt-2">
-              Evolution parameters are managed by the system and cannot be edited.
+            <p className="text-xs text-muted-foreground">
+              Set during pipeline creation. Used to group related runs.
             </p>
           </div>
         </CardContent>
       </Card>
 
-      {/* User Management (admin only) */}
-      {currentUser?.role === "admin" && (
-        <Card data-testid="user-management-section">
-          <CardHeader>
-            <CardTitle>User Management</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {users.length === 0 ? (
-                <p className="text-sm text-muted-foreground">No users found.</p>
-              ) : (
-                <div className="rounded-md border">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b bg-muted/50">
-                        <th className="px-3 py-2 text-left font-medium">Username</th>
-                        <th className="px-3 py-2 text-left font-medium">Email</th>
-                        <th className="px-3 py-2 text-left font-medium">Role</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {users.map((u) => (
-                        <tr key={u.id} className="border-b last:border-0">
-                          <td className="px-3 py-2">{u.username}</td>
-                          <td className="px-3 py-2">{u.email}</td>
-                          <td className="px-3 py-2">
-                            <RoleBadge role={u.role} />
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Appearance */}
+      {/* ── Appearance ───────────────────────────────────────────── */}
       <Card>
         <CardHeader>
-          <CardTitle>Appearance</CardTitle>
+          <SectionHeader icon={Palette} title="Appearance" />
         </CardHeader>
         <CardContent>
           <div className="flex items-center gap-2">
@@ -313,10 +340,118 @@ export default function Settings() {
         </CardContent>
       </Card>
 
-      {/* Help & Onboarding */}
+      {/* ── Advanced (collapsible) ──────────────────────────────── */}
       <Card>
         <CardHeader>
-          <CardTitle>Help & Onboarding</CardTitle>
+          <button
+            className="flex items-center gap-2 w-full text-left"
+            onClick={() => setAdvancedOpen(!advancedOpen)}
+            aria-expanded={advancedOpen}
+            data-testid="advanced-toggle"
+          >
+            {advancedOpen ? (
+              <ChevronDown className="h-4 w-4" />
+            ) : (
+              <ChevronRight className="h-4 w-4" />
+            )}
+            <FlaskConical className="h-5 w-5 text-muted-foreground" />
+            <h2 className="text-lg font-semibold">Advanced</h2>
+          </button>
+        </CardHeader>
+        {advancedOpen && (
+          <CardContent className="space-y-6">
+            {/* Self-Improvement — READ-ONLY */}
+            <div data-testid="self-improve-section">
+              <h3 className="text-sm font-medium mb-3 flex items-center gap-2">
+                <Activity className="h-4 w-4 text-muted-foreground" />
+                Self-Improvement
+              </h3>
+              <div className="space-y-2 text-sm pl-6">
+                <div className="flex items-center gap-2">
+                  <span className="font-medium">Evolution:</span>
+                  <span data-testid="evolution-enabled-status">
+                    {evolutionStatus?.enabled ? "Enabled" : "Disabled"}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="font-medium">Overlays Generated:</span>
+                  <span data-testid="evolution-overlay-count">
+                    {evolutionStatus?.overlays_generated ?? "—"}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="font-medium">Recent Outcomes:</span>
+                  <span data-testid="evolution-outcome-count">
+                    {evolutionStatus?.recent_outcomes?.length ?? 0}
+                  </span>
+                </div>
+                {evolutionStatus?.recent_outcomes &&
+                  evolutionStatus.recent_outcomes.length > 0 && (
+                    <div className="mt-2 space-y-1" data-testid="evolution-outcomes-list">
+                      {evolutionStatus.recent_outcomes.map((outcome, idx) => (
+                        <div
+                          key={idx}
+                          className="flex items-center gap-2 text-xs text-muted-foreground"
+                        >
+                          <span className="font-mono">{outcome.stage_name}</span>
+                          <span>score: {outcome.score.toFixed(2)}</span>
+                          <span>({outcome.run_id})</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                <p className="text-xs text-muted-foreground mt-2">
+                  Evolution parameters are managed by the system and cannot be edited.
+                </p>
+              </div>
+            </div>
+
+            {/* User Management (admin only) */}
+            {currentUser?.role === "admin" && (
+              <div data-testid="user-management-section">
+                <Separator className="mb-4" />
+                <h3 className="text-sm font-medium mb-3 flex items-center gap-2">
+                  <Users className="h-4 w-4 text-muted-foreground" />
+                  User Management
+                </h3>
+                <div className="space-y-3 pl-6">
+                  {users.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">No users found.</p>
+                  ) : (
+                    <div className="rounded-md border">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="border-b bg-muted/50">
+                            <th className="px-3 py-2 text-left font-medium">Username</th>
+                            <th className="px-3 py-2 text-left font-medium">Email</th>
+                            <th className="px-3 py-2 text-left font-medium">Role</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {users.map((u) => (
+                            <tr key={u.id} className="border-b last:border-0">
+                              <td className="px-3 py-2">{u.username}</td>
+                              <td className="px-3 py-2">{u.email}</td>
+                              <td className="px-3 py-2">
+                                <RoleBadge role={u.role} />
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </CardContent>
+        )}
+      </Card>
+
+      {/* ── Help ─────────────────────────────────────────────────── */}
+      <Card>
+        <CardHeader>
+          <SectionHeader icon={HelpCircle} title="Help & Onboarding" />
         </CardHeader>
         <CardContent>
           <p className="text-sm text-muted-foreground mb-3">

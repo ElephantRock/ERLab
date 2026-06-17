@@ -1,7 +1,7 @@
 /** Tests for BATCH-28 role badge and user management (TEST-28-03-01, 02, 03). */
 
 import { describe, it, expect, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 import { RoleBadge } from "@/components/auth/role-badge";
 import { BrowserRouter } from "react-router-dom";
 import { AuthProvider } from "@/contexts/auth-context";
@@ -31,6 +31,10 @@ vi.mock("@/api/client", () => ({
 
 vi.mock("@/api/autonomous", () => ({
   getEvolutionStatus: vi.fn().mockRejectedValue("not available"),
+}));
+
+vi.mock("@/components/settings/model-status-panel", () => ({
+  ModelStatusPanel: () => <div data-testid="model-status-panel">Models</div>,
 }));
 
 import SettingsPage from "@/pages/settings";
@@ -69,6 +73,10 @@ describe("User Management in Settings", () => {
     localStorage.setItem("erock_jwt_token", "fake-token");
 
     renderWithProviders(<SettingsPage />);
+
+    // Wait for settings to load, then expand Advanced
+    await screen.findByTestId("advanced-toggle", undefined, { timeout: 3000 });
+    fireEvent.click(screen.getByTestId("advanced-toggle"));
 
     await screen.findByTestId("user-management-section", undefined, {
       timeout: 3000,

@@ -142,6 +142,10 @@ vi.mock("@/components/auth/role-badge", () => ({
   ),
 }));
 
+vi.mock("@/components/settings/model-status-panel", () => ({
+  ModelStatusPanel: () => <div data-testid="model-status-panel">Models</div>,
+}));
+
 // ── Helper ──────────────────────────────────────────────────────
 function createQueryClient() {
   return new QueryClient({

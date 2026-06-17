@@ -83,6 +83,14 @@ vi.mock("@/api/client", () => ({
   buildAuthHeaders: () => ({}),
 }));
 
+vi.mock("@/api/auth", () => ({
+  listUsers: vi.fn().mockResolvedValue([]),
+}));
+
+vi.mock("@/components/settings/model-status-panel", () => ({
+  ModelStatusPanel: () => <div data-testid="model-status-panel">Models</div>,
+}));
+
 function setupAutonomousMocks() {
   vi.mocked(getAutonomousHistory).mockResolvedValue(mockHistory);
   vi.mocked(stopAutonomousCycle).mockResolvedValue({
@@ -141,6 +149,12 @@ describe("BATCH-27/TASK-02: Self-Improvement Settings + Scheduler Controls", () 
   it("TEST-27-02-01: Settings shows self-improve section (read-only)", async () => {
     setupSettingsMocks();
     renderSettings();
+
+    // Expand Advanced section
+    await waitFor(() => {
+      expect(screen.getByTestId("advanced-toggle")).toBeInTheDocument();
+    });
+    await userEvent.click(screen.getByTestId("advanced-toggle"));
 
     await waitFor(() => {
       expect(screen.getByTestId("self-improve-section")).toBeInTheDocument();
@@ -239,6 +253,12 @@ describe("BATCH-27/TASK-02: Self-Improvement Settings + Scheduler Controls", () 
   it("TEST-27-02-07: No edit controls for evolution params (HB-01)", async () => {
     setupSettingsMocks();
     renderSettings();
+
+    // Expand Advanced section
+    await waitFor(() => {
+      expect(screen.getByTestId("advanced-toggle")).toBeInTheDocument();
+    });
+    await userEvent.click(screen.getByTestId("advanced-toggle"));
 
     await waitFor(() => {
       expect(screen.getByTestId("self-improve-section")).toBeInTheDocument();

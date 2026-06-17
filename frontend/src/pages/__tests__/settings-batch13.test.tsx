@@ -28,6 +28,14 @@ vi.mock("@/api/autonomous", () => ({
   getEvolutionStatus: vi.fn().mockResolvedValue({ enabled: false, overlays_generated: 0, recent_outcomes: [] }),
 }));
 
+vi.mock("@/api/auth", () => ({
+  listUsers: vi.fn().mockResolvedValue([]),
+}));
+
+vi.mock("@/components/settings/model-status-panel", () => ({
+  ModelStatusPanel: () => <div data-testid="model-status-panel">Models</div>,
+}));
+
 // ── Helper ────────────────────────────────────────────────────────
 function renderSettings() {
   return render(
@@ -62,6 +70,13 @@ it("TEST-13-02-01: Test Connection button calls testConnection", async () => {
   mockTestConnection.mockResolvedValue({ ok: true, version: "0.1.0" });
   renderSettings();
 
+  // Wait for auto-test on mount to complete
+  await waitFor(() => {
+    expect(screen.getByTestId("connection-dot").className).toContain("bg-success");
+  });
+
+  // Clear calls from auto-test, then test button
+  mockTestConnection.mockClear();
   const btn = screen.getByTestId("test-connection-btn");
   await user.click(btn);
 

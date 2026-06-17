@@ -6,6 +6,29 @@ import Settings from "@/pages/settings";
 import { SettingsProvider } from "@/contexts/settings-context";
 import { AuthProvider } from "@/contexts/auth-context";
 
+// ── Mocks for non-QueryClient dependencies ────────────────────
+vi.mock("@/api/client", () => ({
+  testConnection: vi.fn().mockResolvedValue({ ok: true, version: "0.1.0" }),
+  getDetailedStatus: vi.fn().mockResolvedValue({ version: "0.1.0", provider: "openai", db_status: "ok" }),
+  apiFetch: vi.fn(),
+  getApiUrl: () => "",
+  getApiKey: () => "",
+  buildUrl: (path: string) => `/api/v1${path}`,
+  buildAuthHeaders: () => ({}),
+}));
+
+vi.mock("@/api/autonomous", () => ({
+  getEvolutionStatus: vi.fn().mockResolvedValue({ enabled: false, overlays_generated: 0, recent_outcomes: [] }),
+}));
+
+vi.mock("@/api/auth", () => ({
+  listUsers: vi.fn().mockResolvedValue([]),
+}));
+
+vi.mock("@/components/settings/model-status-panel", () => ({
+  ModelStatusPanel: () => <div data-testid="model-status-panel">Models</div>,
+}));
+
 // ── Helper ────────────────────────────────────────────────────────
 function renderSettings() {
   return render(
