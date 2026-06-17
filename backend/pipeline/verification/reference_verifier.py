@@ -209,6 +209,8 @@ class ReferenceVerifier:
 
     def _build_author_year_index(self, papers: list[dict]) -> dict[tuple[str, str], list[dict]]:
         """Build (author_lastname, year) → [papers] index."""
+        from backend.pipeline.verification.surname_utils import extract_surname
+
         index: dict[tuple[str, str], list[dict]] = {}
         for paper in papers:
             authors = paper.get("authors", [])
@@ -219,15 +221,15 @@ class ReferenceVerifier:
                 # Use title as fallback
                 continue
 
-            # Index by first author last name
+            # Index by each author's surname
             if isinstance(authors, list):
-                for author_str in authors:
-                    last_name = str(author_str).split()[-1].lower() if author_str else ""
+                for author_entry in authors:
+                    last_name = extract_surname(author_entry)
                     if last_name and year:
                         key = (last_name, year)
                         index.setdefault(key, []).append(paper)
             elif isinstance(authors, str):
-                last_name = authors.split()[-1].lower() if authors else ""
+                last_name = extract_surname(authors)
                 if last_name and year:
                     key = (last_name, year)
                     index.setdefault(key, []).append(paper)
