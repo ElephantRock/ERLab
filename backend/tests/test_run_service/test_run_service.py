@@ -254,33 +254,24 @@ class TestOrphanDetection:
         run_id = run_service.create_run()
         run_service.acquire_worker(run_id, worker_id="w1")
 
-        # Manually backdate the heartbeat past threshold
-        from backend.db.database import get_session as real_get_session
+        # Backdate the worker heartbeat past the real threshold
+        from backend.db.models import RunWorker
         from sqlalchemy import update as sa_update
-        # We need to patch the session for direct manipulation
-        # Use the service's own session context
+
         old_time = datetime.now(timezone.utc) - timedelta(seconds=WORKER_STALE_THRESHOLD_SECONDS + 60)
-        with patch("backend.api.run_service.get_session") as mock_ctx:
-            from contextlib import contextmanager
 
-            # First call: for detect_orphans
-            @contextmanager
-            def session_ctx():
-                from backend.db.database import Base
-                session = run_service._get_test_session() if hasattr(run_service, '_get_test_session') else None
-                if session is None:
-                    raise RuntimeError("no test session")
-                try:
-                    yield session
-                finally:
-                    pass
+        import backend.api.run_service as svc_mod
+        mock_get_session = svc_mod.get_session
 
-            # This approach is too complex — let's use a simpler method
-            # Just call detect_orphans with a very small threshold
-            pass
+        with mock_get_session.side_effect() as session:
+            session.execute(
+                sa_update(RunWorker)
+                .where(RunWorker.worker_id == "w1")
+                .values(last_heartbeat=old_time)
+            )
+            session.commit()
 
-        # Simpler: use threshold of 0 seconds — everything is stale
-        orphaned = run_service.detect_orphans(threshold_seconds=0)
+        orphaned = run_service.detect_orphans(threshold_seconds=WORKER_STALE_THRESHOLD_SECONDS)
         assert run_id in orphaned
         assert run_service.get_active_worker(run_id) is None
 
@@ -289,8 +280,40 @@ class TestOrphanDetection:
         run_id = run_service.create_run()
         run_service.acquire_worker(run_id, worker_id="w1")
 
-        # Force orphan detection
-        run_service.detect_orphans(threshold_seconds=0)
+        # Manually backdate the heartbeat to ensure it is stale
+        from backend.db.models import RunWorker
+        from sqlalchemy import update as sa_update
+        from contextlib import contextmanager
+
+        old_time = datetime.now(timezone.utc) - timedelta(seconds=WORKER_STALE_THRESHOLD_SECONDS + 60)
+
+        # Access the patched session factory directly
+        import backend.api.run_service as svc_mod
+        mock_get_session = svc_mod.get_session
+
+        @contextmanager
+        def temp_session():
+            session = mock_get_session.__wrapped__() if hasattr(mock_get_session, '__wrapped__') else None
+            # Fall back to creating our own session
+            from sqlalchemy import create_engine as sa_create_engine
+            # Use the same in-memory DB by finding the engine from the fixture
+            # Actually simpler: use the patched context manager directly
+            with mock_get_session.side_effect() as s:
+                yield s
+
+        # Backdate the worker heartbeat but keep status as active
+        # so detect_orphans can find it
+        with mock_get_session.side_effect() as session:
+            session.execute(
+                sa_update(RunWorker)
+                .where(RunWorker.worker_id == "w1")
+                .values(last_heartbeat=old_time)
+            )
+            session.commit()
+
+        # Now detect_orphans should find it
+        orphaned = run_service.detect_orphans(threshold_seconds=WORKER_STALE_THRESHOLD_SECONDS)
+        assert run_id in orphaned
 
         # New worker can acquire
         worker2 = run_service.acquire_worker(run_id, worker_id="w2")
