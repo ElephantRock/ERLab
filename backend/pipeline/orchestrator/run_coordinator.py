@@ -223,7 +223,7 @@ class RunCoordinator:
 
             # Cross-stage context: persist stage outputs
             if self._orch._services.cross_stage_ctx:
-                await self._orch._persist_stage_context(run_id, stage.name, ctx, result)
+                await self._orch._processor.persist_stage_context(run_id, stage.name, ctx, result)
 
             # ── 10. Checkpoint save ───────────────────────────
             checkpoint.mark_stage_completed(stage.name)
