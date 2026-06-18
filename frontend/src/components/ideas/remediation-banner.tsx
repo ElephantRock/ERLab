@@ -22,9 +22,11 @@ import { cn } from "@/lib/utils";
 export function RemediationBanner({
   remediationHints,
   citationAudit,
+  onJumpToSection,
 }: {
   remediationHints: RemediationHint[] | null;
   citationAudit: CitationAuditEntry[] | null;
+  onJumpToSection?: (sectionKey: string) => void;
 }) {
   const [expanded, setExpanded] = useState(false);
 
@@ -139,7 +141,12 @@ export function RemediationBanner({
                 {citationIssues.map((entry) => (
                   <div
                     key={entry.section}
-                    className="flex items-center justify-between rounded-lg border border-destructive/20 bg-destructive/5 px-3 py-2"
+                    className={cn(
+                      "flex items-center justify-between rounded-lg border border-destructive/20 bg-destructive/5 px-3 py-2",
+                      onJumpToSection && "cursor-pointer hover:bg-destructive/10 transition-colors",
+                    )}
+                    onClick={() => onJumpToSection?.(entry.section)}
+                    data-testid={`jump-citation-${entry.section}`}
                   >
                     <span className="text-sm font-medium">{entry.label}</span>
                     <div className="flex items-center gap-3 text-xs">
@@ -173,13 +180,13 @@ export function RemediationBanner({
                 Suggested Fixes
               </h4>
               {missingSections.map((hint, idx) => (
-                <HintRow key={`missing-${idx}`} hint={hint} />
+                <HintRow key={`missing-${idx}`} hint={hint} onJumpToSection={onJumpToSection} />
               ))}
               {wordCountIssues.map((hint, idx) => (
-                <HintRow key={`wc-${idx}`} hint={hint} />
+                <HintRow key={`wc-${idx}`} hint={hint} onJumpToSection={onJumpToSection} />
               ))}
               {patternIssues.map((hint, idx) => (
-                <HintRow key={`pat-${idx}`} hint={hint} />
+                <HintRow key={`pat-${idx}`} hint={hint} onJumpToSection={onJumpToSection} />
               ))}
             </div>
           </div>
@@ -189,7 +196,13 @@ export function RemediationBanner({
   );
 }
 
-function HintRow({ hint }: { hint: RemediationHint }) {
+function HintRow({
+  hint,
+  onJumpToSection,
+}: {
+  hint: RemediationHint;
+  onJumpToSection?: (sectionKey: string) => void;
+}) {
   const isError = hint.severity === "error";
   return (
     <div
@@ -198,7 +211,9 @@ function HintRow({ hint }: { hint: RemediationHint }) {
         isError
           ? "border-destructive/20 bg-destructive/5"
           : "border-warning/20 bg-warning/5",
+        onJumpToSection && "cursor-pointer hover:bg-warning/10 transition-colors",
       )}
+      onClick={() => onJumpToSection?.(hint.section)}
       data-testid={`remediation-hint-${hint.section}`}
     >
       <div className="flex-shrink-0 mt-0.5">
@@ -211,9 +226,16 @@ function HintRow({ hint }: { hint: RemediationHint }) {
       <div className="flex-1 min-w-0">
         <div className="flex items-center justify-between gap-2">
           <span className="text-sm font-medium">{hint.label}</span>
-          <span className="text-xs text-muted-foreground capitalize">
-            {hint.issue_type.replace(/_/g, " ")}
-          </span>
+          <div className="flex items-center gap-2">
+            {onJumpToSection && hint.refinement_available && (
+              <Badge variant="outline" className="text-xs text-success border-success/30">
+                Fixable
+              </Badge>
+            )}
+            <span className="text-xs text-muted-foreground capitalize">
+              {hint.issue_type.replace(/_/g, " ")}
+            </span>
+          </div>
         </div>
         <p className="text-xs text-muted-foreground mt-0.5">
           {hint.suggestion}

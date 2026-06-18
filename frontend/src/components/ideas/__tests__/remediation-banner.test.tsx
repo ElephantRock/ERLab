@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { RemediationBanner } from "@/components/ideas/remediation-banner";
 import type { RemediationHint, CitationAuditEntry } from "@/api/types";
@@ -195,5 +195,71 @@ describe("RemediationBanner", () => {
     );
 
     expect(screen.getByText("3 word count")).toBeInTheDocument();
+  });
+
+  // ── Click-to-jump integration ─────────────────────────────
+
+  it("calls onJumpToSection when a hint row is clicked", () => {
+    const onJump = vi.fn();
+    render(
+      <RemediationBanner
+        remediationHints={[wordCountHint]}
+        citationAudit={null}
+        onJumpToSection={onJump}
+      />,
+    );
+
+    fireEvent.click(screen.getByTestId("remediation-toggle"));
+    fireEvent.click(screen.getByTestId("remediation-hint-introduction"));
+
+    expect(onJump).toHaveBeenCalledWith("introduction");
+  });
+
+  it("calls onJumpToSection when a citation issue row is clicked", () => {
+    const onJump = vi.fn();
+    render(
+      <RemediationBanner
+        remediationHints={[patternHint]}
+        citationAudit={citationAudit}
+        onJumpToSection={onJump}
+      />,
+    );
+
+    fireEvent.click(screen.getByTestId("remediation-toggle"));
+    fireEvent.click(screen.getByTestId("jump-citation-related_work"));
+
+    expect(onJump).toHaveBeenCalledWith("related_work");
+  });
+
+  it("shows Fixable badge on fixable hints when jump is available", () => {
+    render(
+      <RemediationBanner
+        remediationHints={[wordCountHint]}
+        citationAudit={null}
+        onJumpToSection={vi.fn()}
+      />,
+    );
+
+    fireEvent.click(screen.getByTestId("remediation-toggle"));
+
+    expect(screen.getByText("Fixable")).toBeInTheDocument();
+  });
+
+  it("does not show Fixable badge when refinement_available is false", () => {
+    const unfixable: RemediationHint = {
+      ...wordCountHint,
+      refinement_available: false,
+    };
+    render(
+      <RemediationBanner
+        remediationHints={[unfixable]}
+        citationAudit={null}
+        onJumpToSection={vi.fn()}
+      />,
+    );
+
+    fireEvent.click(screen.getByTestId("remediation-toggle"));
+
+    expect(screen.queryByText("Fixable")).not.toBeInTheDocument();
   });
 });

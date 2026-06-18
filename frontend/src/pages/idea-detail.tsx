@@ -32,6 +32,16 @@ export default function IdeaDetail() {
   const ideaId = Number(id);
   const [copiedSection, setCopiedSection] = useState<string | null>(null);
   const [revisionSection, setRevisionSection] = useState<string | null>(null);
+  const [highlightedSection, setHighlightedSection] = useState<string | null>(null);
+
+  function handleJumpToSection(sectionKey: string) {
+    const el = document.getElementById(`section-${sectionKey}`);
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "center" });
+      setHighlightedSection(sectionKey);
+      setTimeout(() => setHighlightedSection(null), 3000);
+    }
+  }
 
   const { data, isLoading } = useQuery({
     queryKey: ["idea", ideaId],
@@ -187,6 +197,7 @@ export default function IdeaDetail() {
       <RemediationBanner
         remediationHints={idea.remediation_hints}
         citationAudit={idea.citation_audit}
+        onJumpToSection={handleJumpToSection}
       />
 
       {(idea.proposal_md || idea.novelty_report || idea.feasibility_report || idea.mechanical_metrics) && (
@@ -243,7 +254,11 @@ export default function IdeaDetail() {
                         {Object.entries(idea.proposal_sections)
                           .filter(([key]) => key !== "ensemble_review")
                           .map(([key, value]) => (
-                          <div key={key} id={`section-${key}`}>
+                          <div
+                            key={key}
+                            id={`section-${key}`}
+                            className={highlightedSection === key ? "ring-2 ring-warning/40 rounded-lg p-2 -m-2 transition-all" : ""}
+                          >
                             <div className="flex items-center justify-between mb-3">
                               <h3 className="text-lg font-semibold">
                                 {key.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}
