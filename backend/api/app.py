@@ -10,7 +10,7 @@ from fastapi.responses import JSONResponse
 
 from backend.api.auth import get_current_user, verify_api_key
 from backend.api.errors import APIError
-from backend.api.routes import auth as auth_routes, collaboration, costs, evaluation, experiments, exports, gaps, governance, ideas, knowledge, knowledge_graph, literature, memory, model_config, notifications, pipeline, plugins, recombination, search, status, traces
+from backend.api.routes import auth as auth_routes, collaboration, costs, evaluation, experiments, exports, gaps, governance, ideas, knowledge, knowledge_graph, literature, memory, model_config, notifications, ops, pipeline, plugins, recombination, search, status, traces
 from backend.api import ws as ws_module
 
 app = FastAPI(
@@ -162,6 +162,7 @@ app.include_router(
     governance.router, prefix="/api/v1/governance", tags=["governance"], dependencies=_auth
 )
 app.include_router(costs.router, prefix="/api/v1/costs", tags=["costs"], dependencies=_auth)
+app.include_router(ops.router, prefix="/api/v1/ops", tags=["ops"], dependencies=_auth)
 app.include_router(traces.router, prefix="/api/v1/traces", tags=["traces"], dependencies=_auth)
 app.include_router(
     literature.router, prefix="/api/v1/literature", tags=["literature"], dependencies=_auth

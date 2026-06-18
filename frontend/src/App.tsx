@@ -26,6 +26,7 @@ const SessionsPage = lazy(() => import("./pages/sessions"));
 const KnowledgeGraphPage = lazy(() => import("./pages/knowledge-graph"));
 const AutonomousPage = lazy(() => import("./pages/autonomous"));
 const PluginsPage = lazy(() => import("./pages/plugins"));
+const OpsPage = lazy(() => import("./pages/ops"));
 
 function LoadingScreen() {
   return (
@@ -85,6 +86,7 @@ export default function App() {
                   <Route path="/knowledge-graph" element={<KnowledgeGraphPage />} />
                   <Route path="/autonomous" element={<AutonomousPage />} />
                   <Route path="/plugins" element={<PluginsPage />} />
+                  <Route path="/ops" element={<OpsPage />} />
                   <Route path="*" element={<Navigate to="/" replace />} />
                 </Routes>
               </Suspense>
