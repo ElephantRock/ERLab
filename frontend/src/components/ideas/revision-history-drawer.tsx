@@ -23,6 +23,8 @@ import {
   Loader2,
   GitCommit,
   Clock,
+  Cpu,
+  Fingerprint,
 } from "lucide-react";
 import { getSectionRevisions, restoreSection } from "@/api/ideas";
 import { toast } from "sonner";
@@ -148,12 +150,7 @@ export function RevisionHistoryDrawer({
 
             {/* Model receipt */}
             {rev.model_receipt && (
-              <div className="mt-1.5 flex items-center gap-2 text-xs text-muted-foreground">
-                <span className="font-mono">
-                  {(rev.model_receipt as Record<string, string>).served_model}
-                </span>
-                <span>via {(rev.model_receipt as Record<string, string>).provider}</span>
-              </div>
+              <ReceiptBadge receipt={rev.model_receipt as Record<string, unknown>} />
             )}
 
             {/* Restore button for non-current */}
@@ -205,6 +202,76 @@ function QualityBadge({
       )}
       <span className="text-muted-foreground font-mono">
         {qc.word_count}/{qc.min_words} words
+      </span>
+    </div>
+  );
+}
+
+function ReceiptBadge({ receipt }: { receipt: Record<string, unknown> }) {
+  const served = String(receipt.served_model ?? "unknown");
+  const requested = String(receipt.requested_model ?? "");
+  const provider = String(receipt.provider ?? "unknown");
+  const endpoint = String(receipt.endpoint ?? "");
+  const timestamp = receipt.timestamp as string | undefined;
+  const contextLength = receipt.context_length as number | null;
+  const modelMismatch = requested && requested !== served;
+
+  return (
+    <div
+      className="mt-2 rounded-lg border border-muted bg-muted/20 p-2"
+      data-testid="receipt-badge"
+    >
+      <div className="flex items-center gap-1.5">
+        <Cpu className="h-3 w-3 text-muted-foreground" />
+        <span className="text-xs font-semibold">Model Receipt</span>
+      </div>
+      <div className="mt-1 grid grid-cols-2 gap-x-3 gap-y-0.5 text-xs">
+        <Row label="Served" value={served} mono highlight={modelMismatch} />
+        {requested && requested !== served && (
+          <Row label="Requested" value={requested} mono />
+        )}
+        <Row label="Provider" value={provider} />
+        {contextLength != null && (
+          <Row label="Context" value={`${contextLength.toLocaleString()} tokens`} mono />
+        )}
+        {timestamp && (
+          <Row label="Timestamp" value={new Date(timestamp).toLocaleString()} />
+        )}
+        {endpoint && (
+          <Row label="Endpoint" value={endpoint} mono className="col-span-2" />
+        )}
+      </div>
+      <div className="mt-1 flex items-center gap-1 text-xs text-muted-foreground/60">
+        <Fingerprint className="h-2.5 w-2.5" />
+        <span>Verifiable: model identity from API response</span>
+      </div>
+    </div>
+  );
+}
+
+function Row({
+  label,
+  value,
+  mono,
+  highlight,
+  className,
+}: {
+  label: string;
+  value: string;
+  mono?: boolean;
+  highlight?: boolean;
+  className?: string;
+}) {
+  return (
+    <div className={className}>
+      <span className="text-muted-foreground">{label}: </span>
+      <span
+        className={cn(
+          mono && "font-mono",
+          highlight && "text-warning font-medium",
+        )}
+      >
+        {value}
       </span>
     </div>
   );
