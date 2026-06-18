@@ -211,6 +211,62 @@ export interface CitationAuditEntry {
   unresolved_reference_count?: number;
 }
 
+// --- Section Refinement (Release 2) ---
+
+export interface SectionRefinementResponse {
+  revision_id: number;
+  section_key: string;
+  previous_hash: string;
+  section_hash: string;
+  quality_checks_before: QualityCheckResult[];
+  quality_checks_after: QualityCheckResult[];
+  model_receipt: {
+    requested_model: string;
+    served_model: string;
+    provider: string;
+    endpoint: string;
+    timestamp: string;
+    context_length: number | null;
+  } | null;
+}
+
+export interface RevisionEntry {
+  id: number;
+  source: string;
+  trigger: string;
+  trigger_detail: Record<string, unknown> | null;
+  section_hash: string;
+  model_receipt: Record<string, unknown> | null;
+  quality_summary: {
+    section: string;
+    passed: boolean;
+    word_count: number;
+    min_words: number;
+    failures: string[];
+  } | null;
+  created_at: string;
+  is_current: boolean;
+}
+
+export interface SyntheticOriginal {
+  source: string;
+  section_hash: string | null;
+  quality_summary: {
+    section: string;
+    passed: boolean;
+    word_count: number;
+    min_words: number;
+    failures: string[];
+  } | null;
+  note: string;
+}
+
+export interface RevisionHistoryResponse {
+  revisions: RevisionEntry[];
+  synthetic_original: SyntheticOriginal | null;
+  current_hash: string;
+}
+
 export interface SupportingPaper {
   id: number;
   title: string;

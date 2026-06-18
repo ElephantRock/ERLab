@@ -1,5 +1,11 @@
 import { apiFetch } from "./client";
-import type { IdeaListResponse, IdeaDetail, IdeaFeedbackRequest } from "./types";
+import type {
+  IdeaListResponse,
+  IdeaDetail,
+  IdeaFeedbackRequest,
+  SectionRefinementResponse,
+  RevisionHistoryResponse,
+} from "./types";
 
 export function listIdeas(params?: {
   domain?: string;
@@ -40,4 +46,40 @@ export function refineIdea(
   id: number,
 ): Promise<{ id: number; novelty_score: number; feasibility_score: number; proposal_title: string }> {
   return apiFetch(`/ideas/${id}/refine`, { method: "POST" });
+}
+
+// --- Section refinement (Release 2) ---
+
+export function refineSection(
+  ideaId: number,
+  sectionKey: string,
+  expectedCurrentHash: string,
+  triggerDetail?: Record<string, unknown>,
+): Promise<SectionRefinementResponse> {
+  return apiFetch(`/ideas/${ideaId}/sections/${sectionKey}/refine`, {
+    method: "POST",
+    body: JSON.stringify({
+      expected_current_hash: expectedCurrentHash,
+      trigger_detail: triggerDetail,
+    }),
+  });
+}
+
+export function restoreSection(
+  ideaId: number,
+  sectionKey: string,
+  revisionId: number,
+  expectedCurrentHash: string,
+): Promise<SectionRefinementResponse> {
+  return apiFetch(`/ideas/${ideaId}/sections/${sectionKey}/restore/${revisionId}`, {
+    method: "POST",
+    body: JSON.stringify({ expected_current_hash: expectedCurrentHash }),
+  });
+}
+
+export function getSectionRevisions(
+  ideaId: number,
+  sectionKey: string,
+): Promise<RevisionHistoryResponse> {
+  return apiFetch(`/ideas/${ideaId}/sections/${sectionKey}/revisions`);
 }
