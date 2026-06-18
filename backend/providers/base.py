@@ -8,6 +8,8 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Any, Callable
 
+from backend.pipeline.operations.types import ModelReceipt
+
 
 @dataclass
 class LLMResponse:
@@ -56,6 +58,34 @@ class LLMProvider(ABC):
 
     def __init__(self) -> None:
         self._cost_callback: CostCallback | None = None
+        self._last_receipt: ModelReceipt | None = None
+
+    @property
+    def last_receipt(self) -> ModelReceipt | None:
+        """Receipt from the most recent model-backed call, or None."""
+        return self._last_receipt
+
+    def _set_receipt_from_response(
+        self,
+        served_model: str,
+        endpoint: str = "",
+        context_length: int | None = None,
+    ) -> None:
+        """Build and store a ModelReceipt after a successful API call.
+
+        Called by concrete providers after each complete()/structured_output()
+        call that returns a response containing the served model identity.
+        """
+        from datetime import datetime, timezone
+
+        self._last_receipt = ModelReceipt(
+            requested_model=self.default_model,
+            served_model=served_model,
+            provider=self.provider_name,
+            endpoint=endpoint,
+            timestamp=datetime.now(timezone.utc).isoformat(),
+            context_length=context_length,
+        )
 
     def set_cost_callback(self, callback: CostCallback) -> None:
         """Register a callback to record cost events after each LLM call."""

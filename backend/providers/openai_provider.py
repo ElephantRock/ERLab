@@ -44,6 +44,8 @@ class OpenAIProvider(LLMProvider):
             temperature=temperature,
             max_tokens=max_tokens,
         )
+        served = getattr(response, "model", None) or self._model
+        self._set_receipt_from_response(served)
         return response.choices[0].message.content  # type: ignore[return-value]
 
     async def complete_with_usage(
@@ -62,10 +64,13 @@ class OpenAIProvider(LLMProvider):
         inp = usage.prompt_tokens if usage else 0
         out = usage.completion_tokens if usage else 0
         self._report_cost(inp, out)
+        served = getattr(response, "model", None) or self._model
+        self._set_receipt_from_response(served)
         return LLMResponse(
             content=response.choices[0].message.content or "",
             input_tokens=inp,
             output_tokens=out,
+            served_model=served,
         )
 
     async def complete_stream(
@@ -173,11 +178,14 @@ class OpenAIProvider(LLMProvider):
             out = usage.completion_tokens if usage else 0
             self._report_cost(inp, out)
             content = response.choices[0].message.content or "{}"
+            served = getattr(response, "model", None) or self._model
+            self._set_receipt_from_response(served)
             return LLMResponse(
                 content="",
                 structured=json.loads(content),
                 input_tokens=inp,
                 output_tokens=out,
+                served_model=served,
             )
         except Exception:
             result = await self._structured_output_fallback(messages, schema, temperature)
@@ -259,6 +267,9 @@ class OpenAIProvider(LLMProvider):
 
         choice = response.choices[0]
         content = choice.message.content or ""
+
+        served = getattr(response, "model", None) or self._model
+        self._set_receipt_from_response(served)
 
         tool_calls_data = None
         if choice.message.tool_calls:

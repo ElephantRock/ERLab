@@ -70,9 +70,12 @@ class ResilientProvider(LLMProvider):
         temperature: float = 0.7,
         max_tokens: int = 4096,
     ) -> str:
-        return await self._with_retry(
+        result = await self._with_retry(
             self._wrapped.complete, messages, temperature, max_tokens
         )
+        if hasattr(self._wrapped, '_last_receipt'):
+            self._last_receipt = self._wrapped._last_receipt
+        return result
 
     async def complete_with_usage(
         self,
@@ -82,7 +85,7 @@ class ResilientProvider(LLMProvider):
         stage: str = "",
         run_id: str | None = None,
     ) -> LLMResponse:
-        return await self._with_retry(
+        result = await self._with_retry(
             self._wrapped.complete_with_usage,
             messages,
             temperature,
@@ -90,6 +93,9 @@ class ResilientProvider(LLMProvider):
             stage=stage,
             run_id=run_id,
         )
+        if hasattr(self._wrapped, '_last_receipt'):
+            self._last_receipt = self._wrapped._last_receipt
+        return result
 
     def complete_stream(
         self,

@@ -81,6 +81,8 @@ class CachedProvider(LLMProvider):
         response = LLMResponse(content=result)
         self._store_exact(key, response)
         await self._store_semantic(serialized, response)
+        if hasattr(self._wrapped, '_last_receipt'):
+            self._last_receipt = self._wrapped._last_receipt
         return result
 
     async def complete_with_usage(
@@ -107,6 +109,8 @@ class CachedProvider(LLMProvider):
         )
         self._store_exact(key, response)
         await self._store_semantic(serialized, response)
+        if hasattr(self._wrapped, '_last_receipt'):
+            self._last_receipt = self._wrapped._last_receipt
         return response
 
     def complete_stream(
