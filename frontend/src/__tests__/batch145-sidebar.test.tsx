@@ -31,16 +31,16 @@ describe("TEST-145: Sidebar restructure", () => {
     expect(items).toHaveLength(6);
   });
 
-  it("TEST-145-04: System group has 5 items", () => {
+  it("TEST-145-04: System group has 6 items", () => {
     const systemSection = content.substring(content.indexOf("label: \"System\""));
     const items = systemSection.match(/to: "/g);
-    expect(items).toHaveLength(5);
+    expect(items).toHaveLength(6);
   });
 
-  it("TEST-145-05: total items = 15 (none lost)", () => {
+  it("TEST-145-05: total items = 16 (none lost)", () => {
     const allItems = content.match(/to: "\//g);
-    // 15 items in NAV_GROUPS + 0 elsewhere = 15
-    expect(allItems!.length).toBeGreaterThanOrEqual(15);
+    // 16 items in NAV_GROUPS + 0 elsewhere = 16
+    expect(allItems!.length).toBeGreaterThanOrEqual(16);
   });
 
   it("TEST-145-06: has group label headers when not collapsed", () => {

@@ -30,11 +30,11 @@ function renderRoute(path: string) {
 
 describe("BATCH-16/TASK-01: Phase 2 Navigation", () => {
   // ── TEST-16-01-01: Sidebar renders all nav items ─────────────
-  it("TEST-16-01-01: sidebar renders all 15 nav items", () => {
+  it("TEST-16-01-01: sidebar renders all 16 nav items", () => {
     renderSidebar();
 
     const links = screen.getAllByRole("link");
-    expect(links).toHaveLength(15);
+    expect(links).toHaveLength(16);
 
     const labels = links.map((l) => l.textContent?.trim());
     // Sidebar is grouped: Primary, Research Tools, System
@@ -53,6 +53,7 @@ describe("BATCH-16/TASK-01: Phase 2 Navigation", () => {
       "Sessions",
       // System
       "Costs",
+      "Ops",
       "Governance",
       "Traces",
       "Plugins",

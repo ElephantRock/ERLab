@@ -213,6 +213,16 @@ async def get_idea(idea_id: int):
         )
         quality_checks = compute_quality_checks(sections_dict)
 
+        # Pre-compute per-section content hashes for optimistic concurrency
+        section_hashes = None
+        if sections_dict:
+            import hashlib as _hashlib
+            section_hashes = {
+                k: _hashlib.sha256(v.encode()).hexdigest()
+                for k, v in sections_dict.items()
+                if isinstance(v, str)
+            }
+
         return {
             "idea": {
                 "id": idea.id,
@@ -237,6 +247,7 @@ async def get_idea(idea_id: int):
                 "proposal_references": proposal_references,
                 "supporting_papers": supporting_papers,
                 "quality_checks": quality_checks,
+                "section_hashes": section_hashes,
                 "remediation_hints": compute_remediation_hints(sections_dict, quality_checks),
                 "citation_audit": audit_citations(sections_dict, proposal_references),
                 "experiment_results": experiment_results if experiment_results else None,

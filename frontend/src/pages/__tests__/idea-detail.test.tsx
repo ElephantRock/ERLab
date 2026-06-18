@@ -9,6 +9,9 @@ import type { IdeaDetail as IdeaDetailType } from "@/api/types";
 vi.mock("@/api/ideas", () => ({
   getIdea: vi.fn(),
   refineIdea: vi.fn(),
+  refineSection: vi.fn(),
+  getSectionRevisions: vi.fn(),
+  restoreSection: vi.fn(),
 }));
 
 vi.mock("@/components/ideas/score-badge", () => ({
@@ -51,9 +54,10 @@ vi.mock("sonner", () => ({
   toast: { success: vi.fn(), error: vi.fn() },
 }));
 
-import { getIdea } from "@/api/ideas";
+import { getIdea, getSectionRevisions } from "@/api/ideas";
 
 const mockedGetIdea = vi.mocked(getIdea);
+const mockedGetRevisions = vi.mocked(getSectionRevisions);
 
 function createQueryClient() {
   return new QueryClient({
@@ -91,6 +95,10 @@ const sampleIdea: IdeaDetailType = {
   proposal_md: "# Proposal\n\nThis is the proposal.",
   proposal_latex: null,
   proposal_sections: null,
+  quality_checks: null,
+  section_hashes: null,
+  remediation_hints: null,
+  citation_audit: null,
 };
 
 beforeEach(() => {
@@ -143,6 +151,115 @@ describe("IdeaDetail", () => {
 
     await waitFor(() => {
       expect(screen.getByText("Idea not found.")).toBeInTheDocument();
+    });
+  });
+
+  // ── Section refinement wiring ────────────────────────────────
+
+  const ideaWithSections: IdeaDetailType = {
+    ...sampleIdea,
+    proposal_sections: {
+      introduction: "This is the introduction with enough words to pass the check.",
+      abstract: "Short.", // Too short — will fail word count
+    },
+    section_hashes: {
+      introduction: "hash_intro_abc",
+      abstract: "hash_abs_def",
+    },
+    quality_checks: [
+      {
+        section: "introduction",
+        label: "Introduction",
+        present: true,
+        word_count: 100,
+        min_words: 50,
+        meets_word_count: true,
+        checks: [],
+        passed: true,
+        failures: [],
+      },
+      {
+        section: "abstract",
+        label: "Abstract",
+        present: true,
+        word_count: 1,
+        min_words: 50,
+        meets_word_count: false,
+        checks: [],
+        passed: false,
+        failures: ["insufficient word count (1/50)"],
+      },
+    ],
+    remediation_hints: [
+      {
+        section: "abstract",
+        label: "Abstract",
+        issue_type: "word_count",
+        severity: "error",
+        message: "Abstract has only 1 word (min 50)",
+        suggestion: "Expand the abstract",
+        refinement_available: true,
+      },
+    ],
+    citation_audit: null,
+  };
+
+  it("shows fix section button on failing section with refinement available", async () => {
+    mockedGetIdea.mockResolvedValue({ idea: ideaWithSections });
+
+    renderIdeaDetail("1");
+
+    await waitFor(() => {
+      expect(screen.getByTestId("fix-button-abstract")).toBeInTheDocument();
+    });
+  });
+
+  it("does NOT show fix section button on passing section", async () => {
+    mockedGetIdea.mockResolvedValue({ idea: ideaWithSections });
+
+    renderIdeaDetail("1");
+
+    await waitFor(() => {
+      expect(screen.getByTestId("revision-toggle-introduction")).toBeInTheDocument();
+    });
+
+    expect(screen.queryByTestId("fix-button-introduction")).not.toBeInTheDocument();
+  });
+
+  it("shows revision history toggle on sections with hashes", async () => {
+    mockedGetIdea.mockResolvedValue({ idea: ideaWithSections });
+
+    renderIdeaDetail("1");
+
+    await waitFor(() => {
+      expect(screen.getByTestId("revision-toggle-introduction")).toBeInTheDocument();
+      expect(screen.getByTestId("revision-toggle-abstract")).toBeInTheDocument();
+    });
+  });
+
+  it("expands revision history drawer on toggle click", async () => {
+    mockedGetIdea.mockResolvedValue({ idea: ideaWithSections });
+    mockedGetRevisions.mockResolvedValue({
+      revisions: [],
+      synthetic_original: null,
+      current_hash: "hash_intro_abc",
+    });
+
+    renderIdeaDetail("1");
+
+    await waitFor(() => {
+      expect(screen.getByTestId("revision-toggle-introduction")).toBeInTheDocument();
+    });
+
+    // Drawer should not be visible yet
+    expect(screen.queryByTestId("revision-drawer-introduction")).not.toBeInTheDocument();
+
+    // Click the toggle
+    screen.getByTestId("revision-toggle-introduction").click();
+
+    // Drawer should appear
+    await waitFor(() => {
+      expect(screen.getByTestId("revision-drawer-introduction")).toBeInTheDocument();
     });
   });
 });

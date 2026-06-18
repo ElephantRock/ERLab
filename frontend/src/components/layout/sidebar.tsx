@@ -15,6 +15,7 @@ import {
   BrainCircuit,
   Cpu,
   Puzzle,
+  Gauge,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -56,6 +57,7 @@ const NAV_GROUPS: NavGroup[] = [
     label: "System",
     items: [
       { to: "/costs", icon: DollarSign, label: "Costs" },
+      { to: "/ops", icon: Gauge, label: "Ops" },
       { to: "/governance", icon: Shield, label: "Governance" },
       { to: "/traces", icon: Activity, label: "Traces" },
       { to: "/plugins", icon: Puzzle, label: "Plugins" },

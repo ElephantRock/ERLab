@@ -151,6 +151,7 @@ export interface IdeaDetail extends IdeaSummary {
   proposal_references: ResolvedReference[] | string | null;
   supporting_papers: SupportingPaper[] | null;
   quality_checks: QualityCheckResult[] | null;
+  section_hashes: Record<string, string> | null;
   remediation_hints: RemediationHint[] | null;
   citation_audit: CitationAuditEntry[] | null;
   mechanical_metrics: Record<string, number> | null;

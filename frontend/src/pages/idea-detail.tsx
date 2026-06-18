@@ -12,13 +12,15 @@ import { EvidencePanel } from "@/components/ideas/evidence-panel";
 import { ProposalReviewPanel } from "@/components/ideas/proposal-review-panel";
 import { QualityCheckPanel } from "@/components/ideas/quality-check-panel";
 import { RemediationBanner } from "@/components/ideas/remediation-banner";
+import { FixSectionButton } from "@/components/ideas/fix-section-button";
+import { RevisionHistoryDrawer } from "@/components/ideas/revision-history-drawer";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, RefreshCw, Loader2, CheckCircle2, AlertTriangle, Copy, Check } from "lucide-react";
+import { ArrowLeft, RefreshCw, Loader2, CheckCircle2, AlertTriangle, Copy, Check, History } from "lucide-react";
 import { toast } from "sonner";
 import { useState } from "react";
 import type { ExperimentResult } from "@/api/types";
@@ -29,6 +31,7 @@ export default function IdeaDetail() {
   const queryClient = useQueryClient();
   const ideaId = Number(id);
   const [copiedSection, setCopiedSection] = useState<string | null>(null);
+  const [revisionSection, setRevisionSection] = useState<string | null>(null);
 
   const { data, isLoading } = useQuery({
     queryKey: ["idea", ideaId],
@@ -245,19 +248,62 @@ export default function IdeaDetail() {
                               <h3 className="text-lg font-semibold">
                                 {key.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}
                               </h3>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleCopySection(key, typeof value === "string" ? value : JSON.stringify(value, null, 2))}
-                                data-testid={`copy-section-${key}`}
-                                className="text-muted-foreground hover:text-foreground"
-                              >
-                                {copiedSection === key ? (
-                                  <Check className="h-3 w-3" />
-                                ) : (
-                                  <Copy className="h-3 w-3" />
+                              <div className="flex items-center gap-1">
+                                {/* Fix Section button (only on failing sections with refinement available) */}
+                                {(() => {
+                                  const qc = idea.quality_checks?.find((c) => c.section === key);
+                                  const hints = idea.remediation_hints?.filter(
+                                    (h) => h.section === key && h.refinement_available,
+                                  );
+                                  const hash = idea.section_hashes?.[key] ?? "";
+                                  if (
+                                    qc &&
+                                    !qc.passed &&
+                                    hash &&
+                                    hints &&
+                                    hints.length > 0
+                                  ) {
+                                    return (
+                                      <FixSectionButton
+                                        ideaId={ideaId}
+                                        sectionKey={key}
+                                        sectionLabel={key.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}
+                                        currentHash={hash}
+                                        failureHints={qc.failures}
+                                      />
+                                    );
+                                  }
+                                  return null;
+                                })()}
+                                {/* Revision history toggle */}
+                                {idea.section_hashes?.[key] && (
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() =>
+                                      setRevisionSection(revisionSection === key ? null : key)
+                                    }
+                                    data-testid={`revision-toggle-${key}`}
+                                    className="text-muted-foreground hover:text-foreground"
+                                  >
+                                    <History className="h-3 w-3" />
+                                  </Button>
                                 )}
-                              </Button>
+                                {/* Copy button */}
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleCopySection(key, typeof value === "string" ? value : JSON.stringify(value, null, 2))}
+                                  data-testid={`copy-section-${key}`}
+                                  className="text-muted-foreground hover:text-foreground"
+                                >
+                                  {copiedSection === key ? (
+                                    <Check className="h-3 w-3" />
+                                  ) : (
+                                    <Copy className="h-3 w-3" />
+                                  )}
+                                </Button>
+                              </div>
                             </div>
                             {typeof value === "string" ? (
                               <MarkdownRenderer content={value} />
@@ -307,6 +353,17 @@ export default function IdeaDetail() {
                               </div>
                             ) : (
                               <p className="text-sm text-muted-foreground">{String(value)}</p>
+                            )}
+                            {/* Revision history drawer (collapsible per section) */}
+                            {revisionSection === key && idea.section_hashes?.[key] && (
+                              <div className="mt-4">
+                                <RevisionHistoryDrawer
+                                  ideaId={ideaId}
+                                  sectionKey={key}
+                                  sectionLabel={key.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}
+                                  currentHash={idea.section_hashes[key]}
+                                />
+                              </div>
                             )}
                           </div>
                         ))}
