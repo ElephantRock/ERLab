@@ -373,3 +373,253 @@ async def refine_idea(idea_id: int):
             f"Idea refinement failed: {str(e)}",
             "The LLM provider may be unavailable. Check provider connectivity.",
         )
+
+
+# --------------------------------------------------------------------------- #
+# Section refinement (Release 2) — revision-tracked mutations
+# --------------------------------------------------------------------------- #
+
+from pydantic import BaseModel
+
+
+class SectionRefineRequest(BaseModel):
+    expected_current_hash: str
+    trigger_detail: dict | None = None
+
+
+class SectionRestoreRequest(BaseModel):
+    expected_current_hash: str
+
+
+@router.post(
+    "/{idea_id}/sections/{section_key}/refine",
+    summary="Refine a single proposal section via LLM",
+    description="Regenerate a specific proposal section with full revision tracking.",
+)
+async def refine_section(
+    idea_id: int,
+    section_key: str,
+    request: SectionRefineRequest,
+):
+    """Regenerate a single proposal section.
+
+    Creates a new revision with the old text preserved. Requires
+    expected_current_hash for optimistic concurrency.
+    """
+    from backend.db.crud import get_idea as db_get_idea
+    from backend.db.crud import get_proposal_by_idea
+    from backend.db.database import get_session
+    from backend.pipeline.synthesis.section_refinement import (
+        ProposalSectionRefinementService,
+        ConcurrencyConflict,
+        ReceiptRequired,
+    )
+    from backend.pipeline.synthesis.proposal_synthesizer import ProposalSynthesizer, MIN_WORDS
+    from backend.pipeline.generation.models import ResearchIdea
+    from backend.providers.provider_factory import create_provider
+
+    if section_key not in MIN_WORDS:
+        raise APIError(
+            400, "INVALID_SECTION",
+            f"Section '{section_key}' is not refinable.",
+            f"Allowed: {list(MIN_WORDS.keys())}",
+        )
+
+    with get_session() as session:
+        idea = db_get_idea(session, idea_id)
+        if not idea:
+            raise NotFoundError("Idea not found")
+        proposal = get_proposal_by_idea(session, idea.id)
+        if not proposal:
+            raise NotFoundError("No proposal found for this idea")
+
+        sections = json.loads(proposal.sections_json) if proposal.sections_json else {}
+        if section_key not in sections:
+            raise NotFoundError(f"Section '{section_key}' not found")
+
+        try:
+            provider = create_provider()
+            synthesizer = ProposalSynthesizer(provider)
+            service = ProposalSectionRefinementService(synthesizer)
+
+            research_idea = ResearchIdea(
+                title=idea.title,
+                problem_statement=idea.problem_statement,
+                proposed_method=idea.proposed_method,
+                expected_contributions=idea.expected_contributions,
+                novelty_rationale="",
+                evaluation_approach="",
+            )
+
+            result = await service.refine_section(
+                session=session,
+                proposal=proposal,
+                section_key=section_key,
+                idea=research_idea,
+                expected_current_hash=request.expected_current_hash,
+                trigger_detail=request.trigger_detail,
+                provider=provider,
+            )
+
+            return {
+                "revision_id": result.revision_id,
+                "section_key": result.section_key,
+                "previous_hash": result.previous_hash,
+                "section_hash": result.section_hash,
+                "quality_checks_before": result.quality_checks_before,
+                "quality_checks_after": result.quality_checks_after,
+                "model_receipt": result.model_receipt,
+            }
+        except ConcurrencyConflict as e:
+            raise APIError(409, "CONFLICT", str(e), "The section was modified. Refresh and try again.")
+        except ReceiptRequired as e:
+            raise APIError(422, "RECEIPT_REQUIRED", str(e), "Use a provider that produces model receipts.")
+
+
+@router.post(
+    "/{idea_id}/sections/{section_key}/restore/{revision_id}",
+    summary="Restore a section to a previous revision",
+    description="Rolls back a section to the text captured in a specific revision.",
+)
+async def restore_section(
+    idea_id: int,
+    section_key: str,
+    revision_id: int,
+    request: SectionRestoreRequest,
+):
+    """Restore a section to a previous revision's text."""
+    from backend.db.crud import get_idea as db_get_idea
+    from backend.db.crud import get_proposal_by_idea
+    from backend.db.database import get_session
+    from backend.pipeline.synthesis.section_refinement import (
+        ProposalSectionRefinementService,
+        ConcurrencyConflict,
+    )
+
+    with get_session() as session:
+        idea = db_get_idea(session, idea_id)
+        if not idea:
+            raise NotFoundError("Idea not found")
+        proposal = get_proposal_by_idea(session, idea.id)
+        if not proposal:
+            raise NotFoundError("No proposal found for this idea")
+
+        try:
+            service = ProposalSectionRefinementService.__new__(ProposalSectionRefinementService)
+            result = await service.restore_version(
+                session=session,
+                proposal=proposal,
+                section_key=section_key,
+                target_revision_id=revision_id,
+                expected_current_hash=request.expected_current_hash,
+            )
+
+            return {
+                "revision_id": result.revision_id,
+                "section_key": result.section_key,
+                "previous_hash": result.previous_hash,
+                "section_hash": result.section_hash,
+                "quality_checks_before": result.quality_checks_before,
+                "quality_checks_after": result.quality_checks_after,
+                "model_receipt": result.model_receipt,
+            }
+        except ConcurrencyConflict as e:
+            raise APIError(409, "CONFLICT", str(e), "The section was modified. Refresh and try again.")
+
+
+@router.get(
+    "/{idea_id}/sections/{section_key}/revisions",
+    summary="Get revision history for a section",
+    description="Returns all revisions plus a synthetic original entry.",
+)
+async def get_section_revisions(idea_id: int, section_key: str):
+    """Get revision history for a proposal section."""
+    import hashlib
+    from backend.db.crud import get_idea as db_get_idea
+    from backend.db.crud import get_proposal_by_idea
+    from backend.db.database import get_session
+    from backend.db.models import ProposalSectionRevision
+    from backend.pipeline.synthesis.proposal_synthesizer import MIN_WORDS
+    from backend.api.quality_checks import compute_quality_checks
+
+    with get_session() as session:
+        idea = db_get_idea(session, idea_id)
+        if not idea:
+            raise NotFoundError("Idea not found")
+        proposal = get_proposal_by_idea(session, idea.id)
+        if not proposal:
+            raise NotFoundError("No proposal found for this idea")
+
+        sections = json.loads(proposal.sections_json) if proposal.sections_json else {}
+        current_text = sections.get(section_key, "")
+        current_hash = hashlib.sha256(current_text.encode()).hexdigest()
+
+        revisions_raw = session.execute(
+            select(ProposalSectionRevision)
+            .where(
+                ProposalSectionRevision.proposal_id == proposal.id,
+                ProposalSectionRevision.section_key == section_key,
+            )
+            .order_by(ProposalSectionRevision.created_at.desc())
+        ).scalars().all()
+
+        def _summarize(qc_list):
+            if not qc_list:
+                return None
+            c = qc_list[0]
+            return {
+                "section": c.get("section"),
+                "passed": c.get("passed"),
+                "word_count": c.get("word_count"),
+                "min_words": c.get("min_words"),
+                "failures": c.get("failures", []),
+            }
+
+        revisions = []
+        for rev in revisions_raw:
+            revisions.append({
+                "id": rev.id,
+                "source": rev.source,
+                "trigger": rev.trigger,
+                "trigger_detail": json.loads(rev.trigger_detail) if rev.trigger_detail else None,
+                "section_hash": rev.section_hash,
+                "model_receipt": json.loads(rev.model_receipt_json) if rev.model_receipt_json else None,
+                "quality_summary": _summarize(json.loads(rev.quality_checks_json) if rev.quality_checks_json else []),
+                "created_at": str(rev.created_at),
+                "is_current": rev.section_hash == current_hash,
+            })
+
+        # Synthetic original
+        synthetic_original = None
+        if not revisions:
+            qc = compute_quality_checks({section_key: current_text}) or []
+            synthetic_original = {
+                "source": "pipeline",
+                "section_hash": current_hash,
+                "quality_summary": _summarize(qc),
+                "note": "Original pipeline output (current sections_json)",
+            }
+        elif revisions_raw:
+            earliest = revisions_raw[-1]
+            if earliest.previous_text:
+                eh = hashlib.sha256(earliest.previous_text.encode()).hexdigest()
+                qc = compute_quality_checks({section_key: earliest.previous_text}) or []
+                synthetic_original = {
+                    "source": "pipeline",
+                    "section_hash": eh,
+                    "quality_summary": _summarize(qc),
+                    "note": "Original pipeline output (earliest revision previous_text)",
+                }
+            else:
+                synthetic_original = {
+                    "source": "pipeline",
+                    "section_hash": None,
+                    "quality_summary": None,
+                    "note": "Original unavailable (no previous_text captured)",
+                }
+
+        return {
+            "revisions": revisions,
+            "synthetic_original": synthetic_original,
+            "current_hash": current_hash,
+        }

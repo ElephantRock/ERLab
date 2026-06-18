@@ -164,6 +164,29 @@ class ProposalSynthesizer:
         self._effective_min_words = dict(min_words) if min_words else dict(BASE_MIN_WORDS)
         self._prompt_template = (PROMPT_DIR / "synthesis_system.md").read_text()
 
+    async def generate_section(
+        self,
+        section_key: str,
+        idea: ResearchIdea,
+        novelty_report: NoveltyReport | None = None,
+        feasibility_report: FeasibilityReport | None = None,
+        literature: str = "",
+        gaps: list | None = None,
+    ) -> str:
+        """Generate a single proposal section via LLM.
+
+        Public API for section-level generation. Used by the section
+        refinement service to regenerate individual sections without
+        re-running the full synthesis pipeline.
+
+        Returns the generated section text (pre-sanitization).
+        """
+        section_name = section_key.replace("_", " ").title()
+        return await self._generate_single_section(
+            section_name, idea, novelty_report, feasibility_report,
+            literature, gaps, provider=self._provider,
+        )
+
     async def synthesize(
         self,
         idea: ResearchIdea,

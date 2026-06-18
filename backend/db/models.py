@@ -375,3 +375,36 @@ class RunWorker(Base):
     started_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
     last_heartbeat: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
     completed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+
+
+class ProposalSectionRevision(Base):
+    """Append-only revision history for proposal section text.
+
+    Every change to a proposal section — pipeline origin, user-triggered
+    refinement, or rollback — creates a new row. Rows are never updated
+    or deleted. Includes SHA-256 content hashes for optimistic concurrency.
+    """
+
+    __tablename__ = "proposal_section_revisions"
+    __table_args__ = (
+        Index("ix_psr_proposal_section_created", "proposal_id", "section_key", "created_at"),
+        Index("ix_psr_proposal_created", "proposal_id", "created_at"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    proposal_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("proposals.id"), nullable=False,
+    )
+    section_key: Mapped[str] = mapped_column(String(50), nullable=False)
+    section_text: Mapped[str] = mapped_column(Text, nullable=False)
+    section_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    previous_text: Mapped[str | None] = mapped_column(Text, nullable=True)
+    previous_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    source: Mapped[str] = mapped_column(String(30), nullable=False)
+    trigger: Mapped[str] = mapped_column(String(30), nullable=False)
+    trigger_detail: Mapped[str | None] = mapped_column(Text, nullable=True)
+    model_receipt_json: Mapped[str | None] = mapped_column(Text, nullable=True)
+    quality_checks_json: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=lambda: datetime.now(timezone.utc),
+    )
