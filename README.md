@@ -1,6 +1,6 @@
 # Elephant Rock Research
 
-**v0.1.0** ![status](https://img.shields.io/badge/status-alpha-orange)
+**v0.2.0** ![status](https://img.shields.io/badge/status-alpha-orange)
 
 **Elephant Rock** is an AI-powered research idea generation platform that automates the entire lifecycle of academic ideation — from literature discovery and gap analysis through novel idea generation, feasibility scoring, and structured proposal export. Feed it a research domain and it produces scored, cited research proposals with novelty and feasibility reports, ready for refinement.
 
@@ -24,6 +24,20 @@ erock generate --domain "AI/NLP" --rounds 2 --ideas 3
 
 > **Tip:** `erock setup` creates your `.env` file and optionally runs a test pipeline.
 > Use `erock dev` to start both the FastAPI backend and React frontend with live reload.
+
+---
+
+## Trust & Quality Layer
+
+Elephant Rock produces research outputs that are traceable, verifiable, and reviewable:
+
+- **Schema-Backed Provenance**: Every idea links to supporting papers via a junction table (`IdeaPaperLink`) with role tracking (supporting vs cited). References are resolved against the same-run paper corpus using DOI → arXiv → title match (Jaccard ≥ 0.8) → author-year cascade.
+- **Quality Checks**: Each proposal section is checked for word count, citation markers, and structural completeness — deterministically, at read time, with no pipeline re-run needed.
+- **Citation Integrity**: Shared surname extraction utility handles comma format, space format, Chinese family-name ordering, and `et al.` suffixes. The sanitizer and verifier use the same extraction logic.
+- **Remediation UX**: Failing sections show inline hints with deterministic suggestions. The remediation banner provides click-to-jump navigation to failing sections.
+- **Section Regeneration**: Users can trigger LLM-based section refinement with revision tracking (append-only). Every refinement is recorded with quality before/after snapshots, model receipts, and optimistic concurrency via content hashes.
+- **Governance Decisions**: Append-only decisions (approved / denied / needs_changes) with reviewer identity from auth context. Unified audit timeline aggregates decisions, section revisions, and comments into a chronological feed.
+- **Operational Dashboard**: Read-only observability at `/ops` — run health, model usage, source health, and quality trends with bounded time windows.
 
 ---
 
@@ -122,13 +136,20 @@ The backend exposes a FastAPI server at **http://localhost:8000** with full Swag
 | `POST` | `/api/v1/pipeline/resume/{id}` | Resume a paused run |
 | `POST` | `/api/v1/pipeline/autonomous` | Start autonomous cycle |
 | `GET` | `/api/v1/ideas` | List research ideas |
-| `GET` | `/api/v1/ideas/{id}` | Get idea details |
+| `GET` | `/api/v1/ideas/{id}` | Get idea details with quality checks + provenance |
 | `POST` | `/api/v1/ideas/{id}/feedback` | Submit idea feedback |
 | `POST` | `/api/v1/ideas/{id}/refine` | Refine an idea |
+| `POST` | `/api/v1/ideas/{id}/sections/{key}/refine` | Regenerate a proposal section |
+| `POST` | `/api/v1/ideas/{id}/sections/{key}/restore` | Restore a previous section version |
+| `GET` | `/api/v1/ideas/{id}/sections/{key}/revisions` | Section revision history |
+| `POST` | `/api/v1/ideas/{id}/governance/decision` | Create governance decision |
+| `GET` | `/api/v1/ideas/{id}/governance/decisions` | List governance decisions |
+| `GET` | `/api/v1/ideas/{id}/governance/timeline` | Unified audit timeline |
 | `GET` | `/api/v1/gaps` | List research gaps |
 | `GET` | `/api/v1/knowledge/stats` | Knowledge base statistics |
 | `POST` | `/api/v1/knowledge/search` | Search the knowledge base |
 | `GET` | `/api/v1/status` | System status |
+| `GET` | `/api/v1/ops/dashboard` | Operational dashboard metrics |
 | `GET` | `/health` | Health check (unauthenticated) |
 
 > See the full interactive API reference at `http://localhost:8000/docs` when the server is running.
@@ -170,7 +191,7 @@ Contributions are welcome. To get started:
 
 1. **Fork** the repository and create a feature branch.
 2. **Install** with dev dependencies: `pip install -e ".[dev]"`
-3. **Run tests**: `pytest` (baseline: 1,370 tests)
+3. **Run tests**: `pytest` (baseline: 3,687 backend tests) + `cd frontend && npx vitest run` (624 frontend tests)
 4. **Lint**: `ruff check backend/`
 5. **Type-check**: `mypy backend/`
 6. **Submit** a pull request with a clear description of the change.
