@@ -179,6 +179,12 @@ app.include_router(
     tags=["collaboration"],
     dependencies=_auth,
 )
+app.include_router(
+    governance.idea_governance_router,
+    prefix="/api/v1/ideas",
+    tags=["governance"],
+    dependencies=_auth,
+)
 # Public shared-idea endpoint (no auth required)
 app.include_router(
     collaboration.router,

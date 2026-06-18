@@ -408,3 +408,27 @@ class ProposalSectionRevision(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime, default=lambda: datetime.now(timezone.utc),
     )
+
+
+class GovernanceDecision(Base):
+    """Append-only governance decision per idea.
+
+    Every human review decision (approved / denied / needs_changes)
+    creates a new row. Rows are never updated or deleted.
+    """
+
+    __tablename__ = "governance_decisions"
+    __table_args__ = (
+        Index("ix_governance_decisions_idea_id", "idea_id"),
+        Index("ix_governance_decisions_created_at", "created_at"),
+        Index("ix_governance_decisions_idea_created", "idea_id", "created_at"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    idea_id: Mapped[int] = mapped_column(Integer, ForeignKey("ideas.id"), nullable=False)
+    decision: Mapped[str] = mapped_column(String(20), nullable=False)
+    reviewer: Mapped[str] = mapped_column(String(128), nullable=False, default="anonymous")
+    note: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=lambda: datetime.now(timezone.utc),
+    )

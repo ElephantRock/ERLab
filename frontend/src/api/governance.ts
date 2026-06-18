@@ -54,3 +54,57 @@ export function denyDecision(id: string, amendment?: string): Promise<DenyRespon
     body: JSON.stringify({ amendment: amendment ?? null }),
   });
 }
+
+// ── Idea-scoped governance decisions ────────────────────────────
+
+export type GovernanceDecisionType = "approved" | "denied" | "needs_changes";
+
+export interface GovernanceDecisionEntry {
+  id: number;
+  idea_id: number;
+  decision: GovernanceDecisionType;
+  reviewer: string;
+  note: string | null;
+  created_at: string;
+}
+
+export interface GovernanceDecisionListResponse {
+  decisions: GovernanceDecisionEntry[];
+  total: number;
+}
+
+export interface TimelineEvent {
+  type: "decision" | "section_revision" | "comment";
+  timestamp: string;
+  actor: string;
+  summary: string;
+  detail: Record<string, unknown>;
+}
+
+export interface TimelineResponse {
+  events: TimelineEvent[];
+  total: number;
+}
+
+export function createGovernanceDecision(
+  ideaId: number,
+  decision: GovernanceDecisionType,
+  note?: string,
+): Promise<GovernanceDecisionEntry> {
+  return apiFetch(`/ideas/${ideaId}/governance/decision`, {
+    method: "POST",
+    body: JSON.stringify({ decision, note: note ?? null }),
+  });
+}
+
+export function listGovernanceDecisions(
+  ideaId: number,
+): Promise<GovernanceDecisionListResponse> {
+  return apiFetch(`/ideas/${ideaId}/governance/decisions`);
+}
+
+export function getGovernanceTimeline(
+  ideaId: number,
+): Promise<TimelineResponse> {
+  return apiFetch(`/ideas/${ideaId}/governance/timeline`);
+}

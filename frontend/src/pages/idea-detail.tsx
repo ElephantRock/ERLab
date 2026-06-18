@@ -14,6 +14,7 @@ import { QualityCheckPanel } from "@/components/ideas/quality-check-panel";
 import { RemediationBanner } from "@/components/ideas/remediation-banner";
 import { FixSectionButton } from "@/components/ideas/fix-section-button";
 import { RevisionHistoryDrawer } from "@/components/ideas/revision-history-drawer";
+import { GovernancePanel } from "@/components/ideas/governance-panel";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
@@ -199,6 +200,8 @@ export default function IdeaDetail() {
         citationAudit={idea.citation_audit}
         onJumpToSection={handleJumpToSection}
       />
+
+      <GovernancePanel ideaId={ideaId} />
 
       {(idea.proposal_md || idea.novelty_report || idea.feasibility_report || idea.mechanical_metrics) && (
         <Tabs defaultValue={idea.proposal_md ? "proposal" : idea.novelty_report ? "novelty" : idea.feasibility_report ? "feasibility" : "metrics"}>
