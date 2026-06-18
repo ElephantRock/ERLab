@@ -14,6 +14,25 @@ from backend.pipeline.provenance.reference_resolver import resolve_references
 router = APIRouter()
 
 
+def _parse_source_gap_ids(raw: str | None) -> list[str] | None:
+    """Safely parse source_gap_ids from DB.
+    
+    Handles three storage formats:
+    - None/empty → None
+    - JSON array string → parsed list
+    - Raw hash string (pre-migration) → [raw]
+    """
+    if not raw:
+        return None
+    try:
+        parsed = json.loads(raw)
+        if isinstance(parsed, list):
+            return parsed
+        return [str(parsed)]
+    except (json.JSONDecodeError, TypeError):
+        return [raw]
+
+
 @router.get(
     "/",
     summary="List research ideas",
@@ -72,7 +91,7 @@ async def list_ideas(
                     "novelty_score": i.novelty_score,
                     "feasibility_score": i.feasibility_score,
                     "overall_score": i.overall_score,
-                    "source_gap_ids": json.loads(i.source_gap_ids) if i.source_gap_ids else None,
+                    "source_gap_ids": _parse_source_gap_ids(i.source_gap_ids),
                     "has_proposal": i.proposal is not None,
                     "pipeline_run_id": i.pipeline_run_id,
                     "created_at": str(i.created_at),
