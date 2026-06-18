@@ -16,7 +16,9 @@ import {
   Cpu,
   Puzzle,
   Gauge,
+  ChevronDown,
 } from "lucide-react";
+import { useState } from "react";
 import { cn } from "@/lib/utils";
 
 interface NavItem {
@@ -30,38 +32,46 @@ interface NavItem {
 interface NavGroup {
   label: string;
   items: NavItem[];
+  /** Collapse by default on desktop */
+  collapsedByDefault?: boolean;
 }
 
 const NAV_GROUPS: NavGroup[] = [
   {
-    label: "Primary",
+    label: "Command Center",
     items: [
       { to: "/", icon: LayoutDashboard, label: "Dashboard", mobile: true },
-      { to: "/pipeline/new", icon: Play, label: "Pipeline", mobile: true },
+      { to: "/pipeline/new", icon: Play, label: "New Run", mobile: true },
       { to: "/ideas", icon: Lightbulb, label: "Ideas", mobile: true },
       { to: "/gaps", icon: GitBranch, label: "Gaps" },
     ],
   },
   {
-    label: "Research Tools",
+    label: "Research",
     items: [
       { to: "/literature", icon: BookMarked, label: "Literature" },
       { to: "/knowledge", icon: Search, label: "Knowledge" },
       { to: "/knowledge-graph", icon: BrainCircuit, label: "Graph" },
-      { to: "/memory", icon: Brain, label: "Memory" },
-      { to: "/autonomous", icon: Cpu, label: "Autonomous", mobile: true },
-      { to: "/sessions", icon: Layers, label: "Sessions" },
     ],
   },
   {
     label: "System",
     items: [
-      { to: "/costs", icon: DollarSign, label: "Costs" },
       { to: "/ops", icon: Gauge, label: "Ops" },
       { to: "/governance", icon: Shield, label: "Governance" },
-      { to: "/traces", icon: Activity, label: "Traces" },
-      { to: "/plugins", icon: Puzzle, label: "Plugins" },
       { to: "/settings", icon: Settings, label: "Settings" },
+      { to: "/costs", icon: DollarSign, label: "Costs" },
+    ],
+  },
+  {
+    label: "Advanced",
+    collapsedByDefault: true,
+    items: [
+      { to: "/memory", icon: Brain, label: "Memory" },
+      { to: "/autonomous", icon: Cpu, label: "Autonomous", mobile: true },
+      { to: "/plugins", icon: Puzzle, label: "Plugins" },
+      { to: "/sessions", icon: Layers, label: "Sessions" },
+      { to: "/traces", icon: Activity, label: "Traces" },
     ],
   },
 ];
@@ -75,15 +85,99 @@ export function Sidebar({ collapsed }: { collapsed: boolean }) {
   return (
     <nav className="p-2 space-y-4" data-testid="sidebar-nav">
       {NAV_GROUPS.map((group) => (
-        <div key={group.label} className="space-y-1">
-          {!collapsed && (
-            <div className="px-3 py-1 text-[0.625rem] font-semibold uppercase tracking-wider text-muted-foreground/60">
-              {group.label}
-            </div>
-          )}
-          {collapsed && (
-            <div className="mx-auto my-1 h-px bg-border w-6" role="separator" />
-          )}
+        <NavGroupSection key={group.label} group={group} collapsed={collapsed} />
+      ))}
+    </nav>
+  );
+}
+
+function NavGroupSection({
+  group,
+  collapsed,
+}: {
+  group: NavGroup;
+  collapsed: boolean;
+}) {
+  const [isExpanded, setIsExpanded] = useState(!group.collapsedByDefault);
+
+  // Non-collapsible groups render directly
+  if (!group.collapsedByDefault) {
+    return (
+      <div className="space-y-1">
+        {!collapsed && (
+          <div className="px-3 py-1 text-[0.625rem] font-semibold uppercase tracking-wider text-muted-foreground/60">
+            {group.label}
+          </div>
+        )}
+        {collapsed && (
+          <div className="mx-auto my-1 h-px bg-border w-6" role="separator" />
+        )}
+        {group.items.map((item) => (
+          <NavLink
+            key={item.to}
+            to={item.to}
+            end={item.to === "/"}
+            className={({ isActive }) =>
+              cn(
+                "flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors",
+                isActive
+                  ? "bg-primary/10 text-primary font-medium"
+                  : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
+              )
+            }
+          >
+            <item.icon className="h-4 w-4 flex-shrink-0" />
+            {!collapsed && <span className="truncate">{item.label}</span>}
+          </NavLink>
+        ))}
+      </div>
+    );
+  }
+
+  // Collapsible group (Advanced)
+  return (
+    <div className="space-y-1" data-testid={`nav-group-${group.label.toLowerCase()}`}>
+      {!collapsed ? (
+        <>
+          <button
+            onClick={() => setIsExpanded((v) => !v)}
+            className="flex w-full items-center gap-2 px-3 py-1 text-[0.625rem] font-semibold uppercase tracking-wider text-muted-foreground/60 hover:text-muted-foreground transition-colors"
+            aria-expanded={isExpanded}
+            aria-label={`Toggle ${group.label}`}
+            data-testid={`toggle-${group.label.toLowerCase()}`}
+          >
+            <ChevronDown
+              className={cn(
+                "h-3 w-3 transition-transform",
+                !isExpanded && "-rotate-90",
+              )}
+            />
+            {group.label}
+          </button>
+          {isExpanded &&
+            group.items.map((item) => (
+              <NavLink
+                key={item.to}
+                to={item.to}
+                end={item.to === "/"}
+                className={({ isActive }) =>
+                  cn(
+                    "flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors",
+                    isActive
+                      ? "bg-primary/10 text-primary font-medium"
+                      : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
+                  )
+                }
+              >
+                <item.icon className="h-4 w-4 flex-shrink-0" />
+                <span className="truncate">{item.label}</span>
+              </NavLink>
+            ))}
+        </>
+      ) : (
+        // When sidebar collapsed, show items without labels
+        <>
+          <div className="mx-auto my-1 h-px bg-border w-6" role="separator" />
           {group.items.map((item) => (
             <NavLink
               key={item.to}
@@ -91,7 +185,7 @@ export function Sidebar({ collapsed }: { collapsed: boolean }) {
               end={item.to === "/"}
               className={({ isActive }) =>
                 cn(
-                  "flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors",
+                  "flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors justify-center",
                   isActive
                     ? "bg-primary/10 text-primary font-medium"
                     : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
@@ -99,12 +193,11 @@ export function Sidebar({ collapsed }: { collapsed: boolean }) {
               }
             >
               <item.icon className="h-4 w-4 flex-shrink-0" />
-              {!collapsed && <span className="truncate">{item.label}</span>}
             </NavLink>
           ))}
-        </div>
-      ))}
-    </nav>
+        </>
+      )}
+    </div>
   );
 }
 

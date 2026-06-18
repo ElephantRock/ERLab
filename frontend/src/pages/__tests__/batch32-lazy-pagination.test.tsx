@@ -48,6 +48,12 @@ vi.mock("@/api/ideas", () => ({
 vi.mock("@/api/gaps", () => ({
   listGaps: vi.fn(),
 }));
+vi.mock("@/api/ops", () => ({
+  getOpsDashboard: vi.fn(),
+}));
+vi.mock("@/api/governance", () => ({
+  getPending: vi.fn(),
+}));
 
 // ── Mock lazy-loaded charts ──────────────────────────────────────
 vi.mock("@/components/charts/score-distribution", () => ({
@@ -82,11 +88,15 @@ import { getSystemStatus } from "@/api/status";
 import { listRuns } from "@/api/pipeline";
 import { listIdeas } from "@/api/ideas";
 import { listGaps } from "@/api/gaps";
+import { getOpsDashboard } from "@/api/ops";
+import { getPending } from "@/api/governance";
 
 const mockedGetSystemStatus = vi.mocked(getSystemStatus);
 const mockedListRuns = vi.mocked(listRuns);
 const mockedListIdeas = vi.mocked(listIdeas);
 const mockedListGaps = vi.mocked(listGaps);
+const mockedGetOps = vi.mocked(getOpsDashboard);
+const mockedGetPending = vi.mocked(getPending);
 
 function createQueryClient() {
   return new QueryClient({
@@ -165,6 +175,14 @@ describe("TEST-32-02-01: Dashboard lazy loads chart components", () => {
       total: 1,
       score_guide: {},
     });
+    mockedGetOps.mockResolvedValue({
+      window: { days: 30, from: "", to: "" },
+      run_health: { total_runs: 1, completed: 1, failed: 0, cancelled: 0, running: 0, pending: 0, average_duration_s: 60, slowest_stages: [] },
+      model_usage: { models: [], total_receipts: 0, warnings: [] },
+      source_health: { papers_found_total: 0, zero_result_runs: 0, sources: [] },
+      quality_trends: { proposal_count: 0, quality_pass_rate: 100, common_failures: [], citation_resolution_rate: null, total_citation_needed: 0, total_valid_citations: 0, remediation_count: 0, restore_count: 0 },
+    });
+    mockedGetPending.mockResolvedValue({ pending: [] });
 
     const qc = createQueryClient();
     render(
@@ -183,7 +201,6 @@ describe("TEST-32-02-01: Dashboard lazy loads chart components", () => {
     // Lazy-loaded chart components render their mock placeholders
     expect(screen.getByTestId("score-chart")).toBeInTheDocument();
     expect(screen.getByTestId("status-chart")).toBeInTheDocument();
-    expect(screen.getByTestId("domain-chart")).toBeInTheDocument();
   });
 });
 

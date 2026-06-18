@@ -3,7 +3,6 @@ import { useQuery } from "@tanstack/react-query";
 import { listIdeas } from "@/api/ideas";
 import { IdeaCard } from "@/components/ideas/idea-card";
 import { ExportDialog } from "@/components/export/export-dialog";
-import { ErrorCard } from "@/components/ui/error-card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -17,7 +16,7 @@ import {
 } from "@/components/ui/select";
 import { Slider } from "@/components/ui/slider";
 import { useNavigate } from "react-router-dom";
-import { Search, ChevronLeft, ChevronRight, CheckSquare, Square } from "lucide-react";
+import { Search, ChevronLeft, ChevronRight, CheckSquare, Square, AlertTriangle, RotateCw, Play } from "lucide-react";
 
 const SORT_OPTIONS = [
   { value: "date", label: "Newest First" },
@@ -48,7 +47,7 @@ export default function IdeasBrowser() {
     [domainFilter, searchText, sortBy, minScore, page, limit],
   );
 
-  const { data, isLoading, isError } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["ideas", queryParams],
     queryFn: () => listIdeas(queryParams),
   });
@@ -62,7 +61,8 @@ export default function IdeasBrowser() {
         </p>
       </div>
 
-      {/* Search, Sort, and Filter Controls */}
+      {/* Search, Sort, and Filter Controls (hidden on error) */}
+      {!isError && (
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -131,6 +131,7 @@ export default function IdeasBrowser() {
           </div>
         </div>
       </div>
+      )}
 
       {isLoading ? (
         <div className="grid gap-3 md:grid-cols-2">
@@ -139,7 +140,33 @@ export default function IdeasBrowser() {
           ))}
         </div>
       ) : isError ? (
-        <ErrorCard message="Failed to load ideas" testId="ideas-error" />
+        <div
+          className="rounded-lg border border-destructive/30 bg-destructive/5 p-6 text-center space-y-4"
+          data-testid="ideas-error"
+          role="alert"
+        >
+          <AlertTriangle className="h-8 w-8 mx-auto text-destructive" />
+          <div>
+            <p className="font-medium text-destructive">Failed to load ideas</p>
+            <p className="text-sm text-muted-foreground mt-1">
+              The backend may be offline or unreachable.
+            </p>
+          </div>
+          <div className="flex flex-wrap justify-center gap-2">
+            <Button onClick={() => refetch()} data-testid="ideas-retry">
+              <RotateCw className="mr-2 h-4 w-4" />
+              Retry
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => navigate("/pipeline/new")}
+              data-testid="ideas-start-pipeline"
+            >
+              <Play className="mr-2 h-4 w-4" />
+              Start New Pipeline
+            </Button>
+          </div>
+        </div>
       ) : data?.ideas.length ? (
         <>
           <p className="text-sm text-muted-foreground">
@@ -228,8 +255,27 @@ export default function IdeasBrowser() {
         <EmptyState
           icon={Search}
           title="No ideas found"
-          message={searchText || domainFilter ? `No ideas match your filters.` : "No ideas have been generated yet."}
+          message={searchText || domainFilter ? `No ideas match your filters.` : "No ideas have been generated yet. Start a research pipeline to generate ideas."}
           testId="ideas-empty"
+          action={
+            !searchText && !domainFilter ? (
+              <Button onClick={() => navigate("/pipeline/new")}>
+                <Play className="mr-2 h-4 w-4" />
+                Start New Pipeline
+              </Button>
+            ) : (
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setSearchText("");
+                  setDomainFilter("");
+                  setMinScore(0);
+                }}
+              >
+                Clear Filters
+              </Button>
+            )
+          }
         />
       )}
     </div>

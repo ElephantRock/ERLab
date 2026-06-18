@@ -30,7 +30,7 @@ describe("Sidebar responsive behavior", () => {
 
   it("sidebar shows nav labels when expanded", () => {
     renderWithRouter(<Sidebar collapsed={false} />);
-    const labels = screen.getAllByText(/Dashboard|Pipeline|Ideas/);
+    const labels = screen.getAllByText(/Dashboard|New Run|Ideas/);
     expect(labels.length).toBeGreaterThan(0);
   });
 });
@@ -42,7 +42,7 @@ describe("MobileBottomNav", () => {
     renderWithRouter(<MobileBottomNav />);
     // Mobile nav should show key items: Dashboard, Pipeline, Ideas, Autonomous
     expect(screen.getByText("Dashboard")).toBeInTheDocument();
-    expect(screen.getByText("Pipeline")).toBeInTheDocument();
+    expect(screen.getByText("New Run")).toBeInTheDocument();
     expect(screen.getByText("Ideas")).toBeInTheDocument();
     expect(screen.getByText("Autonomous")).toBeInTheDocument();
     // Bottom nav should NOT show items without mobile flag

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { Sidebar } from "@/components/layout/sidebar";
 import Placeholder from "@/pages/placeholder";
@@ -28,131 +28,152 @@ function renderRoute(path: string) {
   );
 }
 
-describe("BATCH-16/TASK-01: Phase 2 Navigation", () => {
-  // ── TEST-16-01-01: Sidebar renders all nav items ─────────────
-  it("TEST-16-01-01: sidebar renders all 16 nav items", () => {
+describe("BATCH-16/TASK-01: Navigation", () => {
+  // ── Sidebar renders visible nav items (Advanced collapsed) ─────
+  it("renders 11 visible nav items when Advanced is collapsed", () => {
     renderSidebar();
+
+    const links = screen.getAllByRole("link");
+    // Command Center (4) + Research (3) + System (4) = 11 visible
+    // Advanced (5) is collapsed by default
+    expect(links).toHaveLength(11);
+
+    const labels = links.map((l) => l.textContent?.trim());
+    expect(labels).toEqual([
+      // Command Center
+      "Dashboard",
+      "New Run",
+      "Ideas",
+      "Gaps",
+      // Research
+      "Literature",
+      "Knowledge",
+      "Graph",
+      // System
+      "Ops",
+      "Governance",
+      "Settings",
+      "Costs",
+    ]);
+  });
+
+  // ── Expanding Advanced shows all 16 items ──────────────────────
+  it("shows all 16 items when Advanced is expanded", () => {
+    renderSidebar();
+
+    // Click the Advanced toggle
+    const toggle = screen.getByTestId("toggle-advanced");
+    fireEvent.click(toggle);
 
     const links = screen.getAllByRole("link");
     expect(links).toHaveLength(16);
 
     const labels = links.map((l) => l.textContent?.trim());
-    // Sidebar is grouped: Primary, Research Tools, System
-    expect(labels).toEqual([
-      // Primary
-      "Dashboard",
-      "Pipeline",
-      "Ideas",
-      "Gaps",
-      // Research Tools
-      "Literature",
-      "Knowledge",
-      "Graph",
-      "Memory",
-      "Autonomous",
-      "Sessions",
-      // System
-      "Costs",
-      "Ops",
-      "Governance",
-      "Traces",
-      "Plugins",
-      "Settings",
-    ]);
+    // Advanced items should now be visible
+    expect(labels).toContain("Memory");
+    expect(labels).toContain("Autonomous");
+    expect(labels).toContain("Plugins");
+    expect(labels).toContain("Sessions");
+    expect(labels).toContain("Traces");
   });
 
-  // ── TEST-16-01-02: Primary nav items have correct hrefs ────────
-  it("TEST-16-01-02: primary nav items have correct hrefs", () => {
+  // ── Primary nav items have correct hrefs ──────────────────────
+  it("primary nav items have correct hrefs", () => {
     renderSidebar();
 
     const links = screen.getAllByRole("link");
 
-    // Primary group (first 4)
+    // Command Center group (first 4)
     expect(links[0]).toHaveAttribute("href", "/");
     expect(links[1]).toHaveAttribute("href", "/pipeline/new");
     expect(links[2]).toHaveAttribute("href", "/ideas");
     expect(links[3]).toHaveAttribute("href", "/gaps");
   });
 
-  // ── TEST-16-01-03: All nav links have icons ────────────────────
-  it("TEST-16-01-03: all nav links contain SVG icons", () => {
+  // ── All nav links have icons ──────────────────────────────────
+  it("all nav links contain SVG icons", () => {
     renderSidebar();
 
     const links = screen.getAllByRole("link");
 
-    // Every link should contain an SVG icon
     for (const link of links) {
       const svg = link.querySelector("svg");
       expect(svg).toBeTruthy();
     }
 
-    // Verify all expected routes are present
     const hrefs = links.map((l) => l.getAttribute("href"));
+    // Verify expected routes are present (not Advanced)
     const expectedRoutes = [
       "/", "/pipeline/new", "/ideas", "/gaps",
-      "/literature", "/knowledge", "/knowledge-graph", "/memory",
-      "/autonomous", "/sessions",
-      "/costs", "/governance", "/traces", "/plugins", "/settings",
+      "/literature", "/knowledge", "/knowledge-graph",
+      "/ops", "/governance", "/settings", "/costs",
     ];
     for (const route of expectedRoutes) {
       expect(hrefs).toContain(route);
     }
   });
 
-  // ── TEST-16-01-04: /costs route renders placeholder ─────────────
-  it("TEST-16-01-04: /costs route renders placeholder with Costs title", () => {
+  // ── All 16 routes exist when expanded ─────────────────────────
+  it("all 16 routes present when Advanced expanded", () => {
+    renderSidebar();
+
+    fireEvent.click(screen.getByTestId("toggle-advanced"));
+
+    const hrefs = screen.getAllByRole("link").map((l) => l.getAttribute("href"));
+    const allExpected = [
+      "/", "/pipeline/new", "/ideas", "/gaps",
+      "/literature", "/knowledge", "/knowledge-graph",
+      "/ops", "/governance", "/settings", "/costs",
+      "/memory", "/autonomous", "/plugins", "/sessions", "/traces",
+    ];
+    for (const route of allExpected) {
+      expect(hrefs).toContain(route);
+    }
+  });
+
+  // ── Placeholder route tests ───────────────────────────────────
+  it("/costs route renders placeholder", () => {
     renderRoute("/costs");
     expect(screen.getByText("Costs")).toBeInTheDocument();
     expect(screen.getByText("This page is coming soon.")).toBeInTheDocument();
   });
 
-  // ── TEST-16-01-05: /memory route renders placeholder ────────────
-  it("TEST-16-01-05: /memory route renders placeholder", () => {
+  it("/memory route renders placeholder", () => {
     renderRoute("/memory");
     expect(screen.getByText("Memory")).toBeInTheDocument();
     expect(screen.getByText("This page is coming soon.")).toBeInTheDocument();
   });
 
-  // ── TEST-16-01-06: /governance route renders placeholder ────────
-  it("TEST-16-01-06: /governance route renders placeholder", () => {
+  it("/governance route renders placeholder", () => {
     renderRoute("/governance");
     expect(screen.getByText("Governance")).toBeInTheDocument();
     expect(screen.getByText("This page is coming soon.")).toBeInTheDocument();
   });
 
-  // ── TEST-16-01-07: /traces route renders placeholder ────────────
-  it("TEST-16-01-07: /traces route renders placeholder", () => {
+  it("/traces route renders placeholder", () => {
     renderRoute("/traces");
     expect(screen.getByText("Traces")).toBeInTheDocument();
     expect(screen.getByText("This page is coming soon.")).toBeInTheDocument();
   });
 
-  // ── TEST-16-01-08: /sessions route renders placeholder ──────────
-  it("TEST-16-01-08: /sessions route renders placeholder", () => {
+  it("/sessions route renders placeholder", () => {
     renderRoute("/sessions");
     expect(screen.getByText("Sessions")).toBeInTheDocument();
     expect(screen.getByText("This page is coming soon.")).toBeInTheDocument();
   });
 
-  // ── TEST-16-01-09: /literature route renders placeholder ────────
-  it("TEST-16-01-09: /literature route renders placeholder", () => {
+  it("/literature route renders placeholder", () => {
     renderRoute("/literature");
     expect(screen.getByText("Literature")).toBeInTheDocument();
     expect(screen.getByText("This page is coming soon.")).toBeInTheDocument();
   });
 
-  // ── TEST-16-01-10: Placeholder pages do not make API calls ──────
-  it("TEST-16-01-10: placeholder pages do not make API calls", () => {
-    // Verify placeholder.tsx is a pure static component — it has no
-    // API imports and renders only static text based on props.
-    // We confirm by rendering it and checking no network calls occur.
+  it("placeholder pages do not make API calls", () => {
     const { container } = render(
       <MemoryRouter>
         <Placeholder title="Test" />
       </MemoryRouter>,
     );
-
-    // Component renders only heading and text — no data-fetching elements
     expect(container.querySelectorAll("img, iframe, script, link[rel='preload']")).toHaveLength(0);
     expect(screen.getByText("Test")).toBeInTheDocument();
     expect(screen.getByText("This page is coming soon.")).toBeInTheDocument();
