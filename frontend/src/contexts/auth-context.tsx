@@ -55,17 +55,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Restore session on mount
   useEffect(() => {
     const token = getToken();
-    if (token) {
-      getMe()
-        .then((u) => setUser(u))
-        .catch(() => {
-          // Token expired or invalid
-          clearToken();
-        })
-        .finally(() => setLoading(false));
-    } else {
-      setLoading(false);
-    }
+    // Always try getMe() — if auth is disabled on the backend,
+    // it returns a dev user even without a token.
+    // If auth is enabled and there's no token, it 401s → login page.
+    getMe()
+      .then((u) => setUser(u))
+      .catch(() => {
+        // No valid session — token may be expired or auth is enforced
+        if (token) clearToken();
+      })
+      .finally(() => setLoading(false));
   }, []);
 
   const handleLogin = useCallback(async (username: string, password: string) => {

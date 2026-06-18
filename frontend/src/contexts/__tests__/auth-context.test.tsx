@@ -44,6 +44,8 @@ describe("AuthContext", () => {
     vi.mocked(mockGetMe).mockReset();
     vi.mocked(mockLogin).mockReset();
     localStorage.clear();
+    // Default: getMe rejects (simulates auth required without token)
+    vi.mocked(mockGetMe).mockRejectedValue(new Error("No token"));
   });
 
   it("TEST-28-02-03: auth context provides user state", async () => {
@@ -74,6 +76,11 @@ describe("AuthContext", () => {
     });
 
     renderWithProviders(<ShowAuth />);
+
+    // Wait for initial getMe to settle
+    await waitFor(() => {
+      expect(screen.getByTestId("user-state")).toBeInTheDocument();
+    });
 
     // Login first
     await userEvent.click(screen.getByTestId("login-btn"));

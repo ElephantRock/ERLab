@@ -142,10 +142,21 @@ export async function apiFetchFormData<T>(path: string, formData: FormData): Pro
 export async function testConnection(baseUrl?: string): Promise<{ ok: true; version: string } | { ok: false; error: string }> {
   try {
     const base = baseUrl ?? getApiUrl();
-    const res = await fetch(`${base}/health`, {
+    // Try /health first (root-level), fall back to /api/v1/status
+    // Both are proxied by Vite in dev mode
+    let res = await fetch(`${base}/health`, {
       method: "GET",
       headers: { "Content-Type": "application/json" },
-    });
+    }).catch(() => null);
+
+    if (!res || !res.ok) {
+      // Fallback: use API status endpoint (always under /api proxy)
+      res = await fetch(`${base}${API_PREFIX}/status`, {
+        method: "GET",
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
     if (!res.ok) {
       return { ok: false, error: `HTTP ${res.status}` };
     }

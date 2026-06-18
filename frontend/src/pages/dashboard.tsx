@@ -27,6 +27,9 @@ import {
   Loader2,
   FlaskConical,
   Zap,
+  FileText,
+  BookOpen,
+  Download,
 } from "lucide-react";
 
 import { listRuns } from "@/api/pipeline";
@@ -39,15 +42,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
-import { RunCard } from "@/components/pipeline/run-card";
 import { OnboardingOverlay } from "@/components/onboarding/onboarding-overlay";
 import { cn } from "@/lib/utils";
 
-// ── Types ────────────────────────────────────────────────────────
-
 import type { PipelineRunSummary, IdeaSummary } from "@/api/types";
-
-// ── Lazy charts (only loaded when data exists) ───────────────────
 
 const ScoreDistributionChart = lazy(() =>
   import("@/components/charts/score-distribution").then((m) => ({ default: m.ScoreDistributionChart })),
@@ -56,13 +54,10 @@ const RunStatusChart = lazy(() =>
   import("@/components/charts/run-status-chart").then((m) => ({ default: m.RunStatusChart })),
 );
 
-// ── Component ────────────────────────────────────────────────────
-
 export default function Dashboard() {
   const navigate = useNavigate();
   const [showOnboarding, setShowOnboarding] = useState(false);
 
-  // Each query is independent — failures don't cascade
   const { data: status } = useQuery({ queryKey: ["status"], queryFn: getSystemStatus });
   const { data: runsData, isLoading: runsLoading } = useQuery({
     queryKey: ["runs", { limit: 5 }],
@@ -89,7 +84,6 @@ export default function Dashboard() {
     queryFn: () => listRuns({ limit: 50 }),
   });
 
-  // Onboarding: show for first-time users with no completed runs
   useEffect(() => {
     const onboardingDone = localStorage.getItem("erock_onboarding_complete");
     if (!onboardingDone && runsData && (runsData.total ?? 0) === 0) {
@@ -110,26 +104,29 @@ export default function Dashboard() {
   const citationRate = opsData?.quality_trends?.citation_resolution_rate;
   const remediationCount = opsData?.quality_trends?.remediation_count ?? 0;
   const totalIdeas = ideasData?.total ?? 0;
-  const proposalsCount = ideasData?.ideas.filter((i) => i.has_proposal).length ?? 0;
+  const proposalsCount = opsData?.quality_trends?.proposal_count ?? 0;
 
-  // Attention queue items
+  // ── Attention Queue items ──────────────────────────────────────
   const attentionItems: AttentionItem[] = [
     ...failedRuns.slice(0, 3).map((r) => ({
-      type: "failed_run" as const,
+      type: "run_failure" as const,
+      severity: "high" as const,
       title: r.domain,
-      detail: r.error_message ?? "Run failed",
+      detail: r.error_message ?? "Run failed unexpectedly",
       action: () => navigate(`/runs/${r.id}`),
-      actionLabel: "View Run",
+      actionLabel: "Open Run",
     })),
     ...governancePending.slice(0, 3).map((g) => ({
       type: "governance" as const,
+      severity: "medium" as const,
       title: g.summary,
-      detail: `Pending ${g.type}`,
+      detail: `Pending: ${g.type}`,
       action: () => navigate("/governance"),
       actionLabel: "Review",
     })),
-    ...qualityFailures.slice(0, 3).map((f) => ({
+    ...qualityFailures.slice(0, 4).map((f) => ({
       type: "quality" as const,
+      severity: "medium" as const,
       title: f.failure,
       detail: `${f.count} section${f.count !== 1 ? "s" : ""} affected`,
       action: () => navigate("/ideas"),
@@ -140,6 +137,7 @@ export default function Dashboard() {
   if (remediationCount > 0) {
     attentionItems.push({
       type: "remediation" as const,
+      severity: "low" as const,
       title: `${remediationCount} section${remediationCount !== 1 ? "s" : ""} remediated`,
       detail: "Review regenerated sections in revision history",
       action: () => navigate("/ideas"),
@@ -152,22 +150,23 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-6" data-testid="dashboard">
-      {/* Hero */}
+      {/* ── Hero ───────────────────────────────────────────────── */}
       <div className="space-y-3" data-testid="hero-section">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Research Command Center</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-3xl font-bold tracking-tight">Research Command Center</h1>
+          <p className="text-muted-foreground mt-1">
             Generate, review, improve, and export research proposals.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Button onClick={() => navigate("/pipeline/new")} data-testid="hero-new-run">
-            <Play className="mr-2 h-4 w-4" />
+          <Button onClick={() => navigate("/pipeline/new")} size="lg" data-testid="hero-new-run">
+            <Play className="mr-2 h-5 w-5" />
             Start New Research Run
           </Button>
           {latestRun && (
             <Button
               variant="outline"
+              size="lg"
               onClick={() => navigate(`/runs/${latestRun.id}`)}
               data-testid="hero-latest-run"
             >
@@ -177,6 +176,7 @@ export default function Dashboard() {
           )}
           <Button
             variant="outline"
+            size="lg"
             onClick={() => navigate("/ops")}
             data-testid="hero-system-health"
           >
@@ -186,98 +186,82 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Status Summary Cards */}
-      <div className="grid gap-4 md:grid-cols-4">
-        <StatCard
+      {/* ── Metric Strip ───────────────────────────────────────── */}
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <MetricCard
           label="Latest Run"
           icon={Activity}
           loading={runsLoading}
           testId="stat-latest-run"
         >
           {latestRun ? (
-            <>
-              <div className="flex items-center gap-2">
-                <RunStatusBadge status={latestRun.status} />
-              </div>
-              <p className="text-xs text-muted-foreground mt-1 truncate">{latestRun.domain}</p>
-            </>
+            <div className="space-y-1">
+              <RunStatusBadge status={latestRun.status} />
+              <p className="text-xs text-muted-foreground truncate">{latestRun.domain}</p>
+            </div>
           ) : (
             <span className="text-sm text-muted-foreground">No runs yet</span>
           )}
-        </StatCard>
+        </MetricCard>
 
-        <StatCard
-          label="Research Outputs"
+        <MetricCard
+          label="Outputs"
           icon={Lightbulb}
           loading={ideasLoading}
           testId="stat-outputs"
         >
           <div className="flex items-baseline gap-3">
-            <div>
-              <span className="text-2xl font-bold">{totalIdeas}</span>
-              <span className="text-xs text-muted-foreground ml-1">ideas</span>
-            </div>
-            <div>
-              <span className="text-lg font-semibold">{proposalsCount}</span>
-              <span className="text-xs text-muted-foreground ml-1">proposals</span>
-            </div>
+            <Metric label="Ideas" value={totalIdeas} />
+            <Metric label="Proposals" value={proposalsCount} />
           </div>
-        </StatCard>
+        </MetricCard>
 
-        <StatCard
+        <MetricCard
           label="Quality"
           icon={CheckCircle2}
           loading={!opsData && !opsError}
           testId="stat-quality"
         >
           {passRate != null ? (
-            <>
-              <div className="flex items-baseline gap-2">
+            <div className="space-y-0.5">
+              <div className="flex items-baseline gap-1.5">
                 <span className={cn("text-2xl font-bold", passRate >= 80 ? "text-success" : "text-warning")}>
                   {passRate.toFixed(0)}%
                 </span>
                 <span className="text-xs text-muted-foreground">pass rate</span>
               </div>
               {citationRate != null && (
-                <p className="text-xs text-muted-foreground mt-0.5">
+                <p className="text-xs text-muted-foreground">
                   {citationRate.toFixed(0)}% citations resolved
                 </p>
               )}
-            </>
+            </div>
           ) : (
-            <span className="text-sm text-muted-foreground">No data</span>
+            <span className="text-sm text-muted-foreground">Not available</span>
           )}
-        </StatCard>
+        </MetricCard>
 
-        <StatCard
+        <MetricCard
           label="Review"
           icon={Shield}
           loading={!governanceData}
           testId="stat-review"
         >
           <div className="flex items-baseline gap-3">
-            <div>
-              <span className={cn(
-                "text-2xl font-bold",
-                governancePending.length > 0 ? "text-warning" : "text-success",
-              )}>
-                {governancePending.length}
-              </span>
-              <span className="text-xs text-muted-foreground ml-1">pending</span>
-            </div>
+            <Metric
+              label="Pending"
+              value={governancePending.length}
+              tone={governancePending.length > 0 ? "warning" : "success"}
+            />
             {remediationCount > 0 && (
-              <div>
-                <span className="text-lg font-semibold text-info">{remediationCount}</span>
-                <span className="text-xs text-muted-foreground ml-1">remediated</span>
-              </div>
+              <Metric label="Remediated" value={remediationCount} tone="info" />
             )}
           </div>
-        </StatCard>
+        </MetricCard>
       </div>
 
-      {/* Latest Run + Attention Queue */}
-      <div className="grid gap-4 md:grid-cols-2">
-        {/* Latest Run Panel */}
+      {/* ── Latest Run + Attention Queue ──────────────────────── */}
+      <div className="grid gap-4 lg:grid-cols-2">
         <Card data-testid="latest-run-panel">
           <CardHeader>
             <CardTitle className="text-sm font-medium flex items-center justify-between">
@@ -317,7 +301,6 @@ export default function Dashboard() {
           </CardContent>
         </Card>
 
-        {/* Attention Queue */}
         <Card data-testid="attention-queue">
           <CardHeader>
             <CardTitle className="text-sm font-medium flex items-center justify-between">
@@ -340,7 +323,7 @@ export default function Dashboard() {
               </div>
             ) : (
               <div className="space-y-2">
-                {attentionItems.slice(0, 5).map((item, idx) => (
+                {attentionItems.slice(0, 6).map((item, idx) => (
                   <AttentionRow key={idx} item={item} />
                 ))}
               </div>
@@ -349,9 +332,8 @@ export default function Dashboard() {
         </Card>
       </div>
 
-      {/* Recent Outputs + System Health */}
-      <div className="grid gap-4 md:grid-cols-2">
-        {/* Recent Research Outputs */}
+      {/* ── Recent Outputs + System Health ────────────────────── */}
+      <div className="grid gap-4 lg:grid-cols-2">
         <Card data-testid="recent-outputs">
           <CardHeader>
             <CardTitle className="text-sm font-medium flex items-center justify-between">
@@ -371,12 +353,12 @@ export default function Dashboard() {
             {ideasLoading ? (
               <div className="space-y-2">
                 {Array.from({ length: 3 }).map((_, i) => (
-                  <Skeleton key={i} className="h-12 w-full" />
+                  <Skeleton key={i} className="h-14 w-full" />
                 ))}
               </div>
             ) : ideasData?.ideas.length ? (
               <div className="space-y-2">
-                {ideasData.ideas.slice(0, 4).map((idea) => (
+                {ideasData.ideas.slice(0, 5).map((idea) => (
                   <RecentOutputRow
                     key={idea.id}
                     idea={idea}
@@ -393,7 +375,6 @@ export default function Dashboard() {
           </CardContent>
         </Card>
 
-        {/* System Health */}
         <Card data-testid="system-health">
           <CardHeader>
             <CardTitle className="text-sm font-medium flex items-center justify-between">
@@ -418,12 +399,12 @@ export default function Dashboard() {
         </Card>
       </div>
 
-      {/* Analytics (lazy, only when data exists) */}
+      {/* ── Analytics ─────────────────────────────────────────── */}
       {hasChartData && (
         <Suspense fallback={<Skeleton className="h-64 w-full" />}>
           <div className="space-y-4">
             <h2 className="text-lg font-semibold">Analytics</h2>
-            <div className="grid gap-4 md:grid-cols-2">
+            <div className="grid gap-4 lg:grid-cols-2">
               <Card>
                 <CardHeader>
                   <CardTitle className="text-sm font-medium flex items-center gap-2">
@@ -448,7 +429,6 @@ export default function Dashboard() {
         </Suspense>
       )}
 
-      {/* Onboarding overlay for first-time users */}
       {showOnboarding && (
         <OnboardingOverlay
           onStartPipeline={handleOnboardingStart}
@@ -462,43 +442,53 @@ export default function Dashboard() {
 // ── Sub-components ───────────────────────────────────────────────
 
 interface AttentionItem {
-  type: "failed_run" | "governance" | "quality" | "remediation";
+  type: "run_failure" | "governance" | "quality" | "remediation";
+  severity: "high" | "medium" | "low";
   title: string;
   detail: string;
   action: () => void;
   actionLabel: string;
 }
 
+const ATTENTION_CONFIG = {
+  run_failure: { icon: XCircle, color: "text-destructive", label: "Run Failure" },
+  governance: { icon: Shield, color: "text-warning", label: "Governance" },
+  quality: { icon: AlertTriangle, color: "text-warning", label: "Quality" },
+  remediation: { icon: Zap, color: "text-info", label: "Remediation" },
+} as const;
+
+const SEVERITY_DOT = {
+  high: "bg-destructive",
+  medium: "bg-warning",
+  low: "bg-info",
+} as const;
+
 function AttentionRow({ item }: { item: AttentionItem }) {
-  const iconMap = {
-    failed_run: XCircle,
-    governance: Shield,
-    quality: AlertTriangle,
-    remediation: Zap,
-  };
-  const Icon = iconMap[item.type];
-  const colorMap = {
-    failed_run: "text-destructive",
-    governance: "text-warning",
-    quality: "text-warning",
-    remediation: "text-info",
-  };
+  const config = ATTENTION_CONFIG[item.type];
+  const Icon = config.icon;
 
   return (
-    <div className="flex items-center gap-3 rounded-lg border border-muted p-2.5 hover:bg-accent/50 transition-colors cursor-pointer"
-         onClick={item.action}
-         data-testid={`attention-${item.type}`}
-         role="button"
-         tabIndex={0}
-         onKeyDown={(e) => {
-           if (e.key === "Enter" || e.key === " ") {
-             e.preventDefault();
-             item.action();
-           }
-         }}
+    <div
+      className="flex items-center gap-3 rounded-lg border border-muted p-2.5 hover:bg-accent/50 transition-colors cursor-pointer"
+      onClick={item.action}
+      data-testid={`attention-${item.type}`}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          item.action();
+        }
+      }}
     >
-      <Icon className={cn("h-4 w-4 flex-shrink-0", colorMap[item.type])} />
+      <Icon className={cn("h-4 w-4 flex-shrink-0", config.color)} />
       <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+            {config.label}
+          </span>
+          <span className={cn("h-1.5 w-1.5 rounded-full", SEVERITY_DOT[item.severity])} />
+        </div>
         <p className="text-sm font-medium line-clamp-1">{item.title}</p>
         <p className="text-xs text-muted-foreground line-clamp-1">{item.detail}</p>
       </div>
@@ -560,7 +550,6 @@ function LatestRunPanel({
     );
   }
 
-  // Completed
   return (
     <div className="space-y-2">
       <div className="flex items-center gap-2">
@@ -606,14 +595,24 @@ function RecentOutputRow({
     >
       <div className="flex-1 min-w-0">
         <p className="text-sm font-medium line-clamp-1">{idea.title}</p>
-        <div className="flex items-center gap-2 mt-0.5">
+        <div className="flex items-center gap-2 mt-0.5 flex-wrap">
           <span className="text-xs text-muted-foreground">{idea.domain}</span>
-          {idea.has_proposal && (
-            <Badge variant="outline" className="text-xs py-0">Proposal</Badge>
+          {idea.has_proposal ? (
+            <Badge variant="outline" className="text-xs py-0 gap-0.5">
+              <FileText className="h-2.5 w-2.5" />
+              Proposal
+            </Badge>
+          ) : (
+            <span className="text-xs text-muted-foreground italic">No proposal</span>
           )}
           {idea.overall_score != null && (
             <span className="text-xs font-semibold text-primary">
               {idea.overall_score.toFixed(2)}
+            </span>
+          )}
+          {idea.novelty_score != null && (
+            <span className="text-xs text-muted-foreground">
+              Novelty {idea.novelty_score.toFixed(2)}
             </span>
           )}
         </div>
@@ -723,7 +722,7 @@ function RunStatusBadge({ status }: { status: PipelineRunSummary["status"] }) {
   );
 }
 
-function StatCard({
+function MetricCard({
   label,
   icon: Icon,
   loading,
@@ -746,5 +745,27 @@ function StatCard({
         {loading ? <Skeleton className="h-8 w-20" /> : children}
       </CardContent>
     </Card>
+  );
+}
+
+function Metric({
+  label,
+  value,
+  tone,
+}: {
+  label: string;
+  value: number;
+  tone?: "warning" | "success" | "info";
+}) {
+  const toneClass = {
+    warning: "text-warning",
+    success: "text-success",
+    info: "text-info",
+  };
+  return (
+    <div>
+      <span className={cn("text-2xl font-bold", tone && toneClass[tone])}>{value}</span>
+      <span className="text-xs text-muted-foreground ml-1">{label}</span>
+    </div>
   );
 }

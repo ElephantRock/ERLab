@@ -22,6 +22,7 @@ vi.mock("@/api/autonomous", () => ({
 }));
 
 vi.mock("@/api/auth", () => ({
+  getMe: vi.fn().mockResolvedValue(null),
   listUsers: vi.fn().mockResolvedValue([]),
 }));
 

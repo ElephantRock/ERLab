@@ -147,9 +147,9 @@ export default function IdeasBrowser() {
         >
           <AlertTriangle className="h-8 w-8 mx-auto text-destructive" />
           <div>
-            <p className="font-medium text-destructive">Failed to load ideas</p>
+            <p className="font-medium text-destructive">Couldn't load ideas</p>
             <p className="text-sm text-muted-foreground mt-1">
-              The backend may be offline or unreachable.
+              The backend may be offline or unreachable. Check your connection and try again.
             </p>
           </div>
           <div className="flex flex-wrap justify-center gap-2">
@@ -163,7 +163,7 @@ export default function IdeasBrowser() {
               data-testid="ideas-start-pipeline"
             >
               <Play className="mr-2 h-4 w-4" />
-              Start New Pipeline
+              Start New Run
             </Button>
           </div>
         </div>
@@ -254,14 +254,14 @@ export default function IdeasBrowser() {
       ) : (
         <EmptyState
           icon={Search}
-          title="No ideas found"
-          message={searchText || domainFilter ? `No ideas match your filters.` : "No ideas have been generated yet. Start a research pipeline to generate ideas."}
+          title="No research ideas yet"
+          message={searchText || domainFilter ? "No ideas match your filters." : "Run the pipeline to generate ideas from literature."}
           testId="ideas-empty"
           action={
             !searchText && !domainFilter ? (
               <Button onClick={() => navigate("/pipeline/new")}>
                 <Play className="mr-2 h-4 w-4" />
-                Start New Pipeline
+                Start New Research Run
               </Button>
             ) : (
               <Button

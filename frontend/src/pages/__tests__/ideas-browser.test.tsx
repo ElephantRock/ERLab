@@ -109,7 +109,7 @@ describe("IdeasBrowser", () => {
     renderIdeasBrowser();
 
     await waitFor(() => {
-      expect(screen.getByText(/No ideas found/)).toBeInTheDocument();
+      expect(screen.getByText(/No research ideas yet/)).toBeInTheDocument();
     });
   });
 

@@ -245,7 +245,7 @@ describe("Dashboard — Research Command Center", () => {
     renderDashboard();
 
     await waitFor(() => {
-      expect(screen.getByTestId("attention-failed_run")).toBeInTheDocument();
+      expect(screen.getByTestId("attention-run_failure")).toBeInTheDocument();
     });
   });
 
@@ -292,7 +292,7 @@ describe("Dashboard — Research Command Center", () => {
     expect(screen.getByText("Research Command Center")).toBeInTheDocument();
     // Quality card shows fallback
     await waitFor(() => {
-      expect(screen.getByText("No data")).toBeInTheDocument();
+      expect(screen.getByText("Not available")).toBeInTheDocument();
     });
     consoleSpy.mockRestore();
   });

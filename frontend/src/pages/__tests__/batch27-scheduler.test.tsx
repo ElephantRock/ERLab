@@ -84,6 +84,7 @@ vi.mock("@/api/client", () => ({
 }));
 
 vi.mock("@/api/auth", () => ({
+  getMe: vi.fn().mockResolvedValue(null),
   listUsers: vi.fn().mockResolvedValue([]),
 }));
 
