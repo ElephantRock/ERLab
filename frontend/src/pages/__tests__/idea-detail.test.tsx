@@ -1,11 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import IdeaDetail from "@/pages/idea-detail";
 import type { IdeaDetail as IdeaDetailType } from "@/api/types";
 
-// ── Mock API (AR-03) ─────────────────────────────────────────────
+// ── Mock API ─────────────────────────────────────────────────────
 vi.mock("@/api/ideas", () => ({
   getIdea: vi.fn(),
   refineIdea: vi.fn(),
@@ -20,19 +20,33 @@ vi.mock("@/components/ideas/score-badge", () => ({
   ),
 }));
 
-vi.mock("@/components/ideas/export-button", () => ({
-  ExportButton: () => <button data-testid="export-btn">Export</button>,
-}));
-
 vi.mock("@/components/export/export-dialog", () => ({
   ExportDialog: ({ ideaId }: { ideaId: number }) => (
-    <button data-testid="export-btn">Export PDF (Idea {ideaId})</button>
+    <button data-testid="export-btn">Export (Idea {ideaId})</button>
   ),
 }));
 
 vi.mock("@/components/ideas/feedback-form", () => ({
   FeedbackForm: ({ ideaId }: { ideaId: number }) => (
     <div data-testid="feedback-form">Feedback for {ideaId}</div>
+  ),
+}));
+
+vi.mock("@/components/idea/comment-thread", () => ({
+  CommentThread: ({ ideaId }: { ideaId: number }) => (
+    <div data-testid="comment-thread">Comments for {ideaId}</div>
+  ),
+}));
+
+vi.mock("@/components/idea/share-dialog", () => ({
+  ShareDialog: ({ ideaId }: { ideaId: number }) => (
+    <div data-testid="share-dialog">Share {ideaId}</div>
+  ),
+}));
+
+vi.mock("@/components/ideas/governance-panel", () => ({
+  GovernancePanel: ({ ideaId }: { ideaId: number }) => (
+    <div data-testid="governance-panel">Governance {ideaId}</div>
   ),
 }));
 
@@ -60,9 +74,7 @@ const mockedGetIdea = vi.mocked(getIdea);
 const mockedGetRevisions = vi.mocked(getSectionRevisions);
 
 function createQueryClient() {
-  return new QueryClient({
-    defaultOptions: { queries: { retry: false, gcTime: 0 } },
-  });
+  return new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 } } });
 }
 
 function renderIdeaDetail(id: string) {
@@ -99,58 +111,73 @@ const sampleIdea: IdeaDetailType = {
   section_hashes: null,
   remediation_hints: null,
   citation_audit: null,
-};
+  source_gap_ids: null,
+  source_gaps: null,
+  supporting_papers: null,
+  proposal_references: null,
+  mechanical_metrics: null,
+  experiment_results: null,
+  has_proposal: true,
+} as IdeaDetailType;
 
-beforeEach(() => {
-  vi.clearAllMocks();
-});
+beforeEach(() => { vi.clearAllMocks(); });
 
-describe("IdeaDetail", () => {
-  // ── TEST-11-01-12: Renders with valid ID ────────────────────────
-  it("TEST-11-01-12: renders idea detail with valid ID", async () => {
+describe("IdeaDetail — Proposal Review Workspace", () => {
+  it("renders title and domain", async () => {
     mockedGetIdea.mockResolvedValue({ idea: sampleIdea });
-
     renderIdeaDetail("1");
 
     await waitFor(() => {
-      expect(
-        screen.getByText("Quantum NLP for Low-Resource Languages"),
-      ).toBeInTheDocument();
+      expect(screen.getByText("Quantum NLP for Low-Resource Languages")).toBeInTheDocument();
     });
-
-    // Domain shown
     expect(screen.getByText("Quantum Computing + NLP")).toBeInTheDocument();
-
-    // Problem statement section
-    expect(
-      screen.getByText("Low-resource languages lack sufficient training data."),
-    ).toBeInTheDocument();
-
-    // Proposed method section
-    expect(
-      screen.getByText("Use quantum embeddings for cross-lingual transfer."),
-    ).toBeInTheDocument();
-
-    // Expected contributions
-    expect(
-      screen.getByText("A novel quantum-classical hybrid approach."),
-    ).toBeInTheDocument();
-
-    // Export button present
-    expect(screen.getByTestId("export-btn")).toBeInTheDocument();
-
-    // Feedback form rendered with correct ID
-    expect(screen.getByTestId("feedback-form")).toBeInTheDocument();
   });
 
-  // ── TEST-11-01-13: Shows 404 for missing idea ───────────────────
-  it("TEST-11-01-13: shows not found for missing idea", async () => {
-    mockedGetIdea.mockResolvedValue({ idea: null });
+  it("renders export and refine buttons", async () => {
+    mockedGetIdea.mockResolvedValue({ idea: sampleIdea });
+    renderIdeaDetail("1");
 
+    await waitFor(() => {
+      expect(screen.getByTestId("export-btn")).toBeInTheDocument();
+    });
+    expect(screen.getByText("Refine")).toBeInTheDocument();
+  });
+
+  it("renders feedback form", async () => {
+    mockedGetIdea.mockResolvedValue({ idea: sampleIdea });
+    renderIdeaDetail("1");
+
+    await waitFor(() => {
+      expect(screen.getByTestId("feedback-form")).toBeInTheDocument();
+    });
+  });
+
+  it("renders review sidebar with quality and governance sections", async () => {
+    mockedGetIdea.mockResolvedValue({ idea: sampleIdea });
+    renderIdeaDetail("1");
+
+    await waitFor(() => {
+      expect(screen.getByTestId("review-sidebar")).toBeInTheDocument();
+    });
+    expect(screen.getByText("Quality Checks")).toBeInTheDocument();
+    expect(screen.getByTestId("governance-panel")).toBeInTheDocument();
+  });
+
+  it("shows not found for missing idea", async () => {
+    mockedGetIdea.mockResolvedValue({ idea: null });
     renderIdeaDetail("9999");
 
     await waitFor(() => {
       expect(screen.getByText("Idea not found.")).toBeInTheDocument();
+    });
+  });
+
+  it("renders back to results button", async () => {
+    mockedGetIdea.mockResolvedValue({ idea: sampleIdea });
+    renderIdeaDetail("1");
+
+    await waitFor(() => {
+      expect(screen.getByTestId("back-to-ideas")).toBeInTheDocument();
     });
   });
 
@@ -160,7 +187,7 @@ describe("IdeaDetail", () => {
     ...sampleIdea,
     proposal_sections: {
       introduction: "This is the introduction with enough words to pass the check.",
-      abstract: "Short.", // Too short — will fail word count
+      abstract: "Short.",
     },
     section_hashes: {
       introduction: "hash_intro_abc",
@@ -201,12 +228,10 @@ describe("IdeaDetail", () => {
         refinement_available: true,
       },
     ],
-    citation_audit: null,
-  };
+  } as IdeaDetailType;
 
   it("shows fix section button on failing section with refinement available", async () => {
     mockedGetIdea.mockResolvedValue({ idea: ideaWithSections });
-
     renderIdeaDetail("1");
 
     await waitFor(() => {
@@ -216,19 +241,16 @@ describe("IdeaDetail", () => {
 
   it("does NOT show fix section button on passing section", async () => {
     mockedGetIdea.mockResolvedValue({ idea: ideaWithSections });
-
     renderIdeaDetail("1");
 
     await waitFor(() => {
       expect(screen.getByTestId("revision-toggle-introduction")).toBeInTheDocument();
     });
-
     expect(screen.queryByTestId("fix-button-introduction")).not.toBeInTheDocument();
   });
 
   it("shows revision history toggle on sections with hashes", async () => {
     mockedGetIdea.mockResolvedValue({ idea: ideaWithSections });
-
     renderIdeaDetail("1");
 
     await waitFor(() => {
@@ -251,15 +273,31 @@ describe("IdeaDetail", () => {
       expect(screen.getByTestId("revision-toggle-introduction")).toBeInTheDocument();
     });
 
-    // Drawer should not be visible yet
     expect(screen.queryByTestId("revision-drawer-introduction")).not.toBeInTheDocument();
 
-    // Click the toggle
-    screen.getByTestId("revision-toggle-introduction").click();
+    fireEvent.click(screen.getByTestId("revision-toggle-introduction"));
 
-    // Drawer should appear
     await waitFor(() => {
       expect(screen.getByTestId("revision-drawer-introduction")).toBeInTheDocument();
     });
+  });
+
+  it("shows quality summary in review sidebar with issues", async () => {
+    mockedGetIdea.mockResolvedValue({ idea: ideaWithSections });
+    renderIdeaDetail("1");
+
+    await waitFor(() => {
+      expect(screen.getByText("1/2")).toBeInTheDocument();
+    });
+  });
+
+  it("shows remediation hints in review sidebar", async () => {
+    mockedGetIdea.mockResolvedValue({ idea: ideaWithSections });
+    renderIdeaDetail("1");
+
+    await waitFor(() => {
+      expect(screen.getByText("Remediation Hints")).toBeInTheDocument();
+    });
+    expect(screen.getByText(/Abstract has only 1 word/)).toBeInTheDocument();
   });
 });

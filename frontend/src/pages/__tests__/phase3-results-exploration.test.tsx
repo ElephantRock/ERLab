@@ -147,7 +147,9 @@ describe("experiment_results type", () => {
     renderIdeaDetail("1");
 
     await waitFor(() => {
-      expect(screen.getByText(/Experiments \(2\)/)).toBeInTheDocument();
+      // In the new layout, experiments show under metrics tab
+      expect(screen.getByText("Experiment #101")).toBeInTheDocument();
+      expect(screen.getByText("Experiment #102")).toBeInTheDocument();
     });
   });
 
@@ -159,7 +161,7 @@ describe("experiment_results type", () => {
     await waitFor(() => {
       expect(screen.getByText("Test Idea")).toBeInTheDocument();
     });
-    expect(screen.queryByText(/Experiments/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Experiment #/)).not.toBeInTheDocument();
   });
 
   it("hides experiments tab when experiment_results is empty array", async () => {
@@ -170,7 +172,7 @@ describe("experiment_results type", () => {
     await waitFor(() => {
       expect(screen.getByText("Test Idea")).toBeInTheDocument();
     });
-    expect(screen.queryByText(/Experiments/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Experiment #/)).not.toBeInTheDocument();
   });
 });
 
