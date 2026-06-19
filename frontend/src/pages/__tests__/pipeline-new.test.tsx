@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import PipelineNew from "@/pages/pipeline-new";
 
 // ── Mock child components (AR-03) ────────────────────────────────
@@ -57,6 +58,28 @@ vi.mock("@/api/pipeline", () => ({
   cancelRun: vi.fn(),
   getRunIdeas: vi.fn(),
   listRuns: vi.fn(),
+  getEstimate: vi.fn().mockResolvedValue({
+    strategy: "fast_scan",
+    stages: 10,
+    estimated_time_display: "~5 min",
+    cost_display: "Free",
+    local_cost_usd: 0,
+    cloud_cost_usd: 0,
+    breakdown: [],
+  }),
+}));
+
+vi.mock("@/api/status", () => ({
+  getSystemStatus: vi.fn().mockResolvedValue({
+    app_name: "Elephant Rock Research",
+    version: "0.1.0",
+    config: {
+      default_provider: "lmstudio",
+      memory_enabled: true,
+      governance_enabled: true,
+    },
+    defaults: {},
+  }),
 }));
 
 import { triggerRun, cancelRun } from "@/api/pipeline";
@@ -65,10 +88,13 @@ const mockedTriggerRun = vi.mocked(triggerRun);
 const mockedCancelRun = vi.mocked(cancelRun);
 
 function renderPipelineNew() {
+  const qc = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 } } });
   return render(
-    <MemoryRouter>
-      <PipelineNew />
-    </MemoryRouter>,
+    <QueryClientProvider client={qc}>
+      <MemoryRouter>
+        <PipelineNew />
+      </MemoryRouter>
+    </QueryClientProvider>,
   );
 }
 
@@ -81,7 +107,7 @@ describe("PipelineNew", () => {
   it("TEST-11-01-06: renders without crashing", () => {
     renderPipelineNew();
 
-    expect(screen.getByText("Pipelines")).toBeInTheDocument();
+    expect(screen.getByText("New Run")).toBeInTheDocument();
     expect(
       screen.getByText("Configure and launch a research pipeline."),
     ).toBeInTheDocument();
@@ -128,7 +154,7 @@ describe("PipelineNew – Cancel Run (BATCH-15)", () => {
 
     // Wait for the pipeline to be in "running" state
     await waitFor(() => {
-      expect(screen.getByText("Live")).toBeInTheDocument();
+      expect(screen.getByTestId("live-badge")).toBeInTheDocument();
     });
   }
 

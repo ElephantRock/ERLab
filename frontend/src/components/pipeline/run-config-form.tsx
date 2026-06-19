@@ -3,15 +3,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { StageModelSelector } from "./stage-model-selector";
-import { EstimateCard } from "./estimate-card";
 import { useSession } from "@/hooks/useSession";
 import type { PipelineRunRequest } from "@/api/types";
-import { Search, Loader2, ChevronDown, ChevronRight } from "lucide-react";
+import { Loader2, ChevronDown, ChevronRight, Zap, Microscope, GraduationCap, BookOpen } from "lucide-react";
+import { cn } from "@/lib/utils";
 
-/**
- * Validation constants matching backend api/schemas.py PipelineRunRequest exactly.
- * HB-01: Client-side validation MUST match API validation exactly.
- */
 const VALIDATION = {
   domain: { maxLength: 200, default: "AI/NLP" },
   max_gaps: { min: 1, max: 20, default: 5 },
@@ -22,13 +18,50 @@ const VALIDATION = {
 
 export { VALIDATION };
 
+// ── Strategy definitions ──
+const STRATEGIES = [
+  {
+    value: "fast_scan",
+    icon: Zap,
+    title: "Quick Scan",
+    time: "~2-5 min",
+    desc: "Fast scan skips tree search and metrics for rapid results.",
+    accent: "text-accent",
+  },
+  {
+    value: "deep_research",
+    icon: Microscope,
+    title: "Deep Research",
+    time: "~25 min",
+    desc: "Full pipeline with tree search, novelty checking, and proposal synthesis.",
+    accent: "text-info",
+  },
+  {
+    value: "academic_proposal",
+    icon: GraduationCap,
+    title: "Academic Proposal",
+    time: "~45 min",
+    desc: "Stricter thresholds and longer timeouts for academic-grade proposals.",
+    accent: "text-warning",
+  },
+  {
+    value: "literature_review",
+    icon: BookOpen,
+    title: "Literature Review",
+    time: "~10 min",
+    desc: "Literature search and gap analysis only, no proposal generation.",
+    accent: "text-muted-foreground",
+  },
+] as const;
+
 interface RunConfigFormProps {
   onSubmit: (config: PipelineRunRequest) => void;
   isLoading?: boolean;
   initialDomain?: string;
+  onStrategyChange?: (strategy: string) => void;
 }
 
-export function RunConfigForm({ onSubmit, isLoading, initialDomain = "" }: RunConfigFormProps) {
+export function RunConfigForm({ onSubmit, isLoading, initialDomain = "", onStrategyChange }: RunConfigFormProps) {
   const { sessionId, setSessionId } = useSession();
   const [domain, setDomain] = useState(initialDomain);
   const [maxGaps, setMaxGaps] = useState(VALIDATION.max_gaps.default);
@@ -42,6 +75,11 @@ export function RunConfigForm({ onSubmit, isLoading, initialDomain = "" }: RunCo
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const [strategy, setStrategy] = useState<string>("fast_scan");
   const [modelOverrides, setModelOverrides] = useState<Record<string, string>>({});
+
+  function selectStrategy(value: string) {
+    setStrategy(value);
+    onStrategyChange?.(value);
+  }
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -73,65 +111,160 @@ export function RunConfigForm({ onSubmit, isLoading, initialDomain = "" }: RunCo
   }
 
   return (
-    <Card>
+    <Card className="card-shadow" data-testid="run-config-form">
       <CardHeader>
-        <CardTitle>Pipeline Configuration</CardTitle>
+        <CardTitle className="text-base">Research Configuration</CardTitle>
       </CardHeader>
       <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Essential Fields — always visible (2 fields for first-time users) */}
+        <form onSubmit={handleSubmit} className="space-y-5">
 
-          {/* Domain */}
+          {/* ── Domain Hero ── */}
           <div className="space-y-2">
-            <label className="text-sm font-medium">Research Domain</label>
+            <label className="text-[10px] font-mono font-bold uppercase tracking-widest text-muted-foreground">
+              Research Domain
+            </label>
             <Input
               placeholder="machine learning, nlp, computer vision..."
               value={domain}
               onChange={(e) => setDomain(e.target.value)}
               maxLength={VALIDATION.domain.maxLength}
               data-testid="domain-input"
+              className="text-base h-12"
+              autoFocus
             />
-          </div>
-
-          {/* Strategy Selection */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Pipeline Strategy</label>
-            <select
-              value={strategy}
-              onChange={(e) => setStrategy(e.target.value)}
-              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              data-testid="strategy-select"
-            >
-              <option value="fast_scan">Quick Scan (~2-5 min)</option>
-              <option value="deep_research">Deep Research (~25 min)</option>
-              <option value="academic_proposal">Academic Proposal (~45 min)</option>
-              <option value="literature_review">Literature Review (~10 min)</option>
-            </select>
             <p className="text-xs text-muted-foreground">
-              {strategy === "fast_scan" && "Fast scan skips tree search and metrics for rapid results."}
-              {strategy === "deep_research" && "Full pipeline with tree search, novelty checking, and proposal synthesis."}
-              {strategy === "academic_proposal" && "Stricter thresholds and longer timeouts for academic-grade proposals."}
-              {strategy === "literature_review" && "Literature search and gap analysis only, no proposal generation."}
+              The domain guides literature search, gap analysis, and idea generation.
             </p>
           </div>
 
-          {/* Cost & Time Estimate */}
-          <EstimateCard strategy={strategy} />
+          {/* ── Strategy Cards ── */}
+          <div className="space-y-2">
+            <label className="text-[10px] font-mono font-bold uppercase tracking-widest text-muted-foreground">
+              Research Strategy
+            </label>
+            <div className="grid gap-2 sm:grid-cols-2">
+              {STRATEGIES.map((s) => (
+                <button
+                  key={s.value}
+                  type="button"
+                  onClick={() => selectStrategy(s.value)}
+                  data-testid={`strategy-card-${s.value}`}
+                  className={cn(
+                    "text-left rounded-lg border p-3 transition-all",
+                    strategy === s.value
+                      ? "border-accent bg-accent/5 ring-1 ring-accent/20"
+                      : "border-border hover:border-accent/30 hover:bg-muted/30",
+                  )}
+                >
+                  <div className="flex items-center gap-2 mb-1">
+                    <s.icon className={cn("h-4 w-4", strategy === s.value ? s.accent : "text-muted-foreground")} />
+                    <span className="text-sm font-medium">{s.title}</span>
+                    <span className="ml-auto text-[10px] font-mono text-muted-foreground">{s.time}</span>
+                  </div>
+                  <p className="text-[11px] text-muted-foreground leading-tight">{s.desc}</p>
+                </button>
+              ))}
+            </div>
+            {/* Hidden select for backward compat */}
+            <select
+              value={strategy}
+              onChange={(e) => selectStrategy(e.target.value)}
+              data-testid="strategy-select"
+              className="hidden"
+              aria-hidden
+            >
+              {STRATEGIES.map((s) => (
+                <option key={s.value} value={s.value}>{s.title}</option>
+              ))}
+            </select>
+          </div>
 
-          {/* Advanced Options - Collapsible (all tuning knobs here) */}
+          {/* ── Research Intent ── */}
+          <div className="space-y-3 pt-2">
+            <label className="text-[10px] font-mono font-bold uppercase tracking-widest text-muted-foreground">
+              Research Intent
+            </label>
+
+            {/* Proposal Depth */}
+            <div className="space-y-1">
+              <label className="text-xs text-muted-foreground">Proposal Depth</label>
+              <div className="flex gap-2">
+                {(["concise", "standard", "detailed"] as const).map((level) => (
+                  <button
+                    key={level}
+                    type="button"
+                    onClick={() => setProposalDepth(level)}
+                    className={cn(
+                      "flex-1 px-3 py-1.5 text-xs rounded-md border transition-colors capitalize",
+                      proposalDepth === level
+                        ? "border-accent bg-accent/10 text-accent font-medium"
+                        : "border-input text-muted-foreground hover:bg-muted/50",
+                    )}
+                    data-testid={`proposal-depth-${level}`}
+                  >
+                    {level}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Novelty Depth */}
+            <div className="space-y-1">
+              <label className="text-xs text-muted-foreground">Novelty Check</label>
+              <div className="flex gap-2">
+                {(["light", "standard", "thorough"] as const).map((level) => (
+                  <button
+                    key={level}
+                    type="button"
+                    onClick={() => setNoveltyDepth(level)}
+                    className={cn(
+                      "flex-1 px-3 py-1.5 text-xs rounded-md border transition-colors capitalize",
+                      noveltyDepth === level
+                        ? "border-accent bg-accent/10 text-accent font-medium"
+                        : "border-input text-muted-foreground hover:bg-muted/50",
+                    )}
+                    data-testid={`novelty-depth-${level}`}
+                  >
+                    {level}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Idea Diversity */}
+            <div className="space-y-1">
+              <label className="text-xs text-muted-foreground">Idea Diversity</label>
+              <div className="flex gap-2">
+                {(["focused", "balanced", "exploratory"] as const).map((level) => (
+                  <button
+                    key={level}
+                    type="button"
+                    onClick={() => setIdeaDiversity(level)}
+                    className={cn(
+                      "flex-1 px-3 py-1.5 text-xs rounded-md border transition-colors capitalize",
+                      ideaDiversity === level
+                        ? "border-accent bg-accent/10 text-accent font-medium"
+                        : "border-input text-muted-foreground hover:bg-muted/50",
+                    )}
+                    data-testid={`idea-diversity-${level}`}
+                  >
+                    {level}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* ── Advanced Options ── */}
           <div className="border rounded-md">
             <button
               type="button"
               onClick={() => setAdvancedOpen(!advancedOpen)}
-              className="flex items-center gap-2 w-full px-4 py-3 text-sm font-medium text-left hover:bg-muted/50 transition-colors"
+              className="flex items-center gap-2 w-full px-4 py-2.5 text-sm font-medium text-left hover:bg-muted/50 transition-colors"
               data-testid="advanced-toggle"
               aria-expanded={advancedOpen}
             >
-              {advancedOpen ? (
-                <ChevronDown className="h-4 w-4" />
-              ) : (
-                <ChevronRight className="h-4 w-4" />
-              )}
+              {advancedOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
               Advanced Options
             </button>
             {advancedOpen && (
@@ -148,7 +281,6 @@ export function RunConfigForm({ onSubmit, isLoading, initialDomain = "" }: RunCo
                       value={maxGaps}
                       onChange={(e) => setMaxGaps(Number(e.target.value))}
                       data-testid="max-gaps-input"
-                      aria-label="Maximum research gaps to find"
                     />
                   </div>
                   <div className="space-y-2">
@@ -160,11 +292,10 @@ export function RunConfigForm({ onSubmit, isLoading, initialDomain = "" }: RunCo
                       max={VALIDATION.ideas_per_round.max}
                       value={ideasPerRound}
                       onChange={(e) => setIdeasPerRound(Number(e.target.value))}
-                      aria-label="Number of ideas to generate per round"
+                      data-testid="ideas-per-round-input"
                     />
                   </div>
                 </div>
-
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <label className="text-sm font-medium" htmlFor="generation-rounds-input">Generation Rounds</label>
@@ -176,7 +307,6 @@ export function RunConfigForm({ onSubmit, isLoading, initialDomain = "" }: RunCo
                       value={generationRounds}
                       onChange={(e) => setGenerationRounds(Number(e.target.value))}
                       data-testid="generation-rounds-input"
-                      aria-label="Number of generation rounds"
                     />
                   </div>
                   <div className="space-y-2">
@@ -185,7 +315,7 @@ export function RunConfigForm({ onSubmit, isLoading, initialDomain = "" }: RunCo
                       value={exportFormat}
                       onChange={(e) => setExportFormat(e.target.value)}
                       data-testid="export-format-select"
-                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                     >
                       {VALIDATION.export_formats.map((fmt) => (
                         <option key={fmt} value={fmt}>
@@ -219,119 +349,37 @@ export function RunConfigForm({ onSubmit, isLoading, initialDomain = "" }: RunCo
                     value={sessionId}
                     onChange={(e) => setSessionId(e.target.value)}
                     data-testid="session-id-input"
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                     maxLength={200}
                   />
-                  <p className="text-xs text-muted-foreground">
-                    Group multiple runs under the same session for easy tracking.
-                  </p>
                 </div>
 
-                {/* Quality Controls */}
-                <div className="space-y-3 pt-2 border-t">
-                  <label className="text-sm font-medium">Quality Controls</label>
-
-                  {/* Proposal Depth */}
-                  <div className="space-y-1">
-                    <label className="text-xs text-muted-foreground">Proposal Depth</label>
-                    <div className="flex gap-2">
-                      {(["concise", "standard", "detailed"] as const).map((level) => (
-                        <button
-                          key={level}
-                          type="button"
-                          onClick={() => setProposalDepth(level)}
-                          className={`flex-1 px-3 py-1.5 text-xs rounded-md border transition-colors ${
-                            proposalDepth === level
-                              ? "border-primary bg-primary/10 text-primary font-medium"
-                              : "border-input text-muted-foreground hover:bg-muted/50"
-                          }`}
-                          data-testid={`proposal-depth-${level}`}
-                        >
-                          {level.charAt(0).toUpperCase() + level.slice(1)}
-                        </button>
-                      ))}
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      {proposalDepth === "concise" && "Shorter proposals with essential sections only."}
-                      {proposalDepth === "standard" && "Balanced section length for general use."}
-                      {proposalDepth === "detailed" && "Longer, more thorough section depth."}
-                    </p>
-                  </div>
-
-                  {/* Novelty Depth */}
-                  <div className="space-y-1">
-                    <label className="text-xs text-muted-foreground">Novelty Check Depth</label>
-                    <div className="flex gap-2">
-                      {(["light", "standard", "thorough"] as const).map((level) => (
-                        <button
-                          key={level}
-                          type="button"
-                          onClick={() => setNoveltyDepth(level)}
-                          className={`flex-1 px-3 py-1.5 text-xs rounded-md border transition-colors ${
-                            noveltyDepth === level
-                              ? "border-primary bg-primary/10 text-primary font-medium"
-                              : "border-input text-muted-foreground hover:bg-muted/50"
-                          }`}
-                          data-testid={`novelty-depth-${level}`}
-                        >
-                          {level.charAt(0).toUpperCase() + level.slice(1)}
-                        </button>
-                      ))}
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      {noveltyDepth === "light" && "Compare against 10 papers for quick checks."}
-                      {noveltyDepth === "standard" && "Compare against 20 papers (default)."}
-                      {noveltyDepth === "thorough" && "Compare against 50 papers for comprehensive novelty."}
-                    </p>
-                  </div>
-
-                  {/* Idea Diversity */}
-                  <div className="space-y-1">
-                    <label className="text-xs text-muted-foreground">Idea Diversity</label>
-                    <div className="flex gap-2">
-                      {(["focused", "balanced", "exploratory"] as const).map((level) => (
-                        <button
-                          key={level}
-                          type="button"
-                          onClick={() => setIdeaDiversity(level)}
-                          className={`flex-1 px-3 py-1.5 text-xs rounded-md border transition-colors ${
-                            ideaDiversity === level
-                              ? "border-primary bg-primary/10 text-primary font-medium"
-                              : "border-input text-muted-foreground hover:bg-muted/50"
-                          }`}
-                          data-testid={`idea-diversity-${level}`}
-                        >
-                          {level.charAt(0).toUpperCase() + level.slice(1)}
-                        </button>
-                      ))}
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      {ideaDiversity === "focused" && "Conservative, closer to existing literature."}
-                      {ideaDiversity === "balanced" && "Mix of conventional and creative ideas."}
-                      {ideaDiversity === "exploratory" && "Wide-ranging, highly diverse ideas."}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Model Selection per Stage */}
+                {/* Model Selection */}
                 <div className="space-y-2 pt-2 border-t">
                   <label className="text-sm font-medium">Model Selection</label>
-                  <StageModelSelector
-                    value={modelOverrides}
-                    onChange={setModelOverrides}
-                  />
+                  <StageModelSelector value={modelOverrides} onChange={setModelOverrides} />
                 </div>
               </div>
             )}
           </div>
 
-          <Button type="submit" disabled={isLoading} className="w-full">
+          {/* ── Start Button ── */}
+          <Button
+            type="submit"
+            disabled={isLoading}
+            className="w-full h-11 text-base"
+            data-testid="start-pipeline-btn"
+          >
             {isLoading ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Starting Pipeline...
+              </>
             ) : (
-              <Search className="mr-2 h-4 w-4" />
+              <>
+                Start Pipeline
+              </>
             )}
-            {isLoading ? "Starting..." : "Start Pipeline"}
           </Button>
         </form>
       </CardContent>

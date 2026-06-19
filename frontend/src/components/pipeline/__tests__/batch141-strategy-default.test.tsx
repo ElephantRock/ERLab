@@ -53,9 +53,9 @@ describe("BATCH-141 / TASK-01: Strategy Default Change", () => {
   it("TEST-141-01-03: fast_scan option shows time estimate", () => {
     renderForm();
 
-    const select = screen.getByTestId("strategy-select") as HTMLSelectElement;
-    const fastScanOption = Array.from(select.options).find((o) => o.value === "fast_scan");
-    expect(fastScanOption?.textContent).toMatch(/2-5 min/);
+    // Strategy card shows time
+    const card = screen.getByTestId("strategy-card-fast_scan");
+    expect(card.textContent).toMatch(/2-5 min/);
   });
 
   // ── TEST-141-01-04: deep_research option shows "~25 min" time estimate ──
@@ -64,9 +64,9 @@ describe("BATCH-141 / TASK-01: Strategy Default Change", () => {
   it("TEST-141-01-04: deep_research option shows 25 min time estimate", () => {
     renderForm();
 
-    const select = screen.getByTestId("strategy-select") as HTMLSelectElement;
-    const deepOption = Array.from(select.options).find((o) => o.value === "deep_research");
-    expect(deepOption?.textContent).toMatch(/25 min/);
+    // Strategy card shows time
+    const card = screen.getByTestId("strategy-card-deep_research");
+    expect(card.textContent).toMatch(/25 min/);
   });
 
   // ── TEST-141-01-05: Submitted config includes strategy="fast_scan" by default ──
@@ -92,15 +92,13 @@ describe("BATCH-141 / TASK-01: Strategy Default Change", () => {
     const user = userEvent.setup();
     renderForm();
 
-    // Default should show fast_scan description
+    // Default card shows fast_scan description
     expect(screen.getByText(/Fast scan skips tree search/)).toBeInTheDocument();
 
-    // Change to deep_research
-    const select = screen.getByTestId("strategy-select");
-    await user.selectOptions(select, "deep_research");
+    // Click deep_research card
+    await user.click(screen.getByTestId("strategy-card-deep_research"));
 
     // Description should now show deep_research text
     expect(screen.getByText(/Full pipeline with tree search/)).toBeInTheDocument();
-    expect(screen.queryByText(/Fast scan skips tree search/)).not.toBeInTheDocument();
   });
 });

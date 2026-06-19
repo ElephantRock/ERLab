@@ -7,6 +7,7 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import SessionsPage from "@/pages/sessions";
 import PipelineNew from "@/pages/pipeline-new";
 
@@ -51,6 +52,15 @@ vi.mock("@/hooks/usePipelineProgress", () => ({
   usePipelineProgress: () => ({ stages: [], isComplete: false, isConnected: false }),
 }));
 
+vi.mock("@/api/status", () => ({
+  getSystemStatus: vi.fn().mockResolvedValue({
+    app_name: "Elephant Rock Research",
+    version: "0.1.0",
+    config: { default_provider: "lmstudio", governance_enabled: true, memory_enabled: true },
+    defaults: {},
+  }),
+}));
+
 import { getSessionList } from "@/api/sessions";
 import { listRuns } from "@/api/pipeline";
 
@@ -67,12 +77,15 @@ function renderSessionsPage() {
 }
 
 function renderPipelinePage() {
+  const qc = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 } } });
   return render(
-    <MemoryRouter initialEntries={["/pipeline/new"]}>
-      <Routes>
-        <Route path="/pipeline/new" element={<PipelineNew />} />
-      </Routes>
-    </MemoryRouter>,
+    <QueryClientProvider client={qc}>
+      <MemoryRouter initialEntries={["/pipeline/new"]}>
+        <Routes>
+          <Route path="/pipeline/new" element={<PipelineNew />} />
+        </Routes>
+      </MemoryRouter>
+    </QueryClientProvider>,
   );
 }
 

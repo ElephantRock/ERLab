@@ -45,17 +45,17 @@ describe("RunConfigForm", () => {
   });
 
   it("disables button when isLoading is true", () => {
-    const { getByText } = renderWithProviders(
+    const { getByTestId } = renderWithProviders(
       <RunConfigForm onSubmit={vi.fn()} isLoading={true} />,
     );
-    expect(getByText("Starting...").closest("button")).toBeDisabled();
+    expect(getByTestId("start-pipeline-btn")).toBeDisabled();
   });
 
   it("shows Starting text when loading", () => {
     const { getByText } = renderWithProviders(
       <RunConfigForm onSubmit={vi.fn()} isLoading={true} />,
     );
-    expect(getByText("Starting...")).toBeInTheDocument();
+    expect(getByText(/Starting Pipeline/)).toBeInTheDocument();
   });
 
   it("defaults max gaps to 5 and ideas per round to 5", async () => {

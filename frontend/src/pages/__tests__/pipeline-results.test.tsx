@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import PipelineNew from "@/pages/pipeline-new";
 import type { IdeaSummary } from "@/api/types";
 
@@ -84,6 +85,25 @@ vi.mock("@/api/pipeline", () => ({
   triggerRun: vi.fn(),
   getRunIdeas: vi.fn(),
   listRuns: vi.fn(),
+  cancelRun: vi.fn(),
+  getEstimate: vi.fn().mockResolvedValue({
+    strategy: "fast_scan",
+    stages: 10,
+    estimated_time_display: "~5 min",
+    cost_display: "Free",
+    local_cost_usd: 0,
+    cloud_cost_usd: 0,
+    breakdown: [],
+  }),
+}));
+
+vi.mock("@/api/status", () => ({
+  getSystemStatus: vi.fn().mockResolvedValue({
+    app_name: "Elephant Rock Research",
+    version: "0.1.0",
+    config: { default_provider: "lmstudio", governance_enabled: true, memory_enabled: true },
+    defaults: {},
+  }),
 }));
 
 import { triggerRun, getRunIdeas, listRuns } from "@/api/pipeline";
@@ -93,10 +113,13 @@ const mockedGetRunIdeas = vi.mocked(getRunIdeas);
 const mockedListRuns = vi.mocked(listRuns);
 
 function renderPipelineNew() {
+  const qc = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 } } });
   return render(
-    <MemoryRouter>
-      <PipelineNew />
-    </MemoryRouter>,
+    <QueryClientProvider client={qc}>
+      <MemoryRouter>
+        <PipelineNew />
+      </MemoryRouter>
+    </QueryClientProvider>,
   );
 }
 
@@ -146,7 +169,7 @@ describe("PipelineNew - Results Display (BATCH-12/TASK-02)", () => {
     await user.click(screen.getByTestId("submit-btn"));
 
     await waitFor(() => {
-      expect(screen.getByText("Pipeline Complete")).toBeInTheDocument();
+      expect(screen.getByText("Results")).toBeInTheDocument();
       expect(screen.getByText("2 ideas generated")).toBeInTheDocument();
     });
   });
