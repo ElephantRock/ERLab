@@ -2,61 +2,95 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ═══════════════════════════════════════════════════════════════
+   Research Studio — Design Tokens
+   Light main canvas, dark sidebar, softer borders, calmer palette.
+   ═══════════════════════════════════════════════════════════════ */
+
 :root {
-  --background: 0 0% 100%;
-  --foreground: 222.2 84% 4.9%;
+  /* Main canvas — warm white */
+  --background: 40 12% 97%;
+  --foreground: 222 20% 14%;
+
+  /* Cards — pure white with soft shadow */
   --card: 0 0% 100%;
-  --card-foreground: 222.2 84% 4.9%;
+  --card-foreground: 222 20% 14%;
+
   --popover: 0 0% 100%;
-  --popover-foreground: 222.2 84% 4.9%;
-  --primary: 221.2 83.2% 53.3%;
-  --primary-foreground: 210 40% 98%;
-  --secondary: 210 40% 96.1%;
-  --secondary-foreground: 222.2 47.4% 11.2%;
-  --muted: 210 40% 96.1%;
-  --muted-foreground: 215.4 16.3% 46.9%;
-  --accent: 210 40% 96.1%;
-  --accent-foreground: 222.2 47.4% 11.2%;
-  --destructive: 0 84.2% 60.2%;
-  --destructive-foreground: 210 40% 98%;
-  --border: 214.3 31.8% 91.4%;
-  --input: 214.3 31.8% 91.4%;
-  --ring: 221.2 83.2% 53.3%;
-  --radius: 0.5rem;
-  --success: 142 76% 36%;
-  --success-foreground: 210 40% 98%;
-  --warning: 38 92% 50%;
-  --warning-foreground: 222.2 84% 4.9%;
-  --info: 217 91% 60%;
-  --info-foreground: 210 40% 98%;
+  --popover-foreground: 222 20% 14%;
+
+  /* Primary — deep zinc for CTAs */
+  --primary: 222 20% 14%;
+  --primary-foreground: 0 0% 98%;
+
+  /* Secondary — subtle warm gray */
+  --secondary: 40 10% 94%;
+  --secondary-foreground: 222 20% 14%;
+
+  /* Muted — calm gray for backgrounds */
+  --muted: 40 8% 93%;
+  --muted-foreground: 222 10% 45%;
+
+  /* Accent — cyan for links and highlights */
+  --accent: 190 85% 42%;
+  --accent-foreground: 0 0% 98%;
+
+  --destructive: 0 72% 51%;
+  --destructive-foreground: 0 0% 98%;
+
+  --border: 220 10% 90%;
+  --input: 220 10% 90%;
+  --ring: 190 85% 42%;
+
+  --radius: 0.625rem;
+
+  /* Semantic colors */
+  --success: 142 60% 42%;
+  --success-foreground: 0 0% 98%;
+  --warning: 38 88% 50%;
+  --warning-foreground: 222 20% 14%;
+  --info: 190 85% 42%;
+  --info-foreground: 0 0% 98%;
+
+  /* Sidebar — dark studio */
+  --sidebar-bg: 222 20% 10%;
+  --sidebar-fg: 0 0% 65%;
+  --sidebar-active: 222 18% 18%;
+  --sidebar-active-fg: 0 0% 100%;
+  --sidebar-border: 222 15% 18%;
+
+  /* Font stacks */
+  --font-sans: "Inter", system-ui, -apple-system, sans-serif;
+  --font-display: "Space Grotesk", "Inter", sans-serif;
+  --font-mono: "JetBrains Mono", "SF Mono", "Fira Code", monospace;
 }
 
 .dark {
-  --background: 222.2 84% 4.9%;
-  --foreground: 210 40% 98%;
-  --card: 222.2 84% 4.9%;
-  --card-foreground: 210 40% 98%;
-  --popover: 222.2 84% 4.9%;
-  --popover-foreground: 210 40% 98%;
-  --primary: 217.2 91.2% 59.8%;
-  --primary-foreground: 222.2 47.4% 11.2%;
-  --secondary: 217.2 32.6% 17.5%;
-  --secondary-foreground: 210 40% 98%;
-  --muted: 217.2 32.6% 17.5%;
-  --muted-foreground: 215 20.2% 65.1%;
-  --accent: 217.2 32.6% 17.5%;
-  --accent-foreground: 210 40% 98%;
-  --destructive: 0 62.8% 30.6%;
-  --destructive-foreground: 210 40% 98%;
-  --border: 217.2 32.6% 17.5%;
-  --input: 217.2 32.6% 17.5%;
-  --ring: 224.3 76.3% 48%;
-  --success: 142 60% 45%;
-  --success-foreground: 210 40% 98%;
+  --background: 222 22% 7%;
+  --foreground: 0 0% 92%;
+  --card: 222 20% 9%;
+  --card-foreground: 0 0% 92%;
+  --popover: 222 20% 9%;
+  --popover-foreground: 0 0% 92%;
+  --primary: 0 0% 92%;
+  --primary-foreground: 222 22% 7%;
+  --secondary: 222 15% 15%;
+  --secondary-foreground: 0 0% 92%;
+  --muted: 222 15% 15%;
+  --muted-foreground: 0 0% 55%;
+  --accent: 190 80% 50%;
+  --accent-foreground: 222 22% 7%;
+  --destructive: 0 62% 45%;
+  --destructive-foreground: 0 0% 98%;
+  --border: 222 12% 18%;
+  --input: 222 12% 18%;
+  --ring: 190 80% 50%;
+  --success: 142 55% 48%;
+  --success-foreground: 0 0% 98%;
   --warning: 38 80% 55%;
-  --warning-foreground: 222.2 84% 4.9%;
-  --info: 217 91% 65%;
-  --info-foreground: 210 40% 98%;
+  --warning-foreground: 222 22% 7%;
+  --info: 190 80% 55%;
+  --info-foreground: 0 0% 98%;
 }
 
 * {
@@ -66,18 +100,19 @@
 body {
   background-color: hsl(var(--background));
   color: hsl(var(--foreground));
-  font-family: system-ui, -apple-system, sans-serif;
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 /* ── Form Element Reset ────────────────────────────────────────────── */
-/* Prevent browser-default white backgrounds on inputs in dark mode. */
-/* Every input/textarea/select inherits the theme colors unless overridden. */
 input,
 textarea,
 select,
 button {
   background-color: transparent;
   color: inherit;
+  font-family: inherit;
 }
 
 select option {
@@ -85,9 +120,58 @@ select option {
   color: hsl(var(--popover-foreground));
 }
 
+/* ── Typography Utilities ──────────────────────────────────────────── */
+.font-display {
+  font-family: var(--font-display);
+}
+
+.font-mono {
+  font-family: var(--font-mono);
+}
+
+/* ── Page Animations ───────────────────────────────────────────────── */
+.animate-fade-in {
+  animation: fadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ── Scrollbar Polish ──────────────────────────────────────────────── */
+.scrollbar-thin::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: transparent;
+}
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background: hsl(var(--muted-foreground) / 0.3);
+  border-radius: 99px;
+}
+.scrollbar-thin::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--muted-foreground) / 0.5);
+}
+
+/* ── Card Shadow ───────────────────────────────────────────────────── */
+.card-shadow {
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.04), 0 1px 2px -1px rgba(0, 0, 0, 0.04);
+}
+
+.card-shadow-hover:hover {
+  box-shadow: 0 4px 12px -2px rgba(0, 0, 0, 0.06), 0 2px 6px -2px rgba(0, 0, 0, 0.04);
+}
+
 /* ── Responsive Breakpoints (BATCH-31) ───────────────────────────── */
 
-/* Mobile: < 768px — sidebar hidden, bottom nav shown */
 @media (max-width: 767px) {
   .app-sidebar {
     display: none !important;
@@ -98,14 +182,8 @@ select option {
   .app-main {
     padding-bottom: 4rem;
   }
-  /* Dashboard grid stacks on mobile */
-  .dashboard-grid {
-    grid-template-columns: 1fr !important;
-    gap: 0.75rem !important;
-  }
 }
 
-/* Tablet: 768px–1023px — sidebar collapsed */
 @media (min-width: 768px) and (max-width: 1023px) {
   .app-sidebar {
     width: 4rem !important;
@@ -113,18 +191,11 @@ select option {
   .app-bottom-nav {
     display: none !important;
   }
-  .dashboard-grid {
-    grid-template-columns: repeat(2, 1fr) !important;
-  }
 }
 
-/* Desktop: ≥ 1024px — full sidebar */
 @media (min-width: 1024px) {
   .app-bottom-nav {
     display: none !important;
-  }
-  .dashboard-grid {
-    grid-template-columns: repeat(3, 1fr);
   }
 }
 
@@ -159,5 +230,19 @@ select option {
 
 .app-bottom-nav a:hover,
 .app-bottom-nav a.active {
-  color: hsl(var(--primary));
+  color: hsl(var(--accent));
+}
+
+/* ── Highlight Ring for Scroll-to-Section ──────────────────────────── */
+.highlight-ring {
+  animation: highlightPulse 3s ease-out forwards;
+}
+
+@keyframes highlightPulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(0, 0, 0, 0);
+  }
+  10%, 90% {
+    box-shadow: 0 0 0 3px hsl(var(--warning) / 0.5);
+  }
 }

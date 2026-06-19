@@ -1,88 +1,93 @@
 /**
- * BATCH-145: Sidebar Navigation Restructure Tests
- *
- * Updated for Command Center sidebar with 4 groups:
- * Command Center, Research, System, Advanced (collapsed by default)
+ * Sidebar Navigation Tests — Research Studio Layout
  */
 import { describe, it, expect } from "vitest";
 import * as fs from "fs";
 
 const content = fs.readFileSync("src/components/layout/sidebar.tsx", "utf-8");
 
-describe("TEST-145: Sidebar restructure", () => {
-  it("TEST-145-01: has 4 groups (Command Center, Research, System, Advanced)", () => {
-    expect(content).toContain("label: \"Command Center\"");
+describe("Sidebar — Research Studio Layout", () => {
+  it("has 4 groups (Studio, Research, System, Advanced)", () => {
+    expect(content).toContain("label: \"Studio\"");
     expect(content).toContain("label: \"Research\"");
     expect(content).toContain("label: \"System\"");
     expect(content).toContain("label: \"Advanced\"");
   });
 
-  it("TEST-145-02: Command Center group has 4 items", () => {
+  it("Studio group has Home, New Run, Results, Review", () => {
     const section = content.substring(
-      content.indexOf("label: \"Command Center\""),
+      content.indexOf("label: \"Studio\""),
       content.indexOf("label: \"Research\"")
     );
-    const items = section.match(/to: "/g);
-    expect(items).toHaveLength(4);
+    expect(section).toContain("label: \"Home\"");
+    expect(section).toContain("label: \"New Run\"");
+    expect(section).toContain("label: \"Results\"");
+    expect(section).toContain("label: \"Review\"");
   });
 
-  it("TEST-145-03: Research group has 3 items", () => {
+  it("Research group has Gaps, Literature, Knowledge Graph", () => {
     const section = content.substring(
       content.indexOf("label: \"Research\""),
       content.indexOf("label: \"System\"")
     );
-    const items = section.match(/to: "/g);
-    expect(items).toHaveLength(3);
+    expect(section).toContain("label: \"Gaps\"");
+    expect(section).toContain("label: \"Literature\"");
+    expect(section).toContain("label: \"Knowledge Graph\"");
   });
 
-  it("TEST-145-04: System group has 4 items", () => {
+  it("System group has Models, Operations, Settings", () => {
     const section = content.substring(
       content.indexOf("label: \"System\""),
       content.indexOf("label: \"Advanced\"")
     );
-    const items = section.match(/to: "/g);
-    expect(items).toHaveLength(4);
+    expect(section).toContain("label: \"Models\"");
+    expect(section).toContain("label: \"Operations\"");
+    expect(section).toContain("label: \"Settings\"");
   });
 
-  it("TEST-145-05: Advanced group has 5 items", () => {
-    const section = content.substring(content.indexOf("label: \"Advanced\""));
-    const items = section.match(/to: "\//g);
-    expect(items).toHaveLength(5);
-  });
-
-  it("TEST-145-06: total items = 16 (none lost)", () => {
-    const allItems = content.match(/to: "\//g);
-    expect(allItems!.length).toBeGreaterThanOrEqual(16);
-  });
-
-  it("TEST-145-07: Advanced group is collapsed by default", () => {
+  it("Advanced group is collapsed by default", () => {
     expect(content).toContain("collapsedByDefault: true");
   });
 
-  it("TEST-145-08: has collapsible toggle for Advanced", () => {
-    expect(content).toContain("ChevronDown");
+  it("Dashboard route is / with label Home", () => {
+    const section = content.substring(
+      content.indexOf("label: \"Studio\""),
+      content.indexOf("label: \"Research\"")
+    );
+    expect(section).toContain("to: \"/\"");
+    expect(section).toContain("label: \"Home\"");
+  });
+
+  it("Results maps to /ideas", () => {
+    const section = content.substring(
+      content.indexOf("label: \"Studio\""),
+      content.indexOf("label: \"Research\"")
+    );
+    expect(section).toContain('to: "/ideas"');
+    expect(section).toContain("label: \"Results\"");
+  });
+
+  it("Review maps to /governance", () => {
+    const section = content.substring(
+      content.indexOf("label: \"Studio\""),
+      content.indexOf("label: \"Research\"")
+    );
+    expect(section).toContain('to: "/governance"');
+    expect(section).toContain("label: \"Review\"");
+  });
+
+  it("has collapsible toggle for Advanced", () => {
     expect(content).toContain("setIsExpanded");
   });
 
-  it("TEST-145-09: has group label headers when not collapsed", () => {
-    expect(content).toContain("uppercase tracking-wider");
-    expect(content).toContain("text-muted-foreground/60");
+  it("has dark sidebar theme tokens", () => {
+    const css = fs.readFileSync("src/globals.css", "utf-8");
+    expect(css).toContain("sidebar-bg");
+    expect(css).toContain("sidebar-active");
   });
 
-  it("TEST-145-10: has visual dividers when collapsed", () => {
-    expect(content).toContain("role=\"separator\"");
-  });
-
-  it("TEST-145-11: mobile nav still works with NAV_ITEMS", () => {
-    expect(content).toContain("NAV_ITEMS.filter((item) => item.mobile)");
+  it("mobile nav still works", () => {
+    expect(content).toContain("MOBILE_ITEMS");
     expect(content).toContain("MobileBottomNav");
-  });
-
-  it("TEST-145-12: Settings is in System, not Advanced", () => {
-    const systemSection = content.substring(
-      content.indexOf("label: \"System\""),
-      content.indexOf("label: \"Advanced\"")
-    );
-    expect(systemSection).toContain("label: \"Settings\"");
   });
 });

@@ -72,7 +72,7 @@ vi.mock("@/api/sessions", () => ({
 }));
 
 vi.mock("@/api/pipeline", () => ({
-  listRuns: vi.fn(),
+  listRuns: vi.fn().mockResolvedValue({ runs: [], total: 0 }),
 }));
 
 vi.mock("@/api/traces", () => ({
@@ -209,15 +209,19 @@ describe("Phase 6: Icon-only button aria-labels", () => {
   it("sidebar collapse button has aria-label", async () => {
     const { AuthProvider } = await import("@/contexts/auth-context");
     const { SettingsProvider } = await import("@/contexts/settings-context");
+    const { QueryClient, QueryClientProvider } = await import("@tanstack/react-query");
     const AppShell = (await import("@/components/layout/app-shell")).AppShell;
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
 
     render(
       <MemoryRouter>
-        <AuthProvider>
-          <SettingsProvider>
-            <AppShell />
-          </SettingsProvider>
-        </AuthProvider>
+        <QueryClientProvider client={qc}>
+          <AuthProvider>
+            <SettingsProvider>
+              <AppShell />
+            </SettingsProvider>
+          </AuthProvider>
+        </QueryClientProvider>
       </MemoryRouter>,
     );
 

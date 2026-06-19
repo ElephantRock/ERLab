@@ -1,22 +1,22 @@
 import { NavLink } from "react-router-dom";
 import {
-  LayoutDashboard,
+  Compass,
   Play,
-  Lightbulb,
-  GitBranch,
-  Search,
-  Settings,
-  DollarSign,
-  Brain,
-  Shield,
-  Activity,
+  Archive,
+  ShieldCheck,
   Layers,
-  BookMarked,
-  BrainCircuit,
+  BookOpen,
+  GitFork,
   Cpu,
-  Puzzle,
   Gauge,
+  Settings,
+  CreditCard,
+  Activity,
+  Brain,
+  Clock,
+  Puzzle,
   ChevronDown,
+  ChevronRight,
 } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
@@ -25,53 +25,51 @@ interface NavItem {
   to: string;
   icon: React.ElementType;
   label: string;
-  /** Show in mobile bottom nav (limited space) */
   mobile?: boolean;
 }
 
 interface NavGroup {
   label: string;
   items: NavItem[];
-  /** Collapse by default on desktop */
   collapsedByDefault?: boolean;
 }
 
 const NAV_GROUPS: NavGroup[] = [
   {
-    label: "Command Center",
+    label: "Studio",
     items: [
-      { to: "/", icon: LayoutDashboard, label: "Dashboard", mobile: true },
+      { to: "/", icon: Compass, label: "Home", mobile: true },
       { to: "/pipeline/new", icon: Play, label: "New Run", mobile: true },
-      { to: "/ideas", icon: Lightbulb, label: "Ideas", mobile: true },
-      { to: "/gaps", icon: GitBranch, label: "Gaps" },
+      { to: "/ideas", icon: Archive, label: "Results", mobile: true },
+      { to: "/governance", icon: ShieldCheck, label: "Review" },
     ],
   },
   {
     label: "Research",
     items: [
-      { to: "/literature", icon: BookMarked, label: "Literature" },
-      { to: "/knowledge", icon: Search, label: "Knowledge" },
-      { to: "/knowledge-graph", icon: BrainCircuit, label: "Graph" },
+      { to: "/gaps", icon: Layers, label: "Gaps" },
+      { to: "/literature", icon: BookOpen, label: "Literature" },
+      { to: "/knowledge-graph", icon: GitFork, label: "Knowledge Graph" },
     ],
   },
   {
     label: "System",
     items: [
-      { to: "/ops", icon: Gauge, label: "Ops" },
-      { to: "/governance", icon: Shield, label: "Governance" },
+      { to: "/settings", icon: Cpu, label: "Models", mobile: true },
+      { to: "/ops", icon: Gauge, label: "Operations" },
       { to: "/settings", icon: Settings, label: "Settings" },
-      { to: "/costs", icon: DollarSign, label: "Costs" },
     ],
   },
   {
     label: "Advanced",
     collapsedByDefault: true,
     items: [
-      { to: "/memory", icon: Brain, label: "Memory" },
-      { to: "/autonomous", icon: Cpu, label: "Autonomous", mobile: true },
-      { to: "/plugins", icon: Puzzle, label: "Plugins" },
-      { to: "/sessions", icon: Layers, label: "Sessions" },
+      { to: "/costs", icon: CreditCard, label: "Costs" },
       { to: "/traces", icon: Activity, label: "Traces" },
+      { to: "/memory", icon: Brain, label: "Memory" },
+      { to: "/autonomous", icon: Clock, label: "Autonomous" },
+      { to: "/plugins", icon: Puzzle, label: "Plugins" },
+      { to: "/sessions", icon: Clock, label: "Sessions" },
     ],
   },
 ];
@@ -79,11 +77,14 @@ const NAV_GROUPS: NavGroup[] = [
 /** Flat list for mobile nav (backward compat) */
 const NAV_ITEMS: NavItem[] = NAV_GROUPS.flatMap((g) => g.items);
 
+// Deduplicate for mobile (Models/Settings point to same route)
+const MOBILE_ITEMS = NAV_ITEMS.filter((item) => item.mobile);
+
 export { NAV_ITEMS };
 
 export function Sidebar({ collapsed }: { collapsed: boolean }) {
   return (
-    <nav className="p-2 space-y-4" data-testid="sidebar-nav">
+    <nav className="flex-1 overflow-y-auto py-4 px-3 scrollbar-thin" data-testid="sidebar-nav">
       {NAV_GROUPS.map((group) => (
         <NavGroupSection key={group.label} group={group} collapsed={collapsed} />
       ))}
@@ -100,34 +101,49 @@ function NavGroupSection({
 }) {
   const [isExpanded, setIsExpanded] = useState(!group.collapsedByDefault);
 
-  // Non-collapsible groups render directly
+  // Non-collapsible groups
   if (!group.collapsedByDefault) {
     return (
-      <div className="space-y-1">
+      <div className="mb-5 space-y-1">
         {!collapsed && (
-          <div className="px-3 py-1 text-[0.625rem] font-semibold uppercase tracking-wider text-muted-foreground/60">
+          <h3
+            className="text-[10px] font-bold uppercase tracking-widest px-2 mb-1.5 font-mono"
+            style={{ color: "hsl(0 0% 38%)" }}
+          >
             {group.label}
-          </div>
+          </h3>
         )}
         {collapsed && (
-          <div className="mx-auto my-1 h-px bg-border w-6" role="separator" />
+          <div className="mx-auto my-2 h-px w-6" style={{ backgroundColor: "hsl(var(--sidebar-border))" }} role="separator" />
         )}
         {group.items.map((item) => (
           <NavLink
-            key={item.to}
+            key={`${group.label}-${item.to}-${item.label}`}
             to={item.to}
             end={item.to === "/"}
             className={({ isActive }) =>
               cn(
-                "flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors",
+                "flex items-center gap-2.5 px-2 py-1.5 text-xs rounded transition-all duration-150",
                 isActive
-                  ? "bg-primary/10 text-primary font-medium"
-                  : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
+                  ? "font-medium"
+                  : "hover:bg-white/5",
               )
             }
+            style={({ isActive }) => ({
+              backgroundColor: isActive ? "hsl(var(--sidebar-active))" : "transparent",
+              color: isActive ? "hsl(var(--sidebar-active-fg))" : "hsl(0 0% 55%)",
+            })}
           >
-            <item.icon className="h-4 w-4 flex-shrink-0" />
-            {!collapsed && <span className="truncate">{item.label}</span>}
+            {({ isActive }) => (
+              <>
+                {isActive ? (
+                  <span className="h-1.5 w-1.5 rounded-full bg-accent shrink-0" style={{ backgroundColor: "hsl(var(--accent))" }} />
+                ) : (
+                  <item.icon className="h-3.5 w-3.5 shrink-0" style={{ color: "hsl(0 0% 40%)" }} />
+                )}
+                {!collapsed && <span className="truncate">{item.label}</span>}
+              </>
+            )}
           </NavLink>
         ))}
       </div>
@@ -136,63 +152,65 @@ function NavGroupSection({
 
   // Collapsible group (Advanced)
   return (
-    <div className="space-y-1" data-testid={`nav-group-${group.label.toLowerCase()}`}>
+    <div className="mb-5" data-testid={`nav-group-${group.label.toLowerCase()}`}>
       {!collapsed ? (
         <>
           <button
             onClick={() => setIsExpanded((v) => !v)}
-            className="flex w-full items-center gap-2 px-3 py-1 text-[0.625rem] font-semibold uppercase tracking-wider text-muted-foreground/60 hover:text-muted-foreground transition-colors"
+            className="flex w-full items-center gap-1 px-2 py-1.5 text-[10px] font-bold uppercase tracking-widest font-mono transition-colors"
+            style={{ color: "hsl(0 0% 38%)" }}
             aria-expanded={isExpanded}
             aria-label={`Toggle ${group.label}`}
             data-testid={`toggle-${group.label.toLowerCase()}`}
           >
-            <ChevronDown
-              className={cn(
-                "h-3 w-3 transition-transform",
-                !isExpanded && "-rotate-90",
-              )}
-            />
+            {isExpanded
+              ? <ChevronDown className="h-3 w-3" />
+              : <ChevronRight className="h-3 w-3" />
+            }
             {group.label}
           </button>
           {isExpanded &&
             group.items.map((item) => (
               <NavLink
-                key={item.to}
+                key={`${group.label}-${item.to}-${item.label}`}
                 to={item.to}
                 end={item.to === "/"}
                 className={({ isActive }) =>
                   cn(
-                    "flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors",
-                    isActive
-                      ? "bg-primary/10 text-primary font-medium"
-                      : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
+                    "flex items-center gap-2.5 px-2 py-1 text-xs rounded transition-all",
+                    isActive ? "font-medium" : "hover:bg-white/5",
                   )
                 }
+                style={({ isActive }) => ({
+                  backgroundColor: isActive ? "hsl(var(--sidebar-active))" : "transparent",
+                  color: isActive ? "hsl(var(--sidebar-active-fg))" : "hsl(0 0% 45%)",
+                })}
               >
-                <item.icon className="h-4 w-4 flex-shrink-0" />
+                <item.icon className="h-3 w-3 shrink-0" />
                 <span className="truncate">{item.label}</span>
               </NavLink>
             ))}
         </>
       ) : (
-        // When sidebar collapsed, show items without labels
         <>
-          <div className="mx-auto my-1 h-px bg-border w-6" role="separator" />
+          <div className="mx-auto my-2 h-px w-6" style={{ backgroundColor: "hsl(var(--sidebar-border))" }} role="separator" />
           {group.items.map((item) => (
             <NavLink
-              key={item.to}
+              key={`${group.label}-${item.to}-${item.label}`}
               to={item.to}
               end={item.to === "/"}
               className={({ isActive }) =>
                 cn(
-                  "flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors justify-center",
-                  isActive
-                    ? "bg-primary/10 text-primary font-medium"
-                    : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
+                  "flex items-center justify-center px-2 py-1.5 text-xs rounded transition-all",
+                  isActive ? "font-medium" : "hover:bg-white/5",
                 )
               }
+              style={({ isActive }) => ({
+                backgroundColor: isActive ? "hsl(var(--sidebar-active))" : "transparent",
+                color: isActive ? "hsl(var(--sidebar-active-fg))" : "hsl(0 0% 45%)",
+              })}
             >
-              <item.icon className="h-4 w-4 flex-shrink-0" />
+              <item.icon className="h-3.5 w-3.5 shrink-0" />
             </NavLink>
           ))}
         </>
@@ -201,23 +219,19 @@ function NavGroupSection({
   );
 }
 
-/** Mobile bottom navigation — renders on small screens only. */
+/** Mobile bottom navigation */
 export function MobileBottomNav() {
-  const mobileItems = NAV_ITEMS.filter((item) => item.mobile);
-
   return (
     <nav className="app-bottom-nav" aria-label="Mobile navigation">
-      {mobileItems.map((item) => (
+      {MOBILE_ITEMS.map((item) => (
         <NavLink
-          key={item.to}
+          key={`mobile-${item.to}-${item.label}`}
           to={item.to}
           end={item.to === "/"}
           className={({ isActive }) =>
             cn(
               "flex flex-col items-center gap-0.5 text-[0.625rem] px-1 py-1 rounded-md transition-colors",
-              isActive
-                ? "text-primary"
-                : "text-muted-foreground hover:text-primary",
+              isActive ? "text-accent" : "text-muted-foreground hover:text-accent",
             )
           }
         >
