@@ -16,7 +16,10 @@ import {
 } from "@/components/ui/select";
 import { Slider } from "@/components/ui/slider";
 import { useNavigate } from "react-router-dom";
-import { Search, ChevronLeft, ChevronRight, CheckSquare, Square, AlertTriangle, RotateCw, Play } from "lucide-react";
+import {
+  Search, ChevronLeft, ChevronRight, CheckSquare, Square,
+  AlertTriangle, RotateCw, Play, Inbox, SlidersHorizontal,
+} from "lucide-react";
 
 const SORT_OPTIONS = [
   { value: "date", label: "Newest First" },
@@ -33,6 +36,7 @@ export default function IdeasBrowser() {
   const [minScore, setMinScore] = useState(0);
   const [page, setPage] = useState(0);
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [showFilters, setShowFilters] = useState(false);
   const limit = 20;
 
   const queryParams = useMemo(
@@ -52,34 +56,83 @@ export default function IdeasBrowser() {
     queryFn: () => listIdeas(queryParams),
   });
 
+  const ideas = data?.ideas ?? [];
+  const hasQualityIssues = ideas.some(
+    (i) => i.quality_summary?.has_issues,
+  );
+  const hasGovernance = ideas.some((i) => i.governance_status);
+
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Research Ideas</h1>
-        <p className="text-muted-foreground">
-          Browse generated ideas with novelty and feasibility scores.
-        </p>
+    <div className="space-y-5 animate-fade-in" data-testid="ideas-browser">
+      {/* ── Header ── */}
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <div className="flex items-center gap-2 mb-1">
+            <Inbox className="h-5 w-5 text-accent" />
+            <h1 className="text-2xl font-display font-semibold tracking-tight">
+              Results
+            </h1>
+          </div>
+          <p className="text-sm text-muted-foreground">
+            {data?.total ?? "—"} research ideas generated from your pipeline runs.
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          {selectedIds.size > 0 && (
+            <>
+              <ExportDialog ideaIds={Array.from(selectedIds)} />
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setSelectedIds(new Set())}
+              >
+                Clear ({selectedIds.size})
+              </Button>
+            </>
+          )}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => navigate("/pipeline/new")}
+          >
+            <Play className="mr-2 h-3.5 w-3.5" />
+            New Run
+          </Button>
+        </div>
       </div>
 
-      {/* Search, Sort, and Filter Controls (hidden on error) */}
+      {/* ── Search bar ── */}
       {!isError && (
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-end">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder="Search ideas by title..."
-            value={searchText}
-            onChange={(e) => {
-              setSearchText(e.target.value);
-              setPage(0);
-            }}
-            className="pl-9"
-            aria-label="Search ideas by title"
-          />
+        <div className="flex items-center gap-2">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              placeholder="Search ideas by title..."
+              value={searchText}
+              onChange={(e) => {
+                setSearchText(e.target.value);
+                setPage(0);
+              }}
+              className="pl-9"
+              aria-label="Search ideas by title"
+            />
+          </div>
+          <Button
+            variant={showFilters ? "default" : "outline"}
+            size="sm"
+            onClick={() => setShowFilters(!showFilters)}
+            className="flex-shrink-0"
+          >
+            <SlidersHorizontal className="mr-1.5 h-3.5 w-3.5" />
+            Filters
+          </Button>
         </div>
+      )}
 
-        <div className="flex items-end gap-4">
-          <div className="w-[180px]">
+      {/* ── Expandable filter panel ── */}
+      {!isError && showFilters && (
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-end rounded-lg border border-border bg-card p-4 animate-fade-in">
+          <div className="w-full sm:w-[180px]">
             <label className="text-xs text-muted-foreground mb-1 block">Sort by</label>
             <Select
               value={sortBy}
@@ -101,7 +154,7 @@ export default function IdeasBrowser() {
             </Select>
           </div>
 
-          <div className="w-[160px]">
+          <div className="flex-1">
             <label className="text-xs text-muted-foreground mb-1 block">
               Min Score: {minScore.toFixed(1)}
             </label>
@@ -118,7 +171,8 @@ export default function IdeasBrowser() {
             />
           </div>
 
-          <div className="w-[160px]">
+          <div className="w-full sm:w-[180px]">
+            <label className="text-xs text-muted-foreground mb-1 block">Domain</label>
             <Input
               placeholder="Filter by domain..."
               value={domainFilter}
@@ -130,13 +184,13 @@ export default function IdeasBrowser() {
             />
           </div>
         </div>
-      </div>
       )}
 
+      {/* ── Loading ── */}
       {isLoading ? (
         <div className="grid gap-3 md:grid-cols-2">
           {Array.from({ length: 6 }).map((_, i) => (
-            <Skeleton key={i} className="h-28 w-full" />
+            <Skeleton key={i} className="h-32 w-full" />
           ))}
         </div>
       ) : isError ? (
@@ -167,29 +221,11 @@ export default function IdeasBrowser() {
             </Button>
           </div>
         </div>
-      ) : data?.ideas.length ? (
+      ) : ideas.length ? (
         <>
-          <p className="text-sm text-muted-foreground">
-            {data.total} idea{data.total !== 1 ? "s" : ""} found
-          </p>
-          <div className="flex items-center gap-3">
-            {selectedIds.size > 0 && (
-              <ExportDialog
-                ideaIds={Array.from(selectedIds)}
-              />
-            )}
-            {selectedIds.size > 0 && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setSelectedIds(new Set())}
-              >
-                Clear selection ({selectedIds.size})
-              </Button>
-            )}
-          </div>
+          {/* ── Results grid ── */}
           <div className="grid gap-3 md:grid-cols-2">
-            {data.ideas.map((idea) => (
+            {ideas.map((idea) => (
               <div key={idea.id} className="relative">
                 <div
                   className="absolute top-3 right-3 z-10"
@@ -197,7 +233,7 @@ export default function IdeasBrowser() {
                   data-testid={`select-idea-${idea.id}`}
                 >
                   <button
-                    className="text-muted-foreground hover:text-primary"
+                    className="text-muted-foreground hover:text-primary transition-colors"
                     onClick={() => {
                       setSelectedIds((prev) => {
                         const next = new Set(prev);
@@ -225,7 +261,9 @@ export default function IdeasBrowser() {
               </div>
             ))}
           </div>
-          {data.total > limit && (
+
+          {/* ── Pagination ── */}
+          {data && data.total > limit && (
             <div className="flex items-center justify-between pt-2">
               <Button
                 variant="outline"

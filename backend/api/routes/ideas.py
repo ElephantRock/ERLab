@@ -70,6 +70,9 @@ async def list_ideas(
 
     effective_min_score = min_score if min_score > 0 else None
 
+    from backend.db.models import GovernanceDecision, IdeaPaperLink, Proposal
+    from sqlalchemy import func as sa_func
+
     with get_session() as session:
         ideas = db_list_ideas(
             session,
@@ -82,6 +85,69 @@ async def list_ideas(
             sort_order=sort_order,
         )
         total = count_ideas(session, domain=domain, min_score=effective_min_score, search=search)
+
+        idea_ids = [i.id for i in ideas]
+
+        # Batch: latest governance decision per idea
+        gov_status: dict[int, str | None] = {iid: None for iid in idea_ids}
+        if idea_ids:
+            # Subquery: latest decision per idea
+            gov_subq = (
+                select(
+                    GovernanceDecision.idea_id,
+                    GovernanceDecision.decision,
+                    sa_func.max(GovernanceDecision.created_at).label("max_created"),
+                )
+                .where(GovernanceDecision.idea_id.in_(idea_ids))
+                .group_by(GovernanceDecision.idea_id, GovernanceDecision.decision)
+                .subquery()
+            )
+            # Get the actual latest decision per idea
+            gov_rows = session.execute(
+                select(GovernanceDecision.idea_id, GovernanceDecision.decision)
+                .where(GovernanceDecision.idea_id.in_(idea_ids))
+                .order_by(GovernanceDecision.idea_id, GovernanceDecision.created_at.desc())
+            ).all()
+            seen = set()
+            for gid, gdecision in gov_rows:
+                if gid not in seen:
+                    gov_status[gid] = gdecision
+                    seen.add(gid)
+
+        # Batch: paper link counts per idea
+        ref_counts: dict[int, int] = {iid: 0 for iid in idea_ids}
+        if idea_ids:
+            link_rows = session.execute(
+                select(IdeaPaperLink.idea_id, sa_func.count(IdeaPaperLink.id))
+                .where(IdeaPaperLink.idea_id.in_(idea_ids))
+                .group_by(IdeaPaperLink.idea_id)
+            ).all()
+            for lid, lcount in link_rows:
+                ref_counts[lid] = lcount
+
+        # Batch: quality pass rate per idea from proposal sections_json
+        quality_summary: dict[int, dict] = {iid: {} for iid in idea_ids}
+        if idea_ids:
+            prop_rows = session.execute(
+                select(Proposal.idea_id, Proposal.sections_json)
+                .where(Proposal.idea_id.in_(idea_ids))
+            ).all()
+            for pid, psections_json in prop_rows:
+                sections = None
+                if psections_json:
+                    try:
+                        sections = json.loads(psections_json)
+                    except (json.JSONDecodeError, TypeError):
+                        pass
+                checks = compute_quality_checks(sections)
+                if checks:
+                    passed = sum(1 for c in checks if c.get("passed"))
+                    quality_summary[pid] = {
+                        "passed": passed,
+                        "total": len(checks),
+                        "has_issues": passed < len(checks),
+                    }
+
         return {
             "ideas": [
                 {
@@ -95,6 +161,9 @@ async def list_ideas(
                     "has_proposal": i.proposal is not None,
                     "pipeline_run_id": i.pipeline_run_id,
                     "created_at": str(i.created_at),
+                    "quality_summary": quality_summary.get(i.id, {}),
+                    "governance_status": gov_status.get(i.id),
+                    "reference_count": ref_counts.get(i.id, 0),
                 }
                 for i in ideas
             ],

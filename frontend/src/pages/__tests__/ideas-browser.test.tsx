@@ -90,7 +90,7 @@ beforeEach(() => {
 });
 
 describe("IdeasBrowser", () => {
-  // ── TEST-11-01-09: Renders idea list ────────────────────────────
+  // ── TEST-11-01-09: Renders idea list ────────────────────
   it("TEST-11-01-09: renders idea list when data is available", async () => {
     mockedListIdeas.mockResolvedValue(populatedResponse);
 
@@ -99,7 +99,8 @@ describe("IdeasBrowser", () => {
     await waitFor(() => {
       expect(screen.getByText("Neural Architecture Search via RL")).toBeInTheDocument();
     });
-    expect(screen.getByText(/1 idea found/)).toBeInTheDocument();
+    // Header shows count
+    expect(screen.getByText(/1 research ideas generated/)).toBeInTheDocument();
   });
 
   // ── TEST-11-01-10: Shows empty state ────────────────────────────
@@ -121,7 +122,7 @@ describe("IdeasBrowser", () => {
     renderIdeasBrowser();
 
     // Header should still render
-    expect(screen.getByText("Research Ideas")).toBeInTheDocument();
+    expect(screen.getByText("Results")).toBeInTheDocument();
 
     consoleSpy.mockRestore();
   });

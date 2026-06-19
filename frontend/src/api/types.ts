@@ -94,6 +94,12 @@ export type ProgressEvent = StageProgressEvent | ProgressDoneEvent | HeartbeatEv
 
 // --- Ideas ---
 
+export interface QualitySummary {
+  passed: number;
+  total: number;
+  has_issues: boolean;
+}
+
 export interface IdeaSummary {
   id: number;
   title: string;
@@ -105,6 +111,9 @@ export interface IdeaSummary {
   has_proposal: boolean;
   pipeline_run_id: number | null;
   created_at: string;
+  quality_summary?: QualitySummary | null;
+  governance_status?: "approved" | "denied" | "needs_changes" | null;
+  reference_count?: number;
 }
 
 export interface ExperimentResult {

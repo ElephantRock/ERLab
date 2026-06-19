@@ -260,7 +260,7 @@ describe("TEST-32-02-03: Ideas browser paginates results", () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText(/25 idea/)).toBeInTheDocument();
+      expect(screen.getByText(/25 research ideas generated/)).toBeInTheDocument();
     });
 
     // First call should use offset=0

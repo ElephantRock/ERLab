@@ -102,28 +102,28 @@ describe("IdeasBrowser search input", () => {
 describe("IdeaCard overall score badge", () => {
   it("displays overall score when present", () => {
     render(<IdeaCard idea={baseIdea} />);
-    expect(screen.getByText(/Score: 0.78/)).toBeInTheDocument();
+    expect(screen.getByText("0.78")).toBeInTheDocument();
   });
 
   it("does not display score badge when overall_score is null", () => {
     const noScore = { ...baseIdea, overall_score: null };
     render(<IdeaCard idea={noScore} />);
-    expect(screen.queryByText(/Score:/)).not.toBeInTheDocument();
+    expect(screen.queryByText("Overall")).not.toBeInTheDocument();
   });
 });
 
 // ── TEST-14-02-05: IdeaCard shows proposal icon when proposal exists ──────
 
 describe("IdeaCard proposal indicator", () => {
-  it("shows proposal icon when has_proposal is true", () => {
+  it("shows proposal badge when has_proposal is true", () => {
     render(<IdeaCard idea={ideaWithProposal} />);
-    const icon = screen.getByLabelText("Has proposal");
-    expect(icon).toBeInTheDocument();
+    expect(screen.getByText("Proposal")).toBeInTheDocument();
   });
 
-  it("does not show proposal icon when has_proposal is false", () => {
+  it("shows Idea Only badge when has_proposal is false", () => {
     render(<IdeaCard idea={baseIdea} />);
-    expect(screen.queryByLabelText("Has proposal")).not.toBeInTheDocument();
+    expect(screen.getByText("Idea Only")).toBeInTheDocument();
+    expect(screen.queryByText("Proposal")).not.toBeInTheDocument();
   });
 });
 
