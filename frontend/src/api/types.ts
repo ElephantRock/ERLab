@@ -114,6 +114,8 @@ export interface IdeaSummary {
   quality_summary?: QualitySummary | null;
   governance_status?: "approved" | "denied" | "needs_changes" | null;
   reference_count?: number;
+  cited_count?: number;
+  supporting_count?: number;
 }
 
 export interface ExperimentResult {

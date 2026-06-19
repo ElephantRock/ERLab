@@ -114,16 +114,20 @@ async def list_ideas(
                     gov_status[gid] = gdecision
                     seen.add(gid)
 
-        # Batch: paper link counts per idea
-        ref_counts: dict[int, int] = {iid: 0 for iid in idea_ids}
+        # Batch: paper link counts per idea, split by role
+        cited_counts: dict[int, int] = {iid: 0 for iid in idea_ids}
+        supporting_counts: dict[int, int] = {iid: 0 for iid in idea_ids}
         if idea_ids:
             link_rows = session.execute(
-                select(IdeaPaperLink.idea_id, sa_func.count(IdeaPaperLink.id))
+                select(IdeaPaperLink.idea_id, IdeaPaperLink.role, sa_func.count(IdeaPaperLink.id))
                 .where(IdeaPaperLink.idea_id.in_(idea_ids))
-                .group_by(IdeaPaperLink.idea_id)
+                .group_by(IdeaPaperLink.idea_id, IdeaPaperLink.role)
             ).all()
-            for lid, lcount in link_rows:
-                ref_counts[lid] = lcount
+            for lid, lrole, lcount in link_rows:
+                if lrole == "cited":
+                    cited_counts[lid] = lcount
+                elif lrole == "supporting":
+                    supporting_counts[lid] = lcount
 
         # Batch: quality pass rate per idea from proposal sections_json
         quality_summary: dict[int, dict] = {iid: {} for iid in idea_ids}
@@ -163,7 +167,9 @@ async def list_ideas(
                     "created_at": str(i.created_at),
                     "quality_summary": quality_summary.get(i.id, {}),
                     "governance_status": gov_status.get(i.id),
-                    "reference_count": ref_counts.get(i.id, 0),
+                    "reference_count": cited_counts.get(i.id, 0) + supporting_counts.get(i.id, 0),
+                    "cited_count": cited_counts.get(i.id, 0),
+                    "supporting_count": supporting_counts.get(i.id, 0),
                 }
                 for i in ideas
             ],

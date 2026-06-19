@@ -675,19 +675,25 @@ function ReviewCard({
 
 function EvidenceSummary({ idea }: { idea: Record<string, unknown> }) {
   const refs = idea.proposal_references;
-  const supportingPapers = idea.supporting_papers;
+  const supportingPapers = (idea.supporting_papers as Array<{ role?: string }>) || [];
   const sourceGaps = idea.source_gaps;
 
   const refCount = Array.isArray(refs) ? refs.length : typeof refs === "string" ? 1 : 0;
-  const paperCount = Array.isArray(supportingPapers) ? supportingPapers.length : 0;
+  const citedCount = supportingPapers.filter((p) => p.role === "cited").length;
+  const supportingCount = supportingPapers.filter((p) => p.role === "supporting").length;
   const gapCount = Array.isArray(sourceGaps) ? sourceGaps.length : 0;
+  const unresolvedCount = refCount - citedCount - supportingCount;
 
   return (
     <div className="space-y-2 text-xs">
-      <EvidenceRow label="References" value={refCount} />
-      <EvidenceRow label="Supporting Papers" value={paperCount} />
+      <EvidenceRow label="Cited Papers" value={citedCount} tone="info" />
+      <EvidenceRow label="Supporting Papers" value={supportingCount} tone="neutral" />
+      <EvidenceRow label="Total References" value={refCount} />
+      {unresolvedCount > 0 && (
+        <EvidenceRow label="Unresolved" value={unresolvedCount} tone="warning" />
+      )}
       <EvidenceRow label="Source Gaps" value={gapCount} />
-      {refCount === 0 && paperCount === 0 && (
+      {refCount === 0 && citedCount === 0 && supportingCount === 0 && (
         <p className="text-muted-foreground italic text-[11px]">No provenance data linked.</p>
       )}
       <button
@@ -703,11 +709,19 @@ function EvidenceSummary({ idea }: { idea: Record<string, unknown> }) {
   );
 }
 
-function EvidenceRow({ label, value }: { label: string; value: number }) {
+function EvidenceRow({ label, value, tone }: { label: string; value: number; tone?: "info" | "warning" | "neutral" }) {
+  const valueColor = {
+    info: "text-info",
+    warning: "text-warning",
+    neutral: "text-foreground",
+  };
   return (
     <div className="flex items-center justify-between">
       <span className="text-muted-foreground">{label}</span>
-      <span className={cn("font-mono font-semibold", value > 0 ? "text-foreground" : "text-muted-foreground")}>
+      <span className={cn(
+        "font-mono font-semibold",
+        value > 0 ? (tone ? valueColor[tone] : "text-foreground") : "text-muted-foreground",
+      )}>
         {value}
       </span>
     </div>
