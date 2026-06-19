@@ -309,7 +309,7 @@ function Stat({
   icon?: React.ReactNode;
 }) {
   return (
-    <div className="rounded-lg border border-border bg-muted/20 p-2">
+    <div className="bg-muted/50 p-3 rounded border border-border">
       <div className="flex items-center gap-1">
         {icon}
         <span className="text-[10px] font-mono uppercase tracking-wide text-muted-foreground">{label}</span>

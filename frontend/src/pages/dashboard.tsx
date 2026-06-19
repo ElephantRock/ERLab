@@ -455,13 +455,13 @@ export default function Dashboard() {
             <div className="grid gap-4 lg:grid-cols-2">
               <Card className="card-shadow">
                 <CardContent className="pt-6">
-                  <h3 className="text-sm font-medium mb-4">Score Distribution</h3>
+                  <h3 className="text-[10px] font-mono font-bold uppercase tracking-wider text-muted-foreground mb-4">Score Distribution</h3>
                   <ScoreDistributionChart ideas={chartIdeas?.ideas ?? []} />
                 </CardContent>
               </Card>
               <Card className="card-shadow">
                 <CardContent className="pt-6">
-                  <h3 className="text-sm font-medium mb-4">Run Status</h3>
+                  <h3 className="text-[10px] font-mono font-bold uppercase tracking-wider text-muted-foreground mb-4">Run Status</h3>
                   <RunStatusChart runs={chartRuns?.runs ?? []} />
                 </CardContent>
               </Card>
