@@ -722,3 +722,72 @@ async def get_section_revisions(idea_id: int, section_key: str):
             "synthetic_original": synthetic_original,
             "current_hash": current_hash,
         }
+
+
+@router.post(
+    "/{idea_id}/backfill-citations",
+    summary="Backfill cited paper links from proposal references",
+    description=(
+        "Resolves the proposal's reference list against the Paper table and "
+        "creates IdeaPaperLink rows with role='cited'. Idempotent via unique constraint."
+    ),
+)
+async def backfill_citations(idea_id: int):
+    """Backfill cited paper links for a single idea.
+
+    Parses the proposal's ``references_json``, resolves each reference against
+    the Paper table using DOI/arXiv/title matching, and persists matched papers
+    as ``IdeaPaperLink`` rows with ``role='cited'``.
+
+    Idempotent: existing links are skipped.
+    """
+    from backend.db.database import get_session
+    from backend.pipeline.provenance.backfill import backfill_cited_links_for_idea
+
+    with get_session() as session:
+        result = backfill_cited_links_for_idea(session, idea_id)
+        return {
+            "idea_id": result.idea_id,
+            "total_references": result.total_refs,
+            "resolved": result.resolved,
+            "new_links": result.new_links,
+            "skipped_existing": result.skipped_existing,
+            "unresolved": result.unresolved,
+        }
+
+
+@router.post(
+    "/backfill-citations/all",
+    summary="Backfill cited paper links for all ideas",
+    description=(
+        "Runs citation backfill for every idea that has a proposal. "
+        "Useful for one-time migration of existing data."
+    ),
+)
+async def backfill_all_citations():
+    """Backfill cited paper links for all ideas with proposals."""
+    from backend.db.database import get_session
+    from backend.pipeline.provenance.backfill import backfill_cited_links_for_all_ideas
+
+    with get_session() as session:
+        results = backfill_cited_links_for_all_ideas(session)
+        total_new = sum(r.new_links for r in results)
+        total_resolved = sum(r.resolved for r in results)
+        total_unresolved = sum(r.unresolved for r in results)
+        return {
+            "ideas_processed": len(results),
+            "total_new_links": total_new,
+            "total_resolved": total_resolved,
+            "total_unresolved": total_unresolved,
+            "results": [
+                {
+                    "idea_id": r.idea_id,
+                    "total_references": r.total_refs,
+                    "resolved": r.resolved,
+                    "new_links": r.new_links,
+                    "skipped_existing": r.skipped_existing,
+                    "unresolved": r.unresolved,
+                }
+                for r in results
+            ],
+        }
