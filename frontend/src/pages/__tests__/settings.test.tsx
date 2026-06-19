@@ -53,7 +53,7 @@ describe("Settings", () => {
     renderSettings();
 
     expect(screen.getByText("Settings")).toBeInTheDocument();
-    expect(screen.getByText("Configure your API connection and preferences.")).toBeInTheDocument();
+    expect(screen.getByText("Configure your workspace, models, and preferences.")).toBeInTheDocument();
     expect(screen.getByText("API Connection")).toBeInTheDocument();
     expect(screen.getByText("API Base URL")).toBeInTheDocument();
     expect(screen.getByText("API Key")).toBeInTheDocument();

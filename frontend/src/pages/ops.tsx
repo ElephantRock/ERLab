@@ -33,22 +33,26 @@ export default function OpsPage() {
   });
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5 animate-fade-in" data-testid="ops-page">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Operational Dashboard</h1>
-          <p className="text-muted-foreground mt-1">
-            Platform health, model usage, source coverage, and quality trends
+          <div className="flex items-center gap-2 mb-1">
+            <Activity className="h-5 w-5 text-accent" />
+            <h1 className="text-2xl font-display font-semibold tracking-tight">Operational Dashboard</h1>
+          </div>
+          <p className="text-sm text-muted-foreground">
+            Platform health, model usage, source coverage, and quality trends.
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1">
           {[7, 30, 90].map((d) => (
             <Button
               key={d}
               variant={days === d ? "default" : "outline"}
               size="sm"
               onClick={() => setDays(d)}
+              className="font-mono text-xs"
             >
               {d}d
             </Button>
@@ -119,7 +123,7 @@ function RunHealthCard({ data }: { data: OpsDashboard }) {
 
       {rh.slowest_stages.length > 0 && (
         <div className="mt-3 space-y-1" data-testid="slowest-stages">
-          <span className="text-xs text-muted-foreground uppercase tracking-wide">
+          <span className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">
             Slowest Stages
           </span>
           {rh.slowest_stages.map((s) => (
@@ -252,7 +256,7 @@ function QualityTrendsCard({ data }: { data: OpsDashboard }) {
 
       {qt.common_failures.length > 0 && (
         <div className="mt-3 space-y-1" data-testid="common-failures">
-          <span className="text-xs text-muted-foreground uppercase tracking-wide">
+          <span className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">
             Common Failures
           </span>
           {qt.common_failures.map((f) => (
@@ -281,12 +285,14 @@ function MetricCard({
   children: React.ReactNode;
 }) {
   return (
-    <Card data-testid={testId}>
-      <CardHeader>
-        <CardTitle className="text-sm font-medium flex items-center gap-2">
-          <Icon className="h-4 w-4" />
-          {title}
-        </CardTitle>
+    <Card data-testid={testId} className="card-shadow">
+      <CardHeader className="pb-3">
+        <div className="flex items-center gap-1.5 pb-1">
+          <Icon className="h-3.5 w-3.5 text-muted-foreground" />
+          <CardTitle className="text-[10px] font-mono font-bold uppercase tracking-wider text-muted-foreground">
+            {title}
+          </CardTitle>
+        </div>
       </CardHeader>
       <CardContent>{children}</CardContent>
     </Card>
@@ -303,10 +309,10 @@ function Stat({
   icon?: React.ReactNode;
 }) {
   return (
-    <div className="rounded-lg border p-2">
+    <div className="rounded-lg border border-border bg-muted/20 p-2">
       <div className="flex items-center gap-1">
         {icon}
-        <span className="text-xs text-muted-foreground">{label}</span>
+        <span className="text-[10px] font-mono uppercase tracking-wide text-muted-foreground">{label}</span>
       </div>
       <span className="text-lg font-bold font-mono">{value}</span>
     </div>

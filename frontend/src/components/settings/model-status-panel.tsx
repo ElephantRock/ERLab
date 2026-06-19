@@ -37,11 +37,11 @@ export function ModelStatusPanel() {
 
   if (error) {
     return (
-      <Card data-testid="model-status-panel">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Cpu className="h-4 w-4" />
-            Models
+      <Card data-testid="model-status-panel" className="card-shadow">
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center gap-1.5">
+            <Cpu className="h-3.5 w-3.5 text-muted-foreground" />
+            <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-muted-foreground">Models</span>
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -52,11 +52,11 @@ export function ModelStatusPanel() {
   }
 
   return (
-    <Card data-testid="model-status-panel">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Cpu className="h-4 w-4" />
-          Models
+    <Card data-testid="model-status-panel" className="card-shadow">
+      <CardHeader className="pb-3">
+        <CardTitle className="flex items-center gap-1.5">
+          <Cpu className="h-3.5 w-3.5 text-muted-foreground" />
+          <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-muted-foreground">Models</span>
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">

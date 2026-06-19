@@ -41,8 +41,8 @@ function SectionHeader({
 }) {
   return (
     <div className="flex items-center gap-2">
-      <Icon className="h-5 w-5 text-muted-foreground" />
-      <h2 className="text-lg font-semibold">{title}</h2>
+      <Icon className="h-4 w-4 text-muted-foreground" />
+      <h2 className="text-[10px] font-mono font-bold uppercase tracking-wider text-muted-foreground">{title}</h2>
       {action && <div className="ml-auto">{action}</div>}
     </div>
   );
@@ -170,14 +170,17 @@ export default function Settings() {
           : "bg-muted-foreground";
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5 animate-fade-in" data-testid="settings-page">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Settings</h1>
-        <p className="text-muted-foreground">Configure your API connection and preferences.</p>
+        <div className="flex items-center gap-2 mb-1">
+          <Settings2 className="h-5 w-5 text-accent" />
+          <h1 className="text-2xl font-display font-semibold tracking-tight">Settings</h1>
+        </div>
+        <p className="text-sm text-muted-foreground">Configure your workspace, models, and preferences.</p>
       </div>
 
       {/* ── Connection ───────────────────────────────────────────── */}
-      <Card>
+      <Card className="card-shadow">
         <CardHeader>
           <SectionHeader icon={Server} title="API Connection" />
         </CardHeader>
@@ -282,7 +285,7 @@ export default function Settings() {
       </div>
 
       {/* ── Defaults ─────────────────────────────────────────────── */}
-      <Card>
+      <Card className="card-shadow">
         <CardHeader>
           <SectionHeader icon={Settings2} title="Defaults" />
         </CardHeader>
@@ -322,7 +325,7 @@ export default function Settings() {
       </Card>
 
       {/* ── Appearance ───────────────────────────────────────────── */}
-      <Card>
+      <Card className="card-shadow">
         <CardHeader>
           <SectionHeader icon={Palette} title="Appearance" />
         </CardHeader>
@@ -345,7 +348,7 @@ export default function Settings() {
       </Card>
 
       {/* ── Advanced (collapsible) ──────────────────────────────── */}
-      <Card>
+      <Card className="card-shadow">
         <CardHeader>
           <button
             className="flex items-center gap-2 w-full text-left"
@@ -354,12 +357,12 @@ export default function Settings() {
             data-testid="advanced-toggle"
           >
             {advancedOpen ? (
-              <ChevronDown className="h-4 w-4" />
+              <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
             ) : (
-              <ChevronRight className="h-4 w-4" />
+              <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
             )}
-            <FlaskConical className="h-5 w-5 text-muted-foreground" />
-            <h2 className="text-lg font-semibold">Advanced</h2>
+            <FlaskConical className="h-4 w-4 text-muted-foreground" />
+            <h2 className="text-[10px] font-mono font-bold uppercase tracking-wider text-muted-foreground">Advanced</h2>
           </button>
         </CardHeader>
         {advancedOpen && (
@@ -453,7 +456,7 @@ export default function Settings() {
       </Card>
 
       {/* ── Help ─────────────────────────────────────────────────── */}
-      <Card>
+      <Card className="card-shadow">
         <CardHeader>
           <SectionHeader icon={HelpCircle} title="Help & Onboarding" />
         </CardHeader>
