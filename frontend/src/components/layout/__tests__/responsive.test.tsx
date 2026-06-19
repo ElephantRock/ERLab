@@ -36,7 +36,7 @@ describe("Sidebar responsive behavior", () => {
 
   it("sidebar shows nav labels when expanded", () => {
     renderWithRouter(<Sidebar collapsed={false} />);
-    const labels = screen.getAllByText(/Home|New Run|Results|Models/);
+    const labels = screen.getAllByText(/Home|New Run|Results|Settings/);
     expect(labels.length).toBeGreaterThan(0);
   });
 });
@@ -50,9 +50,9 @@ describe("MobileBottomNav", () => {
     expect(screen.getByText("Home")).toBeInTheDocument();
     expect(screen.getByText("New Run")).toBeInTheDocument();
     expect(screen.getByText("Results")).toBeInTheDocument();
-    expect(screen.getByText("Models")).toBeInTheDocument();
+    expect(screen.getByText("Settings")).toBeInTheDocument();
     // Bottom nav should NOT show items without mobile flag
-    expect(screen.queryByText("Settings")).not.toBeInTheDocument();
+    expect(screen.queryByText("Operations")).not.toBeInTheDocument();
     expect(screen.queryByText("Memory")).not.toBeInTheDocument();
   });
 

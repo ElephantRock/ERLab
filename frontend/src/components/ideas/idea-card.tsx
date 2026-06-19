@@ -58,10 +58,10 @@ export function IdeaCard({ idea, onClick }: IdeaCardProps) {
               }
             />
           )}
-          {idea.cited_count && idea.cited_count > 0 && (
+          {(idea.cited_count ?? 0) > 0 && (
             <StatusPill icon={BookOpen} label={`${idea.cited_count} cited`} tone="info" />
           )}
-          {idea.supporting_count && idea.supporting_count > 0 && (
+          {(idea.supporting_count ?? 0) > 0 && (
             <StatusPill icon={BookOpen} label={`${idea.supporting_count} supp.`} tone="neutral" />
           )}
         </div>

@@ -35,12 +35,11 @@ describe("Sidebar — Research Studio Layout", () => {
     expect(section).toContain("label: \"Knowledge Graph\"");
   });
 
-  it("System group has Models, Operations, Settings", () => {
+  it("System group has Operations and Settings", () => {
     const section = content.substring(
       content.indexOf("label: \"System\""),
       content.indexOf("label: \"Advanced\"")
     );
-    expect(section).toContain("label: \"Models\"");
     expect(section).toContain("label: \"Operations\"");
     expect(section).toContain("label: \"Settings\"");
   });

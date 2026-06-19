@@ -242,13 +242,14 @@ async def get_idea(idea_id: int):
         if isinstance(novelty_report_raw, dict):
             mechanical_metrics = novelty_report_raw.pop("mechanical_metrics", None)
 
-        # Resolve source_gap_ids (titles or idempotency keys) to real gap records
+        # Resolve source_gap_ids (titles, gap IDs, or idempotency keys) to real gap records
         try:
             raw_gap_ids = json.loads(idea.source_gap_ids) if idea.source_gap_ids else []
         except (json.JSONDecodeError, TypeError):
-            raw_gap_ids = []
+            # source_gap_ids is a raw idempotency hash, not JSON
+            raw_gap_ids = [idea.source_gap_ids] if idea.source_gap_ids else []
         if not isinstance(raw_gap_ids, list):
-            raw_gap_ids = []
+            raw_gap_ids = [str(raw_gap_ids)]
         source_gaps = resolve_source_gaps(session, raw_gap_ids, idea.pipeline_run_id)
 
         # Extract structured proposal references — try new resolver first

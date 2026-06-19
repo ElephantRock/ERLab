@@ -60,6 +60,12 @@ def resolve_source_gaps(
     by_normalized: dict[str, ResearchGapDB] = {
         _normalize_title(g.title): g for g in gaps
     }
+    by_content_hash: dict[str, ResearchGapDB] = {
+        g.content_hash: g for g in gaps if g.content_hash
+    }
+    by_canonical_id: dict[str, ResearchGapDB] = {
+        g.canonical_id: g for g in gaps if g.canonical_id
+    }
 
     results: list[dict[str, Any]] = []
     for raw_id in raw_gap_ids:
@@ -70,6 +76,14 @@ def resolve_source_gaps(
         if gap is None:
             normalized = _normalize_title(raw_id)
             gap = by_normalized.get(normalized)
+
+        # Try content_hash match (for idempotency keys)
+        if gap is None:
+            gap = by_content_hash.get(raw_id)
+
+        # Try canonical_id match
+        if gap is None:
+            gap = by_canonical_id.get(raw_id)
 
         if gap is not None:
             results.append({
@@ -84,6 +98,23 @@ def resolve_source_gaps(
                 "raw": raw_id,
                 "resolved": False,
             })
+
+    # Fallback: if nothing resolved but the run has gaps, link to all run gaps
+    # as inferred provenance. This handles ideas where source_gap_ids was
+    # stored as an idempotency hash instead of gap titles.
+    has_resolved = any(r.get("resolved") for r in results)
+    if not has_resolved and gaps:
+        results = [  # Replace unresolved entries with inferred gaps
+            {
+                "id": gap.id,
+                "title": gap.title,
+                "gap_type": gap.gap_type,
+                "confidence": gap.confidence,
+                "resolved": True,
+                "inferred": True,
+            }
+            for gap in gaps
+        ]
 
     return results
 

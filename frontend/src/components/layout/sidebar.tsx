@@ -7,7 +7,6 @@ import {
   Layers,
   BookOpen,
   GitFork,
-  Cpu,
   Gauge,
   Settings,
   CreditCard,
@@ -55,9 +54,8 @@ const NAV_GROUPS: NavGroup[] = [
   {
     label: "System",
     items: [
-      { to: "/settings", icon: Cpu, label: "Models", mobile: true },
       { to: "/ops", icon: Gauge, label: "Operations" },
-      { to: "/settings", icon: Settings, label: "Settings" },
+      { to: "/settings", icon: Settings, label: "Settings", mobile: true },
     ],
   },
   {
