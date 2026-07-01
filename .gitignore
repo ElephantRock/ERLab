@@ -1,3 +1,10 @@
+# Environment files — NEVER commit real secrets.
+# Only templates (.env.example, .env.docker, .env.test.example) are tracked.
+.env
+.env.local
+.env.production
+.env.*.local
+
 # Python
 __pycache__/
 *.py[cod]
