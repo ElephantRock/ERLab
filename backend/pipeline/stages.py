@@ -1903,6 +1903,31 @@ class CitationAuditStage(PipelineStage):
         )
         metadata["citation_audit"] = report.to_dict()
 
+        # --- STOPGAP: quarantine fabricated citations (Resolution 2) ---
+        # Fabricated = ref_exists is False (index out of range, citing a paper
+        # that does not exist in the corpus). These are recorded as structured
+        # rows in the QuarantinedCitation table; render_quarantined_view
+        # substitutes them with a display marker at read time. We do NOT mutate
+        # proposal.sections — see backend/pipeline/quarantine.py for why.
+        fabricated_records = self._derive_quarantine_records(proposal, report)
+        if fabricated_records:
+            run_id = getattr(ctx, "run_id", None) or ""
+            try:
+                self._persist_quarantine_rows(
+                    proposal_id=idx,
+                    records=fabricated_records,
+                    audit_run_id=run_id or None,
+                )
+            except Exception as e:
+                logger.warning(
+                    "Quarantine persistence failed for proposal %d (non-fatal): %s",
+                    idx, e,
+                )
+            metadata.setdefault("citation_audit", {})["quarantined"] = [
+                {"section_key": r["section_key"], "ref_index": r["ref_index"]}
+                for r in fabricated_records
+            ]
+
         # --- Collect structured claims from section drafts (if available) ---
         structured_claims_by_section = self._collect_structured_claims(metadata)
         prose_fallback_count = self._count_prose_fallbacks(metadata)
@@ -2296,6 +2321,105 @@ class CitationAuditStage(PipelineStage):
             proposal.metadata = json.dumps(metadata)
         else:
             proposal.metadata = metadata
+
+    # ── STOPGAP quarantine helpers (Resolution 2) ───────────────
+    # See backend/pipeline/quarantine.py for why sections is never mutated.
+
+    @staticmethod
+    def _derive_quarantine_records(proposal, report) -> list[dict]:
+        """Derive quarantine records from fabricated audit items.
+
+        A fabricated item has ``ref_exists == False`` (index out of range,
+        citing a paper that does not exist in the corpus). For each, locate
+        which section contains the ``[SOURCE-N]`` marker and emit a record.
+        Items where ``ref_exists == True`` (real citation, possibly misused)
+        are NOT quarantined — those are a repair concern, not a removal concern.
+        """
+        records: list[dict] = []
+        sections = getattr(proposal, "sections", None) or {}
+        for item in report.items:
+            if getattr(item, "ref_exists", True):
+                continue
+            ref_index = getattr(item, "ref_index", None)
+            if ref_index is None:
+                continue
+            marker = f"[SOURCE-{ref_index}]"
+            for section_key, section_text in sections.items():
+                if isinstance(section_text, str) and marker in section_text:
+                    records.append({
+                        "section_key": str(section_key),
+                        "ref_index": int(ref_index),
+                    })
+                    break
+        return records
+
+    def _persist_quarantine_rows(
+        self,
+        proposal_id: int,
+        records: list[dict],
+        audit_run_id: str | None = None,
+    ) -> None:
+        """Persist quarantine records to the QuarantinedCitation table.
+
+        Default implementation writes to the DB. Tests subclass and override
+        this to capture records in-memory. The ``proposal_id`` here is the
+        in-memory idea index; the real DB Proposal row is resolved via the
+        idea->proposal lookup established by persist_proposals.
+
+        Fails soft: callers wrap in try/except so a persistence error never
+        breaks the run (mirrors HB-02 on the audit itself).
+        """
+        if not records:
+            return
+        try:
+            from backend.db.database import get_session
+            from backend.db.models import Idea, Proposal, QuarantinedCitation
+            from sqlalchemy import select
+
+            with get_session() as session:
+                # Resolve the DB Proposal row from the in-memory idea index.
+                # The proposal row exists by now (persist_proposals ran after
+                # proposal_synthesis, which precedes citation_audit).
+                idea = None
+                ideas = getattr(self, "_ctx_ideas", None) or []
+                if proposal_id < len(ideas):
+                    idea = ideas[proposal_id]
+                db_idea_row = None
+                db_run_id = getattr(self, "_ctx_db_run_id", None)
+                if idea is not None and db_run_id is not None:
+                    db_idea_row = session.execute(
+                        select(Idea).where(
+                            Idea.title == getattr(idea, "title", ""),
+                            Idea.pipeline_run_id == db_run_id,
+                        ).limit(1)
+                    ).scalar_one_or_none()
+                if db_idea_row is None:
+                    logger.debug(
+                        "Quarantine: could not resolve idea for index %d - skipping",
+                        proposal_id,
+                    )
+                    return
+                db_proposal = session.execute(
+                    select(Proposal).where(
+                        Proposal.idea_id == db_idea_row.id
+                    ).limit(1)
+                ).scalar_one_or_none()
+                if db_proposal is None:
+                    logger.debug(
+                        "Quarantine: no proposal row for idea %d - skipping",
+                        db_idea_row.id,
+                    )
+                    return
+                for rec in records:
+                    session.add(QuarantinedCitation(
+                        proposal_id=db_proposal.id,
+                        section_key=rec["section_key"],
+                        ref_index=rec["ref_index"],
+                        audit_run_id=audit_run_id,
+                    ))
+                session.commit()
+        except Exception as e:
+            logger.warning("Quarantine persistence error: %s", e)
 
 
 class EvaluationStage(PipelineStage):

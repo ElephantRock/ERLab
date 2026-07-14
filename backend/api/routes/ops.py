@@ -305,6 +305,21 @@ def _quality_trends(since: datetime, limit: int) -> dict:
         with get_session() as session:
             proposals = session.execute(select(Proposal)).scalars().all()
 
+            # STOPGAP: batch-load quarantine rows so dashboard metrics reflect
+            # what readers see (redacted), not what the synthesizer emitted.
+            quarantine_by_proposal: dict[int, list] = {}
+            try:
+                from backend.db.models import QuarantinedCitation
+                qrows = session.execute(
+                    select(QuarantinedCitation).where(
+                        QuarantinedCitation.proposal_id.in_([p.id for p in proposals])
+                    )
+                ).scalars().all()
+                for q in qrows:
+                    quarantine_by_proposal.setdefault(q.proposal_id, []).append(q)
+            except Exception:
+                pass  # fail-soft: render raw (pre-quarantine behavior)
+
             total_sections = 0
             passed_sections = 0
             failure_counter: dict[str, int] = {}
@@ -319,6 +334,10 @@ def _quality_trends(since: datetime, limit: int) -> dict:
                 if not sections:
                     continue
                 proposal_count += 1
+
+                if p.id in quarantine_by_proposal:
+                    from backend.pipeline.quarantine import render_quarantined_view
+                    sections = render_quarantined_view(sections, quarantine_by_proposal[p.id])
 
                 qc = compute_quality_checks(sections) or []
                 for check in qc:
@@ -367,6 +386,12 @@ def _quality_trends(since: datetime, limit: int) -> dict:
                 reverse=True,
             )[:5]
 
+            # Fabrication metrics — two fields, unambiguously labeled.
+            from backend.db import crud as _crud
+            fabrications_currently_present, fabrications_found_total = (
+                _crud.aggregate_quarantine_counts(session, [p.id for p in proposals])
+            )
+
             return {
                 "proposal_count": proposal_count,
                 "quality_pass_rate": round(pass_rate, 1),
@@ -376,6 +401,8 @@ def _quality_trends(since: datetime, limit: int) -> dict:
                 "total_valid_citations": total_valid_citations,
                 "remediation_count": remediation_count,
                 "restore_count": restore_count,
+                "fabrications_currently_present": fabrications_currently_present,
+                "fabrications_found_total": fabrications_found_total,
             }
     except Exception as e:
         logger.warning("quality_trends metric failed: %s", e)

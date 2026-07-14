@@ -432,3 +432,39 @@ class GovernanceDecision(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime, default=lambda: datetime.now(timezone.utc),
     )
+
+
+# STOPGAP: this quarantine routes around the absence of an ownership contract
+# on proposal.sections (multiple writers across synthesis/adversarial/deepening,
+# multiple readers across API/export/QC/refine). It does not establish that
+# contract. When the contract lands, this side-channel should be revisited —
+# the right fix is preventing fabrication at synthesis, not redacting it at read.
+class QuarantinedCitation(Base):
+    """Append-only record of a fabricated citation found by citation_audit.
+
+    One row per (proposal, section, ref_index) per audit run. Rows are never
+    updated or deleted — they form the historical audit trail. A citation
+    quarantined in run N and re-audited in run N+1 produces a new row, not an
+    update. Render-time substitution (render_quarantined_view) applies rows
+    only where the [SOURCE-N] marker still exists in the current section text
+    — so a human refine that removes the citation makes the row inert without
+    invalidating the audit record.
+    """
+
+    __tablename__ = "quarantined_citations"
+    __table_args__ = (
+        Index("ix_qc_proposal_section", "proposal_id", "section_key"),
+        Index("ix_qc_audit_run", "audit_run_id"),
+        Index("ix_qc_created_at", "created_at"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    proposal_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("proposals.id"), nullable=False,
+    )
+    section_key: Mapped[str] = mapped_column(String(50), nullable=False)
+    ref_index: Mapped[int] = mapped_column(Integer, nullable=False)
+    audit_run_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=lambda: datetime.now(timezone.utc),
+    )

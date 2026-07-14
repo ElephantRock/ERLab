@@ -50,7 +50,10 @@ class MarkdownExporter:
         """Export proposal to Markdown. Returns the markdown string."""
         template = Template(TEMPLATE)
 
-        sections = proposal.sections.copy()
+        # STOPGAP: render quarantined view so exported files reflect the
+        # redaction readers see. proposal.sections is NOT mutated — the render
+        # returns a fresh dict. See backend/pipeline/quarantine.py.
+        sections = self._render_quarantined(proposal)
         if "references" not in sections:
             sections["references"] = []
 
@@ -67,6 +70,37 @@ class MarkdownExporter:
             Path(output_path).write_text(md, encoding="utf-8")
 
         return md
+
+    @staticmethod
+    def _render_quarantined(proposal) -> dict:
+        """Return proposal.sections, with quarantined citations redacted.
+
+        During a pipeline run, quarantine rows may already be persisted (the
+        audit precedes export in stage order). Load them and render. On any
+        error or if no proposal_id is resolvable, return sections unchanged
+        (fail-soft — export still works, just without redaction).
+        """
+        sections = proposal.sections.copy()
+        try:
+            from backend.pipeline.quarantine import render_quarantined_view
+            # Quarantine rows are keyed by DB proposal_id; during export the
+            # in-memory proposal may not carry one. The metadata written by
+            # CitationAuditStage includes the quarantined list, which is enough.
+            metadata = getattr(proposal, "metadata", None)
+            if isinstance(metadata, str):
+                import json as _json
+                try:
+                    metadata = _json.loads(metadata)
+                except (ValueError, TypeError):
+                    metadata = None
+            if isinstance(metadata, dict):
+                audit = metadata.get("citation_audit") or {}
+                quarantined = audit.get("quarantined") or []
+                if quarantined:
+                    return render_quarantined_view(sections, quarantined)
+        except Exception:
+            pass
+        return sections
 
     @staticmethod
     def _format_ref(ref) -> str:

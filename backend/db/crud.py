@@ -496,3 +496,84 @@ def list_canonical_gaps(session: Session, limit: int = 100) -> list[ResearchGapD
         .order_by(ResearchGapDB.confidence.desc())
         .limit(limit)
     ).scalars().all()
+
+
+# --- Quarantined citations (STOPGAP) ---
+#
+# These helpers make the "don't naively COUNT(*) quarantine rows" warning
+# structurally enforceable. Use THESE instead of raw row counts.
+
+def count_active_quarantined_citations(session: Session, proposal_id: int) -> int:
+    """Count quarantine rows whose citation still exists in current sections text."""
+    from backend.db.models import Proposal, QuarantinedCitation
+
+    rows = session.execute(
+        select(QuarantinedCitation).where(
+            QuarantinedCitation.proposal_id == proposal_id
+        )
+    ).scalars().all()
+    if not rows:
+        return 0
+    proposal = session.execute(
+        select(Proposal).where(Proposal.id == proposal_id).limit(1)
+    ).scalar_one_or_none()
+    if not proposal or not proposal.sections_json:
+        return 0
+    try:
+        sections = json.loads(proposal.sections_json)
+    except (json.JSONDecodeError, TypeError):
+        return 0
+    active = 0
+    for row in rows:
+        text = sections.get(row.section_key)
+        if isinstance(text, str) and f"[SOURCE-{row.ref_index}]" in text:
+            active += 1
+    return active
+
+
+def count_all_quarantined_citations(session: Session, proposal_id: int) -> int:
+    """Count ALL quarantine rows for a proposal, including render-inert ones."""
+    from backend.db.models import QuarantinedCitation
+
+    return session.execute(
+        select(func.count()).select_from(QuarantinedCitation).where(
+            QuarantinedCitation.proposal_id == proposal_id
+        )
+    ).scalar_one()
+
+
+def aggregate_quarantine_counts(
+    session: Session, proposal_ids: list[int]
+) -> tuple[int, int]:
+    """Batch-aggregate active and total quarantine counts across proposals."""
+    if not proposal_ids:
+        return 0, 0
+    from backend.db.models import Proposal, QuarantinedCitation
+
+    rows = session.execute(
+        select(QuarantinedCitation).where(
+            QuarantinedCitation.proposal_id.in_(proposal_ids)
+        )
+    ).scalars().all()
+    if not rows:
+        return 0, 0
+    affected_ids = {r.proposal_id for r in rows}
+    proposals = session.execute(
+        select(Proposal.id, Proposal.sections_json).where(
+            Proposal.id.in_(affected_ids)
+        )
+    ).all()
+    sections_by_proposal: dict[int, dict] = {}
+    for pid, sj in proposals:
+        if sj:
+            try:
+                sections_by_proposal[pid] = json.loads(sj)
+            except (json.JSONDecodeError, TypeError):
+                pass
+    active_total = 0
+    for row in rows:
+        sections = sections_by_proposal.get(row.proposal_id, {})
+        text = sections.get(row.section_key)
+        if isinstance(text, str) and f"[SOURCE-{row.ref_index}]" in text:
+            active_total += 1
+    return active_total, len(rows)

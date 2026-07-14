@@ -15,6 +15,34 @@ from starlette.responses import PlainTextResponse
 router = APIRouter()
 
 
+def _render_quarantined_sections(sections: dict | None, proposal_id: int | None) -> dict | None:
+    """STOPGAP: apply quarantine redaction to parsed sections for export.
+
+    Returns the input unchanged on any error or when no quarantine rows exist
+    (fail-soft). Mirrors ideas._load_quarantine_rows + render_quarantined_view.
+    """
+    if not sections or proposal_id is None:
+        return sections
+    try:
+        from sqlalchemy import select
+
+        from backend.db.database import get_session
+        from backend.db.models import QuarantinedCitation
+        from backend.pipeline.quarantine import render_quarantined_view
+
+        with get_session() as session:
+            qrows = list(session.execute(
+                select(QuarantinedCitation).where(
+                    QuarantinedCitation.proposal_id == proposal_id
+                )
+            ).scalars().all())
+            if qrows:
+                return render_quarantined_view(sections, qrows)
+    except Exception:
+        pass
+    return sections
+
+
 def _idea_to_html(idea: dict, proposal_md: str | None) -> str:
     """Render an idea as a simple HTML document for PDF conversion."""
     title = idea.get("title", "Untitled Idea")
@@ -213,6 +241,9 @@ async def bulk_export(request: BulkExportRequest):
                         if proposal and proposal.sections_json
                         else None
                     )
+                    _sections_json = _render_quarantined_sections(
+                        _sections_json, getattr(proposal, "id", None)
+                    )
                     if _sections_json and isinstance(_sections_json.get("ensemble_review"), dict):
                         rv = _sections_json["ensemble_review"]
                         md_content += "\n## Proposal Review\n\n"
@@ -368,6 +399,9 @@ async def export_run_markdown(run_id: int):
                     json.loads(proposal.sections_json)
                     if proposal and proposal.sections_json
                     else None
+                )
+                sections_json = _render_quarantined_sections(
+                    sections_json, getattr(proposal, "id", None)
                 )
                 if sections_json and isinstance(sections_json.get("ensemble_review"), dict):
                     rv = sections_json["ensemble_review"]

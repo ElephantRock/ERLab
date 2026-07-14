@@ -16,7 +16,7 @@ router = APIRouter()
 
 def _parse_source_gap_ids(raw: str | None) -> list[str] | None:
     """Safely parse source_gap_ids from DB.
-    
+
     Handles three storage formats:
     - None/empty → None
     - JSON array string → parsed list
@@ -31,6 +31,30 @@ def _parse_source_gap_ids(raw: str | None) -> list[str] | None:
         return [str(parsed)]
     except (json.JSONDecodeError, TypeError):
         return [raw]
+
+
+def _load_quarantine_rows(proposal_id: int) -> list:
+    """Load QuarantinedCitation rows for a proposal.
+
+    Returns [] on any error (fail-soft: a missing table or DB error means the
+    proposal renders raw, which is the pre-quarantine behavior — no regression).
+    Each row carries section_key and ref_index, which is all
+    render_quarantined_view needs.
+    """
+    try:
+        from sqlalchemy import select
+
+        from backend.db.database import get_session
+        from backend.db.models import QuarantinedCitation
+
+        with get_session() as session:
+            return list(session.execute(
+                select(QuarantinedCitation).where(
+                    QuarantinedCitation.proposal_id == proposal_id
+                )
+            ).scalars().all())
+    except Exception:
+        return []
 
 
 @router.get(
@@ -133,16 +157,37 @@ async def list_ideas(
         quality_summary: dict[int, dict] = {iid: {} for iid in idea_ids}
         if idea_ids:
             prop_rows = session.execute(
-                select(Proposal.idea_id, Proposal.sections_json)
+                select(Proposal.idea_id, Proposal.sections_json, Proposal.id)
                 .where(Proposal.idea_id.in_(idea_ids))
             ).all()
-            for pid, psections_json in prop_rows:
+
+            # STOPGAP: batch-load quarantine rows so list-view quality summaries
+            # match detail-view (readers see redactions consistently).
+            quarantine_by_proposal: dict[int, list] = {}
+            try:
+                from backend.db.models import QuarantinedCitation
+                prop_ids = [row[2] for row in prop_rows if row[2] is not None]
+                if prop_ids:
+                    qrows = session.execute(
+                        select(QuarantinedCitation).where(
+                            QuarantinedCitation.proposal_id.in_(prop_ids)
+                        )
+                    ).scalars().all()
+                    for q in qrows:
+                        quarantine_by_proposal.setdefault(q.proposal_id, []).append(q)
+            except Exception:
+                pass  # fail-soft: render raw (pre-quarantine behavior)
+
+            from backend.pipeline.quarantine import render_quarantined_view
+            for pid, psections_json, prop_id in prop_rows:
                 sections = None
                 if psections_json:
                     try:
                         sections = json.loads(psections_json)
                     except (json.JSONDecodeError, TypeError):
                         pass
+                if sections and prop_id in quarantine_by_proposal:
+                    sections = render_quarantined_view(sections, quarantine_by_proposal[prop_id])
                 checks = compute_quality_checks(sections)
                 if checks:
                     passed = sum(1 for c in checks if c.get("passed"))
@@ -306,9 +351,24 @@ async def get_idea(idea_id: int):
             if proposal and proposal.sections_json
             else None
         )
-        quality_checks = compute_quality_checks(sections_dict)
 
-        # Pre-compute per-section content hashes for optimistic concurrency
+        # STOPGAP: render the quarantined view for reader-facing consumers.
+        # section_hashes and the refine path use RAW sections_dict (so quarantine
+        # never causes spurious 409s); quality_checks / remediation / citation_audit
+        # / proposal_sections use the RENDERED view (readers see the redaction).
+        # See backend/pipeline/quarantine.py for why sections is never mutated.
+        rendered_sections = sections_dict
+        if proposal and sections_dict:
+            from backend.pipeline.quarantine import render_quarantined_view
+            quarantined = _load_quarantine_rows(proposal.id)
+            if quarantined:
+                rendered_sections = render_quarantined_view(sections_dict, quarantined)
+
+        quality_checks = compute_quality_checks(rendered_sections)
+
+        # Pre-compute per-section content hashes for optimistic concurrency.
+        # Uses RAW sections_dict — refine operates on the synthesizer's literal
+        # output, so a quarantine must not change the hash a reviewer holds.
         section_hashes = None
         if sections_dict:
             import hashlib as _hashlib
@@ -338,13 +398,13 @@ async def get_idea(idea_id: int):
                 "mechanical_metrics": mechanical_metrics,
                 "proposal_md": proposal.content_md if proposal else None,
                 "proposal_latex": proposal.content_latex if proposal else None,
-                "proposal_sections": sections_dict,
+                "proposal_sections": rendered_sections,
                 "proposal_references": proposal_references,
                 "supporting_papers": supporting_papers,
                 "quality_checks": quality_checks,
                 "section_hashes": section_hashes,
-                "remediation_hints": compute_remediation_hints(sections_dict, quality_checks),
-                "citation_audit": audit_citations(sections_dict, proposal_references),
+                "remediation_hints": compute_remediation_hints(rendered_sections, quality_checks),
+                "citation_audit": audit_citations(rendered_sections, proposal_references),
                 "experiment_results": experiment_results if experiment_results else None,
                 "created_at": str(idea.created_at),
             },

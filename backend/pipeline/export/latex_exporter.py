@@ -96,7 +96,8 @@ class LatexExporter:
         """Render using the default generic TEMPLATE."""
         template = Template(TEMPLATE)
 
-        sections = proposal.sections.copy()
+        # STOPGAP: render quarantined view so exported files reflect redaction.
+        sections = self._render_quarantined(proposal)
         if "references" not in sections:
             sections["references"] = []
 
@@ -153,6 +154,32 @@ class LatexExporter:
             f"\\noindent\\textit{{\\small AI_HONESTY_BADGE}}\n"
             f"\\end{{document}}\n"
         )
+
+    @staticmethod
+    def _render_quarantined(proposal) -> dict:
+        """Return proposal.sections with quarantined citations redacted.
+
+        Mirrors MarkdownExporter._render_quarantined. Fail-soft: returns the
+        raw sections copy on any error or when no quarantine metadata exists.
+        """
+        sections = proposal.sections.copy()
+        try:
+            from backend.pipeline.quarantine import render_quarantined_view
+            metadata = getattr(proposal, "metadata", None)
+            if isinstance(metadata, str):
+                import json as _json
+                try:
+                    metadata = _json.loads(metadata)
+                except (ValueError, TypeError):
+                    metadata = None
+            if isinstance(metadata, dict):
+                audit = metadata.get("citation_audit") or {}
+                quarantined = audit.get("quarantined") or []
+                if quarantined:
+                    return render_quarantined_view(sections, quarantined)
+        except Exception:
+            pass
+        return sections
 
     @staticmethod
     def _format_ref(ref) -> str:
