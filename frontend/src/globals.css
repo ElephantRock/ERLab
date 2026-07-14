@@ -129,6 +129,55 @@ select option {
   font-family: var(--font-mono);
 }
 
+/* ── Type Scale (INTERFACE_CONTRACT §3 — reading is the center) ──────
+   Two named scales derived from PRODUCT.md §1. The reading scale calibrates
+   for sustained reading of 2,000+ words; the UI scale calibrates against it.
+   The floor is ui-micro (11px); nothing in the product is smaller. The lint
+   rule erock/no-sub-micro-type enforces this. */
+
+/* READING SCALE — prose surfaces (proposal body, gap description, paper text).
+   Non-negotiable on reading surfaces; this is where PRODUCT.md §1 lives. */
+.text-prose-body {
+  font-size: 1.0625rem;   /* 17px */
+  line-height: 1.7;
+}
+.text-prose-lede {
+  font-size: 1.1875rem;   /* 19px */
+  line-height: 1.6;
+}
+.text-prose-caption {
+  font-size: 0.8125rem;   /* 13px */
+  line-height: 1.5;
+}
+.text-prose-quote {
+  font-size: 0.9375rem;   /* 15px — blockquotes, cited text */
+  line-height: 1.6;
+  font-style: italic;
+}
+
+/* UI SCALE — chrome, controls, metadata. Calibrates against the reading
+   scale. ui-micro is the floor; no text-[8px]/[9px]/[10px] below it. */
+.text-ui-display {
+  font-size: 1.75rem;     /* 28px — page titles, hero headings */
+  line-height: 1.2;
+}
+.text-ui-heading {
+  font-size: 1.125rem;    /* 18px — card & section headings */
+  line-height: 1.4;
+}
+.text-ui-label {
+  font-size: 0.875rem;    /* 14px — buttons, nav, primary controls */
+  line-height: 1.4;
+}
+.text-ui-meta {
+  font-size: 0.8125rem;   /* 13px — metadata, timestamps, secondary info */
+  line-height: 1.4;
+}
+.text-ui-micro {
+  font-size: 0.6875rem;   /* 11px — THE FLOOR. badges, tags, dense tables */
+  line-height: 1.3;
+}
+
 /* ── Page Animations ───────────────────────────────────────────────── */
 .animate-fade-in {
   animation: fadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;

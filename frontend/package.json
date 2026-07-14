@@ -9,7 +9,9 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "lint:budget": "node scripts/check-lint-budget.cjs",
+    "lint:fix": "eslint . --fix"
   },
   "dependencies": {
     "@radix-ui/react-dialog": "^1.1.4",

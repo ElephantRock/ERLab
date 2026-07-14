@@ -1,5 +1,21 @@
+/**
+ * AppShell — the application frame.
+ *
+ * INTERFACE_CONTRACT.md §7 (cites PRODUCT.md §6 "Honesty in State"):
+ * The decorative SYS_OK footer and its pulsing green dot have been removed.
+ * Status indicators reflect real, queryable state, or they do not exist.
+ *
+ * The active-run pill stays — it's sourced from a real useQuery on listRuns,
+ * filtered for status === "running". It's truthful by construction.
+ *
+ * The header keeps its functional elements: ⌘K search, active-run pill,
+ * theme toggle, notification bell. The sidebar uses the loop-based IA
+ * (see sidebar.tsx).
+ */
+
 import { useState, useEffect, type ReactNode } from "react";
-import { Sidebar, MobileBottomNav } from "./sidebar";
+import { Sidebar } from "./sidebar";
+import { MobileNav } from "./mobile-nav";
 import { cn } from "@/lib/utils";
 import { PanelLeftClose, PanelLeft, Search, Sun, Moon } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -14,7 +30,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const [searchOpen, setSearchOpen] = useState(false);
   const { theme, setTheme } = useSettings();
 
-  // Check for active running run to show in header
+  // Active run indicator — sourced from a real query (truthful by construction).
   const { data: runsData } = useQuery({
     queryKey: ["runs", { limit: 1 }],
     queryFn: () => listRuns({ limit: 1 }),
@@ -62,12 +78,12 @@ export function AppShell({ children }: { children: ReactNode }) {
         >
           {!collapsed ? (
             <div className="flex items-center gap-2">
-              <span className="text-base font-display font-semibold" style={{ color: "hsl(0 0% 100%)" }}>
+              <span className="text-base font-display font-semibold" style={{ color: "hsl(var(--sidebar-active-fg))" }}>
                 Elephant Rock
               </span>
             </div>
           ) : (
-            <span className="font-display font-bold text-sm mx-auto" style={{ color: "hsl(0 0% 80%)" }}>
+            <span className="font-display font-bold text-sm mx-auto" style={{ color: "hsl(var(--sidebar-fg))" }}>
               ER
             </span>
           )}
@@ -76,7 +92,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               variant="ghost"
               size="icon"
               className="h-7 w-7 hover:bg-white/5"
-              style={{ color: "hsl(0 0% 50%)" }}
+              style={{ color: "hsl(var(--sidebar-fg))" }}
               onClick={() => setCollapsed(!collapsed)}
               aria-label="Collapse sidebar"
             >
@@ -88,7 +104,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               variant="ghost"
               size="icon"
               className="h-7 w-7 hover:bg-white/5 absolute"
-              style={{ color: "hsl(0 0% 50%)", left: "0.5rem" }}
+              style={{ color: "hsl(var(--sidebar-fg))", left: "0.5rem" }}
               onClick={() => setCollapsed(!collapsed)}
               aria-label="Expand sidebar"
             >
@@ -97,26 +113,12 @@ export function AppShell({ children }: { children: ReactNode }) {
           )}
         </div>
 
-        {/* Sidebar navigation */}
+        {/* Sidebar navigation — loop-based IA */}
         <Sidebar collapsed={collapsed} />
 
-        {/* Sidebar footer — system status */}
-        {!collapsed && (
-          <div
-            className="px-3 py-2.5 mt-auto"
-            style={{ borderTop: "1px solid hsl(var(--sidebar-border))" }}
-          >
-            <div className="flex items-center gap-2">
-              <span
-                className="h-2 w-2 rounded-full bg-green-500 animate-pulse"
-                style={{ boxShadow: "0 0 6px rgba(16,185,129,0.4)" }}
-              />
-              <span className="text-[10px] font-mono" style={{ color: "hsl(0 0% 45%)" }}>
-                SYS_OK
-              </span>
-            </div>
-          </div>
-        )}
+        {/* FOOTER: SYS_OK removed per INTERFACE_CONTRACT §7.
+            No decorative status. If system health matters, it's a real
+            /status query rendered in Operations — not a pulsing green dot. */}
       </aside>
 
       {/* Main content area */}
@@ -131,21 +133,21 @@ export function AppShell({ children }: { children: ReactNode }) {
             onClick={() => setSearchOpen(true)}
           >
             <Search className="h-3.5 w-3.5" />
-            <span className="text-xs">Search...</span>
-            <kbd className="pointer-events-none ml-auto inline-flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground">
+            <span className="text-ui-meta">Search...</span>
+            <kbd className="pointer-events-none ml-auto inline-flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-ui-micro font-medium text-muted-foreground">
               ⌘K
             </kbd>
           </Button>
 
           <div className="ml-auto flex items-center gap-3">
-            {/* Active run indicator */}
+            {/* Active run indicator — sourced from real query (truthful) */}
             {activeRun && (
               <div className="flex items-center gap-2 px-2.5 py-1 rounded border border-accent/20 bg-accent/5">
                 <span className="relative flex h-1.5 w-1.5">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-accent opacity-75" />
                   <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-accent" />
                 </span>
-                <span className="text-[10px] font-mono font-medium text-accent">
+                <span className="text-ui-micro font-mono font-medium text-accent">
                   Running
                 </span>
               </div>
@@ -173,8 +175,8 @@ export function AppShell({ children }: { children: ReactNode }) {
         </div>
       </main>
 
-      {/* Mobile bottom nav */}
-      <MobileBottomNav />
+      {/* Mobile navigation — Sheet exposing the full IA */}
+      <MobileNav />
       <GlobalSearchDialog open={searchOpen} onOpenChange={setSearchOpen} />
     </div>
   );
