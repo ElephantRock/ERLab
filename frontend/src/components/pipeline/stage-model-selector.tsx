@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useResource } from "@/lib/useResource";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 interface ModelOption {
@@ -32,28 +33,39 @@ interface StageModelSelectorProps {
 const API_BASE = import.meta.env.VITE_API_URL || "";
 
 export function StageModelSelector({ value, onChange }: StageModelSelectorProps) {
-  const [config, setConfig] = useState<ModelConfigResponse | null>(null);
-  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Fetch model config through useResource (the only sanctioned fetch path;
+  // INTERFACE_CONTRACT §1). The previous hand-rolled useEffect+fetch had no
+  // caching/retry and silently swallowed errors.
+  const resource = useResource<ModelConfigResponse>(
+    ["settings", "models"],
+    async () => {
+      const resp = await fetch(`${API_BASE}/api/v1/settings/models`);
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+      return (await resp.json()) as ModelConfigResponse;
+    },
+  );
+
+  const loading = resource.status === "loading";
+  const config = resource.status === "ready" || resource.status === "empty"
+    ? resource.data
+    : null;
+
+  // Propagate the server's saved assignments up to the parent form once the
+  // config arrives (saved assignments take precedence over parent state on
+  // first load). This is a render-synced side effect, not a fetch.
+  const loadedAssignments =
+    (resource.status === "ready" || resource.status === "empty")
+      ? resource.data.assignments
+      : null;
   useEffect(() => {
-    async function load() {
-      try {
-        const resp = await fetch(`${API_BASE}/api/v1/settings/models`);
-        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-        const data: ModelConfigResponse = await resp.json();
-        setConfig(data);
-        // Initialize with saved assignments merged into value
-        onChange({ ...data.assignments, ...value });
-      } catch (err) {
-        setError("Failed to load models");
-      } finally {
-        setLoading(false);
-      }
+    if (loadedAssignments) {
+      onChange({ ...loadedAssignments, ...value });
     }
-    load();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loadedAssignments]);
 
   function handleStageChange(stageName: string, modelId: string) {
     const updated = { ...value };
@@ -98,6 +110,17 @@ export function StageModelSelector({ value, onChange }: StageModelSelectorProps)
     return (
       <div className="text-sm text-muted-foreground py-2">
         Loading model configuration...
+      </div>
+    );
+  }
+
+  // Surface fetch failures explicitly (PRODUCT.md §6: if data failed to load,
+  // it says so). Previously the swallowed error fell through to the "no
+  // models configured" path, hiding a real failure behind an empty message.
+  if (resource.status === "error") {
+    return (
+      <div className="text-sm text-destructive py-2">
+        Failed to load models
       </div>
     );
   }

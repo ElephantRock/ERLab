@@ -4,6 +4,7 @@ import { describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { RoleBadge } from "@/components/auth/role-badge";
 import { BrowserRouter } from "react-router-dom";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { AuthProvider } from "@/contexts/auth-context";
 import { SettingsProvider } from "@/contexts/settings-context";
 
@@ -40,12 +41,17 @@ vi.mock("@/components/settings/model-status-panel", () => ({
 import SettingsPage from "@/pages/settings";
 
 function renderWithProviders(ui: React.ReactElement) {
+  const qc = new QueryClient({
+    defaultOptions: { queries: { retry: false, gcTime: 0, staleTime: 0 } },
+  });
   return render(
-    <BrowserRouter>
-      <SettingsProvider>
-        <AuthProvider>{ui}</AuthProvider>
-      </SettingsProvider>
-    </BrowserRouter>,
+    <QueryClientProvider client={qc}>
+      <BrowserRouter>
+        <SettingsProvider>
+          <AuthProvider>{ui}</AuthProvider>
+        </SettingsProvider>
+      </BrowserRouter>
+    </QueryClientProvider>,
   );
 }
 

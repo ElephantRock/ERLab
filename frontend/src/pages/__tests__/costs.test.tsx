@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
-import { MemoryRouter, Route, Routes } from "react-router-dom";
+import { screen, waitFor } from "@testing-library/react";
+import { renderWithProviders } from "@/test/test-utils";
 import CostsPage from "@/pages/costs";
 
 // ── Mock the cost API ────────────────────────────────────────────
@@ -49,15 +49,13 @@ function setupMocks() {
 }
 
 // ── Helper ───────────────────────────────────────────────────────
+// Uses the shared renderWithProviders (QueryClientProvider + router +
+// settings/auth contexts) — the same wrapper the app shell provides.
+// Previously this file hand-rolled a thinner MemoryRouter-only wrapper,
+// which broke when the page migrated to useResource (react-query backed).
 
 function renderCostsPage() {
-  return render(
-    <MemoryRouter initialEntries={["/costs"]}>
-      <Routes>
-        <Route path="/costs" element={<CostsPage />} />
-      </Routes>
-    </MemoryRouter>,
-  );
+  return renderWithProviders(<CostsPage />, { initialEntries: ["/costs"] });
 }
 
 describe("BATCH-18/TASK-03: Cost Dashboard Page", () => {

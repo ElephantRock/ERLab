@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import MemoryBrowserPage from "@/pages/memory";
 
 // ── Mock the memory API ──────────────────────────────────────────
@@ -43,14 +44,20 @@ function setupMocks() {
 }
 
 // ── Helper ───────────────────────────────────────────────────────
-
+// Memory page now uses useResource (react-query backed), so the harness
+// must provide a QueryClientProvider — same as the app shell in main.tsx.
 function renderMemoryPage() {
+  const qc = new QueryClient({
+    defaultOptions: { queries: { retry: false, gcTime: 0, staleTime: 0 } },
+  });
   return render(
-    <MemoryRouter initialEntries={["/memory"]}>
-      <Routes>
-        <Route path="/memory" element={<MemoryBrowserPage />} />
-      </Routes>
-    </MemoryRouter>,
+    <QueryClientProvider client={qc}>
+      <MemoryRouter initialEntries={["/memory"]}>
+        <Routes>
+          <Route path="/memory" element={<MemoryBrowserPage />} />
+        </Routes>
+      </MemoryRouter>
+    </QueryClientProvider>,
   );
 }
 
@@ -180,10 +187,10 @@ describe("BATCH-19/TASK-02: Memory Browser Page", () => {
     renderMemoryPage();
 
     await waitFor(() => {
-      expect(screen.getByTestId("empty-state")).toBeInTheDocument();
+      expect(screen.getByTestId("memory-empty")).toBeInTheDocument();
     });
 
-    expect(screen.getByText("No memories found")).toBeInTheDocument();
+    expect(screen.getByText(/No memories yet/i)).toBeInTheDocument();
   });
 
   // ── TEST-19-02-06: Handles API error gracefully ───────────────
@@ -194,7 +201,7 @@ describe("BATCH-19/TASK-02: Memory Browser Page", () => {
     renderMemoryPage();
 
     await waitFor(() => {
-      expect(screen.getByTestId("error-state")).toBeInTheDocument();
+      expect(screen.getByTestId("memory-error")).toBeInTheDocument();
     });
 
     expect(screen.getByText("Error loading memories")).toBeInTheDocument();

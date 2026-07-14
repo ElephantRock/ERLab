@@ -67,12 +67,17 @@ import { listRuns } from "@/api/pipeline";
 // ── Helpers ────────────────────────────────────────────────────
 
 function renderSessionsPage() {
+  const qc = new QueryClient({
+    defaultOptions: { queries: { retry: false, gcTime: 0, staleTime: 0 } },
+  });
   return render(
-    <MemoryRouter initialEntries={["/sessions"]}>
-      <Routes>
-        <Route path="/sessions" element={<SessionsPage />} />
-      </Routes>
-    </MemoryRouter>,
+    <QueryClientProvider client={qc}>
+      <MemoryRouter initialEntries={["/sessions"]}>
+        <Routes>
+          <Route path="/sessions" element={<SessionsPage />} />
+        </Routes>
+      </MemoryRouter>
+    </QueryClientProvider>,
   );
 }
 
@@ -100,12 +105,11 @@ describe("BATCH-22/TASK-02: Sessions Page + Pipeline Session Input", () => {
 
     renderSessionsPage();
 
+    // Wait for the session list to load (cards are ready-only)
     await waitFor(() => {
-      expect(screen.getByTestId("sessions-page")).toBeInTheDocument();
+      expect(screen.getByTestId("session-card-sess-alpha")).toBeInTheDocument();
     });
 
-    // Both sessions should be rendered
-    expect(screen.getByTestId("session-card-sess-alpha")).toBeInTheDocument();
     expect(screen.getByTestId("session-card-sess-beta")).toBeInTheDocument();
   });
 

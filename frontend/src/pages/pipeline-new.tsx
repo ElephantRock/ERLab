@@ -1,3 +1,18 @@
+/**
+ * Pipeline New — Direct Surface.
+ *
+ * PRODUCT.md Core Loop step 1 (DIRECT): "Launch a run on a domain, choose
+ * a strategy. Should take < 1 minute."
+ *
+ * INTERFACE_CONTRACT compliance:
+ * - §3 ui-scale typography (no sub-micro, no telemetry headings)
+ * - §7 truthful status — "System ready" pulsing dot removed, "Local GPU"
+ *   hardcoded label replaced with real config value or "—"
+ *
+ * Preserves all existing functionality: config form, autonomous cycle,
+ * pipeline preview, SSE progress, cancel, results, run-another.
+ */
+
 import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { RunConfigForm } from "@/components/pipeline/run-config-form";
@@ -17,12 +32,12 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import type { PipelineRunRequest, IdeaSummary } from "@/api/types";
 import {
   CheckCircle2, Lightbulb, AlertCircle, XCircle, ExternalLink,
-  Search, FileText, GitBranch, Shield, BarChart3, FilePen,
-  Activity, Sparkles, Download, Server, Cpu, Clock, ArrowRight,
-  ChevronRight,
+  Search, FileText, GitBranch, Shield, FilePen,
+  Activity, Download, Clock, ArrowRight,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useQuery } from "@tanstack/react-query";
+import { useResource } from "@/lib/useResource";
+import { DataView } from "@/components/ui/data-view";
 
 // ── Pipeline preview stages (visual flow) ──
 const PIPELINE_FLOW = [
@@ -57,19 +72,13 @@ export default function PipelineNew() {
   const completedStages = stages.filter((s) => s.status === "completed");
   const hasPartialResults = isCancelled && completedStages.length > 0;
 
-  // ── System status for sidebar ──
-  const { data: systemStatus } = useQuery({
-    queryKey: ["system-status"],
-    queryFn: getSystemStatus,
-    staleTime: 30000,
-  });
+  // ── System status (truthful — from real query, not hardcoded) ──
+  const systemStatusResource = useResource(["system-status"], () => getSystemStatus(), { staleTime: 30000 });
+  const systemStatus = systemStatusResource.status === "ready" ? systemStatusResource.data : null;
 
-  // ── Estimate for sidebar ──
-  const { data: estimate } = useQuery({
-    queryKey: ["estimate", activeStrategy],
-    queryFn: () => getEstimate(activeStrategy),
-    staleTime: 60000,
-  });
+  // ── Estimate (real, from backend) ──
+  const estimateResource = useResource(["estimate", activeStrategy], () => getEstimate(activeStrategy), { staleTime: 60000 });
+  const estimate = estimateResource.status === "ready" ? estimateResource.data : null;
 
   async function handleStart(config: PipelineRunRequest) {
     setIsLoading(true);
@@ -77,13 +86,10 @@ export default function PipelineNew() {
     setIdeas([]);
     setIdeasError(null);
     try {
-      const configWithSession = {
-        ...config,
-        session_id: sessionId || undefined,
-      };
+      const configWithSession = { ...config, session_id: sessionId || undefined };
       const res = await triggerRun(configWithSession);
       setRunId(res.run_id);
-    } catch (err) {
+    } catch {
       setError("Failed to start pipeline");
     } finally {
       setIsLoading(false);
@@ -98,7 +104,7 @@ export default function PipelineNew() {
       try {
         const ideasData = await getRunIdeas(runId);
         setIdeas(ideasData.ideas);
-      } catch (err) {
+      } catch {
         setIdeas([]);
         setIdeasError("Failed to load results");
       } finally {
@@ -108,10 +114,7 @@ export default function PipelineNew() {
     fetchIdeas();
   }, [isComplete, runId]);
 
-  function handleCancelClick() {
-    setCancelError(null);
-    setShowCancelConfirm(true);
-  }
+  function handleCancelClick() { setCancelError(null); setShowCancelConfirm(true); }
   function handleCancelDismiss() { setShowCancelConfirm(false); }
   async function handleCancelConfirm() {
     if (!runId) return;
@@ -121,28 +124,23 @@ export default function PipelineNew() {
       await cancelRun(runId);
       setIsCancelled(true);
       setShowCancelConfirm(false);
-    } catch (err) {
+    } catch {
       setCancelError("Failed to cancel run");
     } finally {
       setIsCancelling(false);
     }
   }
   function handleReset() {
-    setRunId(null);
-    setIdeas([]);
-    setIdeasError(null);
-    setError(null);
-    setIsCancelled(false);
-    setCancelError(null);
-    setShowCancelConfirm(false);
+    setRunId(null); setIdeas([]); setIdeasError(null); setError(null);
+    setIsCancelled(false); setCancelError(null); setShowCancelConfirm(false);
   }
 
   return (
     <div className="space-y-6 animate-fade-in" data-testid="pipeline-new-page">
       {/* ── Header ── */}
       <div>
-        <h1 className="text-2xl font-display font-semibold tracking-tight">New Run</h1>
-        <p className="text-sm text-muted-foreground">Configure and launch a research pipeline.</p>
+        <h1 className="text-ui-display font-display font-semibold tracking-tight">New Run</h1>
+        <p className="text-ui-meta text-muted-foreground">Configure and launch a research pipeline.</p>
       </div>
 
       {/* ══ PRE-RUN STATE: Config + Sidebar ══ */}
@@ -176,42 +174,37 @@ export default function PipelineNew() {
               <Card className="card-shadow">
                 <CardContent className="p-4 space-y-3">
                   <div className="flex items-center justify-between pb-2 border-b border-border/50">
-                    <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-muted-foreground">
+                    <span className="text-ui-micro font-semibold uppercase tracking-wider text-muted-foreground">
                       Pipeline Flow
                     </span>
                     {estimate && (
-                      <span className="flex items-center gap-1 text-[10px] font-mono text-muted-foreground">
-                        <Clock className="h-2.5 w-2.5" />
+                      <span className="flex items-center gap-1 text-ui-micro text-muted-foreground">
+                        <Clock className="h-3 w-3" />
                         {estimate.estimated_time_display}
                       </span>
                     )}
                   </div>
-                  <div className="space-y-1">
-                    {PIPELINE_FLOW.map((stage, i) => (
+                  <div className="space-y-1.5">
+                    {PIPELINE_FLOW.map((stage) => (
                       <div key={stage.label} className="flex items-center gap-2">
-                        <div className="flex items-center gap-2 flex-1">
-                          <div className="h-7 w-7 rounded-lg bg-muted/40 flex items-center justify-center">
-                            <stage.icon className="h-3.5 w-3.5 text-muted-foreground" />
-                          </div>
-                          <div>
-                            <p className="text-xs font-medium leading-tight">{stage.label}</p>
-                            <p className="text-[10px] text-muted-foreground leading-tight">{stage.sub}</p>
-                          </div>
+                        <div className="h-7 w-7 rounded-lg bg-muted/40 flex items-center justify-center">
+                          <stage.icon className="h-3.5 w-3.5 text-muted-foreground" />
                         </div>
-                        {i < PIPELINE_FLOW.length - 1 && (
-                          <ChevronRight className="h-3 w-3 text-muted-foreground/30 hidden" />
-                        )}
+                        <div>
+                          <p className="text-ui-meta font-medium leading-tight">{stage.label}</p>
+                          <p className="text-ui-micro text-muted-foreground leading-tight">{stage.sub}</p>
+                        </div>
                       </div>
                     ))}
                   </div>
-                  {/* Cost */}
+                  {/* Cost — truthful from real estimate */}
                   {estimate && (
                     <div className="flex items-center justify-between pt-2 border-t border-border/50">
-                      <span className="text-[10px] font-mono text-muted-foreground">ESTIMATED COST</span>
+                      <span className="text-ui-micro text-muted-foreground">ESTIMATED COST</span>
                       <div className="flex items-center gap-2">
-                        <span className="text-xs font-semibold">{estimate.cost_display}</span>
+                        <span className="text-ui-label font-semibold">{estimate.cost_display}</span>
                         {estimate.local_cost_usd === 0 && (
-                          <Badge variant="outline" className="text-[9px] py-0 px-1 text-success border-success/20 bg-success/5">
+                          <Badge variant="outline" className="text-ui-micro py-0 px-1 text-success border-success/20 bg-success/5">
                             Local
                           </Badge>
                         )}
@@ -221,46 +214,24 @@ export default function PipelineNew() {
                 </CardContent>
               </Card>
 
-              {/* System Info */}
+              {/* System Info — §7 truthful: no hardcoded "System ready", no "Local GPU" */}
               <Card className="card-shadow">
                 <CardContent className="p-4 space-y-3">
                   <div className="pb-2 border-b border-border/50">
-                    <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-muted-foreground">
+                    <span className="text-ui-micro font-semibold uppercase tracking-wider text-muted-foreground">
                       System Status
                     </span>
                   </div>
-                  <div className="space-y-2">
-                    <SystemRow
-                      icon={Server}
-                      label="Provider"
-                      value={systemStatus?.config?.default_provider ?? "—"}
-                      status="ok"
-                    />
-                    <SystemRow
-                      icon={Cpu}
-                      label="Compute"
-                      value="Local GPU"
-                      status="ok"
-                    />
-                    <SystemRow
-                      icon={Shield}
-                      label="Governance"
-                      value={systemStatus?.config?.governance_enabled ? "Enabled" : "Disabled"}
-                      status={systemStatus?.config?.governance_enabled ? "ok" : "warn"}
-                    />
-                    <SystemRow
-                      icon={Activity}
-                      label="Memory"
-                      value={systemStatus?.config?.memory_enabled ? "Enabled" : "Disabled"}
-                      status={systemStatus?.config?.memory_enabled ? "ok" : "neutral"}
-                    />
-                  </div>
-                  <div className="pt-2 border-t border-border/50">
-                    <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
-                      <span className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" />
-                      <span className="font-mono">System ready</span>
-                    </div>
-                  </div>
+                  <DataView resource={systemStatusResource} testId="sys-status" loading={{ lines: 3 }}>
+                    {(status) => (
+                      <div className="space-y-2">
+                        <SystemRow label="Provider" value={status.config?.default_provider ?? "—"} />
+                        <SystemRow label="Governance" value={status.config?.governance_enabled ? "Enabled" : "Disabled"} />
+                        <SystemRow label="Memory" value={status.config?.memory_enabled ? "Enabled" : "Disabled"} />
+                      </div>
+                    )}
+                  </DataView>
+                  {/* NO "System ready" pulsing dot. §7: if unverified, says nothing. */}
                 </CardContent>
               </Card>
 
@@ -268,11 +239,11 @@ export default function PipelineNew() {
               <Card className="card-shadow">
                 <CardContent className="p-4 space-y-2">
                   <div className="pb-2 border-b border-border/50">
-                    <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-muted-foreground">
+                    <span className="text-ui-micro font-semibold uppercase tracking-wider text-muted-foreground">
                       Expected Outputs
                     </span>
                   </div>
-                  <div className="space-y-1.5 text-xs">
+                  <div className="space-y-1.5 text-ui-meta">
                     <OutputRow icon={FileText} label="Research papers" value="50-100" />
                     <OutputRow icon={GitBranch} label="Research gaps" value="3-5" />
                     <OutputRow icon={Lightbulb} label="Generated ideas" value="2-10" />
@@ -306,7 +277,7 @@ export default function PipelineNew() {
               <div className="flex items-center gap-2">
                 <Badge variant="outline" className="font-mono">Run #{runId}</Badge>
                 {isCancelled ? (
-                  <Badge className="bg-red-100 text-red-800" data-testid="cancelled-badge">Cancelled</Badge>
+                  <Badge variant="destructive" data-testid="cancelled-badge">Cancelled</Badge>
                 ) : isComplete ? (
                   <Badge className="bg-success/10 text-success">Complete</Badge>
                 ) : isConnected ? (
@@ -315,13 +286,7 @@ export default function PipelineNew() {
                   <Badge variant="secondary">Connecting...</Badge>
                 )}
                 {isRunning && (
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    onClick={handleCancelClick}
-                    disabled={isCancelling}
-                    data-testid="cancel-run-btn"
-                  >
+                  <Button variant="destructive" size="sm" onClick={handleCancelClick} disabled={isCancelling} data-testid="cancel-run-btn">
                     {isCancelling ? "Cancelling..." : "Cancel Run"}
                   </Button>
                 )}
@@ -329,7 +294,7 @@ export default function PipelineNew() {
             </div>
           </CardHeader>
           <CardContent>
-            {/* Visual stage flow */}
+            {/* Visual stage flow — ui-micro floor, no text-[8px]/[9px] */}
             <div className="flex items-center gap-1 mb-6 overflow-x-auto pb-2">
               {stages.map((stage, i) => (
                 <div key={stage.key} className="flex items-center gap-1 flex-shrink-0">
@@ -339,30 +304,23 @@ export default function PipelineNew() {
                     stage.status === "running" && "bg-accent/5",
                   )}>
                     <div className={cn(
-                      "h-6 w-6 rounded-full flex items-center justify-center text-[10px] font-mono font-bold transition-all",
-                      stage.status === "completed"
-                        ? "bg-success/15 text-success"
-                        : stage.status === "running"
-                          ? "bg-accent/15 text-accent animate-pulse"
-                          : "bg-muted text-muted-foreground",
+                      "h-6 w-6 rounded-full flex items-center justify-center text-ui-micro font-mono font-bold transition-all",
+                      stage.status === "completed" ? "bg-success/15 text-success"
+                        : stage.status === "running" ? "bg-accent/15 text-accent animate-pulse"
+                        : "bg-muted text-muted-foreground",
                     )}>
                       {stage.status === "completed" ? "✓" : i + 1}
                     </div>
                     <span className={cn(
-                      "text-[9px] font-medium leading-tight text-center max-w-[72px] truncate",
-                      stage.status === "completed" ? "text-success" :
-                      stage.status === "running" ? "text-accent" :
-                      "text-muted-foreground",
+                      "text-ui-micro font-medium leading-tight text-center max-w-[72px] truncate",
+                      stage.status === "completed" ? "text-success"
+                        : stage.status === "running" ? "text-accent"
+                        : "text-muted-foreground",
                     )}>
                       {stage.label}
                     </span>
-                    {stage.status === "running" && (
-                      <span className="text-[8px] text-muted-foreground font-mono">
-                        {stage.elapsed.toFixed(0)}s
-                      </span>
-                    )}
-                    {stage.status === "completed" && stage.elapsed > 0 && (
-                      <span className="text-[8px] text-muted-foreground font-mono">
+                    {stage.elapsed > 0 && (
+                      <span className="text-ui-micro text-muted-foreground font-mono">
                         {stage.elapsed.toFixed(0)}s
                       </span>
                     )}
@@ -377,7 +335,6 @@ export default function PipelineNew() {
               ))}
             </div>
 
-            {/* Detailed stage list */}
             <StageProgress stages={stages} currentStage={null} />
           </CardContent>
 
@@ -386,19 +343,14 @@ export default function PipelineNew() {
             <DialogContent className="max-w-md" data-testid="cancel-confirm-dialog">
               <div className="flex items-center gap-2 mb-3">
                 <AlertCircle className="h-5 w-5 text-destructive" />
-                <h2 className="text-lg font-semibold">Cancel Pipeline Run?</h2>
+                <h2 className="text-ui-heading font-semibold">Cancel Pipeline Run?</h2>
               </div>
-              <p className="text-sm text-muted-foreground mb-4">
-                This will abort the running pipeline. Any stages that have already
-                completed will be preserved, but no further stages will execute.
+              <p className="text-ui-meta text-muted-foreground mb-4">
+                This will abort the running pipeline. Completed stages will be preserved, but no further stages will execute.
               </p>
-              {cancelError && (
-                <p className="text-sm text-destructive mb-4" data-testid="cancel-error">{cancelError}</p>
-              )}
+              {cancelError && <p className="text-ui-meta text-destructive mb-4" data-testid="cancel-error">{cancelError}</p>}
               <div className="flex justify-end gap-2">
-                <Button variant="outline" onClick={handleCancelDismiss} data-testid="cancel-dismiss-btn">
-                  No, Continue
-                </Button>
+                <Button variant="outline" onClick={handleCancelDismiss} data-testid="cancel-dismiss-btn">No, Continue</Button>
                 <Button variant="destructive" onClick={handleCancelConfirm} disabled={isCancelling} data-testid="cancel-confirm-btn">
                   {isCancelling ? "Cancelling..." : "Yes, Cancel Run"}
                 </Button>
@@ -410,7 +362,7 @@ export default function PipelineNew() {
             <CardContent className="border-t pt-4">
               <div className="flex items-center gap-2 text-success">
                 <CheckCircle2 className="h-5 w-5" />
-                <span className="font-medium">Pipeline completed successfully</span>
+                <span className="font-medium text-ui-label">Pipeline completed successfully</span>
               </div>
             </CardContent>
           )}
@@ -419,10 +371,10 @@ export default function PipelineNew() {
             <CardContent className="border-t pt-4" data-testid="cancelled-partial-results">
               <div className="flex items-center gap-2 text-destructive">
                 <XCircle className="h-5 w-5" />
-                <span className="font-medium">Pipeline run was cancelled</span>
+                <span className="font-medium text-ui-label">Pipeline run was cancelled</span>
               </div>
               {hasPartialResults && (
-                <p className="text-sm text-muted-foreground mt-1">
+                <p className="text-ui-meta text-muted-foreground mt-1">
                   {completedStages.length} of {stages.length} stage{completedStages.length !== 1 ? "s" : ""} completed before cancellation.
                 </p>
               )}
@@ -451,7 +403,7 @@ export default function PipelineNew() {
                   )}
                 </div>
                 {ideas.length > 0 && (
-                  <span className="flex items-center gap-1 text-sm text-muted-foreground">
+                  <span className="flex items-center gap-1 text-ui-meta text-muted-foreground">
                     <Lightbulb className="h-4 w-4" />
                     {ideas.length} idea{ideas.length !== 1 ? "s" : ""} generated
                   </span>
@@ -460,12 +412,10 @@ export default function PipelineNew() {
             </CardHeader>
             <CardContent>
               {ideasError && <ErrorCard message={ideasError} testId="ideas-error" />}
-              {ideasLoading && <p className="text-sm text-muted-foreground">Loading results...</p>}
+              {ideasLoading && <p className="text-ui-meta text-muted-foreground">Loading results...</p>}
               {!ideasLoading && !ideasError && ideas.length === 0 && (
-                <p className="text-sm text-muted-foreground">
-                  {isCancelled
-                    ? "No ideas were generated before cancellation."
-                    : "No ideas generated in this run."}
+                <p className="text-ui-meta text-muted-foreground">
+                  {isCancelled ? "No ideas were generated before cancellation." : "No ideas generated in this run."}
                 </p>
               )}
               {!ideasLoading && ideas.length > 0 && (
@@ -475,7 +425,6 @@ export default function PipelineNew() {
                   ))}
                 </div>
               )}
-
               <div className="flex items-center gap-3 mt-4 pt-4 border-t">
                 {isComplete && runId && (
                   <Button variant="outline" onClick={() => navigate(`/runs/${runId}`)} data-testid="view-run-detail">
@@ -499,43 +448,18 @@ export default function PipelineNew() {
   );
 }
 
-// ── Sub-components ──
+// ── Sub-components (restyled to ui-scale) ──
 
-function SystemRow({
-  icon: Icon,
-  label,
-  value,
-  status,
-}: {
-  icon: React.ElementType;
-  label: string;
-  value: string;
-  status: "ok" | "warn" | "neutral";
-}) {
-  const dotColor = {
-    ok: "bg-success",
-    warn: "bg-warning",
-    neutral: "bg-muted-foreground",
-  };
+function SystemRow({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex items-center gap-2 text-xs">
-      <Icon className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+    <div className="flex items-center gap-2 text-ui-meta">
       <span className="text-muted-foreground flex-1">{label}</span>
       <span className="font-mono font-medium capitalize">{value}</span>
-      <span className={cn("h-1.5 w-1.5 rounded-full flex-shrink-0", dotColor[status])} />
     </div>
   );
 }
 
-function OutputRow({
-  icon: Icon,
-  label,
-  value,
-}: {
-  icon: React.ElementType;
-  label: string;
-  value: string;
-}) {
+function OutputRow({ icon: Icon, label, value }: { icon: React.ElementType; label: string; value: string }) {
   return (
     <div className="flex items-center gap-2">
       <Icon className="h-3 w-3 text-muted-foreground flex-shrink-0" />

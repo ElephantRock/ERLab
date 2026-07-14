@@ -1,12 +1,24 @@
+/**
+ * Ideas Browser — Triage Surface.
+ *
+ * PRODUCT.md §5: "Density serves the step." TRIAGE may be dense — the
+ * researcher is scanning. This page is dense by design; the reading surface
+ * (idea-detail) is where density yields to breath.
+ *
+ * INTERFACE_CONTRACT compliance:
+ * - §1 useResource + DataView (not raw useQuery)
+ * - §3 ui-scale typography (no sub-micro)
+ * - §6 ScoreReport compact for triage scannability
+ */
+
 import { useState, useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useResource } from "@/lib/useResource";
+import { DataView } from "@/components/ui/data-view";
 import { listIdeas } from "@/api/ideas";
-import { IdeaCard } from "@/components/ideas/idea-card";
+import { ScoreReport } from "@/components/ui/score-report";
 import { ExportDialog } from "@/components/export/export-dialog";
-import { EmptyState } from "@/components/ui/empty-state";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
 import {
   Select,
   SelectContent,
@@ -17,9 +29,10 @@ import {
 import { Slider } from "@/components/ui/slider";
 import { useNavigate } from "react-router-dom";
 import {
-  Search, ChevronLeft, ChevronRight, CheckSquare, Square,
-  AlertTriangle, RotateCw, Play, Inbox, SlidersHorizontal,
+  Search, ChevronLeft, ChevronRight, Play, Inbox, SlidersHorizontal,
+  ChevronRight as Chevron,
 } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 const SORT_OPTIONS = [
   { value: "date", label: "Newest First" },
@@ -35,7 +48,6 @@ export default function IdeasBrowser() {
   const [sortBy, setSortBy] = useState("date");
   const [minScore, setMinScore] = useState(0);
   const [page, setPage] = useState(0);
-  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [showFilters, setShowFilters] = useState(false);
   const limit = 20;
 
@@ -51,16 +63,14 @@ export default function IdeasBrowser() {
     [domainFilter, searchText, sortBy, minScore, page, limit],
   );
 
-  const { data, isLoading, isError, refetch } = useQuery({
-    queryKey: ["ideas", queryParams],
-    queryFn: () => listIdeas(queryParams),
-  });
-
-  const ideas = data?.ideas ?? [];
-  const hasQualityIssues = ideas.some(
-    (i) => i.quality_summary?.has_issues,
+  // INTERFACE_CONTRACT §1: useResource is the only sanctioned fetch hook.
+  const resource = useResource(
+    ["ideas", queryParams],
+    () => listIdeas(queryParams),
   );
-  const hasGovernance = ideas.some((i) => i.governance_status);
+
+  const ideas = resource.status === "ready" ? resource.data.ideas : [];
+  const total = resource.status === "ready" ? resource.data.total : 0;
 
   return (
     <div className="space-y-5 animate-fade-in" data-testid="ideas-browser">
@@ -69,253 +79,203 @@ export default function IdeasBrowser() {
         <div>
           <div className="flex items-center gap-2 mb-1">
             <Inbox className="h-5 w-5 text-accent" />
-            <h1 className="text-2xl font-display font-semibold tracking-tight">
+            <h1 className="text-ui-display font-display font-semibold tracking-tight">
               Results
             </h1>
           </div>
-          <p className="text-sm text-muted-foreground">
-            {data?.total ?? "—"} research ideas generated from your pipeline runs.
+          <p className="text-ui-meta text-muted-foreground">
+            {total > 0 ? `${total} research ideas generated from your pipeline runs.` : "Research ideas from pipeline runs."}
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          {selectedIds.size > 0 && (
-            <>
-              <ExportDialog ideaIds={Array.from(selectedIds)} />
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setSelectedIds(new Set())}
-              >
-                Clear ({selectedIds.size})
-              </Button>
-            </>
-          )}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => navigate("/pipeline/new")}
-          >
-            <Play className="mr-2 h-3.5 w-3.5" />
-            New Run
-          </Button>
-        </div>
+        <Button variant="outline" size="sm" onClick={() => navigate("/pipeline/new")}>
+          <Play className="mr-2 h-3.5 w-3.5" />
+          New Run
+        </Button>
       </div>
 
-      {/* ── Search bar ── */}
-      {!isError && (
-        <div className="flex items-center gap-2">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              placeholder="Search ideas by title..."
-              value={searchText}
-              onChange={(e) => {
-                setSearchText(e.target.value);
-                setPage(0);
-              }}
-              className="pl-9"
-              aria-label="Search ideas by title"
-            />
-          </div>
-          <Button
-            variant={showFilters ? "default" : "outline"}
-            size="sm"
-            onClick={() => setShowFilters(!showFilters)}
-            className="flex-shrink-0"
-          >
-            <SlidersHorizontal className="mr-1.5 h-3.5 w-3.5" />
-            Filters
-          </Button>
+      {/* ── Search + Filters ── */}
+      <div className="flex items-center gap-2">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            placeholder="Search ideas by title..."
+            value={searchText}
+            onChange={(e) => { setSearchText(e.target.value); setPage(0); }}
+            className="pl-9"
+            aria-label="Search ideas by title"
+          />
         </div>
-      )}
+        <Button
+          variant={showFilters ? "default" : "outline"}
+          size="sm"
+          onClick={() => setShowFilters(!showFilters)}
+          className="flex-shrink-0"
+        >
+          <SlidersHorizontal className="mr-1.5 h-3.5 w-3.5" />
+          Filters
+        </Button>
+      </div>
 
       {/* ── Expandable filter panel ── */}
-      {!isError && showFilters && (
+      {showFilters && (
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end rounded-lg border border-border bg-card p-4 animate-fade-in">
           <div className="w-full sm:w-[180px]">
-            <label className="text-xs text-muted-foreground mb-1 block">Sort by</label>
-            <Select
-              value={sortBy}
-              onValueChange={(v) => {
-                setSortBy(v);
-                setPage(0);
-              }}
-            >
-              <SelectTrigger aria-label="Sort ideas by">
-                <SelectValue />
-              </SelectTrigger>
+            <label className="text-ui-meta text-muted-foreground mb-1 block">Sort by</label>
+            <Select value={sortBy} onValueChange={(v) => { setSortBy(v); setPage(0); }}>
+              <SelectTrigger aria-label="Sort ideas by"><SelectValue /></SelectTrigger>
               <SelectContent>
                 {SORT_OPTIONS.map((opt) => (
-                  <SelectItem key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </SelectItem>
+                  <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
-
           <div className="flex-1">
-            <label className="text-xs text-muted-foreground mb-1 block">
+            <label className="text-ui-meta text-muted-foreground mb-1 block">
               Min Score: {minScore.toFixed(1)}
             </label>
             <Slider
               value={[minScore]}
-              onValueChange={(v) => {
-                setMinScore(v[0]);
-                setPage(0);
-              }}
-              min={0}
-              max={1}
-              step={0.1}
+              onValueChange={(v) => { setMinScore(v[0]); setPage(0); }}
+              min={0} max={1} step={0.1}
               aria-label="Minimum overall score filter"
             />
           </div>
-
           <div className="w-full sm:w-[180px]">
-            <label className="text-xs text-muted-foreground mb-1 block">Domain</label>
+            <label className="text-ui-meta text-muted-foreground mb-1 block">Domain</label>
             <Input
               placeholder="Filter by domain..."
               value={domainFilter}
-              onChange={(e) => {
-                setDomainFilter(e.target.value);
-                setPage(0);
-              }}
+              onChange={(e) => { setDomainFilter(e.target.value); setPage(0); }}
               aria-label="Filter by domain"
             />
           </div>
         </div>
       )}
 
-      {/* ── Loading ── */}
-      {isLoading ? (
-        <div className="grid gap-3 md:grid-cols-2">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <Skeleton key={i} className="h-32 w-full" />
-          ))}
-        </div>
-      ) : isError ? (
-        <div
-          className="rounded-lg border border-destructive/30 bg-destructive/5 p-6 text-center space-y-4"
-          data-testid="ideas-error"
-          role="alert"
-        >
-          <AlertTriangle className="h-8 w-8 mx-auto text-destructive" />
-          <div>
-            <p className="font-medium text-destructive">Couldn't load ideas</p>
-            <p className="text-sm text-muted-foreground mt-1">
-              The backend may be offline or unreachable. Check your connection and try again.
-            </p>
-          </div>
-          <div className="flex flex-wrap justify-center gap-2">
-            <Button onClick={() => refetch()} data-testid="ideas-retry">
-              <RotateCw className="mr-2 h-4 w-4" />
-              Retry
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => navigate("/pipeline/new")}
-              data-testid="ideas-start-pipeline"
-            >
+      {/* ── Results via DataView ── */}
+      <DataView
+        resource={resource}
+        testId="ideas"
+        empty={{
+          what: "ideas",
+          icon: Search,
+          title: searchText || domainFilter ? "No ideas match your filters" : "No research ideas yet",
+          message: searchText || domainFilter ? "Try adjusting your search or filters." : "Run the pipeline to generate ideas from literature.",
+          action: !searchText && !domainFilter ? (
+            <Button onClick={() => navigate("/pipeline/new")}>
               <Play className="mr-2 h-4 w-4" />
-              Start New Run
+              Start New Research Run
             </Button>
-          </div>
-        </div>
-      ) : ideas.length ? (
-        <>
-          {/* ── Results grid ── */}
-          <div className="grid gap-3 md:grid-cols-2">
-            {ideas.map((idea) => (
-              <div key={idea.id} className="relative">
-                <div
-                  className="absolute top-3 right-3 z-10"
-                  onClick={(e) => e.stopPropagation()}
-                  data-testid={`select-idea-${idea.id}`}
-                >
-                  <button
-                    className="text-muted-foreground hover:text-primary transition-colors"
-                    onClick={() => {
-                      setSelectedIds((prev) => {
-                        const next = new Set(prev);
-                        if (next.has(idea.id)) {
-                          next.delete(idea.id);
-                        } else {
-                          next.add(idea.id);
-                        }
-                        return next;
-                      });
-                    }}
-                    aria-label={`Select idea ${idea.id}`}
-                  >
-                    {selectedIds.has(idea.id) ? (
-                      <CheckSquare className="h-4 w-4 text-primary" />
-                    ) : (
-                      <Square className="h-4 w-4" />
-                    )}
-                  </button>
-                </div>
-                <IdeaCard
+          ) : (
+            <Button variant="outline" onClick={() => { setSearchText(""); setDomainFilter(""); setMinScore(0); }}>
+              Clear Filters
+            </Button>
+          ),
+        }}
+      >
+        {(data) => (
+          <>
+            <div className="grid gap-3 md:grid-cols-2">
+              {data.ideas.map((idea) => (
+                <TriageCard
+                  key={idea.id}
                   idea={idea}
                   onClick={() => navigate(`/ideas/${idea.id}`)}
                 />
-              </div>
-            ))}
-          </div>
-
-          {/* ── Pagination ── */}
-          {data && data.total > limit && (
-            <div className="flex items-center justify-between pt-2">
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={page === 0}
-                onClick={() => setPage((p) => p - 1)}
-              >
-                <ChevronLeft className="mr-1 h-4 w-4" />
-                Previous
-              </Button>
-              <span className="text-sm text-muted-foreground">
-                Page {page + 1} of {Math.ceil(data.total / limit)}
-              </span>
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={(page + 1) * limit >= data.total}
-                onClick={() => setPage((p) => p + 1)}
-              >
-                Next
-                <ChevronRight className="ml-1 h-4 w-4" />
-              </Button>
+              ))}
             </div>
-          )}
-        </>
-      ) : (
-        <EmptyState
-          icon={Search}
-          title="No research ideas yet"
-          message={searchText || domainFilter ? "No ideas match your filters." : "Run the pipeline to generate ideas from literature."}
-          testId="ideas-empty"
-          action={
-            !searchText && !domainFilter ? (
-              <Button onClick={() => navigate("/pipeline/new")}>
-                <Play className="mr-2 h-4 w-4" />
-                Start New Research Run
-              </Button>
-            ) : (
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setSearchText("");
-                  setDomainFilter("");
-                  setMinScore(0);
-                }}
-              >
-                Clear Filters
-              </Button>
-            )
-          }
-        />
-      )}
+
+            {/* ── Pagination ── */}
+            {data.total > limit && (
+              <div className="flex items-center justify-between pt-4">
+                <Button
+                  variant="outline" size="sm"
+                  disabled={page === 0}
+                  onClick={() => setPage((p) => p - 1)}
+                >
+                  <ChevronLeft className="mr-1 h-4 w-4" />
+                  Previous
+                </Button>
+                <span className="text-ui-meta text-muted-foreground">
+                  Page {page + 1} of {Math.ceil(data.total / limit)}
+                </span>
+                <Button
+                  variant="outline" size="sm"
+                  disabled={(page + 1) * limit >= data.total}
+                  onClick={() => setPage((p) => p + 1)}
+                >
+                  Next
+                  <ChevronRight className="ml-1 h-4 w-4" />
+                </Button>
+              </div>
+            )}
+          </>
+        )}
+      </DataView>
+    </div>
+  );
+}
+
+// ── Triage Card — dense, scannable, ScoreReport compact ──────────
+
+function TriageCard({
+  idea,
+  onClick,
+}: {
+  idea: {
+    id: number;
+    title: string;
+    domain: string;
+    novelty_score: number | null;
+    feasibility_score: number | null;
+    overall_score: number | null;
+    has_proposal: boolean;
+    quality_summary?: { has_issues?: boolean } | null;
+  };
+  onClick: () => void;
+}) {
+  return (
+    <div
+      className="rounded-lg border border-border bg-card card-shadow card-shadow-hover transition-all cursor-pointer p-4"
+      onClick={onClick}
+      role="button"
+      tabIndex={0}
+      data-testid={`idea-card-${idea.id}`}
+      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onClick(); } }}
+    >
+      <div className="flex items-start justify-between gap-2 mb-2">
+        <h3 className="text-ui-label font-medium leading-snug line-clamp-2 flex-1 hover:text-accent transition-colors">
+          {idea.title}
+        </h3>
+        {idea.quality_summary?.has_issues && (
+          <span className="text-ui-micro bg-warning/10 text-warning px-1.5 py-0.5 rounded font-medium shrink-0">
+            issues
+          </span>
+        )}
+      </div>
+
+      <div className="flex items-center gap-2 mb-3">
+        <span className="text-ui-micro text-muted-foreground uppercase tracking-wider">
+          {idea.domain}
+        </span>
+        {!idea.has_proposal && (
+          <span className="text-ui-micro text-muted-foreground">idea only</span>
+        )}
+      </div>
+
+      {/* ScoreReport compact — scannable in triage */}
+      <div className="flex items-center gap-2">
+        {idea.novelty_score != null && (
+          <ScoreReport kind="novelty" summary={idea.novelty_score} compact />
+        )}
+        {idea.feasibility_score != null && (
+          <ScoreReport kind="feasibility" summary={idea.feasibility_score} compact />
+        )}
+        <span className="text-ui-micro text-muted-foreground ml-auto flex items-center gap-0.5">
+          Open <Chevron className="h-3 w-3" />
+        </span>
+      </div>
     </div>
   );
 }

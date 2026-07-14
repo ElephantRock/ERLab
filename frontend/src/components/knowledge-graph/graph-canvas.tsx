@@ -174,7 +174,7 @@ export function GraphCanvas({
               <text
                 textAnchor="middle"
                 y={4}
-                className="text-white text-[8px] font-bold pointer-events-none"
+                className="text-white text-ui-micro font-bold pointer-events-none"
                 fill="white"
                 fontSize={8}
               >

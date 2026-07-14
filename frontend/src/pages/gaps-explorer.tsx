@@ -1,13 +1,18 @@
+/**
+ * Gaps Explorer — Triage Surface.
+ *
+ * PRODUCT.md §5: density allowed here (scanning). Same contract compliance
+ * as ideas-browser: useResource + DataView, ui-scale typography.
+ */
+
 import { useState, useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useResource } from "@/lib/useResource";
+import { DataView } from "@/components/ui/data-view";
 import { listGaps } from "@/api/gaps";
 import { GapCard } from "@/components/gaps/gap-card";
-import { ErrorCard } from "@/components/ui/error-card";
-import { EmptyState } from "@/components/ui/empty-state";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
 import {
   Select,
   SelectContent,
@@ -19,8 +24,8 @@ import { Slider } from "@/components/ui/slider";
 import { GitBranch, ChevronLeft, ChevronRight, Search } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { ClusterScatterPlot } from "@/components/gaps/cluster-scatter";
+import { useQuery } from "@tanstack/react-query";
 import { apiFetch } from "@/api/client";
-import type { ResearchGap } from "@/api/types";
 
 const SORT_OPTIONS = [
   { value: "confidence", label: "Confidence" },
@@ -60,20 +65,16 @@ export default function GapsExplorer() {
     [searchText, gapTypeFilter, sortBy, minConfidence, page, limit],
   );
 
-  const { data, isLoading, isError } = useQuery({
-    queryKey: ["gaps", queryParams],
-    queryFn: () => listGaps(queryParams),
-  });
+  // INTERFACE_CONTRACT §1: useResource for the main gaps list.
+  const resource = useResource(["gaps", queryParams], () => listGaps(queryParams));
 
+  // Clusters use useQuery with enabled flag (conditional fetch — the contract
+  // allows this for freshness/conditional queries with a cited reason).
   const { data: clusterData } = useQuery({
     queryKey: ["gap-clusters"],
-    queryFn: () => apiFetch("/gaps/clusters") as Promise<{ clusters: any[]; total_papers: number }>,
+    queryFn: () => apiFetch("/gaps/clusters") as Promise<{ clusters: unknown[]; total_papers: number }>,
     enabled: activeTab === "clusters",
   });
-
-  const handleIdeaCountClick = (gap: ResearchGap) => {
-    navigate(`/ideas?search=${encodeURIComponent(gap.title)}`);
-  };
 
   const handleClusterClick = (clusterId: number) => {
     setClusterFilter(clusterFilter === clusterId ? null : clusterId);
@@ -93,11 +94,17 @@ export default function GapsExplorer() {
     searchText !== "" || gapTypeFilter !== "" || sortBy !== "confidence" || minConfidence > 0;
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-6 animate-fade-in">
+      {/* ── Header ── */}
+      <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Research Gaps</h1>
-          <p className="text-muted-foreground">
+          <div className="flex items-center gap-2 mb-1">
+            <GitBranch className="h-5 w-5 text-accent" />
+            <h1 className="text-ui-display font-display font-semibold tracking-tight">
+              Gaps
+            </h1>
+          </div>
+          <p className="text-ui-meta text-muted-foreground">
             Identified gaps in the literature, sorted by confidence.
           </p>
         </div>
@@ -120,187 +127,136 @@ export default function GapsExplorer() {
       </div>
 
       {activeTab === "gaps" ? (
-      <>
-      {clusterFilter !== null && (
-        <div className="flex items-center gap-2">
-          <Badge variant="secondary" data-testid="cluster-filter-badge">
-            Cluster {clusterFilter}
-          </Badge>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setClusterFilter(null)}
-          >
-            Clear
-          </Button>
-        </div>
-      )}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-end">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder="Search gaps by title or description..."
-            value={searchText}
-            onChange={(e) => {
-              setSearchText(e.target.value);
-              setPage(0);
-            }}
-            className="pl-9"
-            aria-label="Search gaps by title or description"
-          />
-        </div>
-
-        <div className="flex items-end gap-4">
-          <div className="w-[180px]">
-            <label className="text-xs text-muted-foreground mb-1 block">Gap Type</label>
-            <Select
-              value={gapTypeFilter}
-              onValueChange={(v) => {
-                setGapTypeFilter(v);
-                setPage(0);
-              }}
-            >
-              <SelectTrigger aria-label="Filter by gap type">
-                <SelectValue placeholder="All Types" />
-              </SelectTrigger>
-              <SelectContent>
-                {GAP_TYPE_OPTIONS.map((opt) => (
-                  <SelectItem key={opt.value} value={opt.value || "__all__"}>
-                    {opt.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="w-[160px]">
-            <label className="text-xs text-muted-foreground mb-1 block">
-              Min Confidence: {minConfidence.toFixed(1)}
-            </label>
-            <Slider
-              value={[minConfidence]}
-              onValueChange={(v) => {
-                setMinConfidence(v[0]);
-                setPage(0);
-              }}
-              min={0}
-              max={1}
-              step={0.1}
-              aria-label="Minimum confidence filter"
-            />
-          </div>
-
-          <div className="w-[160px]">
-            <label className="text-xs text-muted-foreground mb-1 block">Sort by</label>
-            <Select
-              value={sortBy}
-              onValueChange={(v) => {
-                setSortBy(v);
-                setPage(0);
-              }}
-            >
-              <SelectTrigger aria-label="Sort gaps by">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {SORT_OPTIONS.map((opt) => (
-                  <SelectItem key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {hasActiveFilters && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={resetFilters}
-              className="whitespace-nowrap"
-            >
-              Reset
-            </Button>
-          )}
-        </div>
-      </div>
-
-      {isLoading ? (
-        <div className="space-y-3">
-          {Array.from({ length: 5 }).map((_, i) => (
-            <Skeleton key={i} className="h-24 w-full" />
-          ))}
-        </div>
-      ) : isError ? (
-        <ErrorCard message="Failed to load research gaps" testId="gaps-error" />
-      ) : data?.gaps.length ? (
         <>
-          <p className="text-sm text-muted-foreground">
-            {data.total} gap{data.total !== 1 ? "s" : ""} found
-          </p>
-          <div className="space-y-3">
-            {data.gaps.map((gap) => (
-              <GapCard
-                key={gap.id}
-                gap={gap}
-                onIdeaCountClick={handleIdeaCountClick}
-              />
-            ))}
-          </div>
-          {data.total > limit && (
-            <div className="flex items-center justify-between pt-2">
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={page === 0}
-                onClick={() => setPage((p) => p - 1)}
-              >
-                <ChevronLeft className="mr-1 h-4 w-4" />
-                Previous
-              </Button>
-              <span className="text-sm text-muted-foreground">
-                Page {page + 1} of {Math.ceil(data.total / limit)}
-              </span>
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={(page + 1) * limit >= data.total}
-                onClick={() => setPage((p) => p + 1)}
-              >
-                Next
-                <ChevronRight className="ml-1 h-4 w-4" />
+          {clusterFilter !== null && (
+            <div className="flex items-center gap-2">
+              <Badge variant="secondary" data-testid="cluster-filter-badge">
+                Cluster {clusterFilter}
+              </Badge>
+              <Button variant="ghost" size="sm" onClick={() => setClusterFilter(null)}>
+                Clear
               </Button>
             </div>
           )}
+
+          {/* ── Filters ── */}
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-end">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                placeholder="Search gaps by title or description..."
+                value={searchText}
+                onChange={(e) => { setSearchText(e.target.value); setPage(0); }}
+                className="pl-9"
+                aria-label="Search gaps by title or description"
+              />
+            </div>
+            <div className="flex items-end gap-4">
+              <div className="w-[180px]">
+                <label className="text-ui-meta text-muted-foreground mb-1 block">Gap Type</label>
+                <Select value={gapTypeFilter || "__all__"} onValueChange={(v) => { setGapTypeFilter(v === "__all__" ? "" : v); setPage(0); }}>
+                  <SelectTrigger aria-label="Filter by gap type"><SelectValue placeholder="All Types" /></SelectTrigger>
+                  <SelectContent>
+                    {GAP_TYPE_OPTIONS.map((opt) => (
+                      <SelectItem key={opt.value || "__all__"} value={opt.value || "__all__"}>
+                        {opt.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="w-[160px]">
+                <label className="text-ui-meta text-muted-foreground mb-1 block">
+                  Min Confidence: {minConfidence.toFixed(1)}
+                </label>
+                <Slider
+                  value={[minConfidence]}
+                  onValueChange={(v) => { setMinConfidence(v[0]); setPage(0); }}
+                  min={0} max={1} step={0.1}
+                  aria-label="Minimum confidence filter"
+                />
+              </div>
+              <div className="w-[160px]">
+                <label className="text-ui-meta text-muted-foreground mb-1 block">Sort by</label>
+                <Select value={sortBy} onValueChange={(v) => { setSortBy(v); setPage(0); }}>
+                  <SelectTrigger aria-label="Sort gaps by"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {SORT_OPTIONS.map((opt) => (
+                      <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              {hasActiveFilters && (
+                <Button variant="ghost" size="sm" onClick={resetFilters} className="whitespace-nowrap">
+                  Reset
+                </Button>
+              )}
+            </div>
+          </div>
+
+          {/* ── Results via DataView ── */}
+          <DataView
+            resource={resource}
+            testId="gaps"
+            empty={{
+              what: "gaps",
+              icon: GitBranch,
+              title: searchText ? `No gaps match "${searchText}"` : "No research gaps found",
+              message: searchText ? "Try adjusting your search." : "No gaps have been identified yet.",
+            }}
+          >
+            {(data) => (
+              <>
+                <p className="text-ui-meta text-muted-foreground">
+                  {data.total} gap{data.total !== 1 ? "s" : ""} found
+                </p>
+                <div className="space-y-3">
+                  {data.gaps.map((gap) => (
+                    <GapCard
+                      key={gap.id}
+                      gap={gap}
+                      onIdeaCountClick={(g) => navigate(`/ideas?search=${encodeURIComponent(g.title)}`)}
+                    />
+                  ))}
+                </div>
+                {data.total > limit && (
+                  <div className="flex items-center justify-between pt-4">
+                    <Button variant="outline" size="sm" disabled={page === 0} onClick={() => setPage((p) => p - 1)}>
+                      <ChevronLeft className="mr-1 h-4 w-4" />
+                      Previous
+                    </Button>
+                    <span className="text-ui-meta text-muted-foreground">
+                      Page {page + 1} of {Math.ceil(data.total / limit)}
+                    </span>
+                    <Button variant="outline" size="sm" disabled={(page + 1) * limit >= data.total} onClick={() => setPage((p) => p + 1)}>
+                      Next
+                      <ChevronRight className="ml-1 h-4 w-4" />
+                    </Button>
+                  </div>
+                )}
+              </>
+            )}
+          </DataView>
         </>
-      ) : (
-        <EmptyState
-          icon={GitBranch}
-          title="No research gaps found"
-          message={searchText ? `No gaps match "${searchText}".` : "No gaps have been identified yet."}
-          testId="gaps-empty"
-        />
-      )}
-      </>
       ) : (
         <div>
           {clusterData?.clusters?.length ? (
             <ClusterScatterPlot
-              clusters={clusterData.clusters}
+              clusters={clusterData.clusters as never[]}
               onClusterClick={handleClusterClick}
               selectedClusterId={clusterFilter}
             />
           ) : (
-            <p className="text-sm text-muted-foreground py-4">No cluster data available.</p>
+            <p className="text-ui-meta text-muted-foreground py-4">No cluster data available.</p>
           )}
           {clusterData && (
-            <p className="text-sm text-muted-foreground mt-2">
+            <p className="text-ui-meta text-muted-foreground mt-2">
               {clusterData.total_papers} papers across {clusterData.clusters.length} clusters
             </p>
           )}
         </div>
-      )
-      }
+      )}
     </div>
   );
 }

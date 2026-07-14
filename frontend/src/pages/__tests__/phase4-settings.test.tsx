@@ -14,6 +14,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import Settings from "@/pages/settings";
 import { SettingsProvider } from "@/contexts/settings-context";
 import { AuthProvider } from "@/contexts/auth-context";
@@ -58,14 +59,19 @@ vi.mock("@/components/settings/model-status-panel", () => ({
 }));
 
 function renderSettings() {
+  const qc = new QueryClient({
+    defaultOptions: { queries: { retry: false, gcTime: 0, staleTime: 0 } },
+  });
   return render(
-    <MemoryRouter>
-      <AuthProvider>
-        <SettingsProvider>
-          <Settings />
-        </SettingsProvider>
-      </AuthProvider>
-    </MemoryRouter>,
+    <QueryClientProvider client={qc}>
+      <MemoryRouter>
+        <AuthProvider>
+          <SettingsProvider>
+            <Settings />
+          </SettingsProvider>
+        </AuthProvider>
+      </MemoryRouter>
+    </QueryClientProvider>,
   );
 }
 

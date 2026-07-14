@@ -123,7 +123,7 @@ function RunHealthCard({ data }: { data: OpsDashboard }) {
 
       {rh.slowest_stages.length > 0 && (
         <div className="mt-3 space-y-1" data-testid="slowest-stages">
-          <span className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">
+          <span className="text-ui-micro font-semibold uppercase tracking-wider text-muted-foreground">
             Slowest Stages
           </span>
           {rh.slowest_stages.map((s) => (
@@ -256,7 +256,7 @@ function QualityTrendsCard({ data }: { data: OpsDashboard }) {
 
       {qt.common_failures.length > 0 && (
         <div className="mt-3 space-y-1" data-testid="common-failures">
-          <span className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">
+          <span className="text-ui-micro font-semibold uppercase tracking-wider text-muted-foreground">
             Common Failures
           </span>
           {qt.common_failures.map((f) => (
@@ -289,7 +289,7 @@ function MetricCard({
       <CardHeader className="pb-3">
         <div className="flex items-center gap-1.5 pb-1">
           <Icon className="h-3.5 w-3.5 text-muted-foreground" />
-          <CardTitle className="text-[10px] font-mono font-bold uppercase tracking-wider text-muted-foreground">
+          <CardTitle className="text-ui-micro font-semibold uppercase tracking-wider text-muted-foreground">
             {title}
           </CardTitle>
         </div>

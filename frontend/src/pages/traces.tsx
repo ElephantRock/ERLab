@@ -93,7 +93,7 @@ export default function TracesPage() {
     return (
       <div className="space-y-6" data-testid="traces-page">
         <h1 className="text-2xl font-bold tracking-tight">Traces</h1>
-        <div className="rounded-lg border border-yellow-300 bg-yellow-50 p-4 text-yellow-800" data-testid="traces-service-unavailable">
+        <div className="rounded-lg border border-warning/30 bg-warning/5 p-4 text-warning" data-testid="traces-service-unavailable">
           <p className="font-medium">Observability Not Enabled</p>
           <p className="text-sm">Enable observability in platform configuration to view traces.</p>
         </div>
@@ -105,7 +105,7 @@ export default function TracesPage() {
     return (
       <div className="space-y-6" data-testid="traces-page">
         <h1 className="text-2xl font-bold tracking-tight">Traces</h1>
-        <div className="rounded-lg border border-red-300 bg-red-50 p-4 text-red-800" data-testid="traces-error">
+        <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-destructive" data-testid="traces-error">
           <p className="font-medium">Error loading trace data</p>
           <p className="text-sm">{error}</p>
         </div>

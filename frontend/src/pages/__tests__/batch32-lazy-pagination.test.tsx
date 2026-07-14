@@ -145,12 +145,14 @@ beforeEach(() => {
 });
 
 // ═══════════════════════════════════════════════════════════════════
-// TEST-32-02-01: Dashboard lazy loads chart components
+// TEST-32-02-01: Dashboard no longer renders charts (Phase 3 rebuild)
+// The old dashboard had lazy-loaded chart components (ScoreDistributionChart,
+// RunStatusChart) — PRODUCT.md anti-pattern "The Trophy Case." The rebuilt
+// dashboard is an action queue and intentionally has no charts.
 // ═══════════════════════════════════════════════════════════════════
 
-describe("TEST-32-02-01: Dashboard lazy loads chart components", () => {
-  it("renders chart placeholders via lazy-loaded components", async () => {
-    // Import Dashboard dynamically to test lazy loading
+describe("TEST-32-02-01: Dashboard renders without charts (Phase 3 rebuild)", () => {
+  it("renders the action-queue dashboard without Analytics section", async () => {
     const Dashboard = (await import("@/pages/dashboard")).default;
 
     mockedGetSystemStatus.mockResolvedValue(sampleStatus);
@@ -180,7 +182,7 @@ describe("TEST-32-02-01: Dashboard lazy loads chart components", () => {
       run_health: { total_runs: 1, completed: 1, failed: 0, cancelled: 0, running: 0, pending: 0, average_duration_s: 60, slowest_stages: [] },
       model_usage: { models: [], total_receipts: 0, warnings: [] },
       source_health: { papers_found_total: 0, zero_result_runs: 0, sources: [] },
-      quality_trends: { proposal_count: 0, quality_pass_rate: 100, common_failures: [], citation_resolution_rate: null, total_citation_needed: 0, total_valid_citations: 0, remediation_count: 0, restore_count: 0 },
+      quality_trends: { proposal_count: 0, quality_pass_rate: 100, common_failures: [], citation_resolution_rate: null, total_citation_needed: 0, total_valid_citations: 0, remediation_count: 0, restore_count: 0, fabrications_currently_present: 0, fabrications_found_total: 0 },
     });
     mockedGetPending.mockResolvedValue({ pending: [] });
 
@@ -193,14 +195,17 @@ describe("TEST-32-02-01: Dashboard lazy loads chart components", () => {
       </QueryClientProvider>,
     );
 
-    // The chart section should render when data exists
+    // The dashboard should render (either quick-start or active-run-card)
     await waitFor(() => {
-      expect(screen.getByText("Analytics")).toBeInTheDocument();
+      expect(
+        screen.getByTestId("quick-start") || screen.getByTestId("active-run-card"),
+      ).toBeInTheDocument();
     });
 
-    // Lazy-loaded chart components render their mock placeholders
-    expect(screen.getByTestId("score-chart")).toBeInTheDocument();
-    expect(screen.getByTestId("status-chart")).toBeInTheDocument();
+    // Analytics section is intentionally gone (Trophy Case anti-pattern)
+    expect(screen.queryByText("Analytics")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("score-chart")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("status-chart")).not.toBeInTheDocument();
   });
 });
 

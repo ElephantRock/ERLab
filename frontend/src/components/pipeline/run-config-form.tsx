@@ -120,7 +120,7 @@ export function RunConfigForm({ onSubmit, isLoading, initialDomain = "", onStrat
 
           {/* ── Domain Hero ── */}
           <div className="space-y-2">
-            <label className="text-[10px] font-mono font-bold uppercase tracking-widest text-muted-foreground">
+            <label className="text-ui-micro font-semibold uppercase tracking-wider text-muted-foreground">
               Research Domain
             </label>
             <Input
@@ -139,7 +139,7 @@ export function RunConfigForm({ onSubmit, isLoading, initialDomain = "", onStrat
 
           {/* ── Strategy Cards ── */}
           <div className="space-y-2">
-            <label className="text-[10px] font-mono font-bold uppercase tracking-widest text-muted-foreground">
+            <label className="text-ui-micro font-semibold uppercase tracking-wider text-muted-foreground">
               Research Strategy
             </label>
             <div className="grid gap-2 sm:grid-cols-2">
@@ -181,7 +181,7 @@ export function RunConfigForm({ onSubmit, isLoading, initialDomain = "", onStrat
 
           {/* ── Research Intent ── */}
           <div className="space-y-3 pt-2">
-            <label className="text-[10px] font-mono font-bold uppercase tracking-widest text-muted-foreground">
+            <label className="text-ui-micro font-semibold uppercase tracking-wider text-muted-foreground">
               Research Intent
             </label>
 

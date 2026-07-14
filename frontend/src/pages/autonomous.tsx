@@ -270,7 +270,7 @@ export default function AutonomousPage() {
 
       {/* Stop Confirmation (HB-01) */}
       {stopConfirmId && (
-        <Card className="border-yellow-500" data-testid="stop-confirm-dialog">
+        <Card className="border-warning" data-testid="stop-confirm-dialog">
           <CardContent className="p-4">
             <p className="text-sm font-medium mb-3">
               Are you sure you want to stop cycle <code className="text-xs">{stopConfirmId}</code>?

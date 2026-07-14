@@ -201,7 +201,7 @@ export function StageModelEditor() {
     return (
       <Card data-testid="stage-model-editor" className="card-shadow">
         <CardHeader>
-          <CardTitle className="text-[10px] font-mono font-bold uppercase tracking-wider text-muted-foreground">Stage Model Routing</CardTitle>
+          <CardTitle className="text-ui-micro font-semibold uppercase tracking-wider text-muted-foreground">Stage Model Routing</CardTitle>
         </CardHeader>
         <CardContent>
           <Skeleton className="h-32 w-full" />
@@ -214,7 +214,7 @@ export function StageModelEditor() {
     return (
       <Card data-testid="stage-model-editor" className="card-shadow">
         <CardHeader>
-          <CardTitle className="text-[10px] font-mono font-bold uppercase tracking-wider text-muted-foreground">Stage Model Routing</CardTitle>
+          <CardTitle className="text-ui-micro font-semibold uppercase tracking-wider text-muted-foreground">Stage Model Routing</CardTitle>
         </CardHeader>
         <CardContent>
           <ErrorCard message="No models available. Configure a provider first." />
@@ -233,7 +233,7 @@ export function StageModelEditor() {
     <Card data-testid="stage-model-editor" className="card-shadow">
       <CardHeader>
         <div className="flex items-center justify-between">
-          <CardTitle className="text-[10px] font-mono font-bold uppercase tracking-wider text-muted-foreground">Stage Model Routing</CardTitle>
+          <CardTitle className="text-ui-micro font-semibold uppercase tracking-wider text-muted-foreground">Stage Model Routing</CardTitle>
           <div className="flex items-center gap-2">
             {editing ? (
               <>

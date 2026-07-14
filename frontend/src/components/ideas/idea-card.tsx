@@ -73,7 +73,7 @@ export function IdeaCard({ idea, onClick }: IdeaCardProps) {
 
         {/* ── Domain ── */}
         <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
-          <span className="font-mono uppercase tracking-wider bg-muted/40 border border-border px-1.5 py-0.5 rounded">
+          <span className="text-ui-micro font-semibold uppercase tracking-wider bg-muted/40 border border-border px-1.5 py-0.5 rounded">
             {idea.domain}
           </span>
           <span className="flex items-center gap-0.5">

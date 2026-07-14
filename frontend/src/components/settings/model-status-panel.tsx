@@ -41,7 +41,7 @@ export function ModelStatusPanel() {
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-1.5">
             <Cpu className="h-3.5 w-3.5 text-muted-foreground" />
-            <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-muted-foreground">Models</span>
+            <span className="text-ui-micro font-semibold uppercase tracking-wider text-muted-foreground">Models</span>
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -56,7 +56,7 @@ export function ModelStatusPanel() {
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center gap-1.5">
           <Cpu className="h-3.5 w-3.5 text-muted-foreground" />
-          <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-muted-foreground">Models</span>
+          <span className="text-ui-micro font-semibold uppercase tracking-wider text-muted-foreground">Models</span>
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">

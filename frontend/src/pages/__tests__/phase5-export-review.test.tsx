@@ -205,11 +205,13 @@ describe("Phase 5: Run-level export", () => {
 describe("Phase 5: Governance review flows", () => {
   function renderGovernance() {
     return render(
-      <MemoryRouter initialEntries={["/governance"]}>
-        <Routes>
-          <Route path="/governance" element={<GovernancePage />} />
-        </Routes>
-      </MemoryRouter>,
+      <QueryClientProvider client={createQueryClient()}>
+        <MemoryRouter initialEntries={["/governance"]}>
+          <Routes>
+            <Route path="/governance" element={<GovernancePage />} />
+          </Routes>
+        </MemoryRouter>
+      </QueryClientProvider>,
     );
   }
 

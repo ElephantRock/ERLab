@@ -4,16 +4,39 @@
  * Full Memory Browser page replacing the /memory placeholder.
  * Features: search input, type filter, delete confirmation,
  * memory cards list with stats header.
+ *
+ * Migrated to useResource + DataView (Phase 3, Tier 3). The recall query
+ * is the page's primary visible resource surface (loading/error/empty/
+ * ready) — useResource + DataView. It is keyed on [activeQuery, typeFilter]
+ * so changing either (search submit or type-filter change) triggers a
+ * refetch via the key, replacing the previous imperative loadMemories.
+ *
+ * Stats is supplementary metadata (a header above the search bar), not a
+ * primary surface — useQuery with an honest inline "unavailable" hint on
+ * failure. The previous `console.warn("[memory] Failed to load stats")`
+ * swallow silently omitted the header; now failure is visible
+ * (PRODUCT.md §6, INTERFACE_CONTRACT §1/§2).
+ *
+ * Delete stays a mutation (local state + optimistic cache update via
+ * queryClient.setQueryData + stats invalidation), matching the original
+ * behavior.
  */
 
-import { useCallback, useEffect, useState } from "react";
+import { useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getMemoryStats, recallMemories, deleteMemory } from "@/api/memory";
-import type { MemoryStats as MemoryStatsData, MemoryRecallResult } from "@/api/memory";
+import type {
+  MemoryStats as MemoryStatsData,
+  MemoryRecallResult,
+  MemoryRecallResponse,
+} from "@/api/memory";
 import { toast } from "sonner";
 import { MemoryCard } from "@/components/memory/memory-card";
 import { MemoryStats } from "@/components/memory/memory-stats";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { DataView } from "@/components/ui/data-view";
+import { useResource } from "@/lib/useResource";
 import {
   Select,
   SelectContent,
@@ -21,70 +44,53 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Search, Loader2, AlertCircle } from "lucide-react";
+import { Search, AlertCircle } from "lucide-react";
 
 const MEMORY_TYPES = ["semantic", "episodic", "procedural"] as const;
 const BROAD_QUERY = "*";
 const DEFAULT_TOP_K = 50;
 
 export default function MemoryBrowserPage() {
-  const [stats, setStats] = useState<MemoryStatsData | null>(null);
-  const [results, setResults] = useState<MemoryRecallResult[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const queryClient = useQueryClient();
 
   const [query, setQuery] = useState("");
   const [activeQuery, setActiveQuery] = useState(BROAD_QUERY);
   const [typeFilter, setTypeFilter] = useState<string>("all");
 
-  // Delete confirmation state
+  // Delete confirmation state (mutation UI, stays local)
   const [confirmDelete, setConfirmDelete] = useState<MemoryRecallResult | null>(null);
 
-  // ── Load stats ─────────────────────────────────────────────────
-  const loadStats = useCallback(async () => {
-    try {
-      const data = await getMemoryStats();
-      setStats(data);
-    } catch (err) {
-      console.warn("[memory] Failed to load stats:", err);
-    }
-  }, []);
+  // ── Stats (supplementary metadata, useQuery + honest fallback) ──
+  // Previously .catch(console.warn) silently omitted the header on failure.
+  // Now isError drives an honest "unavailable" hint (PRODUCT.md §6).
+  const RECALL_KEY = ["memory", "recall", activeQuery, typeFilter] as const;
+  const { data: stats, isError: statsError } = useQuery({
+    queryKey: ["memory", "stats"],
+    queryFn: () => getMemoryStats(),
+  });
 
-  // ── Recall memories ────────────────────────────────────────────
-  const loadMemories = useCallback(
-    async (searchQuery: string, memType?: string) => {
-      setLoading(true);
-      setError(null);
-      try {
-        const params: { memory_type?: string; top_k?: number } = {
-          top_k: DEFAULT_TOP_K,
-        };
-        if (memType && memType !== "all") {
-          params.memory_type = memType;
-        }
-        const data = await recallMemories(searchQuery || BROAD_QUERY, params);
-        setResults(data.results);
-      } catch (err) {
-        setError("Failed to load memories");
-        setResults([]);
-      } finally {
-        setLoading(false);
+  // ── Recall (primary visible surface, useResource + DataView) ────
+  // Keyed on [activeQuery, typeFilter] — changing either (via search
+  // submit or filter change) triggers a refetch through the key.
+  const recallResource = useResource<MemoryRecallResponse>(
+    RECALL_KEY,
+    () => {
+      const params: { memory_type?: string; top_k?: number } = {
+        top_k: DEFAULT_TOP_K,
+      };
+      if (typeFilter !== "all") {
+        params.memory_type = typeFilter;
       }
+      return recallMemories(activeQuery, params);
     },
-    [],
+    { isEmpty: (d) => d.results.length === 0 },
   );
 
-  // ── Initial load ───────────────────────────────────────────────
-  useEffect(() => {
-    loadStats();
-    loadMemories(BROAD_QUERY);
-  }, [loadStats, loadMemories]);
-
   // ── Search handler ─────────────────────────────────────────────
+  // Updates activeQuery → the recall resource's key changes → refetch.
   function handleSearch() {
     const q = query.trim() || BROAD_QUERY;
     setActiveQuery(q);
-    loadMemories(q, typeFilter);
   }
 
   function handleKeyDown(e: React.KeyboardEvent) {
@@ -94,24 +100,26 @@ export default function MemoryBrowserPage() {
   }
 
   // ── Type filter handler ────────────────────────────────────────
+  // Updates typeFilter → the recall resource's key changes → refetch.
   function handleTypeChange(value: string) {
     setTypeFilter(value);
-    loadMemories(activeQuery, value);
   }
 
-  // ── Delete handler ─────────────────────────────────────────────
-  function handleDeleteRequest(memory: MemoryRecallResult) {
-    setConfirmDelete(memory);
-  }
-
+  // ── Delete handler (mutation + optimistic cache update) ────────
   async function handleDeleteConfirm() {
     if (!confirmDelete) return;
-
+    const target = confirmDelete;
     try {
-      await deleteMemory(confirmDelete.content);
-      setResults((prev) => prev.filter((m) => m !== confirmDelete));
-      // Refresh stats after deletion
-      loadStats();
+      await deleteMemory(target.content);
+      // Optimistic removal from the recall cache — matches the original
+      // setResults(prev => prev.filter(...)).
+      queryClient.setQueryData<MemoryRecallResponse>(RECALL_KEY, (prev) =>
+        prev
+          ? { ...prev, results: prev.results.filter((m) => m !== target) }
+          : prev,
+      );
+      // Refresh stats after deletion.
+      queryClient.invalidateQueries({ queryKey: ["memory", "stats"] });
     } catch (err) {
       toast.error("Failed to delete memory item");
     } finally {
@@ -119,21 +127,35 @@ export default function MemoryBrowserPage() {
     }
   }
 
+  function handleDeleteRequest(memory: MemoryRecallResult) {
+    setConfirmDelete(memory);
+  }
+
   function handleDeleteCancel() {
     setConfirmDelete(null);
   }
 
-  // ── Render ─────────────────────────────────────────────────────
   return (
     <div className="space-y-6" data-testid="memory-page">
       <h1 className="text-2xl font-bold tracking-tight">Memory Browser</h1>
 
-      {/* Stats Header */}
-      {stats && (
+      {/* Stats Header — supplementary. Failed fetch shows honest "unavailable"
+          rather than silently omitting the header (PRODUCT.md §6). */}
+      {statsError ? (
+        <div
+          className="rounded-lg border border-warning/30 bg-banner-warning-bg p-3 text-sm text-warning"
+          data-testid="stats-header"
+        >
+          <div className="flex items-center gap-2">
+            <AlertCircle className="h-4 w-4" />
+            <span>Memory stats unavailable.</span>
+          </div>
+        </div>
+      ) : stats ? (
         <div data-testid="stats-header">
           <MemoryStats stats={stats} />
         </div>
-      )}
+      ) : null}
 
       {/* Search & Filter Bar */}
       <div className="flex gap-3 items-center" data-testid="search-bar">
@@ -166,28 +188,6 @@ export default function MemoryBrowserPage() {
         </Button>
       </div>
 
-      {/* Loading State */}
-      {loading && (
-        <div className="flex items-center gap-2 text-muted-foreground" data-testid="loading-state">
-          <Loader2 className="h-4 w-4 animate-spin" />
-          <span>Loading memories...</span>
-        </div>
-      )}
-
-      {/* Error State */}
-      {error && !loading && (
-        <div
-          className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-destructive"
-          data-testid="error-state"
-        >
-          <div className="flex items-center gap-2">
-            <AlertCircle className="h-4 w-4" />
-            <p className="font-medium">Error loading memories</p>
-          </div>
-          <p className="text-sm mt-1">{error}</p>
-        </div>
-      )}
-
       {/* Delete Confirmation Dialog */}
       {confirmDelete && (
         <div
@@ -214,29 +214,29 @@ export default function MemoryBrowserPage() {
         </div>
       )}
 
-      {/* Results */}
-      {!loading && !error && (
-        <div data-testid="results-list">
-          {results.length === 0 ? (
-            <div className="text-center py-12" data-testid="empty-state">
-              <p className="text-muted-foreground text-lg">No memories found</p>
-              <p className="text-sm text-muted-foreground mt-1">
-                Try adjusting your search query or filters.
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {results.map((memory, idx) => (
-                <MemoryCard
-                  key={`${memory.content}-${idx}`}
-                  memory={memory}
-                  onDelete={handleDeleteRequest}
-                />
-              ))}
-            </div>
-          )}
-        </div>
-      )}
+      {/* Results — primary visible surface, DataView handles all 4 states */}
+      <DataView
+        resource={recallResource}
+        testId="memory"
+        loading={{ lines: 3 }}
+        error={{ message: "Error loading memories" }}
+        empty={{
+          what: "memories",
+          message: "Try adjusting your search query or filters.",
+        }}
+      >
+        {(data) => (
+          <div className="space-y-3">
+            {data.results.map((memory, idx) => (
+              <MemoryCard
+                key={`${memory.content}-${idx}`}
+                memory={memory}
+                onDelete={handleDeleteRequest}
+              />
+            ))}
+          </div>
+        )}
+      </DataView>
     </div>
   );
 }

@@ -38,7 +38,7 @@ export function RunCard({ run, onClick }: RunCardProps) {
               {run.status}
             </Badge>
             {stale && (
-              <AlertTriangle className="h-4 w-4 text-yellow-600" data-testid="stale-run-icon" />
+              <AlertTriangle className="h-4 w-4 text-warning" data-testid="stale-run-icon" />
             )}
           </div>
           <p className="text-xs text-muted-foreground mt-1">{run.domain}</p>

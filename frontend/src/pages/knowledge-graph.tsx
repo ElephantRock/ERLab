@@ -3,16 +3,31 @@
  *
  * Features: stats bar, type filter, search, SVG graph canvas, entity detail panel.
  * HB-02: Initial render limited to 100 entities.
+ *
+ * Entity-detail fetch migrated from a hand-rolled `handleSelectEntity` +
+ * `console.warn` swallow to a dependent react-query. Uses `useQuery`
+ * directly (NOT `useResource`) per INTERFACE_CONTRACT §1's decision rule:
+ * the detail panel is a dependent subquery keyed off the graph's
+ * selection state — it opens on click and renders inline, with no
+ * separate loading/error/empty panel of its own. Forcing `useResource`
+ * + `<DataView>` here would invent a 4-state panel the interaction does
+ * not have. The page-level resources (stats, entities, world model) are
+ * already react-query; the detail is one more query in the same family.
+ *
+ * The previous `console.warn("[knowledge-graph] Failed to load entity")`
+ * swallow is gone — a failed detail fetch now surfaces a toast (the
+ * contract's on-demand-failure convention, INTERFACE_CONTRACT §2) and the
+ * panel stays closed rather than silently doing nothing.
  */
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { BrainCircuit, Search, Filter, Loader2 } from "lucide-react";
 import { getGraphStats, getEntities, getEntity, getWorldModel } from "@/api/knowledge-graph";
-import type { GraphStats, GraphEntity, EntityDetail, WorldModel } from "@/api/knowledge-graph";
 import { GraphCanvas } from "@/components/knowledge-graph/graph-canvas";
 import { EntityDetail as EntityDetailPanel } from "@/components/knowledge-graph/entity-detail";
 import { WorldModelPanel } from "@/components/knowledge-graph/world-model-panel";
+import { toast } from "sonner";
 
 const ENTITY_TYPES = ["paper", "author", "method", "dataset", "concept"];
 
@@ -20,7 +35,6 @@ export default function KnowledgeGraphPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [typeFilter, setTypeFilter] = useState<string>("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [detailData, setDetailData] = useState<EntityDetail | null>(null);
 
   // ── World model query ────────────────────────────────────────
   const { data: worldModel } = useQuery({
@@ -45,26 +59,31 @@ export default function KnowledgeGraphPage() {
       }),
   });
 
-  // ── Derive relationships from entity detail for the canvas ───
-  const relationships = detailData?.relationships || [];
+  // ── Entity detail query (dependent subquery) ─────────────────
+  // Fires only when an entity is selected; auto-cancels and re-fires on
+  // selection change. Replaces the previous hand-rolled fetch + swallow.
+  const { data: detailData, isError: detailError } = useQuery({
+    queryKey: ["kg-entity", selectedId],
+    queryFn: () => getEntity(selectedId!),
+    enabled: !!selectedId,
+  });
 
-  // ── Entity detail query ──────────────────────────────────────
-  const handleSelectEntity = useCallback(
-    async (id: string) => {
-      setSelectedId(id);
-      try {
-        const detail = await getEntity(id);
-        setDetailData(detail);
-      } catch (err) {
-        console.warn("[knowledge-graph] Failed to load entity:", err);
-      }
-    },
-    [],
-  );
+  // Surface detail-fetch failures as a toast. Previously the failure was
+  // swallowed (console.warn) and the panel silently never opened.
+  // useEffect keeps this side-effect out of render.
+  // Note: this is a side-effect, not a state mutation — react-query keeps
+  // the failed query in cache; the panel just doesn't open on error.
+  const handleSelectEntity = useCallback((id: string) => {
+    setSelectedId(id);
+  }, []);
+
+  // Toast on detail error. Kept as an effect rather than inside
+  // handleSelectEntity because the query can also fail on refetch, not
+  // just initial selection — the effect catches both.
+  useDetailErrorToast(detailError, selectedId);
 
   const handleCloseDetail = useCallback(() => {
     setSelectedId(null);
-    setDetailData(null);
   }, []);
 
   const handleNavigateToEntity = useCallback(
@@ -75,6 +94,9 @@ export default function KnowledgeGraphPage() {
   );
 
   const isLoading = statsLoading || entitiesLoading;
+
+  // Derive relationships from the selected entity detail for the canvas.
+  const relationships = detailData?.relationships || [];
 
   return (
     <div className="space-y-4">
@@ -162,7 +184,7 @@ export default function KnowledgeGraphPage() {
             />
           </div>
 
-          {/* Entity Detail Panel */}
+          {/* Entity Detail Panel — only renders when the detail query has data. */}
           {detailData && (
             <div className="lg:col-span-1">
               <EntityDetailPanel
@@ -181,4 +203,24 @@ export default function KnowledgeGraphPage() {
       )}
     </div>
   );
+}
+
+/**
+ * Toast-on-detail-error effect. Extracted as a hook so the render path
+ * stays free of side effects. Fires once when `isError` flips true for a
+ * given selection; tracks the last-reported selection to avoid duplicate
+ * toasts on re-render.
+ */
+function useDetailErrorToast(isError: boolean, selectedId: string | null) {
+  const [lastReported, setLastReported] = useState<string | null>(null);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- minimal effect; deps intentionally narrow
+  useEffect(() => {
+    if (isError && selectedId && selectedId !== lastReported) {
+      toast.error("Failed to load entity detail");
+      setLastReported(selectedId);
+    }
+    if (!isError && lastReported) {
+      setLastReported(null);
+    }
+  });
 }

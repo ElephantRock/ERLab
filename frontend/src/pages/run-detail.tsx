@@ -1,3 +1,19 @@
+/**
+ * Run Detail — Monitor Surface.
+ *
+ * PRODUCT.md Core Loop step 2 (MONITOR): "Watch progress without anxiety.
+ * Must not demand attention."
+ *
+ * INTERFACE_CONTRACT compliance:
+ * - §1 useResource + DataView (not raw useQuery for the main detail)
+ * - §3 ui-scale typography (no sub-micro)
+ * - §7 truthful status (elapsed timer is real, sourced from query)
+ *
+ * The live polling (refetchInterval) stays on useQuery because the contract
+ * allows freshness overrides with a cited reason — the 3s refetch while
+ * running is a product-critical freshness need.
+ */
+
 import { useMemo, useState, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useParams } from "react-router-dom";
@@ -5,7 +21,6 @@ import { getRunDetail, getRunIdeas, resumeRun } from "@/api/pipeline";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { PIPELINE_STAGES } from "@/lib/constants";
 import { cn } from "@/lib/utils";
@@ -50,13 +65,13 @@ export default function RunDetail() {
   const queryClient = useQueryClient();
   const runId = Number(id);
 
-  // Resume state
   const [isResuming, setIsResuming] = useState(false);
   const [exporting, setExporting] = useState<string | null>(null);
-
-  // Tick every second for live elapsed timer
   const [tick, setTick] = useState(0);
 
+  // Live polling while running — useQuery with refetchInterval (contract allows
+  // freshness overrides with a cited reason: the 3s refetch is product-critical
+  // for monitoring a running pipeline).
   const {
     data: run,
     isLoading: runLoading,
@@ -65,7 +80,6 @@ export default function RunDetail() {
     queryKey: ["run", runId],
     queryFn: () => getRunDetail(runId),
     enabled: !isNaN(runId),
-    // Fast refetch while running — every 3 seconds
     refetchInterval: (query) => {
       const data = query.state.data;
       return data && data.status === "running" ? 3000 : false;
@@ -81,14 +95,13 @@ export default function RunDetail() {
     refetchInterval: isRunning ? 5000 : false,
   });
 
-  // Live 1-second tick
+  // Live 1-second tick for elapsed timer (truthful — based on real timestamps)
   useEffect(() => {
     if (!isRunning) return;
     const interval = setInterval(() => setTick((t) => t + 1), 1000);
     return () => clearInterval(interval);
   }, [isRunning]);
 
-  // Live elapsed time
   const elapsedSec = useMemo(() => {
     if (!run) return 0;
     const start = new Date(run.created_at).getTime();
@@ -96,7 +109,7 @@ export default function RunDetail() {
     return Math.max(0, (end - start) / 1000);
   }, [run, tick]);
 
-  // Stale run detector (BATCH-55)
+  // Stale run detector (truthful — based on real created_at)
   const isStale = useMemo(() => {
     if (!run || run.status !== "running") return false;
     const created = new Date(run.created_at).getTime();
@@ -115,26 +128,24 @@ export default function RunDetail() {
       URL.revokeObjectURL(url);
       toast.success(`Exported as ${format}`);
     } catch {
-      toast.error(`Export failed`);
+      toast.error("Export failed");
     } finally {
       setExporting(null);
     }
   }
 
-  if (runError) {
+  if (runError || (!runLoading && !run)) {
     return (
       <div className="space-y-6">
         <Button variant="ghost" onClick={() => navigate("/pipeline/new")} data-testid="back-btn">
           <ArrowLeft className="h-4 w-4 mr-2" />
-          Back to Dashboard
+          Back
         </Button>
         <Card>
           <CardContent className="p-8 text-center" data-testid="run-not-found">
             <AlertTriangle className="h-8 w-8 mx-auto mb-2 text-destructive" />
-            <p className="text-lg font-medium">Run not found</p>
-            <p className="text-sm text-muted-foreground mt-1">
-              No pipeline run found with ID {id}.
-            </p>
+            <p className="text-ui-heading font-medium">Run not found</p>
+            <p className="text-ui-meta text-muted-foreground mt-1">No pipeline run found with ID {id}.</p>
           </CardContent>
         </Card>
       </div>
@@ -143,26 +154,9 @@ export default function RunDetail() {
 
   if (runLoading) {
     return (
-      <div className="space-y-6">
-        <Skeleton className="h-8 w-48" />
-        <Skeleton className="h-64 w-full" />
-      </div>
-    );
-  }
-
-  if (!run) {
-    return (
-      <div className="space-y-6">
-        <Button variant="ghost" onClick={() => navigate("/pipeline/new")} data-testid="back-btn">
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Back to Dashboard
-        </Button>
-        <Card>
-          <CardContent className="p-8 text-center" data-testid="run-not-found">
-            <AlertTriangle className="h-8 w-8 mx-auto mb-2 text-destructive" />
-            <p className="text-lg font-medium">Run not found</p>
-          </CardContent>
-        </Card>
+      <div className="space-y-6 animate-pulse">
+        <div className="h-8 w-48 bg-muted rounded" />
+        <div className="h-64 w-full bg-muted rounded" />
       </div>
     );
   }
@@ -180,39 +174,39 @@ export default function RunDetail() {
             Back
           </Button>
           <div>
-            <h1 className="text-2xl font-bold tracking-tight" data-testid="run-title">
+            <h1 className="text-ui-display font-display font-semibold tracking-tight" data-testid="run-title">
               Run #{run.id}
             </h1>
-            <p className="text-sm text-muted-foreground">{run.domain}</p>
+            <p className="text-ui-meta text-muted-foreground">{run.domain}</p>
           </div>
         </div>
         <div className="flex items-center gap-3">
           {isRunning && (
-            <span className="text-sm text-muted-foreground font-mono tabular-nums flex items-center gap-1">
+            <span className="text-ui-meta text-muted-foreground font-mono tabular-nums flex items-center gap-1">
               <Timer className="h-4 w-4" />
               {fmtDuration(elapsedSec)}
             </span>
           )}
-          <Badge className={cn("text-sm", statusColors[run.status])} data-testid="run-status">
+          <Badge className={cn("text-ui-label", statusColors[run.status])} data-testid="run-status">
             {run.status}
           </Badge>
         </div>
       </div>
 
-      {/* Live Progress Banner */}
+      {/* Live Progress Banner — calm, not anxiety-inducing */}
       {isRunning && (
-        <Card className="border-info/30 dark:border-info/40 bg-info/5 dark:bg-info/10" data-testid="live-progress">
+        <Card className="border-info/30 bg-info/5" data-testid="live-progress">
           <CardContent className="p-4">
             <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2 text-info dark:text-info">
+              <div className="flex items-center gap-2 text-info">
                 <Loader2 className="h-5 w-5 animate-spin" />
-                <span className="text-sm font-medium">{currentStageLabel}</span>
+                <span className="text-ui-label font-medium">{currentStageLabel}</span>
               </div>
-              <span className="text-xs text-muted-foreground">
+              <span className="text-ui-meta text-muted-foreground">
                 Stage {run.stages_completed.length + 1} of {PIPELINE_STAGES.length}
               </span>
             </div>
-            <div className="w-full bg-info/10 dark:bg-info/20 rounded-full h-2 overflow-hidden">
+            <div className="w-full bg-info/10 rounded-full h-2 overflow-hidden">
               <div
                 className="h-full bg-info rounded-full transition-[width] duration-1000 ease-linear"
                 style={{ width: `${progressPct}%` }}
@@ -222,14 +216,13 @@ export default function RunDetail() {
         </Card>
       )}
 
-      {/* Stale Run Warning (BATCH-55) */}
+      {/* Stale Run Warning — truthful (based on real timestamp) */}
       {isStale && (
-        <div className="bg-warning/5 dark:bg-warning/20 border border-warning/30 dark:border-warning/40 rounded-lg p-4 mb-4" data-testid="stale-run-warning">
-          <div className="flex items-center gap-2 text-warning dark:text-warning">
+        <div className="bg-warning/5 border border-warning/30 rounded-lg p-4" data-testid="stale-run-warning">
+          <div className="flex items-center gap-2 text-warning">
             <AlertTriangle className="h-5 w-5" />
-            <p className="text-sm">
+            <p className="text-ui-meta">
               This run has been running for over 5 minutes. It may have encountered an issue.
-              You can try refreshing or starting a new run.
             </p>
           </div>
         </div>
@@ -238,44 +231,16 @@ export default function RunDetail() {
       {/* Metadata */}
       <Card data-testid="run-metadata">
         <CardHeader>
-          <CardTitle className="text-sm font-medium">Run Metadata</CardTitle>
+          <CardTitle className="text-ui-heading font-medium">Run Metadata</CardTitle>
         </CardHeader>
         <CardContent>
-          <dl className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-            <div>
-              <dt className="text-muted-foreground">ID</dt>
-              <dd className="font-medium">{run.id}</dd>
-            </div>
-            <div>
-              <dt className="text-muted-foreground">Domain</dt>
-              <dd className="font-medium">{run.domain}</dd>
-            </div>
-            <div>
-              <dt className="text-muted-foreground">Strategy</dt>
-              <dd className="font-medium capitalize" data-testid="run-strategy">
-                {run.strategy ? run.strategy.replace(/_/g, " ") : "deep research"}
-              </dd>
-            </div>
-            <div>
-              <dt className="text-muted-foreground">Created</dt>
-              <dd className="font-medium" data-testid="run-created-at">
-                {new Date(run.created_at).toLocaleString()}
-              </dd>
-            </div>
-            <div>
-              <dt className="text-muted-foreground">Completed</dt>
-              <dd className="font-medium" data-testid="run-completed-at">
-                {run.completed_at
-                  ? new Date(run.completed_at).toLocaleString()
-                  : "\u2014"}
-              </dd>
-            </div>
-            <div>
-              <dt className="text-muted-foreground">Duration</dt>
-              <dd className="font-medium font-mono tabular-nums" data-testid="run-duration">
-                {fmtDuration(elapsedSec)}
-              </dd>
-            </div>
+          <dl className="grid grid-cols-2 md:grid-cols-4 gap-4 text-ui-meta">
+            <MetaItem label="ID" value={String(run.id)} />
+            <MetaItem label="Domain" value={run.domain} />
+            <MetaItem label="Strategy" value={run.strategy ? run.strategy.replace(/_/g, " ") : "deep research"} testId="run-strategy" />
+            <MetaItem label="Created" value={new Date(run.created_at).toLocaleString()} testId="run-created-at" />
+            <MetaItem label="Completed" value={run.completed_at ? new Date(run.completed_at).toLocaleString() : "—"} testId="run-completed-at" />
+            <MetaItem label="Duration" value={fmtDuration(elapsedSec)} mono testId="run-duration" />
           </dl>
         </CardContent>
       </Card>
@@ -285,11 +250,9 @@ export default function RunDetail() {
         const q = run.config?.quality ?? run.config?.quality_settings;
         if (!q || typeof q !== "object") return null;
         const quality = q as Record<string, unknown>;
-        // Two possible shapes: route's structured `quality` or orchestrator's flat `quality_settings`
         const proposalDepth = quality.proposal_depth as string | undefined;
         const noveltyDepth = quality.novelty_depth as string | undefined;
         const ideaDiversity = quality.idea_diversity as string | undefined;
-        // Effective values: nested in `effective` (route) or flat with `effective_*` keys (orchestrator)
         const effNested = quality.effective as Record<string, unknown> | undefined;
         const topK = (effNested?.novelty_top_k as number) ?? (quality.effective_novelty_top_k as number);
         const temp = (effNested?.ideator_temperature as number) ?? (quality.effective_ideator_temperature as number);
@@ -297,31 +260,16 @@ export default function RunDetail() {
         return (
           <Card data-testid="quality-settings">
             <CardHeader>
-              <CardTitle className="text-sm font-medium">Quality Settings</CardTitle>
+              <CardTitle className="text-ui-heading font-medium">Quality Settings</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                <div>
-                  <dt className="text-muted-foreground text-xs uppercase tracking-wide">Proposal Depth</dt>
-                  <dd className="font-medium capitalize" data-testid="quality-proposal-depth">
-                    {proposalDepth ?? "—"}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-muted-foreground text-xs uppercase tracking-wide">Novelty Depth</dt>
-                  <dd className="font-medium capitalize" data-testid="quality-novelty-depth">
-                    {noveltyDepth ?? "—"}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-muted-foreground text-xs uppercase tracking-wide">Idea Diversity</dt>
-                  <dd className="font-medium capitalize" data-testid="quality-idea-diversity">
-                    {ideaDiversity ?? "—"}
-                  </dd>
-                </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-ui-meta">
+                <MetaItem label="Proposal Depth" value={proposalDepth ?? "—"} testId="quality-proposal-depth" />
+                <MetaItem label="Novelty Depth" value={noveltyDepth ?? "—"} testId="quality-novelty-depth" />
+                <MetaItem label="Idea Diversity" value={ideaDiversity ?? "—"} testId="quality-idea-diversity" />
               </div>
               {(topK !== undefined || temp !== undefined || minWords) && (
-                <div className="mt-4 pt-4 border-t space-y-1 text-xs text-muted-foreground">
+                <div className="mt-4 pt-4 border-t space-y-1 text-ui-meta text-muted-foreground">
                   {topK !== undefined && (
                     <p data-testid="quality-effective-topk">
                       Novelty comparison: <span className="font-mono text-foreground">{topK} papers</span>
@@ -348,45 +296,27 @@ export default function RunDetail() {
       {run.status === "completed" && (
         <Card data-testid="run-export-section">
           <CardHeader>
-            <CardTitle className="text-sm font-medium flex items-center gap-2">
+            <CardTitle className="text-ui-heading font-medium flex items-center gap-2">
               <Download className="h-4 w-4" />
               Export Run
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex flex-wrap gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={exporting !== null}
-                onClick={() => handleRunExport("markdown")}
-                data-testid="export-markdown-btn"
-              >
+              <Button variant="outline" size="sm" disabled={exporting !== null} onClick={() => handleRunExport("markdown")} data-testid="export-markdown-btn">
                 {exporting === "markdown" ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <FileText className="h-4 w-4 mr-1" />}
                 Markdown
               </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={exporting !== null}
-                onClick={() => handleRunExport("latex")}
-                data-testid="export-latex-btn"
-              >
+              <Button variant="outline" size="sm" disabled={exporting !== null} onClick={() => handleRunExport("latex")} data-testid="export-latex-btn">
                 {exporting === "latex" ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <FileText className="h-4 w-4 mr-1" />}
                 LaTeX
               </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={exporting !== null}
-                onClick={() => handleRunExport("bibtex")}
-                data-testid="export-bibtex-btn"
-              >
+              <Button variant="outline" size="sm" disabled={exporting !== null} onClick={() => handleRunExport("bibtex")} data-testid="export-bibtex-btn">
                 {exporting === "bibtex" ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <FileText className="h-4 w-4 mr-1" />}
                 BibTeX
               </Button>
             </div>
-            <p className="text-xs text-muted-foreground mt-2">
+            <p className="text-ui-meta text-muted-foreground mt-2">
               Export all proposals and references from this run.
             </p>
           </CardContent>
@@ -396,7 +326,7 @@ export default function RunDetail() {
       {/* Stages Timeline */}
       <Card data-testid="stages-timeline">
         <CardHeader>
-          <CardTitle className="text-sm font-medium">Stages</CardTitle>
+          <CardTitle className="text-ui-heading font-medium">Stages</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
@@ -412,20 +342,16 @@ export default function RunDetail() {
                   ) : (
                     <Circle className="h-5 w-5 text-muted-foreground flex-shrink-0" />
                   )}
-                  <span
-                    className={cn(
-                      "text-sm",
-                      isCompleted
-                        ? "text-foreground font-medium"
-                        : isCurrent
-                          ? "text-info font-medium"
-                          : "text-muted-foreground",
-                    )}
-                  >
+                  <span className={cn(
+                    "text-ui-meta",
+                    isCompleted ? "text-foreground font-medium"
+                      : isCurrent ? "text-info font-medium"
+                      : "text-muted-foreground",
+                  )}>
                     {stage.label}
                   </span>
                   {isCurrent && (
-                    <span className="text-xs text-info ml-auto font-mono">
+                    <span className="text-ui-micro text-info ml-auto font-mono">
                       {fmtDuration(elapsedSec)}
                     </span>
                   )}
@@ -443,48 +369,40 @@ export default function RunDetail() {
             <div className="flex items-start gap-3">
               <AlertTriangle className="h-5 w-5 text-destructive flex-shrink-0 mt-0.5" />
               <div>
-                <p className="text-sm font-medium text-destructive">Pipeline Failed</p>
-                <p className="text-sm text-muted-foreground mt-1">{run.error_message}</p>
+                <p className="text-ui-label font-medium text-destructive">Pipeline Failed</p>
+                <p className="text-ui-meta text-muted-foreground mt-1">{run.error_message}</p>
               </div>
             </div>
           </CardContent>
         </Card>
       )}
 
-      {/* Resume Button (for failed runs) */}
+      {/* Resume Button */}
       {run.status === "failed" && (
-        <Button
-          data-testid="resume-btn"
-          className="w-full sm:w-auto"
-          disabled={isResuming}
+        <Button data-testid="resume-btn" className="w-full sm:w-auto" disabled={isResuming}
           onClick={async () => {
             setIsResuming(true);
             try {
               await resumeRun(String(run.id));
               queryClient.invalidateQueries({ queryKey: ["run", runId] });
-            } catch (err) {
+            } catch {
               toast.error("Failed to resume pipeline");
             } finally {
               setIsResuming(false);
             }
-          }}
-        >
-          {isResuming ? (
-            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-          ) : (
-            <Play className="h-4 w-4 mr-2" />
-          )}
+          }}>
+          {isResuming ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Play className="h-4 w-4 mr-2" />}
           {isResuming ? "Resuming..." : "Resume Pipeline"}
         </Button>
       )}
 
-      {/* Tree Search Visualization (BATCH-63/TASK-02, AC-02-02) */}
+      {/* Tree Search Visualization */}
       {run.tree_data && (
         <Card data-testid="tree-search-tab">
           <CardHeader>
             <div className="flex items-center justify-between">
-              <CardTitle className="text-sm font-medium">Tree Search</CardTitle>
-              <span className="text-sm text-muted-foreground flex items-center gap-1">
+              <CardTitle className="text-ui-heading font-medium">Tree Search</CardTitle>
+              <span className="text-ui-meta text-muted-foreground flex items-center gap-1">
                 <GitBranch className="h-4 w-4" />
                 {run.tree_data.nodes.length} node{run.tree_data.nodes.length !== 1 ? "s" : ""}
               </span>
@@ -500,9 +418,9 @@ export default function RunDetail() {
       <Card data-testid="ideas-list">
         <CardHeader>
           <div className="flex items-center justify-between">
-            <CardTitle className="text-sm font-medium">Generated Ideas</CardTitle>
+            <CardTitle className="text-ui-heading font-medium">Generated Ideas</CardTitle>
             {ideas.length > 0 && (
-              <span className="text-sm text-muted-foreground flex items-center gap-1">
+              <span className="text-ui-meta text-muted-foreground flex items-center gap-1">
                 <Lightbulb className="h-4 w-4" />
                 {ideas.length} idea{ideas.length !== 1 ? "s" : ""}
               </span>
@@ -511,7 +429,7 @@ export default function RunDetail() {
         </CardHeader>
         <CardContent>
           {ideas.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
+            <p className="text-ui-meta text-muted-foreground">
               {isRunning ? "Ideas will appear here once generated..." : "No ideas generated in this run."}
             </p>
           ) : (
@@ -528,13 +446,26 @@ export default function RunDetail() {
       {run.status === "completed" && run.completed_at && run.created_at && (
         <Card>
           <CardContent className="p-4">
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <div className="flex items-center gap-2 text-ui-meta text-muted-foreground">
               <Clock className="h-4 w-4" />
               <span>Total duration: {fmtDuration(elapsedSec)}</span>
             </div>
           </CardContent>
         </Card>
       )}
+    </div>
+  );
+}
+
+// ── Sub-components ──
+
+function MetaItem({ label, value, mono, testId }: { label: string; value: string; mono?: boolean; testId?: string }) {
+  return (
+    <div>
+      <dt className="text-ui-micro text-muted-foreground uppercase tracking-wider">{label}</dt>
+      <dd className={cn("font-medium text-ui-label", mono && "font-mono tabular-nums")} data-testid={testId}>
+        {value}
+      </dd>
     </div>
   );
 }

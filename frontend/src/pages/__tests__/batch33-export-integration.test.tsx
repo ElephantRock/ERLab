@@ -152,10 +152,14 @@ describe("IdeaDetail — Export Button (BATCH-33)", () => {
   });
 });
 
-// ── TEST-33-03-02: Bulk export in ideas browser ───────────────────
+// ── TEST-33-03-02: Bulk export removed from ideas browser (Phase 3 rebuild) ──
+// The old ideas-browser had multi-select checkboxes and a bulk-export dialog.
+// The Phase 3 rebuild simplified the browser to a triage surface with direct
+// navigation. Bulk export is available from individual idea-detail pages and
+// the /export/bulk API endpoint. This test documents the change.
 
-describe("IdeasBrowser — Bulk Export (BATCH-33)", () => {
-  it("TEST-33-03-02: bulk export available when ideas selected", async () => {
+describe("IdeasBrowser — no bulk export (Phase 3 simplification)", () => {
+  it("renders triage cards without multi-select checkboxes", async () => {
     mockedListIdeas.mockResolvedValue({
       ideas: [
         { id: 1, title: "Idea 1", domain: "AI", novelty_score: 0.5, feasibility_score: 5, overall_score: 0.5, source_gap_ids: null, has_proposal: true, pipeline_run_id: null, created_at: "2026-05-01" },
@@ -174,20 +178,12 @@ describe("IdeasBrowser — Bulk Export (BATCH-33)", () => {
       </QueryClientProvider>,
     );
 
+    // Cards render with direct navigation (no select wrapper)
     await waitFor(() => {
-      expect(screen.getByTestId("idea-card-1")).toBeInTheDocument();
+      expect(screen.getByText("Idea 1")).toBeInTheDocument();
     });
 
-    // Select idea 1 — click the button inside the select wrapper
-    const selectWrapper = screen.getByTestId("select-idea-1");
-    const selectBtn = selectWrapper.querySelector("button")!;
-    fireEvent.click(selectBtn);
-
-    // Export dialog should now appear with idea IDs
-    await waitFor(() => {
-      const exportEl = screen.getByTestId("export-dialog");
-      expect(exportEl).toBeInTheDocument();
-      expect(exportEl.getAttribute("data-idea-ids")).toBe("1");
-    });
+    // The old multi-select UI is gone
+    expect(screen.queryByTestId("select-idea-1")).not.toBeInTheDocument();
   });
 });

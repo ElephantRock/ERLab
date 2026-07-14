@@ -42,7 +42,7 @@ function SectionHeader({
   return (
     <div className="flex items-center gap-2">
       <Icon className="h-4 w-4 text-muted-foreground" />
-      <h2 className="text-[10px] font-mono font-bold uppercase tracking-wider text-muted-foreground">{title}</h2>
+      <h2 className="text-ui-micro font-semibold uppercase tracking-wider text-muted-foreground">{title}</h2>
       {action && <div className="ml-auto">{action}</div>}
     </div>
   );
@@ -362,7 +362,7 @@ export default function Settings() {
               <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
             )}
             <FlaskConical className="h-4 w-4 text-muted-foreground" />
-            <h2 className="text-[10px] font-mono font-bold uppercase tracking-wider text-muted-foreground">Advanced</h2>
+            <h2 className="text-ui-micro font-semibold uppercase tracking-wider text-muted-foreground">Advanced</h2>
           </button>
         </CardHeader>
         {advancedOpen && (
