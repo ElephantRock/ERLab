@@ -2,56 +2,52 @@
 # CogniGen Pipeline Configuration — Single Source of Truth
 # BATCH-180 / FIX-01: YAML reflects real production model routing.
 #
-# Model routing architecture:
-#   thinking   → qwen3-4b via LM Studio (local, fast, cheap)
+# Model routing architecture (z.ai cloud — LM Studio offline):
+#   thinking   → glm-4.6 via z.ai (cloud)
 #                Used for: classification, extraction, ranking, scoring
-#   generation → glm-5.1 via z.ai proxy (cloud, powerful, expensive)
+#   generation → glm-4.6 via z.ai (cloud)
 #                Used for: synthesis, writing, ideation, deepening
-#   embedding  → bge-m3 via LM Studio GPU (local, 1024d)
-#                Used for: vector store, similarity, novelty
-#   reranker   → qwen3-4b via LM Studio chat (local, relevance scoring)
-#                Used for: post-search paper reordering
+#   embedding  → bge-m3 via LM Studio GPU (local, 1024d) [offline — will fail soft]
+#   reranker   → disabled (LM Studio offline)
 # ═══════════════════════════════════════════════════════════════
 
 models:
   thinking:
-    provider: lmstudio
-    model: qwen/qwen3-4b-2507
-    base_url: http://100.64.0.1:1234/v1
+    provider: openai
+    model: glm-4.6
+    base_url: https://api.z.ai/api/coding/paas/v4
     max_tokens: 2048
     temperature: 0.1
     description: >
-      Fast local LLM for reasoning tasks: classification, extraction,
-      ranking, scoring, gap analysis. Runs on RTX 3080 Ti via LM Studio.
+      Cloud LLM for reasoning tasks: classification, extraction,
+      ranking, scoring, gap analysis.
 
   generation:
     provider: openai
-    model: glm-5.1
-    base_url: https://open.bigmodel.cn/api/paas/v4
+    model: glm-4.6
+    base_url: https://api.z.ai/api/coding/paas/v4
     max_tokens: 4096
     temperature: 0.7
     description: >
       Cloud LLM for generation tasks: proposal synthesis, paper writing,
-      idea generation, proposal deepening. High quality, higher cost.
+      idea generation, proposal deepening.
 
   embedding:
     provider: lmstudio
-    model: text-embedding-bge-m3
-    base_url: http://100.64.0.1:1234/v1
+    model: text-embedding-bge-m3-embeddings
+    base_url: http://100.64.0.2:1234/v1
     dimension: 1024
     description: >
-      Local GPU embedding model via LM Studio. 1024-dimensional,
-      multilingual, 32% better noise discrimination than nomic-embed-text.
+      Local GPU embedding model via LM Studio. 8192-dimensional, multilingual.
 
   reranker:
     provider: lmstudio
     model: qwen/qwen3-4b-2507
-    base_url: http://100.64.0.1:1234/v1
+    base_url: http://100.64.0.2:1234/v1
     strategy: llm_chat
     top_k: 20
     description: >
-      Chat-based reranking via LM Studio. Scores paper relevance 0-1
-      using qwen3-4b prompt. Falls back to keyword heuristic on failure.
+      Chat-based reranking via LM Studio. [OFFLINE — falls back to keyword heuristic]
 
 infrastructure:
   chroma_dir: data/chroma

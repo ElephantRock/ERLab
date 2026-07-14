@@ -35,6 +35,7 @@ class Settings(BaseSettings):
     # LLM Providers
     default_provider: str = "openai"
     openai_api_key: str | None = None
+    openai_base_url: str | None = None
     anthropic_api_key: str | None = None
     anthropic_base_url: str | None = None
     gemini_api_key: str | None = None
@@ -59,7 +60,7 @@ class Settings(BaseSettings):
     # Knowledge Base
     chroma_persist_dir: str = "./data/chroma"
     embedding_provider: str = "openai"
-    embedding_model: str = "text-embedding-3-small"
+    embedding_model: str = "text-embedding-bge-m3-embeddings"
     embedding_dimension: int = 1536
     embedding_batch_size: int = 100
     embedding_fallback_enabled: bool = False

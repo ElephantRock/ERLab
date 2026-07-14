@@ -141,6 +141,7 @@ class ProviderRegistry:
                 api_key=settings.openai_api_key,
                 model=settings.openai_model,
                 embedding_model=settings.embedding_model,
+                base_url=settings.openai_base_url,
             )
         elif name == "anthropic":
             return cls(

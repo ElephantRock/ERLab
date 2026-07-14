@@ -55,9 +55,30 @@ class ServiceRegistry:
         else:
             embedding_base = settings.ollama_base_url
 
+        # Resolve the correct embedding model name.
+        # LM Studio reports the model as 'text-embedding-bge-m3-embeddings' but older
+        # configs may use 'text-embedding-bge-m3' (without the -embeddings suffix).
+        # Query LM Studio for the actual loaded model name to avoid 400 errors.
+        emb_model = settings.embedding_model
+        if settings.embedding_provider == "lmstudio" and "bge-m3" in emb_model.lower():
+            try:
+                import httpx as _httpx
+                _r = _httpx.get(f"{embedding_base}/models", timeout=5)
+                if _r.status_code == 200:
+                    _loaded = [m["id"] for m in _r.json().get("data", [])
+                               if "bge-m3" in m["id"].lower()]
+                    if _loaded and _loaded[0] != emb_model:
+                        logger.info(
+                            "Embedding model corrected: '%s' → '%s' (from LM Studio)",
+                            emb_model, _loaded[0],
+                        )
+                        emb_model = _loaded[0]
+            except Exception:
+                pass  # fail-soft — use the configured name
+
         embedding_provider = create_embedding_provider(
             provider_name=settings.embedding_provider,
-            model=settings.embedding_model,
+            model=emb_model,
             api_key=settings.openai_api_key,
             base_url=embedding_base,
             dimension=settings.embedding_dimension or None,

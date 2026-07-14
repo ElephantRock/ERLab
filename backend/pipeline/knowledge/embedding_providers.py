@@ -191,18 +191,22 @@ class LMStudioEmbeddingProvider(EmbeddingProvider):
 
     def __init__(
         self,
-        model: str = "text-embedding-bge-m3",
+        model: str = "text-embedding-bge-m3-embeddings",
         base_url: str = "",
         dimension_override: int | None = None,
         batch_size: int = 32,
     ):
         import httpx
 
+        # Normalize model name: LM Studio may report 'text-embedding-bge-m3-embeddings'
+        # while older configs use 'text-embedding-bge-m3'. Map both to the loaded model.
+        if model == "text-embedding-bge-m3":
+            model = "text-embedding-bge-m3-embeddings"
         self._model = model
         self._base_url = base_url.rstrip("/")
         self._batch_size = batch_size
         self._client = httpx.AsyncClient(timeout=120.0)
-        self._dimension = dimension_override or self.MODEL_DIMENSIONS.get(model, 768)
+        self._dimension = dimension_override or self.MODEL_DIMENSIONS.get(model, 1024)
 
     async def embed(self, texts: list[str]) -> list[list[float]]:
         """Embed texts using LM Studio's /v1/embeddings endpoint."""
