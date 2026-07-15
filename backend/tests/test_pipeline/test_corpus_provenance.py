@@ -16,13 +16,14 @@ from __future__ import annotations
 
 import json
 import sys
+from contextlib import contextmanager
 from unittest.mock import MagicMock
 
 sys.modules.setdefault("chromadb", MagicMock())
 sys.modules.setdefault("google.generativeai", MagicMock())
 
 import pytest
-from sqlalchemy import create_engine, select, text, func
+from sqlalchemy import create_engine, select, text, func, event
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.exc import IntegrityError
 
@@ -44,16 +45,12 @@ from backend.pipeline.literature.models import Paper as SearchPaper, Author
 
 # ── Test fixtures ────────────────────────────────────────────────
 
-def _make_session():
-    """In-memory SQLite with FK enforcement on every connection."""
-    # SQLite PRAGMA foreign_keys is connection-scoped, not engine-scoped.
-    # Use an event listener to enforce it on every new connection.
+def _make_engine():
+    """Create an in-memory SQLite engine with FK enforcement."""
     engine = create_engine(
         "sqlite:///:memory:",
         connect_args={"check_same_thread": False},
     )
-
-    from sqlalchemy import event
 
     @event.listens_for(engine, "connect")
     def _set_fk(dbapi_conn, conn_record):
@@ -62,8 +59,18 @@ def _make_session():
         cursor.close()
 
     Base.metadata.create_all(engine)
+    return engine
+
+
+def _session_from_engine(engine):
+    """Create a session from an existing engine."""
     Session = sessionmaker(bind=engine, expire_on_commit=False)
     return Session()
+
+
+def _make_session():
+    """In-memory SQLite session with FK enforcement (legacy helper)."""
+    return _session_from_engine(_make_engine())
 
 
 def _assert_fk_enabled(session):
@@ -355,48 +362,142 @@ def test_explicit_cross_run_membership():
     assert len(discs) == 2
 
 
-# ══ 9. Transactional rollback ═══════════════════════════════════
+# ══ 9. Transactional rollback (PRODUCTION METHOD) ══════════════
 
-def test_transactional_rollback_on_failure():
-    """Partial failure rolls back: no orphan state."""
-    session = _make_session()
-    _assert_fk_enabled(session)
+def test_transactional_rollback_production_method(monkeypatch):
+    """Production persist_search_results rolls back cleanly on failure.
 
-    # Pre-existing paper
+    Tests the ACTUAL production method via get_session(). Verifies that a
+    failure mid-transaction leaves no partial governed state by inspecting
+    through a FRESH session after the exception.
+    """
+    engine = _make_engine()
+
+    # Patch get_session to use our test engine
+    from backend.db import database as db_module
+
+    test_session_factory = sessionmaker(bind=engine, expire_on_commit=False)
+
+    @contextmanager
+    def patched_get_session():
+        session = test_session_factory()
+        try:
+            yield session
+        except Exception:
+            session.rollback()
+            raise
+        finally:
+            session.close()
+
+    monkeypatch.setattr(db_module, "get_session", patched_get_session)
+    monkeypatch.setattr("backend.pipeline.persistence.get_session", patched_get_session, raising=False)
+    # Also patch in the module's import context
+    import backend.pipeline.persistence as pmod
+    # The method uses a local import: from backend.db.database import get_session
+    # So patching database.get_session is sufficient.
+
+    _run_counter[0] += 1
+
+    # Set up: create a run and pre-existing paper
+    setup = test_session_factory()
+    run = PipelineRun(
+        run_id_str=f"run_rollback_{_run_counter[0]}",
+        domain="test", status="completed",
+        provenance_version="provenance_v1",
+    )
     existing = Paper(source_id="existing:1", source="openalex", title="Existing")
-    session.add(existing)
-    session.commit()
+    setup.add_all([run, existing])
+    setup.commit()
     existing_id = existing.id
+    setup.close()
 
-    # Force a failure by using an invalid run_id (FK violation with FK on)
-    paper = _make_paper(source_id="fail:1", title="Should Not Persist")
+    # Build candidates for a valid run
+    paper_ok = _make_paper(source_id="ok:1", title="Should Not Persist")
+    candidate_ok = _make_candidate(paper_ok)
+    query = SearchQueryData("q", "template", "base", 0, compute_query_key("q", "template", "base", 0))
+
+    # Call the PRODUCTION method with an INVALID run_id (FK violation)
+    persistence = PipelinePersistence()
+    try:
+        persistence.persist_search_results(
+            [candidate_ok], [query], db_run_id=999999,  # invalid FK → IntegrityError
+        )
+    except Exception:
+        pass  # Expected: FK violation triggers rollback
+
+    # Inspect through a FRESH session (not the failed one)
+    verify = test_session_factory()
+
+    # No new canonical paper from the failed operation
+    new_paper = verify.execute(
+        select(Paper).where(Paper.source_id == "ok:1")
+    ).scalar_one_or_none()
+    assert new_paper is None, "Failed operation must not leave orphan papers"
+
+    # Pre-existing paper must remain intact
+    still = verify.execute(
+        select(Paper).where(Paper.id == existing_id)
+    ).scalar_one_or_none()
+    assert still is not None
+    assert still.title == "Existing"
+
+    # No governed state from the failed operation
+    assert verify.execute(select(func.count(SearchQuery.id))).scalar_one() == 0
+    assert verify.execute(select(func.count(RunPaper.id))).scalar_one() == 0
+    assert verify.execute(select(func.count(PaperDiscovery.id))).scalar_one() == 0
+
+    verify.close()
+
+
+# ══ 9b. Commit-boundary assertion ═══════════════════════════════
+
+def test_commit_boundary_success(monkeypatch):
+    """Successful persist_search_results commits exactly once."""
+    from contextlib import contextmanager
+    from backend.db import database as db_module
+
+    engine = _make_engine()
+    test_factory = sessionmaker(bind=engine, expire_on_commit=False)
+    commit_count = [0]
+
+    @contextmanager
+    def counting_get_session():
+        session = test_factory()
+        original_commit = session.commit
+        def counting_commit():
+            commit_count[0] += 1
+            return original_commit()
+        session.commit = counting_commit
+        try:
+            yield session
+        except Exception:
+            session.rollback()
+            raise
+        finally:
+            session.close()
+
+    monkeypatch.setattr(db_module, "get_session", counting_get_session)
+
+    _run_counter[0] += 1
+    setup = test_factory()
+    run = PipelineRun(
+        run_id_str=f"run_commit_{_run_counter[0]}",
+        domain="test", status="completed",
+        provenance_version="provenance_v1",
+    )
+    setup.add(run)
+    setup.commit()
+    run_id = run.id
+    setup.close()
+
+    paper = _make_paper(source_id="commit:1", title="Commit Test")
     candidate = _make_candidate(paper)
     query = SearchQueryData("q", "template", "base", 0, compute_query_key("q", "template", "base", 0))
 
-    # Use invalid run_id to trigger FK violation
-    try:
-        _persist_directly(None, session, [candidate], [query], run_id=999999)
-    except Exception:
-        session.rollback()
+    persistence = PipelinePersistence()
+    persistence.persist_search_results([candidate], [query], db_run_id=run_id)
 
-    # Pre-existing paper must remain intact
-    still_exists = session.execute(
-        select(Paper).where(Paper.id == existing_id)
-    ).scalar_one_or_none()
-    assert still_exists is not None
-    assert still_exists.title == "Existing"
-
-    # The failed paper should NOT persist
-    failed_paper = session.execute(
-        select(Paper).where(Paper.source_id == "fail:1")
-    ).scalar_one_or_none()
-    assert failed_paper is None, "Failed operation must not leave orphan papers"
-
-    # No run_papers or paper_discoveries
-    rp_count = session.execute(select(func.count(RunPaper.id))).scalar_one()
-    pd_count = session.execute(select(func.count(PaperDiscovery.id))).scalar_one()
-    assert rp_count == 0, f"Should be 0 RunPaper, got {rp_count}"
-    assert pd_count == 0, f"Should be 0 PaperDiscovery, got {pd_count}"
+    assert commit_count[0] == 1, f"Expected exactly 1 commit, got {commit_count[0]}"
 
 
 # ══ 10. Idempotent replay — same objects ════════════════════════

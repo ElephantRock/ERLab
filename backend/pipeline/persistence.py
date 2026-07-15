@@ -306,8 +306,6 @@ class PipelinePersistence:
             return
         try:
             from sqlalchemy import select as sa_select
-            from sqlalchemy import func as sa_func
-            from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 
             from backend.db import crud
             from backend.db.database import get_session
@@ -319,11 +317,10 @@ class PipelinePersistence:
             )
 
             with get_session() as session:
-                # ── 1. Persist search queries (idempotent) ───────
+                # ── 1. Persist search queries (idempotent, flush-only) ──
                 query_ids_by_key: dict[str, int] = {}
 
                 for sq_data in search_queries:
-                    # Check if already exists
                     existing_sq = session.execute(
                         sa_select(SearchQueryModel).where(
                             SearchQueryModel.run_id == db_run_id,
@@ -343,17 +340,23 @@ class PipelinePersistence:
                             sequence_number=sq_data.sequence_number,
                         )
                         session.add(new_sq)
-                        session.flush()  # get the ID without committing
+                        session.flush()
                         query_ids_by_key[sq_data.query_key] = new_sq.id
 
-                # ── 2. For each candidate: persist paper + membership + discoveries
+                # ── 2. For each candidate: paper + membership + discoveries
+                # All operations use flush (NOT commit) so the governed
+                # boundary stays in one uncommitted transaction.
                 for candidate in candidates:
                     paper = candidate.paper
 
-                    # 2a. Resolve or create canonical Paper
+                    # 2a. Resolve or create canonical Paper (flush-only)
                     db_paper = crud.get_paper_by_source_id(session, paper.id)
                     if not db_paper:
-                        db_paper = crud.create_paper(
+                        # P0.1.1: Use add_paper (non-committing) not create_paper.
+                        # create_paper calls session.commit() which would
+                        # commit ALL pending state mid-transaction, breaking
+                        # the governed boundary.
+                        db_paper = crud.add_paper(
                             session,
                             source_id=paper.id,
                             source=paper.source,
@@ -373,7 +376,7 @@ class PipelinePersistence:
 
                     paper_db_id = db_paper.id
 
-                    # 2b. Upsert RunPaper membership (idempotent via UNIQUE constraint)
+                    # 2b. Upsert RunPaper membership (flush-only)
                     existing_rp = session.execute(
                         sa_select(RunPaper).where(
                             RunPaper.run_id == db_run_id,

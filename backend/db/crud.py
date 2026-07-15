@@ -11,9 +11,28 @@ from backend.db.models import Idea, Paper, PipelineRun, Proposal, ResearchGapDB
 # --- Papers ---
 
 
-def create_paper(session: Session, **kwargs) -> Paper:
+def add_paper(session: Session, **kwargs) -> Paper:
+    """Add a paper to the current transaction WITHOUT committing.
+
+    P0.1: Used by persist_search_results to keep the governed boundary
+    in a single uncommitted transaction until the final commit.
+
+    The field mapping is identical to create_paper — this is the
+    non-committing primitive that create_paper delegates to.
+    """
     paper = Paper(**kwargs)
     session.add(paper)
+    session.flush()
+    return paper
+
+
+def create_paper(session: Session, **kwargs) -> Paper:
+    """Legacy convenience API with commit behavior.
+
+    Delegates to add_paper then commits. Existing callers that expect
+    auto-commit behavior are unaffected.
+    """
+    paper = add_paper(session, **kwargs)
     session.commit()
     session.refresh(paper)
     return paper
