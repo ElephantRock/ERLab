@@ -246,6 +246,91 @@ def test_quarantine_rows_derived_on_fabrication():
     assert len(valid_not_quarantined) == 0, "valid citations must not be quarantined"
 
 
+def test_fabricated_citation_in_multiple_sections_quarantined_in_all():
+    """Regression: one fabricated citation appearing in sections A, B, and C
+    must produce three section associations, not one.
+
+    The original _derive_quarantine_records used `break` after the first
+    section match, so a fabricated [SOURCE-N] repeated across sections was
+    only quarantined in the first one it appeared in. The reader would still
+    see the fabricated citation in sections B and C.
+    """
+    proposal = ResearchProposal(
+        title="Test",
+        abstract="Abstract",
+        introduction="Background cites [SOURCE-99] early on.",
+        proposed_method="The method also references [SOURCE-99] again.",
+        related_work="Related work mentions [SOURCE-99] too.",
+    )
+
+    result = _FakePipelineResult()
+    result.proposals = {0: proposal}
+
+    ctx = StageContext(
+        result=result,
+        all_papers=[_FakePaper(title="Real Paper")],
+        domain="AI/NLP",
+    )
+
+    report = _make_fabricated_report(proposal_id=1, fabricated_indices=[99])
+    auditor = MagicMock()
+    auditor.audit = _async_return(report)
+
+    stage = _CapturingStage(auditor=auditor)
+    asyncio.run(stage.execute(ctx))
+
+    fabricated_sections = [r for r in stage.captured_quarantine if r["ref_index"] == 99]
+    quarantined_keys = {r["section_key"] for r in fabricated_sections}
+
+    assert len(fabricated_sections) == 3, (
+        f"a fabricated citation in 3 sections must yield 3 records, got {len(fabricated_sections)}"
+    )
+    assert quarantined_keys == {"introduction", "proposed_method", "related_work"}, (
+        f"all three section associations must survive, got {quarantined_keys}"
+    )
+
+
+def test_fabricated_citation_repeated_within_one_section_single_record():
+    """The same fabricated citation repeated multiple times within ONE section
+    produces a single section association (not one per occurrence).
+
+    Quarantine is per (section, ref_index), not per textual occurrence. The
+    render-time redaction replaces all occurrences of the marker regardless of
+    how many rows point at the section, so duplicate rows within a section
+    would be redundant and could inflate reader-facing counts.
+    """
+    proposal = ResearchProposal(
+        title="Test",
+        abstract="Abstract",
+        introduction=(
+            "We cite [SOURCE-99] here, again [SOURCE-99], and once more [SOURCE-99]."
+        ),
+        proposed_method="Method has no fabricated citation.",
+    )
+
+    result = _FakePipelineResult()
+    result.proposals = {0: proposal}
+
+    ctx = StageContext(
+        result=result,
+        all_papers=[_FakePaper(title="Real Paper")],
+        domain="AI/NLP",
+    )
+
+    report = _make_fabricated_report(proposal_id=1, fabricated_indices=[99])
+    auditor = MagicMock()
+    auditor.audit = _async_return(report)
+
+    stage = _CapturingStage(auditor=auditor)
+    asyncio.run(stage.execute(ctx))
+
+    fabricated_sections = [r for r in stage.captured_quarantine if r["ref_index"] == 99]
+    assert len(fabricated_sections) == 1, (
+        f"3 occurrences in one section must yield 1 record, got {len(fabricated_sections)}"
+    )
+    assert fabricated_sections[0]["section_key"] == "introduction"
+
+
 def test_existing_metadata_still_written():
     """metadata["citation_audit"] still has status and trust_score (keeps BATCH-154 green)."""
     proposal = ResearchProposal(

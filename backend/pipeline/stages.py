@@ -2380,7 +2380,11 @@ class CitationAuditStage(PipelineStage):
 
         A fabricated item has ``ref_exists == False`` (index out of range,
         citing a paper that does not exist in the corpus). For each, locate
-        which section contains the ``[SOURCE-N]`` marker and emit a record.
+        EVERY section containing the ``[SOURCE-N]`` marker and emit a record
+        per section. A fabricated citation appearing in multiple sections must
+        be quarantined in all of them — otherwise the reader still sees it in
+        the sections that were skipped.
+
         Items where ``ref_exists == True`` (real citation, possibly misused)
         are NOT quarantined — those are a repair concern, not a removal concern.
         """
@@ -2399,7 +2403,6 @@ class CitationAuditStage(PipelineStage):
                         "section_key": str(section_key),
                         "ref_index": int(ref_index),
                     })
-                    break
         return records
 
     def _persist_quarantine_rows(
