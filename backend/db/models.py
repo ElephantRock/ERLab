@@ -2,7 +2,19 @@
 
 from datetime import datetime, timezone
 
-from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Index, Integer, String, Text, UniqueConstraint
+from sqlalchemy import (
+    Boolean,
+    CheckConstraint,
+    DateTime,
+    Float,
+    ForeignKey,
+    ForeignKeyConstraint,
+    Index,
+    Integer,
+    String,
+    Text,
+    UniqueConstraint,
+)
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from backend.db.database import Base
@@ -599,6 +611,24 @@ class PaperDiscovery(Base):
         UniqueConstraint("run_id", "discovery_key", name="uq_paper_discoveries_run_key"),
         Index("ix_paper_discoveries_run_paper", "run_id", "paper_id"),
         Index("ix_paper_discoveries_query", "search_query_id"),
+        Index("ix_paper_discoveries_execution_id", "execution_id"),
+        # Null-bypass: a non-null execution_id MUST carry a search_query_id.
+        # Without this, MATCH SIMPLE on the composite FK below would let
+        # (execution_id=42, search_query_id=NULL) bypass the constraint.
+        CheckConstraint(
+            "execution_id IS NULL OR search_query_id IS NOT NULL",
+            name="ck_paper_discoveries_execution_requires_query",
+        ),
+        # Composite FK proves the execution belongs to the SAME query as the
+        # discovery. SQLite MATCH SIMPLE skips when execution_id is NULL, so
+        # legacy P0.1 discoveries (search_query_id set, execution_id NULL)
+        # survive untouched.
+        ForeignKeyConstraint(
+            ["execution_id", "search_query_id"],
+            ["search_query_executions.id", "search_query_executions.search_query_id"],
+            name="fk_paper_discoveries_execution_query",
+            ondelete="RESTRICT",
+        ),
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
@@ -610,6 +640,13 @@ class PaperDiscovery(Base):
     )
     search_query_id: Mapped[int | None] = mapped_column(
         Integer, ForeignKey("search_queries.id", ondelete="RESTRICT"), nullable=True,
+    )
+    # P0.2.1: links this discovery to the specific source-adapter execution
+    # that found the paper. Nullable — legacy P0.1 rows keep this NULL.
+    # The composite FK in __table_args__ enforces same-query consistency.
+    execution_id: Mapped[int | None] = mapped_column(
+        Integer,
+        nullable=True,
     )
     source: Mapped[str] = mapped_column(String(50), nullable=False)
     source_record_id: Mapped[str | None] = mapped_column(String(256), nullable=True)
@@ -628,4 +665,115 @@ class PaperDiscovery(Base):
     discovery_key: Mapped[str] = mapped_column(String(32), nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime, default=lambda: datetime.now(timezone.utc),
+    )
+
+
+class SearchQueryExecution(Base):
+    """One logical source-adapter invocation for one logical search query.
+
+    A SearchQuery (logical intent) fans out across N sources; each source
+    attempt is a distinct execution. Transport retries, pagination, and
+    multi-call adapter behavior are internal to this one row — there is
+    exactly one execution per (query, source) pair, enforced by UNIQUE.
+
+    Run ownership is obtained via the indexed join to search_queries.run_id;
+    there is intentionally NO run_id column here, eliminating cross-run
+    ownership inconsistency.
+
+    Lifecycle (documented; the DB enforces only the CHECK constraints):
+        pending   row exists, no source contact begun
+        running   at least one outbound attempt started
+        success   source invocation completed successfully
+        partial   usable results exist, but part of the invocation failed
+        failed    no usable completion (non-timeout failure)
+        timeout   invocation exceeded its time limit
+        skipped   intentionally never began
+
+    attempt_count includes the first outbound attempt:
+        pending/skipped = 0, first contact = 1, one retry = 2.
+
+    translated_query stores the sanitized source-level query representation:
+    no credentials, no secret-bearing URLs, not per-transport-request.
+
+    Count columns are NULL until P0.2.4 reconciliation. accounting_status
+    is 'incomplete' (this migration's default) and must not be set to
+    'reconciled' until P0.2.4 populates and verifies all four counts.
+
+    source is stored canonical (lowercase, trimmed) — the CHECK constraint
+    rejects non-canonical input so casing/whitespace cannot bypass the
+    replay-uniqueness constraint.
+    """
+
+    __tablename__ = "search_query_executions"
+    __table_args__ = (
+        UniqueConstraint(
+            "search_query_id", "source",
+            name="uq_search_query_executions_query_source",
+        ),
+        UniqueConstraint(
+            "id", "search_query_id",
+            name="uq_search_query_executions_id_query",
+        ),
+        Index("ix_search_query_executions_query_id", "search_query_id"),
+        CheckConstraint(
+            "source = lower(trim(source)) AND length(trim(source)) > 0",
+            name="ck_search_query_executions_source_canonical",
+        ),
+        CheckConstraint(
+            "status IN ('pending','running','success','partial',"
+            "'failed','timeout','skipped')",
+            name="ck_search_query_executions_status",
+        ),
+        CheckConstraint(
+            "accounting_status IN ('incomplete','reconciled')",
+            name="ck_search_query_executions_accounting_status",
+        ),
+        CheckConstraint(
+            "attempt_count >= 0",
+            name="ck_search_query_executions_attempt_count_nonnegative",
+        ),
+        CheckConstraint(
+            "raw_result_count IS NULL OR raw_result_count >= 0",
+            name="ck_search_query_executions_raw_count_nonnegative",
+        ),
+        CheckConstraint(
+            "normalized_result_count IS NULL OR normalized_result_count >= 0",
+            name="ck_search_query_executions_normalized_count_nonnegative",
+        ),
+        CheckConstraint(
+            "rejected_result_count IS NULL OR rejected_result_count >= 0",
+            name="ck_search_query_executions_rejected_count_nonnegative",
+        ),
+        CheckConstraint(
+            "source_unique_count IS NULL OR source_unique_count >= 0",
+            name="ck_search_query_executions_source_unique_count_nonnegative",
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    search_query_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("search_queries.id", ondelete="CASCADE"), nullable=False,
+    )
+    source: Mapped[str] = mapped_column(String(50), nullable=False)
+    translated_query: Mapped[str | None] = mapped_column(Text, nullable=True)
+    status: Mapped[str] = mapped_column(
+        String(20), nullable=False, default="pending",
+    )
+    attempt_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    error_detail: Mapped[str | None] = mapped_column(Text, nullable=True)
+    attempted_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    raw_result_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    normalized_result_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    rejected_result_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    source_unique_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    accounting_status: Mapped[str] = mapped_column(
+        String(20), nullable=False, default="incomplete",
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=lambda: datetime.now(timezone.utc),
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime, default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
     )
