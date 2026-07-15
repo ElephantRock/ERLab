@@ -63,3 +63,7 @@ nul
 
 # Misc
 .claude-plugin/
+
+# Local tooling state — never commit (agent/session state, not project content)
+.ouroboros/
+.zcode/
