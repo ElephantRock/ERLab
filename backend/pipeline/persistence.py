@@ -5,13 +5,102 @@ import hashlib
 import logging
 import os
 import re
+import unicodedata
+import uuid
+from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
+from sqlalchemy.exc import IntegrityError
+
 logger = logging.getLogger(__name__)
 
 _CHECKPOINT_DIR = Path("./data/checkpoints")
+
+
+# ═════════════════════════════════════════════════════════════════
+# P0.1: Corpus Provenance Types
+# ═════════════════════════════════════════════════════════════════
+
+
+@dataclass
+class SearchQueryData:
+    """Logical query data for persistence. query_key is pre-computed."""
+
+    query_text: str
+    query_type: str  # template | llm_generated
+    generation_origin: str  # base | llm
+    sequence_number: int
+    query_key: str
+
+
+@dataclass
+class DiscoveryMetadata:
+    """One route through which a paper was found."""
+
+    query_key: str
+    source: str  # openalex | arxiv | crossref | pubmed | etc.
+    source_record_id: str | None = None
+    source_rank: int | None = None
+    discovery_origin: str = "remote_search"
+    canonicalization_method: str | None = None
+
+
+@dataclass
+class CandidateWithDiscoveries:
+    """A deduplicated paper candidate with ALL its discovery routes preserved."""
+
+    paper: Any  # backend.pipeline.literature.models.Paper
+    discoveries: list[DiscoveryMetadata] = field(default_factory=list)
+
+
+def compute_query_key(
+    query_text: str, query_type: str, generation_origin: str, sequence_number: int
+) -> str:
+    """Deterministic query key from normalized logical content.
+
+    Stable across retries: the same logical query rebuilt as a new Python
+    object produces the same key. Uses NFKC normalization + casefold.
+    """
+    normalized = unicodedata.normalize("NFKC", query_text)
+    normalized = " ".join(normalized.strip().casefold().split())
+    raw = f"{normalized}|{query_type}|{generation_origin}|{sequence_number}"
+    return hashlib.sha256(raw.encode()).hexdigest()[:32]
+
+
+def _normalize_source_record_id(source: str, source_record_id: str | None) -> str:
+    """Source-aware normalization for discovery_key computation.
+
+    DOI: case-insensitive. PubMed/arXiv/OpenAlex IDs: trim only.
+    Unknown: trim only, preserve case.
+    """
+    if not source_record_id:
+        return ""
+    sid = source_record_id.strip()
+    if source.lower() in ("doi", "crossref") or sid.startswith("10."):
+        return sid.lower()
+    return sid
+
+
+def compute_discovery_key(
+    run_id: int,
+    paper_id: int,
+    query_key: str,
+    source: str,
+    source_record_id: str | None,
+    discovery_origin: str,
+) -> str:
+    """Deterministic discovery key for idempotent replay."""
+    raw = "|".join([
+        str(run_id),
+        str(paper_id),
+        query_key,
+        source.strip().lower(),
+        _normalize_source_record_id(source, source_record_id),
+        discovery_origin.strip().lower(),
+    ])
+    return hashlib.sha256(raw.encode()).hexdigest()[:32]
 
 
 # Current checkpoint schema version. Bump when the checkpoint
@@ -195,6 +284,160 @@ class PipelinePersistence:
         except Exception as e:
             logger.warning("Failed to persist papers: %s", e)
             self.warnings.append(f"persist_papers: {e}")
+
+    def persist_search_results(
+        self,
+        candidates: list[CandidateWithDiscoveries],
+        search_queries: list[SearchQueryData],
+        db_run_id: int,
+    ) -> None:
+        """Single governed persistence boundary for literature search results.
+
+        P0.1: Persists search queries, run-paper membership, and discovery
+        provenance in one transaction. Idempotent via deterministic keys.
+        All-or-nothing on failure (transactional integrity).
+
+        Args:
+            candidates: deduplicated papers with preserved discovery routes
+            search_queries: logical queries to persist
+            db_run_id: integer PK of the pipeline run
+        """
+        if not db_run_id:
+            return
+        try:
+            from sqlalchemy import select as sa_select
+            from sqlalchemy import func as sa_func
+            from sqlalchemy.dialects.sqlite import insert as sqlite_insert
+
+            from backend.db import crud
+            from backend.db.database import get_session
+            from backend.db.models import (
+                Paper as DBPaper,
+                SearchQuery as SearchQueryModel,
+                RunPaper,
+                PaperDiscovery,
+            )
+
+            with get_session() as session:
+                # ── 1. Persist search queries (idempotent) ───────
+                query_ids_by_key: dict[str, int] = {}
+
+                for sq_data in search_queries:
+                    # Check if already exists
+                    existing_sq = session.execute(
+                        sa_select(SearchQueryModel).where(
+                            SearchQueryModel.run_id == db_run_id,
+                            SearchQueryModel.query_key == sq_data.query_key,
+                        )
+                    ).scalar_one_or_none()
+
+                    if existing_sq:
+                        query_ids_by_key[sq_data.query_key] = existing_sq.id
+                    else:
+                        new_sq = SearchQueryModel(
+                            run_id=db_run_id,
+                            query_key=sq_data.query_key,
+                            query_text=sq_data.query_text,
+                            query_type=sq_data.query_type,
+                            generation_origin=sq_data.generation_origin,
+                            sequence_number=sq_data.sequence_number,
+                        )
+                        session.add(new_sq)
+                        session.flush()  # get the ID without committing
+                        query_ids_by_key[sq_data.query_key] = new_sq.id
+
+                # ── 2. For each candidate: persist paper + membership + discoveries
+                for candidate in candidates:
+                    paper = candidate.paper
+
+                    # 2a. Resolve or create canonical Paper
+                    db_paper = crud.get_paper_by_source_id(session, paper.id)
+                    if not db_paper:
+                        db_paper = crud.create_paper(
+                            session,
+                            source_id=paper.id,
+                            source=paper.source,
+                            title=paper.title,
+                            abstract=paper.abstract,
+                            authors=json.dumps([a.name for a in paper.authors])
+                            if paper.authors
+                            else "[]",
+                            year=paper.year,
+                            venue=paper.venue,
+                            citation_count=paper.citation_count,
+                            url=paper.url,
+                            doi=paper.doi,
+                            arxiv_id=paper.arxiv_id,
+                            keywords=json.dumps(paper.keywords) if paper.keywords else "[]",
+                        )
+
+                    paper_db_id = db_paper.id
+
+                    # 2b. Upsert RunPaper membership (idempotent via UNIQUE constraint)
+                    existing_rp = session.execute(
+                        sa_select(RunPaper).where(
+                            RunPaper.run_id == db_run_id,
+                            RunPaper.paper_id == paper_db_id,
+                        )
+                    ).scalar_one_or_none()
+
+                    if not existing_rp:
+                        new_rp = RunPaper(
+                            run_id=db_run_id,
+                            paper_id=paper_db_id,
+                            inclusion_origin=candidate.discoveries[0].discovery_origin
+                            if candidate.discoveries
+                            else "remote_search",
+                        )
+                        session.add(new_rp)
+                        session.flush()
+
+                    # 2c. Insert PaperDiscovery rows (idempotent via discovery_key)
+                    for disc in candidate.discoveries:
+                        discovery_key = compute_discovery_key(
+                            db_run_id,
+                            paper_db_id,
+                            disc.query_key,
+                            disc.source,
+                            disc.source_record_id,
+                            disc.discovery_origin,
+                        )
+
+                        # Check if this discovery already exists
+                        existing_disc = session.execute(
+                            sa_select(PaperDiscovery).where(
+                                PaperDiscovery.run_id == db_run_id,
+                                PaperDiscovery.discovery_key == discovery_key,
+                            )
+                        ).scalar_one_or_none()
+
+                        if not existing_disc:
+                            new_disc = PaperDiscovery(
+                                run_id=db_run_id,
+                                paper_id=paper_db_id,
+                                search_query_id=query_ids_by_key.get(disc.query_key),
+                                source=disc.source,
+                                source_record_id=disc.source_record_id,
+                                source_rank=disc.source_rank,
+                                discovery_origin=disc.discovery_origin,
+                                canonicalization_method=disc.canonicalization_method,
+                                discovery_key=discovery_key,
+                            )
+                            session.add(new_disc)
+
+                session.commit()
+                logger.info(
+                    "persist_search_results: %d queries, %d candidates, %d total discoveries for run %d",
+                    len(search_queries),
+                    len(candidates),
+                    sum(len(c.discoveries) for c in candidates),
+                    db_run_id,
+                )
+
+        except Exception as e:
+            logger.warning("Failed to persist search results: %s", e)
+            self.warnings.append(f"persist_search_results: {e}")
+            raise
 
     def persist_ideas(self, result, db_run_id: int | None) -> None:
         if not db_run_id or not result.ideas:

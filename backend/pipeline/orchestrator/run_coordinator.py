@@ -525,9 +525,14 @@ class RunCoordinator:
                     import asyncio as _aio
                     await _aio.sleep(2 ** attempt)
 
-            # Persistence (same as normal run)
+            # Persistence (same as normal run) — P0.1: governed path
             if stage.name == "literature_search":
-                orch._persistence.persist_papers(ctx.all_papers, db_run_id)
+                if ctx.candidate_papers and db_run_id:
+                    orch._persistence.persist_search_results(
+                        ctx.candidate_papers, ctx.search_query_data, db_run_id,
+                    )
+                else:
+                    orch._persistence.persist_papers(ctx.all_papers, db_run_id)
             elif stage.name == "gap_analysis":
                 orch._persistence.persist_gaps(result, db_run_id)
             elif stage.name == "feasibility_scoring":

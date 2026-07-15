@@ -169,6 +169,14 @@ class PipelineRun(Base):
     completed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     updated_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)  # BATCH-74: watchdog tracking
 
+    # P0.1: Provenance schema version. NOT NULL DEFAULT 'pre_provenance'.
+    # 'pre_provenance' = legacy runs (no governed corpus boundary).
+    # 'provenance_v1' = governed runs with run-scoped corpus ownership.
+    # Records schema version AT CREATION, not completion status.
+    provenance_version: Mapped[str] = mapped_column(
+        String(20), nullable=False, server_default="pre_provenance",
+    )
+
 
 class Comment(Base):
     """Comment thread on a research idea (BATCH-34)."""
@@ -465,6 +473,159 @@ class QuarantinedCitation(Base):
     section_key: Mapped[str] = mapped_column(String(50), nullable=False)
     ref_index: Mapped[int] = mapped_column(Integer, nullable=False)
     audit_run_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=lambda: datetime.now(timezone.utc),
+    )
+
+
+# ═════════════════════════════════════════════════════════════════
+# P0.1: Corpus Provenance — run-scoped paper ownership
+#
+# Three tables establishing an auditable relational boundary around each
+# new pipeline run's corpus:
+#
+#   SearchQuery     — logical queries executed during literature search
+#   RunPaper        — membership of a paper in a run's working corpus
+#   PaperDiscovery  — every distinct route through which a paper was found
+#
+# Design principles:
+#   - Canonical papers (the `papers` table) remain globally reusable
+#   - Corpus membership is explicitly run-scoped via the join table
+#   - Discovery provenance survives both deduplication layers
+#   - Legacy runs are marked 'pre_provenance' with no fabricated membership
+#   - Deletion: CASCADE from PipelineRun (run-owned), RESTRICT to Paper/SearchQuery
+# ═════════════════════════════════════════════════════════════════
+
+
+class SearchQuery(Base):
+    """A logical search query executed during a pipeline run's literature search.
+
+    One row per logical query (not per source execution). Source-specific
+    execution details (backend-translated form, status, result count) are
+    deferred to P0.2's search_query_executions child table.
+
+    query_key is a deterministic hash of normalized query text, enabling
+    idempotent replay across retries and resume without inflating the ledger.
+    """
+
+    __tablename__ = "search_queries"
+    __table_args__ = (
+        UniqueConstraint("run_id", "query_key", name="uq_search_queries_run_key"),
+        Index("ix_search_queries_run_id", "run_id"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    run_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("pipeline_runs.id", ondelete="CASCADE"), nullable=False,
+    )
+    query_key: Mapped[str] = mapped_column(String(32), nullable=False)
+    query_text: Mapped[str] = mapped_column(Text, nullable=False)
+    query_type: Mapped[str] = mapped_column(String(30), nullable=False, default="template")
+    generation_origin: Mapped[str] = mapped_column(String(30), nullable=False, default="base")
+    sequence_number: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+
+    # Source execution fields — all NULL in P0.1 (deferred to P0.2 child table)
+    source_target: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    executed_query: Mapped[str | None] = mapped_column(Text, nullable=True)
+    status: Mapped[str] = mapped_column(String(20), nullable=False, default="persisted")
+    executed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=lambda: datetime.now(timezone.utc),
+    )
+
+
+class RunPaper(Base):
+    """Membership of a paper in a pipeline run's working corpus.
+
+    This is the run-scoped ownership boundary. A paper may belong to many
+    runs — each membership is an independent row. Upsertable via the
+    UNIQUE(run_id, paper_id) constraint.
+    """
+
+    __tablename__ = "run_papers"
+    __table_args__ = (
+        UniqueConstraint("run_id", "paper_id", name="uq_run_papers_run_paper"),
+        Index("ix_run_papers_run_id", "run_id"),
+        Index("ix_run_papers_paper_id", "paper_id"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    run_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("pipeline_runs.id", ondelete="CASCADE"), nullable=False,
+    )
+    paper_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("papers.id", ondelete="RESTRICT"), nullable=False,
+    )
+    inclusion_origin: Mapped[str] = mapped_column(
+        String(30), nullable=False, default="remote_search",
+    )
+    inclusion_status: Mapped[str] = mapped_column(
+        String(20), nullable=False, default="candidate",
+    )
+    first_discovered_at: Mapped[datetime] = mapped_column(
+        DateTime, default=lambda: datetime.now(timezone.utc),
+    )
+    selected_for_downstream: Mapped[bool] = mapped_column(Boolean, default=False)
+    selection_stage: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    relevance_score: Mapped[float | None] = mapped_column(Float, nullable=True)
+    exclusion_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
+    provenance_schema_version: Mapped[str] = mapped_column(
+        String(20), nullable=False, default="provenance_v1",
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=lambda: datetime.now(timezone.utc),
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime, default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
+    )
+
+
+class PaperDiscovery(Base):
+    """Every distinct route through which a paper entered or re-entered consideration.
+
+    A paper found through two queries across four sources produces four
+    discovery rows (one per source/query pair). The same paper has one
+    RunPaper membership row.
+
+    discovery_key is a deterministic hash enabling idempotent replay.
+    Two records from the same source+query with no source_record_id collapse
+    into one discovery event — documented as acceptable.
+    """
+
+    __tablename__ = "paper_discoveries"
+    __table_args__ = (
+        UniqueConstraint("run_id", "discovery_key", name="uq_paper_discoveries_run_key"),
+        Index("ix_paper_discoveries_run_paper", "run_id", "paper_id"),
+        Index("ix_paper_discoveries_query", "search_query_id"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    run_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("pipeline_runs.id", ondelete="CASCADE"), nullable=False,
+    )
+    paper_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("papers.id", ondelete="RESTRICT"), nullable=False,
+    )
+    search_query_id: Mapped[int | None] = mapped_column(
+        Integer, ForeignKey("search_queries.id", ondelete="RESTRICT"), nullable=True,
+    )
+    source: Mapped[str] = mapped_column(String(50), nullable=False)
+    source_record_id: Mapped[str | None] = mapped_column(String(256), nullable=True)
+    source_rank: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    discovery_origin: Mapped[str] = mapped_column(
+        String(30), nullable=False, default="remote_search",
+    )
+    retrieved_at: Mapped[datetime] = mapped_column(
+        DateTime, default=lambda: datetime.now(timezone.utc),
+    )
+    raw_identifier: Mapped[str | None] = mapped_column(Text, nullable=True)
+    deduplication_status: Mapped[str] = mapped_column(
+        String(20), nullable=False, default="unique",
+    )
+    canonicalization_method: Mapped[str | None] = mapped_column(String(30), nullable=True)
+    discovery_key: Mapped[str] = mapped_column(String(32), nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime, default=lambda: datetime.now(timezone.utc),
     )

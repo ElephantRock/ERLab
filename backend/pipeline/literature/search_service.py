@@ -83,6 +83,113 @@ class SearchService:
 
         return papers
 
+    async def search_all_with_provenance(
+        self,
+        query: str,
+        query_key: str,
+        sources: list[str] | None = None,
+        limit_per_source: int = 20,
+        year_from: int | None = None,
+        year_to: int | None = None,
+    ) -> list:
+        """Search with provenance — returns CandidateWithDiscoveries.
+
+        Unlike search_all, this method preserves EVERY source/query route
+        that found a paper, even after per-query deduplication. The
+        _deduplicate_with_provenance method accumulates discovery events
+        rather than discarding lower-priority sources.
+
+        Args:
+            query: the logical query text
+            query_key: deterministic key for this logical query
+            sources: source names to search (default: all)
+            limit_per_source: max results per source
+            year_from/year_to: optional date filters
+
+        Returns:
+            list[CandidateWithDiscoveries] — one per unique paper, each
+            carrying ALL discovery routes (source + query_key pairs).
+        """
+        from backend.pipeline.persistence import CandidateWithDiscoveries, DiscoveryMetadata
+
+        if sources is None:
+            sources = list(self._sources.keys())
+
+        active = {name: self._sources[name] for name in sources if name in self._sources}
+        if not active:
+            logger.warning("No valid sources specified: %s", sources)
+            return []
+
+        # Concurrent search (same fan-out as search_all)
+        tasks = [
+            source.search(query, limit=limit_per_source, year_from=year_from, year_to=year_to)
+            for source in active.values()
+        ]
+        results_per_source = await asyncio.gather(*tasks, return_exceptions=True)
+
+        all_results: list[SearchResult] = []
+        for name, result in zip(active.keys(), results_per_source, strict=True):
+            if isinstance(result, Exception):
+                logger.warning("Search failed for %s: %s", name, result)
+            else:
+                all_results.extend(result)  # type: ignore[arg-type]
+
+        # Deduplicate WITH provenance — accumulates discovery events
+        return self._deduplicate_with_provenance(all_results, query_key)
+
+    @staticmethod
+    def _deduplicate_with_provenance(
+        results: list[SearchResult], query_key: str,
+    ) -> list:
+        """Deduplicate papers while preserving ALL discovery routes.
+
+        Unlike _deduplicate which discards lower-priority sources, this
+        method accumulates DiscoveryMetadata for every source that found
+        the same paper. The winning Paper is chosen by source priority
+        (same as _deduplicate), but ALL sources are recorded as discovery
+        events.
+
+        Returns:
+            list[CandidateWithDiscoveries]
+        """
+        from backend.pipeline.persistence import CandidateWithDiscoveries, DiscoveryMetadata
+
+        source_priority = {"semantic_scholar": 0, "pubmed": 1, "openalex": 2, "crossref": 3, "arxiv": 4}
+
+        # Sort to prefer semantic_scholar data when choosing the canonical paper
+        sorted_results = sorted(
+            results,
+            key=lambda r: source_priority.get(r.source, 99),
+        )
+
+        # Keyed accumulation: dedup_key → (winning_paper, [DiscoveryMetadata])
+        by_key: dict[str, tuple] = {}
+
+        for rank_offset, result in enumerate(sorted_results):
+            paper = result.paper
+            key = paper.doi if paper.doi else _title_hash(paper.title)
+
+            disc = DiscoveryMetadata(
+                query_key=query_key,
+                source=result.source,
+                source_record_id=paper.id,
+                source_rank=rank_offset,
+                discovery_origin="remote_search",
+            )
+
+            if key in by_key:
+                # Paper already seen — add this discovery route
+                winning_paper, discoveries = by_key[key]
+                discoveries.append(disc)
+            else:
+                # First occurrence (highest priority source wins)
+                by_key[key] = (paper, [disc])
+
+        return [
+            CandidateWithDiscoveries(paper=paper, discoveries=discoveries)
+            for paper, discoveries in by_key.values()
+        ]
+
     async def get_citations(self, paper: Paper, limit: int = 50) -> list[Paper]:
         """Get citations from the paper's source."""
         source = self._sources.get(paper.source)

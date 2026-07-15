@@ -44,6 +44,9 @@ class StageContext:
     provider_override: Any = None  # LLMProvider override for model routing
     journal: Any = None  # B162: Optional JournalWriter or callback
     receipts: list = field(default_factory=list)  # ModelReceipts collected during this stage
+    # P0.1: Corpus provenance — populated by LiteratureSearchStage
+    search_query_data: list = field(default_factory=list)  # list[SearchQueryData]
+    candidate_papers: list = field(default_factory=list)  # list[CandidateWithDiscoveries]
 
 
 # Stages that do NOT use LLM models — no receipt required.
@@ -202,49 +205,93 @@ class LiteratureSearchStage(PipelineStage):
                 logger.debug("LLM query expansion failed (non-fatal): %s", e)
         else:
             logger.debug("LLM query expansion skipped (no gateway available)")
-        # Parallel query fan-out — all queries fire concurrently
+        # P0.1: Build SearchQueryData with deterministic query_keys
+        from backend.pipeline.persistence import (
+            SearchQueryData, CandidateWithDiscoveries, DiscoveryMetadata,
+            compute_query_key,
+        )
+
+        search_query_data: list[SearchQueryData] = []
+        for seq, q in enumerate(queries):
+            # Determine origin: first 2 are base templates, rest are LLM-generated
+            if seq < 2 and not ctx.search_queries:
+                q_type, q_origin = "template", "base"
+            else:
+                q_type, q_origin = "llm_generated", "llm"
+            q_key = compute_query_key(q, q_type, q_origin, seq)
+            search_query_data.append(SearchQueryData(
+                query_text=q, query_type=q_type,
+                generation_origin=q_origin, sequence_number=seq,
+                query_key=q_key,
+            ))
+
+        # Parallel query fan-out with provenance — returns CandidateWithDiscoveries
         query_results = await asyncio.gather(
-            *(self._search.search_all(q, limit_per_source=20) for q in queries),
+            *(
+                self._search.search_all_with_provenance(q, sqd.query_key, limit_per_source=20)
+                for q, sqd in zip(queries, search_query_data, strict=True)
+            ),
             return_exceptions=True,
         )
-        all_papers = []
-        for query, result in zip(queries, query_results, strict=True):
+
+        all_candidates: list[CandidateWithDiscoveries] = []
+        for sqd, result in zip(search_query_data, query_results, strict=True):
             if isinstance(result, Exception):
-                logger.warning("Query '%s' failed: %s", query[:50], result)
+                logger.warning("Query '%s' failed: %s", sqd.query_text[:50], result)
             else:
-                all_papers.extend(result)
-                logger.info("Found %d papers for query: %s", len(result), query)
+                all_candidates.extend(result)
+                logger.info("Found %d papers for query: %s", len(result), sqd.query_text[:50])
 
-        # Deduplicate papers — cross-source duplicates have different IDs
-        seen = set()
-        unique = []
-        for p in all_papers:
-            # Use DOI if available, otherwise normalized title
-            key = p.doi if getattr(p, 'doi', None) else p.title.lower().strip()
-            if key not in seen:
-                seen.add(key)
-                unique.append(p)
-
-        # G6: Fuzzy dedup for near-duplicate titles
+        # Cross-query dedup with provenance merging
+        # When the same paper appears through different queries, merge discovery lists
         from difflib import SequenceMatcher
-        fuzzy_unique = []
-        for paper in unique:
+        seen_keys: dict[str, CandidateWithDiscoveries] = {}
+
+        for cand in all_candidates:
+            p = cand.paper
+            key = p.doi if getattr(p, 'doi', None) else p.title.lower().strip()
+            if key in seen_keys:
+                # Merge discovery events from this candidate into the existing one
+                seen_keys[key].discoveries.extend(cand.discoveries)
+            else:
+                seen_keys[key] = cand
+
+        unique_candidates = list(seen_keys.values())
+
+        # G6: Fuzzy dedup — merge discovery lists for near-duplicates
+        fuzzy_unique: list[CandidateWithDiscoveries] = []
+        for cand in unique_candidates:
+            paper_title = cand.paper.title.lower().strip()
             is_dup = any(
                 SequenceMatcher(
                     None,
-                    paper.title.lower().strip(),
-                    existing.title.lower().strip(),
+                    paper_title,
+                    existing.paper.title.lower().strip(),
                 ).ratio() > 0.85
                 for existing in fuzzy_unique
             )
             if not is_dup:
-                fuzzy_unique.append(paper)
-        if len(fuzzy_unique) < len(unique):
+                fuzzy_unique.append(cand)
+            else:
+                # Find the matching candidate and merge discoveries
+                for existing in fuzzy_unique:
+                    if SequenceMatcher(
+                        None, paper_title,
+                        existing.paper.title.lower().strip(),
+                    ).ratio() > 0.85:
+                        existing.discoveries.extend(cand.discoveries)
+                        break
+
+        if len(fuzzy_unique) < len(unique_candidates):
             logger.info(
                 "Fuzzy dedup removed %d near-duplicates (%d → %d)",
-                len(unique) - len(fuzzy_unique), len(unique), len(fuzzy_unique),
+                len(unique_candidates) - len(fuzzy_unique),
+                len(unique_candidates), len(fuzzy_unique),
             )
-        unique = fuzzy_unique
+        unique_candidates = fuzzy_unique
+
+        # Extract bare papers for backward compatibility
+        unique = [c.paper for c in unique_candidates]
 
         # Merge pre-existing knowledge library papers
         if pre_existing:
@@ -341,6 +388,8 @@ class LiteratureSearchStage(PipelineStage):
             logger.debug("Citation tree exploration skipped: %s", e)
 
         ctx.all_papers = unique
+        ctx.candidate_papers = unique_candidates
+        ctx.search_query_data = search_query_data
         ctx.result.papers_found = len(unique)
         logger.info("Total unique papers: %d (from %d total)", len(unique), len(all_papers))
 

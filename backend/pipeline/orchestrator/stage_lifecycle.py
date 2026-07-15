@@ -226,7 +226,15 @@ class StageLifecycle:
         """Post-processing for literature_search: persist, rerank, metrics, early-exit check."""
         from backend.pipeline.result import StageReport
 
-        self._persistence.persist_papers(ctx.all_papers, db_run_id)
+        # P0.1: Single governed persistence path for literature search results.
+        # Uses persist_search_results (with provenance) when candidate_papers are
+        # available. Falls back to legacy persist_papers for pre-provenance runs.
+        if ctx.candidate_papers and db_run_id:
+            self._persistence.persist_search_results(
+                ctx.candidate_papers, ctx.search_query_data, db_run_id,
+            )
+        else:
+            self._persistence.persist_papers(ctx.all_papers, db_run_id)
         self._processor.collect_warnings(result)
 
         # Rerank papers using cross-encoder
