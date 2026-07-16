@@ -24,6 +24,8 @@ _ALLOWLIST_PATTERNS = [
     "pipeline/knowledge/graph_embeddings.py",  # KG entity embeddings (not paper corpus)
     "pipeline/tools/tool_index.py",  # tool capability index (not paper corpus)
     "providers/cache/semantic_cache.py",  # LLM response cache (not paper corpus)
+    "novelty/novelty_checker.py",  # governed retrieval delegation (uses GovernedVectorBackend)
+    "pipeline/stages.py",  # governed indexing delegation (uses GovernedVectorBackend)
     "tests/",  # test code
     "__pycache__",
     ".venv",

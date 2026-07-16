@@ -523,6 +523,15 @@ class IngestionStage(PipelineStage):
         added = await self._store.add_papers(ctx.all_papers, chunks)
         logger.info("Added %d chunks to knowledge base", added)
 
+        # P0.3.4B: Governed indexing for provenance_v1 runs.
+        # Index through the governed vector indexer to create verified
+        # vector_index_records that scoped retrieval can consume.
+        if ctx.db_run_id:
+            try:
+                await self._index_governed(ctx, unique_papers)
+            except Exception as e:
+                logger.warning("Governed vector indexing failed (non-fatal): %s", e)
+
         all_ids, all_texts, all_metas = [], [], []
         for paper, paper_chunks in zip(ctx.all_papers, chunks, strict=True):
             for j, chunk in enumerate(paper_chunks):
@@ -575,6 +584,134 @@ class IngestionStage(PipelineStage):
                 logger.warning("Relationship extraction failed (non-fatal): %s", e)
 
         return True
+
+    async def _index_governed(self, ctx: StageContext, papers: list) -> None:
+        """P0.3.4B: Index papers through the governed vector indexer.
+
+        Creates verified vector_index_records for provenance_v1 runs.
+        The legacy store.add_papers continues to run for backward compat.
+        """
+        if not papers or not ctx.db_run_id:
+            return
+
+        try:
+            from backend.db.database import _get_engine, get_session
+            from backend.pipeline.provenance_gate import (
+                load_run_provenance_contract,
+                select_run_execution_mode,
+            )
+            from backend.pipeline.vector_contracts import (
+                build_title_abstract_document,
+            )
+            from backend.pipeline.vector_indexer import index_document
+            from backend.pipeline.vector_backend import GovernedVectorBackend
+            from backend.pipeline.vector_access_policy import resolve_profile_id
+            from backend.config import get_settings
+            from sqlalchemy.orm import sessionmaker
+        except ImportError as e:
+            logger.debug("Governed indexing imports unavailable: %s", e)
+            return
+
+        # Verify this is a governed run
+        try:
+            with get_session() as gate_session:
+                contract = load_run_provenance_contract(gate_session, ctx.db_run_id)
+                mode = select_run_execution_mode(contract)
+        except Exception:
+            return  # Not governed — skip
+
+        if mode != "governed":
+            return
+
+        # Resolve embedding profile from settings
+        settings = get_settings()
+        profile_id = resolve_profile_id(
+            embedding_provider=settings.embedding_provider,
+            model_identifier=settings.embedding_model,
+            dimension=self._embedding.dimension if self._embedding else 1024,
+            normalization_policy="l2",
+            chunking_schema_version="title_abstract_v1",
+        )
+
+        profile_dict = {
+            "provider": settings.embedding_provider,
+            "model_identifier": settings.embedding_model,
+            "dimension": self._embedding.dimension if self._embedding else 1024,
+            "normalization_policy": "l2",
+            "chunking_schema_version": "title_abstract_v1",
+        }
+
+        engine = _get_engine()
+        Session = sessionmaker(bind=engine, expire_on_commit=False)
+
+        # Build a governed backend (needs chromadb client)
+        try:
+            import chromadb
+            chroma_client = chromadb.PersistentClient(path=settings.chroma_persist_dir)
+            backend = GovernedVectorBackend(chroma_client)
+        except Exception as e:
+            logger.warning("Cannot create governed vector backend: %s", e)
+            return
+
+        # Index each paper
+        indexed = 0
+        failed = 0
+        already = 0
+        for paper in papers:
+            doc = build_title_abstract_document(
+                paper_id=0,  # Will be resolved from DB — use source_id lookup
+                title=paper.title,
+                abstract=getattr(paper, "abstract", None),
+                embedding_profile_id=profile_id,
+            )
+
+            # Resolve the canonical DB paper ID from the search-layer paper
+            try:
+                from backend.db import crud
+                with get_session() as s:
+                    db_paper = crud.get_paper_by_source_id(s, paper.id)
+                    if db_paper is None:
+                        logger.debug("Paper %s not in DB yet — skipping governed index", paper.id)
+                        failed += 1
+                        continue
+                    db_paper_id = db_paper.id
+
+                # Rebuild doc with correct paper_id
+                doc = build_title_abstract_document(
+                    paper_id=db_paper_id,
+                    title=paper.title,
+                    abstract=getattr(paper, "abstract", None),
+                    embedding_profile_id=profile_id,
+                )
+
+                # Use the embedding service to generate the embedding
+                class _EmbeddingAdapter:
+                    """Adapts EmbeddingService to the indexer's embed_single interface."""
+                    def __init__(self, embedding_service):
+                        self._svc = embedding_service
+                    async def embed_single(self, text):
+                        result = await self._svc.embed_texts([text])
+                        return result[0] if result else []
+
+                outcome = await index_document(
+                    session_factory=Session,
+                    backend=backend,
+                    embedding_provider=_EmbeddingAdapter(self._embedding),
+                    profile=profile_dict,
+                    document=doc,
+                )
+                if outcome.status == "indexed":
+                    indexed += 1
+                elif outcome.status == "already_indexed":
+                    already += 1
+            except Exception as e:
+                logger.debug("Governed indexing failed for paper %s: %s", paper.id, e)
+                failed += 1
+
+        logger.info(
+            "Governed indexing: %d indexed, %d already-indexed, %d failed (of %d papers)",
+            indexed, already, failed, len(papers),
+        )
 
 
 class GapAnalysisStage(PipelineStage):
@@ -883,7 +1020,11 @@ class NoveltyCheckingStage(PipelineStage):
         if not ideas:
             return True
         for i, idea in enumerate(ideas):
-            profile, directives = await self._novelty.check_novelty(idea)
+            profile, directives = await self._novelty.check_novelty(
+                idea,
+                run_id=ctx.db_run_id,
+                db_engine=__import__("backend.db.database", fromlist=["_get_engine"])._get_engine() if ctx.db_run_id else None,
+            )
 
             # Write BOTH formats for backward compat
             ctx.result.novelty_profiles[i] = profile

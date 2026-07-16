@@ -161,6 +161,17 @@ class ScopedVectorResult:
     rank: int
 
 
+@dataclass(frozen=True)
+class GovernedRetrievedContext:
+    """Wrapper that preserves retrieval identity for consuming stages (P0.3.4)."""
+
+    retrieval_event_id: int
+    scope_fingerprint: str
+    embedding_profile_id: str
+    coverage_status: str
+    results: tuple["ScopedVectorResult", ...]
+
+
 # ── Vector document and identity (P0.3.2) ────────────────────────────
 
 
@@ -182,6 +193,32 @@ class VectorIndexDocument:
     content_hash: str
 
     embedding_profile_id: str
+
+
+def build_title_abstract_document(
+    paper_id: int,
+    title: str,
+    abstract: str | None,
+    embedding_profile_id: str,
+) -> VectorIndexDocument:
+    """Build a deterministic title+abstract document for governed indexing.
+
+    Canonical text: normalized title + blank line + normalized abstract.
+    Missing abstract results in title-only text but still uses the
+    title_abstract content kind (the consuming code records the policy).
+    """
+    normalized_title = (title or "").strip()
+    normalized_abstract = (abstract or "").strip()
+    content_text = f"{normalized_title}\n\n{normalized_abstract}"
+    return VectorIndexDocument(
+        schema_version="vector_document_v1",
+        paper_id=paper_id,
+        chunk_key="title_abstract:0",
+        content_kind="title_abstract",
+        content_text=content_text,
+        content_hash=compute_content_hash(content_text),
+        embedding_profile_id=embedding_profile_id,
+    )
 
 
 @dataclass(frozen=True)

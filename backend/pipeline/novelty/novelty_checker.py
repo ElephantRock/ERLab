@@ -88,19 +88,154 @@ class NoveltyChecker:
         self._citation_traverser = citation_traverser
         self._embedding_scorer = embedding_scorer
 
+    async def _retrieve_governed(
+        self, query: str, idea: ResearchIdea, top_k: int,
+        run_id: int, db_engine,
+    ) -> list[dict] | None:
+        """P0.3.4C: Retrieve similar papers through the governed scoped service.
+
+        Returns None if governed retrieval is not applicable (legacy run,
+        missing profile, etc.), causing the caller to fall through to legacy.
+        """
+        try:
+            from backend.db.database import get_session
+            from backend.pipeline.provenance_gate import (
+                load_run_provenance_contract,
+                select_run_execution_mode,
+            )
+            from backend.pipeline.vector_access_policy import resolve_profile_id
+            from backend.pipeline.vector_contracts import (
+                ScopedVectorRetrievalRequest,
+                VectorRetrievalScope,
+            )
+            from backend.pipeline.scoped_vector_service import query_vectors
+            from backend.pipeline.vector_backend import GovernedVectorBackend
+            from backend.config import get_settings
+            from sqlalchemy.orm import sessionmaker
+        except ImportError:
+            return None
+
+        # Verify governed run
+        try:
+            with get_session() as s:
+                contract = load_run_provenance_contract(s, run_id)
+                mode = select_run_execution_mode(contract)
+        except Exception:
+            return None
+
+        if mode != "governed":
+            return None
+
+        settings = get_settings()
+        dim = self._embedding.dimension if self._embedding else 1024
+        profile_id = resolve_profile_id(
+            embedding_provider=settings.embedding_provider,
+            model_identifier=settings.embedding_model,
+            dimension=dim,
+            normalization_policy="l2",
+            chunking_schema_version="title_abstract_v1",
+        )
+
+        # Generate query embedding explicitly
+        try:
+            query_embeddings = await self._embedding.embed_texts([query])
+            query_vector = tuple(query_embeddings[0]) if query_embeddings else ()
+        except Exception:
+            return None
+
+        if not query_vector:
+            return []
+
+        # Build scoped request
+        scope = VectorRetrievalScope(
+            schema_version="vector_scope_v1",
+            mode="current_run_only",
+            run_id=run_id,
+            embedding_profile_id=profile_id,
+        )
+
+        idea_key = getattr(idea, "id", idea.title[:60])
+        request = ScopedVectorRetrievalRequest(
+            schema_version="vector_retrieval_v1",
+            run_id=run_id,
+            stage_name="novelty_check",
+            retrieval_key=f"novelty:{idea_key}",
+            scope=scope,
+            query_vector=query_vector,
+            top_k=top_k,
+        )
+
+        # Build backend
+        try:
+            import chromadb
+            chroma_client = chromadb.PersistentClient(path=settings.chroma_persist_dir)
+            backend = GovernedVectorBackend(chroma_client)
+        except Exception:
+            return None
+
+        Session = sessionmaker(bind=db_engine, expire_on_commit=False)
+
+        try:
+            outcome = await query_vectors(
+                session_factory=Session,
+                backend=backend,
+                request=request,
+            )
+
+            # Convert scoped results to the similar-papers format
+            similar = []
+            for result in outcome.results:
+                similar.append({
+                    "id": f"paper_{result.paper_id}",
+                    "text": "",
+                    "metadata": {"paper_id": result.paper_id},
+                    "distance": result.raw_score,
+                })
+            return similar
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).warning(
+                "Governed novelty retrieval failed (non-fatal): %s", e
+            )
+            return None  # Fall through to legacy
+
     async def check_novelty(
         self,
         idea: ResearchIdea,
         top_k: int = 20,
+        *,
+        run_id: int | None = None,
+        db_engine=None,
     ) -> tuple[NoveltyProfile, DownstreamDirectives]:
         """Check idea novelty against the knowledge base.
+
+        When run_id and db_engine are provided and the run is provenance_v1,
+        retrieval routes through the governed scoped vector service.
 
         Returns:
             Tuple of (NoveltyProfile, DownstreamDirectives).
         """
         query = f"{idea.title} {idea.proposed_method}"
 
-        if self._retriever:
+        # P0.3.4C: Governed retrieval path for provenance_v1 runs
+        if run_id is not None and db_engine is not None:
+            similar = await self._retrieve_governed(
+                query, idea, top_k, run_id, db_engine,
+            )
+            if similar is not None:
+                # Governed path succeeded — use its results
+                pass
+            else:
+                # Fall through to legacy path
+                if self._retriever:
+                    results = await self._retriever.retrieve(query, n_results=top_k)
+                    similar = [
+                        {"id": r.id, "text": r.text, "metadata": r.metadata, "distance": 1.0 - r.score}
+                        for r in results
+                    ]
+                else:
+                    similar = await self._store.query(query, n_results=top_k)
+        elif self._retriever:
             results = await self._retriever.retrieve(query, n_results=top_k)
             similar = [
                 {"id": r.id, "text": r.text, "metadata": r.metadata, "distance": 1.0 - r.score}
