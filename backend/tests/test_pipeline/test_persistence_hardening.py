@@ -74,7 +74,7 @@ def session(engine):
 @pytest.fixture()
 def run_id(session):
     """Insert a PipelineRun row and return its integer id."""
-    run = PipelineRun(status="running", domain="AI/NLP")
+    run = PipelineRun(status="running", domain="AI/NLP", provenance_version="pre_provenance", legacy_provenance_reason="pre_gating_run")
     session.add(run)
     session.commit()
     return run.id
@@ -170,11 +170,11 @@ class TestPersistIdeasDedup:
 
     def test_same_title_different_run_id_not_deduplicated(self, session, persister):
         """Same title but different pipeline_run_id → both persisted."""
-        run1 = PipelineRun(status="running", domain="AI/NLP")
+        run1 = PipelineRun(status="running", domain="AI/NLP", provenance_version="pre_provenance", legacy_provenance_reason="pre_gating_run")
         session.add(run1)
         session.commit()
 
-        run2 = PipelineRun(status="running", domain="AI/NLP")
+        run2 = PipelineRun(status="running", domain="AI/NLP", provenance_version="pre_provenance", legacy_provenance_reason="pre_gating_run")
         session.add(run2)
         session.commit()
 

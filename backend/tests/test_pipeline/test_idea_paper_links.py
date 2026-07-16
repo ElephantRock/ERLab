@@ -28,7 +28,7 @@ def db_session():
 @pytest.fixture
 def run_and_papers(db_session):
     """Create a pipeline run with papers and an idea."""
-    run = PipelineRun(domain="AI/NLP", status="completed")
+    run = PipelineRun(domain="AI/NLP", status="completed", provenance_version="pre_provenance", legacy_provenance_reason="pre_gating_run")
     db_session.add(run)
     db_session.commit()
 

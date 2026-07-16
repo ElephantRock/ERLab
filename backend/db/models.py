@@ -16,6 +16,7 @@ from sqlalchemy import (
     UniqueConstraint,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy import event
 
 from backend.db.database import Base
 
@@ -145,6 +146,25 @@ class PipelineRun(Base):
     __table_args__ = (
         Index("ix_pipeline_runs_status", "status"),
         Index("ix_pipeline_runs_session_id", "session_id"),
+        # P0.2.7: provenance vocabulary
+        CheckConstraint(
+            "provenance_version IN ('pre_provenance', 'provenance_v1')",
+            name="ck_pipeline_runs_provenance_version",
+        ),
+        # P0.2.7: version/reason consistency
+        CheckConstraint(
+            "("
+            "  provenance_version = 'pre_provenance' "
+            "  AND legacy_provenance_reason IN ("
+            "    'pre_gating_run', 'legacy_checkpoint', "
+            "    'explicit_legacy_mode', 'imported_legacy_run'"
+            "  )"
+            ") OR ("
+            "  provenance_version = 'provenance_v1' "
+            "  AND legacy_provenance_reason IS NULL"
+            ")",
+            name="ck_pipeline_runs_provenance_legacy_reason",
+        ),
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
@@ -181,13 +201,15 @@ class PipelineRun(Base):
     completed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     updated_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)  # BATCH-74: watchdog tracking
 
-    # P0.1: Provenance schema version. NOT NULL DEFAULT 'pre_provenance'.
-    # 'pre_provenance' = legacy runs (no governed corpus boundary).
-    # 'provenance_v1' = governed runs with run-scoped corpus ownership.
-    # Records schema version AT CREATION, not completion status.
+    # P0.1/P0.2.7: Provenance contract — immutable after creation.
+    # NO default: callers must explicitly choose governed or legacy.
+    # 'pre_provenance' = outside the enforced provenance contract
+    # 'provenance_v1' = must satisfy the complete governed P0.1–P0.2 contract
     provenance_version: Mapped[str] = mapped_column(
-        String(20), nullable=False, server_default="pre_provenance",
+        String(20), nullable=False,
     )
+    # P0.2.7: Legacy reason — required for pre_provenance, NULL for provenance_v1.
+    legacy_provenance_reason: Mapped[str | None] = mapped_column(String(40), nullable=True)
 
 
 class Comment(Base):
@@ -1185,3 +1207,28 @@ class RunSearchReconciliation(Base):
     canonicalization_reduction_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
     unexplained_membership_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
     unowned_discovery_paper_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
+
+
+# ── P0.2.7: Provenance immutability enforcement ─────────────────────
+
+
+class ProvenanceContractMutationError(Exception):
+    """Raised when an attempt is made to mutate provenance_version or
+    legacy_provenance_reason after run creation."""
+
+
+@event.listens_for(PipelineRun, "before_update")
+def _prevent_provenance_contract_mutation(mapper, connection, target):
+    """ORM-level guard: provenance_version and legacy_provenance_reason are
+    immutable after insertion. A no-op assignment (same value) is allowed."""
+    from sqlalchemy import inspect as sa_inspect
+
+    state = sa_inspect(target)
+    for attr_name in ("provenance_version", "legacy_provenance_reason"):
+        history = state.attrs[attr_name].history
+        if history.has_changes():
+            raise ProvenanceContractMutationError(
+                f"{attr_name} is immutable after run creation "
+                f"(run_id={target.id}). Create a new run with the desired "
+                f"provenance contract instead."
+            )

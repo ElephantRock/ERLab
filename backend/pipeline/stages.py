@@ -49,6 +49,8 @@ class StageContext:
     candidate_papers: list = field(default_factory=list)  # list[CandidateWithDiscoveries]
     # P0.2.5: Execution linkage expectations for governed persistence
     execution_linkage_expectations: list = field(default_factory=list)
+    # P0.2.7: Explicit governed-search marker (replaces context-truthiness)
+    governed_search_context: Any = None  # GovernedSearchContext | None
 
 
 # Stages that do NOT use LLM models — no receipt required.
@@ -451,20 +453,29 @@ class LiteratureSearchStage(PipelineStage):
         ctx.candidate_papers = unique_candidates
         ctx.search_query_data = search_query_data
         ctx.execution_linkage_expectations = all_linkage_expectations
+        # P0.2.7: Populate explicit governed-search marker if governed path ran.
+        if db_engine is not None and ctx.db_run_id:
+            from backend.pipeline.literature.contracts import GovernedSearchContext
+            ctx.governed_search_context = GovernedSearchContext(
+                schema_version="governed_search_context_v1",
+                search_query_data=tuple(search_query_data),
+                candidate_papers=tuple(unique_candidates),
+                execution_linkage_expectations=tuple(all_linkage_expectations),
+            )
         ctx.result.papers_found = len(unique)
-        logger.info("Total unique papers: %d (from %d total)", len(unique), len(all_papers))
+        logger.info("Total unique papers: %d (from %d total)", len(unique), len(all_candidates))
 
         # B162: Journal note
         if ctx.journal:
             try:
-                ctx.journal.add_note("literature_search", f"Found {len(unique)} unique papers from {len(all_papers)} total", {
+                ctx.journal.add_note("literature_search", f"Found {len(unique)} unique papers from {len(all_candidates)} total", {
                     "unique_papers": len(unique),
-                    "total_found": len(all_papers),
+                    "total_found": len(all_candidates),
                 })
             except Exception:
                 pass
 
-        if not all_papers:
+        if not all_candidates:
             logger.warning(
                 "No papers found from any source. Halting pipeline — "
                 "gap analysis requires paper abstracts as input."

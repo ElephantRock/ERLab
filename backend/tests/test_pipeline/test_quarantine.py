@@ -541,6 +541,8 @@ def _seed_proposal_with_quarantine(session, sections_dict, quarantine_rows):
         run_id_str=f"run_test_{_seed_counter[0]}",
         domain="AI/NLP",
         status="completed",
+        provenance_version="pre_provenance",
+        legacy_provenance_reason="pre_gating_run",
     )
     session.add(run)
     session.commit()

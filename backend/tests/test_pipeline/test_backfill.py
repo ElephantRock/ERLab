@@ -31,7 +31,7 @@ def db_session():
 @pytest.fixture
 def sample_run_and_idea(db_session):
     """Create a minimal run + idea + proposal with references."""
-    run = PipelineRun(status="completed", domain="AI/NLP")
+    run = PipelineRun(status="completed", domain="AI/NLP", provenance_version="pre_provenance", legacy_provenance_reason="pre_gating_run")
     db_session.add(run)
     db_session.flush()
 
@@ -126,7 +126,7 @@ def test_backfill_is_idempotent(db_session, sample_run_and_idea):
 
 def test_backfill_handles_no_proposal(db_session):
     """Backfill on idea without proposal should return zeros."""
-    run = PipelineRun(status="completed", domain="AI/NLP")
+    run = PipelineRun(status="completed", domain="AI/NLP", provenance_version="pre_provenance", legacy_provenance_reason="pre_gating_run")
     db_session.add(run)
     db_session.flush()
 

@@ -60,7 +60,9 @@ def client(monkeypatch, db_session):
 @pytest.fixture
 def idea_with_papers(db_session):
     """Create an idea with linked papers and a proposal with references."""
-    run = PipelineRun(domain="AI/NLP", status="completed")
+    run = PipelineRun(domain="AI/NLP", status="completed",
+                      provenance_version="pre_provenance",
+                      legacy_provenance_reason="pre_gating_run")
     db_session.add(run)
     db_session.commit()
 
@@ -136,7 +138,9 @@ class TestGetIdeaSupportingPapers:
 
     def test_no_supporting_papers_returns_null(self, client, db_session):
         """Idea without paper links should have null supporting_papers."""
-        run = PipelineRun(domain="AI/NLP", status="completed")
+        run = PipelineRun(domain="AI/NLP", status="completed",
+                      provenance_version="pre_provenance",
+                      legacy_provenance_reason="pre_gating_run")
         db_session.add(run)
         db_session.commit()
 
@@ -200,7 +204,9 @@ class TestGetIdeaStructuredReferences:
 
     def test_null_references_when_no_proposal(self, client, db_session):
         """Idea without a proposal should have null references."""
-        run = PipelineRun(domain="AI/NLP", status="completed")
+        run = PipelineRun(domain="AI/NLP", status="completed",
+                      provenance_version="pre_provenance",
+                      legacy_provenance_reason="pre_gating_run")
         db_session.add(run)
         db_session.commit()
 

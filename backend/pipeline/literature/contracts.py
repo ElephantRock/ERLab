@@ -268,6 +268,21 @@ class ExecutionLinkageExpectation:
     accounting_status: str
 
 
+@dataclass(frozen=True)
+class GovernedSearchContext:
+    """Explicit marker that a governed search has been executed.
+
+    P0.2.7: Replaces context-truthiness checks. An empty candidate list
+    is VALID for a governed search — the marker's presence (not list
+    truthiness) signals the governed path.
+    """
+
+    schema_version: Literal["governed_search_context_v1"]
+    search_query_data: tuple  # tuple[SearchQueryData, ...]
+    candidate_papers: tuple  # tuple[CandidateWithDiscoveries, ...]
+    execution_linkage_expectations: tuple  # tuple[ExecutionLinkageExpectation, ...]
+
+
 # ── Invariant validation ─────────────────────────────────────────────
 
 

@@ -226,26 +226,72 @@ class StageLifecycle:
         """Post-processing for literature_search: persist, rerank, metrics, early-exit check."""
         from backend.pipeline.result import StageReport
 
-        # P0.1: Single governed persistence path for literature search results.
-        # Uses persist_search_results (with provenance) when candidate_papers are
-        # available. Falls back to legacy persist_papers for pre-provenance runs.
-        if ctx.candidate_papers and db_run_id:
-            self._persistence.persist_search_results(
-                ctx.candidate_papers, ctx.search_query_data, db_run_id,
-                execution_linkage_expectations=getattr(
-                    ctx, "execution_linkage_expectations", None
-                ),
+        # P0.2.7: Route from the durable provenance contract, not context truthiness.
+        if db_run_id:
+            from backend.db.database import _get_engine, get_session
+            from backend.pipeline.provenance_gate import (
+                load_run_provenance_contract,
+                select_run_execution_mode,
             )
-            # P0.2.6: Reconcile after governed corpus commit.
-            try:
-                from backend.db.database import _get_engine
-                from backend.pipeline.literature.run_reconciliation import (
-                    reconcile_run_search,
-                )
-                reconcile_run_search(_get_engine(), db_run_id)
-            except Exception as e:
-                logger.warning("Run search reconciliation failed (non-fatal): %s", e)
-        else:
+
+            with get_session() as gate_session:
+                contract = load_run_provenance_contract(gate_session, db_run_id)
+                mode = select_run_execution_mode(contract)
+
+            if mode == "governed":
+                # Governed path: use governed context marker (not candidate truthiness).
+                # Zero candidates is VALID for governed search.
+                governed_ctx = getattr(ctx, "governed_search_context", None)
+                if governed_ctx is not None:
+                    self._persistence.persist_search_results(
+                        list(governed_ctx.candidate_papers),
+                        list(governed_ctx.search_query_data),
+                        db_run_id,
+                        execution_linkage_expectations=list(
+                            governed_ctx.execution_linkage_expectations
+                        ),
+                    )
+                    # P0.2.6: Reconcile after governed corpus commit.
+                    try:
+                        from backend.pipeline.literature.run_reconciliation import (
+                            reconcile_run_search,
+                        )
+                        reconcile_run_search(_get_engine(), db_run_id)
+                    except Exception as e:
+                        logger.warning("Run search reconciliation failed (non-fatal): %s", e)
+                elif ctx.candidate_papers:
+                    # Fallback for P0.2.6-era runs without explicit governed context
+                    self._persistence.persist_search_results(
+                        ctx.candidate_papers, ctx.search_query_data, db_run_id,
+                        execution_linkage_expectations=getattr(
+                            ctx, "execution_linkage_expectations", None
+                        ),
+                    )
+                    try:
+                        from backend.pipeline.literature.run_reconciliation import (
+                            reconcile_run_search,
+                        )
+                        reconcile_run_search(_get_engine(), db_run_id)
+                    except Exception as e:
+                        logger.warning("Run search reconciliation failed (non-fatal): %s", e)
+                # If no governed context and no candidates, this is a zero-result
+                # governed run — still persist + reconcile if expectations exist.
+                elif getattr(ctx, "execution_linkage_expectations", None):
+                    self._persistence.persist_search_results(
+                        [], ctx.search_query_data, db_run_id,
+                        execution_linkage_expectations=ctx.execution_linkage_expectations,
+                    )
+                    try:
+                        from backend.pipeline.literature.run_reconciliation import (
+                            reconcile_run_search,
+                        )
+                        reconcile_run_search(_get_engine(), db_run_id)
+                    except Exception as e:
+                        logger.warning("Run search reconciliation failed (non-fatal): %s", e)
+            else:
+                # Legacy path (pre_provenance) or legacy_read_only
+                self._persistence.persist_papers(ctx.all_papers, db_run_id)
+        elif ctx.all_papers:
             self._persistence.persist_papers(ctx.all_papers, db_run_id)
         self._processor.collect_warnings(result)
 

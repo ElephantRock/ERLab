@@ -72,7 +72,8 @@ def test_01_fresh_db_migration_working_app(tmp_path: Path):
         assert paper.id is not None
 
         # Insert a pipeline run
-        run = PipelineRun(domain="AI/NLP")
+        run = PipelineRun(domain="AI/NLP", provenance_version="pre_provenance",
+                          legacy_provenance_reason="pre_gating_run")
         session.add(run)
         session.commit()
         assert run.id is not None

@@ -97,14 +97,16 @@ class RunService:
         run_id_str = run_id_override or self.generate_run_id()
 
         with get_session() as session:
-            run = PipelineRun(
+            # P0.2.7: New runs are governed by default.
+            from backend.pipeline.provenance_gate import create_governed_run_record
+            run = create_governed_run_record(
+                session,
                 run_id_str=run_id_str,
                 status="pending",
                 domain=domain,
                 config_json=json.dumps(config or {}),
                 session_id=session_id,
             )
-            session.add(run)
             session.flush()  # Get the PK
             db_id = run.id
             session.commit()

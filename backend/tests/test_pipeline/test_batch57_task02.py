@@ -44,6 +44,8 @@ def test_57_02_01_advance_stage_updates_current_stage():
                 domain="test",
                 current_stage="initializing",
                 stages_completed="[]",
+                provenance_version="pre_provenance",
+                legacy_provenance_reason="pre_gating_run",
             )
             s.add(run)
             s.commit()

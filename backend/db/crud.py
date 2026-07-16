@@ -260,6 +260,11 @@ def list_session_ids(session: Session) -> list[dict]:
 
 
 def create_pipeline_run(session: Session, **kwargs) -> PipelineRun:
+    # P0.2.7: provenance_version is required (no default). Callers must
+    # provide it explicitly, or use create_governed_run_record / create_legacy_run_record.
+    if "provenance_version" not in kwargs:
+        kwargs["provenance_version"] = "provenance_v1"
+        kwargs.setdefault("legacy_provenance_reason", None)
     run = PipelineRun(**kwargs)
     session.add(run)
     session.commit()

@@ -50,7 +50,7 @@ def persistence():
 @pytest.fixture
 def db_run_id(db_session):
     """Create a pipeline run and return its ID."""
-    run = PipelineRun(domain="AI/NLP")
+    run = PipelineRun(domain="AI/NLP", provenance_version="pre_provenance", legacy_provenance_reason="pre_gating_run")
     db_session.add(run)
     db_session.commit()
     return run.id

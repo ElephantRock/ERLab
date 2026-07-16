@@ -126,7 +126,9 @@ def test_migration_preserves_existing_data():
     session.add_all([p1, p2])
     session.commit()
 
-    run = PipelineRun(run_id_str="legacy_run", domain="Test", status="completed")
+    run = PipelineRun(run_id_str="legacy_run", domain="Test", status="completed",
+                      provenance_version="pre_provenance",
+                      legacy_provenance_reason="pre_gating_run")
     session.add(run)
     session.commit()
 
@@ -154,6 +156,7 @@ def test_legacy_runs_marked_pre_provenance():
         run_id_str="legacy_run",
         domain="Test", status="completed",
         provenance_version="pre_provenance",
+        legacy_provenance_reason="pre_gating_run",
     )
     session.add(run)
     session.commit()
