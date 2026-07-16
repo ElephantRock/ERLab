@@ -10,7 +10,7 @@ Part of Pillar 6 (Novelty Redesign) in the Comprehensive Solution Design v2.
 from __future__ import annotations
 
 from enum import Enum
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 
 from pydantic import BaseModel, Field, field_validator
 
@@ -79,6 +79,9 @@ class NoveltyProfile(BaseModel):
     differentiations: List[str] = Field(default_factory=list)
     search_coverage: SearchCoverage = Field(default_factory=SearchCoverage)
     novelty_arguments: str = ""
+    # P0.3.4F: Retrieval provenance linkage
+    retrieval_event_id: Optional[int] = None
+    retrieval_mode: str = ""  # governed_vector | legacy_vector | non_vector
 
     @field_validator("axes")
     @classmethod

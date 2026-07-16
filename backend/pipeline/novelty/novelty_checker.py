@@ -102,10 +102,11 @@ class NoveltyChecker:
     async def _retrieve_governed(
         self, query: str, idea: ResearchIdea, top_k: int,
         run_id: int, db_engine,
-    ) -> list[dict] | None:
+    ) -> tuple[list[dict], int | None, str] | None:
         """P0.3.4C: Retrieve similar papers through the governed scoped service.
 
-        Returns None if the run is NOT governed (legitimate legacy fallthrough).
+        Returns (similar, retrieval_event_id, retrieval_mode) or None.
+        None = non-governed run (legitimate legacy fallthrough).
         For governed runs, failures propagate — they never fall through to legacy.
         """
         from backend.db.database import get_session
@@ -197,7 +198,7 @@ class NoveltyChecker:
                 "metadata": {"paper_id": result.paper_id},
                 "distance": result.raw_score,
             })
-        return similar
+        return similar, outcome.retrieval_event_id, "governed_vector"
 
     async def check_novelty(
         self,
@@ -220,19 +221,21 @@ class NoveltyChecker:
         # P0.3.4C: Governed retrieval path for provenance_v1 runs.
         # _retrieve_governed returns None ONLY for non-governed runs.
         # For governed runs, exceptions propagate (no legacy fallback).
+        retrieval_event_id: int | None = None
+        retrieval_mode = "legacy_vector"
         if run_id is not None and db_engine is not None:
             governed_result = await self._retrieve_governed(
                 query, idea, top_k, run_id, db_engine,
             )
             if governed_result is not None:
                 # Governed path produced results (may be empty list = valid zero)
-                similar = governed_result
+                similar, retrieval_event_id, retrieval_mode = governed_result
             else:
                 # Non-governed run — use legacy path
-                similar = self._retrieve_legacy(query, top_k)
+                similar = await self._retrieve_legacy(query, top_k)
         else:
             # No run context — legacy path (non-pipeline callers)
-            similar = self._retrieve_legacy(query, top_k)
+            similar = await self._retrieve_legacy(query, top_k)
 
         idea_id = getattr(idea, 'id', idea.title[:60])
 
@@ -262,6 +265,8 @@ class NoveltyChecker:
                     blind_spots_identified=["No results from any source — vector quality may be degraded"],
                 ),
                 novelty_arguments="No similar papers found in the knowledge base. Score is unverifiable, not confirmed novel.",
+                retrieval_event_id=retrieval_event_id,
+                retrieval_mode=retrieval_mode,
             )
             return profile, build_directives(profile)
 
@@ -367,6 +372,8 @@ class NoveltyChecker:
                     results_per_source={"vectorstore": len(similar)},
                 ),
                 novelty_arguments=result.get("novelty_arguments", ""),
+                retrieval_event_id=retrieval_event_id,
+                retrieval_mode=retrieval_mode,
             )
 
             # Augment with citation traversal and embedding scoring
@@ -413,6 +420,8 @@ class NoveltyChecker:
                     results_per_source={"vectorstore": len(similar)},
                 ),
                 novelty_arguments=f"Fallback distance-based score. Avg distance: {avg_distance:.3f}",
+                retrieval_event_id=retrieval_event_id,
+                retrieval_mode=retrieval_mode,
             )
             return profile, build_directives(profile)
 
