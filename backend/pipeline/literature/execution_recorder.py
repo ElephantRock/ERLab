@@ -202,6 +202,12 @@ class ExecutionRecorder:
         Pre-existing terminal rows are NOT reset (replay immutability).
         """
         from backend.db.models import SearchQueryExecution
+        from backend.pipeline.literature.run_reconciliation import (
+            ensure_execution_scope,
+        )
+
+        # P0.2.6: Register the execution scope atomically.
+        ensure_execution_scope(self._engine, search_query_id, intended_sources)
 
         session = self._session()
         source_to_id: dict[str, int] = {}

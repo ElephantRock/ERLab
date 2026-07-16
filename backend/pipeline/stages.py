@@ -237,6 +237,12 @@ class LiteratureSearchStage(PipelineStage):
         query_ids_by_key: dict[str, int] = {}
         if ctx.db_run_id:
             db_engine = _get_engine()
+            # P0.2.6: Ensure pending run reconciliation ledger exists before
+            # outbound source work so a crash leaves an explicit incomplete posture.
+            from backend.pipeline.literature.run_reconciliation import (
+                ensure_pending_reconciliation,
+            )
+            ensure_pending_reconciliation(db_engine, ctx.db_run_id)
             # ensure_search_queries is a non-corpus short transaction.
             query_ids_by_key = self._persistence.ensure_search_queries(
                 search_query_data, ctx.db_run_id,

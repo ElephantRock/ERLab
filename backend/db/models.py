@@ -980,3 +980,208 @@ class ExecutionDiscoveryLinkage(Base):
         DateTime, default=lambda: datetime.now(timezone.utc),
         onupdate=lambda: datetime.now(timezone.utc),
     )
+
+
+class SearchQueryExecutionScope(Base):
+    """Durable snapshot of the intended source set for a logical query.
+
+    P0.2.6: Allows run-level reconciliation to verify that the actual
+    execution set exactly matches the intended set — no missing or
+    extra executions. Created atomically with the pending execution rows.
+    """
+
+    __tablename__ = "search_query_execution_scopes"
+    __table_args__ = (
+        CheckConstraint(
+            "scope_schema_version = 'execution_scope_v1'",
+            name="ck_sqes_scope_schema_version",
+        ),
+        CheckConstraint(
+            "intended_source_count >= 0",
+            name="ck_sqes_source_count_nonnegative",
+        ),
+    )
+
+    search_query_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("search_queries.id", ondelete="CASCADE"),
+        primary_key=True,
+    )
+    scope_schema_version: Mapped[str] = mapped_column(String(30), nullable=False)
+    intended_sources_json: Mapped[str] = mapped_column(Text, nullable=False)
+    intended_source_count: Mapped[int] = mapped_column(Integer, nullable=False)
+    source_set_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=lambda: datetime.now(timezone.utc),
+    )
+
+
+class RunSearchReconciliation(Base):
+    """Run-level search reconciliation ledger (P0.2.6).
+
+    One row per PipelineRun. Proves internal completeness from logical
+    query intent through final run-corpus membership. Aggregate counts
+    are NULL until status='reconciled'.
+    """
+
+    __tablename__ = "run_search_reconciliations"
+    __table_args__ = (
+        Index("ix_rsr_status", "status"),
+        CheckConstraint(
+            "reconciliation_schema_version = 'run_reconciliation_v1'",
+            name="ck_rsr_schema_version",
+        ),
+        CheckConstraint(
+            "status IN ('pending','blocked','reconciled','failed')",
+            name="ck_rsr_status",
+        ),
+        CheckConstraint(
+            "execution_posture IS NULL "
+            "OR execution_posture IN ('healthy','degraded','no_usable_sources')",
+            name="ck_rsr_execution_posture",
+        ),
+        CheckConstraint(
+            "reconciliation_attempt_count >= 0",
+            name="ck_rsr_attempt_count_nonnegative",
+        ),
+        CheckConstraint(
+            "status != 'reconciled' OR ("
+            "  logical_query_count IS NOT NULL"
+            "  AND expected_execution_count IS NOT NULL"
+            "  AND actual_execution_count IS NOT NULL"
+            "  AND terminal_execution_count IS NOT NULL"
+            "  AND success_execution_count IS NOT NULL"
+            "  AND partial_execution_count IS NOT NULL"
+            "  AND failed_execution_count IS NOT NULL"
+            "  AND timeout_execution_count IS NOT NULL"
+            "  AND skipped_execution_count IS NOT NULL"
+            "  AND reconciled_accounting_execution_count IS NOT NULL"
+            "  AND incomplete_accounting_execution_count IS NOT NULL"
+            "  AND source_unique_result_count IS NOT NULL"
+            "  AND linked_discovery_count IS NOT NULL"
+            "  AND remote_canonical_paper_count IS NOT NULL"
+            "  AND nonremote_canonical_paper_count IS NOT NULL"
+            "  AND remote_only_paper_count IS NOT NULL"
+            "  AND nonremote_only_paper_count IS NOT NULL"
+            "  AND multi_origin_paper_count IS NOT NULL"
+            "  AND run_paper_count IS NOT NULL"
+            "  AND canonicalization_reduction_count IS NOT NULL"
+            "  AND unexplained_membership_count IS NOT NULL"
+            "  AND unowned_discovery_paper_count IS NOT NULL"
+            "  AND input_fingerprint IS NOT NULL"
+            "  AND execution_posture IS NOT NULL"
+            "  AND completed_at IS NOT NULL"
+            "  AND issue_code IS NULL"
+            "  AND issue_detail IS NULL)",
+            name="ck_rsr_reconciled_completeness",
+        ),
+        CheckConstraint(
+            "status != 'reconciled' OR expected_execution_count = actual_execution_count",
+            name="ck_rsr_expected_equals_actual",
+        ),
+        CheckConstraint(
+            "status != 'reconciled' OR actual_execution_count = terminal_execution_count",
+            name="ck_rsr_actual_equals_terminal",
+        ),
+        CheckConstraint(
+            "status != 'reconciled' OR terminal_execution_count = "
+            "success_execution_count + partial_execution_count "
+            "+ failed_execution_count + timeout_execution_count + skipped_execution_count",
+            name="ck_rsr_terminal_decomposition",
+        ),
+        CheckConstraint(
+            "status != 'reconciled' OR actual_execution_count = "
+            "reconciled_accounting_execution_count + incomplete_accounting_execution_count",
+            name="ck_rsr_accounting_decomposition",
+        ),
+        CheckConstraint(
+            "status != 'reconciled' OR source_unique_result_count = linked_discovery_count",
+            name="ck_rsr_source_unique_equals_linked",
+        ),
+        CheckConstraint(
+            "status != 'reconciled' OR unexplained_membership_count = 0",
+            name="ck_rsr_no_unexplained_membership",
+        ),
+        CheckConstraint(
+            "status != 'reconciled' OR unowned_discovery_paper_count = 0",
+            name="ck_rsr_no_unowned_discovery",
+        ),
+        CheckConstraint(
+            "status != 'reconciled' OR canonicalization_reduction_count = "
+            "linked_discovery_count - remote_canonical_paper_count",
+            name="ck_rsr_canonicalization_reduction",
+        ),
+        CheckConstraint(
+            "status != 'reconciled' OR remote_canonical_paper_count = "
+            "remote_only_paper_count + multi_origin_paper_count",
+            name="ck_rsr_remote_decomposition",
+        ),
+        CheckConstraint(
+            "status != 'reconciled' OR nonremote_canonical_paper_count = "
+            "nonremote_only_paper_count + multi_origin_paper_count",
+            name="ck_rsr_nonremote_decomposition",
+        ),
+        CheckConstraint(
+            "status != 'reconciled' OR run_paper_count = "
+            "remote_only_paper_count + nonremote_only_paper_count + multi_origin_paper_count",
+            name="ck_rsr_membership_decomposition",
+        ),
+        CheckConstraint(
+            "status != 'blocked' OR (issue_code IS NOT NULL AND issue_detail IS NOT NULL "
+            "AND completed_at IS NULL)",
+            name="ck_rsr_blocked_has_issue",
+        ),
+        CheckConstraint(
+            "status != 'failed' OR (issue_code IS NOT NULL AND issue_detail IS NOT NULL "
+            "AND completed_at IS NOT NULL)",
+            name="ck_rsr_failed_has_issue",
+        ),
+        CheckConstraint(
+            "status = 'reconciled' OR logical_query_count IS NULL",
+            name="ck_rsr_nonreconciled_null_counts",
+        ),
+    )
+
+    run_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("pipeline_runs.id", ondelete="CASCADE"),
+        primary_key=True,
+    )
+    reconciliation_schema_version: Mapped[str] = mapped_column(String(30), nullable=False)
+    status: Mapped[str] = mapped_column(String(20), nullable=False)
+    execution_posture: Mapped[str | None] = mapped_column(String(30), nullable=True)
+    reconciliation_attempt_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    input_fingerprint: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    issue_code: Mapped[str | None] = mapped_column(String(60), nullable=True)
+    issue_detail: Mapped[str | None] = mapped_column(Text, nullable=True)
+    last_checked_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=lambda: datetime.now(timezone.utc),
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime, default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
+    )
+
+    # Aggregate counts (nullable until reconciled)
+    logical_query_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    expected_execution_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    actual_execution_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    terminal_execution_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    success_execution_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    partial_execution_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    failed_execution_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    timeout_execution_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    skipped_execution_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    reconciled_accounting_execution_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    incomplete_accounting_execution_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    source_unique_result_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    linked_discovery_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    remote_canonical_paper_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    nonremote_canonical_paper_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    remote_only_paper_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    nonremote_only_paper_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    multi_origin_paper_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    run_paper_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    canonicalization_reduction_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    unexplained_membership_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    unowned_discovery_paper_count: Mapped[int | None] = mapped_column(Integer, nullable=True)

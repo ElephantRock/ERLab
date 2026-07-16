@@ -534,6 +534,15 @@ class RunCoordinator:
                             ctx, "execution_linkage_expectations", None
                         ),
                     )
+                    # P0.2.6: Reconcile on resume path too.
+                    try:
+                        from backend.db.database import _get_engine
+                        from backend.pipeline.literature.run_reconciliation import (
+                            reconcile_run_search,
+                        )
+                        reconcile_run_search(_get_engine(), db_run_id)
+                    except Exception as e:
+                        logger.warning("Resume run search reconciliation failed: %s", e)
                 else:
                     orch._persistence.persist_papers(ctx.all_papers, db_run_id)
             elif stage.name == "gap_analysis":

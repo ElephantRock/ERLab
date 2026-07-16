@@ -236,6 +236,15 @@ class StageLifecycle:
                     ctx, "execution_linkage_expectations", None
                 ),
             )
+            # P0.2.6: Reconcile after governed corpus commit.
+            try:
+                from backend.db.database import _get_engine
+                from backend.pipeline.literature.run_reconciliation import (
+                    reconcile_run_search,
+                )
+                reconcile_run_search(_get_engine(), db_run_id)
+            except Exception as e:
+                logger.warning("Run search reconciliation failed (non-fatal): %s", e)
         else:
             self._persistence.persist_papers(ctx.all_papers, db_run_id)
         self._processor.collect_warnings(result)
