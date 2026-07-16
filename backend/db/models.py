@@ -715,6 +715,10 @@ class SearchQueryExecution(Base):
             name="uq_search_query_executions_id_query",
         ),
         Index("ix_search_query_executions_query_id", "search_query_id"),
+        Index(
+            "ix_search_query_executions_status_category",
+            "status", "failure_category",
+        ),
         CheckConstraint(
             "source = lower(trim(source)) AND length(trim(source)) > 0",
             name="ck_search_query_executions_source_canonical",
@@ -748,6 +752,66 @@ class SearchQueryExecution(Base):
             "source_unique_count IS NULL OR source_unique_count >= 0",
             name="ck_search_query_executions_source_unique_count_nonnegative",
         ),
+        # ── P0.2.3: execution metadata constraints ──
+        CheckConstraint(
+            "execution_metadata_version IS NULL "
+            "OR execution_metadata_version = 'execution_v1'",
+            name="ck_search_query_executions_metadata_version",
+        ),
+        CheckConstraint(
+            "failure_category IS NULL OR failure_category IN ("
+            "'source_unavailable','query_translation','authentication',"
+            "'authorization','rate_limit','timeout','transport',"
+            "'provider_rejection','provider_internal','response_parse',"
+            "'adapter_contract','configuration','internal')",
+            name="ck_search_query_executions_failure_category",
+        ),
+        CheckConstraint(
+            "failure_code IS NULL "
+            "OR (failure_code = lower(trim(failure_code)) "
+            "AND length(trim(failure_code)) BETWEEN 1 AND 80)",
+            name="ck_search_query_executions_failure_code",
+        ),
+        CheckConstraint(
+            "execution_metadata_version IS NULL "
+            "OR (status IN ('pending','running') "
+            "    AND failure_category IS NULL "
+            "    AND failure_code IS NULL "
+            "    AND error_detail IS NULL) "
+            "OR (status = 'success' "
+            "    AND failure_category IS NULL "
+            "    AND failure_code IS NULL "
+            "    AND error_detail IS NULL "
+            "    AND completed_at IS NOT NULL) "
+            "OR (status IN ('partial','failed','timeout','skipped') "
+            "    AND failure_category IS NOT NULL "
+            "    AND failure_code IS NOT NULL "
+            "    AND error_detail IS NOT NULL "
+            "    AND completed_at IS NOT NULL)",
+            name="ck_search_query_executions_metadata_completeness",
+        ),
+        CheckConstraint(
+            "execution_metadata_version IS NULL "
+            "OR status != 'timeout' "
+            "OR failure_category = 'timeout'",
+            name="ck_search_query_executions_timeout_category",
+        ),
+        CheckConstraint(
+            "execution_metadata_version IS NULL "
+            "OR attempt_count = 0 "
+            "OR translated_query IS NOT NULL",
+            name="ck_search_query_executions_attempted_has_plan",
+        ),
+        CheckConstraint(
+            "translated_query IS NULL OR length(translated_query) <= 4096",
+            name="ck_search_query_executions_translated_query_size",
+        ),
+        CheckConstraint(
+            "execution_metadata_version IS NULL "
+            "OR status != 'skipped' "
+            "OR (attempt_count = 0 AND attempted_at IS NULL)",
+            name="ck_search_query_executions_skipped_no_attempts",
+        ),
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
@@ -770,6 +834,11 @@ class SearchQueryExecution(Base):
     accounting_status: Mapped[str] = mapped_column(
         String(20), nullable=False, default="incomplete",
     )
+    # P0.2.3: structured failure metadata + version marker.
+    # NULL for legacy P0.2.2 rows (no fabricated classifications).
+    failure_category: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    failure_code: Mapped[str | None] = mapped_column(String(80), nullable=True)
+    execution_metadata_version: Mapped[str | None] = mapped_column(String(20), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime, default=lambda: datetime.now(timezone.utc),
     )

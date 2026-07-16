@@ -8,7 +8,12 @@ from typing import Any
 import httpx
 
 from backend.pipeline.literature.base import AcademicSearchSource
-from backend.pipeline.literature.contracts import AttemptObserver, SourceSearchOutcome
+from backend.pipeline.literature.contracts import (
+    AttemptObserver,
+    SourceQueryPlan,
+    SourceSearchOutcome,
+    canonical_plan_json,
+)
 from backend.pipeline.literature.models import Author, Paper, SearchResult
 
 logger = logging.getLogger(__name__)
@@ -37,20 +42,30 @@ class OpenAlexSource(AcademicSearchSource):
     def source_name(self) -> str:
         return "openalex"
 
-    async def search(
+    def build_query_plan(
         self,
         query: str,
         limit: int = 20,
         year_from: int | None = None,
         year_to: int | None = None,
-        *,
-        attempt_observer: AttemptObserver | None = None,
-        **kwargs: Any,
-    ) -> SourceSearchOutcome:
+    ) -> SourceQueryPlan:
         params = {"search": query, "per_page": min(limit, 50)}
         if year_from or year_to:
-            year_filter = f"publication_year:{year_from or 2000}-{year_to or 2030}"
-            params["filter"] = year_filter
+            params["filter"] = f"publication_year:{year_from or 2000}-{year_to or 2030}"
+        return SourceQueryPlan(
+            source="openalex",
+            schema_version="source_query_v1",
+            translated_query=canonical_plan_json("openalex", params),
+            request_parameters=params,
+        )
+
+    async def execute_query_plan(
+        self,
+        plan: SourceQueryPlan,
+        *,
+        attempt_observer: AttemptObserver | None = None,
+    ) -> SourceSearchOutcome:
+        params = dict(plan.request_parameters)
 
         attempts_made = 0
         try:
@@ -60,6 +75,25 @@ class OpenAlexSource(AcademicSearchSource):
             response = await self._client.get("/works", params=params)  # type: ignore[arg-type]
             response.raise_for_status()
             data = response.json()
+        except httpx.HTTPStatusError as e:
+            status_code = e.response.status_code
+            logger.warning("OpenAlex search failed: HTTP %s", status_code)
+            if status_code == 401:
+                failure_category, failure_code = "authentication", "http_401"
+            elif status_code == 403:
+                failure_category, failure_code = "authorization", "http_403"
+            elif 400 <= status_code < 500:
+                failure_category, failure_code = "provider_rejection", f"http_{status_code}"
+            else:
+                failure_category, failure_code = "provider_internal", f"http_{status_code}"
+            return SourceSearchOutcome(
+                results=[],
+                status="failed",
+                attempt_count=attempts_made,
+                error_detail=f"{type(e).__name__}: {e}",
+                failure_category=failure_category,
+                failure_code=failure_code,
+            )
         except httpx.HTTPError as e:
             logger.warning("OpenAlex search failed: %s", e)
             return SourceSearchOutcome(
@@ -67,6 +101,8 @@ class OpenAlexSource(AcademicSearchSource):
                 status="failed",
                 attempt_count=attempts_made,
                 error_detail=f"{type(e).__name__}: {e}",
+                failure_category="transport",
+                failure_code="connection_error",
             )
 
         results = []

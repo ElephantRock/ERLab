@@ -3,12 +3,16 @@
 import asyncio
 import logging
 import random
-from typing import Any
 
 import httpx
 
 from backend.pipeline.literature.base import AcademicSearchSource
-from backend.pipeline.literature.contracts import AttemptObserver, SourceSearchOutcome
+from backend.pipeline.literature.contracts import (
+    AttemptObserver,
+    SourceQueryPlan,
+    SourceSearchOutcome,
+    canonical_plan_json,
+)
 from backend.pipeline.literature.models import Author, Paper, SearchResult
 
 logger = logging.getLogger(__name__)
@@ -40,23 +44,43 @@ class SemanticScholarSource(AcademicSearchSource):
     def source_name(self) -> str:
         return "semantic_scholar"
 
-    async def search(
+    def build_query_plan(
         self,
         query: str,
         limit: int = 20,
         year_from: int | None = None,
         year_to: int | None = None,
+    ) -> SourceQueryPlan:
+        """Build a deterministic Semantic Scholar query plan. Pure — no network access."""
+        params = {"query": query, "limit": min(limit, 100)}
+        if year_from or year_to:
+            params["year"] = f"{year_from or ''}-{year_to or ''}"
+        return SourceQueryPlan(
+            source="semantic_scholar",
+            schema_version="source_query_v1",
+            translated_query=canonical_plan_json("semantic_scholar", params),
+            request_parameters=params,
+        )
+
+    async def execute_query_plan(
+        self,
+        plan: SourceQueryPlan,
         *,
         retry_max_retries: int = 5,
         retry_base_delay: float = 2.0,
         retry_max_delay: float = 30.0,
         attempt_observer: AttemptObserver | None = None,
-        **kwargs: Any,
     ) -> SourceSearchOutcome:
-        params = {"query": query, "limit": min(limit, 100), "fields": SEARCH_FIELDS}
-        if year_from or year_to:
-            year_range = f"{year_from or ''}-{year_to or ''}"
-            params["year"] = year_range
+        """Execute the Semantic Scholar query plan with retries and structured failures."""
+        # Reconstruct httpx params from the plan — one source of truth.
+        rp = dict(plan.request_parameters)
+        params = {
+            "query": rp["query"],
+            "limit": rp["limit"],
+            "fields": SEARCH_FIELDS,
+        }
+        if "year" in rp:
+            params["year"] = rp["year"]
 
         attempts_made = 0
         total_backoff = 0.0
@@ -72,13 +96,28 @@ class SemanticScholarSource(AcademicSearchSource):
                 data = response.json()
                 break
             except httpx.HTTPStatusError as e:
-                if e.response.status_code != 429 or attempt >= retry_max_retries:
+                code = e.response.status_code
+                if code != 429 or attempt >= retry_max_retries:
+                    if code == 429:
+                        cat, fc = "rate_limit", "http_429"
+                    elif code == 401:
+                        cat, fc = "authentication", "http_401"
+                    elif code == 403:
+                        cat, fc = "authorization", "http_403"
+                    elif 400 <= code < 500:
+                        cat, fc = "provider_rejection", f"http_{code}"
+                    elif 500 <= code < 600:
+                        cat, fc = "provider_internal", f"http_{code}"
+                    else:
+                        cat, fc = "transport", f"http_{code}"
                     logger.warning("Semantic Scholar search failed: %s", e)
                     return SourceSearchOutcome(
                         results=[],
                         status="failed",
                         attempt_count=attempts_made,
                         error_detail=f"{type(e).__name__}: {e}",
+                        failure_category=cat,
+                        failure_code=fc,
                     )
                 delay = min(
                     retry_base_delay * (2 ** attempt)
@@ -97,6 +136,8 @@ class SemanticScholarSource(AcademicSearchSource):
                         status="failed",
                         attempt_count=attempts_made,
                         error_detail=f"Semantic Scholar rate-limited after {attempts_made} attempts",
+                        failure_category="rate_limit",
+                        failure_code="http_429",
                     )
                 logger.warning(
                     "Semantic Scholar rate-limited (429),"
@@ -113,6 +154,8 @@ class SemanticScholarSource(AcademicSearchSource):
                     status="failed",
                     attempt_count=attempts_made,
                     error_detail=f"{type(e).__name__}: {e}",
+                    failure_category="transport",
+                    failure_code="connection_error",
                 )
 
         results = []

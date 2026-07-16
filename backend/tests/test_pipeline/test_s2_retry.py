@@ -83,24 +83,28 @@ def _make_success_response(data: list[dict] | None = None) -> httpx.Response:
 
 @pytest.mark.anyio
 async def test_429_all_retries_exhausted_returns_empty():
-    """All requests return 429, retries exhausted → returns []."""
+    """All requests return 429, retries exhausted → failed outcome."""
     source = SemanticScholarSource()
 
     error = _make_429_error()
     success_resp = _make_success_response()
     success_resp.raise_for_status.side_effect = error
 
+    plan = source.build_query_plan("test query")
     with patch.object(
         source._client, "get", new_callable=AsyncMock, return_value=success_resp
     ), patch("backend.pipeline.literature.semantic_scholar.asyncio.sleep", new_callable=AsyncMock):
-        results = await source.search(
-            "test query",
+        outcome = await source.execute_query_plan(
+            plan,
             retry_max_retries=3,
             retry_base_delay=0.01,
             retry_max_delay=0.1,
         )
 
-    assert results == []
+    assert outcome.status == "failed"
+    assert outcome.results == []
+    assert outcome.failure_category == "rate_limit"
+    assert outcome.failure_code == "http_429"
 
 
 # ---------------------------------------------------------------------------
@@ -134,16 +138,19 @@ async def test_429_then_200_returns_results():
         "backend.pipeline.literature.semantic_scholar.asyncio.sleep",
         new_callable=AsyncMock,
     ) as mock_sleep:
-        results = await source.search(
-            "test query",
+        plan = source.build_query_plan("test query")
+        outcome = await source.execute_query_plan(
+            plan,
             retry_max_retries=5,
             retry_base_delay=0.01,
             retry_max_delay=0.1,
         )
 
-    assert len(results) == 1
-    assert results[0].paper.title == "Test Paper"
-    assert results[0].source == "semantic_scholar"
+    assert outcome.status == "success"
+    assert len(outcome.results) == 1
+    assert outcome.results[0].paper.title == "Test Paper"
+    assert outcome.results[0].source == "semantic_scholar"
+    assert outcome.attempt_count == 2  # one 429 + one success
     # Verify sleep was called once (for the single retry)
     mock_sleep.assert_called_once()
 
@@ -168,16 +175,21 @@ async def test_max_5_retries_exceeded_returns_empty():
         "backend.pipeline.literature.semantic_scholar.asyncio.sleep",
         new_callable=AsyncMock,
     ) as mock_sleep:
-        results = await source.search(
-            "test query",
+        plan = source.build_query_plan("test query")
+        outcome = await source.execute_query_plan(
+            plan,
             retry_max_retries=5,
             retry_base_delay=0.01,
             retry_max_delay=0.1,
         )
 
-    assert results == []
+    assert outcome.status == "failed"
+    assert outcome.results == []
+    assert outcome.failure_category == "rate_limit"
+    assert outcome.failure_code == "http_429"
     # 6 total attempts: 1 initial + 5 retries
     assert mock_get.call_count == 6
+    assert outcome.attempt_count == 6
     # 5 sleep calls (one per retry)
     assert mock_sleep.call_count == 5
 
@@ -202,9 +214,14 @@ async def test_non_429_error_not_retried():
         "backend.pipeline.literature.semantic_scholar.asyncio.sleep",
         new_callable=AsyncMock,
     ) as mock_sleep:
-        results = await source.search("test query")
+        plan = source.build_query_plan("test query")
+        outcome = await source.execute_query_plan(plan)
 
-    assert results == []
+    assert outcome.status == "failed"
+    assert outcome.results == []
+    assert outcome.failure_category == "provider_internal"
+    assert outcome.failure_code == "http_500"
     # Only one attempt — no retries for non-429
     assert mock_get.call_count == 1
+    assert outcome.attempt_count == 1
     mock_sleep.assert_not_called()

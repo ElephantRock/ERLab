@@ -10,7 +10,12 @@ from typing import Any
 import httpx
 
 from backend.pipeline.literature.base import AcademicSearchSource
-from backend.pipeline.literature.contracts import AttemptObserver, SourceSearchOutcome
+from backend.pipeline.literature.contracts import (
+    AttemptObserver,
+    SourceQueryPlan,
+    SourceSearchOutcome,
+    canonical_plan_json,
+)
 from backend.pipeline.literature.models import Author, Paper, SearchResult
 
 logger = logging.getLogger(__name__)
@@ -49,39 +54,64 @@ class CrossRefSource(AcademicSearchSource):
     def source_name(self) -> str:
         return "crossref"
 
-    async def search(
+    def build_query_plan(
         self,
         query: str,
         limit: int = 20,
         year_from: int | None = None,
         year_to: int | None = None,
+    ) -> SourceQueryPlan:
+        """Build a deterministic CrossRef query plan (no network access).
+
+        Note: ``select`` and ``mailto`` are transport details and are NOT
+        included here — they are re-added by ``execute_query_plan``. The
+        plan captures only the query's semantic meaning.
+        """
+        params: dict[str, Any] = {"query": query, "rows": min(limit, 50), "sort": "relevance"}
+        if year_from:
+            params["filter"] = f"from-pub-date:{year_from}"
+            if year_to:
+                params["filter"] += f",until-pub-date:{year_to}"
+        return SourceQueryPlan(
+            source="crossref",
+            schema_version="source_query_v1",
+            translated_query=canonical_plan_json("crossref", params),
+            request_parameters=params,
+        )
+
+    async def execute_query_plan(
+        self,
+        plan: SourceQueryPlan,
         *,
         attempt_observer: AttemptObserver | None = None,
-        **kwargs: Any,
     ) -> SourceSearchOutcome:
-        """Search CrossRef for papers matching the query."""
+        """Execute the supplied plan against CrossRef.
+
+        Reconstructs the full API params from ``plan.request_parameters``,
+        adding the ``select`` field (a transport detail) for the request.
+        """
+        attempts_made = 0
         try:
-            attempts_made = 0
-            params: dict[str, Any] = {
-                "query": query,
-                "rows": min(limit, 50),
-                "sort": "relevance",
-                "select": "DOI,title,author,published-print,published-online,abstract,container-title,is-referenced-by-count",
-            }
-            if year_from:
-                params["filter"] = f"from-pub-date:{year_from}"
-                if year_to:
-                    params["filter"] += f",until-pub-date:{year_to}"
+            # Reconstruct full params; add transport-only details not in the plan.
+            full_params: dict[str, Any] = dict(plan.request_parameters)
+            full_params["select"] = (
+                "DOI,title,author,published-print,published-online,"
+                "abstract,container-title,is-referenced-by-count"
+            )
+            full_params.setdefault("sort", "relevance")
 
             if attempt_observer is not None:
                 await attempt_observer.attempt_started()
             attempts_made += 1
-            response = await self._client.get("/works", params=params)
+            response = await self._client.get("/works", params=full_params)
             response.raise_for_status()
             data = response.json()
 
             items = data.get("message", {}).get("items", [])
             results = []
+
+            # Rows cap is captured in the plan; honor the requested limit.
+            limit = int(plan.request_parameters.get("rows", 20))
 
             for item in items[:limit]:
                 title_list = item.get("title", [])
@@ -136,11 +166,37 @@ class CrossRefSource(AcademicSearchSource):
                     source="crossref",
                 ))
 
-            return SourceSearchOutcome(results=results, status="success", attempt_count=attempts_made)
+            return SourceSearchOutcome(
+                results=results, status="success", attempt_count=attempts_made
+            )
 
         except Exception as e:
             logger.warning("CrossRef search failed: %s", e)
-            return SourceSearchOutcome(results=[], status="failed", attempt_count=attempts_made, error_detail=f"{type(e).__name__}: {e}")
+            failure_category, failure_code = self._classify_failure(e)
+            return SourceSearchOutcome(
+                results=[],
+                status="failed",
+                attempt_count=attempts_made,
+                error_detail=f"{type(e).__name__}: {e}",
+                failure_category=failure_category,
+                failure_code=failure_code,
+            )
+
+    @staticmethod
+    def _classify_failure(e: Exception) -> tuple[str, str]:
+        """Map an exception to a (failure_category, failure_code) pair."""
+        if isinstance(e, httpx.HTTPStatusError):
+            status_code = e.response.status_code
+            if status_code == 401:
+                return ("authentication", "http_401")
+            if status_code == 403:
+                return ("authorization", "http_403")
+            if 400 <= status_code < 500:
+                return ("provider_rejection", f"http_{status_code}")
+            if 500 <= status_code < 600:
+                return ("provider_internal", f"http_{status_code}")
+            return ("provider_rejection", f"http_{status_code}")
+        return ("transport", "connection_error")
 
     async def get_paper(self, paper_id: str) -> Paper | None:
         """Get a single paper by DOI."""

@@ -89,7 +89,21 @@ def _fake_paper(title="Test Paper", source_id="test:1"):
     return SearchPaper(id=source_id, title=title, source="test")
 
 
-# ── Fake adapters ────────────────────────────────────────────────────
+# ── Fake adapters (implement build_query_plan + execute_query_plan) ──
+
+from backend.pipeline.literature.contracts import (
+    AttemptObserver as _AO,
+    SourceQueryPlan,
+    canonical_plan_json,
+)
+
+
+def _fake_plan(source="arxiv"):
+    return SourceQueryPlan(
+        source=source, schema_version="source_query_v1",
+        translated_query=canonical_plan_json(source, {"query": "test"}),
+        request_parameters={"query": "test"},
+    )
 
 
 class _SuccessAdapter:
@@ -98,7 +112,9 @@ class _SuccessAdapter:
     def __init__(self, n_results=2):
         self._n = n_results
         self.call_count = 0
-    async def search(self, query, *, attempt_observer=None, **kw):
+    def build_query_plan(self, query, limit=20, year_from=None, year_to=None):
+        return _fake_plan()
+    async def execute_query_plan(self, plan, *, attempt_observer=None):
         self.call_count += 1
         if attempt_observer:
             await attempt_observer.attempt_started()
@@ -112,12 +128,14 @@ class _RetryAdapter:
     source_name = "arxiv"
     def __init__(self):
         self.call_count = 0
-    async def search(self, query, *, attempt_observer=None, **kw):
+    def build_query_plan(self, query, limit=20, year_from=None, year_to=None):
+        return _fake_plan()
+    async def execute_query_plan(self, plan, *, attempt_observer=None):
         self.call_count += 1
         if attempt_observer:
-            await attempt_observer.attempt_started()   # attempt 1 (fails)
+            await attempt_observer.attempt_started()
         if attempt_observer:
-            await attempt_observer.attempt_started()   # attempt 2 (retried, succeeds)
+            await attempt_observer.attempt_started()
         results = [SearchResult(paper=_fake_paper("Retried Paper"), source="arxiv")]
         return SourceSearchOutcome(results=results, status="success", attempt_count=2)
 
@@ -127,13 +145,16 @@ class _FailAdapter:
     source_name = "arxiv"
     def __init__(self):
         self.call_count = 0
-    async def search(self, query, *, attempt_observer=None, **kw):
+    def build_query_plan(self, query, limit=20, year_from=None, year_to=None):
+        return _fake_plan()
+    async def execute_query_plan(self, plan, *, attempt_observer=None):
         self.call_count += 1
         if attempt_observer:
             await attempt_observer.attempt_started()
         return SourceSearchOutcome(
             results=[], status="failed", attempt_count=1,
-            error_detail="HTTPError: connection refused",
+            error_detail="connection refused",
+            failure_category="transport", failure_code="connection_error",
         )
 
 
@@ -142,9 +163,10 @@ class _PreAttemptFailAdapter:
     source_name = "arxiv"
     def __init__(self):
         self.call_count = 0
-    async def search(self, query, *, attempt_observer=None, **kw):
-        self.call_count += 1
+    def build_query_plan(self, query, limit=20, year_from=None, year_to=None):
         raise ValueError("bad query construction")
+    async def execute_query_plan(self, plan, *, attempt_observer=None):
+        raise ValueError("should not reach execute")
 
 
 class _TimeoutAdapter:
@@ -152,11 +174,13 @@ class _TimeoutAdapter:
     source_name = "arxiv"
     def __init__(self):
         self.call_count = 0
-    async def search(self, query, *, attempt_observer=None, **kw):
+    def build_query_plan(self, query, limit=20, year_from=None, year_to=None):
+        return _fake_plan()
+    async def execute_query_plan(self, plan, *, attempt_observer=None):
         self.call_count += 1
         if attempt_observer:
             await attempt_observer.attempt_started()
-        await asyncio.sleep(10)  # will be cancelled by asyncio.wait_for
+        await asyncio.sleep(10)
         return SourceSearchOutcome(results=[], status="success", attempt_count=1)
 
 
@@ -165,7 +189,9 @@ class _PartialAdapter:
     source_name = "arxiv"
     def __init__(self):
         self.call_count = 0
-    async def search(self, query, *, attempt_observer=None, **kw):
+    def build_query_plan(self, query, limit=20, year_from=None, year_to=None):
+        return _fake_plan()
+    async def execute_query_plan(self, plan, *, attempt_observer=None):
         self.call_count += 1
         if attempt_observer:
             await attempt_observer.attempt_started()
@@ -173,6 +199,7 @@ class _PartialAdapter:
         return SourceSearchOutcome(
             results=results, status="partial", attempt_count=1,
             error_detail="truncated response",
+            failure_category="response_parse", failure_code="incomplete_response",
         )
 
 
@@ -181,11 +208,13 @@ class _BareListAdapter:
     source_name = "arxiv"
     def __init__(self):
         self.call_count = 0
-    async def search(self, query, *, attempt_observer=None, **kw):
+    def build_query_plan(self, query, limit=20, year_from=None, year_to=None):
+        return _fake_plan()
+    async def execute_query_plan(self, plan, *, attempt_observer=None):
         self.call_count += 1
         if attempt_observer:
             await attempt_observer.attempt_started()
-        return [SearchResult(paper=_fake_paper(), source="arxiv")]
+        return [SearchResult(paper=_fake_paper(), source="arxiv")]  # bare list!
 
 
 def _setup_execution(engine, source="arxiv"):
@@ -614,7 +643,9 @@ def test_cancellation_leaves_running():
 
     class _CancellableAdapter:
         source_name = "arxiv"
-        async def search(self, query, *, attempt_observer=None, **kw):
+        def build_query_plan(self, query, limit=20, year_from=None, year_to=None):
+            return _fake_plan()
+        async def execute_query_plan(self, plan, *, attempt_observer=None):
             if attempt_observer:
                 await attempt_observer.attempt_started()
             await attempt_observer.attempt_started()  # second attempt
@@ -654,12 +685,15 @@ def test_error_detail_sanitized():
 
     class _SecretAdapter:
         source_name = "arxiv"
-        async def search(self, query, *, attempt_observer=None, **kw):
+        def build_query_plan(self, query, limit=20, year_from=None, year_to=None):
+            return _fake_plan()
+        async def execute_query_plan(self, plan, *, attempt_observer=None):
             if attempt_observer:
                 await attempt_observer.attempt_started()
             return SourceSearchOutcome(
                 results=[], status="failed", attempt_count=1,
                 error_detail="Auth failed: api_key=sk-abc123 at http://admin:hunter2@host/api",
+                failure_category="authentication", failure_code="http_401",
             )
 
     recorder = ExecutionRecorder(engine)
@@ -724,12 +758,15 @@ def test_attempt_count_mismatch_propagates():
 
     class _LyingAdapter:
         source_name = "arxiv"
-        async def search(self, query, *, attempt_observer=None, **kw):
+        def build_query_plan(self, query, limit=20, year_from=None, year_to=None):
+            return _fake_plan()
+        async def execute_query_plan(self, plan, *, attempt_observer=None):
             if attempt_observer:
                 await attempt_observer.attempt_started()  # observer counts 1
             return SourceSearchOutcome(
                 results=[], status="failed", attempt_count=99,  # lies
                 error_detail="oops",
+                failure_category="transport", failure_code="connection_error",
             )
 
     recorder = ExecutionRecorder(engine)

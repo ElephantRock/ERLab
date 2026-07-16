@@ -13,8 +13,9 @@ This keeps the graph acyclic.
 
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass, field
-from typing import Literal, Protocol, runtime_checkable
+from typing import Any, Literal, Mapping, Protocol, runtime_checkable
 
 from backend.pipeline.literature.models import SearchResult
 
@@ -62,6 +63,49 @@ class AttemptObserver(Protocol):
         ...
 
 
+# ── Query plan (P0.2.3) ──────────────────────────────────────────────
+
+
+@dataclass(frozen=True)
+class SourceQueryPlan:
+    """Deterministic provider-level query plan.
+
+    ``translated_query`` is the canonical JSON serialization, safe for
+    persistence. ``request_parameters`` are used by the adapter's
+    ``execute_query_plan`` and MUST exclude secrets (API keys, tokens,
+    authorization headers, URL credentials, mailto identity).
+
+    The persisted ``translated_query`` is the same plan the adapter
+    executes — one source of truth, no independent reconstruction.
+    """
+
+    source: str
+    schema_version: Literal["source_query_v1"]
+    translated_query: str
+    request_parameters: Mapping[str, object]
+
+
+def canonical_plan_json(source: str, parameters: dict[str, Any]) -> str:
+    """Build a canonical JSON serialization of a query plan.
+
+    The output is deterministic (sorted keys, compact separators) so it
+    can be compared for translation-drift detection. MUST NOT contain
+    secrets — the adapter is responsible for excluding them from
+    ``parameters`` before calling this.
+    """
+    representation = {
+        "schema": "source_query_v1",
+        "source": source,
+        "parameters": parameters,
+    }
+    return json.dumps(
+        representation,
+        ensure_ascii=False,
+        sort_keys=True,
+        separators=(",", ":"),
+    )
+
+
 # ── Outcomes ─────────────────────────────────────────────────────────
 
 
@@ -86,6 +130,8 @@ class SourceSearchOutcome:
     status: ExecutionStatus
     attempt_count: int
     error_detail: str | None = None
+    failure_category: str | None = None
+    failure_code: str | None = None
 
 
 @dataclass(frozen=True)
@@ -104,6 +150,8 @@ class AttemptOutcome:
     attempt_count: int
     results: list[SearchResult] = field(default_factory=list)
     error_detail: str | None = None
+    failure_category: str | None = None
+    failure_code: str | None = None
 
 
 @dataclass(frozen=True)
@@ -140,6 +188,8 @@ def validate_outcome(
     status = outcome.status
     ac = outcome.attempt_count
     err = outcome.error_detail
+    cat = outcome.failure_category
+    code = outcome.failure_code
     n_results = len(outcome.results)
 
     if status == "success":
@@ -149,6 +199,8 @@ def validate_outcome(
             )
         if err is not None:
             raise ValueError("success outcome must have error_detail = None")
+        if cat is not None or code is not None:
+            raise ValueError("success outcome must have failure_category/code = None")
 
     elif status == "partial":
         if ac < 1:
@@ -159,12 +211,20 @@ def validate_outcome(
             raise ValueError("partial outcome requires non-empty results")
         if not err:
             raise ValueError("partial outcome requires error_detail present")
+        if not cat:
+            raise ValueError("partial outcome requires failure_category")
+        if not code:
+            raise ValueError("partial outcome requires failure_code")
 
     elif status == "failed":
         if n_results > 0:
             raise ValueError("failed outcome must have empty results")
         if not err:
             raise ValueError("failed outcome requires error_detail present")
+        if not cat:
+            raise ValueError("failed outcome requires failure_category")
+        if not code:
+            raise ValueError("failed outcome requires failure_code")
         if ac < 0:
             raise ValueError(f"failed outcome attempt_count must be >= 0, got {ac}")
         # attempt_count == 0 is permitted only when no attempt was observed.
@@ -188,6 +248,12 @@ def validate_outcome(
             raise ValueError("timeout outcome must have empty results")
         if not err:
             raise ValueError("timeout outcome requires error_detail present")
+        if cat != "timeout":
+            raise ValueError(
+                f"timeout outcome requires failure_category='timeout', got {cat!r}"
+            )
+        if not code:
+            raise ValueError("timeout outcome requires failure_code")
 
     else:
         raise ValueError(

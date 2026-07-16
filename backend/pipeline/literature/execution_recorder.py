@@ -33,11 +33,18 @@ from backend.pipeline.literature.contracts import (
     AttemptObserver,
     AttemptOutcome,
     VALID_TRANSITIONS,
+    SourceQueryPlan,
     SourceSearchOutcome,
     validate_outcome,
 )
 
 logger = logging.getLogger(__name__)
+
+
+class TranslationDriftError(Exception):
+    """Raised when a pending execution's stored translation differs from the
+    newly built plan. The previous translation is preserved as evidence."""
+
 
 # Maximum length for stored error_detail.
 _MAX_ERROR_DETAIL_LEN = 500
@@ -241,7 +248,12 @@ class ExecutionRecorder:
         self._transition(
             execution_id, "skipped",
             error_detail=sanitize_error_detail(reason),
-            extra_values={"completed_at": _now()},
+            extra_values={
+                "completed_at": _now(),
+                "failure_category": "source_unavailable",
+                "failure_code": "no_active_adapter",
+                "execution_metadata_version": "execution_v1",
+            },
         )
 
     def is_terminal(self, execution_id: int) -> bool:
@@ -273,6 +285,78 @@ class ExecutionRecorder:
                 ).where(SearchQueryExecution.id == execution_id)
             ).one()
             return row[0], row[1], row[2]
+        finally:
+            session.close()
+
+    def _get_translated_query(self, execution_id: int) -> str | None:
+        """Return the stored translated_query for an execution."""
+        from backend.db.models import SearchQueryExecution
+
+        session = self._session()
+        try:
+            return session.execute(
+                select(SearchQueryExecution.translated_query).where(
+                    SearchQueryExecution.id == execution_id
+                )
+            ).scalar_one_or_none()
+        finally:
+            session.close()
+
+    def _persist_translation(
+        self, execution_id: int, translated_query: str,
+    ) -> None:
+        """Persist translated_query if NULL; detect drift if already set.
+
+        Raises ``TranslationDriftError`` if the stored translation differs.
+        """
+        from backend.db.models import SearchQueryExecution
+
+        session = self._session()
+        try:
+            existing = session.execute(
+                select(SearchQueryExecution.translated_query).where(
+                    SearchQueryExecution.id == execution_id
+                )
+            ).scalar_one_or_none()
+
+            if existing is None:
+                # Write the translation.
+                session.execute(
+                    update(SearchQueryExecution)
+                    .where(SearchQueryExecution.id == execution_id)
+                    .values(
+                        translated_query=translated_query,
+                        execution_metadata_version="execution_v1",
+                    )
+                )
+                session.commit()
+            elif existing == translated_query:
+                # Replay-safe; proceed.
+                pass
+            else:
+                # Drift: mark failed, preserve the old translation.
+                session.execute(
+                    update(SearchQueryExecution)
+                    .where(SearchQueryExecution.id == execution_id)
+                    .values(
+                        status="failed",
+                        error_detail="translation drift detected",
+                        failure_category="query_translation",
+                        failure_code="translation_drift",
+                        execution_metadata_version="execution_v1",
+                        completed_at=_now(),
+                    )
+                )
+                session.commit()
+                raise TranslationDriftError(
+                    f"execution {execution_id}: stored translation differs from "
+                    f"newly built plan"
+                )
+        except TranslationDriftError:
+            raise
+        except Exception:
+            session.rollback()
+            raise
         finally:
             session.close()
 
@@ -326,27 +410,22 @@ class ExecutionRecorder:
         query: str,
         *,
         timeout_seconds: float | None = None,
+        limit: int = 20,
+        year_from: int | None = None,
+        year_to: int | None = None,
         **search_kwargs: Any,
     ) -> AttemptOutcome:
         """Drive one adapter through its full lifecycle.
 
-        1. Check immutability -- if terminal, return the existing state
-           without invoking the adapter.
-        2. Create a ``DatabaseAttemptObserver`` for this execution.
-        3. Call ``adapter.search(query, attempt_observer=observer, **kwargs)``.
-        4. The outcome MUST be a ``SourceSearchOutcome`` (bare list -> raise).
-        5. Validate invariants, cross-check attempt_count, persist terminal.
+        P0.2.3: Builds the query plan, persists the translation before the
+        first outbound request, then executes exactly that plan.
 
-        On unexpected adapter exception:
-          - Before first observer callback: pending -> failed (attempt_count=0)
-          - After callbacks: running -> failed (observed attempt_count)
-          - Exception propagates after persisting.
-
-        On ``asyncio.TimeoutError`` from ``asyncio.wait_for``:
-          - If no observer callback fired: pending -> failed (pre-attempt)
-          - If callbacks fired: running -> timeout (observed attempt_count)
-
-        On ``asyncio.CancelledError``: propagate; leave row ``running``.
+        1. Check immutability -- if terminal/running, return without adapter.
+        2. Build query plan (``adapter.build_query_plan``).
+        3. Persist ``translated_query`` (drift-checked).
+        4. Create ``DatabaseAttemptObserver``.
+        5. Execute plan (``adapter.execute_query_plan``) via the observer.
+        6. Validate invariants, cross-check attempt_count, persist terminal.
         """
         import asyncio
 
@@ -364,39 +443,82 @@ class ExecutionRecorder:
                 status=status, attempt_count=ac,
             )
 
+        # ── Running: do not invoke adapter (stale recovery deferred) ──
+        if status == "running":
+            logger.debug(
+                "execution %d is running — not invoking adapter", execution_id,
+            )
+            return AttemptOutcome(
+                execution_id=execution_id, source=source_name,
+                status="running", attempt_count=ac,
+            )
+
+        # ── Build query plan ──
+        try:
+            plan = adapter.build_query_plan(
+                query, limit=limit, year_from=year_from, year_to=year_to,
+            )
+        except Exception as exc:
+            # Pre-attempt translation failure.
+            self._transition(
+                execution_id, "failed",
+                error_detail=sanitize_error_detail(f"{type(exc).__name__}: {exc}"),
+                extra_values={
+                    "completed_at": _now(),
+                    "failure_category": "internal",
+                    "failure_code": "unexpected_translation_exception",
+                    "execution_metadata_version": "execution_v1",
+                },
+            )
+            raise
+
+        # ── Persist translation (drift-checked) ──
+        try:
+            self._persist_translation(execution_id, plan.translated_query)
+        except TranslationDriftError:
+            return AttemptOutcome(
+                execution_id=execution_id, source=source_name,
+                status="failed", attempt_count=0,
+                error_detail="translation drift detected",
+                failure_category="query_translation",
+                failure_code="translation_drift",
+            )
+
+        # ── Execute via observer ──
         observer = DatabaseAttemptObserver(execution_id, self._engine)
 
         try:
             if timeout_seconds is not None:
                 outcome = await asyncio.wait_for(
-                    adapter.search(
-                        query, attempt_observer=observer, **search_kwargs,
-                    ),
+                    adapter.execute_query_plan(plan, attempt_observer=observer),
                     timeout=timeout_seconds,
                 )
             else:
-                outcome = await adapter.search(
-                    query, attempt_observer=observer, **search_kwargs,
+                outcome = await adapter.execute_query_plan(
+                    plan, attempt_observer=observer,
                 )
         except asyncio.CancelledError:
-            # Propagate cancellation; leave the row running truthfully.
             raise
         except asyncio.TimeoutError:
-            # asyncio.wait_for expired.
             _, obs_ac, attempted_at = self._get_state(execution_id)
             if attempted_at is None:
-                # No observer callback fired before timeout — pre-attempt failure.
                 self._transition(
                     execution_id, "failed",
                     error_detail=sanitize_error_detail(
                         f"recorder timeout ({timeout_seconds}s) before first attempt"
                     ),
-                    extra_values={"completed_at": _now()},
+                    extra_values={
+                        "completed_at": _now(),
+                        "failure_category": "internal",
+                        "failure_code": "recorder_timeout",
+                        "execution_metadata_version": "execution_v1",
+                    },
                 )
                 return AttemptOutcome(
                     execution_id=execution_id, source=source_name,
                     status="failed", attempt_count=0,
-                    error_detail=f"recorder timeout before first attempt",
+                    error_detail="recorder timeout before first attempt",
+                    failure_category="internal", failure_code="recorder_timeout",
                 )
             else:
                 self._transition(
@@ -404,40 +526,35 @@ class ExecutionRecorder:
                     error_detail=sanitize_error_detail(
                         f"recorder timeout ({timeout_seconds}s) after {obs_ac} attempts"
                     ),
-                    extra_values={"completed_at": _now()},
+                    extra_values={
+                        "completed_at": _now(),
+                        "failure_category": "timeout",
+                        "failure_code": "recorder_timeout",
+                        "execution_metadata_version": "execution_v1",
+                    },
                 )
                 return AttemptOutcome(
                     execution_id=execution_id, source=source_name,
                     status="timeout", attempt_count=obs_ac,
                     error_detail=f"recorder timeout after {obs_ac} attempts",
+                    failure_category="timeout", failure_code="recorder_timeout",
                 )
         except Exception as exc:
-            # Unexpected adapter exception.
             _, obs_ac, attempted_at = self._get_state(execution_id)
-            if attempted_at is None:
-                # Pre-attempt failure: exception before any observer callback.
-                self._transition(
-                    execution_id, "failed",
-                    error_detail=sanitize_error_detail(
-                        f"{type(exc).__name__}: {exc}"
-                    ),
-                    extra_values={"completed_at": _now()},
-                )
-            else:
-                self._transition(
-                    execution_id, "failed",
-                    error_detail=sanitize_error_detail(
-                        f"{type(exc).__name__}: {exc}"
-                    ),
-                    extra_values={"completed_at": _now()},
-                )
-            # Propagate — this is a programming/adapter defect.
+            self._transition(
+                execution_id, "failed",
+                error_detail=sanitize_error_detail(f"{type(exc).__name__}: {exc}"),
+                extra_values={
+                    "completed_at": _now(),
+                    "failure_category": "internal",
+                    "failure_code": "unexpected_exception",
+                    "execution_metadata_version": "execution_v1",
+                },
+            )
             raise
 
         # ── Strict return-type check ──
         if not isinstance(outcome, SourceSearchOutcome):
-            # Bare list or other type on the governed path — instrumentation
-            # error. Persist as failed, then raise TypeError.
             _, obs_ac, attempted_at = self._get_state(execution_id)
             if attempted_at is not None:
                 self._transition(
@@ -446,35 +563,66 @@ class ExecutionRecorder:
                         f"adapter returned {type(outcome).__name__}, "
                         f"expected SourceSearchOutcome"
                     ),
-                    extra_values={"completed_at": _now()},
+                    extra_values={
+                        "completed_at": _now(),
+                        "failure_category": "adapter_contract",
+                        "failure_code": "adapter_return_type",
+                        "execution_metadata_version": "execution_v1",
+                    },
                 )
             raise TypeError(
                 f"governed adapter {source_name!r} returned "
-                f"{type(outcome).__name__}, expected SourceSearchOutcome. "
-                f"All adapters must be migrated to the outcome contract."
+                f"{type(outcome).__name__}, expected SourceSearchOutcome."
             )
 
-        # ── Validate outcome invariants ──
+        # ── Validate invariants ──
         _, obs_ac, attempted_at = self._get_state(execution_id)
         attempted_at_is_null = attempted_at is None
-        validate_outcome(outcome, attempted_at_is_null=attempted_at_is_null)
+        try:
+            validate_outcome(outcome, attempted_at_is_null=attempted_at_is_null)
+        except ValueError:
+            # Invariant violation — persist as failed then propagate.
+            self._transition(
+                execution_id, "failed",
+                error_detail="outcome invariant violation",
+                extra_values={
+                    "completed_at": _now(),
+                    "failure_category": "adapter_contract",
+                    "failure_code": "outcome_invariant",
+                    "execution_metadata_version": "execution_v1",
+                },
+            )
+            raise
 
         # ── Cross-check attempt_count ──
-        # The observer's independently counted attempts should match the
-        # adapter's reported count. A mismatch is an instrumentation defect.
         if outcome.attempt_count != obs_ac:
+            self._transition(
+                execution_id, "failed",
+                error_detail="attempt_count mismatch",
+                extra_values={
+                    "completed_at": _now(),
+                    "failure_category": "adapter_contract",
+                    "failure_code": "attempt_count_mismatch",
+                    "execution_metadata_version": "execution_v1",
+                },
+            )
             raise ValueError(
                 f"attempt_count mismatch for execution {execution_id}: "
                 f"adapter reported {outcome.attempt_count}, "
                 f"observer counted {obs_ac}"
             )
 
-        # ── Persist terminal transition ──
+        # ── Persist terminal transition with structured failure metadata ──
+        extra: dict[str, Any] = {"completed_at": _now()}
+        if outcome.status != "success":
+            extra["failure_category"] = outcome.failure_category
+            extra["failure_code"] = outcome.failure_code
+
         self._transition(
             execution_id, outcome.status,
             error_detail=sanitize_error_detail(outcome.error_detail)
             if outcome.status != "success" else None,
-            extra_values={"completed_at": _now()},
+            extra_values=extra,
         )
 
         return AttemptOutcome(
@@ -482,4 +630,6 @@ class ExecutionRecorder:
             status=outcome.status, attempt_count=outcome.attempt_count,
             results=list(outcome.results),
             error_detail=outcome.error_detail if outcome.status != "success" else None,
+            failure_category=outcome.failure_category if outcome.status != "success" else None,
+            failure_code=outcome.failure_code if outcome.status != "success" else None,
         )

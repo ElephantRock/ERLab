@@ -10,7 +10,12 @@ from typing import Any
 import httpx
 
 from backend.pipeline.literature.base import AcademicSearchSource
-from backend.pipeline.literature.contracts import AttemptObserver, SourceSearchOutcome
+from backend.pipeline.literature.contracts import (
+    AttemptObserver,
+    SourceQueryPlan,
+    SourceSearchOutcome,
+    canonical_plan_json,
+)
 from backend.pipeline.literature.models import Author, Paper, SearchResult
 
 logger = logging.getLogger(__name__)
@@ -34,47 +39,70 @@ class PubMedSource(AcademicSearchSource):
     def source_name(self) -> str:
         return "pubmed"
 
-    async def search(
+    def build_query_plan(
         self,
         query: str,
         limit: int = 20,
         year_from: int | None = None,
         year_to: int | None = None,
+    ) -> SourceQueryPlan:
+        """Build a deterministic PubMed query plan. Pure — no network access."""
+        search_term = query
+        if year_from or year_to:
+            search_term = f"{query} AND ({year_from or 1900}:{year_to or 2030}[pdat])"
+        params = {
+            "term": search_term,
+            "retmax": min(limit, 50),
+            "workflow": ["esearch", "efetch"],
+        }
+        return SourceQueryPlan(
+            source="pubmed",
+            schema_version="source_query_v1",
+            translated_query=canonical_plan_json("pubmed", params),
+            request_parameters=params,
+        )
+
+    async def execute_query_plan(
+        self,
+        plan: SourceQueryPlan,
         *,
         attempt_observer: AttemptObserver | None = None,
-        **kwargs: Any,
     ) -> SourceSearchOutcome:
-        """Search PubMed for papers matching the query."""
-        try:
-            attempts_made = 0
-            # Build search query with date filter
-            search_term = query
-            if year_from or year_to:
-                y_from = year_from or 1900
-                y_to = year_to or 2030
-                search_term += f" AND ({y_from}:{y_to}[pdat])"
+        """Execute the PubMed query plan: ESearch then EFetch.
 
+        Reconstructs search_term and retmax from ``plan.request_parameters``
+        (one source of truth). Calls the observer before EACH outbound
+        request. Returns a ``SourceSearchOutcome`` with structured failures.
+        """
+        rp = dict(plan.request_parameters)
+        search_term = rp["term"]
+        retmax = rp["retmax"]
+
+        attempts_made = 0
+        try:
             # Step 1: ESearch to get PMIDs
-            params: dict[str, Any] = {
+            esearch_params: dict[str, Any] = {
                 "db": "pubmed",
                 "term": search_term,
-                "retmax": min(limit, 50),
+                "retmax": retmax,
                 "retmode": "json",
                 "sort": "relevance",
             }
             if self._api_key:
-                params["api_key"] = self._api_key
+                esearch_params["api_key"] = self._api_key
 
             if attempt_observer is not None:
                 await attempt_observer.attempt_started()
             attempts_made += 1
-            response = await self._client.get(ESEARCH_URL, params=params)
+            response = await self._client.get(ESEARCH_URL, params=esearch_params)
             response.raise_for_status()
             data = response.json()
 
             id_list = data.get("esearchresult", {}).get("idlist", [])
             if not id_list:
-                return SourceSearchOutcome(results=[], status="success", attempt_count=attempts_made)
+                return SourceSearchOutcome(
+                    results=[], status="success", attempt_count=attempts_made
+                )
 
             # Step 2: EFetch to get details
             fetch_params: dict[str, Any] = {
@@ -91,13 +119,46 @@ class PubMedSource(AcademicSearchSource):
             fetch_response = await self._client.get(EFETCH_URL, params=fetch_params)
             fetch_response.raise_for_status()
 
-            # Parse XML response (simplified)
             results = self._parse_results(fetch_response.text)
-            return SourceSearchOutcome(results=results[:limit], status="success", attempt_count=attempts_made)
+            return SourceSearchOutcome(
+                results=results[:retmax],
+                status="success",
+                attempt_count=attempts_made,
+            )
 
+        except httpx.HTTPStatusError as e:
+            code = e.response.status_code if hasattr(e, "response") else 0
+            if code == 401:
+                cat, fc = "authentication", "http_401"
+            elif code == 403:
+                cat, fc = "authorization", "http_403"
+            elif code == 429:
+                cat, fc = "rate_limit", "http_429"
+            elif 400 <= code < 500:
+                cat, fc = "provider_rejection", f"http_{code}"
+            elif 500 <= code < 600:
+                cat, fc = "provider_internal", f"http_{code}"
+            else:
+                cat, fc = "transport", "http_status_error"
+            logger.warning("PubMed search failed (HTTP %s): %s", code, e)
+            return SourceSearchOutcome(
+                results=[],
+                status="failed",
+                attempt_count=attempts_made,
+                error_detail=f"HTTPStatusError {code}",
+                failure_category=cat,
+                failure_code=fc,
+            )
         except Exception as e:
             logger.warning("PubMed search failed: %s", e)
-            return SourceSearchOutcome(results=[], status="failed", attempt_count=attempts_made, error_detail=f"{type(e).__name__}: {e}")
+            return SourceSearchOutcome(
+                results=[],
+                status="failed",
+                attempt_count=attempts_made,
+                error_detail=f"{type(e).__name__}: {e}",
+                failure_category="transport",
+                failure_code="connection_error",
+            )
 
     async def get_paper(self, paper_id: str) -> Paper | None:
         """Get a single paper by PMID."""

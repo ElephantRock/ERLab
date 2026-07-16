@@ -8,7 +8,12 @@ from typing import Any
 import httpx
 
 from backend.pipeline.literature.base import AcademicSearchSource
-from backend.pipeline.literature.contracts import AttemptObserver, SourceSearchOutcome
+from backend.pipeline.literature.contracts import (
+    AttemptObserver,
+    SourceQueryPlan,
+    SourceSearchOutcome,
+    canonical_plan_json,
+)
 from backend.pipeline.literature.models import Author, Paper, SearchResult
 
 logger = logging.getLogger(__name__)
@@ -29,28 +34,51 @@ class ArxivSource(AcademicSearchSource):
     def source_name(self) -> str:
         return "arxiv"
 
-    async def search(
+    def build_query_plan(
         self,
         query: str,
         limit: int = 20,
         year_from: int | None = None,
         year_to: int | None = None,
-        *,
-        attempt_observer: AttemptObserver | None = None,
-        **kwargs: Any,
-    ) -> SourceSearchOutcome:
+    ) -> SourceQueryPlan:
+        """Build a deterministic arXiv query plan. Pure — no network access."""
         search_query = f'all:"{query}"'
         if year_from or year_to:
             search_query += (
                 f" AND submittedDate:[{year_from or 2000}01010000 TO {year_to or 2030}12312359]"
             )
-
         params = {
             "search_query": search_query,
-            "start": 0,
             "max_results": min(limit, 50),
-            "sortBy": "relevance",
-            "sortOrder": "descending",
+            "sort_by": "relevance",
+        }
+        return SourceQueryPlan(
+            source="arxiv",
+            schema_version="source_query_v1",
+            translated_query=canonical_plan_json("arxiv", params),
+            request_parameters={
+                **params,
+                "start": 0,
+                "sortBy": "relevance",
+                "sortOrder": "descending",
+            },
+        )
+
+    async def execute_query_plan(
+        self,
+        plan: SourceQueryPlan,
+        *,
+        attempt_observer: AttemptObserver | None = None,
+    ) -> SourceSearchOutcome:
+        """Execute the arXiv query plan with retries and structured failures."""
+        # Reconstruct params from the plan — one source of truth.
+        rp = dict(plan.request_parameters)
+        params = {
+            "search_query": rp["search_query"],
+            "start": rp.get("start", 0),
+            "max_results": rp["max_results"],
+            "sortBy": rp.get("sortBy", "relevance"),
+            "sortOrder": rp.get("sortOrder", "descending"),
         }
 
         attempts_made = 0
@@ -74,6 +102,8 @@ class ArxivSource(AcademicSearchSource):
                         status="failed",
                         attempt_count=attempts_made,
                         error_detail=f"arXiv rate-limited after {attempts_made} attempts",
+                        failure_category="rate_limit",
+                        failure_code="http_429",
                     )
                 response.raise_for_status()
                 results = self._parse_feed(response.text)
@@ -82,18 +112,43 @@ class ArxivSource(AcademicSearchSource):
                     status="success",
                     attempt_count=attempts_made,
                 )
+        except httpx.HTTPStatusError as e:
+            code = e.response.status_code if hasattr(e, "response") else 0
+            if code == 401:
+                cat, fc = "authentication", "http_401"
+            elif code == 403:
+                cat, fc = "authorization", "http_403"
+            elif 400 <= code < 500:
+                cat, fc = "provider_rejection", f"http_{code}"
+            elif 500 <= code < 600:
+                cat, fc = "provider_internal", f"http_{code}"
+            else:
+                cat, fc = "transport", "http_status_error"
+            logger.warning("arXiv search failed (HTTP %s): %s", code, e)
+            return SourceSearchOutcome(
+                results=[],
+                status="failed",
+                attempt_count=attempts_made,
+                error_detail=f"HTTPStatusError {code}",
+                failure_category=cat,
+                failure_code=fc,
+            )
         except httpx.HTTPError as e:
             logger.warning("arXiv search failed: %s", e)
             return SourceSearchOutcome(
                 results=[],
                 status="failed",
                 attempt_count=attempts_made,
-                error_detail=f"{type(e).__name__}: {e}",
+                error_detail=f"{type(e).__name__}",
+                failure_category="transport",
+                failure_code="connection_error",
             )
 
         return SourceSearchOutcome(
             results=[], status="failed", attempt_count=attempts_made,
             error_detail="arXiv search: unreachable fallthrough",
+            failure_category="internal",
+            failure_code="unreachable_fallthrough",
         )
 
     async def get_paper(self, paper_id: str) -> Paper | None:

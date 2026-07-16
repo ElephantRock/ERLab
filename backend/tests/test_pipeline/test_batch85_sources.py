@@ -35,11 +35,12 @@ def test_85_01_01_pubmed_source_name():
 
 
 def test_85_01_02_pubmed_search_handles_failure():
-    """PubMed search returns empty list on network failure."""
+    """PubMed search returns failed outcome on network failure."""
     source = PubMedSource()
     with patch.object(source._client, "get", side_effect=Exception("network error")):
-        results = asyncio.run(source.search("test query"))
-        assert results == []
+        outcome = asyncio.run(source.search("test query"))
+        assert outcome.status == "failed"
+        assert outcome.results == []
 
 
 def test_85_01_03_pubmed_get_paper_handles_failure():
@@ -57,11 +58,12 @@ def test_85_01_04_crossref_source_name():
 
 
 def test_85_01_05_crossref_search_handles_failure():
-    """CrossRef search returns empty list on failure."""
+    """CrossRef search returns failed outcome on failure."""
     source = CrossRefSource()
     with patch.object(source._client, "get", side_effect=Exception("error")):
-        results = asyncio.run(source.search("test query"))
-        assert results == []
+        outcome = asyncio.run(source.search("test query"))
+        assert outcome.status == "failed"
+        assert outcome.results == []
 
 
 def test_85_01_06_crossref_get_paper_handles_failure():
