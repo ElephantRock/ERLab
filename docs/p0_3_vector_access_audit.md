@@ -1,7 +1,33 @@
 # P0.3 Vector Access Audit
 
-> **Status:** Complete inventory of every vector-store (ChromaDB) read and write
-> in the production codebase, conducted before P0.3 scoping migration.
+> **Status:** Complete inventory with terminal P0.3.4 migration classifications.
+> The governed scoped vector service is available (`scoped_vector_service.py`).
+> Production readers/writers are being migrated to use it.
+
+## P0.3.4 Migration Classifications
+
+Every audited call site has a terminal classification:
+
+| Call site | Classification | Notes |
+|---|---|---|
+| `stages.py:135` LiteratureSearchStage local_upload | `confirmed_non_vector` | Uses in-memory filter on ctx, not scoped retrieval |
+| `novelty_checker.py:104` NoveltyChecker | `migrated_governed` | Policy: `novelty_check:retrieve`, `current_run_only` |
+| `novelty_checker.py:110` NoveltyChecker fallback | `migrated_governed` | Merged into governed path |
+| `builtin.py:56` vector_search tool | `explicit_legacy_only` | Agent tool, not pipeline stage |
+| `knowledge.py:129` API /search | `explicit_legacy_only` | API endpoint, requires explicit scope when governed |
+| `knowledge.py:91` API /stats | `maintenance_allowlisted` | Direct collection stats, not semantic retrieval |
+| `knowledge.py:246` API /documents | `maintenance_allowlisted` | Direct collection listing |
+| `cli/main.py:694` CLI knowledge | `explicit_legacy_only` | CLI tool, not governed pipeline |
+| `retriever.py:117` TwoStageRetriever | `migrated_governed` | Delegates to scoped service when governed |
+| `vector_store.py:198` query_by_embedding | `maintenance_allowlisted` | Legacy compat layer |
+| `stages.py:523` IngestionStage write | `migrated_governed` | Routes through vector_indexer when governed |
+| `knowledge.py:211` API /ingest | `explicit_legacy_only` | API endpoint, not pipeline stage |
+| `cli/main.py:166` CLI ingest | `explicit_legacy_only` | CLI tool |
+| GapAnalysisStage | `confirmed_non_vector` | Operates on in-memory ctx.all_papers |
+| IdeaGenerationStage | `confirmed_non_vector` | LLM + in-memory only |
+| FeasibilityScoringStage | `confirmed_non_vector` | LLM only |
+| ProposalSynthesisStage | `confirmed_non_vector` | LLM only |
+| ExportStage | `confirmed_non_vector` | SQLite KnowledgeLibrary, not ChromaDB |
 
 ## Architecture
 
