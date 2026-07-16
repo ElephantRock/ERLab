@@ -1267,6 +1267,111 @@ class GlobalLibraryMembership(Base):
     removed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
 
+class EmbeddingProfile(Base):
+    """Durable embedding-profile declaration (P0.3.2).
+
+    P0.3.2 supports only ``unverified`` — the profile is declarative.
+    P0.4 will expand the verification lifecycle.
+    """
+
+    __tablename__ = "embedding_profiles"
+    __table_args__ = (
+        CheckConstraint("profile_schema_version = 'embedding_profile_v1'", name="ck_ep_schema_version"),
+        CheckConstraint("verification_status = 'unverified'", name="ck_ep_verification_status"),
+        CheckConstraint("dimension > 0", name="ck_ep_dimension_positive"),
+        UniqueConstraint("collection_name", name="uq_ep_collection_name"),
+    )
+
+    profile_id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    profile_schema_version: Mapped[str] = mapped_column(String(30), nullable=False)
+    provider: Mapped[str] = mapped_column(String(80), nullable=False)
+    model_identifier: Mapped[str] = mapped_column(String(255), nullable=False)
+    dimension: Mapped[int] = mapped_column(Integer, nullable=False)
+    normalization_policy: Mapped[str] = mapped_column(String(80), nullable=False)
+    chunking_schema_version: Mapped[str] = mapped_column(String(80), nullable=False)
+    collection_name: Mapped[str] = mapped_column(String(120), nullable=False)
+    verification_status: Mapped[str] = mapped_column(String(20), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=lambda: datetime.now(timezone.utc),
+    )
+
+
+class VectorIndexRecord(Base):
+    """Canonical vector lifecycle record (P0.3.2).
+
+    A vector may participate in governed retrieval only when
+    ``index_status = 'indexed'`` and the backend has been verified.
+    """
+
+    __tablename__ = "vector_index_records"
+    __table_args__ = (
+        UniqueConstraint("vector_record_id", name="uq_vir_vector_record_id"),
+        UniqueConstraint(
+            "paper_id", "chunk_key", "content_hash", "embedding_profile_id",
+            name="uq_vir_chunk_identity",
+        ),
+        Index("ix_vir_paper_id", "paper_id"),
+        Index("ix_vir_profile_status", "embedding_profile_id", "index_status"),
+        CheckConstraint("vector_store = 'chroma'", name="ck_vir_vector_store"),
+        CheckConstraint("index_schema_version = 'vector_index_v1'", name="ck_vir_index_schema"),
+        CheckConstraint(
+            "content_kind IN ('title_abstract', 'abstract', 'full_text_chunk', 'metadata')",
+            name="ck_vir_content_kind",
+        ),
+        CheckConstraint(
+            "index_status IN ('pending','indexing','indexed','failed','stale','deleting','deleted')",
+            name="ck_vir_index_status",
+        ),
+        CheckConstraint("attempt_count >= 0", name="ck_vir_attempt_count_nonnegative"),
+        CheckConstraint(
+            "length(vector_record_id) = 64 AND vector_record_id = lower(vector_record_id)",
+            name="ck_vir_vector_record_id_format",
+        ),
+        CheckConstraint(
+            "length(content_hash) = 64 AND content_hash = lower(content_hash)",
+            name="ck_vir_content_hash_format",
+        ),
+        CheckConstraint(
+            "length(embedding_profile_id) = 64 AND embedding_profile_id = lower(embedding_profile_id)",
+            name="ck_vir_embedding_profile_id_format",
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    vector_record_id: Mapped[str] = mapped_column(String(64), nullable=False)
+    paper_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("papers.id", ondelete="RESTRICT"), nullable=False,
+    )
+    chunk_key: Mapped[str] = mapped_column(String(255), nullable=False)
+    content_kind: Mapped[str] = mapped_column(String(40), nullable=False)
+    content_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    embedding_profile_id: Mapped[str] = mapped_column(
+        String(64),
+        ForeignKey("embedding_profiles.profile_id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    vector_store: Mapped[str] = mapped_column(String(40), nullable=False, default="chroma")
+    collection_name: Mapped[str] = mapped_column(String(120), nullable=False)
+    index_schema_version: Mapped[str] = mapped_column(String(30), nullable=False, default="vector_index_v1")
+    index_status: Mapped[str] = mapped_column(String(20), nullable=False, default="pending")
+    attempt_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    failure_code: Mapped[str | None] = mapped_column(String(80), nullable=True)
+    failure_detail: Mapped[str | None] = mapped_column(Text, nullable=True)
+    indexing_started_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    indexed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    backend_verified_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    stale_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    deleting_started_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    deleted_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=lambda: datetime.now(timezone.utc),
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime, default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
+    )
+
+
 # ── P0.2.7: Provenance immutability enforcement ─────────────────────
 
 

@@ -161,6 +161,91 @@ class ScopedVectorResult:
     rank: int
 
 
+# ── Vector document and identity (P0.3.2) ────────────────────────────
+
+
+@dataclass(frozen=True)
+class VectorIndexDocument:
+    """Deterministic canonical paper chunk for governed indexing."""
+
+    schema_version: Literal["vector_document_v1"]
+
+    paper_id: int
+    chunk_key: str
+    content_kind: Literal[
+        "title_abstract",
+        "abstract",
+        "full_text_chunk",
+        "metadata",
+    ]
+    content_text: str
+    content_hash: str
+
+    embedding_profile_id: str
+
+
+@dataclass(frozen=True)
+class VectorIndexingOutcome:
+    """Result of a governed indexing operation."""
+
+    vector_record_id: str
+    paper_id: int
+    chunk_key: str
+    embedding_profile_id: str
+    status: Literal["indexed", "already_indexed"]
+    attempt_count: int
+
+
+def compute_content_hash(content_text: str) -> str:
+    """SHA-256 of the exact normalized text supplied to the embedding provider."""
+    return hashlib.sha256(content_text.encode("utf-8")).hexdigest()
+
+
+def compute_vector_record_id(
+    paper_id: int,
+    chunk_key: str,
+    content_hash: str,
+    embedding_profile_id: str,
+) -> str:
+    """Deterministic vector identity from canonical JSON."""
+    payload = {
+        "schema": "vector_index_v1",
+        "paper_id": paper_id,
+        "chunk_key": chunk_key,
+        "content_hash": content_hash,
+        "embedding_profile_id": embedding_profile_id,
+    }
+    return hashlib.sha256(
+        json.dumps(payload, sort_keys=True, separators=(",", ":")).encode()
+    ).hexdigest()
+
+
+def compute_profile_id(
+    provider: str,
+    model_identifier: str,
+    dimension: int,
+    normalization_policy: str,
+    chunking_schema_version: str,
+) -> str:
+    """Canonical embedding profile ID from canonical JSON."""
+    payload = {
+        "schema": "embedding_profile_v1",
+        "provider": provider,
+        "model_identifier": model_identifier,
+        "dimension": dimension,
+        "normalization_policy": normalization_policy,
+        "chunking_schema_version": chunking_schema_version,
+    }
+    return hashlib.sha256(
+        json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode()
+    ).hexdigest()
+
+
+def compute_collection_name(embedding_profile_id: str) -> str:
+    """Derive the deterministic governed collection name."""
+    return f"erlab_vectors_v1_{embedding_profile_id[:24]}"
+
+
 # ── Exceptions ───────────────────────────────────────────────────────
 
 
@@ -189,3 +274,15 @@ class IndexCoverageIncomplete(VectorScopeError):
 
 class MixedVectorModeError(VectorScopeError):
     """Governed run used legacy unscoped query, or vice versa."""
+
+
+class EmbeddingProfileDriftError(VectorScopeError):
+    """Same profile ID with different declaration fields."""
+
+
+class VectorIndexRegistryDriftError(VectorScopeError):
+    """Same vector_record_id resolves to different registry content."""
+
+
+class IndexingAlreadyClaimedError(VectorScopeError):
+    """Another worker has already claimed the indexing for this vector."""
