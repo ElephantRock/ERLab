@@ -25,6 +25,7 @@ _ALLOWLIST_PATTERNS = [
     "pipeline/knowledge/graph_embeddings.py",  # KG entity embeddings (not paper corpus)
     "pipeline/tools/tool_index.py",  # tool capability index (not paper corpus)
     "providers/cache/semantic_cache.py",  # LLM response cache (not paper corpus)
+    "pipeline/legacy_vector_inventory.py",  # P0.3.5 maintenance inventory (allowed to read research_papers)
     "tests/",  # test code
     "__pycache__",
     ".venv",
