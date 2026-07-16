@@ -612,21 +612,36 @@ class PaperDiscovery(Base):
         Index("ix_paper_discoveries_run_paper", "run_id", "paper_id"),
         Index("ix_paper_discoveries_query", "search_query_id"),
         Index("ix_paper_discoveries_execution_id", "execution_id"),
+        Index("ix_paper_discoveries_source_result_key", "source_result_key"),
         # Null-bypass: a non-null execution_id MUST carry a search_query_id.
-        # Without this, MATCH SIMPLE on the composite FK below would let
-        # (execution_id=42, search_query_id=NULL) bypass the constraint.
         CheckConstraint(
             "execution_id IS NULL OR search_query_id IS NOT NULL",
             name="ck_paper_discoveries_execution_requires_query",
         ),
-        # Composite FK proves the execution belongs to the SAME query as the
-        # discovery. SQLite MATCH SIMPLE skips when execution_id is NULL, so
-        # legacy P0.1 discoveries (search_query_id set, execution_id NULL)
-        # survive untouched.
+        # P0.2.5: governed linkage requires all four identity fields
+        CheckConstraint(
+            "linkage_schema_version IS NULL "
+            "OR ("
+            "  linkage_schema_version = 'linkage_v1' "
+            "  AND execution_id IS NOT NULL "
+            "  AND search_query_id IS NOT NULL "
+            "  AND source_result_key IS NOT NULL "
+            "  AND discovery_origin = 'remote_search'"
+            ")",
+            name="ck_paper_discoveries_linkage_governed",
+        ),
+        # P0.2.5: replay-safe one-to-one: one source-unique result per execution
+        UniqueConstraint(
+            "execution_id", "source_result_key",
+            name="uq_paper_discoveries_execution_result_key",
+        ),
+        # P0.2.5: triple composite FK enforces execution+query+source consistency
         ForeignKeyConstraint(
-            ["execution_id", "search_query_id"],
-            ["search_query_executions.id", "search_query_executions.search_query_id"],
-            name="fk_paper_discoveries_execution_query",
+            ["execution_id", "search_query_id", "source"],
+            ["search_query_executions.id",
+             "search_query_executions.search_query_id",
+             "search_query_executions.source"],
+            name="fk_paper_discoveries_execution_query_source",
             ondelete="RESTRICT",
         ),
     )
@@ -648,6 +663,11 @@ class PaperDiscovery(Base):
         Integer,
         nullable=True,
     )
+    # P0.2.5: stable SHA-256 identity of the source-unique result that produced
+    # this discovery. Uses the exact P0.2.4 dedup identity function.
+    source_result_key: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    # P0.2.5: linkage contract marker. NULL for legacy/non-query discoveries.
+    linkage_schema_version: Mapped[str | None] = mapped_column(String(20), nullable=True)
     source: Mapped[str] = mapped_column(String(50), nullable=False)
     source_record_id: Mapped[str | None] = mapped_column(String(256), nullable=True)
     source_rank: Mapped[int | None] = mapped_column(Integer, nullable=True)
@@ -713,6 +733,11 @@ class SearchQueryExecution(Base):
         UniqueConstraint(
             "id", "search_query_id",
             name="uq_search_query_executions_id_query",
+        ),
+        # P0.2.5: triple uniqueness for the discovery FK
+        UniqueConstraint(
+            "id", "search_query_id", "source",
+            name="uq_search_query_executions_id_query_source",
         ),
         Index("ix_search_query_executions_query_id", "search_query_id"),
         Index(
@@ -869,6 +894,85 @@ class SearchQueryExecution(Base):
     # P0.2.4: accounting schema version marker. NULL for legacy/incomplete,
     # 'accounting_v1' when all four counts follow the reconciliation contract.
     accounting_schema_version: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=lambda: datetime.now(timezone.utc),
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime, default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
+    )
+
+
+class ExecutionDiscoveryLinkage(Base):
+    """Linkage ledger: one row per execution tracking discovery-linkage state.
+
+    Created atomically with terminal accounting. An execution that finishes
+    successfully gets a 'pending' row (expected to be linked to discoveries
+    by the governed corpus persistence). An incomplete execution gets
+    'not_applicable'. This prevents ambiguous states where
+    source_unique_count > 0 but no PaperDiscovery rows exist.
+    """
+
+    __tablename__ = "execution_discovery_linkages"
+    __table_args__ = (
+        CheckConstraint(
+            "linkage_schema_version = 'linkage_v1'",
+            name="ck_edl_linkage_schema_version",
+        ),
+        CheckConstraint(
+            "status IN ('pending','linked','failed','not_applicable')",
+            name="ck_edl_status",
+        ),
+        CheckConstraint(
+            "linkage_attempt_count >= 0",
+            name="ck_edl_attempt_count_nonnegative",
+        ),
+        CheckConstraint(
+            "expected_discovery_count IS NULL OR expected_discovery_count >= 0",
+            name="ck_edl_expected_count_nonnegative",
+        ),
+        CheckConstraint(
+            "linked_discovery_count IS NULL OR linked_discovery_count >= 0",
+            name="ck_edl_linked_count_nonnegative",
+        ),
+        CheckConstraint(
+            "("
+            "  status = 'pending' "
+            "  AND expected_discovery_count IS NOT NULL "
+            "  AND linked_discovery_count IS NULL "
+            "  AND completed_at IS NULL "
+            ") OR ("
+            "  status = 'linked' "
+            "  AND expected_discovery_count IS NOT NULL "
+            "  AND linked_discovery_count = expected_discovery_count "
+            "  AND completed_at IS NOT NULL "
+            ") OR ("
+            "  status = 'failed' "
+            "  AND expected_discovery_count IS NOT NULL "
+            "  AND linked_discovery_count IS NULL "
+            "  AND last_error_detail IS NOT NULL "
+            "  AND completed_at IS NOT NULL "
+            ") OR ("
+            "  status = 'not_applicable' "
+            "  AND expected_discovery_count IS NULL "
+            "  AND linked_discovery_count IS NULL "
+            "  AND completed_at IS NOT NULL "
+            ")",
+            name="ck_edl_state_consistency",
+        ),
+    )
+
+    execution_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("search_query_executions.id", ondelete="CASCADE"),
+        primary_key=True,
+    )
+    linkage_schema_version: Mapped[str] = mapped_column(String(20), nullable=False)
+    status: Mapped[str] = mapped_column(String(20), nullable=False)
+    expected_discovery_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    linked_discovery_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    linkage_attempt_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    last_error_detail: Mapped[str | None] = mapped_column(Text, nullable=True)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime, default=lambda: datetime.now(timezone.utc),
     )

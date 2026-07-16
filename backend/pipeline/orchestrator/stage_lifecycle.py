@@ -232,6 +232,9 @@ class StageLifecycle:
         if ctx.candidate_papers and db_run_id:
             self._persistence.persist_search_results(
                 ctx.candidate_papers, ctx.search_query_data, db_run_id,
+                execution_linkage_expectations=getattr(
+                    ctx, "execution_linkage_expectations", None
+                ),
             )
         else:
             self._persistence.persist_papers(ctx.all_papers, db_run_id)

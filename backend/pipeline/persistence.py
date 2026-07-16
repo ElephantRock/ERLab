@@ -37,14 +37,21 @@ class SearchQueryData:
 
 @dataclass
 class DiscoveryMetadata:
-    """One route through which a paper was found."""
+    """One route through which a paper was found.
+
+    P0.2.5: Governed remote discoveries carry execution_id, source_result_key,
+    and linkage_schema_version. Legacy/non-query discoveries leave them NULL.
+    """
 
     query_key: str
     source: str  # openalex | arxiv | crossref | pubmed | etc.
+    execution_id: int | None = None
+    source_result_key: str | None = None
     source_record_id: str | None = None
     source_rank: int | None = None
     discovery_origin: str = "remote_search"
     canonicalization_method: str | None = None
+    linkage_schema_version: str | None = None
 
 
 @dataclass
@@ -347,6 +354,7 @@ class PipelinePersistence:
         candidates: list[CandidateWithDiscoveries],
         search_queries: list[SearchQueryData],
         db_run_id: int,
+        execution_linkage_expectations: list | None = None,
     ) -> None:
         """Single governed persistence boundary for literature search results.
 
@@ -476,6 +484,9 @@ class PipelinePersistence:
                                 run_id=db_run_id,
                                 paper_id=paper_db_id,
                                 search_query_id=query_ids_by_key.get(disc.query_key),
+                                execution_id=disc.execution_id,
+                                source_result_key=disc.source_result_key,
+                                linkage_schema_version=disc.linkage_schema_version,
                                 source=disc.source,
                                 source_record_id=disc.source_record_id,
                                 source_rank=disc.source_rank,
@@ -484,6 +495,52 @@ class PipelinePersistence:
                                 discovery_key=discovery_key,
                             )
                             session.add(new_disc)
+
+                # ── P0.2.5: Linkage-ledger reconciliation ──
+                if execution_linkage_expectations:
+                    from backend.db.models import ExecutionDiscoveryLinkage
+                    from datetime import datetime, timezone as dt_tz
+
+                    for exp in execution_linkage_expectations:
+                        if exp.accounting_status != "reconciled":
+                            # Incomplete execution: mark not_applicable if not already
+                            existing_ledger = session.execute(
+                                sa_select(ExecutionDiscoveryLinkage).where(
+                                    ExecutionDiscoveryLinkage.execution_id == exp.execution_id
+                                )
+                            ).scalar_one_or_none()
+                            if existing_ledger and existing_ledger.status == "pending":
+                                # Shouldn't happen for incomplete, but handle defensively
+                                pass
+                            continue
+
+                        # Count actual linked discoveries for this execution
+                        linked_count = session.execute(
+                            sa_select(PaperDiscovery).where(
+                                PaperDiscovery.execution_id == exp.execution_id,
+                                PaperDiscovery.linkage_schema_version == "linkage_v1",
+                            )
+                        ).all()
+                        actual_count = len(linked_count)
+
+                        # Conservation check
+                        if actual_count != (exp.expected_discovery_count or 0):
+                            raise RuntimeError(
+                                f"conservation violation for execution {exp.execution_id}: "
+                                f"expected {exp.expected_discovery_count} discoveries, "
+                                f"found {actual_count}"
+                            )
+
+                        # Mark linkage ledger as linked
+                        ledger = session.execute(
+                            sa_select(ExecutionDiscoveryLinkage).where(
+                                ExecutionDiscoveryLinkage.execution_id == exp.execution_id
+                            )
+                        ).scalar_one_or_none()
+                        if ledger and ledger.status == "pending":
+                            ledger.status = "linked"
+                            ledger.linked_discovery_count = actual_count
+                            ledger.completed_at = datetime.now(dt_tz.utc)
 
                 session.commit()
                 logger.info(

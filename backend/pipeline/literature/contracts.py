@@ -251,6 +251,23 @@ class SearchBatchOutcome:
     executions: list[AttemptOutcome]
 
 
+@dataclass(frozen=True)
+class ExecutionLinkageExpectation:
+    """Reference to an execution for governed corpus persistence (P0.2.5).
+
+    Each reconciled execution produces one expectation; zero-result
+    executions still need explicit reconciliation. The governed persistence
+    validates that every source-unique result produces exactly one
+    PaperDiscovery linked to this execution.
+    """
+
+    execution_id: int
+    search_query_id: int
+    source: str
+    expected_discovery_count: int | None
+    accounting_status: str
+
+
 # ── Invariant validation ─────────────────────────────────────────────
 
 

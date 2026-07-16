@@ -47,6 +47,8 @@ class StageContext:
     # P0.1: Corpus provenance — populated by LiteratureSearchStage
     search_query_data: list = field(default_factory=list)  # list[SearchQueryData]
     candidate_papers: list = field(default_factory=list)  # list[CandidateWithDiscoveries]
+    # P0.2.5: Execution linkage expectations for governed persistence
+    execution_linkage_expectations: list = field(default_factory=list)
 
 
 # Stages that do NOT use LLM models — no receipt required.
@@ -256,11 +258,31 @@ class LiteratureSearchStage(PipelineStage):
         )
 
         all_candidates: list[CandidateWithDiscoveries] = []
+        all_linkage_expectations: list = []
         for sqd, result in zip(search_query_data, query_results, strict=True):
             if isinstance(result, Exception):
                 logger.warning("Query '%s' failed: %s", sqd.query_text[:50], result)
             elif isinstance(result, SearchBatchOutcome):
                 all_candidates.extend(result.candidates)
+                # P0.2.5: Collect linkage expectations for governed persistence
+                for exec_outcome in result.executions:
+                    from backend.pipeline.literature.contracts import ExecutionLinkageExpectation
+                    if exec_outcome.status in ("success", "partial"):
+                        all_linkage_expectations.append(ExecutionLinkageExpectation(
+                            execution_id=exec_outcome.execution_id,
+                            search_query_id=query_ids_by_key.get(sqd.query_key, 0),
+                            source=exec_outcome.source,
+                            expected_discovery_count=len(exec_outcome.results),
+                            accounting_status="reconciled",
+                        ))
+                    elif exec_outcome.status == "skipped":
+                        all_linkage_expectations.append(ExecutionLinkageExpectation(
+                            execution_id=exec_outcome.execution_id,
+                            search_query_id=query_ids_by_key.get(sqd.query_key, 0),
+                            source=exec_outcome.source,
+                            expected_discovery_count=None,
+                            accounting_status="incomplete",
+                        ))
                 logger.info(
                     "Found %d papers for query: %s",
                     len(result.candidates), sqd.query_text[:50],
@@ -422,6 +444,7 @@ class LiteratureSearchStage(PipelineStage):
         ctx.all_papers = unique
         ctx.candidate_papers = unique_candidates
         ctx.search_query_data = search_query_data
+        ctx.execution_linkage_expectations = all_linkage_expectations
         ctx.result.papers_found = len(unique)
         logger.info("Total unique papers: %d (from %d total)", len(unique), len(all_papers))
 

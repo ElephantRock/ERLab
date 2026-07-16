@@ -207,11 +207,64 @@ class SearchService:
                 ),
                 return_exceptions=False,
             )
+
+            # P0.2.5: Attach execution identity to each source-unique result.
+            # Build DiscoveryMetadata with execution_id + source_result_key.
+            from backend.pipeline.literature.result_accounting import (
+                build_source_result_identity,
+            )
+
+            all_discovery_routes: list = []  # list[DiscoveryMetadata]
+            linkage_expectations: list = []
+
             for outcome in outcomes:
                 executions.append(outcome)
                 all_results.extend(outcome.results)
 
-            candidates = self._deduplicate_with_provenance(all_results, query_key)
+                from backend.pipeline.literature.contracts import (
+                    ExecutionLinkageExpectation,
+                )
+                # Build linkage expectation for this execution
+                exp_count = None
+                if outcome.status == "success" or outcome.status == "partial":
+                    exp_count = len(outcome.results)
+                linkage_expectations.append(ExecutionLinkageExpectation(
+                    execution_id=outcome.execution_id,
+                    search_query_id=search_query_id,  # type: ignore[arg-type]
+                    source=outcome.source,
+                    expected_discovery_count=exp_count,
+                    accounting_status="reconciled" if exp_count is not None else "incomplete",
+                ))
+
+                # Build discovery routes for each source-unique result
+                for rank, result in enumerate(outcome.results):
+                    srk, method = build_source_result_identity(result)
+                    all_discovery_routes.append(DiscoveryMetadata(
+                        query_key=query_key,
+                        source=outcome.source,
+                        execution_id=outcome.execution_id,
+                        source_result_key=srk,
+                        source_record_id=result.paper.id,
+                        source_rank=rank,
+                        discovery_origin="remote_search",
+                        canonicalization_method=method,
+                        linkage_schema_version="linkage_v1",
+                    ))
+
+            # Also build expectations for skipped executions
+            for exec_outcome in executions:
+                if exec_outcome.status == "skipped":
+                    linkage_expectations.append(ExecutionLinkageExpectation(
+                        execution_id=exec_outcome.execution_id,
+                        search_query_id=search_query_id,  # type: ignore[arg-type]
+                        source=exec_outcome.source,
+                        expected_discovery_count=None,
+                        accounting_status="incomplete",
+                    ))
+
+            candidates = self._deduplicate_with_provenance_linkage(
+                all_results, all_discovery_routes, query_key,
+            )
             from backend.pipeline.literature.contracts import SearchBatchOutcome
             return SearchBatchOutcome(candidates=candidates, executions=executions)
 
@@ -290,6 +343,46 @@ class SearchService:
             else:
                 # First occurrence (highest priority source wins)
                 by_key[key] = (paper, [disc])
+
+        return [
+            CandidateWithDiscoveries(paper=paper, discoveries=discoveries)
+            for paper, discoveries in by_key.values()
+        ]
+
+    @staticmethod
+    def _deduplicate_with_provenance_linkage(
+        results: list[SearchResult],
+        discovery_routes: list,
+        query_key: str,
+    ) -> list:
+        """Deduplicate while preserving pre-built DiscoveryMetadata with linkage.
+
+        P0.2.5: Unlike _deduplicate_with_provenance, this method receives
+        pre-constructed DiscoveryMetadata objects (carrying execution_id,
+        source_result_key, linkage_schema_version) and accumulates them
+        without dropping linkage fields.
+
+        The results and discovery_routes are parallel arrays — routes[i]
+        is the metadata for results[i].
+        """
+        from backend.pipeline.persistence import CandidateWithDiscoveries
+
+        source_priority = {"semantic_scholar": 0, "pubmed": 1, "openalex": 2, "crossref": 3, "arxiv": 4}
+
+        # Sort by source priority but keep results paired with their routes
+        paired = list(zip(results, discovery_routes, strict=True))
+        paired.sort(key=lambda p: source_priority.get(p[0].source, 99))
+
+        by_key: dict[str, tuple] = {}
+        for result, route in paired:
+            paper = result.paper
+            key = paper.doi if getattr(paper, "doi", None) else _title_hash(paper.title)
+
+            if key in by_key:
+                winning_paper, discoveries = by_key[key]
+                discoveries.append(route)
+            else:
+                by_key[key] = (paper, [route])
 
         return [
             CandidateWithDiscoveries(paper=paper, discoveries=discoveries)

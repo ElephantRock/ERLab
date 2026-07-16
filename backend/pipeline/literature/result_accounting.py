@@ -91,6 +91,38 @@ def _result_identity(result: SearchResult) -> str:
     return f"obj:{id(result)}"
 
 
+def build_source_result_identity(
+    result: SearchResult,
+) -> tuple[str, str]:
+    """Return (source_result_key, canonicalization_method) for a source-unique result.
+
+    This is the EXACT identity function used by P0.2.4 deduplication. P0.2.5
+    linkage MUST use the same function — one identity, no second hierarchy.
+
+    Returns:
+        (sha256_digest_hex, method) where method is one of:
+        'doi', 'source_id', 'title_hash'.
+
+    For fallback identities (no DOI/source-id/title), the result is unique
+    per object and method is 'fallback'.
+    """
+    paper = result.paper
+    doi = normalize_doi(getattr(paper, "doi", None))
+    if doi:
+        return hashlib.sha256(f"doi:{doi}".encode()).hexdigest(), "doi"
+
+    sid = normalize_source_id(getattr(paper, "id", None))
+    if sid:
+        return hashlib.sha256(f"sid:{sid}".encode()).hexdigest(), "source_id"
+
+    th = title_hash(getattr(paper, "title", None))
+    if th:
+        return hashlib.sha256(f"th:{th}".encode()).hexdigest(), "title_hash"
+
+    # Fallback: unique per object
+    return hashlib.sha256(f"obj:{id(result)}".encode()).hexdigest(), "fallback"
+
+
 # ── Reconciliation ───────────────────────────────────────────────────
 
 

@@ -302,6 +302,63 @@ class ExecutionRecorder:
         finally:
             session.close()
 
+    def _ensure_linkage_ledger(
+        self, execution_id: int, terminal_values: dict[str, Any],
+    ) -> None:
+        """Create or preserve the linkage ledger row for an execution.
+
+        Called after terminal accounting is persisted. Uses the same short
+        transaction semantics.
+
+        - Reconciled execution → status='pending', expected=source_unique_count
+        - Incomplete execution → status='not_applicable', expected=NULL
+        - Existing pending/not_applicable/linked → preserved (no overwrite)
+        - Existing failed → preserved (eligible for retry)
+        """
+        from backend.db.models import ExecutionDiscoveryLinkage
+
+        session = self._session()
+        try:
+            existing = session.execute(
+                select(ExecutionDiscoveryLinkage).where(
+                    ExecutionDiscoveryLinkage.execution_id == execution_id
+                )
+            ).scalar_one_or_none()
+
+            if existing is not None:
+                # Preserve existing ledger state (replay-safe).
+                session.commit()
+                return
+
+            accounting_status = terminal_values.get("accounting_status", "incomplete")
+            if accounting_status == "reconciled":
+                expected = terminal_values.get("source_unique_count")
+                row = ExecutionDiscoveryLinkage(
+                    execution_id=execution_id,
+                    linkage_schema_version="linkage_v1",
+                    status="pending",
+                    expected_discovery_count=expected,
+                    linked_discovery_count=None,
+                    linkage_attempt_count=0,
+                )
+            else:
+                row = ExecutionDiscoveryLinkage(
+                    execution_id=execution_id,
+                    linkage_schema_version="linkage_v1",
+                    status="not_applicable",
+                    expected_discovery_count=None,
+                    linked_discovery_count=None,
+                    linkage_attempt_count=0,
+                    completed_at=_now(),
+                )
+            session.add(row)
+            session.commit()
+        except Exception:
+            session.rollback()
+            raise
+        finally:
+            session.close()
+
     def _persist_translation(
         self, execution_id: int, translated_query: str,
     ) -> None:
@@ -684,6 +741,9 @@ class ExecutionRecorder:
             if outcome.status != "success" else None,
             extra_values=extra,
         )
+
+        # ── P0.2.5: Create linkage ledger atomically with terminal accounting ──
+        self._ensure_linkage_ledger(execution_id, extra)
 
         return AttemptOutcome(
             execution_id=execution_id, source=source_name,
