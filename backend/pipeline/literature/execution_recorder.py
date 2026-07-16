@@ -612,11 +612,71 @@ class ExecutionRecorder:
                 f"observer counted {obs_ac}"
             )
 
-        # ── Persist terminal transition with structured failure metadata ──
+        # ── P0.2.4: Accounting validation and persistence ──
+        from backend.pipeline.literature.contracts import validate_accounting
+
         extra: dict[str, Any] = {"completed_at": _now()}
         if outcome.status != "success":
             extra["failure_category"] = outcome.failure_category
             extra["failure_code"] = outcome.failure_code
+
+        # success/partial MUST include valid accounting (frozen rule).
+        # failed MAY include accounting. timeout/skipped NEVER.
+        if outcome.status in ("success", "partial"):
+            if outcome.accounting is None:
+                # Missing accounting on governed success/partial = contract defect.
+                self._transition(
+                    execution_id, "failed",
+                    error_detail="governed success/partial outcome missing accounting",
+                    extra_values={
+                        "completed_at": _now(),
+                        "failure_category": "adapter_contract",
+                        "failure_code": "accounting_missing",
+                        "execution_metadata_version": "execution_v1",
+                    },
+                )
+                raise ValueError(
+                    f"governed {outcome.status} outcome for execution {execution_id} "
+                    f"is missing accounting"
+                )
+            try:
+                validate_accounting(outcome.accounting, outcome.results)
+            except ValueError:
+                self._transition(
+                    execution_id, "failed",
+                    error_detail="accounting invariant violation",
+                    extra_values={
+                        "completed_at": _now(),
+                        "failure_category": "adapter_contract",
+                        "failure_code": "accounting_invariant",
+                        "execution_metadata_version": "execution_v1",
+                    },
+                )
+                raise
+            # Persist reconciled accounting atomically with terminal state.
+            extra["raw_result_count"] = outcome.accounting.raw_result_count
+            extra["normalized_result_count"] = outcome.accounting.normalized_result_count
+            extra["rejected_result_count"] = outcome.accounting.rejected_result_count
+            extra["source_unique_count"] = outcome.accounting.source_unique_count
+            extra["accounting_status"] = "reconciled"
+            extra["accounting_schema_version"] = "accounting_v1"
+
+        elif outcome.status == "failed" and outcome.accounting is not None:
+            # Failed outcome may carry accounting if a stable raw set was observed.
+            try:
+                validate_accounting(outcome.accounting, outcome.results)
+                extra["raw_result_count"] = outcome.accounting.raw_result_count
+                extra["normalized_result_count"] = outcome.accounting.normalized_result_count
+                extra["rejected_result_count"] = outcome.accounting.rejected_result_count
+                extra["source_unique_count"] = outcome.accounting.source_unique_count
+                extra["accounting_status"] = "reconciled"
+                extra["accounting_schema_version"] = "accounting_v1"
+            except ValueError:
+                # Invalid accounting on failed — persist as failed, no counts.
+                pass
+
+        # timeout/skipped: leave accounting incomplete (all NULL, no version).
+        # The _transition call below does NOT set count fields if not in extra.
 
         self._transition(
             execution_id, outcome.status,

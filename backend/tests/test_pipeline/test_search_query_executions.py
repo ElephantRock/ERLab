@@ -210,9 +210,21 @@ def test_accounting_status_default_incomplete_and_invalid_rejected():
         with pytest.raises(IntegrityError):
             _make_execution(session, q.id, accounting_status="bogus")
         session.rollback()  # clear the dirty txn state from the failed insert
-        # 'reconciled' IS valid at the schema level (P0.2.4 will use it;
-        # P0.2.1 code must not write it, but the DB allows it).
-        ex2 = _make_execution(session, q.id, source="openalex", accounting_status="reconciled")
+        # 'reconciled' requires all four counts + accounting_v1 (P0.2.4 constraint).
+        # Test with a complete reconciled row:
+        from datetime import datetime, timezone
+        from backend.db.models import SearchQueryExecution
+        ex2 = SearchQueryExecution(
+            search_query_id=q.id, source="openalex", status="success",
+            attempt_count=1, completed_at=datetime(2026, 1, 1, tzinfo=timezone.utc),
+            accounting_status="reconciled", accounting_schema_version="accounting_v1",
+            execution_metadata_version="execution_v1",
+            translated_query='{"schema":"source_query_v1"}',
+            raw_result_count=5, normalized_result_count=3,
+            rejected_result_count=2, source_unique_count=3,
+        )
+        session.add(ex2)
+        session.commit()
         assert ex2.accounting_status == "reconciled"
     finally:
         session.close()

@@ -15,6 +15,7 @@ from backend.pipeline.literature.contracts import (
     canonical_plan_json,
 )
 from backend.pipeline.literature.models import Author, Paper, SearchResult
+from backend.pipeline.literature.result_accounting import reconcile_source_results
 
 logger = logging.getLogger(__name__)
 
@@ -105,8 +106,22 @@ class OpenAlexSource(AcademicSearchSource):
                 failure_code="connection_error",
             )
 
+        if not isinstance(data, dict) or "results" not in data:
+            logger.warning("OpenAlex parse failed: malformed response")
+            return SourceSearchOutcome(
+                results=[],
+                status="failed",
+                attempt_count=attempts_made,
+                error_detail="Malformed response: missing 'results' key",
+                failure_category="provider_internal",
+                failure_code="parse_error",
+            )
+
+        raw_items = data.get("results", [])
+        raw_count = len(raw_items)
+
         results = []
-        for item in data.get("results", []):
+        for item in raw_items:
             paper = self._parse_work(item)
             if paper:
                 results.append(
@@ -116,7 +131,21 @@ class OpenAlexSource(AcademicSearchSource):
                         source=self.source_name,
                     )
                 )
-        return SourceSearchOutcome(results=results, status="success", attempt_count=attempts_made)
+
+        normalized_count = len(results)
+        rejected_count = raw_count - normalized_count
+
+        source_unique, accounting = reconcile_source_results(
+            raw_result_count=raw_count,
+            normalized_results=results,
+            rejected_result_count=rejected_count,
+        )
+        return SourceSearchOutcome(
+            results=source_unique,
+            status="success",
+            attempt_count=attempts_made,
+            accounting=accounting,
+        )
 
     async def get_paper(self, paper_id: str) -> Paper | None:
         try:

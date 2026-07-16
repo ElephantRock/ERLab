@@ -812,6 +812,33 @@ class SearchQueryExecution(Base):
             "OR (attempt_count = 0 AND attempted_at IS NULL)",
             name="ck_search_query_executions_skipped_no_attempts",
         ),
+        # ── P0.2.4: accounting reconciliation constraints ──
+        CheckConstraint(
+            "accounting_schema_version IS NULL "
+            "OR accounting_schema_version = 'accounting_v1'",
+            name="ck_search_query_executions_accounting_schema_version",
+        ),
+        CheckConstraint(
+            "("
+            "  accounting_status = 'incomplete' "
+            "  AND accounting_schema_version IS NULL "
+            "  AND raw_result_count IS NULL "
+            "  AND normalized_result_count IS NULL "
+            "  AND rejected_result_count IS NULL "
+            "  AND source_unique_count IS NULL "
+            ") OR ("
+            "  accounting_status = 'reconciled' "
+            "  AND accounting_schema_version = 'accounting_v1' "
+            "  AND raw_result_count IS NOT NULL "
+            "  AND normalized_result_count IS NOT NULL "
+            "  AND rejected_result_count IS NOT NULL "
+            "  AND source_unique_count IS NOT NULL "
+            "  AND raw_result_count = "
+            "      normalized_result_count + rejected_result_count "
+            "  AND source_unique_count <= normalized_result_count "
+            ")",
+            name="ck_search_query_executions_accounting_reconciled",
+        ),
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
@@ -839,6 +866,9 @@ class SearchQueryExecution(Base):
     failure_category: Mapped[str | None] = mapped_column(String(40), nullable=True)
     failure_code: Mapped[str | None] = mapped_column(String(80), nullable=True)
     execution_metadata_version: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    # P0.2.4: accounting schema version marker. NULL for legacy/incomplete,
+    # 'accounting_v1' when all four counts follow the reconciliation contract.
+    accounting_schema_version: Mapped[str | None] = mapped_column(String(20), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime, default=lambda: datetime.now(timezone.utc),
     )

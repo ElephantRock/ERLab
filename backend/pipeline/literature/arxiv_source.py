@@ -15,6 +15,7 @@ from backend.pipeline.literature.contracts import (
     canonical_plan_json,
 )
 from backend.pipeline.literature.models import Author, Paper, SearchResult
+from backend.pipeline.literature.result_accounting import reconcile_source_results
 
 logger = logging.getLogger(__name__)
 
@@ -106,11 +107,17 @@ class ArxivSource(AcademicSearchSource):
                         failure_code="http_429",
                     )
                 response.raise_for_status()
-                results = self._parse_feed(response.text)
+                normalized, raw_count = self._parse_feed(response.text)
+                source_unique, accounting = reconcile_source_results(
+                    raw_result_count=raw_count,
+                    normalized_results=normalized,
+                    rejected_result_count=raw_count - len(normalized),
+                )
                 return SourceSearchOutcome(
-                    results=results,
+                    results=source_unique,
                     status="success",
                     attempt_count=attempts_made,
+                    accounting=accounting,
                 )
         except httpx.HTTPStatusError as e:
             code = e.response.status_code if hasattr(e, "response") else 0
@@ -158,7 +165,7 @@ class ArxivSource(AcademicSearchSource):
                 ARXIV_API, params={"id_list": paper_id, "max_results": 1}
             )
             response.raise_for_status()
-            results = self._parse_feed(response.text)
+            results, _ = self._parse_feed(response.text)
             return results[0].paper if results else None
         except httpx.HTTPError as e:
             logger.warning("arXiv get_paper failed: %s", e)
@@ -172,14 +179,21 @@ class ArxivSource(AcademicSearchSource):
         # arXiv API doesn't support reference lookup
         return []
 
-    def _parse_feed(self, xml_text: str) -> list[SearchResult]:
+    def _parse_feed(self, xml_text: str) -> tuple[list[SearchResult], int]:
+        """Parse feed XML. Returns (normalized_results, raw_entry_count).
+
+        raw_entry_count = total <entry> elements in the feed.
+        Entries that fail to parse (missing title, etc.) are counted as
+        rejected = raw - len(normalized).
+        """
         results: list[SearchResult] = []
         try:
             root = ET.fromstring(xml_text)
         except ET.ParseError:
-            return results
+            return results, 0
 
-        for entry in root.findall(f"{ATOM_NS}entry"):
+        entries = root.findall(f"{ATOM_NS}entry")
+        for entry in entries:
             title = self._get_text(entry, f"{ATOM_NS}title")
             if not title:
                 continue
@@ -215,7 +229,7 @@ class ArxivSource(AcademicSearchSource):
             )
             results.append(SearchResult(paper=paper, source=self.source_name))
 
-        return results
+        return results, len(entries)
 
     @staticmethod
     def _get_text(element: ET.Element, path: str) -> str | None:

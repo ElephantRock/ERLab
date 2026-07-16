@@ -14,6 +14,7 @@ from backend.pipeline.literature.contracts import (
     canonical_plan_json,
 )
 from backend.pipeline.literature.models import Author, Paper, SearchResult
+from backend.pipeline.literature.result_accounting import reconcile_source_results
 
 logger = logging.getLogger(__name__)
 
@@ -158,8 +159,22 @@ class SemanticScholarSource(AcademicSearchSource):
                     failure_code="connection_error",
                 )
 
+        if not isinstance(data, dict) or "data" not in data:
+            logger.warning("Semantic Scholar parse failed: malformed response")
+            return SourceSearchOutcome(
+                results=[],
+                status="failed",
+                attempt_count=attempts_made,
+                error_detail="Malformed response: missing 'data' key",
+                failure_category="provider_internal",
+                failure_code="parse_error",
+            )
+
+        raw_items = data.get("data", [])
+        raw_count = len(raw_items)
+
         results = []
-        for item in data.get("data", []):
+        for item in raw_items:
             paper = self._parse_paper(item)
             if paper:
                 results.append(
@@ -169,10 +184,20 @@ class SemanticScholarSource(AcademicSearchSource):
                         source=self.source_name,
                     )
                 )
+
+        normalized_count = len(results)
+        rejected_count = raw_count - normalized_count
+
+        source_unique, accounting = reconcile_source_results(
+            raw_result_count=raw_count,
+            normalized_results=results,
+            rejected_result_count=rejected_count,
+        )
         return SourceSearchOutcome(
-            results=results,
+            results=source_unique,
             status="success",
             attempt_count=attempts_made,
+            accounting=accounting,
         )
 
     async def get_paper(self, paper_id: str) -> Paper | None:

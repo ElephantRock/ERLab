@@ -31,6 +31,7 @@ from backend.db.database import Base
 from backend.db.models import PipelineRun, SearchQuery, SearchQueryExecution
 from backend.pipeline.literature.contracts import (
     SourceQueryPlan,
+    SourceResultAccounting,
     SourceSearchOutcome,
     canonical_plan_json,
     validate_outcome,
@@ -40,6 +41,15 @@ from backend.pipeline.literature.execution_recorder import (
     TranslationDriftError,
     sanitize_error_detail,
 )
+
+
+def _zero_acct():
+    """Zero-result accounting for genuine zero-result success."""
+    return SourceResultAccounting(
+        schema_version="accounting_v1",
+        raw_result_count=0, normalized_result_count=0,
+        rejected_result_count=0, source_unique_count=0,
+    )
 
 
 # ── Session helpers ──────────────────────────────────────────────────
@@ -113,7 +123,7 @@ class _PlanInspectingAdapter:
         self.call_count += 1
         if attempt_observer:
             await attempt_observer.attempt_started()
-        return SourceSearchOutcome(results=[], status="success", attempt_count=1)
+        return SourceSearchOutcome(results=[], status="success", attempt_count=1, accounting=_zero_acct())
 
 
 # ── 1. Query-plan determinism ────────────────────────────────────────
@@ -292,7 +302,7 @@ def test_pending_replay_same_translation_proceeds():
         async def execute_query_plan(self, p, *, attempt_observer=None):
             if attempt_observer:
                 await attempt_observer.attempt_started()
-            return SourceSearchOutcome(results=[], status="success", attempt_count=1)
+            return SourceSearchOutcome(results=[], status="success", attempt_count=1, accounting=_zero_acct())
 
     recorder = ExecutionRecorder(engine)
     outcome = asyncio.run(recorder.run_execution(exec_id, "arxiv", _SameAdapter(), "test"))
@@ -314,7 +324,7 @@ def test_successful_execution_metadata():
         async def execute_query_plan(self, plan, *, attempt_observer=None):
             if attempt_observer:
                 await attempt_observer.attempt_started()
-            return SourceSearchOutcome(results=[], status="success", attempt_count=1)
+            return SourceSearchOutcome(results=[], status="success", attempt_count=1, accounting=_zero_acct())
 
     recorder = ExecutionRecorder(engine)
     asyncio.run(recorder.run_execution(exec_id, "arxiv", _Adapter(), "test"))
@@ -327,9 +337,9 @@ def test_successful_execution_metadata():
         assert row.failure_category is None
         assert row.failure_code is None
         assert row.error_detail is None
-        # Count columns still NULL
-        assert row.raw_result_count is None
-        assert row.accounting_status == "incomplete"
+        # P0.2.4: zero-result success now has reconciled accounting (0/0/0/0)
+        assert row.raw_result_count == 0
+        assert row.accounting_status == "reconciled"
     finally:
         s.close()
 
@@ -382,7 +392,7 @@ def test_timeout_has_timeout_category():
             if attempt_observer:
                 await attempt_observer.attempt_started()
             await asyncio.sleep(10)
-            return SourceSearchOutcome(results=[], status="success", attempt_count=1)
+            return SourceSearchOutcome(results=[], status="success", attempt_count=1, accounting=_zero_acct())
 
     recorder = ExecutionRecorder(engine)
     outcome = asyncio.run(
@@ -661,7 +671,7 @@ def test_count_columns_remain_null_after_governed_execution():
         async def execute_query_plan(self, plan, *, attempt_observer=None):
             if attempt_observer:
                 await attempt_observer.attempt_started()
-            return SourceSearchOutcome(results=[], status="success", attempt_count=1)
+            return SourceSearchOutcome(results=[], status="success", attempt_count=1, accounting=_zero_acct())
 
     recorder = ExecutionRecorder(engine)
     asyncio.run(recorder.run_execution(exec_id, "arxiv", _Adapter(), "test"))
@@ -670,9 +680,12 @@ def test_count_columns_remain_null_after_governed_execution():
     s = Session()
     try:
         row = s.get(SearchQueryExecution, exec_id)
-        for col in ["raw_result_count", "normalized_result_count",
-                     "rejected_result_count", "source_unique_count"]:
-            assert getattr(row, col) is None, f"{col} should remain NULL"
-        assert row.accounting_status == "incomplete"
+        # P0.2.4: zero-result success now has reconciled 0/0/0/0 accounting
+        assert row.raw_result_count == 0
+        assert row.normalized_result_count == 0
+        assert row.rejected_result_count == 0
+        assert row.source_unique_count == 0
+        assert row.accounting_status == "reconciled"
+        assert row.accounting_schema_version == "accounting_v1"
     finally:
         s.close()

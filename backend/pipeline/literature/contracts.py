@@ -106,6 +106,84 @@ def canonical_plan_json(source: str, parameters: dict[str, Any]) -> str:
     )
 
 
+# ── Result accounting (P0.2.4) ───────────────────────────────────────
+
+
+@dataclass(frozen=True)
+class SourceResultAccounting:
+    """Execution-local reconciliation of provider candidates.
+
+    Every governed success/partial execution must carry valid accounting.
+    The invariant: ``raw_result_count = normalized_result_count +
+    rejected_result_count`` and ``source_unique_count <=
+    normalized_result_count`` and ``len(results) == source_unique_count``.
+    """
+
+    schema_version: Literal["accounting_v1"]
+    raw_result_count: int
+    normalized_result_count: int
+    rejected_result_count: int
+    source_unique_count: int
+
+    @property
+    def within_execution_duplicates_removed(self) -> int:
+        return self.normalized_result_count - self.source_unique_count
+
+
+def validate_accounting(
+    accounting: SourceResultAccounting,
+    results: list[SearchResult],
+) -> None:
+    """Validate that a SourceResultAccounting is internally consistent.
+
+    Rejects:
+      - bool values (Python treats bool as int subclass)
+      - negative values
+      - raw != normalized + rejected
+      - source_unique > normalized
+      - len(results) != source_unique
+      - schema_version != accounting_v1
+
+    Raises ``ValueError`` on violation.
+    """
+    a = accounting
+
+    # Reject bool (Python bool is an int subclass — must check explicitly).
+    for name, val in (
+        ("raw_result_count", a.raw_result_count),
+        ("normalized_result_count", a.normalized_result_count),
+        ("rejected_result_count", a.rejected_result_count),
+        ("source_unique_count", a.source_unique_count),
+    ):
+        if isinstance(val, bool):
+            raise ValueError(f"accounting {name} must be int, not bool")
+        if not isinstance(val, int):
+            raise ValueError(f"accounting {name} must be int, got {type(val).__name__}")
+        if val < 0:
+            raise ValueError(f"accounting {name} must be >= 0, got {val}")
+
+    if a.schema_version != "accounting_v1":
+        raise ValueError(
+            f"accounting schema_version must be 'accounting_v1', got {a.schema_version!r}"
+        )
+
+    if a.raw_result_count != a.normalized_result_count + a.rejected_result_count:
+        raise ValueError(
+            f"accounting equation violated: raw ({a.raw_result_count}) != "
+            f"normalized ({a.normalized_result_count}) + rejected ({a.rejected_result_count})"
+        )
+
+    if a.source_unique_count > a.normalized_result_count:
+        raise ValueError(
+            f"source_unique ({a.source_unique_count}) > normalized ({a.normalized_result_count})"
+        )
+
+    if len(results) != a.source_unique_count:
+        raise ValueError(
+            f"len(results) ({len(results)}) != source_unique_count ({a.source_unique_count})"
+        )
+
+
 # ── Outcomes ─────────────────────────────────────────────────────────
 
 
@@ -124,6 +202,10 @@ class SourceSearchOutcome:
         failed:   attempt_count >= 0 (0 only if attempted_at is NULL),
                   results empty, error_detail present
         timeout:  attempt_count >= 1, results empty, error_detail present
+
+    P0.2.4: Every governed success/partial outcome must include valid
+    ``accounting``. Failed/timeout outcomes may include accounting only
+    when a stable raw candidate set was observed.
     """
 
     results: list[SearchResult]
@@ -132,6 +214,7 @@ class SourceSearchOutcome:
     error_detail: str | None = None
     failure_category: str | None = None
     failure_code: str | None = None
+    accounting: SourceResultAccounting | None = None
 
 
 @dataclass(frozen=True)

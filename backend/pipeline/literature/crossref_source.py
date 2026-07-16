@@ -17,6 +17,7 @@ from backend.pipeline.literature.contracts import (
     canonical_plan_json,
 )
 from backend.pipeline.literature.models import Author, Paper, SearchResult
+from backend.pipeline.literature.result_accounting import reconcile_source_results
 
 logger = logging.getLogger(__name__)
 
@@ -108,6 +109,22 @@ class CrossRefSource(AcademicSearchSource):
             data = response.json()
 
             items = data.get("message", {}).get("items", [])
+
+            # Missing message.items is a parse failure (no accounting).
+            if not isinstance(data, dict) or not isinstance(
+                data.get("message"), dict
+            ) or "items" not in data.get("message", {}):
+                logger.warning("CrossRef parse failed: malformed response")
+                return SourceSearchOutcome(
+                    results=[],
+                    status="failed",
+                    attempt_count=attempts_made,
+                    error_detail="Malformed response: missing 'message.items'",
+                    failure_category="provider_internal",
+                    failure_code="parse_error",
+                )
+
+            raw_count = len(items)
             results = []
 
             # Rows cap is captured in the plan; honor the requested limit.
@@ -166,8 +183,18 @@ class CrossRefSource(AcademicSearchSource):
                     source="crossref",
                 ))
 
+            rejected_count = raw_count - len(results)
+
+            source_unique, accounting = reconcile_source_results(
+                raw_result_count=raw_count,
+                normalized_results=results,
+                rejected_result_count=rejected_count,
+            )
             return SourceSearchOutcome(
-                results=results, status="success", attempt_count=attempts_made
+                results=source_unique,
+                status="success",
+                attempt_count=attempts_made,
+                accounting=accounting,
             )
 
         except Exception as e:

@@ -96,6 +96,17 @@ from backend.pipeline.literature.contracts import (
     SourceQueryPlan,
     canonical_plan_json,
 )
+from backend.pipeline.literature.result_accounting import reconcile_source_results
+
+
+def _acct_for(results):
+    """Helper: build accounting for a list of results."""
+    unique, acct = reconcile_source_results(
+        raw_result_count=len(results),
+        normalized_results=results,
+        rejected_result_count=0,
+    )
+    return unique, acct
 
 
 def _fake_plan(source="arxiv"):
@@ -118,9 +129,10 @@ class _SuccessAdapter:
         self.call_count += 1
         if attempt_observer:
             await attempt_observer.attempt_started()
-        results = [SearchResult(paper=_fake_paper(f"Paper {i}"), source="arxiv")
+        results = [SearchResult(paper=_fake_paper(f"Paper {i}", source_id=f"test:{i}"), source="arxiv")
                    for i in range(self._n)]
-        return SourceSearchOutcome(results=results, status="success", attempt_count=1)
+        unique, acct = _acct_for(results)
+        return SourceSearchOutcome(results=unique, status="success", attempt_count=1, accounting=acct)
 
 
 class _RetryAdapter:
@@ -137,7 +149,8 @@ class _RetryAdapter:
         if attempt_observer:
             await attempt_observer.attempt_started()
         results = [SearchResult(paper=_fake_paper("Retried Paper"), source="arxiv")]
-        return SourceSearchOutcome(results=results, status="success", attempt_count=2)
+        unique, acct = _acct_for(results)
+        return SourceSearchOutcome(results=unique, status="success", attempt_count=2, accounting=acct)
 
 
 class _FailAdapter:
@@ -196,10 +209,12 @@ class _PartialAdapter:
         if attempt_observer:
             await attempt_observer.attempt_started()
         results = [SearchResult(paper=_fake_paper("Partial Paper"), source="arxiv")]
+        unique, acct = _acct_for(results)
         return SourceSearchOutcome(
-            results=results, status="partial", attempt_count=1,
+            results=unique, status="partial", attempt_count=1,
             error_detail="truncated response",
             failure_category="response_parse", failure_code="incomplete_response",
+            accounting=acct,
         )
 
 
@@ -258,12 +273,12 @@ def test_successful_invocation():
         assert row.attempt_count == 1
         assert row.attempted_at is not None
         assert row.completed_at is not None
-        # Count columns remain NULL
-        assert row.raw_result_count is None
-        assert row.normalized_result_count is None
-        assert row.rejected_result_count is None
-        assert row.source_unique_count is None
-        assert row.accounting_status == "incomplete"
+        # P0.2.4: success now has reconciled accounting
+        assert row.raw_result_count == 3
+        assert row.normalized_result_count == 3
+        assert row.rejected_result_count == 0
+        assert row.source_unique_count == 3
+        assert row.accounting_status == "reconciled"
     finally:
         session.close()
 
