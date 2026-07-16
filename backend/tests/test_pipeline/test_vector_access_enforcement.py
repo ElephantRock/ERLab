@@ -20,13 +20,11 @@ _ALLOWLIST_PATTERNS = [
     "pipeline/vector_backend.py",
     "pipeline/vector_indexer.py",
     "pipeline/scoped_vector_service.py",
+    "pipeline/vector_runtime.py",  # central composition root (constructs chromadb client)
     "pipeline/knowledge/vector_store.py",  # legacy compat layer
     "pipeline/knowledge/graph_embeddings.py",  # KG entity embeddings (not paper corpus)
     "pipeline/tools/tool_index.py",  # tool capability index (not paper corpus)
     "providers/cache/semantic_cache.py",  # LLM response cache (not paper corpus)
-    "novelty/novelty_checker.py",  # governed retrieval delegation (uses GovernedVectorBackend)
-    "pipeline/stages.py",  # governed indexing delegation (uses GovernedVectorBackend)
-    "api/routes/knowledge.py",  # governed search endpoint (uses GovernedVectorBackend)
     "tests/",  # test code
     "__pycache__",
     ".venv",

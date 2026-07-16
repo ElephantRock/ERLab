@@ -81,12 +81,14 @@ class NoveltyChecker:
         retriever: TwoStageRetriever | None = None,
         citation_traverser: Any | None = None,
         embedding_scorer: Any | None = None,
+        governed_runtime: Any | None = None,  # GovernedVectorRuntime
     ):
         self._provider = provider
         self._store = store
         self._retriever = retriever
         self._citation_traverser = citation_traverser
         self._embedding_scorer = embedding_scorer
+        self._governed_runtime = governed_runtime
 
     async def _retrieve_legacy(self, query: str, top_k: int) -> list[dict]:
         """Legacy unscoped retrieval (only for pre_provenance runs)."""
@@ -129,32 +131,37 @@ class NoveltyChecker:
 
         # Step 2: For governed runs, ALL failures propagate.
         # Missing dependencies are contract violations, not fallthrough signals.
-        from backend.pipeline.vector_access_policy import resolve_profile_id
         from backend.pipeline.vector_contracts import (
             ScopedVectorRetrievalRequest,
             VectorRetrievalScope,
         )
         from backend.pipeline.scoped_vector_service import query_vectors
-        from backend.pipeline.vector_backend import GovernedVectorBackend
-        from backend.config import get_settings
-        from sqlalchemy.orm import sessionmaker
 
-        settings = get_settings()
-        dim = self._embedding.dimension if self._embedding else 1024
-        profile_id = resolve_profile_id(
-            embedding_provider=settings.embedding_provider,
-            model_identifier=settings.embedding_model,
-            dimension=dim,
-            normalization_policy="l2",
-            chunking_schema_version="title_abstract_v1",
-        )
+        # Use injected governed runtime, or construct from settings (fallback for
+        # callers that haven't been updated to inject yet)
+        if self._governed_runtime is not None:
+            runtime = self._governed_runtime
+            profile_id = runtime.embedding_profile_id
+            backend = runtime.backend
+            Session = runtime.session_factory
+        else:
+            from backend.pipeline.vector_runtime import build_governed_vector_runtime_from_settings
+            runtime = build_governed_vector_runtime_from_settings(db_engine)
+            if runtime is None:
+                raise RuntimeError(
+                    "governed novelty retrieval requires governed vector runtime; "
+                    "could not construct from settings"
+                )
+            profile_id = runtime.embedding_profile_id
+            backend = runtime.backend
+            Session = runtime.session_factory
 
         # Generate query embedding explicitly — failure propagates for governed
         query_embeddings = await self._embedding.embed_texts([query])
         query_vector = tuple(query_embeddings[0]) if query_embeddings else ()
 
         if not query_vector:
-            return []  # Empty result is valid, not a failure
+            return [], None, "governed_vector"
 
         # Build scoped request
         scope = VectorRetrievalScope(
@@ -174,13 +181,6 @@ class NoveltyChecker:
             query_vector=query_vector,
             top_k=top_k,
         )
-
-        # Build backend — failure propagates for governed runs
-        import chromadb
-        chroma_client = chromadb.PersistentClient(path=settings.chroma_persist_dir)
-        backend = GovernedVectorBackend(chroma_client)
-
-        Session = sessionmaker(bind=db_engine, expire_on_commit=False)
 
         # Execute scoped retrieval — failure propagates for governed runs
         outcome = await query_vectors(

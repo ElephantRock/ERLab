@@ -205,18 +205,20 @@ async def search_knowledge_governed(
             "selected_papers scope requires selected_paper_ids",
         )
 
-    # Resolve profile
+    # Use governed vector runtime (constructed from settings at call time)
+    from backend.pipeline.vector_runtime import build_governed_vector_runtime_from_settings
+
+    runtime = build_governed_vector_runtime_from_settings(_get_engine())
+    if runtime is None:
+        raise ServiceUnavailableError(
+            "Governed vector runtime unavailable",
+            hint="Ensure embedding provider and ChromaDB are configured.",
+        )
+
+    profile_id = runtime.embedding_profile_id
     settings = get_settings()
     provider = create_provider()
     embedding = EmbeddingService(provider)
-    dim = embedding.dimension
-    profile_id = resolve_profile_id(
-        embedding_provider=settings.embedding_provider,
-        model_identifier=settings.embedding_model,
-        dimension=dim,
-        normalization_policy="l2",
-        chunking_schema_version="title_abstract_v1",
-    )
 
     # Generate explicit query vector
     query_embeddings = await embedding.embed_texts([query])
@@ -245,15 +247,9 @@ async def search_knowledge_governed(
         allow_partial_index_coverage=True,
     )
 
-    # Build backend and execute
-    import chromadb
-    chroma_client = chromadb.PersistentClient(path=settings.chroma_persist_dir)
-    backend = GovernedVectorBackend(chroma_client)
-
-    Session = sessionmaker(bind=_get_engine(), expire_on_commit=False)
-
     outcome = await query_vectors(
-        session_factory=Session,
+        session_factory=runtime.session_factory,
+        backend=runtime.backend,
         backend=backend,
         request=request,
     )

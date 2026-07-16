@@ -485,12 +485,13 @@ class LiteratureSearchStage(PipelineStage):
 
 
 class IngestionStage(PipelineStage):
-    def __init__(self, store, bm25, embedding, kg=None, provider=None):
+    def __init__(self, store, bm25, embedding, kg=None, provider=None, governed_runtime=None):
         self._store = store
         self._bm25 = bm25
         self._embedding = embedding
         self._kg = kg
         self._provider = provider
+        self._governed_runtime = governed_runtime
 
     @property
     def name(self) -> str:
@@ -623,35 +624,22 @@ class IngestionStage(PipelineStage):
         if mode != "governed":
             return
 
-        # Resolve embedding profile from settings
-        settings = get_settings()
-        profile_id = resolve_profile_id(
-            embedding_provider=settings.embedding_provider,
-            model_identifier=settings.embedding_model,
-            dimension=self._embedding.dimension if self._embedding else 1024,
-            normalization_policy="l2",
-            chunking_schema_version="title_abstract_v1",
-        )
+        # Use injected governed runtime, or construct from settings
+        from backend.pipeline.vector_runtime import build_governed_vector_runtime_from_settings
 
-        profile_dict = {
-            "provider": settings.embedding_provider,
-            "model_identifier": settings.embedding_model,
-            "dimension": self._embedding.dimension if self._embedding else 1024,
-            "normalization_policy": "l2",
-            "chunking_schema_version": "title_abstract_v1",
-        }
+        if self._governed_runtime is not None:
+            runtime = self._governed_runtime
+        else:
+            engine = _get_engine()
+            runtime = build_governed_vector_runtime_from_settings(engine)
+            if runtime is None:
+                logger.warning("Cannot construct governed vector runtime for indexing")
+                return
 
-        engine = _get_engine()
-        Session = sessionmaker(bind=engine, expire_on_commit=False)
-
-        # Build a governed backend (needs chromadb client)
-        try:
-            import chromadb
-            chroma_client = chromadb.PersistentClient(path=settings.chroma_persist_dir)
-            backend = GovernedVectorBackend(chroma_client)
-        except Exception as e:
-            logger.warning("Cannot create governed vector backend: %s", e)
-            return
+        profile_id = runtime.embedding_profile_id
+        profile_dict = runtime.profile_dict
+        Session = runtime.session_factory
+        backend = runtime.backend
 
         # Index each paper
         indexed = 0
