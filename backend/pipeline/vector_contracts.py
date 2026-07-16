@@ -286,3 +286,35 @@ class VectorIndexRegistryDriftError(VectorScopeError):
 
 class IndexingAlreadyClaimedError(VectorScopeError):
     """Another worker has already claimed the indexing for this vector."""
+
+
+class RetrievalAlreadyClaimedError(VectorScopeError):
+    """Another worker has already claimed the retrieval event."""
+
+
+# ── Retrieval snapshot and outcome contracts (P0.3.3) ────────────────
+
+
+@dataclass(frozen=True)
+class EligibleVectorSnapshot:
+    """One eligible indexed vector record in a retrieval's candidate set."""
+
+    vector_record_id: str
+    paper_id: int
+    chunk_key: str
+    content_kind: str
+    collection_name: str
+    embedding_profile_id: str
+
+
+@dataclass(frozen=True)
+class ScopedVectorRetrievalOutcome:
+    """Result of a governed scoped vector retrieval."""
+
+    retrieval_event_id: int
+    status: Literal["success", "replayed"]
+    coverage_status: Literal["empty_scope", "complete", "partial", "none"]
+    allowed_paper_count: int
+    indexed_paper_count: int
+    eligible_vector_record_count: int
+    results: tuple["ScopedVectorResult", ...]

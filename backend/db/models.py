@@ -1372,6 +1372,135 @@ class VectorIndexRecord(Base):
     )
 
 
+class VectorRetrievalEvent(Base):
+    """Immutable retrieval audit event (P0.3.3).
+
+    One row per governed vector retrieval. Snapshots the scope, eligible
+    records, and ranked results so P0.3.6 can prove which scope influenced
+    a stage.
+    """
+
+    __tablename__ = "vector_retrieval_events"
+    __table_args__ = (
+        UniqueConstraint("run_id", "stage_name", "retrieval_key", name="uq_vre_run_stage_key"),
+        Index("ix_vre_run_id", "run_id"),
+        Index("ix_vre_status", "status"),
+        CheckConstraint("requested_top_k > 0", name="ck_vre_top_k_positive"),
+        CheckConstraint("attempt_count >= 0", name="ck_vre_attempt_count_nonnegative"),
+        CheckConstraint("status IN ('pending','running','success','failed')", name="ck_vre_status"),
+        CheckConstraint(
+            "coverage_status IN ('empty_scope','complete','partial','none')",
+            name="ck_vre_coverage_status",
+        ),
+        CheckConstraint(
+            "unindexed_paper_count = allowed_paper_count - indexed_paper_count",
+            name="ck_vre_unindexed_equation",
+        ),
+        CheckConstraint("indexed_paper_count <= allowed_paper_count", name="ck_vre_indexed_le_allowed"),
+        CheckConstraint(
+            "failure_category IS NULL OR failure_category IN "
+            "('scope_resolution','query_validation','index_coverage',"
+            "'backend','result_validation','contract','internal')",
+            name="ck_vre_failure_category",
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    run_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("pipeline_runs.id", ondelete="CASCADE"), nullable=False,
+    )
+    stage_name: Mapped[str] = mapped_column(String(100), nullable=False)
+    retrieval_key: Mapped[str] = mapped_column(String(160), nullable=False)
+    request_schema_version: Mapped[str] = mapped_column(String(30), nullable=False)
+    scope_mode: Mapped[str] = mapped_column(String(40), nullable=False)
+    scope_schema_version: Mapped[str] = mapped_column(String(30), nullable=False)
+    scope_fingerprint: Mapped[str] = mapped_column(String(64), nullable=False)
+    embedding_profile_id: Mapped[str] = mapped_column(
+        String(64), ForeignKey("embedding_profiles.profile_id", ondelete="RESTRICT"), nullable=False,
+    )
+    profile_verification_status_snapshot: Mapped[str] = mapped_column(String(20), nullable=False, default="unverified")
+    query_vector_fingerprint: Mapped[str] = mapped_column(String(64), nullable=False)
+    input_fingerprint: Mapped[str] = mapped_column(String(64), nullable=False)
+    requested_top_k: Mapped[int] = mapped_column(Integer, nullable=False)
+    allow_partial_index_coverage: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    allowed_paper_count: Mapped[int] = mapped_column(Integer, nullable=False)
+    indexed_paper_count: Mapped[int] = mapped_column(Integer, nullable=False)
+    unindexed_paper_count: Mapped[int] = mapped_column(Integer, nullable=False)
+    eligible_vector_record_count: Mapped[int] = mapped_column(Integer, nullable=False)
+    coverage_status: Mapped[str] = mapped_column(String(20), nullable=False)
+    status: Mapped[str] = mapped_column(String(20), nullable=False, default="pending")
+    attempt_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    backend_batch_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    returned_result_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    failure_category: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    failure_code: Mapped[str | None] = mapped_column(String(80), nullable=True)
+    failure_detail: Mapped[str | None] = mapped_column(Text, nullable=True)
+    started_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=lambda: datetime.now(timezone.utc),
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime, default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
+    )
+
+
+class VectorRetrievalScopePaper(Base):
+    """Allowed-paper snapshot for a retrieval event."""
+
+    __tablename__ = "vector_retrieval_scope_papers"
+
+    retrieval_event_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("vector_retrieval_events.id", ondelete="CASCADE"), primary_key=True,
+    )
+    paper_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("papers.id", ondelete="RESTRICT"), primary_key=True,
+    )
+    is_indexed: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+
+
+class VectorRetrievalEligibleRecord(Base):
+    """Exact eligible backend candidate snapshot for a retrieval event."""
+
+    __tablename__ = "vector_retrieval_eligible_records"
+
+    retrieval_event_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("vector_retrieval_events.id", ondelete="CASCADE"), primary_key=True,
+    )
+    vector_record_id: Mapped[str] = mapped_column(
+        String(64), ForeignKey("vector_index_records.vector_record_id", ondelete="RESTRICT"),
+        primary_key=True,
+    )
+
+
+class VectorRetrievalResult(Base):
+    """Ranked validated result for a retrieval event.
+
+    The composite FK to eligible_records database-enforces that every
+    result belonged to the frozen candidate snapshot.
+    """
+
+    __tablename__ = "vector_retrieval_results"
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ["retrieval_event_id", "vector_record_id"],
+            ["vector_retrieval_eligible_records.retrieval_event_id",
+             "vector_retrieval_eligible_records.vector_record_id"],
+            name="fk_vrr_eligible",
+        ),
+        UniqueConstraint("retrieval_event_id", "vector_record_id", name="uq_vrr_no_dup_vector"),
+        CheckConstraint("rank > 0", name="ck_vrr_rank_positive"),
+    )
+
+    retrieval_event_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("vector_retrieval_events.id", ondelete="CASCADE"), primary_key=True,
+    )
+    rank: Mapped[int] = mapped_column(Integer, primary_key=True)
+    vector_record_id: Mapped[str] = mapped_column(String(64), nullable=False)
+    canonical_distance: Mapped[float] = mapped_column(Float, nullable=False)
+
+
 # ── P0.2.7: Provenance immutability enforcement ─────────────────────
 
 
