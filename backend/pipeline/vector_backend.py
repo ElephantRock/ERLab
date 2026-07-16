@@ -215,3 +215,76 @@ class GovernedVectorBackend:
             vector_record_id=vector_record_id,
         )
         return record is None
+
+    def query_vectors(
+        self,
+        *,
+        collection_name: str,
+        query_vector: Sequence[float],
+        candidate_vector_record_ids: Sequence[str],
+        top_k: int,
+    ) -> list["BackendVectorMatch"]:
+        """Candidate-constrained similarity query.
+
+        The backend receives exact ``vector_record_record_ids`` to rank
+        against — never a global query. The legacy ``research_papers``
+        collection is rejected.
+
+        Returns matches sorted by canonical_distance (lower is better).
+        """
+        if collection_name == _LEGACY_COLLECTION:
+            raise ValueError(
+                f"governed operations cannot query {_LEGACY_COLLECTION!r}"
+            )
+
+        if not candidate_vector_record_ids:
+            return []
+
+        collection = self._collections.get(collection_name)
+        if collection is None:
+            raise ValueError(
+                f"collection {collection_name!r} not initialized"
+            )
+
+        result = collection.query(
+            query_embeddings=[list(query_vector)],
+            ids=list(candidate_vector_record_ids),
+            n_results=min(top_k, len(candidate_vector_record_ids)),
+            include=["metadatas", "distances"],
+        )
+
+        matches: list[BackendVectorMatch] = []
+        ids = result.get("ids", [[]])
+        distances = result.get("distances", [[]])
+        metadatas = result.get("metadatas", [[]])
+
+        if ids and ids[0]:
+            for i, vid in enumerate(ids[0]):
+                dist = distances[0][i] if distances and i < len(distances[0]) else 1.0
+                meta = metadatas[0][i] if metadatas and i < len(metadatas[0]) else {}
+                matches.append(BackendVectorMatch(
+                    vector_record_id=vid,
+                    paper_id=int(meta.get("paper_id", 0)),
+                    chunk_key=str(meta.get("chunk_key", "")),
+                    content_kind=str(meta.get("content_kind", "")),
+                    content_hash=str(meta.get("content_hash", "")),
+                    embedding_profile_id=str(meta.get("embedding_profile_id", "")),
+                    index_schema_version=str(meta.get("index_schema_version", "")),
+                    canonical_distance=float(dist),
+                ))
+
+        return matches
+
+
+@dataclass(frozen=True)
+class BackendVectorMatch:
+    """One similarity match from a candidate-constrained backend query."""
+
+    vector_record_id: str
+    paper_id: int
+    chunk_key: str
+    content_kind: str
+    content_hash: str
+    embedding_profile_id: str
+    index_schema_version: str
+    canonical_distance: float
