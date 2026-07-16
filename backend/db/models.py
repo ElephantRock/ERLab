@@ -165,6 +165,16 @@ class PipelineRun(Base):
             ")",
             name="ck_pipeline_runs_provenance_legacy_reason",
         ),
+        # P0.3.1: domain scope consistency
+        CheckConstraint(
+            "("
+            "  domain_scope_key IS NULL AND domain_scope_version IS NULL"
+            ") OR ("
+            "  domain_scope_key IS NOT NULL"
+            "  AND domain_scope_version = 'domain_scope_v1'"
+            ")",
+            name="ck_pipeline_runs_domain_scope",
+        ),
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
@@ -210,6 +220,9 @@ class PipelineRun(Base):
     )
     # P0.2.7: Legacy reason — required for pre_provenance, NULL for provenance_v1.
     legacy_provenance_reason: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    # P0.3.1: Stable domain identity for same-domain-prior-runs scope
+    domain_scope_key: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    domain_scope_version: Mapped[str | None] = mapped_column(String(20), nullable=True)
 
 
 class Comment(Base):
@@ -1207,6 +1220,51 @@ class RunSearchReconciliation(Base):
     canonicalization_reduction_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
     unexplained_membership_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
     unowned_discovery_paper_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
+
+
+class GlobalLibraryMembership(Base):
+    """Explicit global-library paper membership (P0.3.1).
+
+    No paper becomes a global-library member merely because it exists in
+    ``papers`` or the vector collection. Membership must be explicit.
+    """
+
+    __tablename__ = "global_library_memberships"
+    __table_args__ = (
+        CheckConstraint(
+            "membership_schema_version = 'global_library_v1'",
+            name="ck_glm_schema_version",
+        ),
+        CheckConstraint(
+            "status IN ('active', 'removed')",
+            name="ck_glm_status",
+        ),
+        CheckConstraint(
+            "membership_origin IS NULL OR membership_origin IN "
+            "('user_curated', 'admin_import', 'verified_migration')",
+            name="ck_glm_origin",
+        ),
+        CheckConstraint(
+            "status != 'active' OR removed_at IS NULL",
+            name="ck_glm_active_no_removed_at",
+        ),
+        CheckConstraint(
+            "status != 'removed' OR removed_at IS NOT NULL",
+            name="ck_glm_removed_has_removed_at",
+        ),
+    )
+
+    paper_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("papers.id", ondelete="CASCADE"),
+        primary_key=True,
+    )
+    membership_schema_version: Mapped[str] = mapped_column(String(30), nullable=False)
+    status: Mapped[str] = mapped_column(String(20), nullable=False)
+    membership_origin: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=lambda: datetime.now(timezone.utc),
+    )
+    removed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
 
 # ── P0.2.7: Provenance immutability enforcement ─────────────────────
