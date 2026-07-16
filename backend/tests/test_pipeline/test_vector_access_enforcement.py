@@ -26,6 +26,7 @@ _ALLOWLIST_PATTERNS = [
     "providers/cache/semantic_cache.py",  # LLM response cache (not paper corpus)
     "novelty/novelty_checker.py",  # governed retrieval delegation (uses GovernedVectorBackend)
     "pipeline/stages.py",  # governed indexing delegation (uses GovernedVectorBackend)
+    "api/routes/knowledge.py",  # governed search endpoint (uses GovernedVectorBackend)
     "tests/",  # test code
     "__pycache__",
     ".venv",

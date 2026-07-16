@@ -136,6 +136,148 @@ async def search_knowledge(request: SearchRequest):
 
 
 @router.post(
+    "/search/governed",
+    summary="Scoped knowledge search (governed)",
+    description=(
+        "Perform scoped semantic search for a governed pipeline run. "
+        "Requires explicit run_id and scope_mode. No global fallback."
+    ),
+)
+async def search_knowledge_governed(
+    run_id: int,
+    query: str,
+    scope_mode: str = "current_run_only",
+    top_k: int = 10,
+    selected_paper_ids: list[int] | None = None,
+):
+    """Governed scoped vector search.
+
+    Requires a provenance_v1 run and an explicit scope mode.
+    Returns retrieval_event_id and coverage metadata.
+    """
+    import asyncio
+
+    from backend.config import get_settings
+    from backend.db.database import _get_engine, get_session
+    from backend.pipeline.provenance_gate import (
+        load_run_provenance_contract,
+        select_run_execution_mode,
+        ProvenanceContractError,
+    )
+    from backend.pipeline.vector_access_policy import resolve_profile_id
+    from backend.pipeline.vector_contracts import (
+        ScopedVectorRetrievalRequest,
+        VectorRetrievalScope,
+    )
+    from backend.pipeline.scoped_vector_service import query_vectors
+    from backend.pipeline.vector_backend import GovernedVectorBackend
+    from backend.pipeline.knowledge.embedding_service import EmbeddingService
+    from backend.providers.provider_factory import create_provider
+    from sqlalchemy.orm import sessionmaker
+
+    # Verify governed run
+    try:
+        with get_session() as s:
+            contract = load_run_provenance_contract(s, run_id)
+            mode = select_run_execution_mode(contract)
+    except ProvenanceContractError:
+        raise BadRequestError(
+            f"Run {run_id} not found",
+            hint="Provide a valid pipeline run ID.",
+        )
+
+    if mode != "governed":
+        raise BadRequestError(
+            f"Run {run_id} is not governed (mode={mode})",
+            hint="Use /search for legacy searches or create a provenance_v1 run.",
+        )
+
+    # Validate scope mode
+    valid_modes = {"current_run_only", "same_domain_prior_runs", "global_library", "selected_papers"}
+    if scope_mode not in valid_modes:
+        raise BadRequestError(
+            f"Invalid scope_mode {scope_mode!r}",
+            hint=f"Choose from: {sorted(valid_modes)}",
+        )
+
+    if scope_mode == "selected_papers" and not selected_paper_ids:
+        raise BadRequestError(
+            "selected_papers scope requires selected_paper_ids",
+        )
+
+    # Resolve profile
+    settings = get_settings()
+    provider = create_provider()
+    embedding = EmbeddingService(provider)
+    dim = embedding.dimension
+    profile_id = resolve_profile_id(
+        embedding_provider=settings.embedding_provider,
+        model_identifier=settings.embedding_model,
+        dimension=dim,
+        normalization_policy="l2",
+        chunking_schema_version="title_abstract_v1",
+    )
+
+    # Generate explicit query vector
+    query_embeddings = await embedding.embed_texts([query])
+    query_vector = tuple(query_embeddings[0]) if query_embeddings else ()
+
+    if not query_vector:
+        raise BadRequestError("Could not generate query embedding")
+
+    # Build scoped request
+    scope = VectorRetrievalScope(
+        schema_version="vector_scope_v1",
+        mode=scope_mode,
+        run_id=run_id,
+        embedding_profile_id=profile_id,
+        selected_paper_ids=tuple(selected_paper_ids) if selected_paper_ids else (),
+    )
+
+    request = ScopedVectorRetrievalRequest(
+        schema_version="vector_retrieval_v1",
+        run_id=run_id,
+        stage_name="knowledge_search",
+        retrieval_key=f"knowledge_search:{uuid.uuid4().hex[:8]}",
+        scope=scope,
+        query_vector=query_vector,
+        top_k=top_k,
+        allow_partial_index_coverage=True,
+    )
+
+    # Build backend and execute
+    import chromadb
+    chroma_client = chromadb.PersistentClient(path=settings.chroma_persist_dir)
+    backend = GovernedVectorBackend(chroma_client)
+
+    Session = sessionmaker(bind=_get_engine(), expire_on_commit=False)
+
+    outcome = await query_vectors(
+        session_factory=Session,
+        backend=backend,
+        request=request,
+    )
+
+    return {
+        "retrieval_event_id": outcome.retrieval_event_id,
+        "scope_mode": scope_mode,
+        "coverage_status": outcome.coverage_status,
+        "allowed_paper_count": outcome.allowed_paper_count,
+        "indexed_paper_count": outcome.indexed_paper_count,
+        "returned_result_count": len(outcome.results),
+        "results": [
+            {
+                "paper_id": r.paper_id,
+                "rank": r.rank,
+                "score": r.raw_score,
+                "vector_record_id": r.vector_record_id,
+            }
+            for r in outcome.results
+        ],
+    }
+
+
+@router.post(
     "/ingest",
     summary="Upload and ingest a document",
     description=(
