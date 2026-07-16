@@ -75,8 +75,11 @@ async def test_429_then_200_returns_results():
     ):
         results = await source.search("artificial intelligence")
 
-    assert len(results) > 0
-    assert results[0].paper.title == "Test Paper on AI"
+    # search() now returns SourceSearchOutcome
+    assert results.status == "success"
+    assert len(results.results) > 0
+    assert results.results[0].paper.title == "Test Paper on AI"
+    assert results.attempt_count == 2  # one 429 + one success
 
 
 # ---------------------------------------------------------------------------
@@ -98,7 +101,10 @@ async def test_persistent_429_gives_up_after_3_retries():
     ):
         results = await source.search("quantum computing")
 
-    assert results == []
+    # Persistent 429 → failed outcome with 4 attempts
+    assert results.status == "failed"
+    assert results.results == []
+    assert results.attempt_count == 4  # 1 initial + 3 retries
     # 1 initial + 3 retries = 4 total GET attempts
     assert mock_get.call_count == 4
 
@@ -122,7 +128,10 @@ async def test_non_429_error_no_retry():
     ) as mock_sleep:
         results = await source.search("machine learning")
 
-    assert results == []
+    # Non-429 error → failed outcome, one attempt
+    assert results.status == "failed"
+    assert results.results == []
+    assert results.attempt_count == 1
     # Only one GET attempt — no retries for non-429 errors
     assert mock_get.call_count == 1
     # Only the pre-request sleep(3), no backoff sleeps
@@ -149,7 +158,9 @@ async def test_backoff_delays_are_5_15_30():
     ) as mock_sleep:
         results = await source.search("deep learning")
 
-    assert results == []
+    # Persistent 429 → failed outcome
+    assert results.status == "failed"
+    assert results.results == []
 
     # Collect all sleep call arguments
     sleep_args = [call.args[0] for call in mock_sleep.call_args_list]

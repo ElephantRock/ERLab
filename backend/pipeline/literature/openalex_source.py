@@ -1,10 +1,14 @@
 """OpenAlex API client."""
 
+from __future__ import annotations
+
 import logging
+from typing import Any
 
 import httpx
 
 from backend.pipeline.literature.base import AcademicSearchSource
+from backend.pipeline.literature.contracts import AttemptObserver, SourceSearchOutcome
 from backend.pipeline.literature.models import Author, Paper, SearchResult
 
 logger = logging.getLogger(__name__)
@@ -39,19 +43,31 @@ class OpenAlexSource(AcademicSearchSource):
         limit: int = 20,
         year_from: int | None = None,
         year_to: int | None = None,
-    ) -> list[SearchResult]:
+        *,
+        attempt_observer: AttemptObserver | None = None,
+        **kwargs: Any,
+    ) -> SourceSearchOutcome:
         params = {"search": query, "per_page": min(limit, 50)}
         if year_from or year_to:
             year_filter = f"publication_year:{year_from or 2000}-{year_to or 2030}"
             params["filter"] = year_filter
 
+        attempts_made = 0
         try:
+            if attempt_observer is not None:
+                await attempt_observer.attempt_started()
+            attempts_made += 1
             response = await self._client.get("/works", params=params)  # type: ignore[arg-type]
             response.raise_for_status()
             data = response.json()
         except httpx.HTTPError as e:
             logger.warning("OpenAlex search failed: %s", e)
-            return []
+            return SourceSearchOutcome(
+                results=[],
+                status="failed",
+                attempt_count=attempts_made,
+                error_detail=f"{type(e).__name__}: {e}",
+            )
 
         results = []
         for item in data.get("results", []):
@@ -64,7 +80,7 @@ class OpenAlexSource(AcademicSearchSource):
                         source=self.source_name,
                     )
                 )
-        return results
+        return SourceSearchOutcome(results=results, status="success", attempt_count=attempts_made)
 
     async def get_paper(self, paper_id: str) -> Paper | None:
         try:

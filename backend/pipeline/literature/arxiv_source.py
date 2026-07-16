@@ -3,10 +3,12 @@
 import asyncio
 import logging
 import xml.etree.ElementTree as ET
+from typing import Any
 
 import httpx
 
 from backend.pipeline.literature.base import AcademicSearchSource
+from backend.pipeline.literature.contracts import AttemptObserver, SourceSearchOutcome
 from backend.pipeline.literature.models import Author, Paper, SearchResult
 
 logger = logging.getLogger(__name__)
@@ -33,7 +35,10 @@ class ArxivSource(AcademicSearchSource):
         limit: int = 20,
         year_from: int | None = None,
         year_to: int | None = None,
-    ) -> list[SearchResult]:
+        *,
+        attempt_observer: AttemptObserver | None = None,
+        **kwargs: Any,
+    ) -> SourceSearchOutcome:
         search_query = f'all:"{query}"'
         if year_from or year_to:
             search_query += (
@@ -48,10 +53,14 @@ class ArxivSource(AcademicSearchSource):
             "sortOrder": "descending",
         }
 
+        attempts_made = 0
         try:
             # arXiv asks for 1 req / 3 seconds
             await asyncio.sleep(3)
             for attempt in range(self.MAX_RETRIES + 1):
+                if attempt_observer is not None:
+                    await attempt_observer.attempt_started()
+                attempts_made += 1
                 response = await self._client.get(ARXIV_API, params=params)
                 if response.status_code == 429:
                     if attempt < self.MAX_RETRIES:
@@ -60,14 +69,32 @@ class ArxivSource(AcademicSearchSource):
                     logger.warning(
                         "arXiv rate-limited after %d retries", self.MAX_RETRIES
                     )
-                    return []
+                    return SourceSearchOutcome(
+                        results=[],
+                        status="failed",
+                        attempt_count=attempts_made,
+                        error_detail=f"arXiv rate-limited after {attempts_made} attempts",
+                    )
                 response.raise_for_status()
-                return self._parse_feed(response.text)
+                results = self._parse_feed(response.text)
+                return SourceSearchOutcome(
+                    results=results,
+                    status="success",
+                    attempt_count=attempts_made,
+                )
         except httpx.HTTPError as e:
             logger.warning("arXiv search failed: %s", e)
-            return []
+            return SourceSearchOutcome(
+                results=[],
+                status="failed",
+                attempt_count=attempts_made,
+                error_detail=f"{type(e).__name__}: {e}",
+            )
 
-        return []
+        return SourceSearchOutcome(
+            results=[], status="failed", attempt_count=attempts_made,
+            error_detail="arXiv search: unreachable fallthrough",
+        )
 
     async def get_paper(self, paper_id: str) -> Paper | None:
         try:

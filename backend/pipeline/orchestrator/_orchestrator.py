@@ -677,7 +677,7 @@ class PipelineOrchestrator:
         from backend.pipeline.dag.trimmer import TrimmerStage
 
         return [
-            LiteratureSearchStage(self._services.search, self._services.hooks, gateway=self._gateway),
+            LiteratureSearchStage(self._services.search, self._services.hooks, gateway=self._gateway, persistence=self._persistence),
             IngestionStage(self._services.store, self._services.bm25, self._services.embedding, kg=self._services.kg, provider=self._provider),
             TrimmerStage(top_k=trim_top_k, max_abstract_chars=trim_max_chars),  # BATCH-184
             GapAnalysisStage(self._services.gap_analyzer, self._services.goal_manager, self._services.hooks, self._services.memory, kg=self._services.kg, faithfulness_checker=self._services.faithfulness_checker),

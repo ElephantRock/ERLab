@@ -73,10 +73,11 @@ class PipelineStage(ABC):
 
 
 class LiteratureSearchStage(PipelineStage):
-    def __init__(self, search, hooks, gateway=None):
+    def __init__(self, search, hooks, gateway=None, persistence=None):
         self._search = search
         self._hooks = hooks
         self._gateway = gateway
+        self._persistence = persistence
 
     @property
     def name(self) -> str:
@@ -225,10 +226,30 @@ class LiteratureSearchStage(PipelineStage):
                 query_key=q_key,
             ))
 
-        # Parallel query fan-out with provenance — returns CandidateWithDiscoveries
+        # P0.2.2: Pre-resolve search_query_id before the fan-out so the
+        # execution recorder can link execution rows to the correct query.
+        from backend.db.database import _get_engine
+        from backend.pipeline.literature.contracts import SearchBatchOutcome
+
+        db_engine = None
+        query_ids_by_key: dict[str, int] = {}
+        if ctx.db_run_id:
+            db_engine = _get_engine()
+            # ensure_search_queries is a non-corpus short transaction.
+            query_ids_by_key = self._persistence.ensure_search_queries(
+                search_query_data, ctx.db_run_id,
+            )
+
+        # Parallel query fan-out with provenance.
+        # Governed path: returns SearchBatchOutcome (candidates + executions).
+        # Legacy path (no db_run_id): returns list[CandidateWithDiscoveries].
         query_results = await asyncio.gather(
             *(
-                self._search.search_all_with_provenance(q, sqd.query_key, limit_per_source=20)
+                self._search.search_all_with_provenance(
+                    q, sqd.query_key, limit_per_source=20,
+                    search_query_id=query_ids_by_key.get(sqd.query_key),
+                    db_engine=db_engine,
+                )
                 for q, sqd in zip(queries, search_query_data, strict=True)
             ),
             return_exceptions=True,
@@ -238,9 +259,20 @@ class LiteratureSearchStage(PipelineStage):
         for sqd, result in zip(search_query_data, query_results, strict=True):
             if isinstance(result, Exception):
                 logger.warning("Query '%s' failed: %s", sqd.query_text[:50], result)
-            else:
+            elif isinstance(result, SearchBatchOutcome):
+                all_candidates.extend(result.candidates)
+                logger.info(
+                    "Found %d papers for query: %s",
+                    len(result.candidates), sqd.query_text[:50],
+                )
+            elif isinstance(result, list):
                 all_candidates.extend(result)
                 logger.info("Found %d papers for query: %s", len(result), sqd.query_text[:50])
+            else:
+                logger.warning(
+                    "Query '%s' returned unexpected type: %s",
+                    sqd.query_text[:50], type(result),
+                )
 
         # Cross-query dedup with provenance merging
         # When the same paper appears through different queries, merge discovery lists

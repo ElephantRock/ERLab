@@ -3,10 +3,12 @@
 import asyncio
 import logging
 import random
+from typing import Any
 
 import httpx
 
 from backend.pipeline.literature.base import AcademicSearchSource
+from backend.pipeline.literature.contracts import AttemptObserver, SourceSearchOutcome
 from backend.pipeline.literature.models import Author, Paper, SearchResult
 
 logger = logging.getLogger(__name__)
@@ -48,15 +50,21 @@ class SemanticScholarSource(AcademicSearchSource):
         retry_max_retries: int = 5,
         retry_base_delay: float = 2.0,
         retry_max_delay: float = 30.0,
-    ) -> list[SearchResult]:
+        attempt_observer: AttemptObserver | None = None,
+        **kwargs: Any,
+    ) -> SourceSearchOutcome:
         params = {"query": query, "limit": min(limit, 100), "fields": SEARCH_FIELDS}
         if year_from or year_to:
             year_range = f"{year_from or ''}-{year_to or ''}"
             params["year"] = year_range
 
+        attempts_made = 0
         total_backoff = 0.0
         for attempt in range(retry_max_retries + 1):
             try:
+                if attempt_observer is not None:
+                    await attempt_observer.attempt_started()
+                attempts_made += 1
                 response = await self._client.get(
                     "/paper/search", params=params
                 )  # type: ignore[arg-type]
@@ -66,7 +74,12 @@ class SemanticScholarSource(AcademicSearchSource):
             except httpx.HTTPStatusError as e:
                 if e.response.status_code != 429 or attempt >= retry_max_retries:
                     logger.warning("Semantic Scholar search failed: %s", e)
-                    return []
+                    return SourceSearchOutcome(
+                        results=[],
+                        status="failed",
+                        attempt_count=attempts_made,
+                        error_detail=f"{type(e).__name__}: {e}",
+                    )
                 delay = min(
                     retry_base_delay * (2 ** attempt)
                     + random.uniform(0, 1),
@@ -79,7 +92,12 @@ class SemanticScholarSource(AcademicSearchSource):
                         " %.1fs",
                         total_backoff,
                     )
-                    return []
+                    return SourceSearchOutcome(
+                        results=[],
+                        status="failed",
+                        attempt_count=attempts_made,
+                        error_detail=f"Semantic Scholar rate-limited after {attempts_made} attempts",
+                    )
                 logger.warning(
                     "Semantic Scholar rate-limited (429),"
                     " retry %d/%d in %.1fs",
@@ -90,7 +108,12 @@ class SemanticScholarSource(AcademicSearchSource):
                 await asyncio.sleep(delay)
             except (httpx.HTTPError, KeyError) as e:
                 logger.warning("Semantic Scholar search failed: %s", e)
-                return []
+                return SourceSearchOutcome(
+                    results=[],
+                    status="failed",
+                    attempt_count=attempts_made,
+                    error_detail=f"{type(e).__name__}: {e}",
+                )
 
         results = []
         for item in data.get("data", []):
@@ -103,7 +126,11 @@ class SemanticScholarSource(AcademicSearchSource):
                         source=self.source_name,
                     )
                 )
-        return results
+        return SourceSearchOutcome(
+            results=results,
+            status="success",
+            attempt_count=attempts_made,
+        )
 
     async def get_paper(self, paper_id: str) -> Paper | None:
         try:

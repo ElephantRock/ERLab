@@ -10,6 +10,7 @@ from typing import Any
 import httpx
 
 from backend.pipeline.literature.base import AcademicSearchSource
+from backend.pipeline.literature.contracts import AttemptObserver, SourceSearchOutcome
 from backend.pipeline.literature.models import Author, Paper, SearchResult
 
 logger = logging.getLogger(__name__)
@@ -54,10 +55,13 @@ class CrossRefSource(AcademicSearchSource):
         limit: int = 20,
         year_from: int | None = None,
         year_to: int | None = None,
+        *,
+        attempt_observer: AttemptObserver | None = None,
         **kwargs: Any,
-    ) -> list[SearchResult]:
+    ) -> SourceSearchOutcome:
         """Search CrossRef for papers matching the query."""
         try:
+            attempts_made = 0
             params: dict[str, Any] = {
                 "query": query,
                 "rows": min(limit, 50),
@@ -69,6 +73,9 @@ class CrossRefSource(AcademicSearchSource):
                 if year_to:
                     params["filter"] += f",until-pub-date:{year_to}"
 
+            if attempt_observer is not None:
+                await attempt_observer.attempt_started()
+            attempts_made += 1
             response = await self._client.get("/works", params=params)
             response.raise_for_status()
             data = response.json()
@@ -129,11 +136,11 @@ class CrossRefSource(AcademicSearchSource):
                     source="crossref",
                 ))
 
-            return results
+            return SourceSearchOutcome(results=results, status="success", attempt_count=attempts_made)
 
         except Exception as e:
             logger.warning("CrossRef search failed: %s", e)
-            return []
+            return SourceSearchOutcome(results=[], status="failed", attempt_count=attempts_made, error_detail=f"{type(e).__name__}: {e}")
 
     async def get_paper(self, paper_id: str) -> Paper | None:
         """Get a single paper by DOI."""

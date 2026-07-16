@@ -1,7 +1,11 @@
 """Abstract base class for academic search sources."""
 
-from abc import ABC, abstractmethod
+from __future__ import annotations
 
+from abc import ABC, abstractmethod
+from typing import Any
+
+from backend.pipeline.literature.contracts import AttemptObserver, SourceSearchOutcome
 from backend.pipeline.literature.models import Paper, SearchResult
 
 
@@ -15,8 +19,17 @@ class AcademicSearchSource(ABC):
         limit: int = 20,
         year_from: int | None = None,
         year_to: int | None = None,
-    ) -> list[SearchResult]:
-        """Search for papers matching the query."""
+        *,
+        attempt_observer: AttemptObserver | None = None,
+        **kwargs: Any,
+    ) -> SourceSearchOutcome:
+        """Search for papers matching the query.
+
+        Must call ``attempt_observer.attempt_started()`` immediately before
+        EVERY outbound provider request (initial, retry, pagination, or
+        follow-up). Must return a ``SourceSearchOutcome`` with a truthful
+        status and the actual outbound attempt count.
+        """
         ...
 
     @abstractmethod

@@ -285,6 +285,63 @@ class PipelinePersistence:
             logger.warning("Failed to persist papers: %s", e)
             self.warnings.append(f"persist_papers: {e}")
 
+    def ensure_search_queries(
+        self,
+        search_queries: list[SearchQueryData],
+        db_run_id: int,
+    ) -> dict[str, int]:
+        """Idempotently persist logical queries in one short transaction.
+
+        P0.2.2: Resolves search_query_id BEFORE the search fan-out so the
+        execution recorder can link execution rows to the correct query.
+        Uses a dedicated short transaction (NOT the governed corpus boundary).
+
+        Returns ``query_key -> search_query_id`` mapping. The later
+        ``persist_search_results`` call will find these rows already present
+        (its select-then-insert-if-absent loop handles this).
+
+        When ``db_run_id`` is falsy, returns an empty dict (no-op).
+        """
+        if not db_run_id:
+            return {}
+
+        from sqlalchemy import select as sa_select
+
+        from backend.db.database import get_session
+        from backend.db.models import SearchQuery as SearchQueryModel
+
+        query_ids_by_key: dict[str, int] = {}
+        try:
+            with get_session() as session:
+                for sq_data in search_queries:
+                    existing_sq = session.execute(
+                        sa_select(SearchQueryModel).where(
+                            SearchQueryModel.run_id == db_run_id,
+                            SearchQueryModel.query_key == sq_data.query_key,
+                        )
+                    ).scalar_one_or_none()
+
+                    if existing_sq:
+                        query_ids_by_key[sq_data.query_key] = existing_sq.id
+                    else:
+                        new_sq = SearchQueryModel(
+                            run_id=db_run_id,
+                            query_key=sq_data.query_key,
+                            query_text=sq_data.query_text,
+                            query_type=sq_data.query_type,
+                            generation_origin=sq_data.generation_origin,
+                            sequence_number=sq_data.sequence_number,
+                        )
+                        session.add(new_sq)
+                        session.flush()
+                        query_ids_by_key[sq_data.query_key] = new_sq.id
+                session.commit()
+        except Exception as e:
+            logger.warning("Failed to ensure search queries: %s", e)
+            self.warnings.append(f"ensure_search_queries: {e}")
+            return {}
+        return query_ids_by_key
+
     def persist_search_results(
         self,
         candidates: list[CandidateWithDiscoveries],

@@ -91,51 +91,157 @@ class SearchService:
         limit_per_source: int = 20,
         year_from: int | None = None,
         year_to: int | None = None,
-    ) -> list:
-        """Search with provenance — returns CandidateWithDiscoveries.
+        *,
+        search_query_id: int | None = None,
+        db_engine: Any | None = None,
+        intended_sources: list[str] | None = None,
+    ) -> Any:
+        """Search with provenance — returns CandidateWithDiscoveries or SearchBatchOutcome.
 
-        Unlike search_all, this method preserves EVERY source/query route
-        that found a paper, even after per-query deduplication. The
-        _deduplicate_with_provenance method accumulates discovery events
-        rather than discarding lower-priority sources.
+        P0.2.2: When ``search_query_id`` and ``db_engine`` are provided, this
+        method records the full execution lifecycle for every intended source
+        via ``ExecutionRecorder``. Failed, timed-out, and skipped attempts
+        remain visible in the returned ``SearchBatchOutcome.executions`` even
+        when no candidates are produced.
+
+        When ``search_query_id`` is None (legacy/no-DB path), behaves exactly
+        as before — returns ``list[CandidateWithDiscoveries]`` with no
+        execution recording.
 
         Args:
             query: the logical query text
             query_key: deterministic key for this logical query
-            sources: source names to search (default: all)
+            sources: source names to search (default: all active)
             limit_per_source: max results per source
             year_from/year_to: optional date filters
+            search_query_id: DB PK of the SearchQuery (governed path)
+            db_engine: SQLAlchemy engine for execution recording
+            intended_sources: canonical source set (defaults to active keys)
 
         Returns:
-            list[CandidateWithDiscoveries] — one per unique paper, each
-            carrying ALL discovery routes (source + query_key pairs).
+            ``SearchBatchOutcome`` on the governed path (with candidates +
+            executions), or ``list[CandidateWithDiscoveries]`` on the legacy path.
         """
-        from backend.pipeline.persistence import CandidateWithDiscoveries, DiscoveryMetadata
+        from backend.pipeline.persistence import (
+            CandidateWithDiscoveries,
+            DiscoveryMetadata,
+        )
+
+        governed = search_query_id is not None and db_engine is not None
+
+        # Determine intended and active sources.
+        if intended_sources is None:
+            intended_sources = sorted(self._sources.keys())
+        else:
+            # Normalize: lowercase, trim, deduplicate, preserve order.
+            seen: set[str] = set()
+            normalized: list[str] = []
+            for s in intended_sources:
+                ns = s.strip().lower()
+                if ns and ns not in seen:
+                    seen.add(ns)
+                    normalized.append(ns)
+            intended_sources = normalized
 
         if sources is None:
             sources = list(self._sources.keys())
+        active = {
+            name: self._sources[name]
+            for name in sources
+            if name in self._sources
+        }
 
-        active = {name: self._sources[name] for name in sources if name in self._sources}
-        if not active:
+        # Assert: every active adapter must be in the intended set.
+        for name in active:
+            if name not in intended_sources:
+                raise ValueError(
+                    f"active adapter {name!r} is not in intended_sources "
+                    f"{intended_sources!r} — configuration error"
+                )
+
+        if not active and not governed:
             logger.warning("No valid sources specified: %s", sources)
-            return []
-
-        # Concurrent search (same fan-out as search_all)
-        tasks = [
-            source.search(query, limit=limit_per_source, year_from=year_from, year_to=year_to)
-            for source in active.values()
-        ]
-        results_per_source = await asyncio.gather(*tasks, return_exceptions=True)
+            from backend.pipeline.literature.contracts import SearchBatchOutcome
+            return SearchBatchOutcome(candidates=[], executions=[])
 
         all_results: list[SearchResult] = []
-        for name, result in zip(active.keys(), results_per_source, strict=True):
-            if isinstance(result, Exception):
-                logger.warning("Search failed for %s: %s", name, result)
-            else:
-                all_results.extend(result)  # type: ignore[arg-type]
+        executions: list = []
 
-        # Deduplicate WITH provenance — accumulates discovery events
-        return self._deduplicate_with_provenance(all_results, query_key)
+        if governed:
+            from backend.pipeline.literature.execution_recorder import ExecutionRecorder
+
+            recorder = ExecutionRecorder(db_engine)
+
+            # 1. Ensure pending execution rows for ALL intended sources.
+            source_to_exec_id = recorder.ensure_pending_executions(
+                search_query_id, intended_sources,  # type: ignore[arg-type]
+            )
+
+            # 2. Skip intended sources with no active adapter.
+            for src in intended_sources:
+                if src not in active:
+                    recorder.skip_unavailable(
+                        source_to_exec_id[src],
+                        reason="no active adapter / source disabled",
+                    )
+                    from backend.pipeline.literature.contracts import AttemptOutcome
+                    executions.append(AttemptOutcome(
+                        execution_id=source_to_exec_id[src],
+                        source=src,
+                        status="skipped",
+                        attempt_count=0,
+                        error_detail="no active adapter",
+                    ))
+
+            # 3. Concurrently invoke active adapters through the recorder.
+            async def _run_one(src_name: str, adapter: AcademicSearchSource):
+                return await recorder.run_execution(
+                    source_to_exec_id[src_name], src_name, adapter, query,
+                    limit=limit_per_source, year_from=year_from, year_to=year_to,
+                )
+
+            outcomes = await asyncio.gather(
+                *(
+                    _run_one(name, adapter)
+                    for name, adapter in active.items()
+                ),
+                return_exceptions=False,
+            )
+            for outcome in outcomes:
+                executions.append(outcome)
+                all_results.extend(outcome.results)
+
+            candidates = self._deduplicate_with_provenance(all_results, query_key)
+            from backend.pipeline.literature.contracts import SearchBatchOutcome
+            return SearchBatchOutcome(candidates=candidates, executions=executions)
+
+        else:
+            # Legacy path: no execution recording, bare adapter calls.
+            # Adapters now return SourceSearchOutcome; unwrap for compat.
+            from backend.pipeline.literature.contracts import SourceSearchOutcome
+
+            tasks = [
+                source.search(query, limit=limit_per_source, year_from=year_from, year_to=year_to)
+                for source in active.values()
+            ]
+            outcomes_raw = await asyncio.gather(*tasks, return_exceptions=True)
+
+            for name, result in zip(active.keys(), outcomes_raw, strict=True):
+                if isinstance(result, Exception):
+                    logger.warning("Search failed for %s: %s", name, result)
+                elif isinstance(result, SourceSearchOutcome):
+                    if result.status == "success" or result.status == "partial":
+                        all_results.extend(result.results)
+                    else:
+                        logger.warning(
+                            "Search failed for %s: %s", name, result.error_detail,
+                        )
+                else:
+                    logger.warning(
+                        "Unexpected return type from %s: %s", name, type(result),
+                    )
+
+            return self._deduplicate_with_provenance(all_results, query_key)
 
     @staticmethod
     def _deduplicate_with_provenance(

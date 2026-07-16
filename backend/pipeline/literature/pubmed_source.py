@@ -10,6 +10,7 @@ from typing import Any
 import httpx
 
 from backend.pipeline.literature.base import AcademicSearchSource
+from backend.pipeline.literature.contracts import AttemptObserver, SourceSearchOutcome
 from backend.pipeline.literature.models import Author, Paper, SearchResult
 
 logger = logging.getLogger(__name__)
@@ -39,10 +40,13 @@ class PubMedSource(AcademicSearchSource):
         limit: int = 20,
         year_from: int | None = None,
         year_to: int | None = None,
+        *,
+        attempt_observer: AttemptObserver | None = None,
         **kwargs: Any,
-    ) -> list[SearchResult]:
+    ) -> SourceSearchOutcome:
         """Search PubMed for papers matching the query."""
         try:
+            attempts_made = 0
             # Build search query with date filter
             search_term = query
             if year_from or year_to:
@@ -61,13 +65,16 @@ class PubMedSource(AcademicSearchSource):
             if self._api_key:
                 params["api_key"] = self._api_key
 
+            if attempt_observer is not None:
+                await attempt_observer.attempt_started()
+            attempts_made += 1
             response = await self._client.get(ESEARCH_URL, params=params)
             response.raise_for_status()
             data = response.json()
 
             id_list = data.get("esearchresult", {}).get("idlist", [])
             if not id_list:
-                return []
+                return SourceSearchOutcome(results=[], status="success", attempt_count=attempts_made)
 
             # Step 2: EFetch to get details
             fetch_params: dict[str, Any] = {
@@ -78,16 +85,19 @@ class PubMedSource(AcademicSearchSource):
             if self._api_key:
                 fetch_params["api_key"] = self._api_key
 
+            if attempt_observer is not None:
+                await attempt_observer.attempt_started()
+            attempts_made += 1
             fetch_response = await self._client.get(EFETCH_URL, params=fetch_params)
             fetch_response.raise_for_status()
 
             # Parse XML response (simplified)
             results = self._parse_results(fetch_response.text)
-            return results[:limit]
+            return SourceSearchOutcome(results=results[:limit], status="success", attempt_count=attempts_made)
 
         except Exception as e:
             logger.warning("PubMed search failed: %s", e)
-            return []
+            return SourceSearchOutcome(results=[], status="failed", attempt_count=attempts_made, error_detail=f"{type(e).__name__}: {e}")
 
     async def get_paper(self, paper_id: str) -> Paper | None:
         """Get a single paper by PMID."""
