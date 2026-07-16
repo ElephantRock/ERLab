@@ -1606,6 +1606,60 @@ class LegacyVectorInventoryRecord(Base):
     completed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
 
+class LegacyVectorReindexTarget(Base):
+    """Authoritative target-level reindex lifecycle (P0.3.5B1).
+
+    Several legacy records may map to one canonical paper/chunk/profile
+    target. This table deduplicates them into one indexing operation.
+    """
+
+    __tablename__ = "legacy_vector_reindex_targets"
+    __table_args__ = (
+        UniqueConstraint(
+            "inventory_run_id", "paper_id", "chunk_key", "embedding_profile_id",
+            name="uq_lvrt_target_identity",
+        ),
+        Index("ix_lvrt_run_status", "inventory_run_id", "status"),
+        CheckConstraint(
+            "status IN ('planned','indexing','indexed','already_indexed',"
+            "'content_unavailable','failed')",
+            name="ck_lvrt_status",
+        ),
+        CheckConstraint("attempt_count >= 0", name="ck_lvrt_attempt_count"),
+        CheckConstraint("source_record_count >= 1", name="ck_lvrt_source_count"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    inventory_run_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("legacy_vector_inventory_runs.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    paper_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("papers.id", ondelete="RESTRICT"), nullable=False,
+    )
+    chunk_key: Mapped[str] = mapped_column(String(255), nullable=False)
+    embedding_profile_id: Mapped[str] = mapped_column(
+        String(64), ForeignKey("embedding_profiles.profile_id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    content_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    target_vector_record_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    status: Mapped[str] = mapped_column(String(30), nullable=False, default="planned")
+    representative_legacy_record_id: Mapped[str | None] = mapped_column(String(256), nullable=True)
+    source_record_count: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+    attempt_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    failure_code: Mapped[str | None] = mapped_column(String(80), nullable=True)
+    failure_detail: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=lambda: datetime.now(timezone.utc),
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime, default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
+    )
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+
+
 # ── P0.2.7: Provenance immutability enforcement ─────────────────────
 
 
