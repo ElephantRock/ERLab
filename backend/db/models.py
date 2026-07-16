@@ -1501,6 +1501,111 @@ class VectorRetrievalResult(Base):
     canonical_distance: Mapped[float] = mapped_column(Float, nullable=False)
 
 
+class LegacyVectorInventoryRun(Base):
+    """Immutable legacy collection scan and reindex attempt (P0.3.5)."""
+
+    __tablename__ = "legacy_vector_inventory_runs"
+    __table_args__ = (
+        CheckConstraint(
+            "inventory_schema_version = 'legacy_vector_inventory_v1'",
+            name="ck_lvir_schema_version",
+        ),
+        CheckConstraint(
+            "status IN ('pending','scanning','scanned','reindexing','complete','failed')",
+            name="ck_lvir_status",
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    inventory_schema_version: Mapped[str] = mapped_column(String(30), nullable=False)
+    vector_store: Mapped[str] = mapped_column(String(40), nullable=False, default="chroma")
+    collection_name: Mapped[str] = mapped_column(String(120), nullable=False)
+    target_embedding_profile_id: Mapped[str] = mapped_column(
+        String(64), ForeignKey("embedding_profiles.profile_id", ondelete="RESTRICT"), nullable=False,
+    )
+    status: Mapped[str] = mapped_column(String(20), nullable=False, default="pending")
+    source_record_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    mapped_record_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    ambiguous_record_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    unmapped_record_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    invalid_record_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    identity_conflict_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    distinct_target_paper_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    newly_indexed_target_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    already_indexed_target_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    duplicate_target_record_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    content_unavailable_target_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    reindex_failed_target_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    source_snapshot_fingerprint: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    failure_code: Mapped[str | None] = mapped_column(String(80), nullable=True)
+    failure_detail: Mapped[str | None] = mapped_column(Text, nullable=True)
+    started_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    scanned_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=lambda: datetime.now(timezone.utc),
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime, default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
+    )
+
+
+class LegacyVectorInventoryRecord(Base):
+    """One legacy Chroma record's mapping and disposition (P0.3.5)."""
+
+    __tablename__ = "legacy_vector_inventory_records"
+    __table_args__ = (
+        Index("ix_lvirec_run_mapping", "inventory_run_id", "mapping_status"),
+        CheckConstraint(
+            "mapping_status IN ('mapped','ambiguous','unmapped','invalid','identity_conflict')",
+            name="ck_lvirec_mapping_status",
+        ),
+        CheckConstraint(
+            "mapping_method IS NULL OR mapping_method IN "
+            "('paper_id_exact','doi_exact','source_identifier_exact',"
+            "'title_author_year_exact','none')",
+            name="ck_lvirec_mapping_method",
+        ),
+        CheckConstraint(
+            "disposition IS NULL OR disposition IN "
+            "('reindexed','already_indexed','duplicate_target',"
+            "'quarantined_ambiguous','quarantined_unmapped',"
+            "'quarantined_invalid','quarantined_identity_conflict',"
+            "'content_unavailable','reindex_failed')",
+            name="ck_lvirec_disposition",
+        ),
+    )
+
+    inventory_run_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("legacy_vector_inventory_runs.id", ondelete="CASCADE"),
+        primary_key=True,
+    )
+    legacy_record_id: Mapped[str] = mapped_column(String(256), primary_key=True)
+    legacy_record_fingerprint: Mapped[str] = mapped_column(String(64), nullable=False)
+    legacy_metadata_fingerprint: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    legacy_document_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    legacy_embedding_dimension: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    mapping_schema_version: Mapped[str] = mapped_column(String(30), nullable=False)
+    mapping_status: Mapped[str] = mapped_column(String(30), nullable=False)
+    mapping_method: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    mapped_paper_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    candidate_match_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    identity_conflict_code: Mapped[str | None] = mapped_column(String(60), nullable=True)
+    disposition: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    target_vector_record_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    failure_code: Mapped[str | None] = mapped_column(String(80), nullable=True)
+    failure_detail: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=lambda: datetime.now(timezone.utc),
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime, default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
+    )
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+
+
 # ── P0.2.7: Provenance immutability enforcement ─────────────────────
 
 
