@@ -1,0 +1,141 @@
+"""Legacy collection freeze and quarantine (P0.3.6).
+
+Controls the runtime accessibility of the ``research_papers`` collection.
+
+After P0.3.6:
+  - Legacy VectorStore construction is disabled for all paths
+  - Legacy API endpoints (/search, /ingest) refuse with a clear error
+  - Only explicit maintenance inventory (P0.3.5 CLI) may inspect the collection
+  - The collection may be quarantined (renamed) or deleted under operator action
+
+The freeze is controlled by a durable database flag so it survives restarts.
+"""
+
+from __future__ import annotations
+
+import logging
+from datetime import datetime, timezone
+from typing import Literal
+
+from sqlalchemy import select, update
+from sqlalchemy.orm import Session
+
+logger = logging.getLogger(__name__)
+
+
+class LegacyCollectionFrozenError(Exception):
+    """Raised when production code attempts to use the frozen legacy collection."""
+
+
+_LEGACY_COLLECTION = "research_papers"
+
+
+# ── Freeze state ─────────────────────────────────────────────────────
+
+
+def is_legacy_collection_frozen(session: Session) -> bool:
+    """Check if the legacy collection is frozen (production access disabled).
+
+    Uses a singleton key-value in the database. If the key doesn't exist,
+    the collection is NOT frozen (backward compat during transition).
+    """
+    result = session.execute(
+        select(_LegacyFreezeState).where(
+            _LegacyFreezeState.collection_name == _LEGACY_COLLECTION
+        )
+    ).scalar_one_or_none()
+    return result is not None and result.status in ("frozen", "quarantined", "deleted")
+
+
+def freeze_legacy_collection(session: Session, *, reason: str = "P0.3.6 isolation") -> None:
+    """Freeze the legacy collection — disable all production access."""
+    existing = session.execute(
+        select(_LegacyFreezeState).where(
+            _LegacyFreezeState.collection_name == _LEGACY_COLLECTION
+        )
+    ).scalar_one_or_none()
+
+    if existing is not None:
+        if existing.status in ("frozen", "quarantined", "deleted"):
+            return  # Already frozen
+        existing.status = "frozen"
+        existing.reason = reason
+        existing.frozen_at = datetime.now(timezone.utc)
+    else:
+        state = _LegacyFreezeState(
+            collection_name=_LEGACY_COLLECTION,
+            status="frozen",
+            reason=reason,
+            frozen_at=datetime.now(timezone.utc),
+        )
+        session.add(state)
+    session.commit()
+    logger.info("Legacy collection %s frozen: %s", _LEGACY_COLLECTION, reason)
+
+
+def quarantine_legacy_collection(session: Session, *, reason: str = "P0.3.6 quarantine") -> None:
+    """Quarantine the legacy collection — rename/access-revoke posture."""
+    session.execute(
+        update(_LegacyFreezeState)
+        .where(_LegacyFreezeState.collection_name == _LEGACY_COLLECTION)
+        .values(status="quarantined", reason=reason,
+                quarantined_at=datetime.now(timezone.utc))
+    )
+    session.commit()
+    logger.info("Legacy collection %s quarantined", _LEGACY_COLLECTION)
+
+
+def delete_legacy_collection_record(session: Session, *, reason: str = "P0.3.6 deletion") -> None:
+    """Mark the legacy collection as deleted (physical deletion is a separate Chroma operation)."""
+    session.execute(
+        update(_LegacyFreezeState)
+        .where(_LegacyFreezeState.collection_name == _LEGACY_COLLECTION)
+        .values(status="deleted", reason=reason,
+                deleted_at=datetime.now(timezone.utc))
+    )
+    session.commit()
+    logger.info("Legacy collection %s marked deleted", _LEGACY_COLLECTION)
+
+
+# ── Production guard ─────────────────────────────────────────────────
+
+
+def assert_legacy_not_frozen(session: Session) -> None:
+    """Guard for production code that constructs legacy VectorStore.
+
+    Call this before any production access to the legacy collection.
+    Raises LegacyCollectionFrozenError if the collection is frozen.
+    """
+    if is_legacy_collection_frozen(session):
+        raise LegacyCollectionFrozenError(
+            f"The legacy collection '{_LEGACY_COLLECTION}' is frozen. "
+            f"Production access is disabled. Use the governed scoped vector "
+            f"service (/search/governed) for governed runs."
+        )
+
+
+# ── ORM model for the freeze state ───────────────────────────────────
+# This is a simple singleton-style table that doesn't need a full migration
+# for P0.3.6 — it uses an existing pattern of a settings/state table.
+# We define it here and let create_all handle it for tests.
+# In production, migration 027 would add it formally.
+
+
+from sqlalchemy import Boolean, Column, DateTime, Integer, String, Text
+
+from backend.db.database import Base
+
+
+class _LegacyFreezeState(Base):
+    """Durable freeze state for the legacy collection."""
+
+    __tablename__ = "legacy_collection_freeze_state"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    collection_name = Column(String(120), unique=True, nullable=False)
+    status = Column(String(30), nullable=False, default="active")  # active|frozen|quarantined|deleted
+    reason = Column(Text, nullable=True)
+    frozen_at = Column(DateTime, nullable=True)
+    quarantined_at = Column(DateTime, nullable=True)
+    deleted_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))

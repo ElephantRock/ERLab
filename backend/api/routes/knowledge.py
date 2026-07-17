@@ -119,9 +119,15 @@ async def search_knowledge(request: SearchRequest):
     """
     try:
         from backend.config import get_settings
+        from backend.db.database import get_session
         from backend.pipeline.knowledge.embedding_service import EmbeddingService
         from backend.pipeline.knowledge.vector_store import VectorStore
+        from backend.pipeline.legacy_collection_freeze import assert_legacy_not_frozen, LegacyCollectionFrozenError
         from backend.providers.provider_factory import create_provider
+
+        # P0.3.6: Check if legacy collection is frozen
+        with get_session() as freeze_session:
+            assert_legacy_not_frozen(freeze_session)
 
         provider = create_provider()
         embedding = EmbeddingService(provider)
@@ -330,10 +336,16 @@ async def ingest_pdf(file: UploadFile = File(...)):
 
         # Embed and store chunks
         from backend.config import get_settings
+        from backend.db.database import get_session
         from backend.pipeline.knowledge.embedding_service import EmbeddingService
         from backend.pipeline.knowledge.vector_store import VectorStore
+        from backend.pipeline.legacy_collection_freeze import assert_legacy_not_frozen
         from backend.pipeline.literature.models import Paper
         from backend.providers.provider_factory import create_provider
+
+        # P0.3.6: Check if legacy collection is frozen
+        with get_session() as freeze_session:
+            assert_legacy_not_frozen(freeze_session)
 
         settings = get_settings()
         provider = create_provider()
