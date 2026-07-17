@@ -1586,6 +1586,7 @@ class LegacyVectorInventoryRecord(Base):
     legacy_metadata_fingerprint: Mapped[str | None] = mapped_column(String(64), nullable=True)
     legacy_document_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
     legacy_embedding_dimension: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    legacy_identity_json: Mapped[str | None] = mapped_column(Text, nullable=True)
     mapping_schema_version: Mapped[str] = mapped_column(String(30), nullable=False)
     mapping_status: Mapped[str] = mapped_column(String(30), nullable=False)
     mapping_method: Mapped[str | None] = mapped_column(String(40), nullable=True)

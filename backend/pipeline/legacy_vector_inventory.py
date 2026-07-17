@@ -503,6 +503,19 @@ def scan_legacy_collection(
                     json.dumps(record.metadata, sort_keys=True, separators=(",", ":")).encode()
                 ).hexdigest()
 
+                # Persist the frozen identity snapshot so mapping reads from
+                # the immutable record, not mutable Chroma metadata.
+                identity_json = json.dumps({
+                    "schema_version": identity.schema_version,
+                    "paper_id": identity.paper_id,
+                    "doi": identity.doi,
+                    "source": identity.source,
+                    "source_record_id": identity.source_record_id,
+                    "title": identity.title,
+                    "first_author": identity.first_author,
+                    "publication_year": identity.publication_year,
+                }, sort_keys=True, separators=(",", ":"))
+
                 inv_record = LegacyVectorInventoryRecord(
                     inventory_run_id=inventory_run_id,
                     legacy_record_id=rid,
@@ -510,6 +523,7 @@ def scan_legacy_collection(
                     legacy_metadata_fingerprint=meta_fp,
                     legacy_document_hash=_document_hash(record.document),
                     legacy_embedding_dimension=record.embedding_dimension,
+                    legacy_identity_json=identity_json,
                     mapping_schema_version=_MAPPING_SCHEMA_VERSION,
                     mapping_status="unmapped",  # Will be updated in mapping phase
                 )
@@ -559,22 +573,32 @@ def run_mapping_phase(
     *,
     inventory_run_id: int,
 ) -> None:
-    """Map every inventory record to canonical papers."""
+    """Map every inventory record to canonical papers using the frozen snapshot.
+
+    Reads ``legacy_identity_json`` from each inventory row (persisted during
+    scan) — never re-reads Chroma metadata. This preserves the immutable
+    snapshot guarantee.
+    """
     from backend.db.models import (
         LegacyVectorInventoryRecord,
         LegacyVectorInventoryRun,
     )
 
+    # Atomic claim: scanned → reindexing
     session = session_factory()
     try:
-        session.execute(
+        claim = session.execute(
             update(LegacyVectorInventoryRun)
             .where(
                 LegacyVectorInventoryRun.id == inventory_run_id,
                 LegacyVectorInventoryRun.status == "scanned",
             )
-            .values(status="reindexing")  # Combined mapping+reindex for simplicity
+            .values(status="reindexing")
         )
+        if claim.rowcount != 1:
+            raise RuntimeError(
+                f"inventory run {inventory_run_id} not in scanned state"
+            )
         session.commit()
     except Exception:
         session.rollback()
@@ -582,41 +606,56 @@ def run_mapping_phase(
     finally:
         session.close()
 
-    # Process each record
+    # Load all inventory records with their frozen identity
     session = session_factory()
     try:
         records = session.execute(
-            select(LegacyVectorInventoryRecord).where(
+            select(
+                LegacyVectorInventoryRecord.legacy_record_id,
+                LegacyVectorInventoryRecord.legacy_identity_json,
+            ).where(
                 LegacyVectorInventoryRecord.inventory_run_id == inventory_run_id
             )
-        ).scalars().all()
-        session.commit()
+        ).all()
     finally:
         session.close()
 
     counts = {"mapped": 0, "ambiguous": 0, "unmapped": 0, "invalid": 0, "identity_conflict": 0}
 
-    for record in records:
-        # Reconstruct identity from stored fingerprint fields
-        # In production, we'd store extracted identity; for P0.3.5 we re-read
+    for row in records:
+        legacy_rid = row[0]
+        identity_json = row[1]
+
+        # Reconstruct identity from frozen snapshot
+        if identity_json:
+            identity_data = json.loads(identity_json)
+            identity = ExtractedLegacyIdentity(
+                schema_version=identity_data.get("schema_version", "legacy_identity_v1"),
+                paper_id=identity_data.get("paper_id"),
+                doi=identity_data.get("doi"),
+                source=identity_data.get("source"),
+                source_record_id=identity_data.get("source_record_id"),
+                title=identity_data.get("title"),
+                first_author=identity_data.get("first_author"),
+                publication_year=identity_data.get("publication_year"),
+            )
+        else:
+            identity = ExtractedLegacyIdentity(
+                schema_version="legacy_identity_v1",
+                paper_id=None, doi=None, source=None, source_record_id=None,
+                title=None, first_author=None, publication_year=None,
+            )
+
+        # Run the real mapper from the frozen snapshot
         session = session_factory()
         try:
-            # We need the original metadata to re-extract identity
-            # For the test path, identity is passed directly
-            # In production, we'd store it or re-read from legacy
-            decision = LegacyMappingDecision(
-                mapping_status="unmapped",
-                mapping_method=None,
-                mapped_paper_id=None,
-                candidate_match_count=0,
-                identity_conflict_code=None,
-            )
-            # Update the record
+            decision = map_legacy_identity(session, identity)
+
             session.execute(
                 update(LegacyVectorInventoryRecord)
                 .where(
                     LegacyVectorInventoryRecord.inventory_run_id == inventory_run_id,
-                    LegacyVectorInventoryRecord.legacy_record_id == record.legacy_record_id,
+                    LegacyVectorInventoryRecord.legacy_record_id == legacy_rid,
                 )
                 .values(
                     mapping_status=decision.mapping_status,
@@ -715,3 +754,456 @@ def verify_source_drift(
 
     current_fp = compute_source_snapshot_fingerprint(all_records)
     return current_fp == original_fp
+
+
+# ── Target planning (P0.3.5D) ───────────────────────────────────────
+
+
+def plan_reindex_targets(
+    session_factory: sessionmaker,
+    *,
+    inventory_run_id: int,
+    embedding_profile_id: str,
+) -> int:
+    """Plan deterministic canonical reindex targets from mapped records.
+
+    Groups mapped records by paper_id, creates one LegacyVectorReindexTarget
+    per distinct paper, and selects the lexicographically smallest
+    legacy_record_id as the representative.
+
+    Returns the number of distinct targets planned.
+    """
+    from backend.db.models import (
+        LegacyVectorInventoryRecord,
+        LegacyVectorReindexTarget,
+        Paper,
+    )
+
+    session = session_factory()
+    try:
+        # Get all mapped records grouped by paper_id
+        mapped = session.execute(
+            select(
+                LegacyVectorInventoryRecord.mapped_paper_id,
+                LegacyVectorInventoryRecord.legacy_record_id,
+            ).where(
+                LegacyVectorInventoryRecord.inventory_run_id == inventory_run_id,
+                LegacyVectorInventoryRecord.mapping_status == "mapped",
+                LegacyVectorInventoryRecord.mapped_paper_id.is_not(None),
+            ).order_by(LegacyVectorInventoryRecord.legacy_record_id)
+        ).all()
+    finally:
+        session.close()
+
+    # Group by paper_id, select representative
+    paper_to_records: dict[int, list[str]] = {}
+    for paper_id, legacy_rid in mapped:
+        paper_to_records.setdefault(paper_id, []).append(legacy_rid)
+
+    target_count = 0
+    for paper_id, record_ids in sorted(paper_to_records.items()):
+        # Representative = lexicographically smallest
+        representative = min(record_ids)
+
+        session = session_factory()
+        try:
+            # Load canonical paper to build content
+            paper = session.get(Paper, paper_id)
+            if paper is None:
+                # Paper disappeared — mark all records as content_unavailable
+                for rid in record_ids:
+                    session.execute(
+                        update(LegacyVectorInventoryRecord)
+                        .where(
+                            LegacyVectorInventoryRecord.inventory_run_id == inventory_run_id,
+                            LegacyVectorInventoryRecord.legacy_record_id == rid,
+                        )
+                        .values(disposition="content_unavailable", completed_at=_now())
+                    )
+                session.commit()
+                continue
+
+            # Build canonical document using the shared helper
+            from backend.pipeline.vector_contracts import build_title_abstract_document
+            doc = build_title_abstract_document(
+                paper_id=paper_id,
+                title=paper.title or "",
+                abstract=getattr(paper, "abstract", None),
+                embedding_profile_id=embedding_profile_id,
+            )
+
+            # Check if target already exists
+            existing = session.execute(
+                select(LegacyVectorReindexTarget).where(
+                    LegacyVectorReindexTarget.inventory_run_id == inventory_run_id,
+                    LegacyVectorReindexTarget.paper_id == paper_id,
+                    LegacyVectorReindexTarget.chunk_key == doc.chunk_key,
+                    LegacyVectorReindexTarget.embedding_profile_id == embedding_profile_id,
+                )
+            ).scalar_one_or_none()
+
+            if existing is None:
+                target = LegacyVectorReindexTarget(
+                    inventory_run_id=inventory_run_id,
+                    paper_id=paper_id,
+                    chunk_key=doc.chunk_key,
+                    embedding_profile_id=embedding_profile_id,
+                    content_hash=doc.content_hash,
+                    status="planned",
+                    representative_legacy_record_id=representative,
+                    source_record_count=len(record_ids),
+                )
+                session.add(target)
+                session.flush()
+            else:
+                # Already planned
+                pass
+
+            session.commit()
+            target_count += 1
+        except Exception:
+            session.rollback()
+            raise
+        finally:
+            session.close()
+
+    return target_count
+
+
+# ── Reindex orchestration (P0.3.5E) ──────────────────────────────────
+
+
+async def execute_reindex_targets(
+    session_factory: sessionmaker,
+    *,
+    inventory_run_id: int,
+    governed_backend: Any,
+    embedding_provider: Any,
+    profile_dict: dict[str, Any],
+    embedding_profile_id: str,
+) -> dict[str, int]:
+    """Execute governed reindexing for all planned targets.
+
+    Calls VectorIndexer.index_document for each target, then propagates
+    disposition to source records.
+
+    Returns counts: {indexed, already_indexed, failed, content_unavailable}.
+    """
+    from backend.db.models import (
+        LegacyVectorInventoryRecord,
+        LegacyVectorReindexTarget,
+        Paper,
+    )
+    from backend.pipeline.vector_indexer import index_document
+    from backend.pipeline.vector_contracts import build_title_abstract_document
+
+    session = session_factory()
+    try:
+        targets = session.execute(
+            select(LegacyVectorReindexTarget).where(
+                LegacyVectorReindexTarget.inventory_run_id == inventory_run_id,
+                LegacyVectorReindexTarget.status.in_(["planned", "failed"]),
+            )
+        ).scalars().all()
+    finally:
+        session.close()
+
+    counts = {"indexed": 0, "already_indexed": 0, "failed": 0, "content_unavailable": 0}
+
+    for target in targets:
+        # Atomic target claim
+        session = session_factory()
+        try:
+            claim = session.execute(
+                update(LegacyVectorReindexTarget)
+                .where(
+                    LegacyVectorReindexTarget.id == target.id,
+                    LegacyVectorReindexTarget.status.in_(["planned", "failed"]),
+                )
+                .values(
+                    status="indexing",
+                    attempt_count=LegacyVectorReindexTarget.attempt_count + 1,
+                )
+            )
+            if claim.rowcount != 1:
+                continue  # Already claimed
+            session.commit()
+        except Exception:
+            session.rollback()
+            continue
+        finally:
+            session.close()
+
+        # Load canonical paper
+        session = session_factory()
+        try:
+            paper = session.get(Paper, target.paper_id)
+        finally:
+            session.close()
+
+        if paper is None or not paper.title:
+            # Content unavailable
+            _propagate_target_outcome(
+                session_factory, inventory_run_id, target,
+                "content_unavailable", None,
+            )
+            counts["content_unavailable"] += 1
+            continue
+
+        # Build canonical document
+        doc = build_title_abstract_document(
+            paper_id=paper.id,
+            title=paper.title,
+            abstract=getattr(paper, "abstract", None),
+            embedding_profile_id=embedding_profile_id,
+        )
+
+        # Call VectorIndexer
+        try:
+            outcome = await index_document(
+                session_factory=session_factory,
+                backend=governed_backend,
+                embedding_provider=embedding_provider,
+                profile=profile_dict,
+                document=doc,
+            )
+
+            if outcome.status == "indexed":
+                _propagate_target_outcome(
+                    session_factory, inventory_run_id, target,
+                    "indexed", outcome.vector_record_id,
+                )
+                counts["indexed"] += 1
+            elif outcome.status == "already_indexed":
+                _propagate_target_outcome(
+                    session_factory, inventory_run_id, target,
+                    "already_indexed", outcome.vector_record_id,
+                )
+                counts["already_indexed"] += 1
+
+        except Exception as e:
+            logger.warning("Reindex failed for target %s: %s", target.id, e)
+            _propagate_target_outcome(
+                session_factory, inventory_run_id, target,
+                "failed", None, failure_detail=str(e)[:500],
+            )
+            counts["failed"] += 1
+
+    return counts
+
+
+def _propagate_target_outcome(
+    session_factory: sessionmaker,
+    inventory_run_id: int,
+    target: Any,
+    target_status: str,
+    vector_record_id: str | None,
+    failure_detail: str | None = None,
+) -> None:
+    """Propagate a target's outcome to the target row and its source records."""
+    from backend.db.models import (
+        LegacyVectorInventoryRecord,
+        LegacyVectorReindexTarget,
+    )
+
+    session = session_factory()
+    try:
+        now = _now()
+
+        # Update target
+        update_values: dict[str, Any] = {
+            "status": target_status,
+            "completed_at": now,
+        }
+        if vector_record_id:
+            update_values["target_vector_record_id"] = vector_record_id
+        if failure_detail:
+            update_values["failure_code"] = "reindex_failed"
+            update_values["failure_detail"] = failure_detail
+
+        session.execute(
+            update(LegacyVectorReindexTarget)
+            .where(LegacyVectorReindexTarget.id == target.id)
+            .values(**update_values)
+        )
+
+        # Determine source-record dispositions
+        if target_status in ("indexed", "already_indexed"):
+            # Representative → reindexed/already_indexed
+            # Others → duplicate_target
+            all_records = session.execute(
+                select(LegacyVectorInventoryRecord.legacy_record_id).where(
+                    LegacyVectorInventoryRecord.inventory_run_id == inventory_run_id,
+                    LegacyVectorInventoryRecord.mapped_paper_id == target.paper_id,
+                )
+            ).scalars().all()
+
+            for rid in all_records:
+                source_disposition = (
+                    "reindexed" if target_status == "indexed" and rid == target.representative_legacy_record_id
+                    else "already_indexed" if target_status == "already_indexed" and rid == target.representative_legacy_record_id
+                    else "duplicate_target"
+                )
+                session.execute(
+                    update(LegacyVectorInventoryRecord)
+                    .where(
+                        LegacyVectorInventoryRecord.inventory_run_id == inventory_run_id,
+                        LegacyVectorInventoryRecord.legacy_record_id == rid,
+                    )
+                    .values(
+                        disposition=source_disposition,
+                        target_vector_record_id=vector_record_id,
+                        completed_at=now,
+                    )
+                )
+        elif target_status == "content_unavailable":
+            session.execute(
+                update(LegacyVectorInventoryRecord)
+                .where(
+                    LegacyVectorInventoryRecord.inventory_run_id == inventory_run_id,
+                    LegacyVectorInventoryRecord.mapped_paper_id == target.paper_id,
+                )
+                .values(disposition="content_unavailable", completed_at=now)
+            )
+        elif target_status == "failed":
+            session.execute(
+                update(LegacyVectorInventoryRecord)
+                .where(
+                    LegacyVectorInventoryRecord.inventory_run_id == inventory_run_id,
+                    LegacyVectorInventoryRecord.mapped_paper_id == target.paper_id,
+                )
+                .values(disposition="reindex_failed", completed_at=now)
+            )
+
+        session.commit()
+    except Exception:
+        session.rollback()
+    finally:
+        session.close()
+
+
+# ── Aggregate reconciliation (P0.3.5G) ───────────────────────────────
+
+
+def reconcile_inventory_aggregates(
+    session_factory: sessionmaker,
+    *,
+    inventory_run_id: int,
+) -> tuple[bool, str | None]:
+    """Recompute all aggregates from ledger rows and verify equations.
+
+    Returns (is_valid, failure_detail).
+    """
+    from backend.db.models import (
+        LegacyVectorInventoryRecord,
+        LegacyVectorInventoryRun,
+        LegacyVectorReindexTarget,
+    )
+
+    session = session_factory()
+    try:
+        # Count mapping statuses from records
+        status_counts: dict[str, int] = {}
+        disposition_counts: dict[str, int] = {}
+
+        records = session.execute(
+            select(
+                LegacyVectorInventoryRecord.mapping_status,
+                LegacyVectorInventoryRecord.disposition,
+            ).where(
+                LegacyVectorInventoryRecord.inventory_run_id == inventory_run_id
+            )
+        ).all()
+
+        for mapping_status, disposition in records:
+            status_counts[mapping_status] = status_counts.get(mapping_status, 0) + 1
+            if disposition:
+                disposition_counts[disposition] = disposition_counts.get(disposition, 0) + 1
+
+        # Count targets
+        target_status_counts: dict[str, int] = {}
+        targets = session.execute(
+            select(LegacyVectorReindexTarget.status).where(
+                LegacyVectorReindexTarget.inventory_run_id == inventory_run_id
+            )
+        ).all()
+        for (ts,) in targets:
+            target_status_counts[ts] = target_status_counts.get(ts, 0) + 1
+
+        run = session.execute(
+            select(LegacyVectorInventoryRun).where(
+                LegacyVectorInventoryRun.id == inventory_run_id
+            )
+        ).scalar_one()
+        source_count = run.source_record_count or 0
+
+        # Equation 1: source = mapped + ambiguous + unmapped + invalid + conflict
+        eq1 = source_count == (
+            status_counts.get("mapped", 0)
+            + status_counts.get("ambiguous", 0)
+            + status_counts.get("unmapped", 0)
+            + status_counts.get("invalid", 0)
+            + status_counts.get("identity_conflict", 0)
+        )
+        if not eq1:
+            return False, f"mapping equation violated: {source_count} != {status_counts}"
+
+        # Equation 2: mapped = reindexed + already_indexed + duplicate + content_unavailable + failed
+        mapped = status_counts.get("mapped", 0)
+        eq2 = mapped == (
+            disposition_counts.get("reindexed", 0)
+            + disposition_counts.get("already_indexed", 0)
+            + disposition_counts.get("duplicate_target", 0)
+            + disposition_counts.get("content_unavailable", 0)
+            + disposition_counts.get("reindex_failed", 0)
+        )
+        if not eq2:
+            return False, f"disposition equation violated: {mapped} != {disposition_counts}"
+
+        # Equation 3: distinct targets = indexed + already_indexed + content_unavailable + failed
+        distinct_targets = len(targets)
+        eq3 = distinct_targets == (
+            target_status_counts.get("indexed", 0)
+            + target_status_counts.get("already_indexed", 0)
+            + target_status_counts.get("content_unavailable", 0)
+            + target_status_counts.get("failed", 0)
+        )
+        if not eq3:
+            return False, f"target equation violated: {distinct_targets} != {target_status_counts}"
+
+        # Completion policy: no failed targets, no nonterminal targets
+        failed_targets = target_status_counts.get("failed", 0)
+        nonterminal = (
+            target_status_counts.get("planned", 0)
+            + target_status_counts.get("indexing", 0)
+        )
+        if failed_targets > 0:
+            return False, f"{failed_targets} failed targets prevent completion"
+        if nonterminal > 0:
+            return False, f"{nonterminal} nonterminal targets prevent completion"
+
+        # Update run aggregates
+        session.execute(
+            update(LegacyVectorInventoryRun)
+            .where(LegacyVectorInventoryRun.id == inventory_run_id)
+            .values(
+                mapped_record_count=status_counts.get("mapped", 0),
+                ambiguous_record_count=status_counts.get("ambiguous", 0),
+                unmapped_record_count=status_counts.get("unmapped", 0),
+                invalid_record_count=status_counts.get("invalid", 0),
+                identity_conflict_count=status_counts.get("identity_conflict", 0),
+                distinct_target_paper_count=distinct_targets,
+                newly_indexed_target_count=target_status_counts.get("indexed", 0),
+                already_indexed_target_count=target_status_counts.get("already_indexed", 0),
+                content_unavailable_target_count=target_status_counts.get("content_unavailable", 0),
+                reindex_failed_target_count=failed_targets,
+                duplicate_target_record_count=disposition_counts.get("duplicate_target", 0),
+            )
+        )
+        session.commit()
+        return True, None
+    except Exception as e:
+        session.rollback()
+        return False, str(e)
+    finally:
+        session.close()
