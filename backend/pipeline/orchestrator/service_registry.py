@@ -88,9 +88,12 @@ class ServiceRegistry:
         if getattr(settings, "embedding_fallback_enabled", False):
             from backend.pipeline.knowledge.embedding_providers import (
                 FallbackEmbeddingProvider,
-                OllamaEmbeddingProvider,
+                create_embedding_provider,
             )
-            fallback = OllamaEmbeddingProvider(base_url=settings.ollama_base_url)
+            fallback = create_embedding_provider(
+                provider_name="ollama",
+                base_url=settings.ollama_base_url,
+            )
             embedding_provider = FallbackEmbeddingProvider(embedding_provider, fallback)
 
         self.embedding = EmbeddingService(
