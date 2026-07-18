@@ -135,14 +135,18 @@ def _resolve_same_domain_prior_runs(
 
     domain_key = current_run.domain_scope_key
 
-    # Find earlier reconciled provenance_v1 runs with the same domain
+    # Find earlier reconciled provenance_v1 runs with the same domain.
+    # Use id < run_id as the primary ordering criterion (deterministic,
+    # immune to timestamp precision issues). The created_at check is a
+    # secondary guard against unusual ID allocation patterns; using <=
+    # avoids excluding prior runs created in the same microsecond.
     prior_runs = session.execute(
         select(PipelineRun.id).where(
             PipelineRun.domain_scope_key == domain_key,
             PipelineRun.provenance_version == "provenance_v1",
             PipelineRun.id != run_id,
             PipelineRun.id < run_id,
-            PipelineRun.created_at < current_run.created_at,
+            PipelineRun.created_at <= current_run.created_at,
         )
     ).scalars().all()
 
