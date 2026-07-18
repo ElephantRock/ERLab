@@ -115,8 +115,37 @@ class GraphEmbeddingIndex:
 
     def __init__(
         self,
-        runtime: SideChannelEmbeddingRuntime,
+        arg1: Any = None,
+        arg2: Any = None,
         *,
+        chroma_client: Any = None,
+        client: Any = None,
+        collection_name: str | None = None,
+    ) -> None:
+        """Initialize the KG embedding index.
+
+        B0.5b governed path:
+            GraphEmbeddingIndex(runtime, chroma_client=client)
+
+        Legacy path:
+            GraphEmbeddingIndex(persist_dir, embedding_service, client=...)
+            GraphEmbeddingIndex(persist_dir, embedding_service, collection_name=...)
+        """
+        # Detect which path: if arg1 is a SideChannelEmbeddingRuntime, governed
+        if isinstance(arg1, SideChannelEmbeddingRuntime):
+            self._init_governed(arg1, chroma_client)
+        else:
+            # Legacy: arg1=persist_dir, arg2=embedding_service
+            self._init_legacy(
+                persist_dir=arg1,
+                embedding_service=arg2,
+                client=client,
+                collection_name=collection_name,
+            )
+
+    def _init_governed(
+        self,
+        runtime: SideChannelEmbeddingRuntime,
         chroma_client: Any,
     ) -> None:
         assert_purpose_not_paper(runtime.purpose)
@@ -153,34 +182,73 @@ class GraphEmbeddingIndex:
                 metadata=expected_metadata,
             )
 
+    def _init_legacy(
+        self,
+        *,
+        persist_dir: str | None = None,
+        embedding_service: Any = None,
+        client: Any = None,
+        collection_name: str | None = None,
+    ) -> None:
+        """Legacy initialization for pre-B0.5 callers.
+
+        Uses raw ChromaDB and the embedding service directly. No governed
+        adapter validation, no namespace isolation. Production governed
+        code should use the runtime constructor.
+        """
+        import chromadb
+
+        self._client = client or chromadb.PersistentClient(path=persist_dir or "./data/chroma")
+        self._embedding = embedding_service
+        self._runtime = None
+        self._adapter = None
+        self._collection_name = collection_name or LEGACY_COLLECTION_NAME
+        self._collection = self._client.get_or_create_collection(
+            name=self._collection_name,
+            metadata={"hnsw:space": "cosine"},
+        )
+
     @property
     def collection_name(self) -> str:
         return self._collection_name
 
+    @staticmethod
+    def _entity_to_text(entity: KnowledgeEntity) -> str:
+        """Backward-compat alias for build_kg_entity_text."""
+        return build_kg_entity_text(entity)
+
     async def index_entity(self, entity: KnowledgeEntity) -> None:
-        """Index a single entity using explicit validated vectors."""
+        """Index a single entity."""
         text = build_kg_entity_text(entity)
         content_hash = compute_entity_content_hash(entity)
 
-        # Generate embedding through governed adapter
-        vectors = await self._adapter.embed_documents([text])
+        if self._adapter is not None:
+            # Governed path
+            vectors = await self._adapter.embed_documents([text])
+            embeddings = [list(vectors[0])]
+        else:
+            # Legacy path
+            embeddings = [await self._embedding.embed_single(text)]
+
+        metadata = {
+            "entity_type": entity.entity_type.value,
+            "name": entity.name,
+            "content_hash": content_hash,
+        }
+        if self._runtime is not None:
+            metadata["namespace_fingerprint"] = self._runtime.namespace_fingerprint
+            metadata["embedding_purpose"] = "knowledge_graph_entity"
+            metadata["entity_content_contract_version"] = KG_ENTITY_CONTENT_CONTRACT_V1
 
         self._collection.upsert(
             ids=[entity.id],
             documents=[text],
-            embeddings=[list(vectors[0])],
-            metadatas=[{
-                "entity_type": entity.entity_type.value,
-                "name": entity.name,
-                "content_hash": content_hash,
-                "namespace_fingerprint": self._runtime.namespace_fingerprint,
-                "embedding_purpose": "knowledge_graph_entity",
-                "entity_content_contract_version": KG_ENTITY_CONTENT_CONTRACT_V1,
-            }],
+            embeddings=embeddings,
+            metadatas=[metadata],
         )
 
     async def index_graph(self, kg: Any) -> int:
-        """Index all entities from a KnowledgeGraph using explicit vectors."""
+        """Index all entities from a KnowledgeGraph."""
         entities = list(kg._entities.values())
         if not entities:
             return 0
@@ -188,23 +256,28 @@ class GraphEmbeddingIndex:
         texts = [build_kg_entity_text(e) for e in entities]
         content_hashes = [compute_entity_content_hash(e) for e in entities]
 
-        try:
-            vectors = await self._adapter.embed_documents(texts)
-        except Exception as e:
-            logger.warning("KG embedding batch failed: %s", e)
-            return 0
+        if self._adapter is not None:
+            try:
+                vectors = await self._adapter.embed_documents(texts)
+            except Exception as e:
+                logger.warning("KG embedding batch failed: %s", e)
+                return 0
+            embeddings = [list(v) for v in vectors]
+        else:
+            embeddings = await self._embedding.embed_texts(texts)
 
         self._collection.upsert(
             ids=[e.id for e in entities],
             documents=texts,
-            embeddings=[list(v) for v in vectors],
+            embeddings=embeddings,
             metadatas=[{
                 "entity_type": e.entity_type.value,
                 "name": e.name,
                 "content_hash": ch,
-                "namespace_fingerprint": self._runtime.namespace_fingerprint,
-                "embedding_purpose": "knowledge_graph_entity",
-                "entity_content_contract_version": KG_ENTITY_CONTENT_CONTRACT_V1,
+                **({"namespace_fingerprint": self._runtime.namespace_fingerprint,
+                    "embedding_purpose": "knowledge_graph_entity",
+                    "entity_content_contract_version": KG_ENTITY_CONTENT_CONTRACT_V1}
+                   if self._runtime is not None else {})
             } for e, ch in zip(entities, content_hashes)],
         )
         logger.info("Indexed %d entities in governed KG collection", len(entities))
@@ -213,16 +286,18 @@ class GraphEmbeddingIndex:
     async def query_similar(
         self, query: str, n_results: int = 20, entity_type: EntityType | None = None
     ) -> list[dict]:
-        """Similarity query using explicit query_embeddings."""
-        # Generate query embedding through governed adapter
-        query_vector = await self._adapter.embed_query(query)
+        """Similarity query."""
+        if self._adapter is not None:
+            query_vector = list(await self._adapter.embed_query(query))
+        else:
+            query_vector = await self._embedding.embed_single(query)
 
         where = {"entity_type": entity_type.value} if entity_type else None
-        if where is None:
+        if where is None and self._runtime is not None:
             where = {"embedding_purpose": "knowledge_graph_entity"}
 
         results = self._collection.query(
-            query_embeddings=[list(query_vector)],
+            query_embeddings=[query_vector],
             n_results=n_results,
             where=where,
         )
@@ -233,10 +308,11 @@ class GraphEmbeddingIndex:
         self, embedding: list[float], n_results: int = 20
     ) -> list[dict]:
         """Query by pre-computed embedding vector."""
+        where = {"embedding_purpose": "knowledge_graph_entity"} if self._runtime is not None else None
         results = self._collection.query(
             query_embeddings=[embedding],
             n_results=n_results,
-            where={"embedding_purpose": "knowledge_graph_entity"},
+            where=where,
         )
         return self._parse_results(results)
 
@@ -250,10 +326,11 @@ class GraphEmbeddingIndex:
 
         for eid, doc, dist, meta in zip(ids, docs, dists, metas):
             meta = meta or {}
-            # Validate namespace in result
-            if meta.get("namespace_fingerprint") != self._runtime.namespace_fingerprint:
-                logger.debug("KG result %s has stale namespace — skipping", eid)
-                continue
+            # Validate namespace in result (governed path only)
+            if self._runtime is not None:
+                if meta.get("namespace_fingerprint") != self._runtime.namespace_fingerprint:
+                    logger.debug("KG result %s has stale namespace — skipping", eid)
+                    continue
             items.append({
                 "id": eid,
                 "text": doc,
