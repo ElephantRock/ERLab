@@ -204,7 +204,7 @@ def test_validate_correct_embedding():
 
 def test_validate_empty_embedding():
     ok, code = validate_embedding([], 4)
-    assert not ok and code == "embedding_empty"
+    assert not ok and code == "embedding_vector_empty"
 
 
 def test_validate_dimension_mismatch():
@@ -214,17 +214,17 @@ def test_validate_dimension_mismatch():
 
 def test_validate_bool_element():
     ok, code = validate_embedding([True, 0.2, 0.3, 0.4], 4)
-    assert not ok and code == "embedding_non_numeric"
+    assert not ok and code == "embedding_element_type_invalid"
 
 
 def test_validate_nan():
     ok, code = validate_embedding([float("nan"), 0.2, 0.3, 0.4], 4)
-    assert not ok and code == "embedding_non_finite"
+    assert not ok and code == "embedding_element_non_finite"
 
 
 def test_validate_inf():
     ok, code = validate_embedding([float("inf"), 0.2, 0.3, 0.4], 4)
-    assert not ok and code == "embedding_non_finite"
+    assert not ok and code == "embedding_element_non_finite"
 
 
 def test_validate_zero_vector():

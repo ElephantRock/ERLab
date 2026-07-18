@@ -80,26 +80,26 @@ def _compute_input_fingerprint(
 def validate_query_vector(
     query_vector: Any, expected_dimension: int,
 ) -> tuple[bool, str | None]:
-    """Validate a query vector before any backend query."""
-    if query_vector is None:
-        return False, "query_vector_empty"
-    if isinstance(query_vector, (str, bytes)):
-        return False, "query_vector_non_numeric"
-    if not isinstance(query_vector, (list, tuple)):
-        return False, "query_vector_non_numeric"
-    if len(query_vector) == 0:
-        return False, "query_vector_empty"
-    if len(query_vector) != expected_dimension:
-        return False, "query_vector_dimension_mismatch"
-    for v in query_vector:
-        if isinstance(v, bool):
-            return False, "query_vector_non_numeric"
-        if not isinstance(v, (int, float)):
-            return False, "query_vector_non_numeric"
-        if math.isnan(v) or math.isinf(v):
-            return False, "query_vector_non_finite"
-    if all(v == 0.0 for v in query_vector):
-        return False, "query_vector_zero"
+    """Validate a query vector before any backend query.
+
+    Delegates all structural checks to the canonical
+    ``backend.pipeline.knowledge.embedding_validation.validate_embedding_vector``
+    so that rejection rules live in exactly one place.
+
+    Returns (is_valid, failure_code). The failure_code is the canonical
+    EmbeddingValidationError subclass's ``failure_code`` attribute.
+    """
+    from backend.pipeline.knowledge.embedding_validation import (
+        EmbeddingValidationError,
+        validate_embedding_vector,
+    )
+
+    try:
+        validate_embedding_vector(
+            query_vector, expected_dimension=expected_dimension, role="query"
+        )
+    except EmbeddingValidationError as exc:
+        return False, exc.failure_code
     return True, None
 
 

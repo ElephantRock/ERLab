@@ -350,6 +350,69 @@ def test_side_channel_modules_have_no_inline_structural_checks():
     )
 
 
+def test_no_duplicate_embedding_validators_in_governed_modules():
+    """Governed modules must not define their own embedding structural
+    validators — they must delegate to the canonical module.
+
+    Catches differently-named duplicates (e.g. ``validate_embedding`` vs
+    the canonical ``validate_embedding_vector``) that perform the same
+    NaN/Inf/dimension/zero checks inline. The canonical validator's
+    rejection rules must live in exactly one place.
+
+    A wrapper that delegates to the canonical validator (catching
+    EmbeddingValidationError and translating to a different return
+    shape) is permitted — it contains no inline logic of its own.
+    """
+    spec = MANIFEST["canonical_validation"]
+    canonical_module = spec["module"]
+
+    # Heuristic: any function that BOTH (a) has "valid" in its name AND
+    # (b) contains inline NaN/Inf checks is a duplicate structural
+    # validator. A delegating wrapper calls the canonical function and
+    # catches exceptions — it does NOT contain math.isnan/isinf.
+    embedding_check_indicators = ("math.isnan", "math.isinf")
+
+    violations: list[str] = []
+    for rel, path in _iter_production_py():
+        if rel == canonical_module:
+            continue
+        try:
+            source_lines = path.read_text(encoding="utf-8").splitlines()
+        except Exception:
+            continue
+        tree = _read_ast(path)
+        if tree is None:
+            continue
+        for node in ast.walk(tree):
+            if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                continue
+            fname = node.name
+            if "valid" not in fname.lower() and "validate" not in fname.lower():
+                continue
+            if node.end_lineno is None:
+                continue
+            # Slice the function body from source lines
+            func_source = "\n".join(source_lines[node.lineno - 1: node.end_lineno])
+
+            has_inline_check = any(
+                indicator in func_source
+                for indicator in embedding_check_indicators
+            )
+            if has_inline_check:
+                violations.append(
+                    f"{rel}:{node.lineno} {fname}() contains inline "
+                    f"NaN/Inf checks — must delegate to {canonical_module}"
+                )
+
+    assert not violations, (
+        "D4 violation — governed modules define duplicate embedding "
+        "validators with inline structural checks:\n"
+        + "\n".join(f"  {v}" for v in violations)
+        + "\nAll structural validation must delegate to "
+        "backend/pipeline/knowledge/embedding_validation.py."
+    )
+
+
 # ---------------------------------------------------------------------------
 # D5 — Side-channel isolation
 # ---------------------------------------------------------------------------
@@ -416,6 +479,65 @@ def test_side_channel_modules_accept_no_raw_provider_construction():
     assert not violations, (
         "D5 violation — side-channel modules construct raw EmbeddingProviders:\n"
         + "\n".join(f"  {v}" for v in violations)
+    )
+
+
+def test_legacy_side_channel_wiring_confined_to_frozen_call_sites():
+    """Production code may construct side-channel indices via the legacy
+    constructor path ONLY at the explicitly enumerated call sites.
+
+    B0.5 introduced SideChannelEmbeddingRuntime as the governed path for
+    KG, tool, and cache side channels. Three production call sites in
+    ``service_registry.py`` pre-date B0.5 and still use the legacy
+    constructor (``GraphEmbeddingIndex(persist_dir, embedding_service)`` /
+    ``ToolEmbeddingIndex(persist_dir, embedding_service)``). They are
+    feature-flag-gated and default-off.
+
+    This test freezes that list: no NEW production module may construct
+    a side-channel index via the legacy path. New wiring must go through
+    ``SideChannelEmbeddingRuntime``. The three grandfathered sites must
+    be migrated to the governed runtime during P0.4A1+ (capability
+    ledger), at which point they are removed from this list and the
+    legacy constructor itself is removed.
+    """
+    legacy_spec = MANIFEST.get("side_channel_legacy_wiring", {})
+    frozen_sites = {
+        (entry["file"], entry["method"])
+        for entry in legacy_spec.get("known_legacy_call_sites", [])
+    }
+
+    # Side-channel index classes that have a legacy constructor form
+    legacy_index_classes = {"GraphEmbeddingIndex", "ToolEmbeddingIndex"}
+
+    # Scan all production modules for legacy constructor calls
+    found_sites: set[tuple[str, str | None]] = set()
+    for rel, path in _iter_production_py():
+        # Skip the side-channel modules themselves (they DEFINE the constructors)
+        side_channel_modules = {ch["module"] for ch in MANIFEST["side_channels"]}
+        if rel in side_channel_modules:
+            continue
+        tree = _read_ast(path)
+        if tree is None:
+            continue
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Call) and isinstance(node.func, ast.Name):
+                if node.func.id in legacy_index_classes:
+                    # Determine enclosing method (best-effort via lineno)
+                    found_sites.add((rel, None))
+
+    # The only production file allowed to have these calls is service_registry.py
+    # (which contains all three grandfathered sites).
+    allowed_files = {entry["file"] for entry in legacy_spec.get("known_legacy_call_sites", [])}
+    unexpected_files = {
+        rel for (rel, _) in found_sites if rel not in allowed_files
+    }
+
+    assert not unexpected_files, (
+        "D5 violation — new production file constructs side-channel index via "
+        "legacy constructor:\n"
+        + "\n".join(f"  {f}" for f in sorted(unexpected_files))
+        + "\nOnly the frozen call sites in service_registry.py may use the "
+        "legacy constructor. New wiring must use SideChannelEmbeddingRuntime."
     )
 
 

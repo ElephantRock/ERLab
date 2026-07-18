@@ -164,22 +164,22 @@ def test_validate_correct_vector():
 
 def test_validate_empty_vector():
     ok, code = validate_query_vector([], 4)
-    assert not ok and code == "query_vector_empty"
+    assert not ok and code == "embedding_vector_empty"
 
 
 def test_validate_dimension_mismatch():
     ok, code = validate_query_vector([0.1, 0.2], 4)
-    assert not ok and code == "query_vector_dimension_mismatch"
+    assert not ok and code == "embedding_dimension_mismatch"
 
 
 def test_validate_nan():
     ok, code = validate_query_vector([float("nan"), 0.2, 0.3, 0.4], 4)
-    assert not ok and code == "query_vector_non_finite"
+    assert not ok and code == "embedding_element_non_finite"
 
 
 def test_validate_zero_vector():
     ok, code = validate_query_vector([0.0, 0.0, 0.0, 0.0], 4)
-    assert not ok and code == "query_vector_zero"
+    assert not ok and code == "embedding_zero_vector"
 
 
 def test_validate_top_k():

@@ -17,7 +17,6 @@ back and verifies before publishing ``indexed`` eligibility.
 from __future__ import annotations
 
 import logging
-import math
 from datetime import datetime, timezone
 from typing import Any, Literal
 
@@ -121,6 +120,11 @@ def register_embedding_profile(
 
 
 # ── Embedding validation ─────────────────────────────────────────────
+#
+# B0.9 Defect B repair: structural validation is owned by the canonical
+# embedding_validation module. This wrapper preserves the (bool, str)
+# return shape that the indexer's DB-persisted failure codes depend on,
+# while delegating every rejection rule to validate_embedding_vector.
 
 
 def validate_embedding(
@@ -128,31 +132,25 @@ def validate_embedding(
 ) -> tuple[bool, str | None]:
     """Validate an embedding vector before backend write.
 
-    Returns (is_valid, failure_code).
+    Delegates all structural checks to the canonical
+    ``backend.pipeline.knowledge.embedding_validation.validate_embedding_vector``
+    so that rejection rules live in exactly one place.
+
+    Returns (is_valid, failure_code). The failure_code is the canonical
+    EmbeddingValidationError subclass's ``failure_code`` attribute, which
+    the indexer persists into vector_index_records.validation_failure_code.
     """
-    if embedding is None:
-        return False, "embedding_empty"
+    from backend.pipeline.knowledge.embedding_validation import (
+        EmbeddingValidationError,
+        validate_embedding_vector,
+    )
 
-    if not isinstance(embedding, (list, tuple)):
-        return False, "embedding_non_numeric"
-
-    if len(embedding) == 0:
-        return False, "embedding_empty"
-
-    if len(embedding) != expected_dimension:
-        return False, "embedding_dimension_mismatch"
-
-    for v in embedding:
-        if isinstance(v, bool):
-            return False, "embedding_non_numeric"
-        if not isinstance(v, (int, float)):
-            return False, "embedding_non_numeric"
-        if math.isnan(v) or math.isinf(v):
-            return False, "embedding_non_finite"
-
-    if all(v == 0.0 for v in embedding):
-        return False, "embedding_zero_vector"
-
+    try:
+        validate_embedding_vector(
+            embedding, expected_dimension=expected_dimension, role="document"
+        )
+    except EmbeddingValidationError as exc:
+        return False, exc.failure_code
     return True, None
 
 

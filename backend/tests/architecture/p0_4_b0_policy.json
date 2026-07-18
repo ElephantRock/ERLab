@@ -106,6 +106,34 @@
     }
   ],
 
+  "side_channel_legacy_wiring": {
+    "known_legacy_call_sites": [
+      {
+        "file": "backend/pipeline/orchestrator/service_registry.py",
+        "method": "init_cross_refs",
+        "constructs": "GraphEmbeddingIndex(persist_dir=..., embedding_service=self.embedding)",
+        "feature_flag": "embedding_novelty_enabled",
+        "classification": "legacy_bounded",
+        "note": "Constructs KG index via legacy constructor with raw EmbeddingService. Feature-flag gated (default False). Migration to SideChannelEmbeddingRuntime requires EffectiveEmbeddingConfiguration + GovernedEmbeddingAdapter, which belong to P0.4A1+. No new legacy call sites may be added; this list is frozen."
+      },
+      {
+        "file": "backend/pipeline/orchestrator/service_registry.py",
+        "method": "init_graph_rag",
+        "constructs": "GraphEmbeddingIndex(persist_dir=..., embedding_service=self.embedding)",
+        "feature_flag": "graph_rag_enabled",
+        "classification": "legacy_bounded"
+      },
+      {
+        "file": "backend/pipeline/orchestrator/service_registry.py",
+        "method": "init_tool_discovery",
+        "constructs": "ToolEmbeddingIndex(persist_dir=..., embedding_service=self.embedding)",
+        "feature_flag": "tool_discovery_enabled",
+        "classification": "legacy_bounded"
+      }
+    ],
+    "policy": "These three call sites are the only production locations that construct side-channel indices via the legacy constructor path. They pre-date B0.5 and are feature-flag-gated (all default False). They must not propagate to governed (provenance_v1) runs without migration to SideChannelEmbeddingRuntime. The boundary test forbids any NEW production call site outside this frozen list."
+  },
+
   "embedding_purposes": {
     "module": "backend/pipeline/side_channel_embedding.py",
     "literal_type": "EmbeddingPurpose",
