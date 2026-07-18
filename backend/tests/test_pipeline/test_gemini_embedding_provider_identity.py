@@ -364,3 +364,117 @@ class TestGeminiConcurrencySeal:
         assert fake.embed_content_calls == 3
         # Every call observed SAME_KEY — no None, no stale value
         assert all(k == "SAME_KEY" for k in fake.observed_key_for_call)
+
+
+# ─── P0.4B0.1c follow-up: process-wide threading.Lock tests ───────────
+
+
+class TestGeminiProcessWideIsolation:
+    """Process-wide serialization proof: the threading.Lock must coordinate
+    across different event loops and threads, not just within one loop.
+
+    Per directive:
+        two provider instances on separate event loops   isolated
+        two provider instances from separate threads      isolated
+        cancelled caller cannot leave global lock held    proven
+    """
+
+    def test_separate_event_loops_isolated(self, monkeypatch):
+        """Two providers on different event loops cannot interleave."""
+        fake = _ConcurrentFakeGenai()
+        monkeypatch.setitem(sys.modules, "google.generativeai", fake)
+
+        provider_a = GeminiEmbeddingProvider(model="models/embedding-001", api_key="KEY_A")
+        provider_b = GeminiEmbeddingProvider(model="models/embedding-001", api_key="KEY_B")
+
+        # Run each provider in its own event loop concurrently via threads
+        import threading as _threading
+
+        results: dict[str, list] = {}
+        errors: list[Exception] = []
+
+        def _run_in_loop(provider, key, texts):
+            try:
+                res = asyncio.run(provider.embed(texts))
+                results[key] = res
+            except Exception as e:
+                errors.append(e)
+
+        t1 = _threading.Thread(target=_run_in_loop, args=(provider_a, "A", ["a"]))
+        t2 = _threading.Thread(target=_run_in_loop, args=(provider_b, "B", ["b"]))
+        t1.start(); t2.start(); t1.join(); t2.join()
+
+        assert not errors, f"thread errors: {errors}"
+        assert fake.embed_content_calls == 2
+        assert sorted(fake.observed_key_for_call) == ["KEY_A", "KEY_B"]
+
+    def test_cancelled_caller_releases_lock(self, monkeypatch):
+        """A cancelled caller must not leave the threading.Lock held."""
+        import time
+
+        class _SlowFakeGenai:
+            def __init__(self):
+                self.current_api_key = None
+            def configure(self, *, api_key=None):
+                self.current_api_key = api_key
+            def embed_content(self, *, model, content, task_type):
+                time.sleep(0.3)  # Simulate slow provider
+                return {"embedding": [[0.1, 0.1]]}
+
+        fake = _SlowFakeGenai()
+        monkeypatch.setitem(sys.modules, "google.generativeai", fake)
+
+        provider = GeminiEmbeddingProvider(model="models/embedding-001", api_key="KEY_A")
+
+        # Start a slow embed, cancel it mid-flight
+        async def _cancel_mid_flight():
+            task = asyncio.create_task(provider.embed(["test"]))
+            await asyncio.sleep(0.05)  # Let it enter the lock
+            task.cancel()
+            try:
+                await task
+            except asyncio.CancelledError:
+                pass
+
+        asyncio.run(_cancel_mid_flight())
+
+        # The lock must be released — a second call should succeed
+        result = asyncio.run(provider.embed(["second"]))
+        assert len(result) == 1
+
+    def test_cross_thread_isolation(self, monkeypatch):
+        """Two providers called from separate threads observe their own keys."""
+        fake = _ConcurrentFakeGenai()
+        monkeypatch.setitem(sys.modules, "google.generativeai", fake)
+
+        provider_a = GeminiEmbeddingProvider(model="models/embedding-001", api_key="KEY_A")
+        provider_b = GeminiEmbeddingProvider(model="models/embedding-001", api_key="KEY_B")
+
+        import threading as _threading
+
+        errors: list[Exception] = []
+
+        def _embed(provider, texts):
+            try:
+                asyncio.run(provider.embed(texts))
+            except Exception as e:
+                errors.append(e)
+
+        t1 = _threading.Thread(target=_embed, args=(provider_a, ["a"]))
+        t2 = _threading.Thread(target=_embed, args=(provider_b, ["b"]))
+        t1.start(); t2.start(); t1.join(); t2.join()
+
+        assert not errors
+        assert sorted(fake.observed_key_for_call) == ["KEY_A", "KEY_B"]
+
+    def test_identity_evidence_matches_request(self, monkeypatch):
+        """Evidence captured under the lock reflects the instance that served."""
+        fake = _ConcurrentFakeGenai()
+        monkeypatch.setitem(sys.modules, "google.generativeai", fake)
+
+        provider = GeminiEmbeddingProvider(model="models/embedding-001", api_key="KEY_A")
+        batch = asyncio.run(provider.embed_with_evidence(["test"]))
+
+        assert batch.identity_evidence is not None
+        assert batch.identity_evidence.requested_model == "models/embedding-001"
+        assert batch.identity_evidence.provider_kind == "gemini"

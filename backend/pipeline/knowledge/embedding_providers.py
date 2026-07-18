@@ -33,35 +33,23 @@ logger = logging.getLogger(__name__)
 # so all GeminiEmbeddingProvider instances share one process-wide
 # configuration slot. Without serialization, instance B can ``configure``
 # between instance A's ``configure`` and A's ``embed_content`` invocation,
-# causing A's request to execute under B's identity. The lock is held across
-# the entire {configure, embed_content, evidence-capture} critical section
-# so the captured evidence always reflects the configuration that actually
-# served the request.
+# causing A's request to execute under B's identity.
 #
-# Implementation note: ``asyncio.Lock()`` binds to the event loop that was
-# current at construction time. Production typically runs a single loop per
-# process, so a module-level lock is fine there. But to remain correct
-# under any loop topology (including test suites that call asyncio.run()
-# repeatedly, or frameworks that swap loops), we keep one lock PER event
-# loop and look it up dynamically. This is the same pattern used by
-# asyncio's own primitives internally.
-_gemini_sdk_locks_by_loop: dict[int, asyncio.Lock] = {}
+# Process-wide serialization: a single ``threading.Lock`` serializes the
+# complete synchronous critical section {configure, embed_content, evidence
+# capture} across all event loops and threads. This is necessary because:
+#   1. ``embed_content`` is synchronous and runs via ``asyncio.to_thread``
+#   2. An ``asyncio.Lock`` only serializes at the coroutine level within one
+#      event loop — two threads from different loops can interleave
+#   3. A lock keyed by ``id(loop)`` does not coordinate across threads
+#
+# The lock is acquired inside a dedicated synchronous function called via
+# ``asyncio.to_thread``, so it is never held across an ``await`` on the
+# event-loop thread. A cancelled caller releases the lock because
+# ``to_thread`` propagates ``CancelledError`` and the ``with`` block exits.
+import threading
 
-
-def _gemini_sdk_lock() -> asyncio.Lock:
-    """Return the serializing lock for the currently running event loop.
-
-    One lock per loop avoids the "bound to a different event loop" error
-    when the module is imported before any loop exists and then used
-    across several short-lived loops (common in test runners).
-    """
-    loop = asyncio.get_running_loop()
-    key = id(loop)
-    lock = _gemini_sdk_locks_by_loop.get(key)
-    if lock is None:
-        lock = asyncio.Lock()
-        _gemini_sdk_locks_by_loop[key] = lock
-    return lock
+_gemini_sdk_lock = threading.Lock()
 
 
 def _get_default_lmstudio_url() -> str:
@@ -245,28 +233,20 @@ class GeminiEmbeddingProvider(EmbeddingProvider):
         if self._api_key is not None:
             self._genai.configure(api_key=self._api_key)
 
-    async def embed(self, texts: list[str]) -> list[list[float]]:
-        # P0.4B0.1c follow-up: hold the process-wide lock across configure,
-        # the embed_content call, and evidence capture. This is the only
-        # way to guarantee instance A's request does not observe instance
-        # B's configuration under overlapping calls, given the SDK has no
-        # per-client config. The directive is explicit: "Locking only
-        # genai.configure() is insufficient; the protected region must
-        # include the provider call that consumes that configuration."
-        async with _gemini_sdk_lock():
+    def _embed_under_global_lock(self, texts: list[str]) -> list[list[float]]:
+        """Synchronous critical section: configure, embed, capture evidence.
+
+        Called via ``asyncio.to_thread`` so the process-wide ``threading.Lock``
+        is never held on the event-loop thread. The lock serializes the
+        complete SDK critical section across all loops and threads.
+        """
+        with _gemini_sdk_lock:
             self._reconfigure_if_needed()
-            result = await asyncio.to_thread(
-                self._genai.embed_content,
+            result = self._genai.embed_content(
                 model=self._model,
                 content=texts,
                 task_type="retrieval_document",
             )
-            # Gemini returns {"embedding": [...]} with no served-model field.
-            # evidence_source = gemini_configured_model is honest: we have only
-            # the configured model, not response evidence. Evidence is captured
-            # inside the lock so it reflects the configuration that actually
-            # served this request, not whatever an interleaving instance left
-            # in global state afterward.
             self._last_identity_evidence = ProviderModelIdentityEvidence(
                 provider_kind="gemini",
                 requested_model=self._model,
@@ -275,7 +255,15 @@ class GeminiEmbeddingProvider(EmbeddingProvider):
                 provider_revision=None,
                 evidence_source=EVIDENCE_SOURCE_GEMINI_CONFIGURED_MODEL,
             )
-        return result["embedding"]
+            return result["embedding"]
+
+    async def embed(self, texts: list[str]) -> list[list[float]]:
+        # P0.4B0.1c follow-up: the complete {configure, embed_content,
+        # evidence-capture} critical section runs under a process-wide
+        # threading.Lock inside a synchronous helper, invoked via
+        # asyncio.to_thread so the lock is never held on the event-loop
+        # thread across an await.
+        return await asyncio.to_thread(self._embed_under_global_lock, texts)
 
     async def embed_with_evidence(
         self, texts: list[str]
