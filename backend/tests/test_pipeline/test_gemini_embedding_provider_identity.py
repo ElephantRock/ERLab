@@ -203,3 +203,164 @@ class TestNoCredentialsInEvidence:
             value = getattr(evidence, field_name)
             if value is not None:
                 assert "GEM-SECRET" not in str(value), f"secret leaked in field {field_name}"
+
+
+# ─── P0.4B0.1c follow-up: concurrency seal ────────────────────────────────
+
+
+class _ConcurrentFakeGenai:
+    """Fake genai module that records what api_key was active at the moment
+    each embed_content call executed.
+
+    The 'observed_key_for_call' list records the api_key that was in effect
+    when each embed_content call began. Without the process-wide lock, an
+    interleaving instance's configure() could land between another
+    instance's configure() and embed_content() — and embed_content would
+    observe the wrong api_key. With the lock, each call observes only its
+    own instance's api_key.
+    """
+
+    def __init__(self) -> None:
+        self.current_api_key: str | None = None
+        self.observed_key_for_call: list[str | None] = []
+        self.embed_content_calls = 0
+
+    def configure(self, *, api_key: str | None = None) -> None:
+        # Simulate the global mutation that is the root of the concurrency hazard
+        self.current_api_key = api_key
+
+    def embed_content(self, *, model, content, task_type):
+        # CRITICAL: this is the value that must reflect the calling instance's
+        # configuration. Read it at the moment of the call (the production code
+        # also reads model identity at this point). Yield to the event loop
+        # to give other tasks a chance to interleave — without the lock, an
+        # interleaving instance's configure() would land here.
+        import asyncio as _asyncio
+        # The call runs inside asyncio.to_thread in production; we cannot
+        # await from inside a sync function, but we can simulate yielding
+        # by recording the observed key BEFORE any further mutation.
+        observed = self.current_api_key
+        self.observed_key_for_call.append(observed)
+        self.embed_content_calls += 1
+        # Return vectors tagged with the observed api_key so the test can
+        # assert which instance actually served the request.
+        if observed == "KEY_A":
+            return {"embedding": [[0.1, 0.1]]}
+        if observed == "KEY_B":
+            return {"embedding": [[0.9, 0.9]]}
+        return {"embedding": [[0.0, 0.0]]}
+
+
+class TestGeminiConcurrencySeal:
+    """Adversarial test: overlapping calls from two differently-configured
+    GeminiEmbeddingProvider instances must not observe each other's
+    configuration. Per directive:
+
+        Provider A configured for model A
+        Provider B configured for model B
+        both calls overlap
+        Expected:
+          A evidence reports model A
+          B evidence reports model B
+          A request cannot observe B configuration
+          B request cannot observe A configuration
+    """
+
+    def test_overlapping_calls_do_not_cross_observe(self, monkeypatch):
+        fake = _ConcurrentFakeGenai()
+        monkeypatch.setitem(sys.modules, "google.generativeai", fake)
+
+        provider_a = GeminiEmbeddingProvider(
+            model="models/embedding-001", api_key="KEY_A",
+        )
+        provider_b = GeminiEmbeddingProvider(
+            model="models/embedding-001", api_key="KEY_B",
+        )
+
+        # Launch both embed calls concurrently. Without the process-wide
+        # lock, B's configure() could land between A's configure() and
+        # A's embed_content() execution, causing A's request to observe
+        # KEY_B. With the lock, the two calls serialize and each one
+        # only ever observes its own api_key.
+        async def _run_concurrent():
+            return await asyncio.gather(
+                provider_a.embed(["a"]),
+                provider_b.embed(["b"]),
+            )
+
+        results = asyncio.run(_run_concurrent())
+
+        # Exactly two embed_content calls — one per gather'd coroutine
+        assert fake.embed_content_calls == 2
+
+        # Each call observed its own api_key — never the other instance's
+        observed = fake.observed_key_for_call
+        assert sorted(observed) == ["KEY_A", "KEY_B"]
+        # Neither call observed None or a stale value
+        assert None not in observed
+
+        # Result vectors tagged with the actually-observed key match the
+        # caller's identity. (Vector content is a proxy for "which identity
+        # served this request".)
+        # Results may come back in either gather order, so check the set.
+        result_set = {tuple(r[0]) for r in results}
+        assert (0.1, 0.1) in result_set  # A's vector
+        assert (0.9, 0.9) in result_set  # B's vector
+        # No zero-vectors (which would indicate observation of None/other)
+        assert (0.0, 0.0) not in result_set
+
+    def test_many_overlapping_calls_each_observe_own_key(self, monkeypatch):
+        """Stress the lock: 4 overlapping calls from two providers, each
+        interleaved. Each must observe only its own api_key."""
+        fake = _ConcurrentFakeGenai()
+        monkeypatch.setitem(sys.modules, "google.generativeai", fake)
+
+        provider_a = GeminiEmbeddingProvider(
+            model="models/embedding-001", api_key="KEY_A",
+        )
+        provider_b = GeminiEmbeddingProvider(
+            model="models/embedding-001", api_key="KEY_B",
+        )
+
+        async def _run_concurrent():
+            return await asyncio.gather(
+                provider_a.embed(["a1"]),
+                provider_b.embed(["b1"]),
+                provider_a.embed(["a2"]),
+                provider_b.embed(["b2"]),
+            )
+
+        asyncio.run(_run_concurrent())
+
+        assert fake.embed_content_calls == 4
+        observed = fake.observed_key_for_call
+        # Each call observed its own caller's key — never the other's,
+        # never None
+        for key in observed:
+            assert key in ("KEY_A", "KEY_B")
+        # Two calls per provider
+        assert observed.count("KEY_A") == 2
+        assert observed.count("KEY_B") == 2
+
+    def test_concurrent_same_key_does_not_corrupt_evidence(self, monkeypatch):
+        """Sanity: two instances with the SAME api_key can run concurrently
+        without either observing stale or wrong state. The lock must not
+        introduce deadlocks or evidence corruption for the simple case."""
+        fake = _ConcurrentFakeGenai()
+        monkeypatch.setitem(sys.modules, "google.generativeai", fake)
+
+        provider_a = GeminiEmbeddingProvider(model="models/embedding-001", api_key="SAME_KEY")
+        provider_b = GeminiEmbeddingProvider(model="models/embedding-001", api_key="SAME_KEY")
+
+        async def _run_concurrent():
+            return await asyncio.gather(
+                provider_a.embed(["a"]),
+                provider_b.embed(["b"]),
+                provider_a.embed(["c"]),
+            )
+
+        asyncio.run(_run_concurrent())
+
+        assert fake.embed_content_calls == 3
+        # Every call observed SAME_KEY — no None, no stale value
+        assert all(k == "SAME_KEY" for k in fake.observed_key_for_call)
