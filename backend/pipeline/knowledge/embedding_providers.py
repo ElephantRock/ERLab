@@ -12,6 +12,14 @@ import asyncio
 import hashlib
 import logging
 from abc import ABC, abstractmethod
+from typing import Any
+
+from backend.pipeline.knowledge.embedding_provider_identity import (
+    EVIDENCE_SOURCE_CONFIGURED_ONLY,
+    EVIDENCE_SOURCE_OPENAI_RESPONSE_MODEL,
+    ProviderEmbeddingBatch,
+    ProviderModelIdentityEvidence,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -60,6 +68,11 @@ class OpenAIEmbeddingProvider(EmbeddingProvider):
         self._client = openai.AsyncOpenAI(api_key=api_key) if api_key else openai.AsyncOpenAI()
         self._model = model
         self._dimension = dimension_override or self._default_dimension(model)
+        # P0.4B0.1b: cached identity evidence from the most recent response.
+        # None until the first successful embed call. This is observational
+        # evidence only — B0.2 interprets it; this provider does NOT
+        # classify posture.
+        self._last_identity_evidence: ProviderModelIdentityEvidence | None = None
 
     @staticmethod
     def _default_dimension(model: str) -> int:
@@ -72,7 +85,57 @@ class OpenAIEmbeddingProvider(EmbeddingProvider):
 
     async def embed(self, texts: list[str]) -> list[list[float]]:
         response = await self._client.embeddings.create(model=self._model, input=texts)
+        # P0.4B0.1b: capture the response.model field. OpenAI's embeddings
+        # API echoes the served model identifier on every response. We
+        # retain it as evidence; B0.2's classifier decides whether the echo
+        # is strong enough for stable_deployment or merely confirms
+        # alias_only. We do NOT promote the echo to a stable identity here.
+        reported_model = self._safe_reported_model(response)
+        self._last_identity_evidence = ProviderModelIdentityEvidence(
+            provider_kind="openai",
+            requested_model=self._model,
+            reported_model=reported_model,
+            deployment_id=None,
+            provider_revision=None,
+            evidence_source=EVIDENCE_SOURCE_OPENAI_RESPONSE_MODEL
+            if reported_model is not None
+            else EVIDENCE_SOURCE_CONFIGURED_ONLY,
+        )
         return [item.embedding for item in response.data]
+
+    async def embed_with_evidence(
+        self, texts: list[str]
+    ) -> ProviderEmbeddingBatch:
+        """Embed and return vectors together with the captured identity evidence.
+
+        New in P0.4B0.1b. ``embed`` keeps the legacy list-of-lists contract
+        for backward compatibility; new governed paths should call this
+        method so evidence is bound to the result rather than cached on
+        the instance.
+        """
+        embeddings = await self.embed(texts)
+        assert self._last_identity_evidence is not None  # set by embed()
+        return ProviderEmbeddingBatch(
+            embeddings=tuple(tuple(v) for v in embeddings),
+            identity_evidence=self._last_identity_evidence,
+        )
+
+    @staticmethod
+    def _safe_reported_model(response: Any) -> str | None:
+        """Extract response.model defensively. Returns None if missing or malformed.
+
+        The OpenAI SDK exposes ``response.model`` as a string. Some edge
+        cases (proxies, future SDK revisions) may not populate it; in that
+        case we return None rather than guess. None is honest — it tells
+        B0.2 we have no evidence beyond the configured request.
+        """
+        try:
+            reported = getattr(response, "model", None)
+        except Exception:
+            return None
+        if isinstance(reported, str) and reported:
+            return reported
+        return None
 
     @property
     def dimension(self) -> int:
@@ -81,6 +144,11 @@ class OpenAIEmbeddingProvider(EmbeddingProvider):
     @property
     def provider_name(self) -> str:
         return f"openai:{self._model}"
+
+    @property
+    def last_identity_evidence(self) -> ProviderModelIdentityEvidence | None:
+        """Most recently captured identity evidence, or None if no embed call yet."""
+        return self._last_identity_evidence
 
 
 class GeminiEmbeddingProvider(EmbeddingProvider):
