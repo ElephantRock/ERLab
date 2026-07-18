@@ -69,6 +69,31 @@ class EmbeddingProvider(ABC):
         """Generate embeddings for a list of texts."""
         ...
 
+    async def embed_with_evidence(self, texts: list[str]) -> ProviderEmbeddingBatch:
+        """Embed and return vectors together with identity evidence.
+
+        Default implementation delegates to ``embed()`` with
+        ``evidence_source='configured_only'`` and no observed identity.
+        Concrete providers that can capture stronger evidence (OpenAI
+        response model, Ollama digest, LM Studio echo) override this.
+        """
+        from backend.pipeline.knowledge.embedding_provider_identity import (
+            EVIDENCE_SOURCE_CONFIGURED_ONLY,
+            ProviderEmbeddingBatch,
+            ProviderModelIdentityEvidence,
+        )
+
+        embeddings = await self.embed(texts)
+        evidence = ProviderModelIdentityEvidence(
+            provider_kind=self.provider_name.split(":")[0] if ":" in self.provider_name else self.provider_name,
+            requested_model=getattr(self, "_model", ""),
+            evidence_source=EVIDENCE_SOURCE_CONFIGURED_ONLY,
+        )
+        return ProviderEmbeddingBatch(
+            embeddings=tuple(tuple(v) for v in embeddings),
+            identity_evidence=evidence,
+        )
+
     @property
     @abstractmethod
     def dimension(self) -> int:

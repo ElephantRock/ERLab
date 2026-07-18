@@ -145,6 +145,85 @@ class GovernedEmbeddingAdapter:
         query_tuple = await self.embed_query(text)
         return list(query_tuple)
 
+    async def embed_documents_with_evidence(
+        self,
+        texts: Sequence[str],
+    ) -> tuple[tuple[tuple[float, ...], ...], Any]:
+        """Document embed with identity evidence — same validation path.
+
+        Exercises the SAME canonical validation + post-processing as
+        ``embed_documents``, PLUS captures identity evidence from the
+        underlying provider's ``embed_with_evidence`` response.
+
+        Used by the capability probe (P0.4A1.4) so the check exercises
+        the exact production adapter path rather than duplicating it.
+
+        Returns ``(validated_vectors, identity_evidence)``.
+        """
+        texts_list = list(texts)
+        if not texts_list:
+            from backend.pipeline.knowledge.embedding_provider_identity import (
+                ProviderModelIdentityEvidence,
+            )
+            return (), ProviderModelIdentityEvidence(
+                provider_kind=self.provider_kind,
+                requested_model=self.requested_model,
+                evidence_source="configured_only",
+            )
+
+        try:
+            batch = await self.embedding_service.embed_with_evidence(texts_list)
+        except Exception as exc:
+            raise GovernedEmbeddingAdapterError(
+                f"embedding provider raised: {type(exc).__name__}: {exc}"
+            ) from exc
+
+        from backend.pipeline.knowledge.embedding_validation import (
+            validate_document_embeddings,
+            EmbeddingValidationError,
+        )
+        try:
+            validated = validate_document_embeddings(
+                list(batch.embeddings),
+                expected_count=len(texts_list),
+                expected_dimension=self.configured_dimension,
+            )
+        except EmbeddingValidationError as exc:
+            raise GovernedEmbeddingAdapterError(str(exc)) from exc
+
+        return validated, batch.identity_evidence
+
+    async def embed_query_with_evidence(
+        self,
+        text: str,
+    ) -> tuple[tuple[float, ...], Any]:
+        """Query embed with identity evidence — same validation path.
+
+        Query-path equivalent of ``embed_documents_with_evidence``.
+
+        Returns ``(validated_vector, identity_evidence)``.
+        """
+        try:
+            batch = await self.embedding_service.embed_with_evidence([text])
+        except Exception as exc:
+            raise GovernedEmbeddingAdapterError(
+                f"embedding provider raised on query: {type(exc).__name__}: {exc}"
+            ) from exc
+
+        from backend.pipeline.knowledge.embedding_validation import (
+            validate_query_embedding,
+            EmbeddingValidationError,
+        )
+        try:
+            validated = validate_query_embedding(
+                batch.embeddings[0] if batch.embeddings else None,
+                expected_dimension=self.configured_dimension,
+            )
+        except EmbeddingValidationError as exc:
+            raise GovernedEmbeddingAdapterError(str(exc)) from exc
+
+        return validated, batch.identity_evidence
+
     def _validate_single(
         self,
         vec: Any,

@@ -90,6 +90,47 @@ class EmbeddingService:
         results = await self.embed_texts([text])
         return results[0]
 
+    async def embed_with_evidence(self, texts: list[str]):
+        """Generate embeddings with identity evidence.
+
+        Delegates to the provider's ``embed_with_evidence`` method,
+        applying the same fail-closed error handling and zero-vector
+        rejection as ``embed_texts``.
+
+        Returns a ``ProviderEmbeddingBatch`` (vectors + identity evidence).
+        """
+        if not texts:
+            from backend.pipeline.knowledge.embedding_provider_identity import (
+                ProviderEmbeddingBatch,
+            )
+            return ProviderEmbeddingBatch(
+                embeddings=(),
+                identity_evidence=None,  # type: ignore[arg-type]
+            )
+
+        try:
+            batch = await self._provider.embed_with_evidence(texts)  # type: ignore[attr-defined]
+        except AttributeError:
+            # Provider doesn't implement embed_with_evidence — fall back
+            # to the ABC's default implementation
+            batch = await self._provider.embed_with_evidence(texts)
+        except EmbeddingProviderError:
+            raise
+        except Exception as e:
+            raise EmbeddingProviderError(
+                f"Embedding provider failed during evidence embed: {e}"
+            ) from e
+
+        # Check for zero vectors (same fail-closed rule as embed_texts)
+        zero_count = sum(1 for e in batch.embeddings if not e or all(v == 0.0 for v in e))
+        if zero_count > 0:
+            raise EmbeddingProviderError(
+                f"Embedding provider returned {zero_count}/{len(batch.embeddings)} "
+                f"zero vectors. Provider may be offline or misconfigured."
+            )
+
+        return batch
+
     @property
     def dimension(self) -> int:
         """Return embedding dimension from provider, or default 1536."""
