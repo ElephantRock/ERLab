@@ -26,8 +26,10 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from backend.pipeline.vector_backend import BackendVectorRecord, GovernedVectorBackend
 from backend.pipeline.vector_contracts import (
+    EMBEDDING_PROFILE_V1,
     EmbeddingProfileDriftError,
     IndexingAlreadyClaimedError,
+    VECTOR_INDEX_V1,
     VectorIndexDocument,
     VectorIndexingOutcome,
     VectorIndexRegistryDriftError,
@@ -104,7 +106,7 @@ def register_embedding_profile(
 
     profile = EmbeddingProfile(
         profile_id=profile_id,
-        profile_schema_version="embedding_profile_v1",
+        profile_schema_version=EMBEDDING_PROFILE_V1,
         provider=provider,
         model_identifier=model_identifier,
         dimension=dimension,
@@ -168,7 +170,7 @@ def _build_backend_metadata(doc: VectorIndexDocument) -> dict[str, object]:
         "content_kind": doc.content_kind,
         "content_hash": doc.content_hash,
         "embedding_profile_id": doc.embedding_profile_id,
-        "index_schema_version": "vector_index_v1",
+        "index_schema_version": VECTOR_INDEX_V1,
     }
 
 
@@ -194,7 +196,7 @@ def _verify_readback(
         return False, "metadata_mismatch_content_hash"
     if record.embedding_profile_id != doc.embedding_profile_id:
         return False, "metadata_mismatch_profile"
-    if record.index_schema_version != "vector_index_v1":
+    if record.index_schema_version != VECTOR_INDEX_V1:
         return False, "metadata_mismatch_index_schema"
     if len(record.embedding) != expected_dimension:
         return False, "backend_dimension_mismatch"

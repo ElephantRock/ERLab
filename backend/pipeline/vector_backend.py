@@ -14,6 +14,8 @@ import logging
 from dataclasses import dataclass
 from typing import Any, Mapping, Protocol, Sequence
 
+from backend.pipeline.vector_contracts import VECTOR_INDEX_V1
+
 logger = logging.getLogger(__name__)
 
 _LEGACY_COLLECTION = "research_papers"
@@ -64,7 +66,7 @@ class GovernedVectorBackend:
             )
 
         metadata = {
-            "index_schema_version": "vector_index_v1",
+            "index_schema_version": VECTOR_INDEX_V1,
             "embedding_profile_id": embedding_profile_id,
             "embedding_dimension": embedding_dimension,
             "hnsw:space": "cosine",

@@ -1276,6 +1276,10 @@ class EmbeddingProfile(Base):
 
     __tablename__ = "embedding_profiles"
     __table_args__ = (
+        # Schema-version literal must match EMBEDDING_PROFILE_V1 in
+        # backend/pipeline/vector_contracts.py (kept as SQL text here to
+        # avoid a layering inversion: db/models.py is the lowest layer and
+        # must not import transport contracts).
         CheckConstraint("profile_schema_version = 'embedding_profile_v1'", name="ck_ep_schema_version"),
         CheckConstraint("verification_status = 'unverified'", name="ck_ep_verification_status"),
         CheckConstraint("dimension > 0", name="ck_ep_dimension_positive"),
@@ -1313,6 +1317,10 @@ class VectorIndexRecord(Base):
         Index("ix_vir_paper_id", "paper_id"),
         Index("ix_vir_profile_status", "embedding_profile_id", "index_status"),
         CheckConstraint("vector_store = 'chroma'", name="ck_vir_vector_store"),
+        # Schema-version literal must match VECTOR_INDEX_V1 in
+        # backend/pipeline/vector_contracts.py (kept as SQL text here to
+        # avoid a layering inversion: db/models.py is the lowest layer and
+        # must not import transport contracts).
         CheckConstraint("index_schema_version = 'vector_index_v1'", name="ck_vir_index_schema"),
         CheckConstraint(
             "content_kind IN ('title_abstract', 'abstract', 'full_text_chunk', 'metadata')",

@@ -26,6 +26,7 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from backend.pipeline.vector_backend import BackendVectorMatch, GovernedVectorBackend
 from backend.pipeline.vector_contracts import (
+    VECTOR_INDEX_V1,
     EligibleVectorSnapshot,
     RetrievalAlreadyClaimedError,
     ScopedVectorRetrievalOutcome,
@@ -136,7 +137,7 @@ def resolve_eligible_records(
         ).where(
             VectorIndexRecord.index_status == "indexed",
             VectorIndexRecord.embedding_profile_id == embedding_profile_id,
-            VectorIndexRecord.index_schema_version == "vector_index_v1",
+            VectorIndexRecord.index_schema_version == VECTOR_INDEX_V1,
             VectorIndexRecord.collection_name == collection_name,
             VectorIndexRecord.paper_id.in_(list(allowed_paper_ids)),
         ).order_by(VectorIndexRecord.vector_record_id)

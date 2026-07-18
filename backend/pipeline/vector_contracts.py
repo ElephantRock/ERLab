@@ -14,6 +14,37 @@ from dataclasses import dataclass
 from typing import Literal, Sequence
 
 
+# ── Schema and contract version constants ────────────────────────────
+# P0.4B0.8: centralize the version literals that participate in vector
+# identity, capability provenance, backend collection metadata, retrieval
+# eligibility, and DB CHECK constraints. Anything that branches on one of
+# these strings must read it from here rather than re-typing the literal.
+#
+# These are the load-bearing axes frozen by docs/p0_4_entry_contract.md §5:
+#   index_schema_version      governs vector identity, registry lifecycle,
+#                             backend collection layout and collection metadata
+#   embedding_contract_version  governs capability provenance and the
+#                             authorization under which the embedding was
+#                             generated
+#
+# Allowed combinations (contract §5.2):
+#   VECTOR_INDEX_V1 + EMBEDDING_CONTRACT_PRE_CAPABILITY_V0  (historical P0.3)
+#   VECTOR_INDEX_V2 + EMBEDDING_CONTRACT_CAPABILITY_V1      (P0.4 binding-specific)
+# Disallowed combinations (contract §5.3):
+#   VECTOR_INDEX_V1 + EMBEDDING_CONTRACT_CAPABILITY_V1
+#   VECTOR_INDEX_V2 + EMBEDDING_CONTRACT_PRE_CAPABILITY_V0
+
+VECTOR_INDEX_V1 = "vector_index_v1"
+VECTOR_INDEX_V2 = "vector_index_v2"
+
+EMBEDDING_CONTRACT_PRE_CAPABILITY_V0 = "pre_capability_v0"
+EMBEDDING_CONTRACT_CAPABILITY_V1 = "capability_v1"
+
+# Profile-schema version (single value today; P0.4A1 may add capability_v1
+# variant when the capability-binding tables land).
+EMBEDDING_PROFILE_V1 = "embedding_profile_v1"
+
+
 # ── Domain identity ──────────────────────────────────────────────────
 
 
@@ -246,7 +277,7 @@ def compute_vector_record_id(
 ) -> str:
     """Deterministic vector identity from canonical JSON."""
     payload = {
-        "schema": "vector_index_v1",
+        "schema": VECTOR_INDEX_V1,
         "paper_id": paper_id,
         "chunk_key": chunk_key,
         "content_hash": content_hash,
@@ -266,7 +297,7 @@ def compute_profile_id(
 ) -> str:
     """Canonical embedding profile ID from canonical JSON."""
     payload = {
-        "schema": "embedding_profile_v1",
+        "schema": EMBEDDING_PROFILE_V1,
         "provider": provider,
         "model_identifier": model_identifier,
         "dimension": dimension,
