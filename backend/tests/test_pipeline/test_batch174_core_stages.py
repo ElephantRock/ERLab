@@ -99,7 +99,20 @@ class TestLiteratureSearchStage:
             abstract="Abstract on RL robotics.",
             authors=[Author(name="B")], year=2024,
         )
-        search.search_all = AsyncMock(return_value=[paper1, paper2])
+        # Production LiteratureSearchStage calls search_all_with_provenance
+        # and expects a governed SearchBatchOutcome (candidates + executions),
+        # not a bare list. Configure the mock to the production contract.
+        from backend.pipeline.literature.contracts import SearchBatchOutcome
+        from backend.pipeline.persistence import CandidateWithDiscoveries
+        search.search_all_with_provenance = AsyncMock(
+            return_value=SearchBatchOutcome(
+                candidates=[
+                    CandidateWithDiscoveries(paper=paper1),
+                    CandidateWithDiscoveries(paper=paper2),
+                ],
+                executions=[],
+            )
+        )
 
         hooks = MagicMock()
         hooks.dispatch_sync_safe = AsyncMock()

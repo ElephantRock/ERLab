@@ -68,6 +68,9 @@ def temp_db():
             status="running",
             domain="AI/NLP",
             config_json="{}",
+            # P0.2 made provenance_version NOT NULL; this is a historical
+            # legacy fixture, so declare the pre-gating posture honestly.
+            provenance_version="pre_provenance",
         )
         session.add(run)
         session.commit()

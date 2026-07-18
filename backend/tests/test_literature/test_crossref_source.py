@@ -98,11 +98,13 @@ class TestCrossRefSearch:
             return_value=_make_mock_response(CROSSREF_RESPONSE)
         )
 
-        results = await source.search("transformer attention", limit=5)
+        outcome = await source.search("transformer attention", limit=5)
 
-        assert len(results) == 2  # third item has no title → skipped
-        assert all(isinstance(r, SearchResult) for r in results)
-        assert all(r.source == "crossref" for r in results)
+        assert outcome.status == "success"
+        assert outcome.attempt_count >= 1
+        assert len(outcome.results) == 2  # third item has no title → skipped
+        assert all(isinstance(r, SearchResult) for r in outcome.results)
+        assert all(r.source == "crossref" for r in outcome.results)
 
     @pytest.mark.asyncio
     async def test_paper_fields_parsed_correctly(self, source: CrossRefSource):
@@ -111,9 +113,9 @@ class TestCrossRefSearch:
             return_value=_make_mock_response(CROSSREF_RESPONSE)
         )
 
-        results = await source.search("transformer attention", limit=5)
+        outcome = await source.search("transformer attention", limit=5)
 
-        paper = results[0].paper
+        paper = outcome.results[0].paper
         assert paper.title == "Attention Is All You Need"
         assert paper.doi == "10.1234/test.001"
         assert paper.year == 2017
@@ -130,11 +132,11 @@ class TestCrossRefSearch:
             return_value=_make_mock_response(CROSSREF_RESPONSE)
         )
 
-        results = await source.search("transformer attention", limit=5)
+        outcome = await source.search("transformer attention", limit=5)
 
         # First paper has JATS tags in abstract
-        assert "We propose a new architecture." == results[0].paper.abstract
-        assert "<jats:" not in results[0].paper.abstract
+        assert "We propose a new architecture." == outcome.results[0].paper.abstract
+        assert "<jats:" not in outcome.results[0].paper.abstract
 
     @pytest.mark.asyncio
     async def test_paper_without_title_skipped(self, source: CrossRefSource):
@@ -143,9 +145,9 @@ class TestCrossRefSearch:
             return_value=_make_mock_response(CROSSREF_RESPONSE)
         )
 
-        results = await source.search("anything", limit=10)
+        outcome = await source.search("anything", limit=10)
 
-        titles = [r.paper.title for r in results]
+        titles = [r.paper.title for r in outcome.results]
         assert "" not in titles
 
     @pytest.mark.asyncio
@@ -155,8 +157,8 @@ class TestCrossRefSearch:
             return_value=_make_mock_response(CROSSREF_RESPONSE)
         )
 
-        results = await source.search("anything", limit=1)
-        assert len(results) == 1
+        outcome = await source.search("anything", limit=1)
+        assert len(outcome.results) == 1
 
     @pytest.mark.asyncio
     async def test_empty_response(self, source: CrossRefSource):
@@ -166,26 +168,33 @@ class TestCrossRefSearch:
             return_value=_make_mock_response(empty_resp)
         )
 
-        results = await source.search("anything", limit=5)
-        assert results == []
+        outcome = await source.search("anything", limit=5)
+        assert outcome.status == "success"
+        assert outcome.results == []
 
     @pytest.mark.asyncio
     async def test_network_error_returns_empty(self, source: CrossRefSource):
-        """Network errors return empty list, not crash."""
+        """Network errors return a failed outcome with empty results, not crash."""
         source._client.get = AsyncMock(side_effect=httpx.ConnectError("refused"))
 
-        results = await source.search("anything", limit=5)
-        assert results == []
+        outcome = await source.search("anything", limit=5)
+        assert outcome.status == "failed"
+        assert outcome.results == []
+        assert outcome.attempt_count >= 1
+        assert outcome.error_detail is not None
 
     @pytest.mark.asyncio
     async def test_http_error_returns_empty(self, source: CrossRefSource):
-        """HTTP 4xx/5xx errors return empty list."""
+        """HTTP 4xx/5xx errors return a failed outcome with empty results."""
         source._client.get = AsyncMock(
             return_value=_make_mock_response({}, status_code=429)
         )
 
-        results = await source.search("anything", limit=5)
-        assert results == []
+        outcome = await source.search("anything", limit=5)
+        assert outcome.status == "failed"
+        assert outcome.results == []
+        assert outcome.attempt_count >= 1
+        assert outcome.error_detail is not None
 
     @pytest.mark.asyncio
     async def test_year_filter_applied(self, source: CrossRefSource):
@@ -208,10 +217,10 @@ class TestCrossRefSearch:
             return_value=_make_mock_response(CROSSREF_RESPONSE)
         )
 
-        results = await source.search("anything", limit=5)
+        outcome = await source.search("anything", limit=5)
 
         # Second paper has abstract=None
-        paper2 = results[1].paper
+        paper2 = outcome.results[1].paper
         assert paper2.abstract == ""
 
 
