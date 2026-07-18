@@ -232,3 +232,152 @@ python -c "from backend.api.app import app"
 python -m pytest backend/tests --tb=no -q
 # expected: 11 failed, 3978 passed, 25 skipped, 3 errors, ~156s, exit 1
 ```
+
+---
+
+# Sealed baseline — P0.4-pre closeout
+
+The red baseline above is preserved as evidence of what the syntax
+repair uncovered. It is **superseded** as the active baseline by the
+green baseline below. Both observations remain documented per the
+P0.4-pre directive: "Do not overwrite the red baseline captured at
+4b58406."
+
+## P0.4-pre.1 — contract-drifted test repairs
+
+Commit `623106c` — `test: align pre-P0.4 tests with provenance and
+search outcome contracts`. No production code changed. All 13
+deterministic defects in the red baseline (Class A + Class B) repaired
+by updating stale test expectations to match current production
+contracts:
+
+```text
+crossref (9 failures)       test calls updated to access outcome.results
+                            and assert outcome.status / attempt_count /
+                            error_detail on the error paths; no __len__
+                            or list-like compatibility added to
+                            SourceSearchOutcome
+batch174 (1 failure)        mock updated from search.search_all to
+                            search.search_all_with_provenance, returning
+                            SearchBatchOutcome(candidates, executions)
+                            per the governed production contract
+proposal_persistence (3)    PipelineRun fixture given explicit
+                            provenance_version='pre_provenance'
+```
+
+Result at `623106c`: **1 failed, 3991 passed, 25 skipped, 0 errors**
+— only the cost_router ordering failure remained.
+
+## P0.4-pre.2 — cost_router production defect
+
+Commit `2273b37` — `test: isolate cost router health state across
+backend suite`. The P0.4-pre directive permitted production changes
+only when a test exposed a genuine production defect rather than a
+stale expectation; this is that case.
+
+Root cause: `CircuitBreaker.check()` is a raising guard (returns None
+on closed, raises `CircuitOpenError` on open), as its docstring states
+and as its only other call site (`resilient_provider.py:107`) honors.
+But `cost_router.py:71` and `:108` used `if breaker and not
+breaker.check():` — treating the return value as a boolean. Since
+`not None` is always True, any registered breaker caused the candidate
+to be skipped unconditionally. The test passed in isolation only
+because no test had populated `_breakers`; in the full suite, an
+earlier test's `provider_factory.py:343` `setdefault` registered a
+breaker for `openai`, and the primary was always skipped.
+
+Fix: both call sites use `check()` as a raising guard inside a
+`try/except CircuitOpenError` block, matching the contract the rest
+of the codebase already honors. Result at `2273b37`: **3992 passed,
+25 skipped, 0 failed, 0 errors.**
+
+## Sealed green baseline
+
+```text
+Repair commit (final)        2273b37
+Git commit tested            2273b37
+Branch                       feat/quarantine-and-frontend-redesign
+Working-tree status          clean
+OS                           win32 10.0.26200 x64
+Python version               3.12.1
+pytest version               9.1.1
+```
+
+### Sealed result
+
+```text
+exact command                python -m pytest backend/tests --tb=no -q
+tests collected              3992
+tests passed                 3992
+tests failed                 0
+tests skipped                25
+tests deselected             0
+collection errors            0
+duration                     ~153 s
+exit code                    0
+consecutive green runs       4
+                             (1 diagnostic --tb=short + 3 --tb=no)
+```
+
+### Consecutive run evidence
+
+```text
+diagnostic  python -m pytest backend/tests --tb=short -q   3992 passed, 25 skipped, 0 failed, ~156s
+run 1       python -m pytest backend/tests --tb=no -q      3992 passed, 25 skipped, 0 failed, ~154s
+run 2       python -m pytest backend/tests --tb=no -q      3992 passed, 25 skipped, 0 failed, ~153s
+run 3       python -m pytest backend/tests --tb=no -q      3992 passed, 25 skipped, 0 failed, ~150s
+```
+
+All four runs returned exit code 0 with identical counts.
+
+## Non-deterministic cluster — not reproduced
+
+The 16-test non-deterministic cluster observed in the original red
+baseline (one `--tb=short` run at `b3ac7d9`) **did not recur** in any
+of the four sealing runs at `2273b37`. Per the directive, they are
+retained here as:
+
+```text
+previously observed, currently unreproduced instability
+```
+
+They remain technical debt. If any of them recur in a future run,
+capture the exact test IDs and first failure, classify
+reproducibility, and block whatever wave is in progress until the
+instability is resolved.
+
+## P0.4-pre completion gate — PASSED
+
+Per the revised gate in the directive:
+
+```text
+backend/tests collection errors                     0     ✓
+deterministic test failures                          0     ✓
+deterministic test errors                            0     ✓
+three consecutive full-suite runs                    green ✓ (4 green)
+working tree                                         clean ✓
+red and green baseline evidence                      preserved ✓
+```
+
+**P0.4-pre is CLOSED at `2273b37`.** P0.4A0 is now unblocked.
+
+## Commit chain for P0.4-pre
+
+```text
+2273b37  test: isolate cost router health state across backend suite     (P0.4-pre.2)
+623106c  test: align pre-P0.4 tests with provenance and search outcome   (P0.4-pre.1)
+b3ac7d9  fix: restore reproducible backend baseline before P0.4          (P0.4-pre.0)
+4b58406  docs: capture P0.4-pre baseline and pre-existing defect classification
+9a86aa2  docs: freeze P0.4A0 embedding-surface dispositions
+69945c9  docs: P0.4 revised entry contract after repository-fit critique
+```
+
+## Reproduction (sealed)
+
+```bash
+# Clean tree at 2273b37
+python -m py_compile backend/api/routes/knowledge.py
+python -c "from backend.api.app import app"
+python -m pytest backend/tests --tb=no -q
+# expected: 3992 passed, 25 skipped, 0 failed, 0 errors, ~153s, exit 0
+```
