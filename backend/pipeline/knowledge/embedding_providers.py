@@ -16,6 +16,7 @@ from typing import Any
 
 from backend.pipeline.knowledge.embedding_provider_identity import (
     EVIDENCE_SOURCE_CONFIGURED_ONLY,
+    EVIDENCE_SOURCE_GEMINI_CONFIGURED_MODEL,
     EVIDENCE_SOURCE_OPENAI_RESPONSE_MODEL,
     ProviderEmbeddingBatch,
     ProviderModelIdentityEvidence,
@@ -159,21 +160,76 @@ class GeminiEmbeddingProvider(EmbeddingProvider):
         model: str = "models/embedding-001",
         api_key: str | None = None,
     ):
+        # P0.4B0.1c: capture the api_key on the instance rather than calling
+        # genai.configure(api_key=...) once at construction and leaving global
+        # state mutated forever. The genai SDK exposes only ``configure`` (no
+        # per-client config), so we cannot fully avoid global mutation — but
+        # we can bound it: ``_reconfigure_if_needed`` runs immediately before
+        # each ``embed_content`` call, ensuring the per-instance intended
+        # configuration is authoritative at the moment of use. Constructing
+        # or using one GeminiEmbeddingProvider no longer silently redefines
+        # the effective identity for an unrelated instance on its next call.
         import google.generativeai as genai
 
-        if api_key:
-            genai.configure(api_key=api_key)
         self._model = model
+        self._api_key = api_key
         self._genai = genai
+        # Apply the configuration once at construction so the very first
+        # embed() call is correct even if no reconfigure runs first (defensive).
+        self._reconfigure_if_needed()
+        # P0.4B0.1c: identity evidence — Gemini's embed_content API returns
+        # only {"embedding": [...]} and exposes no served-model identity.
+        # We honestly report only the configured model; B0.2 will classify
+        # this as alias_only unless stronger evidence appears elsewhere.
+        self._last_identity_evidence: ProviderModelIdentityEvidence | None = None
+
+    def _reconfigure_if_needed(self) -> None:
+        """Bound the genai global configuration mutation.
+
+        Called at construction and immediately before every embed_content
+        invocation. Each GeminiEmbeddingProvider instance re-establishes
+        its own api_key before use, so two instances with different keys
+        cannot silently poison each other's effective configuration.
+        """
+        if self._api_key is not None:
+            self._genai.configure(api_key=self._api_key)
 
     async def embed(self, texts: list[str]) -> list[list[float]]:
+        # P0.4B0.1c: re-establish per-instance configuration immediately
+        # before the call. This is the isolation primitive.
+        self._reconfigure_if_needed()
         result = await asyncio.to_thread(
             self._genai.embed_content,
             model=self._model,
             content=texts,
             task_type="retrieval_document",
         )
+        # Gemini returns {"embedding": [...]} with no served-model field.
+        # evidence_source = gemini_configured_model is honest: we have only
+        # the configured model, not response evidence.
+        self._last_identity_evidence = ProviderModelIdentityEvidence(
+            provider_kind="gemini",
+            requested_model=self._model,
+            reported_model=None,
+            deployment_id=None,
+            provider_revision=None,
+            evidence_source=EVIDENCE_SOURCE_GEMINI_CONFIGURED_MODEL,
+        )
         return result["embedding"]
+
+    async def embed_with_evidence(
+        self, texts: list[str]
+    ) -> ProviderEmbeddingBatch:
+        """Embed and return vectors together with the captured identity evidence.
+
+        New in P0.4B0.1c. Mirrors OpenAIEmbeddingProvider.embed_with_evidence.
+        """
+        embeddings = await self.embed(texts)
+        assert self._last_identity_evidence is not None
+        return ProviderEmbeddingBatch(
+            embeddings=tuple(tuple(v) for v in embeddings),
+            identity_evidence=self._last_identity_evidence,
+        )
 
     @property
     def dimension(self) -> int:
@@ -186,6 +242,11 @@ class GeminiEmbeddingProvider(EmbeddingProvider):
     @property
     def provider_name(self) -> str:
         return f"gemini:{self._model}"
+
+    @property
+    def last_identity_evidence(self) -> ProviderModelIdentityEvidence | None:
+        """Most recently captured identity evidence, or None if no embed call yet."""
+        return self._last_identity_evidence
 
 
 class OllamaEmbeddingProvider(EmbeddingProvider):
