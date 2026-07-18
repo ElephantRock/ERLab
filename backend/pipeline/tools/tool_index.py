@@ -48,7 +48,6 @@ class ToolEmbeddingIndex:
                 assert_purpose_not_paper,
                 SideChannelEmbeddingError,
                 compute_side_channel_collection_name,
-                build_kg_collection_metadata,  # reuse pattern
             )
             assert_purpose_not_paper(arg1.purpose)
             if arg1.purpose != "tool_description":
