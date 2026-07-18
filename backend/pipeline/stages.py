@@ -672,19 +672,32 @@ class IngestionStage(PipelineStage):
                     embedding_profile_id=profile_id,
                 )
 
-                # Use the embedding service to generate the embedding
-                class _EmbeddingAdapter:
-                    """Adapts EmbeddingService to the indexer's embed_single interface."""
-                    def __init__(self, embedding_service):
-                        self._svc = embedding_service
-                    async def embed_single(self, text):
-                        result = await self._svc.embed_texts([text])
-                        return result[0] if result else []
+                # P0.4B0.3: use the canonical GovernedEmbeddingAdapter instead
+                # of an inline private _EmbeddingAdapter. The canonical adapter
+                # exposes provider/model/dimension identity and performs
+                # fail-closed structural validation; the inline adapter did
+                # neither. B0.6 will migrate this to runtime.embedding_adapter.
+                from backend.pipeline.governed_embedding_adapter import (
+                    GovernedEmbeddingAdapter,
+                )
+
+                # The IngestionStage's embedding service does not yet carry
+                # provider/model identity on this code path (that lands in
+                # B0.6/B0.7). For now we surface the configured_dimension from
+                # the profile so the adapter's structural validation is
+                # meaningful. provider_kind/requested_model are derived from
+                # the profile; B0.7 will reconcile these against Settings.
+                adapter = GovernedEmbeddingAdapter(
+                    embedding_service=self._embedding,
+                    provider_kind=profile_dict.get("provider", "unknown"),
+                    requested_model=profile_dict.get("model_identifier", "unknown"),
+                    configured_dimension=int(profile_dict.get("dimension", 0)),
+                )
 
                 outcome = await index_document(
                     session_factory=Session,
                     backend=backend,
-                    embedding_provider=_EmbeddingAdapter(self._embedding),
+                    embedding_provider=adapter,
                     profile=profile_dict,
                     document=doc,
                 )

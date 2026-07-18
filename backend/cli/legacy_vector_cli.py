@@ -286,21 +286,34 @@ def _execute_reindex(Session, run_id: int, profile_id: str) -> int:
         print("Error: cannot build governed vector runtime", file=sys.stderr)
         return 5
 
-    class _EmbeddingAdapter:
-        def __init__(self, svc):
-            self._svc = svc
-        async def embed_single(self, text):
-            result = await self._svc.embed_texts([text])
-            return result[0] if result else []
+    # P0.4B0.3: use the canonical GovernedEmbeddingAdapter instead of an
+    # inline private _EmbeddingAdapter. The canonical adapter exposes
+    # provider/model/dimension identity and performs fail-closed structural
+    # validation; the inline adapter did neither. Profile-derived dimension
+    # drives validation; provider/model come from the runtime profile.
+    from backend.pipeline.governed_embedding_adapter import (
+        GovernedEmbeddingAdapter,
+    )
+    profile_dict = runtime.profile_dict
+    adapter = GovernedEmbeddingAdapter(
+        embedding_service=__import__(
+            "backend.pipeline.knowledge.embedding_service",
+            fromlist=["EmbeddingService"],
+        ).EmbeddingService(
+            __import__(
+                "backend.providers.provider_factory",
+                fromlist=["create_provider"],
+            ).create_provider()
+        ),
+        provider_kind=profile_dict.get("provider", "unknown"),
+        requested_model=profile_dict.get("model_identifier", "unknown"),
+        configured_dimension=int(profile_dict.get("dimension", 0)),
+    )
 
     counts = __import__("asyncio").run(execute_reindex_targets(
         Session, inventory_run_id=run_id,
         governed_backend=runtime.backend,
-        embedding_provider=_EmbeddingAdapter(
-            __import__("backend.pipeline.knowledge.embedding_service", fromlist=["EmbeddingService"]).EmbeddingService(
-                __import__("backend.providers.provider_factory", fromlist=["create_provider"]).create_provider()
-            )
-        ),
+        embedding_provider=adapter,
         profile_dict=runtime.profile_dict,
         embedding_profile_id=profile_id,
     ))

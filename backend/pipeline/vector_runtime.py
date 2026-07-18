@@ -96,16 +96,23 @@ def build_governed_vector_runtime_from_settings(db_engine: Any) -> GovernedVecto
         provider = create_provider()
         embedding = EmbeddingService(provider)
 
-        class _EmbeddingAdapter:
-            def __init__(self, svc):
-                self._svc = svc
-            async def embed_single(self, text):
-                result = await self._svc.embed_texts([text])
-                return result[0] if result else []
+        # P0.4B0.3: use the canonical GovernedEmbeddingAdapter instead of
+        # an inline private _EmbeddingAdapter. The canonical adapter exposes
+        # provider/model/dimension identity and performs fail-closed
+        # structural validation; the inline adapter did neither.
+        from backend.pipeline.governed_embedding_adapter import (
+            GovernedEmbeddingAdapter,
+        )
+        adapter = GovernedEmbeddingAdapter(
+            embedding_service=embedding,
+            provider_kind=settings.embedding_provider,
+            requested_model=settings.embedding_model,
+            configured_dimension=embedding.dimension,
+        )
 
         return build_governed_vector_runtime(
             chroma_persist_dir=settings.chroma_persist_dir,
-            embedding_provider=_EmbeddingAdapter(embedding),
+            embedding_provider=adapter,
             embedding_dimension=embedding.dimension,
             embedding_provider_name=settings.embedding_provider,
             embedding_model_identifier=settings.embedding_model,
