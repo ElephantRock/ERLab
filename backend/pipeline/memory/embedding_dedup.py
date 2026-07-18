@@ -1,4 +1,9 @@
-"""Embedding-based deduplication — cosine similarity via provider.embed()."""
+"""Embedding-based deduplication — cosine similarity via EmbeddingProvider.
+
+This module uses the dedicated ``EmbeddingProvider`` protocol from
+``backend.pipeline.knowledge.embedding_providers`` — never an
+``LLMProvider``. Chat providers cannot produce embeddings.
+"""
 
 from __future__ import annotations
 
@@ -9,7 +14,7 @@ from typing import TYPE_CHECKING
 from backend.pipeline.memory.models import MemoryEntry
 
 if TYPE_CHECKING:
-    from backend.providers.base import LLMProvider
+    from backend.pipeline.knowledge.embedding_providers import EmbeddingProvider
 
 logger = logging.getLogger(__name__)
 
@@ -17,7 +22,7 @@ logger = logging.getLogger(__name__)
 class EmbeddingSimilarity:
     """Computes cosine similarity between memory entries via embeddings."""
 
-    def __init__(self, provider: LLMProvider) -> None:
+    def __init__(self, provider: EmbeddingProvider) -> None:
         self._provider = provider
         self._cache: dict[str, list[float]] = {}
 

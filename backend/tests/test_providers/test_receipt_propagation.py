@@ -43,9 +43,6 @@ class ReceiptCapturingProvider(LLMProvider):
     async def structured_output(self, messages, schema, temperature=0.3, **kwargs) -> dict:
         return {}
 
-    async def embed(self, texts):
-        return [[0.1]]
-
 
 class TestReceiptPropagation:
     """Test that receipts propagate through the provider chain."""

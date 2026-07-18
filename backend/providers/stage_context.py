@@ -155,9 +155,6 @@ class StageAwareProvider(LLMProvider):
             messages, tools, temperature, max_tokens, stage
         )
 
-    async def embed(self, texts: list[str]) -> list[list[float]]:
-        return await self._resolve().embed(texts)
-
     async def health_check(self) -> bool:
         return await self._default.health_check()
 

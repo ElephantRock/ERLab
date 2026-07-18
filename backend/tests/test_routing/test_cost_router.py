@@ -35,9 +35,6 @@ class FakeProvider(LLMProvider):
     async def structured_output(self, messages, schema, temperature=0.3):
         return {}
 
-    async def embed(self, texts):
-        return []
-
 
 class FakeRegistry:
     def __init__(self, providers: dict[str, FakeProvider] | None = None):

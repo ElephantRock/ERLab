@@ -198,9 +198,6 @@ class SchemaAwareFakeProvider(LLMProvider):
     async def complete_stream(self, messages, temperature=0.7, max_tokens=4096):
         yield "Test"
 
-    async def embed(self, texts) -> list[list[float]]:
-        return [[0.1] * 10 for _ in texts]
-
     @property
     def provider_name(self) -> str:
         return "schema_aware_fake"

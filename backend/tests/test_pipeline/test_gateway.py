@@ -311,9 +311,6 @@ class TestGatewayProvider:
                 self.calls.append(("structured_output", messages))
                 return {"result": "mock"}
 
-            async def embed(self, texts):
-                return [[0.1] * 10 for _ in texts]
-
             def complete_stream(self, messages, temperature=0.7, max_tokens=4096):
                 async def _gen():
                     yield "mock"
@@ -360,12 +357,6 @@ class TestGatewayProvider:
         )
         # Gateway may wrap the result or return it directly
         assert result.get("result") == "mock" or "result" in str(result)
-
-    @pytest.mark.asyncio
-    async def test_embed_bypasses_gateway(self):
-        gp, mock = self._make_provider()
-        result = await gp.embed(["hello", "world"])
-        assert len(result) == 2
 
     def test_provider_name_delegates(self):
         gp, mock = self._make_provider()

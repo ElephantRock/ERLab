@@ -54,9 +54,6 @@ class _BrokenProvider:
     async def structured_output(self, *a, **kw):
         return {}
 
-    async def embed(self, texts):
-        return []
-
 
 @pytest.fixture
 def summarizer(fake_provider):

@@ -5,7 +5,13 @@ import pytest
 from backend.pipeline.knowledge.truth import TruthValue
 from backend.pipeline.memory.embedding_dedup import EmbeddingSimilarity, _cosine_similarity
 from backend.pipeline.memory.models import MemoryEntry, MemoryType
-from backend.tests.conftest import FakeLLMProvider
+
+
+class FakeEmbeddingProvider:
+    """Fake dedicated EmbeddingProvider — returns identical vectors for all inputs."""
+
+    async def embed(self, texts):
+        return [[0.1] * 10 for _ in texts]
 
 
 def _make_entry(content: str, entry_id: str = "") -> MemoryEntry:
@@ -42,12 +48,12 @@ class TestCosineSimilarity:
 class TestEmbeddingSimilarity:
     @pytest.fixture
     def sim(self):
-        return EmbeddingSimilarity(provider=FakeLLMProvider())
+        return EmbeddingSimilarity(provider=FakeEmbeddingProvider())
 
     @pytest.mark.anyio
     async def test_compute_similarity(self, sim):
         score = await sim.compute_similarity("hello world", "hello world")
-        # Same text gets identical embeddings from FakeLLMProvider
+        # Same text gets identical embeddings from FakeEmbeddingProvider
         assert score == pytest.approx(1.0)
 
     @pytest.mark.anyio
@@ -63,7 +69,7 @@ class TestEmbeddingSimilarity:
 
     @pytest.mark.anyio
     async def test_find_duplicates_with_matches(self, sim):
-        # FakeLLMProvider returns identical embeddings for all inputs
+        # FakeEmbeddingProvider returns identical embeddings for all inputs
         entries = [
             _make_entry("RAG improves retrieval", entry_id="e1"),
             _make_entry("RAG improves reranking", entry_id="e2"),
@@ -76,9 +82,8 @@ class TestEmbeddingSimilarity:
 
     @pytest.mark.anyio
     async def test_find_duplicates_below_threshold(self, sim):
-        class VariedProvider(FakeLLMProvider):
+        class VariedProvider(FakeEmbeddingProvider):
             async def embed(self, texts):
-                self._call_log.append({"method": "embed", "texts": texts})
                 results = []
                 for i, _ in enumerate(texts):
                     vec = [0.0] * 10

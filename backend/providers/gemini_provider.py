@@ -13,12 +13,10 @@ class GeminiProvider(LLMProvider):
         self,
         api_key: str,
         model: str = "gemini-2.0-flash",
-        embedding_model: str = "models/embedding-001",
     ):
         super().__init__()
         genai.configure(api_key=api_key)
         self._model_name = model
-        self._embedding_model = embedding_model
 
     @property
     def provider_name(self) -> str:
@@ -162,14 +160,6 @@ class GeminiProvider(LLMProvider):
         )
         augmented = messages + [{"role": "user", "content": tool_prompt}]
         return await self.complete_with_usage(augmented, temperature, max_tokens, stage)
-
-    async def embed(self, texts: list[str]) -> list[list[float]]:
-        result = genai.embed_content(
-            model=self._embedding_model,
-            content=texts,
-            task_type="retrieval_document",
-        )
-        return result["embedding"]
 
     @staticmethod
     def _messages_to_prompt(messages: list[dict]) -> str:

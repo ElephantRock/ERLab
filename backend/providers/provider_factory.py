@@ -140,14 +140,12 @@ class ProviderRegistry:
             return cls(
                 api_key=settings.openai_api_key,
                 model=settings.openai_model,
-                embedding_model=settings.embedding_model,
                 base_url=settings.openai_base_url,
             )
         elif name == "anthropic":
             return cls(
                 api_key=settings.anthropic_api_key,
                 model=settings.anthropic_model,
-                embedding_model=settings.embedding_model,
                 base_url=settings.anthropic_base_url,
             )
         elif name == "gemini":
@@ -174,7 +172,6 @@ class ProviderRegistry:
             return cls(
                 api_key="lm-studio",
                 model=settings.lmstudio_model,
-                embedding_model=settings.embedding_model,
                 base_url=base,
             )
         else:

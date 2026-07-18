@@ -262,10 +262,6 @@ class GatewayProvider(LLMProvider):
                 messages, tools, temperature, max_tokens, stage,
             )
 
-    async def embed(self, texts: list[str]) -> list[list[float]]:
-        """Embeddings bypass the gateway (different path)."""
-        return await self._inner.embed(texts)
-
     async def health_check(self) -> bool:
         """Health check via inner provider."""
         return await self._inner.health_check()

@@ -130,9 +130,6 @@ class MockLLMProvider(LLMProvider):
         else:
             return self._generate_from_schema(schema)
 
-    async def embed(self, texts) -> list[list[float]]:
-        return [[0.1] * 64 for _ in texts]
-
     @property
     def provider_name(self) -> str:
         return "mock"

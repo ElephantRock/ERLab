@@ -83,9 +83,6 @@ class StageAwareProvider(LLMProvider):
             run_id=run_id or self._run_id,
         )
 
-    async def embed(self, texts: list[str]) -> list[list[float]]:
-        return await self._wrapped.embed(texts)
-
     async def complete_with_tools(
         self,
         messages: list[dict],

@@ -7,19 +7,15 @@ Fail-closed behavior (Phase 5):
 - Zero vectors returned by the provider raise EmbeddingProviderError.
 - The only path to a zero vector is the explicit empty-input case.
 
-Accepts either the new EmbeddingProvider or the legacy LLMProvider
-for backward compatibility.
+Accepts only the dedicated ``EmbeddingProvider`` — never an ``LLMProvider``.
+Chat providers cannot produce embeddings directly or indirectly.
 """
 
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING
 
 from backend.pipeline.knowledge.embedding_providers import EmbeddingProvider
-
-if TYPE_CHECKING:
-    from backend.providers.base import LLMProvider
 
 logger = logging.getLogger(__name__)
 
@@ -45,7 +41,7 @@ class EmbeddingService:
 
     def __init__(
         self,
-        provider: EmbeddingProvider | LLMProvider,
+        provider: EmbeddingProvider,
         batch_size: int = 100,
         expected_dimension: int | None = None,
     ):

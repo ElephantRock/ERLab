@@ -13,7 +13,6 @@ class OllamaProvider(LLMProvider):
         self,
         base_url: str | None = None,
         model: str = "llama3",
-        embedding_model: str = "nomic-embed-text",
     ):
         super().__init__()
         if base_url is None:
@@ -24,7 +23,6 @@ class OllamaProvider(LLMProvider):
                 base_url = "http://localhost:11434"
         self._base_url = base_url.rstrip("/")
         self._model = model
-        self._embedding_model = embedding_model
         self._client = httpx.AsyncClient(timeout=120.0)
 
     @property
@@ -178,14 +176,3 @@ class OllamaProvider(LLMProvider):
         )
         augmented = messages + [{"role": "user", "content": tool_prompt}]
         return await self.complete_with_usage(augmented, temperature, max_tokens, stage)
-
-    async def embed(self, texts: list[str]) -> list[list[float]]:
-        embeddings = []
-        for text in texts:
-            response = await self._client.post(
-                f"{self._base_url}/api/embeddings",
-                json={"model": self._embedding_model, "prompt": text},
-            )
-            response.raise_for_status()
-            embeddings.append(response.json()["embedding"])
-        return embeddings

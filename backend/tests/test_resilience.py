@@ -157,7 +157,6 @@ class TestResilientProvider:
         rp = ResilientProvider(inner, cb, retry_config)
 
         assert await rp.complete([{"role": "user", "content": "hi"}]) == "hello"
-        assert await rp.embed(["text"]) == [[0.1] * 10]
         assert rp.provider_name == "fake"
         assert rp.default_model == "fake-model"
 

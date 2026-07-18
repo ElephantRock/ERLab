@@ -216,13 +216,3 @@ class LiteLLMProvider(LLMProvider):
             input_tokens=inp,
             output_tokens=out,
         )
-
-    async def embed(self, texts: list[str]) -> list[list[float]]:
-        import litellm
-
-        response = await litellm.aembedding(
-            model=self._model,
-            input=texts,
-            api_key=self._api_key,
-        )
-        return [item["embedding"] for item in response.data]

@@ -166,9 +166,6 @@ class CachedProvider(LLMProvider):
         await self._store_semantic(serialized, response)
         return response
 
-    async def embed(self, texts: list[str]) -> list[list[float]]:
-        return await self._wrapped.embed(texts)
-
     async def complete_with_tools(
         self,
         messages: list[dict],

@@ -67,12 +67,6 @@ class TestCachedProvider:
         chunks2 = [c async for c in cp.complete_stream(msgs)]
         assert len(fake._call_log) == 2
 
-    async def test_embed_not_cached(self):
-        cp, fake = _cached_provider(max_size=10, ttl_seconds=3600)
-        await cp.embed(["hello"])
-        await cp.embed(["hello"])
-        assert len(fake._call_log) == 2
-
     async def test_complete_with_tools_not_cached(self):
         cp, _ = _cached_provider(max_size=10, ttl_seconds=3600)
         msgs = [{"role": "user", "content": "tools"}]

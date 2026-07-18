@@ -13,7 +13,6 @@ class AnthropicProvider(LLMProvider):
         self,
         api_key: str,
         model: str = "claude-sonnet-4-20250514",
-        embedding_model: str = "text-embedding-3-small",
         base_url: str | None = None,
     ):
         super().__init__()
@@ -22,7 +21,6 @@ class AnthropicProvider(LLMProvider):
             kwargs["base_url"] = base_url
         self._client = anthropic.AsyncAnthropic(**kwargs)
         self._model = model
-        self._embedding_model = embedding_model
 
     @property
     def provider_name(self) -> str:
@@ -201,14 +199,6 @@ class AnthropicProvider(LLMProvider):
             input_tokens=inp,
             output_tokens=out,
         )
-
-    async def embed(self, texts: list[str]) -> list[list[float]]:
-        # Anthropic doesn't offer embeddings — use OpenAI as fallback
-        import openai as _openai
-
-        client = _openai.AsyncOpenAI()
-        response = await client.embeddings.create(model=self._embedding_model, input=texts)
-        return [item.embedding for item in response.data]  # type: ignore[return-value, union-attr]
 
     async def _structured_output_fallback(
         self,

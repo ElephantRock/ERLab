@@ -42,9 +42,6 @@ class FakeProvider:
             "severity": "medium",
         }
 
-    async def embed(self, texts) -> list[list[float]]:
-        return [[0.1] * 10 for _ in texts]
-
     @property
     def provider_name(self) -> str:
         return "fake"

@@ -42,9 +42,6 @@ class FakeProvider:
     async def structured_output(self, messages, schema, temperature=0.3, **kwargs):
         return {"result": "ok"}
 
-    async def embed(self, texts):
-        return [[0.1] * 10 for _ in texts]
-
 
 class TestModelReceiptContract:
     """Verify ModelReceipt construction and conformance checking."""

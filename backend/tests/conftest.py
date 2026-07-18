@@ -36,10 +36,6 @@ class FakeLLMProvider(LLMProvider):
         )
         return self._responses.get("structured_output", {})
 
-    async def embed(self, texts) -> list[list[float]]:
-        self._call_log.append({"method": "embed", "texts": texts})
-        return [[0.1] * 10 for _ in texts]
-
     @property
     def provider_name(self) -> str:
         return "fake"

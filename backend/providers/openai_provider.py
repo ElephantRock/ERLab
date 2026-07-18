@@ -13,7 +13,6 @@ class OpenAIProvider(LLMProvider):
         self,
         api_key: str,
         model: str = "gpt-4o",
-        embedding_model: str = "text-embedding-3-small",
         base_url: str | None = None,
     ):
         super().__init__()
@@ -22,7 +21,6 @@ class OpenAIProvider(LLMProvider):
             kwargs["base_url"] = base_url
         self._client = openai.AsyncOpenAI(**kwargs)
         self._model = model
-        self._embedding_model = embedding_model
 
     @property
     def provider_name(self) -> str:
@@ -290,10 +288,3 @@ class OpenAIProvider(LLMProvider):
             input_tokens=inp,
             output_tokens=out,
         )
-
-    async def embed(self, texts: list[str]) -> list[list[float]]:
-        response = await self._client.embeddings.create(
-            model=self._embedding_model,
-            input=texts,
-        )
-        return [item.embedding for item in response.data]  # type: ignore[return-value]

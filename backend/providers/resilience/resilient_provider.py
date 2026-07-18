@@ -134,9 +134,6 @@ class ResilientProvider(LLMProvider):
             run_id=run_id,
         )
 
-    async def embed(self, texts: list[str]) -> list[list[float]]:
-        return await self._with_retry(self._wrapped.embed, texts)
-
     async def complete_with_tools(
         self,
         messages: list[dict],

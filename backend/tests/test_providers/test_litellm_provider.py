@@ -8,7 +8,6 @@ from unittest.mock import AsyncMock, MagicMock, patch
 # Create a mock litellm module so the lazy import in LiteLLMProvider works
 _mock_litellm = MagicMock()
 _mock_litellm.acompletion = AsyncMock()
-_mock_litellm.aembedding = AsyncMock()
 sys.modules.setdefault("litellm", _mock_litellm)
 
 from backend.providers.litellm_provider import LiteLLMProvider
@@ -25,13 +24,6 @@ def _mock_completion_response(content: str):
     choice.message = msg
     resp = MagicMock()
     resp.choices = [choice]
-    return resp
-
-
-def _mock_embedding_response(embeddings: list[list[float]]):
-    data = [{"embedding": e} for e in embeddings]
-    resp = MagicMock()
-    resp.data = data
     return resp
 
 
@@ -90,15 +82,6 @@ class TestLiteLLMProvider:
             )
         )
         assert result == expected
-
-    def test_embed(self):
-        p = LiteLLMProvider(model="text-embedding-3-small")
-        embeddings = [[0.1, 0.2], [0.3, 0.4]]
-        mock_resp = _mock_embedding_response(embeddings)
-        _mock_litellm.aembedding = AsyncMock(return_value=mock_resp)
-
-        result = _run(p.embed(["hello", "world"]))
-        assert result == embeddings
 
 
 class TestProviderFactoryLiteLLM:

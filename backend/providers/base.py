@@ -177,11 +177,6 @@ class LLMProvider(ABC):
             served_model=self.default_model,
         )
 
-    @abstractmethod
-    async def embed(self, texts: list[str]) -> list[list[float]]:
-        """Generate embeddings for a list of texts."""
-        ...
-
     @property
     @abstractmethod
     def provider_name(self) -> str:
