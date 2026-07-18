@@ -1,9 +1,17 @@
-"""Governed vector runtime bundle (P0.3.4H).
+"""Governed vector runtime bundle (P0.4B0.6).
 
 Central composition root for governed vector services. Constructed once
 at application startup and injected into stages, novelty checker, and API
 routes. No production module outside this file and ``vector_backend.py``
 should import or construct ``chromadb`` directly.
+
+B0.6 breaking change: the runtime now exposes only:
+  - backend (GovernedVectorBackend)
+  - session_factory (sessionmaker)
+  - effective_embedding_config (EffectiveEmbeddingConfiguration)
+  - embedding_adapter (GovernedEmbeddingAdapter)
+
+Removed: embedding_provider, embedding_profile_id, profile_dict, db_engine.
 """
 
 from __future__ import annotations
@@ -17,107 +25,155 @@ logger = logging.getLogger(__name__)
 
 @dataclass(frozen=True)
 class GovernedVectorRuntime:
-    """Complete governed vector service bundle.
+    """B0.6 governed vector service bundle.
 
-    Constructed once at application startup and injected into all
-    governed vector consumers. Contains every dependency a governed
-    vector operation needs — no consumer may construct partial services.
+    Exactly four public fields. No raw provider, no untyped profile dict,
+    no duplicate profile ID, no dead engine field.
     """
-
     backend: Any  # GovernedVectorBackend
-    embedding_provider: Any  # EmbeddingProvider (embed_single interface)
-    embedding_profile_id: str
-    profile_dict: dict[str, Any]
     session_factory: Any  # sessionmaker
-    db_engine: Any  # SQLAlchemy engine
+    effective_embedding_config: Any  # EffectiveEmbeddingConfiguration
+    embedding_adapter: Any  # GovernedEmbeddingAdapter
 
 
-def build_governed_vector_runtime(
-    *,
-    chroma_persist_dir: str,
-    embedding_provider: Any,
-    embedding_dimension: int,
-    embedding_provider_name: str,
-    embedding_model_identifier: str,
-    db_engine: Any,
-    normalization_policy: str = "l2",
-    chunking_schema_version: str = "title_abstract_v1",
-) -> GovernedVectorRuntime:
-    """Construct the governed vector runtime at application startup.
-
-    This is the ONLY production location that imports chromadb and
-    constructs a GovernedVectorBackend. All consumers receive the
-    injected runtime.
-    """
-    import chromadb
-    from sqlalchemy.orm import sessionmaker
-
-    from backend.pipeline.vector_backend import GovernedVectorBackend
-    from backend.pipeline.vector_access_policy import resolve_profile_id
-    from backend.pipeline.vector_contracts import compute_collection_name
-
-    profile_id = resolve_profile_id(
-        embedding_provider=embedding_provider_name,
-        model_identifier=embedding_model_identifier,
-        dimension=embedding_dimension,
-        normalization_policy=normalization_policy,
-        chunking_schema_version=chunking_schema_version,
-    )
-
-    chroma_client = chromadb.PersistentClient(path=chroma_persist_dir)
-    backend = GovernedVectorBackend(chroma_client)
-
-    session_factory = sessionmaker(bind=db_engine, expire_on_commit=False)
-
-    return GovernedVectorRuntime(
-        backend=backend,
-        embedding_provider=embedding_provider,
-        embedding_profile_id=profile_id,
-        profile_dict={
-            "provider": embedding_provider_name,
-            "model_identifier": embedding_model_identifier,
-            "dimension": embedding_dimension,
-            "normalization_policy": normalization_policy,
-            "chunking_schema_version": chunking_schema_version,
-        },
-        session_factory=session_factory,
-        db_engine=db_engine,
-    )
+class GovernedVectorRuntimeError(Exception):
+    """Bounded composition error with sanitized detail."""
+    def __init__(self, code: str, detail: str):
+        self.code = code
+        self.detail = detail[:500]
+        super().__init__(f"[{code}] {self.detail}")
 
 
 def build_governed_vector_runtime_from_settings(db_engine: Any) -> GovernedVectorRuntime | None:
-    """Construct from application settings, or None if dependencies unavailable."""
+    """Construct from application settings, or None if dependencies unavailable.
+
+    Sequence (load-bearing ordering):
+      1. Snapshot runtime embedding settings
+      2. Load EmbeddingProfileSnapshot from DB
+      3. Obtain adapter capability snapshot
+      4. Resolve EffectiveEmbeddingConfiguration (B0.7 reconciliation)
+      5. Construct embedding provider
+      6. Wrap provider in GovernedEmbeddingAdapter
+      7. Construct GovernedVectorBackend
+      8. Return GovernedVectorRuntime
+
+    Steps 1-4 must complete before step 5 (provider construction).
+    """
     try:
         from backend.config import get_settings
+        from backend.db.database import get_session
+        from backend.db.models import EmbeddingProfile
+        from backend.pipeline.governed_embedding_adapter import GovernedEmbeddingAdapter
+        from backend.pipeline.knowledge.embedding_configuration import (
+            EmbeddingAdapterCapabilitySnapshot,
+            EmbeddingProfileSnapshot,
+            EmbeddingRuntimeSettingsSnapshot,
+            resolve_effective_embedding_configuration,
+            EmbeddingConfigurationError,
+        )
+        from backend.pipeline.vector_access_policy import resolve_profile_id
+        from backend.pipeline.vector_contracts import compute_collection_name
+        from backend.pipeline.vector_backend import GovernedVectorBackend
         from backend.pipeline.knowledge.embedding_service import EmbeddingService
         from backend.providers.provider_factory import create_provider
+        from sqlalchemy import select
+        from sqlalchemy.orm import sessionmaker
 
-        settings = get_settings()
+        app_settings = get_settings()
+        embedding = EmbeddingService(create_provider())
+
+        # ── Step 1: Snapshot runtime settings (no credentials) ──
+        settings_snapshot = EmbeddingRuntimeSettingsSnapshot(
+            provider_kind=app_settings.embedding_provider,
+            requested_model=app_settings.embedding_model,
+            expected_dimension=embedding.dimension,
+            declared_normalization_policy="none",
+            document_task=None,
+            query_task=None,
+            endpoint=getattr(app_settings, "embedding_base_url", None),
+            configured_deployment_id=None,
+            deployment_is_explicitly_pinned=False,
+        )
+
+        # ── Step 2: Load EmbeddingProfileSnapshot from DB ──
+        profile_id = resolve_profile_id(
+            embedding_provider=app_settings.embedding_provider,
+            model_identifier=app_settings.embedding_model,
+            dimension=embedding.dimension,
+            normalization_policy="none",
+            chunking_schema_version="title_abstract_v1",
+        )
+
+        with get_session() as session:
+            profile_row = session.execute(
+                select(EmbeddingProfile).where(
+                    EmbeddingProfile.profile_id == profile_id
+                )
+            ).scalar_one_or_none()
+
+        if profile_row is None:
+            logger.debug("Embedding profile %s... not registered", profile_id[:12])
+            return None
+
+        profile_snapshot = EmbeddingProfileSnapshot(
+            embedding_profile_id=profile_row.profile_id,
+            profile_schema_version=profile_row.profile_schema_version,
+            provider_kind=profile_row.provider,
+            model_identifier=profile_row.model_identifier,
+            dimension=profile_row.dimension,
+            normalization_policy=profile_row.normalization_policy,
+            document_task=None,
+            query_task=None,
+            verification_status=profile_row.verification_status,
+        )
+
+        # ── Step 3: Adapter capability snapshot ──
+        adapter_snapshot = EmbeddingAdapterCapabilitySnapshot(
+            provider_adapter_contract_version="provider_adapter_v1",
+            governed_adapter_contract_version="governed_adapter_v1",
+            implemented_postprocessing_policy="none",
+            supports_document_embedding=True,
+            supports_query_embedding=True,
+        )
+
+        # ── Step 4: Resolve effective configuration (may fail) ──
+        try:
+            effective_config = resolve_effective_embedding_configuration(
+                settings=settings_snapshot,
+                profile=profile_snapshot,
+                adapter=adapter_snapshot,
+            )
+        except EmbeddingConfigurationError as e:
+            logger.warning("Embedding configuration reconciliation failed: %s", e)
+            return None
+
+        # ── Step 5: Construct embedding provider (after reconciliation) ──
         provider = create_provider()
-        embedding = EmbeddingService(provider)
+        embedding_service = EmbeddingService(provider)
 
-        # P0.4B0.3: use the canonical GovernedEmbeddingAdapter instead of
-        # an inline private _EmbeddingAdapter. The canonical adapter exposes
-        # provider/model/dimension identity and performs fail-closed
-        # structural validation; the inline adapter did neither.
-        from backend.pipeline.governed_embedding_adapter import (
-            GovernedEmbeddingAdapter,
-        )
+        # ── Step 6: Wrap in GovernedEmbeddingAdapter ──
         adapter = GovernedEmbeddingAdapter(
-            embedding_service=embedding,
-            provider_kind=settings.embedding_provider,
-            requested_model=settings.embedding_model,
-            configured_dimension=embedding.dimension,
+            embedding_service=embedding_service,
+            provider_kind=effective_config.provider_kind,
+            requested_model=effective_config.requested_model,
+            configured_dimension=effective_config.expected_dimension,
         )
 
-        return build_governed_vector_runtime(
-            chroma_persist_dir=settings.chroma_persist_dir,
-            embedding_provider=adapter,
-            embedding_dimension=embedding.dimension,
-            embedding_provider_name=settings.embedding_provider,
-            embedding_model_identifier=settings.embedding_model,
-            db_engine=db_engine,
+        # ── Step 7: Construct GovernedVectorBackend ──
+        import chromadb
+        chroma_client = chromadb.PersistentClient(path=app_settings.chroma_persist_dir)
+        backend = GovernedVectorBackend(chroma_client)
+
+        session_factory = sessionmaker(bind=db_engine, expire_on_commit=False)
+
+        # ── Step 8: Return runtime ──
+        return GovernedVectorRuntime(
+            backend=backend,
+            session_factory=session_factory,
+            effective_embedding_config=effective_config,
+            embedding_adapter=adapter,
         )
+
     except Exception as e:
         logger.debug("Could not build governed vector runtime: %s", e)
         return None

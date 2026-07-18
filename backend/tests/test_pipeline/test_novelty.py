@@ -58,12 +58,20 @@ class TestNoveltyChecker:
 
 
 class _FakeGovernedRuntime:
-    """Minimal stand-in for the fields ``_retrieve_governed`` reads."""
+    """Minimal stand-in for the fields ``_retrieve_governed`` reads.
+
+    B0.6: GovernedVectorRuntime now has effective_embedding_config instead
+    of separate embedding_profile_id/profile_dict fields.
+    """
 
     def __init__(self) -> None:
-        self.embedding_profile_id = "profile_test"
+        # Create a minimal object that has embedding_profile_id
+        self.effective_embedding_config = MagicMock(
+            embedding_profile_id="profile_test"
+        )
         self.backend = MagicMock(name="governed_backend")
         self.session_factory = MagicMock(name="session_factory")
+        self.embedding_adapter = MagicMock(name="embedding_adapter")
 
 
 class _FakeGovernedEmbedding:

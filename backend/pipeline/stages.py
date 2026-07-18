@@ -636,10 +636,19 @@ class IngestionStage(PipelineStage):
                 logger.warning("Cannot construct governed vector runtime for indexing")
                 return
 
-        profile_id = runtime.embedding_profile_id
-        profile_dict = runtime.profile_dict
+        profile_id = runtime.effective_embedding_config.embedding_profile_id
+        cfg = runtime.effective_embedding_config
         Session = runtime.session_factory
         backend = runtime.backend
+
+        # Build the profile dict for VectorIndexer from the effective config
+        profile_dict = {
+            "provider": cfg.provider_kind,
+            "model_identifier": cfg.requested_model,
+            "dimension": cfg.expected_dimension,
+            "normalization_policy": cfg.implemented_postprocessing_policy,
+            "chunking_schema_version": "title_abstract_v1",
+        }
 
         # Index each paper
         indexed = 0
@@ -689,9 +698,9 @@ class IngestionStage(PipelineStage):
                 # the profile; B0.7 will reconcile these against Settings.
                 adapter = GovernedEmbeddingAdapter(
                     embedding_service=self._embedding,
-                    provider_kind=profile_dict.get("provider", "unknown"),
-                    requested_model=profile_dict.get("model_identifier", "unknown"),
-                    configured_dimension=int(profile_dict.get("dimension", 0)),
+                    provider_kind=cfg.provider_kind,
+                    requested_model=cfg.requested_model,
+                    configured_dimension=cfg.expected_dimension,
                 )
 
                 outcome = await index_document(

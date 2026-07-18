@@ -178,7 +178,7 @@ class NoveltyChecker:
         # callers that haven't been updated to inject yet)
         if self._governed_runtime is not None:
             runtime = self._governed_runtime
-            profile_id = runtime.embedding_profile_id
+            profile_id = runtime.effective_embedding_config.embedding_profile_id
             backend = runtime.backend
             Session = runtime.session_factory
         else:
@@ -189,7 +189,7 @@ class NoveltyChecker:
                     "governed novelty retrieval requires governed vector runtime; "
                     "could not construct from settings"
                 )
-            profile_id = runtime.embedding_profile_id
+            profile_id = runtime.effective_embedding_config.embedding_profile_id
             backend = runtime.backend
             Session = runtime.session_factory
 

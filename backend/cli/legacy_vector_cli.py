@@ -294,28 +294,23 @@ def _execute_reindex(Session, run_id: int, profile_id: str) -> int:
     from backend.pipeline.governed_embedding_adapter import (
         GovernedEmbeddingAdapter,
     )
-    profile_dict = runtime.profile_dict
-    adapter = GovernedEmbeddingAdapter(
-        embedding_service=__import__(
-            "backend.pipeline.knowledge.embedding_service",
-            fromlist=["EmbeddingService"],
-        ).EmbeddingService(
-            __import__(
-                "backend.providers.provider_factory",
-                fromlist=["create_provider"],
-            ).create_provider()
-        ),
-        provider_kind=profile_dict.get("provider", "unknown"),
-        requested_model=profile_dict.get("model_identifier", "unknown"),
-        configured_dimension=int(profile_dict.get("dimension", 0)),
-    )
+    cfg = runtime.effective_embedding_config
+    profile_dict = {
+        "provider": cfg.provider_kind,
+        "model_identifier": cfg.requested_model,
+        "dimension": cfg.expected_dimension,
+        "normalization_policy": cfg.implemented_postprocessing_policy,
+        "chunking_schema_version": "title_abstract_v1",
+    }
+    # Use the runtime's own adapter — it already wraps the provider correctly
+    adapter = runtime.embedding_adapter
 
     counts = __import__("asyncio").run(execute_reindex_targets(
         Session, inventory_run_id=run_id,
         governed_backend=runtime.backend,
         embedding_provider=adapter,
-        profile_dict=runtime.profile_dict,
-        embedding_profile_id=profile_id,
+        profile_dict=profile_dict,
+        embedding_profile_id=cfg.embedding_profile_id,
     ))
 
     print(f"Reindex: {counts['indexed']} indexed, {counts['already_indexed']} already-indexed, "

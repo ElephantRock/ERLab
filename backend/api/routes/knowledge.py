@@ -221,7 +221,7 @@ async def search_knowledge_governed(
             hint="Ensure embedding provider and ChromaDB are configured.",
         )
 
-    profile_id = runtime.embedding_profile_id
+    profile_id = runtime.effective_embedding_config.embedding_profile_id
     settings = get_settings()
     provider = create_provider()
     embedding = EmbeddingService(provider)
