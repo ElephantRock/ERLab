@@ -663,13 +663,20 @@ def test_effective_configuration_resolver_rejects_provider_mismatch():
 
 
 def test_no_premature_capability_claims_in_production():
-    """No capability-ledger symbols may exist in production code during B0.
+    """No prohibited capability-ledger symbols may exist in production code.
 
-    Capability bindings, checks, and verified runtime tokens belong to
-    P0.4A1+. Their presence now would indicate premature claims.
+    Post-A1.1, EmbeddingCapabilityBinding and EmbeddingCapabilityCheck are
+    legitimate schema and are allowed in exact approved paths (models,
+    capability module, contracts, migration, tests). The remaining
+    prohibited symbols (verified_until, EmbeddingProfileBindingActivation)
+    belong to future cutover waves and must not appear in production.
     """
     spec = MANIFEST["prohibited_capability_claims"]
     symbols = spec["symbols"]
+
+    incremental = spec.get("incremental_allowlist", {})
+    allowed_symbols = set(incremental.get("allowed_from_a1_1", []))
+    allowed_path_prefixes = tuple(incremental.get("allowed_paths", []))
 
     # Documents and migration files that may legitimately reference future
     # symbols as forward reservations.
@@ -685,14 +692,22 @@ def test_no_premature_capability_claims_in_production():
 
     violations: list[str] = []
     for rel, path in _iter_production_py():
-        if any(sub in rel for sub in allowed_path_substrings):
-            continue
+        # Check if this path is in the incremental allowlist
+        path_is_allowed = (
+            any(sub in rel for sub in allowed_path_substrings)
+            or any(rel.startswith(prefix.replace("backend/", "")) for prefix in allowed_path_prefixes)
+            or any(rel == prefix.replace("backend/", "") for prefix in allowed_path_prefixes)
+        )
         try:
             source = path.read_text(encoding="utf-8")
         except Exception:
             continue
         for symbol in symbols:
             if symbol in source:
+                # If the symbol is incrementally allowed AND the path is
+                # in the allowed list, skip it.
+                if symbol in allowed_symbols and path_is_allowed:
+                    continue
                 # Find first occurrence line
                 for i, line in enumerate(source.splitlines(), 1):
                     if symbol in line:
@@ -700,9 +715,10 @@ def test_no_premature_capability_claims_in_production():
                         break
 
     assert not violations, (
-        "D7 violation — premature capability-claim symbols in production:\n"
+        "D7 violation — prohibited capability-claim symbols in production:\n"
         + "\n".join(f"  {v}" for v in violations)
-        + "\nCapability bindings/checks belong to P0.4A1+, not B0."
+        + "\nRemaining prohibited symbols (verified_until, activations) "
+        "belong to future cutover waves."
     )
 
 

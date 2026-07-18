@@ -165,16 +165,27 @@
 
   "prohibited_capability_claims": {
     "symbols": [
-      "capability_binding_id",
-      "capability_check_id",
       "verified_until",
-      "EmbeddingCapabilityBinding",
-      "EmbeddingCapabilityCheck",
-      "EmbeddingProfileBindingActivation",
-      "VerifiedEmbeddingRuntime"
+      "EmbeddingProfileBindingActivation"
     ],
     "expected_count_during_b0": 0,
-    "note": "These belong to P0.4A1+ (capability ledger). Their presence in executable production code during B0 indicates premature capability claims. References in documentation, future-constant declarations, or migration files explicitly classified as forward-reserved do not count."
+    "note": "These belong to future macro-waves (capability-bound vector cutover). Their presence in executable production code during A1 indicates premature cutover claims. References in documentation, future-constant declarations, or migration files explicitly classified as forward-reserved do not count.",
+    "incremental_allowlist": {
+      "allowed_from_a1_1": [
+        "EmbeddingCapabilityBinding",
+        "EmbeddingCapabilityCheck",
+        "capability_binding_id",
+        "capability_check_id"
+      ],
+      "allowed_paths": [
+        "backend/db/models.py",
+        "backend/pipeline/capability/",
+        "backend/pipeline/vector_contracts.py",
+        "alembic/versions/027_capability_ledger.py",
+        "backend/tests/"
+      ],
+      "note": "EmbeddingCapabilityBinding and EmbeddingCapabilityCheck are legitimate A1 schema. They are allowed ONLY in the exact paths listed above. verified_until and EmbeddingProfileBindingActivation remain prohibited throughout A1 — they belong to the cutover macro-wave."
+    }
   },
 
   "b0_4_seal": {

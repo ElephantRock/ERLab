@@ -14,6 +14,7 @@ from sqlalchemy import (
     String,
     Text,
     UniqueConstraint,
+    text,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy import event
@@ -1667,6 +1668,291 @@ class LegacyVectorReindexTarget(Base):
         onupdate=lambda: datetime.now(timezone.utc),
     )
     completed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+
+
+# ── P0.4A1: Capability ledger ────────────────────────────────────────
+
+
+class EmbeddingCapabilityCheck(Base):
+    """Timestamped runtime-health evidence for an embedding capability
+    probe (P0.4A1).
+
+    Check-first lifecycle: a pending check is created BEFORE any probe.
+    The ``binding_id`` column is NULL while the check is pending, running,
+    or failed, and is set ONLY when the probe passes and a binding is
+    resolved. This enforces the frozen rule:
+
+        A failed or incomplete probe may create check evidence, but it
+        may never create a resolved capability binding.
+
+    Lifecycle::
+
+        pending → running → passed | failed | cancelled
+                       ↓ (lease expiry)
+                    abandoned
+
+    ``passed``, ``failed``, ``cancelled``, and ``abandoned`` are all
+    immutable terminals. Expiry is DERIVED at read time::
+
+        operational_status = "expired"
+        when check_status == "passed" AND now > expires_at
+
+    The stored fact that a probe passed is never rewritten to "expired".
+    """
+
+    __tablename__ = "embedding_capability_checks"
+    __table_args__ = (
+        # Authority lookup index: find the latest completed check for a
+        # given profile + runtime fingerprint + probe suite.
+        Index(
+            "ix_ecc_profile_fingerprint_suite",
+            "embedding_profile_id",
+            "runtime_config_fingerprint",
+            "probe_suite_version",
+        ),
+        Index("ix_ecc_binding_id", "binding_id"),
+        Index("ix_ecc_lease_expires_at", "lease_expires_at"),
+        # ── Schema-version literal ──
+        CheckConstraint(
+            "check_schema_version = 'capability_check_v1'",
+            name="ck_ecc_schema_version",
+        ),
+        # ── Status vocabulary ──
+        CheckConstraint(
+            "check_status IN ('pending','running','passed','failed',"
+            "'cancelled','abandoned')",
+            name="ck_ecc_check_status",
+        ),
+        CheckConstraint(
+            "probe_kind IN ('document_probe','query_probe','dual_probe')",
+            name="ck_ecc_probe_kind",
+        ),
+        CheckConstraint("attempt_count >= 0", name="ck_ecc_attempt_count"),
+        CheckConstraint(
+            "provider_request_count >= 0", name="ck_ecc_provider_request_count"
+        ),
+        # ── Lifecycle completeness (DB-enforced) ──
+        # passed → binding present, completed, expires, probed; no failure
+        CheckConstraint(
+            "check_status != 'passed' OR "
+            "(binding_id IS NOT NULL AND completed_at IS NOT NULL "
+            "AND expires_at IS NOT NULL AND probed_at IS NOT NULL "
+            "AND failure_code IS NULL)",
+            name="ck_ecc_passed_completeness",
+        ),
+        # failed → completed, failure code present, no binding, no expires
+        CheckConstraint(
+            "check_status != 'failed' OR "
+            "(completed_at IS NOT NULL AND failure_code IS NOT NULL "
+            "AND binding_id IS NULL AND expires_at IS NULL)",
+            name="ck_ecc_failed_completeness",
+        ),
+        # cancelled → completed, no binding
+        CheckConstraint(
+            "check_status != 'cancelled' OR "
+            "(completed_at IS NOT NULL AND binding_id IS NULL)",
+            name="ck_ecc_cancelled_completeness",
+        ),
+        # abandoned → completed, no binding
+        CheckConstraint(
+            "check_status != 'abandoned' OR "
+            "(completed_at IS NOT NULL AND binding_id IS NULL)",
+            name="ck_ecc_abandoned_completeness",
+        ),
+        # running → claimed + lease; not completed
+        CheckConstraint(
+            "check_status != 'running' OR "
+            "(claimed_at IS NOT NULL AND lease_expires_at IS NOT NULL "
+            "AND completed_at IS NULL)",
+            name="ck_ecc_running_completeness",
+        ),
+        # pending → not claimed
+        CheckConstraint(
+            "check_status != 'pending' OR claimed_at IS NULL",
+            name="ck_ecc_pending_completeness",
+        ),
+        # ── Format checks ──
+        CheckConstraint(
+            "length(embedding_profile_id) = 64 "
+            "AND embedding_profile_id = lower(embedding_profile_id)",
+            name="ck_ecc_profile_id_format",
+        ),
+        CheckConstraint(
+            "length(runtime_config_fingerprint) = 64 "
+            "AND runtime_config_fingerprint = lower(runtime_config_fingerprint)",
+            name="ck_ecc_fingerprint_format",
+        ),
+    )
+
+    check_id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    embedding_profile_id: Mapped[str] = mapped_column(
+        String(64),
+        ForeignKey("embedding_profiles.profile_id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    binding_id: Mapped[str | None] = mapped_column(
+        String(64),
+        ForeignKey("embedding_capability_bindings.binding_id", ondelete="RESTRICT"),
+        nullable=True,
+    )
+    runtime_config_fingerprint: Mapped[str] = mapped_column(
+        String(64), nullable=False
+    )
+    probe_suite_version: Mapped[str] = mapped_column(String(30), nullable=False)
+    check_status: Mapped[str] = mapped_column(String(20), nullable=False)
+    probe_kind: Mapped[str] = mapped_column(String(20), nullable=False)
+    attempt_count: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=0, server_default="0"
+    )
+    provider_request_count: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=0, server_default="0"
+    )
+    claimed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    lease_expires_at: Mapped[datetime | None] = mapped_column(
+        DateTime, nullable=True
+    )
+    probed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    expires_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+
+    # ── Separate document/query observations ──
+    observed_document_dimension: Mapped[int | None] = mapped_column(
+        Integer, nullable=True
+    )
+    observed_query_dimension: Mapped[int | None] = mapped_column(
+        Integer, nullable=True
+    )
+    observed_document_norm_min: Mapped[float | None] = mapped_column(
+        Float, nullable=True
+    )
+    observed_document_norm_max: Mapped[float | None] = mapped_column(
+        Float, nullable=True
+    )
+    observed_query_norm: Mapped[float | None] = mapped_column(
+        Float, nullable=True
+    )
+    observed_document_reported_model: Mapped[str | None] = mapped_column(
+        String(255), nullable=True
+    )
+    observed_query_reported_model: Mapped[str | None] = mapped_column(
+        String(255), nullable=True
+    )
+    observed_document_provider_revision: Mapped[str | None] = mapped_column(
+        String(255), nullable=True
+    )
+    observed_query_provider_revision: Mapped[str | None] = mapped_column(
+        String(255), nullable=True
+    )
+    observed_document_evidence_source: Mapped[str | None] = mapped_column(
+        String(60), nullable=True
+    )
+    observed_query_evidence_source: Mapped[str | None] = mapped_column(
+        String(60), nullable=True
+    )
+
+    # ── Failure evidence (NULL on pass) ──
+    failure_category: Mapped[str | None] = mapped_column(
+        String(40), nullable=True
+    )
+    failure_code: Mapped[str | None] = mapped_column(String(80), nullable=True)
+    sanitized_error_detail: Mapped[str | None] = mapped_column(
+        String(500), nullable=True
+    )
+
+    check_schema_version: Mapped[str] = mapped_column(
+        String(30), nullable=False
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        default=lambda: datetime.now(timezone.utc),
+        server_default=text("CURRENT_TIMESTAMP"),
+    )
+
+
+class EmbeddingCapabilityBinding(Base):
+    """Stable resolved semantic-space identity (P0.4A1).
+
+    A binding is created ONLY after a successful dual-probe proves the
+    runtime matches the declared contract. It is immutable once created.
+
+    The binding identity (``binding_id``) is a deterministic SHA-256 over
+    ALL semantic-space-defining fields: profile, provider, model,
+    revision, posture, tasks, dimension, normalization, post-processing,
+    endpoint, deployment, contracts, and classifier version. Two runtimes
+    that share a provider+model+dimension but differ in any other field
+    produce distinct bindings.
+    """
+
+    __tablename__ = "embedding_capability_bindings"
+    __table_args__ = (
+        Index("ix_ecb_profile_id", "embedding_profile_id"),
+        CheckConstraint(
+            "binding_schema_version = 'capability_binding_v1'",
+            name="ck_ecb_schema_version",
+        ),
+        CheckConstraint("resolved_dimension > 0", name="ck_ecb_dimension_positive"),
+        CheckConstraint(
+            "length(binding_id) = 64 AND binding_id = lower(binding_id)",
+            name="ck_ecb_binding_id_format",
+        ),
+        CheckConstraint(
+            "length(embedding_profile_id) = 64 "
+            "AND embedding_profile_id = lower(embedding_profile_id)",
+            name="ck_ecb_profile_id_format",
+        ),
+    )
+
+    binding_id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    embedding_profile_id: Mapped[str] = mapped_column(
+        String(64),
+        ForeignKey("embedding_profiles.profile_id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    provider_kind: Mapped[str] = mapped_column(String(80), nullable=False)
+    resolved_model: Mapped[str] = mapped_column(String(255), nullable=False)
+    provider_revision: Mapped[str | None] = mapped_column(
+        String(255), nullable=True
+    )
+    model_resolution_posture: Mapped[str] = mapped_column(
+        String(40), nullable=False
+    )
+    resolved_document_task: Mapped[str | None] = mapped_column(
+        String(60), nullable=True
+    )
+    resolved_query_task: Mapped[str | None] = mapped_column(
+        String(60), nullable=True
+    )
+    resolved_dimension: Mapped[int] = mapped_column(Integer, nullable=False)
+    resolved_normalization: Mapped[str] = mapped_column(String(80), nullable=False)
+    postprocessing_contract_version: Mapped[str] = mapped_column(
+        String(60), nullable=False
+    )
+    resolved_endpoint_identity: Mapped[str] = mapped_column(
+        String(512), nullable=False
+    )
+    resolved_deployment_id: Mapped[str | None] = mapped_column(
+        String(255), nullable=True
+    )
+    profile_schema_version: Mapped[str] = mapped_column(
+        String(30), nullable=False
+    )
+    provider_adapter_contract_version: Mapped[str] = mapped_column(
+        String(60), nullable=False
+    )
+    governed_adapter_contract_version: Mapped[str] = mapped_column(
+        String(60), nullable=False
+    )
+    resolution_classifier_version: Mapped[str] = mapped_column(
+        String(60), nullable=False
+    )
+    binding_schema_version: Mapped[str] = mapped_column(
+        String(30), nullable=False
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        default=lambda: datetime.now(timezone.utc),
+        server_default=text("CURRENT_TIMESTAMP"),
+    )
 
 
 # ── P0.2.7: Provenance immutability enforcement ─────────────────────
