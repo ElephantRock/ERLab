@@ -17,6 +17,7 @@ from typing import Any
 from backend.pipeline.knowledge.embedding_provider_identity import (
     EVIDENCE_SOURCE_CONFIGURED_ONLY,
     EVIDENCE_SOURCE_GEMINI_CONFIGURED_MODEL,
+    EVIDENCE_SOURCE_LMSTUDIO_RESPONSE_MODEL,
     EVIDENCE_SOURCE_OLLAMA_API_SHOW_DIGEST,
     EVIDENCE_SOURCE_OLLAMA_RESPONSE,
     EVIDENCE_SOURCE_OPENAI_RESPONSE_MODEL,
@@ -378,6 +379,16 @@ class OllamaEmbeddingProvider(EmbeddingProvider):
         return self._identity_evidence
 
 
+class LMStudioEmbeddingOutputError(RuntimeError):
+    """Raised when LM Studio returns a malformed response.
+
+    Per directive B0.1e: malformed output is an explicit failure, not a
+    silent skip. Distinct from network/HTTP exceptions (which propagate
+    as their own types) so callers can distinguish output-contract
+    failures from connectivity failures.
+    """
+
+
 class LMStudioEmbeddingProvider(EmbeddingProvider):
     """Embeddings via LM Studio's OpenAI-compatible /v1/embeddings endpoint.
 
@@ -414,6 +425,12 @@ class LMStudioEmbeddingProvider(EmbeddingProvider):
 
         # Normalize model name: LM Studio may report 'text-embedding-bge-m3-embeddings'
         # while older configs use 'text-embedding-bge-m3'. Map both to the loaded model.
+        # P0.4B0.1e: the configured (post-rewrite) model is recorded as
+        # deployment_id evidence — it's the model LM Studio reported as loaded
+        # via /v1/models at orchestrator init (see service_registry.py:63-77).
+        # This is *evidence* only; B0.2's classifier decides whether the
+        # endpoint/deployment configuration justifies stable_deployment or
+        # only alias_only.
         if model == "text-embedding-bge-m3":
             model = "text-embedding-bge-m3-embeddings"
         self._model = model
@@ -421,40 +438,89 @@ class LMStudioEmbeddingProvider(EmbeddingProvider):
         self._batch_size = batch_size
         self._client = httpx.AsyncClient(timeout=120.0)
         self._dimension = dimension_override or self.MODEL_DIMENSIONS.get(model, 1024)
+        # P0.4B0.1e: cached identity evidence from the most recent response.
+        # None until the first successful embed call.
+        self._last_identity_evidence: ProviderModelIdentityEvidence | None = None
 
     async def embed(self, texts: list[str]) -> list[list[float]]:
-        """Embed texts using LM Studio's /v1/embeddings endpoint."""
+        """Embed texts using LM Studio's /v1/embeddings endpoint.
+
+        P0.4B0.1e fail-closed repair: provider failures now propagate as
+        explicit exceptions. Pre-B0 this method silently caught every
+        exception and substituted ``[0.0] * dimension`` placeholder
+        vectors, which (a) defeated downstream EmbeddingService zero-vector
+        rejection in subtle ways and (b) fabricated evidence of a
+        successful embedding when none occurred. The directive requires:
+
+          successful request -> embeddings + resolved model evidence
+          provider failure    -> explicit exception, zero fabricated vectors
+          malformed output    -> explicit output-contract failure
+        """
         all_embeddings: list[list[float]] = []
+        last_reported_model: str | None = None
 
         for i in range(0, len(texts), self._batch_size):
             batch = texts[i : i + self._batch_size]
-            try:
-                response = await self._client.post(
-                    f"{self._base_url}/embeddings",
-                    json={
-                        "model": self._model,
-                        "input": batch,
-                    },
-                )
-                response.raise_for_status()
-                data = response.json()
+            # No try/except: let exceptions propagate. The caller (EmbeddingService
+            # or the GovernedEmbeddingAdapter) wraps them in fail-closed errors.
+            response = await self._client.post(
+                f"{self._base_url}/embeddings",
+                json={
+                    "model": self._model,
+                    "input": batch,
+                },
+            )
+            response.raise_for_status()
+            data = response.json()
 
-                # Sort by index to maintain order
-                items = sorted(data["data"], key=lambda x: x["index"])
-                all_embeddings.extend(item["embedding"] for item in items)
+            # Malformed output is an explicit failure, not a silent skip.
+            if not isinstance(data, dict) or "data" not in data:
+                raise LMStudioEmbeddingOutputError(
+                    f"LM Studio /v1/embeddings returned malformed response: "
+                    f"missing 'data' field (got {type(data).__name__})"
+                )
 
-            except Exception as e:
-                logger.error(
-                    "LM Studio embedding batch %d failed: %s",
-                    i // self._batch_size,
-                    str(e)[:100],
-                )
-                # Return zero vectors on failure
-                all_embeddings.extend(
-                    [[0.0] * self._dimension for _ in batch]
-                )
+            items = sorted(data["data"], key=lambda x: x["index"])
+            all_embeddings.extend(item["embedding"] for item in items)
+
+            # P0.4B0.1e: capture the echoed 'model' field as evidence.
+            # LM Studio's OpenAI-compatible endpoint populates data.model
+            # with the actually-loaded model id. We retain it as
+            # reported_model evidence; we do NOT promote the echo to a
+            # stable identity here.
+            reported = data.get("model")
+            if isinstance(reported, str) and reported:
+                last_reported_model = reported
+
+        # Build the evidence record after all batches complete so it
+        # reflects the most recent reported_model observed.
+        self._last_identity_evidence = ProviderModelIdentityEvidence(
+            provider_kind="lmstudio",
+            requested_model=self._model,
+            reported_model=last_reported_model,
+            # The configured model id is the closest thing LM Studio
+            # exposes to a deployment identity (the model is loaded at
+            # a specific endpoint). B0.2 decides whether this rises to
+            # stable_deployment or remains alias_only.
+            deployment_id=self._model,
+            provider_revision=None,
+            evidence_source=EVIDENCE_SOURCE_LMSTUDIO_RESPONSE_MODEL
+            if last_reported_model is not None
+            else EVIDENCE_SOURCE_CONFIGURED_ONLY,
+        )
 
         return all_embeddings
+
+    async def embed_with_evidence(
+        self, texts: list[str]
+    ) -> ProviderEmbeddingBatch:
+        """Embed and return vectors together with the captured identity evidence."""
+        embeddings = await self.embed(texts)
+        assert self._last_identity_evidence is not None
+        return ProviderEmbeddingBatch(
+            embeddings=tuple(tuple(v) for v in embeddings),
+            identity_evidence=self._last_identity_evidence,
+        )
 
     @property
     def dimension(self) -> int:
@@ -463,6 +529,11 @@ class LMStudioEmbeddingProvider(EmbeddingProvider):
     @property
     def provider_name(self) -> str:
         return f"lmstudio:{self._model}"
+
+    @property
+    def last_identity_evidence(self) -> ProviderModelIdentityEvidence | None:
+        """Most recently captured identity evidence, or None if no embed call yet."""
+        return self._last_identity_evidence
 
 
 class FallbackEmbeddingProvider(EmbeddingProvider):
