@@ -61,15 +61,24 @@ class CostAwareRouter:
     async def get_provider_with_health_check(
         self, stage: str, run_id: str | None = None
     ) -> LLMProvider:
-        from backend.providers.resilience.circuit_breaker import _breakers
+        from backend.providers.resilience.circuit_breaker import (
+            CircuitOpenError,
+            _breakers,
+        )
 
         candidates = self._get_candidates(stage)
         candidates = self._filter_by_budget(candidates)
 
         for name in candidates:
             breaker = _breakers.get(name)
-            if breaker and not breaker.check():
-                continue
+            if breaker is not None:
+                # check() is a raising guard, not a boolean predicate:
+                # it returns None when closed and raises CircuitOpenError
+                # when open. Treat the raise as "skip this candidate".
+                try:
+                    breaker.check()
+                except CircuitOpenError:
+                    continue
             provider = self._get_or_create(name, self._routing.get(stage, {}))
             try:
                 if await provider.health_check():
@@ -98,17 +107,25 @@ class CostAwareRouter:
         return [n for n in candidates if not self._budget.provider_exceeded(n, self._cost_tracker)]
 
     def _filter_by_health(self, candidates: list[str]) -> list[str]:
-        from backend.providers.resilience.circuit_breaker import _breakers
+        from backend.providers.resilience.circuit_breaker import (
+            CircuitOpenError,
+            _breakers,
+        )
 
         healthy = []
         for name in candidates:
             breaker = _breakers.get(name)
             if breaker is None:
                 healthy.append(name)
-            elif not breaker.check():
-                continue
             else:
-                healthy.append(name)
+                # check() is a raising guard, not a boolean predicate:
+                # it returns None when closed and raises CircuitOpenError
+                # when open. Treat the raise as "exclude this candidate".
+                try:
+                    breaker.check()
+                    healthy.append(name)
+                except CircuitOpenError:
+                    continue
         return healthy if healthy else candidates
 
     def _get_or_create(self, name: str, config: dict) -> LLMProvider:
