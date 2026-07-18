@@ -256,7 +256,6 @@ async def search_knowledge_governed(
     outcome = await query_vectors(
         session_factory=runtime.session_factory,
         backend=runtime.backend,
-        backend=backend,
         request=request,
     )
 
