@@ -36,19 +36,38 @@ _LEGACY_COLLECTION = "research_papers"
 def is_legacy_collection_frozen(session: Session) -> bool:
     """Check if the legacy collection is frozen (production access disabled).
 
-    Uses a singleton key-value in the database. If the key doesn't exist,
-    the collection is NOT frozen (backward compat during transition).
+    Fail-closed semantics: if the freeze-state row is missing, the read
+    fails, or the database is unavailable, the collection is treated as
+    FROZEN. This prevents a migration error, database restoration, or
+    partial deployment from silently reopening the legacy collection.
+
+    Only an explicitly ``active`` row permits production access.
     """
-    result = session.execute(
-        select(_LegacyFreezeState).where(
-            _LegacyFreezeState.collection_name == _LEGACY_COLLECTION
-        )
-    ).scalar_one_or_none()
-    return result is not None and result.status in ("frozen", "quarantined", "deleted")
+    try:
+        result = session.execute(
+            select(_LegacyFreezeState).where(
+                _LegacyFreezeState.collection_name == _LEGACY_COLLECTION
+            )
+        ).scalar_one_or_none()
+
+        # Missing row → fail closed (treat as frozen)
+        if result is None:
+            return True
+
+        # Only 'active' permits access; everything else is frozen
+        return result.status != "active"
+    except Exception:
+        # Read failure → fail closed
+        return True
 
 
 def freeze_legacy_collection(session: Session, *, reason: str = "P0.3.6 isolation") -> None:
-    """Freeze the legacy collection — disable all production access."""
+    """Freeze the legacy collection — disable all production access.
+
+    Monotonic: once frozen, the state can only advance (frozen → quarantined
+    → deleted). The transition active → frozen is the only way to enter the
+    frozen lifecycle. A frozen collection can never return to active.
+    """
     existing = session.execute(
         select(_LegacyFreezeState).where(
             _LegacyFreezeState.collection_name == _LEGACY_COLLECTION
@@ -56,8 +75,15 @@ def freeze_legacy_collection(session: Session, *, reason: str = "P0.3.6 isolatio
     ).scalar_one_or_none()
 
     if existing is not None:
+        # Monotonic guard: cannot go backward
         if existing.status in ("frozen", "quarantined", "deleted"):
-            return  # Already frozen
+            return  # Already frozen or stronger — no backward transition
+        # Only active → frozen is permitted
+        if existing.status != "active":
+            raise ValueError(
+                f"cannot freeze from status {existing.status!r}; "
+                f"only 'active' can transition to 'frozen'"
+            )
         existing.status = "frozen"
         existing.reason = reason
         existing.frozen_at = datetime.now(timezone.utc)
@@ -74,25 +100,49 @@ def freeze_legacy_collection(session: Session, *, reason: str = "P0.3.6 isolatio
 
 
 def quarantine_legacy_collection(session: Session, *, reason: str = "P0.3.6 quarantine") -> None:
-    """Quarantine the legacy collection — rename/access-revoke posture."""
-    session.execute(
-        update(_LegacyFreezeState)
-        .where(_LegacyFreezeState.collection_name == _LEGACY_COLLECTION)
-        .values(status="quarantined", reason=reason,
-                quarantined_at=datetime.now(timezone.utc))
-    )
+    """Quarantine the legacy collection — rename/access-revoke posture.
+
+    Monotonic: only frozen → quarantined is permitted.
+    """
+    existing = session.execute(
+        select(_LegacyFreezeState).where(
+            _LegacyFreezeState.collection_name == _LEGACY_COLLECTION
+        )
+    ).scalar_one_or_none()
+    if existing is None:
+        raise ValueError("cannot quarantine: no freeze state exists")
+    if existing.status != "frozen":
+        raise ValueError(
+            f"cannot quarantine from status {existing.status!r}; "
+            f"only 'frozen' can transition to 'quarantined'"
+        )
+    existing.status = "quarantined"
+    existing.reason = reason
+    existing.quarantined_at = datetime.now(timezone.utc)
     session.commit()
     logger.info("Legacy collection %s quarantined", _LEGACY_COLLECTION)
 
 
 def delete_legacy_collection_record(session: Session, *, reason: str = "P0.3.6 deletion") -> None:
-    """Mark the legacy collection as deleted (physical deletion is a separate Chroma operation)."""
-    session.execute(
-        update(_LegacyFreezeState)
-        .where(_LegacyFreezeState.collection_name == _LEGACY_COLLECTION)
-        .values(status="deleted", reason=reason,
-                deleted_at=datetime.now(timezone.utc))
-    )
+    """Mark the legacy collection as deleted (physical deletion is a separate Chroma operation).
+
+    Monotonic: only quarantined → deleted is permitted. Deleted is terminal.
+    """
+    existing = session.execute(
+        select(_LegacyFreezeState).where(
+            _LegacyFreezeState.collection_name == _LEGACY_COLLECTION
+        )
+    ).scalar_one_or_none()
+    if existing is None:
+        raise ValueError("cannot delete: no freeze state exists")
+    if existing.status != "quarantined":
+        raise ValueError(
+            f"cannot delete from status {existing.status!r}; "
+            f"only 'quarantined' can transition to 'deleted'"
+        )
+    existing.status = "deleted"
+    existing.reason = reason
+    existing.deleted_at = datetime.now(timezone.utc)
     session.commit()
     logger.info("Legacy collection %s marked deleted", _LEGACY_COLLECTION)
 
