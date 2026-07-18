@@ -30,7 +30,6 @@ receive only well-formed vectors.
 from __future__ import annotations
 
 import logging
-import math
 from dataclasses import dataclass
 from typing import Any, Sequence
 
@@ -78,15 +77,9 @@ class GovernedEmbeddingAdapter:
     ) -> tuple[tuple[float, ...], ...]:
         """Embed a batch of document texts.
 
-        Validates:
-          * result count equals input count (no silent drops)
-          * each result is a non-empty sequence
-          * each result matches the configured dimension
-          * each element is numeric, non-bool, finite
-          * no all-zero vectors
-
-        Failures raise ``GovernedEmbeddingAdapterError`` rather than
-        returning fabricated vectors.
+        Delegates validation to the canonical
+        ``backend.pipeline.knowledge.embedding_validation`` module so there
+        is exactly one set of rejection rules in the codebase.
         """
         texts_list = list(texts)
         if not texts_list:
@@ -95,23 +88,22 @@ class GovernedEmbeddingAdapter:
         try:
             raw_results = await self.embedding_service.embed_texts(texts_list)
         except Exception as exc:
-            # Propagate provider failures honestly — the pre-B0
-            # LMStudioEmbeddingProvider would silently substitute zero
-            # vectors here; the canonical adapter never does.
             raise GovernedEmbeddingAdapterError(
                 f"embedding provider raised: {type(exc).__name__}: {exc}"
             ) from exc
 
-        if len(raw_results) != len(texts_list):
-            raise GovernedEmbeddingAdapterError(
-                f"embedding provider returned {len(raw_results)} vectors for "
-                f"{len(texts_list)} inputs; result-count mismatch"
+        from backend.pipeline.knowledge.embedding_validation import (
+            validate_document_embeddings,
+            EmbeddingValidationError,
+        )
+        try:
+            return validate_document_embeddings(
+                raw_results,
+                expected_count=len(texts_list),
+                expected_dimension=self.configured_dimension,
             )
-
-        validated: list[tuple[float, ...]] = []
-        for i, vec in enumerate(raw_results):
-            validated.append(self._validate_single(vec, role="document", index=i))
-        return tuple(validated)
+        except EmbeddingValidationError as exc:
+            raise GovernedEmbeddingAdapterError(str(exc)) from exc
 
     async def embed_query(
         self,
@@ -119,8 +111,8 @@ class GovernedEmbeddingAdapter:
     ) -> tuple[float, ...]:
         """Embed a single query text.
 
-        Same structural validation as ``embed_documents``; the role label
-        is "query" so future role-aware validation can distinguish them.
+        Delegates validation to the canonical
+        ``validate_query_embedding`` function.
         """
         try:
             raw_results = await self.embedding_service.embed_texts([text])
@@ -129,11 +121,17 @@ class GovernedEmbeddingAdapter:
                 f"embedding provider raised on query: {type(exc).__name__}: {exc}"
             ) from exc
 
-        if not raw_results:
-            raise GovernedEmbeddingAdapterError(
-                "embedding provider returned empty result list for single query"
+        from backend.pipeline.knowledge.embedding_validation import (
+            validate_query_embedding,
+            EmbeddingValidationError,
+        )
+        try:
+            return validate_query_embedding(
+                raw_results[0] if raw_results else None,
+                expected_dimension=self.configured_dimension,
             )
-        return self._validate_single(raw_results[0], role="query", index=0)
+        except EmbeddingValidationError as exc:
+            raise GovernedEmbeddingAdapterError(str(exc)) from exc
 
     async def embed_single(self, text: str) -> list[float]:
         """Backward-compatible single-text embed used by VectorIndexer.
@@ -154,56 +152,19 @@ class GovernedEmbeddingAdapter:
         role: str,
         index: int,
     ) -> tuple[float, ...]:
-        if vec is None:
-            raise GovernedEmbeddingAdapterError(
-                f"{role} vector at index {index} is None"
-            )
-        if isinstance(vec, (str, bytes)):
-            raise GovernedEmbeddingAdapterError(
-                f"{role} vector at index {index} is {type(vec).__name__}, not a sequence"
-            )
+        """Deprecated: delegates to canonical embedding_validation.
+
+        Retained for any callers that have not yet migrated to
+        ``embed_documents`` / ``embed_query``. New code must use the
+        role-named methods which call the canonical validator directly.
+        """
+        from backend.pipeline.knowledge.embedding_validation import (
+            validate_embedding_vector,
+            EmbeddingValidationError,
+        )
         try:
-            as_list = list(vec)
-        except TypeError as exc:
-            raise GovernedEmbeddingAdapterError(
-                f"{role} vector at index {index} is not iterable: {exc}"
-            ) from exc
-
-        if not as_list:
-            raise GovernedEmbeddingAdapterError(
-                f"{role} vector at index {index} is empty"
+            return validate_embedding_vector(
+                vec, expected_dimension=self.configured_dimension, role=role,
             )
-        if len(as_list) != self.configured_dimension:
-            raise GovernedEmbeddingAdapterError(
-                f"{role} vector at index {index} has dimension {len(as_list)}; "
-                f"expected {self.configured_dimension}"
-            )
-
-        # Element-level checks: numeric, non-bool, finite. bool is a subclass
-        # of int in Python, so the isinstance check must exclude it explicitly.
-        validated_elements: list[float] = []
-        for j, v in enumerate(as_list):
-            if isinstance(v, bool):
-                raise GovernedEmbeddingAdapterError(
-                    f"{role} vector at index {index} element {j} is bool"
-                )
-            if not isinstance(v, (int, float)):
-                raise GovernedEmbeddingAdapterError(
-                    f"{role} vector at index {index} element {j} is "
-                    f"{type(v).__name__}, not numeric"
-                )
-            f = float(v)
-            if math.isnan(f) or math.isinf(f):
-                raise GovernedEmbeddingAdapterError(
-                    f"{role} vector at index {index} element {j} is non-finite: {f}"
-                )
-            validated_elements.append(f)
-
-        # All-zero rejection (after normalization to floats). This is the
-        # invariant the pre-B0 LMStudio adapter violated.
-        if all(v == 0.0 for v in validated_elements):
-            raise GovernedEmbeddingAdapterError(
-                f"{role} vector at index {index} is all-zero"
-            )
-
-        return tuple(validated_elements)
+        except EmbeddingValidationError as exc:
+            raise GovernedEmbeddingAdapterError(str(exc)) from exc
