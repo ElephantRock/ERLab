@@ -1,0 +1,159 @@
+{
+  "wave": "P0.4B0",
+  "status": "closed",
+  "entry_commit": "f32761e",
+  "final_executable_commit": "da79945",
+  "closeout_commit": "pending-documentation-commit",
+  "entry_backend_gate": {
+    "passed": 4188,
+    "skipped": 50,
+    "failed": 0
+  },
+  "final_backend_gate": {
+    "passed": 4245,
+    "skipped": 25,
+    "failed": 0,
+    "errors": 0
+  },
+  "commit_chain": [
+    {"hash": "35cbac2", "message": "refactor: remove embedding from production LLM providers", "wave": "B0.4a"},
+    {"hash": "bbcfe34", "message": "test: prevent LLM embedding surface reintroduction", "wave": "B0.4b"},
+    {"hash": "28c30e2", "message": "test: seal P0.4B0 architectural boundaries", "wave": "B0.9"},
+    {"hash": "da79945", "message": "fix: repair adversarial-review defects in B0 architectural seal", "wave": "closeout"}
+  ],
+  "zero_counts": {
+    "production_llm_provider_embed_declarations": 0,
+    "chat_provider_embedding_implementations": 0,
+    "chat_wrapper_embedding_forwarders": 0,
+    "stage_aware_provider_embedding_forwarders": 0,
+    "direct_production_llm_embedding_callers": 0,
+    "anthropic_to_openai_embedding_dependency": 0,
+    "chat_provider_embedding_fallbacks": 0,
+    "raw_provider_fields_on_governed_vector_runtime": 0,
+    "private_inline_embedding_adapters": 0,
+    "provider_construction_outside_approved_factories": 0,
+    "declared_l2_treated_as_implemented": 0,
+    "governed_duplicate_structural_validators": 0,
+    "new_legacy_side_channel_call_sites": 0,
+    "temporary_architectural_allowlist_entries": 0,
+    "false_capability_bindings_checks": 0,
+    "unexplained_skipped_tests": 0,
+    "adversarial_findings_unresolved": 0
+  },
+  "architectural_enforcement": {
+    "policy_manifest": "backend/tests/architecture/p0_4_b0_policy.json",
+    "b0_4_seal_test": "backend/tests/test_providers/test_no_llm_embedding_surface.py",
+    "b0_4_seal_test_count": 19,
+    "b0_9_seal_test": "backend/tests/architecture/test_p0_4_b0_seal.py",
+    "b0_9_seal_test_count": 16,
+    "total_architectural_tests": 35
+  },
+  "verifier_script": "scripts/verify_p0_4_b0.py",
+  "full_suite_runs": [
+    {"run": 1, "commit": "da79945", "passed": 4245, "failed": 0, "errors": 0, "skipped": 25, "duration_s": 183},
+    {"run": 2, "commit": "da79945", "passed": 4245, "failed": 0, "errors": 0, "skipped": 25, "duration_s": 181},
+    {"run": 3, "commit": "da79945", "passed": 4245, "failed": 0, "errors": 0, "skipped": 25, "duration_s": 174},
+    {"run": 4, "commit": "da79945", "passed": 4245, "failed": 0, "errors": 0, "skipped": 25, "duration_s": 196},
+    {"run": 5, "commit": "da79945", "passed": 4245, "failed": 0, "errors": 0, "skipped": 25, "duration_s": 177}
+  ],
+  "skip_accounting": {
+    "total_skips": 25,
+    "groups": {
+      "optional_dependency_unavailable": {
+        "count": 4,
+        "reason": "WeasyPrint not installed",
+        "files": ["backend/tests/test_api/test_batch33_exports_plugins.py:69,112,149,174"],
+        "stable": true,
+        "predates_b0": true,
+        "touches_b0": false
+      },
+      "external_service_chromadb": {
+        "count": 8,
+        "reason": "ChromaDB not fully available in test environment",
+        "files": ["backend/tests/test_caching/test_semantic_cache.py:59,63,73,92,110,121,130,153"],
+        "stable": true,
+        "predates_b0": true,
+        "touches_b0": true,
+        "note": "Tests SemanticCache (cache side-channel). Skipped due to ChromaDB not installed, not B0 architecture. Namespace-isolation logic covered by test_kg_embedding_isolation.py and test_side_channel_embedding_contracts.py (fakes, no skip)."
+      },
+      "external_service_lmstudio": {
+        "count": 4,
+        "reason": "Requires LM Studio running at 100.64.0.1:1234",
+        "files": ["backend/tests/test_pipeline/test_lmstudio_embeddings.py:55,68,80,92"],
+        "stable": true,
+        "predates_b0": true,
+        "touches_b0": false
+      },
+      "environment_var_e2e": {
+        "count": 1,
+        "reason": "E2E test requires EROCK_E2E=1 env var and available servers",
+        "files": ["backend/tests/test_cli/test_dev.py:113"],
+        "stable": true,
+        "predates_b0": true,
+        "touches_b0": false
+      },
+      "environment_var_live_cert": {
+        "count": 2,
+        "reason": "Live tests require EROCK_RUN_LIVE_TESTS=1 and LM Studio",
+        "files": ["backend/tests/test_pipeline/test_model_certification/test_live_certification.py:52,94"],
+        "stable": true,
+        "predates_b0": true,
+        "touches_b0": false
+      },
+      "external_service_docker": {
+        "count": 5,
+        "reason": "Docker not available",
+        "files": ["backend/tests/test_sandboxing/test_docker_backend.py:25,34,44,57,65"],
+        "stable": true,
+        "predates_b0": true,
+        "touches_b0": false
+      },
+      "known_flake_parallel": {
+        "count": 1,
+        "reason": "Flaky under parallel load — passes in isolation. Race condition in mock provider cleanup.",
+        "files": ["backend/tests/test_pipeline/test_batch121_claim_extraction.py:188"],
+        "stable": true,
+        "predates_b0": true,
+        "touches_b0": false,
+        "note": "Claim-extraction chat-provider failure path. Unrelated to embedding governance. Passes with -p no:xdist."
+      }
+    }
+  },
+  "adversarial_review": {
+    "reviewer": "independent code-reviewer agent (disproof mandate)",
+    "confirmed_defects_found": 2,
+    "defects_repaired": 2,
+    "defects_open": 0,
+    "defects": [
+      {
+        "id": "A",
+        "title": "Legacy side-channel wiring in service_registry.py",
+        "classification": "confirmed defect → repaired with frozen boundary test",
+        "files": ["backend/pipeline/orchestrator/service_registry.py:285-288,715-718,750-753"],
+        "resolution": "Three feature-flag-gated call sites frozen in policy manifest. New boundary test forbids additional legacy call sites. Migration to SideChannelEmbeddingRuntime deferred to P0.4A1+.",
+        "repaired_in": "da79945"
+      },
+      {
+        "id": "B",
+        "title": "Duplicate embedding validators in governed modules",
+        "classification": "confirmed defect → repaired by delegation to canonical module",
+        "files": ["backend/pipeline/vector_indexer.py:126-156", "backend/pipeline/scoped_vector_service.py:80-103"],
+        "resolution": "Both validators now delegate to validate_embedding_vector from embedding_validation.py. 9 test assertions updated to canonical failure codes. New D4 scan walks all production modules for inline-validator duplicates.",
+        "repaired_in": "da79945"
+      }
+    ],
+    "false_positives_documented": 6,
+    "seal_test_blind_spots_documented": 4
+  },
+  "working_tree_clean": true,
+  "next_wave": "P0.4A1",
+  "roadmap_posture": {
+    "P0.4-pre": "CLOSED",
+    "P0.4A0": "CLOSED",
+    "P0.4B0": "CLOSED",
+    "P0.4A1": "READY — capability binding/check schema",
+    "P0.4A2+": "BLOCKED by normal dependency order",
+    "P0.5": "BLOCKED pending P0.4",
+    "Frontend": "OPEN"
+  }
+}
