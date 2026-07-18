@@ -47,14 +47,18 @@ filed rather than a silent terminal class.
 | Reranker / scoring-model classes                          |     6 |
 | Confirmed scoring-only rerankers                          |     6 |
 | Underlying reranker model-construction sites (handshake)  |     2 |
-| **Unresolved call sites**                                 | **1** |
+| Unclassified call sites                                   |    0 |
+| Unresolved taxonomy decisions                             |    0 |
+| **Open reachability blockers**                            | **1** |
 
-The single unresolved call site is **BLOCKER #1** in §3.3 (row 22) —
+The single open reachability blocker is **BLOCKER #1** in §3.3 (row 22) —
 `NoveltyChecker._retrieve_governed` references `self._embedding` which is
-never assigned in `__init__`. This is surfaced per directive §6 rather
-than silently classified. It does not contradict any frozen disposition;
-it is a pre-existing defect in governed novelty retrieval that P0.4B0/C
-will need to address.
+never assigned in `__init__`. The intended taxonomy class
+(`governed_query_embedding`) is unambiguous and assigned — what is open
+is the production defect preventing that classified path from
+executing, not the classification itself. Per the directive's review of
+this audit, this is recorded as a reachability blocker, not an
+unresolved taxonomy decision. P0.4B0.0 fixes it as its first item.
 
 ---
 
@@ -178,7 +182,7 @@ Every executable production call site. Taxonomy class is one of:
 | 19 | `IngestionStage._index_governed` + inline `_EmbeddingAdapter` — `stages.py:676-690` | governed_paper_embedding | document | private adapter | yes (runtime.profile_dict) | inherited from `index_document` | preserve | verified-runtime integration | medium |
 | 20 | `build_governed_vector_runtime_from_settings` + inline `_EmbeddingAdapter` — `vector_runtime.py:88-116` | governed_paper_embedding | document+query | private adapter | yes | inherited | preserve | verified-runtime integration | medium |
 | 21 | `ScopedVectorRetrievalRequest.query_vector` consumer — `scoped_vector_service.py:161` | governed_query_embedding | query | n/a (consumer) | yes | strict via `validate_query_vector` | preserve | verified-runtime compatible | low |
-| **22** | **`NoveltyChecker._retrieve_governed` — `novelty_checker.py:160`** ⚠️ | governed_query_embedding *(intent)* | query | `self._embedding.embed_texts` | yes (runtime.profile_id) | **UNRESOLVED BLOCKER #1** — `self._embedding` is never assigned in `__init__` (lines 77-91); governed novelty retrieval raises `AttributeError` on every call | **fix in B0** — inject `EmbeddingService` into `NoveltyChecker.__init__` or use `runtime.embedding_provider.embed_single` | verified-runtime integration | **critical** |
+| **22** | **`NoveltyChecker._retrieve_governed` — `novelty_checker.py:160`** ⚠️ | `governed_query_embedding` (taxonomy resolved); `execution_status = broken`; `blocker_code = embedding_dependency_uninitialized` | query | `self._embedding.embed_texts` | yes (runtime.profile_id) | **OPEN REACHABILITY BLOCKER #1** — `self._embedding` is never assigned in `__init__` (lines 77-91); governed novelty retrieval raises `AttributeError` on every call. The taxonomy class is unambiguous; what is broken is execution, not classification | **B0.0** — DI of a governed embedding/query capability into `NoveltyChecker.__init__`; no legacy fallback; explicit configuration error when dependency absent; regression test that reaches `_retrieve_governed` | verified-runtime integration | **critical** |
 | 23 | `search_knowledge_governed` embed_texts — `knowledge.py:230` | governed_query_embedding | query | `EmbeddingService.embed_texts` constructed at request time | yes (runtime.profile_id) | downstream via scoped service | preserve | verified-runtime integration | medium |
 
 ### Side-channel persistent embeddings
@@ -886,7 +890,7 @@ shows any of:
 | a provider cannot expose even an honest alias/deployment posture | NOT TRIGGERED — all 4 providers can at minimum honestly declare `alias_only`; OpenAI/LMStudio can reach `stable_deployment` after B0.1; Ollama can via `/api/show`; Gemini requires external pinning but can declare `alias_only` honestly |
 | runtime profile identity cannot be linked to current settings | NOT TRIGGERED — 5 drift surfaces identified (§3.8) but all closeable in B0.7 |
 | an embedding surface writes persistent vectors without a discoverable reader | NOT TRIGGERED — all three side-channel collections have discoverable readers (see §3.7) |
-| an executable embedding path cannot be assigned one taxonomy class | NOT TRIGGERED — all executable paths assigned exactly one class. NoveltyChecker:160 (BLOCKER #1) is assigned `governed_query_embedding` by intent but flagged as a non-executable code defect |
+| an executable embedding path cannot be assigned one taxonomy class | NOT TRIGGERED — all executable paths assigned exactly one class. NoveltyChecker:160 (BLOCKER #1) is assigned `governed_query_embedding` (taxonomy resolved); flagged as `execution_status = broken` rather than as a taxonomy gap |
 
 **No stop conditions triggered.** The audit proceeds to closeout with
 one surfaced blocker (BLOCKER #1) that does not contradict any frozen
@@ -900,7 +904,9 @@ Per directive:
 
 | criterion | status |
 |---|---|
-| production embedding call sites unclassified | **1 unresolved** (BLOCKER #1, surfaced explicitly per §6) |
+| production embedding call sites unclassified | 0 |
+| unresolved taxonomy decisions | 0 |
+| open reachability blockers | **1** (BLOCKER #1, surfaced per §6; classified but non-executable) |
 | persistent vector collections unclassified | 0 |
 | raw-provider construction sites unclassified | 0 |
 | `LLMProvider.embed` symbols unaccounted | 0 (1 base + 5 concrete + 5 forwarders all listed in §3.4) |
@@ -910,28 +916,33 @@ Per directive:
 | frozen dispositions silently contradicted | 0 |
 | production code changes during A0 | 0 |
 
-### Honest disclosure
+### Classification vs. execution — the distinction
 
-The directive's completion gate requires "unresolved call sites = 0."
-The audit surfaces **1 unresolved call site** rather than silently
-classifying it. This is a deliberate choice per directive §6: "When
-reachability cannot be established, classify the item as an explicit
-unresolved blocker rather than silently assigning a terminal class."
+The directive's review of this audit clarified the distinction between
+*unresolved taxonomy* (the intended role is unknown) and *broken
+execution* (the role is known but the code path cannot run). The
+NoveltyChecker:160 site is the latter:
 
-The unresolved site (`NoveltyChecker._retrieve_governed` at
-`novelty_checker.py:160`) is a pre-existing production defect (referenced
-attribute never assigned in `__init__`). The intended taxonomy class
-(`governed_query_embedding`) is unambiguous, but the code path is
-non-executable as written. This blocker does not prevent B0 from
-proceeding — it becomes an explicit B0 work item (fix in B0, before
-governed novelty retrieval can be exercised end-to-end).
+```text
+NoveltyChecker._retrieve_governed
+  taxonomy_class      = governed_query_embedding
+  execution_status    = broken
+  blocker_code        = embedding_dependency_uninitialized
+```
+
+This preserves both requirements: A0 remains audit-only, and the broken
+governed query path remains prominently tracked rather than hidden by
+classification. The defect becomes B0.0 (the first B0 work item) —
+dependency injection of the governed embedding/query capability into
+`NoveltyChecker.__init__`, no legacy fallback, with a regression test
+that reaches `_retrieve_governed`.
 
 ### Status
 
 ```text
 P0.4-pre       CLOSED — 2273b37 / evidence 35bf4c2
-P0.4A0         COMPLETE (this commit) — 1 blocker surfaced per §6
-P0.4B0         READY (B0 work ledger above defines scope; blocker fix is in-scope)
+P0.4A0         CLOSED — 3d617af (audit) + this amendment; 1 reachability blocker tracked, 0 unresolved taxonomy
+P0.4B0         AUTHORIZED — B0 work ledger in §5 defines scope; B0.0 fixes the blocker
 P0.4A1+        BLOCKED pending B0
 ```
 
