@@ -1,11 +1,14 @@
 # P0.4 — Embedding Capability Handshake (Revised Entry Contract)
 
-> **Status:** Specification revised; implementation NOT APPROVED.
-> Supersedes the original P0.4 draft (pasted 2026-07-18) pending the preconditions in §1.
+> **Status:** APPROVED WITH MINOR AMENDMENT at the architectural level.
+> Implementation remains BLOCKED pending the preconditions in §1.
+> The §16 dispositions are frozen in this document (no longer deferred to P0.4A0).
 
 This document is the **entry contract** for P0.4. It is binding: implementation
 may begin only after every precondition in §1 is satisfied and every correction
-in §§3–10 is reflected in the implementing waves.
+in §§3–10 is reflected in the implementing waves. The decisions in §16 are
+frozen here — P0.4A0 verifies their implementation surface, it does not choose
+their architectural disposition.
 
 The original P0.4 draft was reviewed against the repository at `90d2ebb`
 (P0.3.6 head, clean tree). Its invariants are sound, but its repository fit is
@@ -16,9 +19,11 @@ behavior.
 
 ```text
 P0.3 implementation       CLOSED, subject to baseline repair
-P0.4 specification        REVISED (this document); NOT APPROVED for implementation
+P0.4 specification        APPROVED WITH MINOR AMENDMENT (this document)
 P0.4 implementation       BLOCKED on §1 preconditions
-Immediate work            pre-P0.4 repair and specification revision (this doc)
+P0.4-pre baseline repair  READY
+P0.4A0 expanded audit     follows successful baseline
+P0.4B0                    blocked pending A0 inventory
 Frontend regression       OPEN — 101 TypeScript errors (unchanged, not in scope)
 ```
 
@@ -126,27 +131,25 @@ side-channel vector collections          (kg_entity_embeddings, tool_embeddings,
 ### Revised taxonomy
 
 ```text
-governed_paper_embedding            — produces vectors written to vector_index_records
-governed_query_embedding            — produces query vectors for scoped retrieval
-side_channel_persistent_embedding   — writes to governed/allowlisted non-paper collections
-ephemeral_embedding                 — provider embeddings used transiently (e.g. semantic cache lookup)
-legacy_embedding                    — used only by legacy P0.3.5 migration paths
-provider_wrapper                    — embedding proxy or wrapper around an underlying provider
-dead_embedding_surface              — never instantiated in production
+governed_paper_embedding                  — produces vectors written to vector_index_records
+governed_query_embedding                  — produces query vectors for scoped retrieval
+side_channel_persistent_embedding         — writes to governed/allowlisted non-paper collections
+ephemeral_or_rebuildable_cache_embedding  — provider embeddings used transiently (e.g. cache key); discardable on binding change
+legacy_embedding                          — used only by legacy P0.3.5 migration paths
+provider_wrapper                          — embedding proxy or wrapper around an underlying provider
+dead_embedding_surface                    — never instantiated in production
+confirmed_non_embedding_model             — model that returns relevance scores only, no reusable vectors (e.g. scoring cross-encoder); out of P0.4 scope
 ```
 
 `kg_entity_embeddings`, `tool_embeddings`, and `llm_cache` cannot remain
 silently capability-ungoverned while being described as governed collections.
-A decision is required for each:
+Their dispositions are **frozen in §16** of this contract (INCLUDED,
+INCLUDED, and capability-gated-without-cutover respectively). P0.4A0 verifies
+the implementation surface that realizes each disposition; it does not choose
+the architectural posture.
 
-```text
-bring it under P0.4
-explicitly exclude it and narrow the P0.4 completion claim
-retire or redesign it
-```
-
-That decision is **mandatory** in P0.4A0 (see §11) and must be recorded as part
-of the audit document, not deferred.
+A scoring-only reranker is not an embedding surface. Reranker classification
+is frozen in §16.7.
 
 ## 1.3 Add P0.4B0 before the handshake schema becomes actionable
 
@@ -674,13 +677,15 @@ P0.4-pre   Repair syntax error and establish reproducible baseline
 
 P0.4A0     Expanded embedding access audit
            - EmbeddingProvider implementations
-           - LLMProvider.embed and its wrappers/proxies
+           - LLMProvider.embed and its wrappers/proxies (per 16.4, surface to be removed)
            - side-channel collections (kg_entity_embeddings, tool_embeddings, llm_cache)
+             with dispositions already frozen in 16.1-16.3
            - private _EmbeddingAdapter implementations (three sites)
            - runtime configuration sources (Settings vs EmbeddingProfile)
-           - per-collection P0.4 coverage decision (bring in / exclude / retire)
+           - reranker / cross-encoder models (classified per 16.7)
            Exit gate: docs/p0_4_embedding_access_audit.md committed,
-                       every side-channel decision recorded
+                       every 16 disposition verified against the actual code surface,
+                       every surface mapped to a terminal runtime-enforced classification
 
 P0.4B0     Provider identity capture and embedding-surface consolidation
            - adapter response capture (OpenAI/LMStudio/Ollama/Gemini)
@@ -796,7 +801,9 @@ control characters) apply unchanged.
 # 13. Completion gate (corrected)
 
 P0.4 is complete when every condition in the original completion gate holds
-**and** the corrected conditions below hold:
+**and** the six corrected conditions below hold. The side-channel and
+activation-I/O gates are sharpened: a written decision is not sufficient, and
+ordinary relational reads are not prohibited.
 
 ```text
 working tree clean
@@ -815,20 +822,66 @@ runtime drift silently accepted                              0
 same-dimension cross-model mixing                            0
 partial cutovers activated                                   0
 secrets persisted in capability evidence                     0
+```
 
-side-channel collections operating without a recorded decision    0
-LLMProvider.embed surface unclassified after P0.4B0               0
-GovernedVectorRuntime callers reading dropped fields              0
-vector_index_v1 + capability_v1 combinations                     0
-vector_index_v2 + pre_capability_v0 combinations                  0
-workers observing the same expired lease as simultaneously
-  claimable                                                       0
-activation transactions performing provider or backend I/O        0
+## 13.1 Six corrected invariants (hard gates)
+
+| # | Invariant | Required final wording |
+|---|---|---|
+| 1 | Side-channel disposition | Every persistent or cache embedding surface has a terminal, runtime-enforced classification; no surface remains accidentally ungated |
+| 2 | `LLMProvider.embed()` disposition | No production embedding bypass remains through the chat-provider protocol or its wrappers |
+| 3 | Dropped runtime-field reads | No migrated caller reads removed raw-provider or untyped-profile fields |
+| 4 | Invalid v1/capability combinations | `vector_index_v1 + capability_v1` and `vector_index_v2 + pre_capability_v0` are rejected |
+| 5 | Lease-recovery claim races | Exactly one worker abandons an expired check and owns its replacement |
+| 6 | External I/O in activation | No provider, embedding, Chroma, or other backend I/O occurs inside the activation publication transaction |
+
+### 13.2 Side-channel gate — implementation, not just decision
+
+A row classified as `excluded` but still reachable through a raw embedding
+provider does not satisfy the gate. The classification must be **enforced at
+runtime**, not merely recorded in the audit document. Each persistent or cache
+embedding surface ends P0.4 in exactly one of these terminal postures:
+
+```text
+brought under P0.4   — verified runtime gates every read and write
+explicitly excluded  — architectural enforcement prevents ungated reachability
+retired              — surface removed from production code
+```
+
+A surface that remains reachable through an ungated path fails invariant 1,
+regardless of what the audit document records.
+
+### 13.3 Activation-I/O gate — scope of the prohibition
+
+Invariant 6 prohibits **external or unbounded** operations inside the
+activation publication transaction. It does not prohibit the ordinary
+relational reads and writes required for verification.
+
+Permitted inside the `BEGIN IMMEDIATE` activation transaction:
+
+```text
+SELECT / UPDATE / INSERT on relational tables
+activation-guard row claim
+cutover row verification
+vector_index_records eligibility update
+binding-activation row update
+```
+
+Prohibited inside the activation transaction — must complete before it starts:
+
+```text
+provider probes
+embedding generation
+Chroma reads or writes
+network requests
+filesystem exports
+any other external or unbounded I/O
 ```
 
 The final closeout document (`docs/p0_4_embedding_capability_closeout.md`)
 must record the exact command, the exact commit, and the actual counts for
-each line above. Inherited counts from narrower gates are not acceptable.
+each line of §13 and §13.1. Inherited counts from narrower gates are not
+acceptable.
 
 ---
 
@@ -896,21 +949,189 @@ docs: close P0.4 embedding capability handshake
 
 ---
 
-# 16. Outstanding decisions (must be made in P0.4A0)
+# 16. Frozen dispositions (binding — P0.4A0 verifies implementation surface)
 
-These are decisions, not implementation items. They must be recorded in
-`docs/p0_4_embedding_access_audit.md` during P0.4A0:
+These dispositions were open in the prior revision of this contract. They are
+now **frozen**. P0.4A0 records the implementation surface that realizes each
+disposition and confirms the runtime enforcement; it does not choose the
+architectural posture.
+
+## 16.1 `kg_entity_embeddings` — INCLUDED under P0.4
+
+Classification:
 
 ```text
-kg_entity_embeddings   — bring under P0.4 / exclude + narrow claim / retire
-tool_embeddings        — bring under P0.4 / exclude + narrow claim / retire
-llm_cache              — bring under P0.4 / exclude + narrow claim / retire
-LLMProvider.embed()    — delete entirely / formally allowlist as 2nd adapter
-knowledge.py:259 fix   — restore governed search endpoint / delete the route
+side_channel_persistent_embedding
+P0.4 scope: included
 ```
 
-Each decision carries forward into the relevant wave's exit gate. A decision
-may not be deferred past P0.4A0.
+Required posture:
+
+```text
+verified runtime required for writes and queries
+dedicated embedding profile and capability binding
+binding-specific collection namespace and metadata
+different binding → rebuild/reindex before activation
+no reuse of the paper vector_index_records ledger
+```
+
+Knowledge-graph entity vectors are a distinct semantic space. They do not
+share the paper profile or binding merely because they use the same provider
+or dimension. They get their own profile, their own binding, and their own
+collection namespace.
+
+## 16.2 `tool_embeddings` — INCLUDED under P0.4
+
+Classification:
+
+```text
+side_channel_persistent_embedding
+P0.4 scope: included
+```
+
+Required posture:
+
+```text
+verified runtime required
+binding-specific collection
+binding change requires deterministic rebuild
+cross-binding queries rejected
+```
+
+Tool descriptions have a different content and lifecycle contract from paper
+chunks and from knowledge-graph entities. Tool embeddings use a separate
+profile and binding from both paper and KG embeddings.
+
+## 16.3 `llm_cache` — capability-gated, no durable cutover
+
+Classification:
+
+```text
+ephemeral_or_rebuildable_cache_embedding
+P0.4 scope: capability-gated, no durable cutover ledger required
+```
+
+The cache still requires semantic-space isolation, but it does not need the
+full historical vector-remediation machinery.
+
+Required design:
+
+```text
+verified runtime required for cache-key embeddings
+capability_binding_id included in cache namespace or key
+binding change makes old cache entries unreachable
+expired health check blocks generation of new cache entries
+cache may be discarded rather than migrated
+```
+
+This keeps the safety invariant without treating cache entries as durable
+research evidence.
+
+## 16.4 `LLMProvider.embed()` — REMOVED from production protocol
+
+Disposition:
+
+```text
+remove from the production LLMProvider protocol
+```
+
+The expanded audit (critique finding B1) found no required live production
+callers outside wrappers. P0.4B0 eliminates this second embedding front door
+rather than certifying and maintaining two parallel protocols.
+
+Required work:
+
+```text
+remove concrete chat-provider embed implementations
+remove forwarding methods from cache/gateway/resilience wrappers
+remove StageContext forwarding
+migrate any surviving caller to the governed embedding provider
+add architectural enforcement against reintroduction
+```
+
+A temporary compatibility shim is acceptable only inside tests or a narrowly
+named migration module, and it must not be reachable from production
+composition.
+
+## 16.5 `knowledge.py:259` — REPAIRED, not deleted
+
+Disposition:
+
+```text
+fix, do not delete the governed route
+```
+
+Remove the duplicated `backend=backend` argument and retain:
+
+```python
+backend=runtime.backend
+```
+
+The governed knowledge-search route was a deliberate P0.3 production migration
+boundary. Deleting it to restore collection would erase proven functionality
+rather than repair the defect.
+
+P0.4-pre must then execute and record:
+
+```text
+python -m pytest backend/tests
+```
+
+The baseline record must include:
+
+```text
+repair commit
+Python version
+pytest version
+tests collected
+passed
+failed
+skipped
+deselected
+collection errors
+duration
+working-tree status
+```
+
+The contract does not assume the result will be 285.
+
+## 16.6 Disposition summary
+
+```text
+kg_entity_embeddings    side_channel_persistent_embedding   INCLUDED
+tool_embeddings         side_channel_persistent_embedding   INCLUDED
+llm_cache               ephemeral_or_rebuildable_cache      capability-gated, no cutover
+LLMProvider.embed()     —                                   REMOVED from production protocol
+knowledge.py:259        —                                   REPAIRED, route retained
+```
+
+## 16.7 Reranker / cross-encoder classification
+
+A reranker or cross-encoder is not automatically an embedding surface. P0.4A0
+must classify each reranker model in the codebase according to its actual
+output contract:
+
+```text
+reranker emits reusable embedding vectors
+→ embedding surface; classify under P0.4
+
+reranker returns only relevance scores
+→ confirmed_non_embedding_model
+```
+
+A scoring-only cross-encoder must not be forced into the embedding-capability
+ledger when it does not create a reusable semantic vector. It may need a
+**future model-capability handshake**, but that is a different contract and is
+explicitly out of scope for P0.4.
+
+The audit record for each reranker must show:
+
+```text
+model location (file:line)
+output contract (reusable vectors | relevance scores only)
+classification (embedding surface | confirmed_non_embedding_model)
+disposition (bring under P0.4 | defer to future model-capability contract)
+```
 
 ---
 
