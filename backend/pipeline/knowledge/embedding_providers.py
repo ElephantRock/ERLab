@@ -17,6 +17,8 @@ from typing import Any
 from backend.pipeline.knowledge.embedding_provider_identity import (
     EVIDENCE_SOURCE_CONFIGURED_ONLY,
     EVIDENCE_SOURCE_GEMINI_CONFIGURED_MODEL,
+    EVIDENCE_SOURCE_OLLAMA_API_SHOW_DIGEST,
+    EVIDENCE_SOURCE_OLLAMA_RESPONSE,
     EVIDENCE_SOURCE_OPENAI_RESPONSE_MODEL,
     ProviderEmbeddingBatch,
     ProviderModelIdentityEvidence,
@@ -269,8 +271,60 @@ class OllamaEmbeddingProvider(EmbeddingProvider):
         self._model = model
         self._base_url = base_url
         self._dim: int | None = None
+        # P0.4B0.1d: lazy-captured identity evidence. Ollama's /api/embeddings
+        # response carries only {"embedding": [...]}; the served-model identity
+        # (digest, family) is only available via /api/show. We probe /api/show
+        # once on the first embed() call and cache the evidence; if the probe
+        # fails (Ollama down, model not loaded), evidence stays NULL honestly
+        # rather than fabricating an alias.
+        self._identity_evidence: ProviderModelIdentityEvidence | None = None
+        self._identity_probe_attempted = False
+
+    async def _probe_identity_evidence(self) -> None:
+        """Probe Ollama /api/show for the loaded model's immutable digest.
+
+        Idempotent — runs at most once per instance. On any failure (network,
+        HTTP error, missing digest field), leaves evidence NULL.
+        """
+        if self._identity_probe_attempted:
+            return
+        self._identity_probe_attempted = True
+
+        try:
+            response = await self._client.post(
+                f"{self._base_url}/api/show",
+                json={"name": self._model},
+            )
+            response.raise_for_status()
+            data = response.json()
+        except Exception:
+            # Cannot reach Ollama or model not loaded. Leave evidence NULL;
+            # the first embed() call will still report requested_model honestly
+            # via evidence_source = ollama_response (the embedding endpoint
+            # itself succeeded).
+            return
+
+        digest = data.get("digest") if isinstance(data, dict) else None
+        if not isinstance(digest, str) or not digest:
+            return
+
+        # digest is Ollama's immutable artifact identity (e.g.
+        # "sha256:abc123..."). B0.2 may classify this as exact_revision.
+        # We do NOT classify here — only capture.
+        self._identity_evidence = ProviderModelIdentityEvidence(
+            provider_kind="ollama",
+            requested_model=self._model,
+            reported_model=self._model,
+            deployment_id=None,
+            provider_revision=digest,
+            evidence_source=EVIDENCE_SOURCE_OLLAMA_API_SHOW_DIGEST,
+        )
 
     async def embed(self, texts: list[str]) -> list[list[float]]:
+        # P0.4B0.1d: probe /api/show once for immutable digest evidence.
+        # The probe is best-effort; failure leaves evidence NULL honestly.
+        await self._probe_identity_evidence()
+
         embeddings = []
         for text in texts:
             response = await self._client.post(
@@ -282,7 +336,33 @@ class OllamaEmbeddingProvider(EmbeddingProvider):
             embeddings.append(emb)
             if self._dim is None:
                 self._dim = len(emb)
+
+        # If /api/show did not yield evidence, fall back to recording the
+        # requested model + the embedding-endpoint as the evidence source.
+        # This is honest: 'ollama_response' means 'we got vectors from the
+        # embedding endpoint but no served-model identity'.
+        if self._identity_evidence is None:
+            self._identity_evidence = ProviderModelIdentityEvidence(
+                provider_kind="ollama",
+                requested_model=self._model,
+                reported_model=self._model,
+                deployment_id=None,
+                provider_revision=None,
+                evidence_source=EVIDENCE_SOURCE_OLLAMA_RESPONSE,
+            )
+
         return embeddings
+
+    async def embed_with_evidence(
+        self, texts: list[str]
+    ) -> ProviderEmbeddingBatch:
+        """Embed and return vectors together with the captured identity evidence."""
+        embeddings = await self.embed(texts)
+        assert self._identity_evidence is not None
+        return ProviderEmbeddingBatch(
+            embeddings=tuple(tuple(v) for v in embeddings),
+            identity_evidence=self._identity_evidence,
+        )
 
     @property
     def dimension(self) -> int:
@@ -291,6 +371,11 @@ class OllamaEmbeddingProvider(EmbeddingProvider):
     @property
     def provider_name(self) -> str:
         return f"ollama:{self._model}"
+
+    @property
+    def last_identity_evidence(self) -> ProviderModelIdentityEvidence | None:
+        """Most recently captured identity evidence, or None if no embed call yet."""
+        return self._identity_evidence
 
 
 class LMStudioEmbeddingProvider(EmbeddingProvider):
