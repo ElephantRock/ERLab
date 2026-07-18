@@ -33,6 +33,8 @@ class SemanticCache:
         similarity_threshold: float = 0.95,
         ttl_seconds: int = 3600,
         max_size: int = 1000,
+        *,
+        cache_namespace: str | None = None,
     ) -> None:
         Path(persist_dir).mkdir(parents=True, exist_ok=True)
         self._client = chromadb.PersistentClient(path=persist_dir)
@@ -40,8 +42,11 @@ class SemanticCache:
         self._threshold = similarity_threshold
         self._ttl_seconds = ttl_seconds
         self._max_size = max_size
+        # B0.5d: namespace-specific collection prevents cross-runtime cache reuse
+        collection_name = f"llm_cache_{cache_namespace[:16]}" if cache_namespace else COLLECTION_NAME
+        self._cache_namespace = cache_namespace
         self._collection = self._client.get_or_create_collection(
-            name=COLLECTION_NAME,
+            name=collection_name,
             metadata={"hnsw:space": "cosine"},
         )
         self._hits = 0
@@ -51,6 +56,15 @@ class SemanticCache:
 
     async def lookup_similar(self, query_text: str) -> CacheEntry | None:
         query_embedding = await self._embedding_service.embed_single(query_text)
+        if not query_embedding or all(v == 0.0 for v in query_embedding):
+            self._misses += 1
+            return None
+
+        results = self._collection.query(
+            query_embeddings=[query_embedding],
+            n_results=1,
+            include=["distances", "documents", "metadatas"],
+        )
         if not query_embedding or all(v == 0.0 for v in query_embedding):
             self._misses += 1
             return None

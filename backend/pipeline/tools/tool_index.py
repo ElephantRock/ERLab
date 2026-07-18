@@ -25,22 +25,61 @@ class ToolSearchResult(BaseModel):
 
 
 class ToolEmbeddingIndex:
-    """Stores and queries embeddings for tools in a dedicated ChromaDB collection."""
+    """Stores and queries embeddings for tools in a dedicated ChromaDB collection.
+
+    B0.5c: Supports governed SideChannelEmbeddingRuntime for namespace isolation.
+    Legacy callers pass persist_dir + embedding_service directly.
+    """
 
     def __init__(
         self,
-        persist_dir: str,
-        embedding_service: EmbeddingService,
+        arg1: Any = None,
+        arg2: Any = None,
         *,
         collection_name: str | None = None,
         client: Any | None = None,
+        chroma_client: Any = None,
     ) -> None:
-        self._client = client or chromadb.PersistentClient(path=persist_dir)
-        self._embedding = embedding_service
-        self._collection = self._client.get_or_create_collection(
-            name=collection_name or COLLECTION_NAME,
-            metadata={"hnsw:space": "cosine"},
-        )
+        from backend.pipeline.side_channel_embedding import SideChannelEmbeddingRuntime
+
+        if isinstance(arg1, SideChannelEmbeddingRuntime):
+            # Governed path
+            from backend.pipeline.side_channel_embedding import (
+                assert_purpose_not_paper,
+                SideChannelEmbeddingError,
+                compute_side_channel_collection_name,
+                build_kg_collection_metadata,  # reuse pattern
+            )
+            assert_purpose_not_paper(arg1.purpose)
+            if arg1.purpose != "tool_description":
+                raise SideChannelEmbeddingError(
+                    "side_channel_purpose_mismatch",
+                    f"ToolEmbeddingIndex requires purpose 'tool_description', "
+                    f"got {arg1.purpose!r}",
+                )
+            self._runtime = arg1
+            self._adapter = arg1.embedding_adapter
+            self._embedding = None
+            self._client = chroma_client
+            coll_name = compute_side_channel_collection_name(
+                "tool_embeddings_v2", arg1.namespace_fingerprint,
+            )
+            self._collection_name = coll_name
+            self._collection = chroma_client.get_or_create_collection(
+                name=coll_name,
+                metadata={"hnsw:space": "cosine"},
+            )
+        else:
+            # Legacy path: arg1=persist_dir, arg2=embedding_service
+            self._runtime = None
+            self._adapter = None
+            self._client = client or chromadb.PersistentClient(path=arg1 or "./data/chroma")
+            self._embedding = arg2
+            self._collection_name = collection_name or COLLECTION_NAME
+            self._collection = self._client.get_or_create_collection(
+                name=self._collection_name,
+                metadata={"hnsw:space": "cosine"},
+            )
 
     @staticmethod
     def _tool_to_text(tool: ToolDefinition) -> str:
@@ -52,11 +91,15 @@ class ToolEmbeddingIndex:
 
     async def index_tool(self, tool: ToolDefinition) -> None:
         text = self._tool_to_text(tool)
-        embedding = await self._embedding.embed_single(text)
+        if self._adapter is not None:
+            vectors = await self._adapter.embed_documents([text])
+            embeddings = [list(vectors[0])]
+        else:
+            embeddings = [await self._embedding.embed_single(text)]
         self._collection.upsert(
             ids=[tool.name],
             documents=[text],
-            embeddings=[embedding],
+            embeddings=embeddings,
             metadatas=[{
                 "trust_level": tool.trust_level,
                 "source": tool.source,
@@ -70,9 +113,13 @@ class ToolEmbeddingIndex:
             return 0
 
         texts = [self._tool_to_text(t) for t in tools]
-        embeddings = await self._embedding.embed_texts(texts)
-
-        valid = [(t, txt, emb) for t, txt, emb in zip(tools, texts, embeddings) if emb]
+        if self._adapter is not None:
+            vectors = await self._adapter.embed_documents(texts)
+            embeddings = [list(v) for v in vectors]
+            valid = list(zip(tools, texts, embeddings))
+        else:
+            embeddings = await self._embedding.embed_texts(texts)
+            valid = [(t, txt, emb) for t, txt, emb in zip(tools, texts, embeddings) if emb]
         if not valid:
             return 0
 
@@ -95,7 +142,10 @@ class ToolEmbeddingIndex:
         n_results: int = 10,
         trust_level: str | None = None,
     ) -> list[ToolSearchResult]:
-        embedding = await self._embedding.embed_single(capability_description)
+        if self._adapter is not None:
+            embedding = list(await self._adapter.embed_query(capability_description))
+        else:
+            embedding = await self._embedding.embed_single(capability_description)
         where = {"trust_level": trust_level} if trust_level else None
         results = self._collection.query(
             query_embeddings=[embedding],
