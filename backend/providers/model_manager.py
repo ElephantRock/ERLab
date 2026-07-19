@@ -329,7 +329,7 @@ class ModelManager:
                     display_name="Ollama",
                 )
             )
-        elif getattr(settings, "default_provider", "") == "ollama":
+        elif settings.default_provider == "ollama":
             # Default provider is ollama — include default URL
             endpoints.append(
                 EndpointConfig(
@@ -353,7 +353,7 @@ class ModelManager:
             )
 
         # Anthropic-compatible (includes Z.AI proxy)
-        anthropic_key = getattr(settings, "anthropic_api_key", "")
+        anthropic_key = settings.anthropic_api_key
         if anthropic_key and anthropic_key != "YOUR_API_KEY_HERE":
             anthropic_url = getattr(settings, "anthropic_base_url", None)
             anthropic_model = getattr(settings, "anthropic_model", "")
@@ -369,7 +369,7 @@ class ModelManager:
             )
 
         # OpenAI
-        openai_key = getattr(settings, "openai_api_key", "")
+        openai_key = settings.openai_api_key
         if openai_key and openai_key != "YOUR_API_KEY_HERE":
             endpoints.append(
                 EndpointConfig(
@@ -382,7 +382,7 @@ class ModelManager:
             )
 
         # Gemini
-        gemini_key = getattr(settings, "gemini_api_key", "")
+        gemini_key = settings.gemini_api_key
         if gemini_key and gemini_key != "YOUR_API_KEY_HERE":
             endpoints.append(
                 EndpointConfig(

@@ -135,8 +135,8 @@ def create_router(
         strategy = RoutingStrategy(getattr(settings, "cost_routing_strategy", "cheapest"))
         per_provider = getattr(settings, "cost_routing_per_provider_limits", {})
         window = getattr(settings, "cost_routing_latency_window", 100)
-        max_cost = getattr(settings, "budget_max_cost_usd", 10.0)
-        max_tokens = getattr(settings, "budget_max_tokens", 0)
+        max_cost = settings.budget_max_cost_usd
+        max_tokens = settings.budget_max_tokens
 
         budget = BudgetManager(
             max_cost_usd=max_cost,

@@ -115,7 +115,7 @@ class ServiceRegistry:
 
         # Wire reranker from config
         reranker = None
-        if getattr(settings, "reranker_enabled", False):
+        if settings.reranker_enabled:
             if getattr(settings, "reranker_type", "llm") == "cross_encoder":
                 from backend.pipeline.knowledge.reranker import CrossEncoderReranker
                 reranker = CrossEncoderReranker()
@@ -704,7 +704,7 @@ class ServiceRegistry:
 
     def init_graph_rag(self, settings: "Settings", provider: "LLMProvider") -> None:
         self.graph_rag_retriever = None
-        if not getattr(settings, "graph_rag_enabled", False):
+        if not settings.graph_rag_enabled:
             return
         from backend.pipeline.knowledge.community_detection import CommunityDetector
         from backend.pipeline.knowledge.entity_extractor import EntityExtractor
@@ -740,7 +740,7 @@ class ServiceRegistry:
     def init_tool_discovery(self, settings: "Settings") -> None:
         self.tool_matcher = None
         self.tool_scorer = None
-        if not getattr(settings, "tool_discovery_enabled", False):
+        if not settings.tool_discovery_enabled:
             return
         from backend.pipeline.knowledge.bm25_index import BM25Index
         from backend.pipeline.tools.tool_index import ToolEmbeddingIndex

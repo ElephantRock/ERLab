@@ -67,15 +67,9 @@ def test_config_cli_wired():
 
 
 def test_no_hardcoded_fallbacks_for_material_fields():
-    """Material fields should not have getattr-with-fallback in
-    production code outside the config package.
-
-    This test currently documents the remaining migration work as a
-    known finding. The full migration of 76 service_registry.py reads
-    and 19 provider_factory.py reads is tracked as P0.5 follow-up work.
-    The test counts the violations and reports them, failing if the
-    count INCREASES beyond the known baseline.
-    """
+    """Material fields must not have getattr-with-fallback in production
+    code outside the config package. The Settings model owns the default —
+    no second default owner may exist."""
     from backend.pipeline.config.field_registry import build_registry
 
     registry = build_registry()
@@ -87,7 +81,7 @@ def test_no_hardcoded_fallbacks_for_material_fields():
         if "/tests/" in rel or "/config/" in rel or "__pycache__" in rel:
             continue
         if rel.endswith("config.py"):
-            continue  # The Settings model itself
+            continue
 
         try:
             source = py_file.read_text(encoding="utf-8")
@@ -108,13 +102,9 @@ def test_no_hardcoded_fallbacks_for_material_fields():
                                 f"{rel}:{node.lineno} getattr(..., \"{field_name}\", <fallback>)"
                             )
 
-    # Known baseline as of P0.5 initial registry
-    KNOWN_BASELINE = 22  # service_registry + provider_factory + model_manager + orchestrator + pipeline
-
-    assert len(violations) <= KNOWN_BASELINE, (
-        f"Material field fallback defaults INCREASED to {len(violations)} "
-        f"(known baseline: {KNOWN_BASELINE}). New violations:\n"
-        + "\n".join(v for v in violations[:30])
+    assert not violations, (
+        "Material fields with hard-coded fallback defaults in production:\n"
+        + "\n".join(f"  {v}" for v in violations[:30])
     )
 
 

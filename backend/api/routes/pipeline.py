@@ -1484,10 +1484,10 @@ async def data_quality():
         from backend.pipeline.knowledge.embedding_service import EmbeddingService
 
         provider = create_embedding_provider(
-            getattr(settings, "embedding_provider", "lmstudio"),
+            settings.embedding_provider,
             base_url=getattr(settings, "embedding_base_url", None),
         )
-        emb_service = EmbeddingService(provider, expected_dimension=getattr(settings, "embedding_dimension", None))
+        emb_service = EmbeddingService(provider, expected_dimension=settings.embedding_dimension)
         store = VectorStore(persist_dir=settings.chroma_persist_dir, embedding_service=emb_service)
         vs_stats = store.get_stats()
     except Exception as e:

@@ -389,7 +389,7 @@ class PipelineOrchestrator:
             smart_truncation=getattr(settings, "compaction_smart_truncation", True),
             summarization=getattr(settings, "compaction_summarization", True),
             budget_management=getattr(settings, "compaction_budget_management", True),
-            global_token_limit=getattr(settings, "budget_max_tokens", 500000),
+            global_token_limit=settings.budget_max_tokens,
         )
 
         # ── Stage Executor & Result Processor ─────────────────────
@@ -745,7 +745,7 @@ class PipelineOrchestrator:
         # Gateway: Preflight LM Studio — ensure model loaded with sufficient context
         _lmstudio_mgr = None
         lmstudio_url = getattr(self._settings, 'lmstudio_base_url', None)
-        if lmstudio_url and getattr(self._settings, 'default_provider', '') == 'lmstudio':
+        if lmstudio_url and self._settings.default_provider == 'lmstudio':
             try:
                 from backend.pipeline.research import LMStudioManager
                 mgr = LMStudioManager()

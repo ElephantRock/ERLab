@@ -124,10 +124,10 @@ class ProviderRegistry:
         if self._cost_tracker:
             provider.set_cost_callback(self._cost_tracker.record)
 
-        if getattr(settings, "caching_enabled", False):
+        if settings.caching_enabled:
             provider = _wrap_cached(provider, name, settings)
 
-        if getattr(settings, "resilience_enabled", False):
+        if settings.resilience_enabled:
             provider = _wrap_resilient(provider, name, settings)
 
         return provider
@@ -273,7 +273,7 @@ def _get_vault(settings: Any) -> KeyVault | None:
     global _vault
     if _vault is not None:
         return _vault
-    if not getattr(settings, "secrets_master_password", None):
+    if not settings.secrets_master_password:
         return None
     from backend.providers.secrets import KeyVault
 
@@ -293,7 +293,7 @@ def _wrap_cached(
 ) -> LLMProvider:
     from backend.providers.cache import CachedProvider, InMemoryCache, SemanticCache
 
-    cache_type = getattr(settings, "caching_type", "memory")
+    cache_type = settings.caching_type
     max_size = getattr(settings, "caching_max_size", 1000)
     ttl_seconds = getattr(settings, "caching_ttl_seconds", 3600)
 
@@ -302,11 +302,11 @@ def _wrap_cached(
         from backend.pipeline.knowledge.embedding_service import EmbeddingService
 
         emb_provider = create_embedding_provider(
-            provider_name=getattr(settings, "embedding_provider", "openai"),
-            model=getattr(settings, "embedding_model", "text-embedding-3-small"),
-            api_key=getattr(settings, "openai_api_key", ""),
+            provider_name=settings.embedding_provider,
+            model=settings.embedding_model,
+            api_key=settings.openai_api_key,
             base_url=settings.ollama_base_url,
-            dimension=getattr(settings, "embedding_dimension", 1536) or None,
+            dimension=settings.embedding_dimension or None,
         )
         emb_service = EmbeddingService(
             emb_provider,
@@ -323,7 +323,7 @@ def _wrap_cached(
             # namespace is applied at lookup time when a verified runtime
             # is available; this profile-level namespace prevents the
             # most common cross-runtime contamination.
-            cache_namespace=getattr(settings, "embedding_model", "default"),
+            cache_namespace=settings.embedding_model,
         )
         memory_cache = InMemoryCache(max_size=max_size, ttl_seconds=ttl_seconds)
         return CachedProvider(
