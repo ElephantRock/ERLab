@@ -2273,3 +2273,57 @@ def _prevent_provenance_contract_mutation(mapper, connection, target):
                 f"(run_id={target.id}). Create a new run with the desired "
                 f"provenance contract instead."
             )
+
+
+# ── P0.5B WP4: Durable configuration resolution evidence ────────────
+
+
+class ConfigurationResolutionSnapshot(Base):
+    """Immutable configuration resolution snapshot for one operation."""
+
+    __tablename__ = "configuration_resolution_snapshots"
+    __table_args__ = (
+        Index("ix_crs_scope", "scope_kind", "scope_id"),
+        CheckConstraint(
+            "scope_kind IN ('search_execution', 'retrieval_event', 'generation', 'release', 'capability_verification')",
+            name="ck_crs_scope_kind",
+        ),
+    )
+
+    snapshot_id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    scope_kind: Mapped[str] = mapped_column(String(40), nullable=False)
+    scope_id: Mapped[str] = mapped_column(String(255), nullable=False)
+    registry_schema_version: Mapped[str] = mapped_column(String(30), nullable=False)
+    precedence_policy_version: Mapped[str] = mapped_column(String(30), nullable=False)
+    effective_configuration_fingerprint: Mapped[str] = mapped_column(String(64), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, nullable=False,
+        default=lambda: datetime.now(timezone.utc),
+        server_default=text("CURRENT_TIMESTAMP"),
+    )
+
+
+class ConfigurationResolutionItem(Base):
+    """One resolved field within a configuration snapshot."""
+
+    __tablename__ = "configuration_resolution_items"
+    __table_args__ = (
+        Index("ix_cri_snapshot", "snapshot_id"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    snapshot_id: Mapped[str] = mapped_column(
+        String(64),
+        ForeignKey("configuration_resolution_snapshots.snapshot_id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    field_id: Mapped[str] = mapped_column(String(120), nullable=False)
+    effect_class: Mapped[str] = mapped_column(String(40), nullable=False)
+    winning_semantic_tier: Mapped[str] = mapped_column(String(40), nullable=False)
+    winning_physical_origin: Mapped[str] = mapped_column(String(40), nullable=False)
+    default_applied: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    normalization_applied: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    value_representation: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    value_fingerprint: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    shadowed_source_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    sensitivity: Mapped[str] = mapped_column(String(20), nullable=False, default="public")
