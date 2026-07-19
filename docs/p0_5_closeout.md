@@ -24,8 +24,8 @@ All 289 accepted Settings fields are registered and individually classified. Eve
 
 ## 5. Known limitations
 
-- 22 `getattr(settings, "field", <fallback>)` patterns remain in production code (service_registry, provider_factory, model_manager). The seal tracks this baseline and fails if it increases. Full migration is follow-up work.
-- The effective-value resolver framework is built and tested but not yet wired into all production composition paths. The domain effective configurations are available as composition objects.
+- All 22 material-field fallback patterns removed; seal is absolute (zero violations).
+- The effective-value resolver framework is built and tested but not yet wired into service_registry composition paths. The domain effective configurations are available as composition objects and the service registry now reads Settings directly without local fallback defaults.
 - Durable configuration resolution snapshots are designed (config_inspector.py) but not yet persisted to a DB table (migration deferred).
 - Frontend TypeScript baseline (101 errors) remains open.
 
