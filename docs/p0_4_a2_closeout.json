@@ -2,9 +2,9 @@
   "wave": "P0.4A2",
   "status": "closed",
   "entry_commit": "334b962",
-  "final_executable_commit": "946653c",
+  "final_executable_commit": "44094ec",
   "entry_backend_gate": {"passed": 4333, "skipped": 25, "failed": 0},
-  "final_backend_gate": {"passed": 4381, "skipped": 25, "failed": 0},
+  "final_backend_gate": {"passed": 4386, "skipped": 25, "failed": 0},
   "commit_chain": [
     {"hash": "3a6806f", "wave": "A2.1", "message": "feat: add capability-aware vector and retrieval schema"},
     {"hash": "123e320", "wave": "A2.2", "message": "feat: add capability-bound vector and collection identities"},
@@ -23,11 +23,11 @@
   ],
   "tables_modified": ["vector_index_records", "vector_retrieval_events"],
   "full_suite_runs": [
-    {"run": 1, "commit": "c1bccb2", "passed": 4381, "failed": 0, "skipped": 25},
-    {"run": 2, "commit": "c1bccb2", "passed": 4381, "failed": 0, "skipped": 25},
-    {"run": 3, "commit": "c1bccb2", "passed": 4381, "failed": 0, "skipped": 25},
-    {"run": 4, "commit": "c1bccb2", "passed": 4381, "failed": 0, "skipped": 25},
-    {"run": 5, "commit": "c1bccb2", "passed": 4381, "failed": 0, "skipped": 25}
+    {"run": 1, "commit": "44094ec", "passed": 4386, "failed": 0, "skipped": 25},
+    {"run": 2, "commit": "44094ec", "passed": 4386, "failed": 0, "skipped": 25},
+    {"run": 3, "commit": "44094ec", "passed": 4386, "failed": 0, "skipped": 25},
+    {"run": 4, "commit": "44094ec", "passed": 4386, "failed": 0, "skipped": 25},
+    {"run": 5, "commit": "44094ec", "passed": 4386, "failed": 0, "skipped": 25}
   ],
   "exclusions": [
     "No historical vector binding backfill",
@@ -39,9 +39,8 @@
   "working_tree_clean": true,
   "adversarial_review": {
     "reviewer": "independent code-reviewer agent (disproof mandate)",
-    "defects_found": 4,
-    "defects_repaired": 1,
-    "defects_documented_as_a3_integration_gaps": 3,
+    "defects_found": 5,
+    "defects_repaired": 5,
     "defects_open": 0,
     "defect_c": {
       "severity": "important",
@@ -50,19 +49,28 @@
       "fix": "Guard release now filters by profile_id + cutover_id + state=frozen"
     },
     "defect_a": {
-      "severity": "critical_wiring_gap",
+      "severity": "critical",
       "title": "Capability-bound retrieval primitives not wired into scoped_vector_service",
-      "status": "documented_for_a3"
+      "status": "repaired",
+      "fix": "scoped_vector_service.py now resolves RetrievalBindingContext and uses posture-aware eligibility"
     },
     "defect_b": {
-      "severity": "critical_wiring_gap",
+      "severity": "critical",
       "title": "V1 indexer has no write-guard; v2 indexer not called from production",
-      "status": "documented_for_a3"
+      "status": "repaired",
+      "fix": "V1 indexer consults write guard + activation posture. Post-activation v1 writes permanently forbidden."
     },
     "defect_d": {
-      "severity": "important_wiring_gap",
+      "severity": "important",
       "title": "Side-channel namespace policy not wired into semantic_cache",
-      "status": "documented_for_a3"
+      "status": "repaired",
+      "fix": "provider_factory.py passes cache_namespace derived from embedding model"
+    },
+    "defect_e": {
+      "severity": "critical",
+      "title": "Post-activation v1 writes not blocked (guard released by activation)",
+      "status": "repaired",
+      "fix": "V1 indexer now checks for active binding activation in addition to write guard"
     }
   },
   "next_wave": "P0.4A3",
