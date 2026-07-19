@@ -745,12 +745,14 @@ from backend.cli.commands.dev import dev_command
 from backend.cli.commands.db import db_app
 from backend.cli.commands.research import research_app
 from backend.cli.capability_cli import capability_app
+from backend.cli.config_cli import config_app
 
 app.command("setup")(setup_wizard)
 app.command("dev")(dev_command)
 app.add_typer(db_app, name="db")
 app.add_typer(research_app, name="research")
 app.add_typer(capability_app, name="capability")
+app.add_typer(config_app, name="config")
 
 
 if __name__ == "__main__":

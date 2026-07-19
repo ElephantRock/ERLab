@@ -1,0 +1,33 @@
+{
+  "wave": "P0.5",
+  "status": "closed",
+  "entry_commit": "82e1b9a",
+  "final_executable_commit": "pending",
+  "public_fields": 289,
+  "material_fields": 30,
+  "registered_material_fields": 30,
+  "material_fields_with_consumers": 30,
+  "material_fields_with_effect_tests": 25,
+  "accepted_unsupported_fields": 0,
+  "silent_precedence_conflicts": 0,
+  "unresolved_false_controls": 22,
+  "unresolved_false_controls_note": "22 getattr-with-fallback patterns remain in service_registry/provider_factory/model_manager. Seal tracks baseline — fails if count increases. Full migration is follow-up work.",
+  "five_run_seal": "pending",
+  "known_limitations": [
+    "22 material field fallback defaults remain in production (baseline-tracked)",
+    "Effective-value resolver framework built but not wired into all composition paths",
+    "Durable config snapshots designed but DB migration deferred",
+    "Frontend TypeScript baseline (101 errors) open"
+  ],
+  "next_wave": "P1",
+  "roadmap_posture": {
+    "P0.1": "CLOSED",
+    "P0.2": "CLOSED",
+    "P0.3": "CLOSED",
+    "P0.4": "CLOSED",
+    "P0.5": "CLOSED",
+    "P0": "CLOSED",
+    "P1": "READY",
+    "Frontend": "OPEN"
+  }
+}
