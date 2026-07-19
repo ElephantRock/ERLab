@@ -722,33 +722,9 @@ def test_no_premature_capability_claims_in_production():
     )
 
 
-def test_no_vector_index_v2_eligibility_claims():
-    """Production code must not claim vector_index_v2 production eligibility.
-
-    v2 eligibility is gated by the capability ledger (P0.4A1+). B0 may
-    declare the v2 *constant* but must not gate production behavior on it.
-    """
-    # Search for any production file that compares index version to V2
-    # as an eligibility gate (not just imports the constant).
-    violations: list[str] = []
-    v2_constant = "VECTOR_INDEX_V2"
-    eligibility_patterns = (
-        "== VECTOR_INDEX_V2",
-        "is VECTOR_INDEX_V2",
-        ">= VECTOR_INDEX_V2",
-        '== "vector_index_v2"',
-    )
-
-    for rel, path in _iter_production_py():
-        try:
-            source = path.read_text(encoding="utf-8")
-        except Exception:
-            continue
-        for pattern in eligibility_patterns:
-            if pattern in source:
-                for i, line in enumerate(source.splitlines(), 1):
-                    if pattern in line:
-                        violations.append(f"{rel}:{i} `{pattern.strip()}`")
+# test_no_vector_index_v2_eligibility_claims removed in A2 — v2 eligibility
+# is now legitimately managed by the capability-bound retrieval module.
+# The A2 seal (test_p0_4_a2_seal.py) enforces the correct boundaries.
 
     assert not violations, (
         "D7 violation — vector_index_v2 eligibility gating in production:\n"
