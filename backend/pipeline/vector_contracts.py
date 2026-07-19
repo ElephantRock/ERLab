@@ -318,6 +318,50 @@ def compute_vector_record_id(
     ).hexdigest()
 
 
+def compute_vector_record_id_v2(
+    paper_id: int,
+    chunk_key: str,
+    content_hash: str,
+    embedding_profile_id: str,
+    capability_binding_id: str,
+) -> str:
+    """Deterministic vector identity v2 from canonical JSON (P0.4A2).
+
+    Excludes: capability check ID, timestamps, expires_at, provider
+    request count, activation ID.
+
+    Consequences::
+
+        same content + same binding + fresh check
+        → same vector identity
+
+        same content + different binding
+        → different vector identity
+
+    Does not alter the v1 identity function.
+    """
+    payload = {
+        "schema": VECTOR_INDEX_V2,
+        "paper_id": paper_id,
+        "chunk_key": chunk_key,
+        "content_hash": content_hash,
+        "embedding_profile_id": embedding_profile_id,
+        "capability_binding_id": capability_binding_id,
+    }
+    return hashlib.sha256(
+        json.dumps(payload, sort_keys=True, separators=(",", ":")).encode()
+    ).hexdigest()
+
+
+def compute_v2_collection_name(capability_binding_id: str) -> str:
+    """Binding-specific collection name for v2 vectors (P0.4A2).
+
+    Deterministic: the same binding always maps to the same collection.
+    The full binding ID in collection metadata is authoritative.
+    """
+    return f"erlab_vectors_v2_{capability_binding_id[:24]}"
+
+
 def compute_profile_id(
     provider: str,
     model_identifier: str,

@@ -23,6 +23,7 @@ vector records remain pre_capability_v0 under the P0.3 contract.
 from __future__ import annotations
 
 import logging
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any, Sequence
 
@@ -55,6 +56,39 @@ from backend.pipeline.knowledge.embedding_configuration import (
 from backend.pipeline.vector_contracts import EMBEDDING_PROBE_SUITE_V1
 
 logger = logging.getLogger(__name__)
+
+
+# ── Authorized embedding receipts (P0.4A2.2) ─────────────────────────
+
+
+@dataclass(frozen=True)
+class AuthorizedEmbeddingBatch:
+    """Document embedding batch with immutable authorization evidence.
+
+    Returned by ``embed_documents_authorized``. Persistent production
+    callers MUST use receipt-returning methods so the authorization
+    evidence is bound to the result.
+    """
+
+    embeddings: tuple[tuple[float, ...], ...]
+    capability_binding_id: str
+    capability_check_id: str
+    runtime_config_fingerprint: str
+    authorized_at: datetime
+
+
+@dataclass(frozen=True)
+class AuthorizedQueryEmbedding:
+    """Query embedding with immutable authorization evidence.
+
+    Returned by ``embed_query_authorized``.
+    """
+
+    embedding: tuple[float, ...]
+    capability_binding_id: str
+    capability_check_id: str
+    runtime_config_fingerprint: str
+    authorized_at: datetime
 
 
 class VerifiedEmbeddingRuntime:
@@ -108,6 +142,51 @@ class VerifiedEmbeddingRuntime:
         """
         self._validate_authority()
         return await self._embedding_adapter.embed_query(text)
+
+    # ── Receipt-returning methods (P0.4A2.2) ──────────────────────
+    #
+    # Persistent production callers MUST use these methods so the
+    # authorization evidence is bound to the result.
+
+    async def embed_documents_authorized(
+        self, texts: Sequence[str],
+    ) -> AuthorizedEmbeddingBatch:
+        """Embed documents and return vectors with authorization evidence.
+
+        Validates authority, performs the embedding, and returns an
+        immutable receipt with the exact check and binding that
+        authorized the operation.
+
+        No public adapter access is introduced.
+        """
+        self._validate_authority()
+        embeddings = await self._embedding_adapter.embed_documents(texts)
+        return AuthorizedEmbeddingBatch(
+            embeddings=embeddings,
+            capability_binding_id=self._capability_binding_id,
+            capability_check_id=self._capability_check_id,
+            runtime_config_fingerprint=self._runtime_config_fingerprint,
+            authorized_at=datetime.now(timezone.utc),
+        )
+
+    async def embed_query_authorized(
+        self, text: str,
+    ) -> AuthorizedQueryEmbedding:
+        """Embed a query and return the vector with authorization evidence.
+
+        Validates authority, performs the embedding, and returns an
+        immutable receipt with the exact check and binding that
+        authorized the operation.
+        """
+        self._validate_authority()
+        embedding = await self._embedding_adapter.embed_query(text)
+        return AuthorizedQueryEmbedding(
+            embedding=embedding,
+            capability_binding_id=self._capability_binding_id,
+            capability_check_id=self._capability_check_id,
+            runtime_config_fingerprint=self._runtime_config_fingerprint,
+            authorized_at=datetime.now(timezone.utc),
+        )
 
     # ── Read-only accessors (no adapter) ──
 
