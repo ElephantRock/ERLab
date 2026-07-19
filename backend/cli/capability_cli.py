@@ -244,3 +244,173 @@ def recover_stale_cmd():
         console.print("[green]No stale running checks found.[/green]")
     else:
         console.print(f"[yellow]Recovered {count} stale running check(s) → abandoned.[/yellow]")
+
+
+# ── A2.8: Cutover operator commands ──────────────────────────────────
+
+
+@capability_app.command("cutover-create")
+def cutover_create_cmd(
+    binding_id: str = typer.Option(..., help="Target capability binding ID"),
+    profile_id: str = typer.Option(..., help="Embedding profile ID"),
+):
+    """Create a cutover for a target binding."""
+    import uuid
+    from backend.db.models import EmbeddingBindingCutover, EmbeddingProfileBindingActivation
+
+    sf = _get_session_factory()
+    cutover_id = uuid.uuid4().hex
+    activation_id = uuid.uuid4().hex
+
+    with sf() as session:
+        # Check no conflicting open cutover
+        existing = session.execute(
+            select(EmbeddingBindingCutover).where(
+                EmbeddingBindingCutover.embedding_profile_id == profile_id,
+                EmbeddingBindingCutover.status.in_(["pending", "snapshotting", "reindexing", "verifying", "ready", "sealed"]),
+            )
+        ).scalar_one_or_none()
+
+        if existing is not None:
+            console.print(f"[red]Conflicting open cutover: {existing.cutover_id[:16]}...[/red]")
+            raise typer.Exit(1)
+
+        cutover = EmbeddingBindingCutover(
+            cutover_id=cutover_id,
+            cutover_schema_version="cutover_v1",
+            embedding_profile_id=profile_id,
+            embedding_purpose="paper",
+            source_contract_version="pre_capability_v0",
+            target_binding_id=binding_id,
+            source_snapshot_kind="paper_chunk",
+            source_snapshot_fingerprint="pending",
+            source_item_count=0,
+            status="pending",
+        )
+        session.add(cutover)
+
+        activation = EmbeddingProfileBindingActivation(
+            activation_id=activation_id,
+            embedding_profile_id=profile_id,
+            embedding_purpose="paper",
+            capability_binding_id=binding_id,
+            status="candidate",
+            activation_generation=1,
+        )
+        session.add(activation)
+        session.commit()
+
+    console.print(f"[green]Cutover created:[/green] {cutover_id[:32]}...")
+    console.print(f"[green]Candidate activation:[/green] {activation_id[:32]}...")
+    console.print("[dim]Run 'erock capability cutover-run' to snapshot and regenerate.[/dim]")
+
+
+@capability_app.command("cutover-status")
+def cutover_status_cmd(
+    cutover_id: str = typer.Option(..., help="Cutover ID"),
+):
+    """Show cutover status."""
+    from backend.db.models import EmbeddingBindingCutover
+
+    sf = _get_session_factory()
+    with sf() as session:
+        cutover = session.execute(
+            select(EmbeddingBindingCutover).where(
+                EmbeddingBindingCutover.cutover_id == cutover_id
+            )
+        ).scalar_one_or_none()
+
+        if cutover is None:
+            console.print(f"[red]Cutover {cutover_id[:16]}... not found.[/red]")
+            raise typer.Exit(1)
+
+        table = Table(title=f"Cutover {cutover_id[:16]}...")
+        table.add_column("Field", style="cyan")
+        table.add_column("Value")
+        table.add_row("status", cutover.status)
+        table.add_row("profile", cutover.embedding_profile_id[:32] + "...")
+        table.add_row("target_binding", cutover.target_binding_id[:32] + "...")
+        table.add_row("source_count", str(cutover.source_item_count))
+        table.add_row("indexed", str(cutover.target_indexed_count))
+        table.add_row("failed", str(cutover.target_failed_count))
+        if cutover.sealed_at:
+            table.add_row("sealed_at", cutover.sealed_at.isoformat())
+        if cutover.activated_at:
+            table.add_row("activated_at", cutover.activated_at.isoformat())
+        console.print(table)
+
+
+@capability_app.command("cutover-seal")
+def cutover_seal_cmd(
+    cutover_id: str = typer.Option(..., help="Cutover ID"),
+    profile_id: str = typer.Option(..., help="Embedding profile ID"),
+):
+    """Seal a cutover (freeze writes, verify no drift)."""
+    from backend.pipeline.capability.activation_service import seal_cutover
+
+    sf = _get_session_factory()
+    sealed, reason = seal_cutover(
+        sf, cutover_id=cutover_id,
+        embedding_profile_id=profile_id,
+    )
+
+    if sealed:
+        console.print(f"[green]Cutover {cutover_id[:16]}... sealed.[/green]")
+    else:
+        console.print(f"[red]Seal failed:[/red] {reason}")
+        raise typer.Exit(1)
+
+
+@capability_app.command("activate-binding")
+def activate_binding_cmd(
+    cutover_id: str = typer.Option(..., help="Cutover ID"),
+    profile_id: str = typer.Option(..., help="Embedding profile ID"),
+    binding_id: str = typer.Option(..., help="Target binding ID"),
+    activation_id: str = typer.Option(..., help="Candidate activation ID"),
+):
+    """Execute the atomic activation transaction."""
+    from backend.pipeline.capability.activation_service import activate_binding, ActivationError
+
+    sf = _get_session_factory()
+    try:
+        result = activate_binding(
+            sf,
+            cutover_id=cutover_id,
+            embedding_profile_id=profile_id,
+            target_binding_id=binding_id,
+            candidate_activation_id=activation_id,
+        )
+        if result.success:
+            console.print(f"[green]Binding activated:[/green] {binding_id[:32]}...")
+        else:
+            console.print(f"[red]Activation failed:[/red] {result.failure_code}")
+            raise typer.Exit(1)
+    except ActivationError as e:
+        console.print(f"[red]Activation error:[/red] {e.code}: {e.detail}")
+        raise typer.Exit(1)
+
+
+@capability_app.command("active-binding")
+def active_binding_cmd(
+    profile_id: str = typer.Option(..., help="Embedding profile ID"),
+):
+    """Show the current active binding for a profile."""
+    from backend.pipeline.capability.capability_bound_retrieval import (
+        resolve_retrieval_binding_context,
+    )
+
+    sf = _get_session_factory()
+    with sf() as session:
+        ctx = resolve_retrieval_binding_context(session, profile_id)
+
+    table = Table(title="Active Binding")
+    table.add_column("Field", style="cyan")
+    table.add_column("Value")
+    table.add_row("eligibility_contract", ctx.vector_eligibility_contract_version)
+    if ctx.active_binding_id:
+        table.add_row("active_binding", ctx.active_binding_id[:32] + "...")
+        table.add_row("activation_id", (ctx.activation_id or "")[:32] + "...")
+        table.add_row("generation", str(ctx.activation_generation))
+    else:
+        table.add_row("active_binding", "(none — pre-capability)")
+    console.print(table)
