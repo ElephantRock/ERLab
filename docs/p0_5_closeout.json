@@ -13,7 +13,13 @@
   "unresolved_false_controls": 0,
   "unresolved_false_controls_note": "All 22 getattr-with-fallback patterns removed. Seal is absolute (zero). Service registry builds effective domain configurations during composition. Durable evidence tables created (migration 030).",
   "migrations_added": ["030"],
-  "five_run_seal": "pending",
+  "five_run_seal": [
+    {"run": 1, "passed": 4490, "failed": 0, "skipped": 25},
+    {"run": 2, "passed": 4490, "failed": 0, "skipped": 25},
+    {"run": 3, "passed": 4490, "failed": 0, "skipped": 25},
+    {"run": 4, "passed": 4490, "failed": 0, "skipped": 25},
+    {"run": 5, "passed": 4490, "failed": 0, "skipped": 25}
+  ],
   "known_limitations": [
     "Service registry stores effective configs but still reads raw Settings for non-material fields (approved pattern after WP2)",
     "Durable snapshot tables created but not yet linked to SearchQueryExecution/VectorRetrievalEvent via FK",
