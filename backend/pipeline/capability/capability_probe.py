@@ -71,17 +71,60 @@ class CapabilityProbeResult:
 
 
 def _sanitize_detail(detail: str) -> str:
-    """Strip credentials and truncate to 500 chars."""
+    """Strip credentials and truncate to 500 chars.
+
+    Handles the common credential-bearing formats that appear in provider
+    and HTTP-client exception messages:
+      - URL userinfo: ``user:pass@host``
+      - ``api_key=`` / ``token=`` / ``secret=`` / ``password=`` / ``bearer=``
+      - ``Authorization: Bearer ...`` and ``Authorization: bearer ...`` headers
+      - ``x-api-key: ...`` / ``api-key: ...`` headers
+      - Bare OpenAI-style tokens: ``sk-[A-Za-z0-9-]{20,}``
+      - Query-param credentials: ``?key=...`` / ``&api_key=...``
+    """
     import re
-    # Strip userinfo
+
+    # Strip URL userinfo (user:pass@host)
     detail = re.sub(r"\w+:\w+@", "[creds]@", detail)
-    # Strip api_key=, token=, etc.
+
+    # Strip key=value form credentials
     detail = re.sub(
-        r"(api_key|token|secret|password|bearer)\s*=\s*\S+",
+        r"(api_key|apikey|token|secret|password|bearer|key)\s*=\s*\S+",
         "[auth]",
         detail,
         flags=re.IGNORECASE,
     )
+
+    # Strip Authorization headers (Authorization: Bearer ..., Authorization: bearer ...)
+    detail = re.sub(
+        r"(?i)authorization\s*:\s*bearer\s+\S+",
+        "[auth-header]",
+        detail,
+    )
+    detail = re.sub(
+        r"(?i)authorization\s*:\s*\S+",
+        "[auth-header]",
+        detail,
+    )
+
+    # Strip x-api-key / api-key headers
+    detail = re.sub(
+        r"(?i)(x-api-key|api-key)\s*:\s*\S+",
+        "[auth-header]",
+        detail,
+    )
+
+    # Strip bare OpenAI-style tokens (sk- followed by 20+ alphanumeric/dash chars)
+    detail = re.sub(r"sk-[A-Za-z0-9-]{20,}", "[sk-token]", detail)
+
+    # Strip query-param credentials (?key=... / &api_key=...)
+    detail = re.sub(
+        r"[?&](api_key|apikey|key|token|access_token)\s*=\s*[^&\s]+",
+        "[query-auth]",
+        detail,
+        flags=re.IGNORECASE,
+    )
+
     return detail[:500]
 
 

@@ -186,3 +186,39 @@ class TestProbeFail:
         result = _run(probe_embedding_capability(adapter, expected_dimension=1536))
         assert result.passed is False
         assert len(result.sanitized_error_detail or "") <= 500
+
+    def test_authorization_bearer_header_sanitized(self):
+        err = GovernedEmbeddingAdapterError(
+            "HTTP 401: Authorization: Bearer sk-proj-abc123XYZdefGHI456 failed"
+        )
+        adapter = _FakeAdapter(dimension=1536, raise_on_documents=err)
+        result = _run(probe_embedding_capability(adapter, expected_dimension=1536))
+        assert result.passed is False
+        assert "sk-proj-abc123XYZdefGHI456" not in (result.sanitized_error_detail or "")
+
+    def test_x_api_key_header_sanitized(self):
+        err = GovernedEmbeddingAdapterError(
+            "request failed: x-api-key: secret-key-value-here not authorized"
+        )
+        adapter = _FakeAdapter(dimension=1536, raise_on_documents=err)
+        result = _run(probe_embedding_capability(adapter, expected_dimension=1536))
+        assert result.passed is False
+        assert "secret-key-value-here" not in (result.sanitized_error_detail or "")
+
+    def test_bare_openai_token_sanitized(self):
+        err = GovernedEmbeddingAdapterError(
+            "invalid api key: sk-1234567890abcdefghijklmnopqrstuv"
+        )
+        adapter = _FakeAdapter(dimension=1536, raise_on_documents=err)
+        result = _run(probe_embedding_capability(adapter, expected_dimension=1536))
+        assert result.passed is False
+        assert "sk-1234567890abcdefghijklmnopqrstuv" not in (result.sanitized_error_detail or "")
+
+    def test_query_param_credential_sanitized(self):
+        err = GovernedEmbeddingAdapterError(
+            "GET https://api.example.com/v1/embed?key=AIzaSyB123abc failed"
+        )
+        adapter = _FakeAdapter(dimension=1536, raise_on_documents=err)
+        result = _run(probe_embedding_capability(adapter, expected_dimension=1536))
+        assert result.passed is False
+        assert "AIzaSyB123abc" not in (result.sanitized_error_detail or "")
