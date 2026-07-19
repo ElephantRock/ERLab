@@ -4,7 +4,7 @@
   "entry_commit": "1fea62a",
   "final_executable_commit": "f982917",
   "entry_backend_gate": {"passed": 4245, "skipped": 25, "failed": 0},
-  "final_backend_gate": {"passed": 4329, "skipped": 25, "failed": 0},
+  "final_backend_gate": {"passed": 4333, "skipped": 25, "failed": 0},
   "commit_chain": [
     {"hash": "88b66b3", "wave": "A1.1", "message": "feat: P0.4A1.1 capability check-first schema"},
     {"hash": "3e0bb90", "wave": "A1.2", "message": "feat: P0.4A1.2 capability identity and fingerprint contracts"},
@@ -33,11 +33,11 @@
     "backend/cli/capability_cli.py"
   ],
   "full_suite_runs": [
-    {"run": 1, "commit": "f982917", "passed": 4329, "failed": 0, "skipped": 25},
-    {"run": 2, "commit": "f982917", "passed": 4329, "failed": 0, "skipped": 25},
-    {"run": 3, "commit": "f982917", "passed": 4329, "failed": 0, "skipped": 25},
-    {"run": 4, "commit": "f982917", "passed": 4329, "failed": 0, "skipped": 25},
-    {"run": 5, "commit": "f982917", "passed": 4329, "failed": 0, "skipped": 25}
+    {"run": 1, "commit": "f982917", "passed": 4333, "failed": 0, "skipped": 25},
+    {"run": 2, "commit": "f982917", "passed": 4333, "failed": 0, "skipped": 25},
+    {"run": 3, "commit": "f982917", "passed": 4333, "failed": 0, "skipped": 25},
+    {"run": 4, "commit": "f982917", "passed": 4333, "failed": 0, "skipped": 25},
+    {"run": 5, "commit": "f982917", "passed": 4333, "failed": 0, "skipped": 25}
   ],
   "adversarial_review": {
     "reviewer": "independent code-reviewer agent (disproof mandate)",
