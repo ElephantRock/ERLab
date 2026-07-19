@@ -23,6 +23,7 @@ class ServiceRegistry:
 
     def __init__(self) -> None:
         # Will be populated by init_* methods
+        self._effective = None  # EffectiveDomainConfigurations (P0.5B WP1)
         pass
 
     # ── Core services ────────────────────────────────────────────────
@@ -39,6 +40,12 @@ class ServiceRegistry:
         from backend.pipeline.knowledge.embedding_service import EmbeddingService
         from backend.pipeline.knowledge.vector_store import VectorStore
         from backend.pipeline.literature.search_service import SearchService
+
+        # Build effective domain configurations (P0.5B WP1)
+        from backend.pipeline.config.effective_configurations import (
+            build_effective_domain_configurations,
+        )
+        self._effective = build_effective_domain_configurations(settings)
 
         self.search = SearchService()
         self.pdf = PDFService(mode=settings.s1_parser_mode, s1_parser_url=settings.s1_parser_url)
