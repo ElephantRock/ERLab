@@ -249,60 +249,116 @@ def recover_stale_cmd():
 # ── A2.8: Cutover operator commands ──────────────────────────────────
 
 
+@capability_app.command("inspect")
+def inspect_cmd(
+    profile_id: str = typer.Option(..., help="Embedding profile ID"),
+    purpose: str = typer.Option("paper", help="Embedding purpose"),
+    json_output: bool = typer.Option(False, "--json", help="Machine-readable output"),
+):
+    """Inspect the unified lifecycle posture for a profile."""
+    from backend.pipeline.capability.lifecycle_service import CapabilityLifecycleService
+
+    sf = _get_session_factory()
+    svc = CapabilityLifecycleService(sf)
+    posture = svc.inspect(
+        embedding_profile_id=profile_id,
+        embedding_purpose=purpose,
+    )
+
+    if json_output:
+        import json as _json
+        console.print_json(_json.dumps({
+            "operator_report_schema_version": "v1",
+            "embedding_profile_id": posture.embedding_profile_id,
+            "embedding_purpose": posture.embedding_purpose,
+            "readiness_phase": posture.readiness_phase,
+            "capability_health_status": posture.capability_health_status,
+            "binding_id": posture.binding_id,
+            "model_resolution_posture": posture.model_resolution_posture,
+            "persistent_activation_eligible": posture.persistent_activation_eligible,
+            "active_binding_id": posture.active_binding_id,
+            "open_cutover_id": posture.open_cutover_id,
+            "cutover_status": posture.cutover_status,
+            "source_item_count": posture.source_item_count,
+            "indexed_item_count": posture.indexed_item_count,
+            "failed_item_count": posture.failed_item_count,
+            "write_guard_status": posture.write_guard_status,
+            "blocker_codes": list(posture.blocker_codes),
+            "next_actions": list(posture.next_actions),
+        }))
+        return
+
+    table = Table(title=f"Lifecycle Posture — {profile_id[:16]}...")
+    table.add_column("Field", style="cyan")
+    table.add_column("Value")
+    table.add_row("readiness_phase", posture.readiness_phase)
+    table.add_row("capability_health_status", posture.capability_health_status)
+    table.add_row("binding_id", (posture.binding_id[:32] + "...") if posture.binding_id else "(none)")
+    table.add_row("model_resolution_posture", posture.model_resolution_posture or "(none)")
+    table.add_row("persistent_activation_eligible", str(posture.persistent_activation_eligible))
+    table.add_row("active_binding_id", (posture.active_binding_id[:32] + "...") if posture.active_binding_id else "(none)")
+    table.add_row("open_cutover_id", (posture.open_cutover_id[:32] + "...") if posture.open_cutover_id else "(none)")
+    table.add_row("cutover_status", posture.cutover_status or "(none)")
+    table.add_row("write_guard_status", posture.write_guard_status)
+    if posture.blocker_codes:
+        table.add_row("blocker_codes", ", ".join(posture.blocker_codes))
+    if posture.next_actions:
+        table.add_row("next_actions", "; ".join(posture.next_actions))
+    console.print(table)
+
+
+@capability_app.command("cutover-abort")
+def cutover_abort_cmd(
+    cutover_id: str = typer.Option(..., help="Cutover ID to abort"),
+    profile_id: str = typer.Option(..., help="Embedding profile ID"),
+):
+    """Abort a cutover before activation."""
+    from backend.pipeline.capability.lifecycle_service import (
+        CapabilityLifecycleService,
+        LifecycleError,
+    )
+
+    sf = _get_session_factory()
+    svc = CapabilityLifecycleService(sf)
+
+    try:
+        result = svc.abort_cutover(
+            cutover_id=cutover_id,
+            embedding_profile_id=profile_id,
+        )
+        console.print(f"[green]Cutover aborted:[/green] {result.cutover_id[:32]}...")
+        console.print(f"[green]Activation rejected:[/green] {result.activation_id[:32] or '(none)'}")
+        console.print(f"[green]Guard released:[/green] {result.guard_released}")
+    except LifecycleError as e:
+        console.print(f"[red]Abort failed:[/red] {e.code}: {e.detail}")
+        raise typer.Exit(3)
+
+
 @capability_app.command("cutover-create")
 def cutover_create_cmd(
     binding_id: str = typer.Option(..., help="Target capability binding ID"),
     profile_id: str = typer.Option(..., help="Embedding profile ID"),
+    purpose: str = typer.Option("paper", help="Embedding purpose"),
 ):
     """Create a cutover for a target binding."""
-    import uuid
-    from backend.db.models import EmbeddingBindingCutover, EmbeddingProfileBindingActivation
+    from backend.pipeline.capability.lifecycle_service import CapabilityLifecycleService
 
     sf = _get_session_factory()
-    cutover_id = uuid.uuid4().hex
-    activation_id = uuid.uuid4().hex
+    svc = CapabilityLifecycleService(sf)
 
-    with sf() as session:
-        # Check no conflicting open cutover
-        existing = session.execute(
-            select(EmbeddingBindingCutover).where(
-                EmbeddingBindingCutover.embedding_profile_id == profile_id,
-                EmbeddingBindingCutover.status.in_(["pending", "snapshotting", "reindexing", "verifying", "ready", "sealed"]),
-            )
-        ).scalar_one_or_none()
+    result = svc.create_cutover(
+        embedding_profile_id=profile_id,
+        embedding_purpose=purpose,
+        target_binding_id=binding_id,
+    )
 
-        if existing is not None:
-            console.print(f"[red]Conflicting open cutover: {existing.cutover_id[:16]}...[/red]")
-            raise typer.Exit(1)
-
-        cutover = EmbeddingBindingCutover(
-            cutover_id=cutover_id,
-            cutover_schema_version="cutover_v1",
-            embedding_profile_id=profile_id,
-            embedding_purpose="paper",
-            source_contract_version="pre_capability_v0",
-            target_binding_id=binding_id,
-            source_snapshot_kind="paper_chunk",
-            source_snapshot_fingerprint="pending",
-            source_item_count=0,
-            status="pending",
-        )
-        session.add(cutover)
-
-        activation = EmbeddingProfileBindingActivation(
-            activation_id=activation_id,
-            embedding_profile_id=profile_id,
-            embedding_purpose="paper",
-            capability_binding_id=binding_id,
-            status="candidate",
-            activation_generation=1,
-        )
-        session.add(activation)
-        session.commit()
-
-    console.print(f"[green]Cutover created:[/green] {cutover_id[:32]}...")
-    console.print(f"[green]Candidate activation:[/green] {activation_id[:32]}...")
-    console.print("[dim]Run 'erock capability cutover-run' to snapshot and regenerate.[/dim]")
+    if result.created:
+        console.print(f"[green]Cutover created:[/green] {result.cutover_id[:32]}...")
+        console.print(f"[green]Candidate activation:[/green] {result.activation_id[:32]}...")
+        console.print("[dim]Run 'erock capability cutover-run' to snapshot and regenerate.[/dim]")
+    else:
+        console.print(f"[yellow]Existing open cutover returned:[/yellow] {result.cutover_id[:32]}...")
+        console.print(f"[yellow]Activation:[/yellow] {result.activation_id[:32]}...")
 
 
 @capability_app.command("cutover-status")
