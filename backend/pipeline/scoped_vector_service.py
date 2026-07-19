@@ -120,28 +120,60 @@ def resolve_eligible_records(
     embedding_profile_id: str,
     collection_name: str,
 ) -> list[EligibleVectorSnapshot]:
-    """Select the exact indexed vector records for the allowed papers/profile."""
+    """Select the exact indexed vector records for the allowed papers/profile.
+
+    P0.4A2 Final: posture-aware eligibility. If an active binding exists
+    for the profile, only v2 records under that binding are eligible. If
+    no active binding exists, v1 records remain eligible (pre-capability
+    posture). No mixing.
+    """
     from backend.db.models import VectorIndexRecord
+    from backend.pipeline.capability.capability_bound_retrieval import (
+        resolve_retrieval_binding_context,
+    )
 
     if not allowed_paper_ids:
         return []
 
-    rows = session.execute(
-        select(
-            VectorIndexRecord.vector_record_id,
-            VectorIndexRecord.paper_id,
-            VectorIndexRecord.chunk_key,
-            VectorIndexRecord.content_kind,
-            VectorIndexRecord.collection_name,
-            VectorIndexRecord.embedding_profile_id,
-        ).where(
-            VectorIndexRecord.index_status == "indexed",
-            VectorIndexRecord.embedding_profile_id == embedding_profile_id,
-            VectorIndexRecord.index_schema_version == VECTOR_INDEX_V1,
-            VectorIndexRecord.collection_name == collection_name,
-            VectorIndexRecord.paper_id.in_(list(allowed_paper_ids)),
-        ).order_by(VectorIndexRecord.vector_record_id)
-    ).all()
+    # Resolve the current activation posture
+    binding_ctx = resolve_retrieval_binding_context(session, embedding_profile_id)
+
+    if binding_ctx.active_binding_id is not None:
+        # Post-activation: only v2 records under the active binding
+        rows = session.execute(
+            select(
+                VectorIndexRecord.vector_record_id,
+                VectorIndexRecord.paper_id,
+                VectorIndexRecord.chunk_key,
+                VectorIndexRecord.content_kind,
+                VectorIndexRecord.collection_name,
+                VectorIndexRecord.embedding_profile_id,
+            ).where(
+                VectorIndexRecord.index_status == "indexed",
+                VectorIndexRecord.embedding_profile_id == embedding_profile_id,
+                VectorIndexRecord.index_schema_version == "vector_index_v2",
+                VectorIndexRecord.capability_binding_id == binding_ctx.active_binding_id,
+                VectorIndexRecord.paper_id.in_(list(allowed_paper_ids)),
+            ).order_by(VectorIndexRecord.vector_record_id)
+        ).all()
+    else:
+        # Pre-activation: v1 records remain eligible
+        rows = session.execute(
+            select(
+                VectorIndexRecord.vector_record_id,
+                VectorIndexRecord.paper_id,
+                VectorIndexRecord.chunk_key,
+                VectorIndexRecord.content_kind,
+                VectorIndexRecord.collection_name,
+                VectorIndexRecord.embedding_profile_id,
+            ).where(
+                VectorIndexRecord.index_status == "indexed",
+                VectorIndexRecord.embedding_profile_id == embedding_profile_id,
+                VectorIndexRecord.index_schema_version == VECTOR_INDEX_V1,
+                VectorIndexRecord.collection_name == collection_name,
+                VectorIndexRecord.paper_id.in_(list(allowed_paper_ids)),
+            ).order_by(VectorIndexRecord.vector_record_id)
+        ).all()
 
     return [
         EligibleVectorSnapshot(
@@ -299,6 +331,12 @@ async def query_vectors(
                 )
 
         # ── 4. Create event + snapshots ──
+        # P0.4A2 Final: record capability evidence on the retrieval event
+        from backend.pipeline.capability.capability_bound_retrieval import (
+            resolve_retrieval_binding_context as _resolve_ctx,
+        )
+        _binding_ctx = _resolve_ctx(session, request.scope.embedding_profile_id)
+
         event = VectorRetrievalEvent(
             run_id=request.run_id,
             stage_name=request.stage_name,
@@ -319,6 +357,12 @@ async def query_vectors(
             eligible_vector_record_count=eligible_count,
             coverage_status=coverage_status,
             status="pending",
+            # P0.4A2: capability contract evidence
+            query_embedding_contract_version="capability_v1",
+            vector_eligibility_contract_version=_binding_ctx.vector_eligibility_contract_version,
+            query_capability_binding_id=_binding_ctx.active_binding_id,
+            query_capability_check_id=None,  # populated when query receipt is available
+            binding_activation_id=_binding_ctx.activation_id,
         )
         session.add(event)
         session.flush()

@@ -318,6 +318,12 @@ def _wrap_cached(
             similarity_threshold=getattr(settings, "caching_similarity_threshold", 0.95),
             ttl_seconds=ttl_seconds,
             max_size=max_size,
+            # P0.4A2 Final: namespace by embedding profile to prevent
+            # cross-binding cache reuse. The full capability binding
+            # namespace is applied at lookup time when a verified runtime
+            # is available; this profile-level namespace prevents the
+            # most common cross-runtime contamination.
+            cache_namespace=getattr(settings, "embedding_model", "default"),
         )
         memory_cache = InMemoryCache(max_size=max_size, ttl_seconds=ttl_seconds)
         return CachedProvider(

@@ -43,6 +43,10 @@ logger = logging.getLogger(__name__)
 _LEGACY_COLLECTION = "research_papers"
 
 
+class WriteGuardFrozen(Exception):
+    """The profile write guard is frozen — new writes rejected (P0.4A2)."""
+
+
 def _now() -> datetime:
     return datetime.now(timezone.utc)
 
@@ -242,6 +246,22 @@ async def index_document(
         raise
     finally:
         session.close()
+
+    # 1b. Consult write guard — reject if frozen (P0.4A2 Final)
+    from backend.db.models import EmbeddingProfileEmbeddingWriteGuard
+    with session_factory() as guard_session:
+        guard = guard_session.execute(
+            select(EmbeddingProfileEmbeddingWriteGuard).where(
+                EmbeddingProfileEmbeddingWriteGuard.embedding_profile_id == profile_id,
+                EmbeddingProfileEmbeddingWriteGuard.embedding_purpose == "paper",
+            )
+        ).scalar_one_or_none()
+
+    if guard is not None and guard.state == "frozen":
+        raise WriteGuardFrozen(
+            f"profile {profile_id[:16]}... write guard is frozen "
+            f"(cutover={guard.cutover_id[:16] if guard.cutover_id else 'none'}...)"
+        )
 
     collection_name = compute_collection_name(profile_id)
     vector_record_id = compute_vector_record_id(

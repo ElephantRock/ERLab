@@ -714,6 +714,8 @@ class IngestionStage(PipelineStage):
                     indexed += 1
                 elif outcome.status == "already_indexed":
                     already += 1
+                elif outcome.status == "failed":
+                    failed += 1
             except Exception as e:
                 logger.debug("Governed indexing failed for paper %s: %s", paper.id, e)
                 failed += 1
