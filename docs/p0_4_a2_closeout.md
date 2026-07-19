@@ -69,8 +69,21 @@ execution path:
   `query_embedding_contract_version`, `vector_eligibility_contract_version`,
   `query_capability_binding_id`, `binding_activation_id`.
 - **Cache namespace**: `provider_factory.py` passes `cache_namespace`
-  derived from the embedding model to `SemanticCache`, preventing
-  cross-runtime cache contamination.
+  to `SemanticCache`. The current production namespace is derived from
+  the embedding model name, which prevents cross-model contamination
+  but does NOT yet achieve the full A2 isolation contract:
+
+  Target contract (not yet fully wired):
+    stable activation-eligible runtime → namespace includes
+      capability_binding_id
+    alias-only runtime → namespace includes capability_binding_id
+      + capability_check_id, validity cannot exceed check expiry
+
+  The binding-level namespace requires a verified runtime at cache
+  lookup time, which is a P0.4A3 deliverable. The model-name namespace
+  is an interim measure that prevents the most common contamination
+  (different embedding models) but would not prevent cross-binding
+  reuse within the same model.
 
 ## 6. Adversarial review findings
 
