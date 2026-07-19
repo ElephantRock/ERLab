@@ -1,0 +1,74 @@
+{
+  "wave": "P0.4A1",
+  "status": "closed",
+  "entry_commit": "1fea62a",
+  "final_executable_commit": "f982917",
+  "entry_backend_gate": {"passed": 4245, "skipped": 25, "failed": 0},
+  "final_backend_gate": {"passed": 4329, "skipped": 25, "failed": 0},
+  "commit_chain": [
+    {"hash": "88b66b3", "wave": "A1.1", "message": "feat: P0.4A1.1 capability check-first schema"},
+    {"hash": "3e0bb90", "wave": "A1.2", "message": "feat: P0.4A1.2 capability identity and fingerprint contracts"},
+    {"hash": "6e59cb3", "wave": "A1.3", "message": "feat: P0.4A1.3 check claim and lease lifecycle"},
+    {"hash": "2accec8", "wave": "A1.4", "message": "feat: P0.4A1.4 production-path dual probe suite"},
+    {"hash": "e4bc839", "wave": "A1.5", "message": "feat: P0.4A1.5 check-first publication"},
+    {"hash": "1cc4e93", "wave": "A1.6+7", "message": "feat: P0.4A1.6+7 encapsulated verified runtime and drift enforcement"},
+    {"hash": "c9cd043", "wave": "A1.8", "message": "feat: P0.4A1.8 operator verify and status commands"},
+    {"hash": "7980f18", "wave": "A1.9", "message": "test: seal P0.4A1 capability ledger architecture"},
+    {"hash": "f982917", "wave": "closeout", "message": "fix: broaden capability probe credential redaction"}
+  ],
+  "tables_created": ["embedding_capability_checks", "embedding_capability_bindings"],
+  "tables_not_created": ["embedding_profile_binding_activations"],
+  "modules_created": [
+    "backend/pipeline/capability/capability_identity.py",
+    "backend/pipeline/capability/capability_resolution.py",
+    "backend/pipeline/capability/capability_repository.py",
+    "backend/pipeline/capability/contracts.py",
+    "backend/pipeline/capability/capability_check_lifecycle.py",
+    "backend/pipeline/capability/capability_probe.py",
+    "backend/pipeline/capability/capability_check_service.py",
+    "backend/pipeline/capability/verified_embedding_runtime.py",
+    "backend/pipeline/capability/capability_errors.py",
+    "backend/pipeline/capability/capability_drift.py",
+    "backend/pipeline/capability/capability_status.py",
+    "backend/cli/capability_cli.py"
+  ],
+  "full_suite_runs": [
+    {"run": 1, "commit": "f982917", "passed": 4329, "failed": 0, "skipped": 25},
+    {"run": 2, "commit": "f982917", "passed": 4329, "failed": 0, "skipped": 25},
+    {"run": 3, "commit": "f982917", "passed": 4329, "failed": 0, "skipped": 25},
+    {"run": 4, "commit": "f982917", "passed": 4329, "failed": 0, "skipped": 25},
+    {"run": 5, "commit": "f982917", "passed": 4329, "failed": 0, "skipped": 25}
+  ],
+  "adversarial_review": {
+    "reviewer": "independent code-reviewer agent (disproof mandate)",
+    "confirmed_defects_found": 1,
+    "defects_repaired": 1,
+    "defects_open": 0,
+    "defect": {
+      "id": "10",
+      "title": "Incomplete credential redaction in _sanitize_detail",
+      "classification": "confirmed defect -> repaired",
+      "file": "backend/pipeline/capability/capability_probe.py:73",
+      "resolution": "Broadened regex to redact Authorization headers, x-api-key headers, bare sk- tokens, and query-param credentials. 4 new redaction tests added.",
+      "repaired_in": "f982917"
+    },
+    "false_positives_documented": 10,
+    "critical_findings": 0
+  },
+  "exclusions": [
+    "No embedding_profile_binding_activations table",
+    "No vector_index_v2 production eligibility",
+    "No binding backfill onto existing VectorIndexRecord",
+    "No cutover/remediation of historical vectors",
+    "EmbeddingProfile.verification_status stays unverified, never read for authorization"
+  ],
+  "working_tree_clean": true,
+  "next_wave": "P0.4A2+",
+  "roadmap_posture": {
+    "P0.4B0": "CLOSED",
+    "P0.4A1": "CLOSED",
+    "P0.4A2+": "READY — capability-bound vector cutover",
+    "P0.5": "BLOCKED pending P0.4",
+    "Frontend": "OPEN"
+  }
+}
