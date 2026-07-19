@@ -1347,7 +1347,10 @@ class VectorIndexRecord(Base):
             name="ck_vir_embedding_profile_id_format",
         ),
         # P0.4A2: capability contract — v1+v0 with NULL capability fields,
-        # or v2+v1 with non-NULL capability fields. No mixing.
+        # or v2+v1 with binding set and check set on indexed completion.
+        # The generation check is NULL during pending/indexing (it is
+        # populated atomically when the indexed status is published) and
+        # NOT NULL once indexed. Binding is set at creation time.
         CheckConstraint(
             "(index_schema_version = 'vector_index_v1' "
             "AND embedding_contract_version = 'pre_capability_v0' "
@@ -1356,7 +1359,7 @@ class VectorIndexRecord(Base):
             "OR (index_schema_version = 'vector_index_v2' "
             "AND embedding_contract_version = 'capability_v1' "
             "AND capability_binding_id IS NOT NULL "
-            "AND generation_capability_check_id IS NOT NULL)",
+            "AND (index_status != 'indexed' OR generation_capability_check_id IS NOT NULL))",
             name="ck_vir_capability_contract",
         ),
     )

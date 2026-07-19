@@ -79,10 +79,14 @@ def upgrade() -> None:
     with op.batch_alter_table("vector_index_records", recreate="always") as batch_op:
         batch_op.create_check_constraint(
             "ck_vir_capability_contract",
-            "(index_schema_version = 'vector_index_v1' AND embedding_contract_version = 'pre_capability_v0' "
-            "AND capability_binding_id IS NULL AND generation_capability_check_id IS NULL) "
-            "OR (index_schema_version = 'vector_index_v2' AND embedding_contract_version = 'capability_v1' "
-            "AND capability_binding_id IS NOT NULL AND generation_capability_check_id IS NOT NULL)",
+            "(index_schema_version = 'vector_index_v1' "
+            "AND embedding_contract_version = 'pre_capability_v0' "
+            "AND capability_binding_id IS NULL "
+            "AND generation_capability_check_id IS NULL) "
+            "OR (index_schema_version = 'vector_index_v2' "
+            "AND embedding_contract_version = 'capability_v1' "
+            "AND capability_binding_id IS NOT NULL "
+            "AND (index_status != 'indexed' OR generation_capability_check_id IS NOT NULL))",
         )
 
     # ── 6. Index for capability lookups ───────────────────────────
