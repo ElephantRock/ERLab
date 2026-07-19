@@ -1317,12 +1317,14 @@ class VectorIndexRecord(Base):
         ),
         Index("ix_vir_paper_id", "paper_id"),
         Index("ix_vir_profile_status", "embedding_profile_id", "index_status"),
+        Index("ix_vir_capability_binding", "capability_binding_id"),
         CheckConstraint("vector_store = 'chroma'", name="ck_vir_vector_store"),
-        # Schema-version literal must match VECTOR_INDEX_V1 in
-        # backend/pipeline/vector_contracts.py (kept as SQL text here to
-        # avoid a layering inversion: db/models.py is the lowest layer and
-        # must not import transport contracts).
-        CheckConstraint("index_schema_version = 'vector_index_v1'", name="ck_vir_index_schema"),
+        # P0.4A2: index_schema_version now allows both v1 and v2.
+        # Literal strings mirror VECTOR_INDEX_V1/V2 in vector_contracts.py.
+        CheckConstraint(
+            "index_schema_version IN ('vector_index_v1', 'vector_index_v2')",
+            name="ck_vir_index_schema",
+        ),
         CheckConstraint(
             "content_kind IN ('title_abstract', 'abstract', 'full_text_chunk', 'metadata')",
             name="ck_vir_content_kind",
@@ -1343,6 +1345,19 @@ class VectorIndexRecord(Base):
         CheckConstraint(
             "length(embedding_profile_id) = 64 AND embedding_profile_id = lower(embedding_profile_id)",
             name="ck_vir_embedding_profile_id_format",
+        ),
+        # P0.4A2: capability contract — v1+v0 with NULL capability fields,
+        # or v2+v1 with non-NULL capability fields. No mixing.
+        CheckConstraint(
+            "(index_schema_version = 'vector_index_v1' "
+            "AND embedding_contract_version = 'pre_capability_v0' "
+            "AND capability_binding_id IS NULL "
+            "AND generation_capability_check_id IS NULL) "
+            "OR (index_schema_version = 'vector_index_v2' "
+            "AND embedding_contract_version = 'capability_v1' "
+            "AND capability_binding_id IS NOT NULL "
+            "AND generation_capability_check_id IS NOT NULL)",
+            name="ck_vir_capability_contract",
         ),
     )
 
@@ -1372,6 +1387,14 @@ class VectorIndexRecord(Base):
     stale_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     deleting_started_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     deleted_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    # P0.4A2: capability evidence (NULL on v1 rows, NOT NULL on v2 rows)
+    embedding_contract_version: Mapped[str] = mapped_column(
+        String(30), nullable=False, default="pre_capability_v0",
+    )
+    capability_binding_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    generation_capability_check_id: Mapped[str | None] = mapped_column(
+        String(64), nullable=True
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime, default=lambda: datetime.now(timezone.utc),
     )
@@ -1446,6 +1469,25 @@ class VectorRetrievalEvent(Base):
     failure_detail: Mapped[str | None] = mapped_column(Text, nullable=True)
     started_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     completed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    # P0.4A2: capability evidence for query embedding and vector eligibility.
+    # Historical rows default to pre_capability_v0. Capability-v1 queries
+    # record their binding/check; vector_eligibility_contract stays v0
+    # until the profile's binding is activated.
+    query_embedding_contract_version: Mapped[str] = mapped_column(
+        String(30), nullable=False, default="pre_capability_v0",
+    )
+    vector_eligibility_contract_version: Mapped[str] = mapped_column(
+        String(30), nullable=False, default="pre_capability_v0",
+    )
+    query_capability_binding_id: Mapped[str | None] = mapped_column(
+        String(64), nullable=True
+    )
+    query_capability_check_id: Mapped[str | None] = mapped_column(
+        String(64), nullable=True
+    )
+    binding_activation_id: Mapped[str | None] = mapped_column(
+        String(64), nullable=True
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime, default=lambda: datetime.now(timezone.utc),
     )
@@ -1953,6 +1995,256 @@ class EmbeddingCapabilityBinding(Base):
         default=lambda: datetime.now(timezone.utc),
         server_default=text("CURRENT_TIMESTAMP"),
     )
+
+
+# ── P0.4A2: Binding activation, cutover, and write guards ────────────
+
+
+class EmbeddingProfileBindingActivation(Base):
+    """One governed activation attempt for a profile+binding (P0.4A2).
+
+    At most one ``active`` activation per profile. A retired binding may
+    become active again only through a new cutover → new candidate → new
+    activation generation.
+
+    Statuses: candidate → active | rejected; active → retired.
+    ``retired`` and ``rejected`` are terminal.
+    """
+
+    __tablename__ = "embedding_profile_binding_activations"
+    __table_args__ = (
+        Index("ix_epba_profile_status", "embedding_profile_id", "status"),
+        Index("ix_epba_binding_id", "capability_binding_id"),
+        CheckConstraint(
+            "status IN ('candidate','active','retired','rejected')",
+            name="ck_epba_status",
+        ),
+        CheckConstraint(
+            "activation_generation > 0", name="ck_epba_generation_positive"
+        ),
+        CheckConstraint(
+            "embedding_purpose IN ('paper','knowledge_graph_entity','tool_description')",
+            name="ck_epba_purpose",
+        ),
+        CheckConstraint(
+            "status != 'active' OR (cutover_id IS NOT NULL AND activated_at IS NOT NULL)",
+            name="ck_epba_active_requires_cutover",
+        ),
+        CheckConstraint(
+            "status != 'retired' OR retired_at IS NOT NULL",
+            name="ck_epba_retired_requires_timestamp",
+        ),
+        CheckConstraint(
+            "status != 'rejected' OR rejected_at IS NOT NULL",
+            name="ck_epba_rejected_requires_timestamp",
+        ),
+    )
+
+    activation_id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    embedding_profile_id: Mapped[str] = mapped_column(
+        String(64),
+        ForeignKey("embedding_profiles.profile_id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    embedding_purpose: Mapped[str] = mapped_column(String(40), nullable=False)
+    capability_binding_id: Mapped[str] = mapped_column(
+        String(64),
+        ForeignKey("embedding_capability_bindings.binding_id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    cutover_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    status: Mapped[str] = mapped_column(String(20), nullable=False)
+    activation_generation: Mapped[int] = mapped_column(Integer, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, nullable=False,
+        default=lambda: datetime.now(timezone.utc),
+        server_default=text("CURRENT_TIMESTAMP"),
+    )
+    activated_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    retired_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    rejected_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+
+
+class EmbeddingBindingCutover(Base):
+    """Generalized cutover ledger (P0.4A2).
+
+    Supports paper, knowledge_graph_entity, and tool_description
+    purposes. The semantic cache is disposable and does not need a
+    durable cutover ledger.
+
+    Statuses: pending → snapshotting → reindexing → verifying → ready
+    → sealed → active. Also: failed, cancelled.
+    """
+
+    __tablename__ = "embedding_binding_cutovers"
+    __table_args__ = (
+        Index("ix_ebc_profile_status", "embedding_profile_id", "status"),
+        Index("ix_ebc_target_binding", "target_binding_id"),
+        CheckConstraint(
+            "cutover_schema_version = 'cutover_v1'",
+            name="ck_ebc_schema_version",
+        ),
+        CheckConstraint(
+            "status IN ('pending','snapshotting','reindexing','verifying',"
+            "'ready','sealed','active','failed','cancelled')",
+            name="ck_ebc_status",
+        ),
+        CheckConstraint(
+            "embedding_purpose IN ('paper','knowledge_graph_entity','tool_description')",
+            name="ck_ebc_purpose",
+        ),
+        CheckConstraint("source_item_count >= 0", name="ck_ebc_source_count"),
+        CheckConstraint("target_indexed_count >= 0", name="ck_ebc_indexed_count"),
+        CheckConstraint("target_failed_count >= 0", name="ck_ebc_failed_count"),
+    )
+
+    cutover_id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    cutover_schema_version: Mapped[str] = mapped_column(String(30), nullable=False)
+    embedding_profile_id: Mapped[str] = mapped_column(
+        String(64),
+        ForeignKey("embedding_profiles.profile_id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    embedding_purpose: Mapped[str] = mapped_column(String(40), nullable=False)
+    source_contract_version: Mapped[str] = mapped_column(String(30), nullable=False)
+    source_binding_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    target_binding_id: Mapped[str] = mapped_column(
+        String(64),
+        ForeignKey("embedding_capability_bindings.binding_id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    source_snapshot_kind: Mapped[str] = mapped_column(String(40), nullable=False)
+    source_snapshot_fingerprint: Mapped[str] = mapped_column(String(64), nullable=False)
+    source_item_count: Mapped[int] = mapped_column(Integer, nullable=False)
+    target_indexed_count: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=0, server_default="0"
+    )
+    target_failed_count: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=0, server_default="0"
+    )
+    content_unavailable_count: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=0, server_default="0"
+    )
+    verification_failure_count: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=0, server_default="0"
+    )
+    status: Mapped[str] = mapped_column(String(20), nullable=False)
+    write_guard_epoch: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, nullable=False,
+        default=lambda: datetime.now(timezone.utc),
+        server_default=text("CURRENT_TIMESTAMP"),
+    )
+    snapshot_completed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    reindex_completed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    verified_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    sealed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    activated_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    failed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    failure_code: Mapped[str | None] = mapped_column(String(80), nullable=True)
+    sanitized_failure_detail: Mapped[str | None] = mapped_column(
+        String(500), nullable=True
+    )
+
+
+class EmbeddingBindingCutoverItem(Base):
+    """Per-item remediation tracking for a cutover (P0.4A2).
+
+    The source snapshot is immutable. Retry attempts may update item
+    execution state, but they must not replace the snapshotted identity
+    or content hash.
+    """
+
+    __tablename__ = "embedding_binding_cutover_items"
+    __table_args__ = (
+        Index("ix_ebci_cutover_status", "cutover_id", "status"),
+        CheckConstraint(
+            "status IN ('pending','indexing','indexed','already_indexed',"
+            "'content_unavailable','failed')",
+            name="ck_ebci_status",
+        ),
+        CheckConstraint("attempt_count >= 0", name="ck_ebci_attempt_count"),
+    )
+
+    item_id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    cutover_id: Mapped[str] = mapped_column(
+        String(64),
+        ForeignKey("embedding_binding_cutovers.cutover_id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    source_object_type: Mapped[str] = mapped_column(String(40), nullable=False)
+    source_object_id: Mapped[str] = mapped_column(String(255), nullable=False)
+    source_vector_record_id: Mapped[str | None] = mapped_column(
+        String(64), nullable=True
+    )
+    paper_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    chunk_key: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    canonical_content_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    source_contract_version: Mapped[str] = mapped_column(String(30), nullable=False)
+    target_vector_record_id: Mapped[str | None] = mapped_column(
+        String(64), nullable=True
+    )
+    target_collection_name: Mapped[str | None] = mapped_column(
+        String(120), nullable=True
+    )
+    status: Mapped[str] = mapped_column(
+        String(20), nullable=False, default="pending", server_default="pending"
+    )
+    attempt_count: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=0, server_default="0"
+    )
+    claimed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    failure_code: Mapped[str | None] = mapped_column(String(80), nullable=True)
+    sanitized_failure_detail: Mapped[str | None] = mapped_column(
+        String(500), nullable=True
+    )
+
+
+class EmbeddingProfileEmbeddingWriteGuard(Base):
+    """Write-guard contract per persistent embedding profile (P0.4A2).
+
+    One guard row per profile + purpose. All persistent embedding writes
+    must consult the guard before claiming work.
+
+    States: open → frozen → open.
+    """
+
+    __tablename__ = "embedding_profile_embedding_write_guards"
+    __table_args__ = (
+        Index(
+            "ix_epewg_profile_purpose",
+            "embedding_profile_id",
+            "embedding_purpose",
+            unique=True,
+        ),
+        CheckConstraint("state IN ('open','frozen')", name="ck_epewg_state"),
+        CheckConstraint(
+            "embedding_purpose IN ('paper','knowledge_graph_entity','tool_description')",
+            name="ck_epewg_purpose",
+        ),
+        CheckConstraint(
+            "state != 'frozen' OR (cutover_id IS NOT NULL AND frozen_at IS NOT NULL)",
+            name="ck_epewg_frozen_requires_cutover",
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    embedding_profile_id: Mapped[str] = mapped_column(
+        String(64),
+        ForeignKey("embedding_profiles.profile_id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    embedding_purpose: Mapped[str] = mapped_column(String(40), nullable=False)
+    state: Mapped[str] = mapped_column(
+        String(20), nullable=False, default="open", server_default="open"
+    )
+    guard_epoch: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=0, server_default="0"
+    )
+    cutover_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    frozen_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    released_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
 
 # ── P0.2.7: Provenance immutability enforcement ─────────────────────

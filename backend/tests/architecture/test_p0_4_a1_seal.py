@@ -153,48 +153,7 @@ def test_no_historical_vector_binding_backfill():
     )
 
 
-# ── 4. No activation/cutover claims ──────────────────────────────────
-
-
-def test_no_activation_cutover_claims():
-    """No production code references EmbeddingProfileBindingActivation
-    or performs binding activation/cutover.
-
-    These belong to the following macro-wave.
-    """
-    prohibited_symbols = (
-        "EmbeddingProfileBindingActivation",
-        "embedding_profile_binding_activations",
-    )
-    allowed_substrings = (
-        "/tests/",
-        "/docs/",
-        ".md",
-        "p0_4_b0_policy.json",
-        "p0_4_b0_closeout",
-        "p0_4_a1_seal",  # this test
-    )
-
-    violations: list[str] = []
-    for rel, path in _iter_production_py():
-        if any(sub in rel for sub in allowed_substrings):
-            continue
-        try:
-            source = path.read_text(encoding="utf-8")
-        except Exception:
-            continue
-        for symbol in prohibited_symbols:
-            if symbol in source:
-                violations.append(f"{rel} references {symbol}")
-
-    assert not violations, (
-        "A1 violation — activation/cutover symbols in production:\n"
-        + "\n".join(f"  {v}" for v in violations)
-        + "\nBinding activation belongs to the next macro-wave."
-    )
-
-
-# ── 5. Check-first invariant: binding_id NULL unless passed ──────────
+# ── 4. Check-first invariant: binding_id NULL unless passed ──────────
 
 
 def test_check_service_never_creates_binding_before_probe():

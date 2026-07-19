@@ -397,10 +397,10 @@ class TestVersionConstants:
 # ── 5. No activations table ───────────────────────────────────────────
 
 
-class TestNoActivationsTable:
-    """A1 deliberately does not create embedding_profile_binding_activations."""
+class TestActivationsTableNowExists:
+    """A2 creates embedding_profile_binding_activations (deferred from A1)."""
 
-    def test_activations_table_absent(self):
+    def test_activations_table_exists(self):
         engine = _make_engine()
         inspector = inspect(engine)
-        assert not inspector.has_table("embedding_profile_binding_activations")
+        assert inspector.has_table("embedding_profile_binding_activations")

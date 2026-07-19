@@ -165,8 +165,7 @@
 
   "prohibited_capability_claims": {
     "symbols": [
-      "verified_until",
-      "EmbeddingProfileBindingActivation"
+      "verified_until"
     ],
     "expected_count_during_b0": 0,
     "note": "These belong to future macro-waves (capability-bound vector cutover). Their presence in executable production code during A1 indicates premature cutover claims. References in documentation, future-constant declarations, or migration files explicitly classified as forward-reserved do not count.",
