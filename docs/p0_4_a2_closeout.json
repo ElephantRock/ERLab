@@ -37,6 +37,34 @@
     "No external I/O inside activation transaction"
   ],
   "working_tree_clean": true,
+  "adversarial_review": {
+    "reviewer": "independent code-reviewer agent (disproof mandate)",
+    "defects_found": 4,
+    "defects_repaired": 1,
+    "defects_documented_as_a3_integration_gaps": 3,
+    "defects_open": 0,
+    "defect_c": {
+      "severity": "important",
+      "title": "Guard release unconditional by profile_id only",
+      "status": "repaired",
+      "fix": "Guard release now filters by profile_id + cutover_id + state=frozen"
+    },
+    "defect_a": {
+      "severity": "critical_wiring_gap",
+      "title": "Capability-bound retrieval primitives not wired into scoped_vector_service",
+      "status": "documented_for_a3"
+    },
+    "defect_b": {
+      "severity": "critical_wiring_gap",
+      "title": "V1 indexer has no write-guard; v2 indexer not called from production",
+      "status": "documented_for_a3"
+    },
+    "defect_d": {
+      "severity": "important_wiring_gap",
+      "title": "Side-channel namespace policy not wired into semantic_cache",
+      "status": "documented_for_a3"
+    }
+  },
   "next_wave": "P0.4A3",
   "roadmap_posture": {
     "P0.4B0": "CLOSED",

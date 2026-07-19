@@ -251,15 +251,24 @@ def activate_binding(
                 )
             )
 
-            # 6. Release write guard
-            session.execute(
+            # 6. Release write guard (scoped to THIS cutover, not any cutover)
+            guard_result = session.execute(
                 update(EmbeddingProfileEmbeddingWriteGuard).where(
                     EmbeddingProfileEmbeddingWriteGuard.embedding_profile_id == embedding_profile_id,
+                    EmbeddingProfileEmbeddingWriteGuard.cutover_id == cutover_id,
+                    EmbeddingProfileEmbeddingWriteGuard.state == "frozen",
                 ).values(
                     state="open",
                     released_at=now,
                 )
             )
+
+            if guard_result.rowcount != 1:
+                raise ActivationError(
+                    "write_guard_not_frozen",
+                    f"write guard for profile {embedding_profile_id[:16]}... "
+                    f"cutover {cutover_id[:16]}... is not frozen (rowcount={guard_result.rowcount})",
+                )
 
             session.commit()
 

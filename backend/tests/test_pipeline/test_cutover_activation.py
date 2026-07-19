@@ -328,6 +328,16 @@ class TestActivateBinding:
                     EmbeddingBindingCutoverItem.cutover_id == _CUTOVER_ID
                 ).values(status="indexed")
             )
+            # Seed a frozen write guard for this cutover
+            from backend.db.models import EmbeddingProfileEmbeddingWriteGuard
+            session.add(EmbeddingProfileEmbeddingWriteGuard(
+                embedding_profile_id=_PROFILE_ID,
+                embedding_purpose="paper",
+                state="frozen",
+                guard_epoch=1,
+                cutover_id=_CUTOVER_ID,
+                frozen_at=datetime.now(timezone.utc),
+            ))
             session.commit()
 
         seal_cutover(sf, cutover_id=_CUTOVER_ID, embedding_profile_id=_PROFILE_ID)

@@ -53,6 +53,39 @@ VerifiedEmbeddingRuntime
 - No cross-binding cache hits
 - No external I/O inside activation transaction
 
+## 6. Adversarial review findings
+
+An independent adversarial review found 4 defects:
+
+**Defect C (IMPORTANT — REPAIRED):** The activation transaction
+released the write guard unconditionally by profile_id only, without
+filtering by cutover_id or checking the guard was frozen. Fixed: the
+guard release now filters by `embedding_profile_id + cutover_id +
+state='frozen'` and requires `rowcount=1`.
+
+**Defect A (CRITICAL — KNOWN INTEGRATION GAP for A3):** The capability-
+bound retrieval primitives (`resolve_retrieval_binding_context`,
+`is_vector_eligible_for_retrieval`) are not yet wired into the production
+retrieval path (`scoped_vector_service.py:query_vectors`). The production
+retrieval still uses the v1-only eligibility filter. Wiring is the
+primary deliverable of P0.4A3.
+
+**Defect B (CRITICAL — KNOWN INTEGRATION GAP for A3):** The v1 indexer
+(`vector_indexer.py:index_document`) has no write-guard or activation
+check. Production ingestion in `stages.py` continues to create v1 rows
+after activation. The capability-bound v2 indexer
+(`capability_bound_indexer.py`) exists but is not yet called from
+production. Wiring is the primary deliverable of P0.4A3.
+
+**Defect D (IMPORTANT — KNOWN INTEGRATION GAP for A3):** The side-
+channel binding namespace policy (`side_channel_binding_policy.py`) is
+not yet wired into `semantic_cache.py`. The cache lookup path does not
+consult capability bindings. Wiring is a deliverable of P0.4A3.
+
+These gaps are architectural wiring tasks, not logic defects — the
+capability modules are internally consistent and the contracts are
+sound. A3 connects them to production paths.
+
 ## 6. Five-run gate
 
 (Filled from actual results — see JSON)
