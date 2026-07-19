@@ -18,6 +18,7 @@ from __future__ import annotations
 import asyncio
 import math
 import sys
+from datetime import datetime, timezone
 from unittest.mock import MagicMock
 
 import pytest
@@ -630,3 +631,79 @@ def test_concurrent_claim_single_owner():
             embedding_provider=_FakeEmbeddingProvider(dim=4),
             profile=_profile(), document=doc,
         ))
+
+
+# ── P0.4A2 Final: post-activation v1 write rejection ────────────────
+
+
+class TestPostActivationWriteRejection:
+    """Once a profile has an active binding, v1 writes must be rejected."""
+
+    def test_v1_write_rejected_after_activation(self):
+        engine = _make_engine()
+        engine, Session, paper_id = _setup(engine)
+        backend = _FakeBackend()
+
+        # Register the profile first — must match _profile() exactly
+        prof = _profile()
+        with Session() as s:
+            pid = register_embedding_profile(
+                s,
+                provider=prof["provider"],
+                model_identifier=prof["model_identifier"],
+                dimension=prof["dimension"],
+                normalization_policy=prof["normalization_policy"],
+                chunking_schema_version=prof["chunking_schema_version"],
+            )
+            s.commit()
+
+        # Seed an active binding activation
+        from backend.db.models import EmbeddingProfileBindingActivation
+        with Session() as s:
+            binding_id = "b" * 64
+            activation_id = "a" * 64
+            cutover_id = "c" * 64
+            s.execute(text(
+                "INSERT INTO embedding_capability_bindings "
+                "(binding_id, embedding_profile_id, provider_kind, resolved_model, "
+                " model_resolution_posture, resolved_dimension, resolved_normalization, "
+                " postprocessing_contract_version, resolved_endpoint_identity, "
+                " profile_schema_version, provider_adapter_contract_version, "
+                " governed_adapter_contract_version, resolution_classifier_version, "
+                " binding_schema_version) "
+                "VALUES (:bid, :pid, 'lmstudio', 'qwen3', 'configured_match', 4, 'l2', "
+                "        'none', 'provider-default://unset', 'embedding_profile_v1', "
+                "        'v1', 'v1', 'v1', 'capability_binding_v1')"
+            ), {"bid": binding_id, "pid": pid})
+            # Seed cutover row for FK
+            s.execute(text(
+                "INSERT INTO embedding_binding_cutovers "
+                "(cutover_id, cutover_schema_version, embedding_profile_id, "
+                " embedding_purpose, source_contract_version, target_binding_id, "
+                " source_snapshot_kind, source_snapshot_fingerprint, source_item_count, "
+                " status) "
+                "VALUES (:cid, 'cutover_v1', :pid, 'paper', 'pre_capability_v0', :bid, "
+                "        'paper_chunk', :fp, 0, 'active')"
+            ), {"cid": cutover_id, "pid": pid, "bid": binding_id, "fp": "d" * 64})
+            s.add(EmbeddingProfileBindingActivation(
+                activation_id=activation_id,
+                embedding_profile_id=pid,
+                embedding_purpose="paper",
+                capability_binding_id=binding_id,
+                cutover_id=cutover_id,
+                status="active",
+                activation_generation=1,
+                activated_at=datetime.now(timezone.utc),
+            ))
+            s.commit()
+
+        doc = _doc(paper_id)
+
+        # V1 write must be rejected
+        from backend.pipeline.vector_indexer import WriteGuardFrozen
+        with pytest.raises(WriteGuardFrozen, match="v1 writes forbidden"):
+            asyncio.run(index_document(
+                session_factory=Session, backend=backend,
+                embedding_provider=_FakeEmbeddingProvider(dim=4),
+                profile=_profile(), document=doc,
+            ))

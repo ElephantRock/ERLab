@@ -248,7 +248,10 @@ async def index_document(
         session.close()
 
     # 1b. Consult write guard — reject if frozen (P0.4A2 Final)
-    from backend.db.models import EmbeddingProfileEmbeddingWriteGuard
+    from backend.db.models import (
+        EmbeddingProfileEmbeddingWriteGuard,
+        EmbeddingProfileBindingActivation,
+    )
     with session_factory() as guard_session:
         guard = guard_session.execute(
             select(EmbeddingProfileEmbeddingWriteGuard).where(
@@ -257,10 +260,28 @@ async def index_document(
             )
         ).scalar_one_or_none()
 
+        # Also check for an active binding — once a profile has been
+        # activated, v1 writes are permanently forbidden. The write guard
+        # is released by activation itself, so it cannot be the sole
+        # mechanism; this activation check is the permanent barrier.
+        active_binding = guard_session.execute(
+            select(EmbeddingProfileBindingActivation).where(
+                EmbeddingProfileBindingActivation.embedding_profile_id == profile_id,
+                EmbeddingProfileBindingActivation.status == "active",
+            )
+        ).scalar_one_or_none()
+
     if guard is not None and guard.state == "frozen":
         raise WriteGuardFrozen(
             f"profile {profile_id[:16]}... write guard is frozen "
             f"(cutover={guard.cutover_id[:16] if guard.cutover_id else 'none'}...)"
+        )
+
+    if active_binding is not None:
+        raise WriteGuardFrozen(
+            f"profile {profile_id[:16]}... has active binding "
+            f"{active_binding.capability_binding_id[:16]}... "
+            f"— v1 writes forbidden after activation"
         )
 
     collection_name = compute_collection_name(profile_id)

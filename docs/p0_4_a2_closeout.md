@@ -53,6 +53,25 @@ VerifiedEmbeddingRuntime
 - No cross-binding cache hits
 - No external I/O inside activation transaction
 
+## 5b. Production integration (A2 Final)
+
+The capability architecture now governs every corresponding production
+execution path:
+
+- **Write guard**: `vector_indexer.py index_document` consults the
+  `EmbeddingProfileEmbeddingWriteGuard` before claiming work. Frozen
+  guard → `WriteGuardFrozen` raised, no embedding/backend calls.
+- **Posture-aware retrieval**: `scoped_vector_service.py
+  resolve_eligible_records` calls `resolve_retrieval_binding_context`
+  to determine eligibility. Pre-activation: v1 records. Post-activation:
+  only v2 records under the active binding. No mixing.
+- **Retrieval event evidence**: `VectorRetrievalEvent` creation sets
+  `query_embedding_contract_version`, `vector_eligibility_contract_version`,
+  `query_capability_binding_id`, `binding_activation_id`.
+- **Cache namespace**: `provider_factory.py` passes `cache_namespace`
+  derived from the embedding model to `SemanticCache`, preventing
+  cross-runtime cache contamination.
+
 ## 6. Adversarial review findings
 
 An independent adversarial review found 4 defects:
