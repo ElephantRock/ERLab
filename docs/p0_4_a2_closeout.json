@@ -1,0 +1,49 @@
+{
+  "wave": "P0.4A2",
+  "status": "closed",
+  "entry_commit": "334b962",
+  "final_executable_commit": "c1bccb2",
+  "entry_backend_gate": {"passed": 4333, "skipped": 25, "failed": 0},
+  "final_backend_gate": {"passed": 4381, "skipped": 25, "failed": 0},
+  "commit_chain": [
+    {"hash": "3a6806f", "wave": "A2.1", "message": "feat: add capability-aware vector and retrieval schema"},
+    {"hash": "123e320", "wave": "A2.2", "message": "feat: add capability-bound vector and collection identities"},
+    {"hash": "988c0be", "wave": "A2.3", "message": "feat: index candidate and active binding vectors"},
+    {"hash": "80ac6a5", "wave": "A2.4", "message": "feat: enforce capability-bound scoped retrieval"},
+    {"hash": "82b5c01", "wave": "A2.5+6", "message": "feat: snapshot and regenerate capability cutovers and atomically activate"},
+    {"hash": "b13ee3e", "wave": "A2.7+8", "message": "feat: bind side-channel namespaces and add cutover commands"},
+    {"hash": "c1bccb2", "wave": "A2.9", "message": "test: seal P0.4A2 capability-bound vector lifecycle"}
+  ],
+  "migrations": ["028_capability_vector_evidence", "029_activation_cutover_guards"],
+  "tables_created": [
+    "embedding_profile_binding_activations",
+    "embedding_binding_cutovers",
+    "embedding_binding_cutover_items",
+    "embedding_profile_embedding_write_guards"
+  ],
+  "tables_modified": ["vector_index_records", "vector_retrieval_events"],
+  "full_suite_runs": [
+    {"run": 1, "commit": "c1bccb2", "passed": 4381, "failed": 0, "skipped": 25},
+    {"run": 2, "commit": "c1bccb2", "passed": 4381, "failed": 0, "skipped": 25},
+    {"run": 3, "commit": "c1bccb2", "passed": 4381, "failed": 0, "skipped": 25},
+    {"run": 4, "commit": "c1bccb2", "passed": 4381, "failed": 0, "skipped": 25},
+    {"run": 5, "commit": "c1bccb2", "passed": 4381, "failed": 0, "skipped": 25}
+  ],
+  "exclusions": [
+    "No historical vector binding backfill",
+    "No vector_index_v2 production eligibility without activation",
+    "No pre-capability fallback after activation",
+    "No cross-binding cache hits",
+    "No external I/O inside activation transaction"
+  ],
+  "working_tree_clean": true,
+  "next_wave": "P0.4A3",
+  "roadmap_posture": {
+    "P0.4B0": "CLOSED",
+    "P0.4A1": "CLOSED",
+    "P0.4A2": "CLOSED",
+    "P0.4A3": "READY — final operator/product integration and end-to-end seal",
+    "P0.5": "BLOCKED pending complete P0.4",
+    "Frontend": "OPEN"
+  }
+}
