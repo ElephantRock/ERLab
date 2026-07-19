@@ -1,0 +1,54 @@
+{
+  "wave": "P0.4",
+  "status": "closed",
+  "entry_commit": "29a137f",
+  "final_executable_commit": "b27dbce",
+  "sub_waves": [
+    {"wave": "P0.4-pre", "status": "CLOSED"},
+    {"wave": "P0.4A0", "status": "CLOSED"},
+    {"wave": "P0.4B0", "status": "CLOSED", "final_commit": "1fea62a"},
+    {"wave": "P0.4A1", "status": "CLOSED", "final_commit": "334b962"},
+    {"wave": "P0.4A2", "status": "CLOSED", "final_commit": "04d89d9"},
+    {"wave": "P0.4A3", "status": "CLOSED", "final_commit": "b27dbce"}
+  ],
+  "software_implementation_status": "closed",
+  "controlled_provider_e2e_status": "passed",
+  "live_provider_certifications": [],
+  "production_activation_performed": false,
+  "manual_database_steps_required": 0,
+  "migrations_added": ["027", "028", "029"],
+  "tables_created": [
+    "embedding_capability_checks",
+    "embedding_capability_bindings",
+    "embedding_profile_binding_activations",
+    "embedding_binding_cutovers",
+    "embedding_binding_cutover_items",
+    "embedding_profile_embedding_write_guards"
+  ],
+  "tables_modified": ["vector_index_records", "vector_retrieval_events"],
+  "symbols_removed": ["LLMProvider.embed"],
+  "full_suite_runs": [
+    {"run": 1, "passed": 4418, "failed": 0, "skipped": 25},
+    {"run": 2, "passed": 4418, "failed": 0, "skipped": 25},
+    {"run": 3, "passed": 4418, "failed": 0, "skipped": 25},
+    {"run": 4, "passed": 4418, "failed": 0, "skipped": 25},
+    {"run": 5, "passed": 4418, "failed": 0, "skipped": 25}
+  ],
+  "adversarial_reviews": {
+    "total_rounds": 5,
+    "defects_found": 10,
+    "defects_repaired": 10,
+    "defects_open": 0
+  },
+  "known_limitations": [
+    "Cache namespace uses embedding model name (interim); full binding-level namespace is future work",
+    "Frontend TypeScript baseline (101 errors) remains open",
+    "No real provider certification executed"
+  ],
+  "next_wave": "P0.5",
+  "roadmap_posture": {
+    "P0.4": "CLOSED",
+    "P0.5": "READY — configuration-effectiveness enforcement",
+    "Frontend": "OPEN"
+  }
+}

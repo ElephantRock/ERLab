@@ -143,13 +143,16 @@ def test_activation_service_no_external_io():
 
 
 def test_controlled_provider_not_in_factory():
-    """The controlled test provider must not appear in the production
-    provider factory's routing logic."""
-    factory_path = BACKEND_ROOT / "providers" / "provider_factory.py"
-    source = factory_path.read_text(encoding="utf-8")
-
-    # The factory should not reference "controlled" as a provider name
-    assert '"controlled"' not in source, (
-        "provider_factory.py references a 'controlled' provider — "
-        "test-only providers must not be production-selectable"
-    )
+    """The controlled test provider must not appear in any production
+    provider factory's routing logic (LLM or embedding)."""
+    # Check BOTH factories — the LLM factory and the embedding factory
+    factory_paths = [
+        BACKEND_ROOT / "providers" / "provider_factory.py",
+        BACKEND_ROOT / "pipeline" / "knowledge" / "embedding_providers.py",
+    ]
+    for factory_path in factory_paths:
+        source = factory_path.read_text(encoding="utf-8")
+        assert '"controlled"' not in source, (
+            f"{factory_path.name} references a 'controlled' provider — "
+            "test-only providers must not be production-selectable"
+        )
