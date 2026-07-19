@@ -217,3 +217,80 @@ def test_receipt_dataclasses_are_frozen():
     # Frozen check
     assert AuthorizedEmbeddingBatch.__dataclass_params__.frozen
     assert AuthorizedQueryEmbedding.__dataclass_params__.frozen
+
+
+# ── 7. Production path: write guard consultation ─────────────────────
+
+
+def test_v1_indexer_consults_write_guard():
+    """The v1 indexer must consult the write guard before claiming work.
+
+    Catches removal of the guard check from the production write path.
+    """
+    indexer_path = BACKEND_ROOT / "pipeline" / "vector_indexer.py"
+    source = indexer_path.read_text(encoding="utf-8")
+
+    assert "EmbeddingProfileEmbeddingWriteGuard" in source, (
+        "v1 indexer does not consult the write guard"
+    )
+    assert "WriteGuardFrozen" in source, (
+        "v1 indexer does not raise WriteGuardFrozen"
+    )
+
+
+# ── 8. Production path: posture-aware retrieval ──────────────────────
+
+
+def test_scoped_vector_service_uses_binding_context():
+    """scoped_vector_service must resolve the binding context for
+    posture-aware eligibility — not just filter on v1."""
+    svc_path = BACKEND_ROOT / "pipeline" / "scoped_vector_service.py"
+    source = svc_path.read_text(encoding="utf-8")
+
+    assert "resolve_retrieval_binding_context" in source or (
+        "resolve_retrieval_binding_context" in source
+    ), "scoped_vector_service does not resolve binding context"
+    assert "active_binding_id" in source, (
+        "scoped_vector_service does not check active_binding_id"
+    )
+
+
+# ── 9. Production path: capability evidence on retrieval events ──────
+
+
+def test_retrieval_event_records_capability_evidence():
+    """VectorRetrievalEvent creation must set capability contract fields."""
+    svc_path = BACKEND_ROOT / "pipeline" / "scoped_vector_service.py"
+    source = svc_path.read_text(encoding="utf-8")
+
+    required_fields = (
+        "query_embedding_contract_version",
+        "vector_eligibility_contract_version",
+    )
+    for field in required_fields:
+        assert field in source, (
+            f"scoped_vector_service does not set {field} on retrieval events"
+        )
+
+
+# ── 10. Production path: cache namespace ─────────────────────────────
+
+
+def test_semantic_cache_uses_namespace():
+    """provider_factory must pass a cache_namespace to SemanticCache."""
+    factory_path = BACKEND_ROOT / "providers" / "provider_factory.py"
+    source = factory_path.read_text(encoding="utf-8")
+
+    # The SemanticCache construction must include cache_namespace
+    tree = _read_ast(factory_path)
+    assert tree is not None
+
+    found_namespace = False
+    for node in ast.walk(tree):
+        if isinstance(node, ast.keyword) and node.arg == "cache_namespace":
+            found_namespace = True
+            break
+
+    assert found_namespace, (
+        "provider_factory does not pass cache_namespace to SemanticCache"
+    )
