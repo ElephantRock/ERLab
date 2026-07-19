@@ -1,0 +1,2029 @@
+{
+  "total_fields": 289,
+  "generated_from": "backend.config.Settings",
+  "fields": [
+    {
+      "name": "app_name",
+      "type": "<class 'str'>",
+      "default": "'Elephant Rock Research'",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "debug",
+      "type": "<class 'bool'>",
+      "default": "False",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "env",
+      "type": "<class 'str'>",
+      "default": "'development'",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "default_provider",
+      "type": "<class 'str'>",
+      "default": "'openai'",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "openai_api_key",
+      "type": "str | None",
+      "default": null,
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "openai_base_url",
+      "type": "str | None",
+      "default": null,
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "anthropic_api_key",
+      "type": "str | None",
+      "default": null,
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "anthropic_base_url",
+      "type": "str | None",
+      "default": null,
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "gemini_api_key",
+      "type": "str | None",
+      "default": null,
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "ollama_base_url",
+      "type": "<class 'str'>",
+      "default": "'http://localhost:11434'",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "openai_model",
+      "type": "<class 'str'>",
+      "default": "'gpt-4o'",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "anthropic_model",
+      "type": "<class 'str'>",
+      "default": "'claude-sonnet-4-20250514'",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "gemini_model",
+      "type": "<class 'str'>",
+      "default": "'gemini-2.0-flash'",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "ollama_model",
+      "type": "<class 'str'>",
+      "default": "'llama3'",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "semantic_scholar_api_key",
+      "type": "str | None",
+      "default": null,
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "openalex_email",
+      "type": "str | None",
+      "default": null,
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "crossref_api_url",
+      "type": "<class 'str'>",
+      "default": "'https://api.crossref.org'",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "openalex_api_url",
+      "type": "<class 'str'>",
+      "default": "'https://api.openalex.org'",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "semantic_scholar_api_url",
+      "type": "<class 'str'>",
+      "default": "'https://api.semanticscholar.org/graph/v1'",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "pubmed_api_key",
+      "type": "str | None",
+      "default": null,
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "pubmed_enabled",
+      "type": "<class 'bool'>",
+      "default": "True",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "crossref_enabled",
+      "type": "<class 'bool'>",
+      "default": "True",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "chroma_persist_dir",
+      "type": "<class 'str'>",
+      "default": "'./data/chroma'",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "embedding_provider",
+      "type": "<class 'str'>",
+      "default": "'openai'",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "embedding_model",
+      "type": "<class 'str'>",
+      "default": "'text-embedding-bge-m3-embeddings'",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "embedding_dimension",
+      "type": "<class 'int'>",
+      "default": "1536",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "embedding_batch_size",
+      "type": "<class 'int'>",
+      "default": "100",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "embedding_fallback_enabled",
+      "type": "<class 'bool'>",
+      "default": "False",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "embedding_base_url",
+      "type": "<class 'str'>",
+      "default": "''",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "chunk_size",
+      "type": "<class 'int'>",
+      "default": "1000",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "chunk_overlap",
+      "type": "<class 'int'>",
+      "default": "200",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "retrieval_mode",
+      "type": "<class 'str'>",
+      "default": "'hybrid'",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "bm25_persist_dir",
+      "type": "<class 'str'>",
+      "default": "'./data/bm25'",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "reranker_enabled",
+      "type": "<class 'bool'>",
+      "default": "True",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "reranker_type",
+      "type": "<class 'str'>",
+      "default": "'cross_encoder'",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "rrf_k",
+      "type": "<class 'int'>",
+      "default": "60",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "query_transform_enabled",
+      "type": "<class 'bool'>",
+      "default": "False",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "litellm_fallback_enabled",
+      "type": "<class 'bool'>",
+      "default": "True",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "litellm_model",
+      "type": "<class 'str'>",
+      "default": "'gpt-4o'",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "thinking_model",
+      "type": "<class 'str'>",
+      "default": "''",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "generation_model",
+      "type": "<class 'str'>",
+      "default": "''",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "thinking_model_max_tokens",
+      "type": "<class 'int'>",
+      "default": "2048",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "generation_model_max_tokens",
+      "type": "<class 'int'>",
+      "default": "8192",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "search_depth",
+      "type": "<class 'int'>",
+      "default": "1",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "lmstudio_base_url",
+      "type": "<class 'str'>",
+      "default": "'http://localhost:1234/v1'",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "lmstudio_model",
+      "type": "<class 'str'>",
+      "default": "'qwen/qwen3-4b-2507'",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "lmstudio_enabled",
+      "type": "<class 'bool'>",
+      "default": "False",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "lmstudio_max_tokens",
+      "type": "<class 'int'>",
+      "default": "2048",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "lmstudio_context_length",
+      "type": "<class 'int'>",
+      "default": "32768",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "lmstudio_temperature",
+      "type": "<class 'float'>",
+      "default": "0.1",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "lmstudio_auto_download",
+      "type": "<class 'bool'>",
+      "default": "False",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "lmstudio_download_timeout",
+      "type": "<class 'int'>",
+      "default": "600",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "vllm_base_url",
+      "type": "<class 'str'>",
+      "default": "''",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "gpu_vram_mb",
+      "type": "<class 'int'>",
+      "default": "12288",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "gpu_auto_detect",
+      "type": "<class 'bool'>",
+      "default": "True",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "gpu_override_vram_mb",
+      "type": "<class 'int'>",
+      "default": "0",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "generation_rounds",
+      "type": "<class 'int'>",
+      "default": "2",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "ideas_per_round",
+      "type": "<class 'int'>",
+      "default": "3",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "novelty_top_k",
+      "type": "<class 'int'>",
+      "default": "20",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "api_key",
+      "type": "str | None",
+      "default": null,
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "auth_enabled",
+      "type": "<class 'bool'>",
+      "default": "False",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "jwt_secret",
+      "type": "<class 'str'>",
+      "default": "'dev-secret-change-in-production'",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "jwt_algorithm",
+      "type": "<class 'str'>",
+      "default": "'HS256'",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "jwt_expire_minutes",
+      "type": "<class 'int'>",
+      "default": "1440",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "cors_origins",
+      "type": "list[str]",
+      "default": "['*']",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "rate_limit_enabled",
+      "type": "<class 'bool'>",
+      "default": "True",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "rate_limit_per_minute",
+      "type": "<class 'int'>",
+      "default": "60",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "database_url",
+      "type": "<class 'str'>",
+      "default": "'sqlite:///./data/elephant_rock.db'",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "s1_parser_mode",
+      "type": "<class 'str'>",
+      "default": "'import'",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "s1_parser_url",
+      "type": "<class 'str'>",
+      "default": "'http://localhost:8000'",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "memory_enabled",
+      "type": "<class 'bool'>",
+      "default": "True",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "memory_persist_dir",
+      "type": "<class 'str'>",
+      "default": "'./data/memory'",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "memory_decay_rate",
+      "type": "<class 'float'>",
+      "default": "0.99",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "memory_min_confidence",
+      "type": "<class 'float'>",
+      "default": "0.1",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "memory_tier",
+      "type": "<class 'str'>",
+      "default": "'tiered'",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "memory_working_capacity",
+      "type": "<class 'int'>",
+      "default": "100",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "memory_shared_enabled",
+      "type": "<class 'bool'>",
+      "default": "True",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "self_improve_enabled",
+      "type": "<class 'bool'>",
+      "default": "True",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "self_improve_persist_dir",
+      "type": "<class 'str'>",
+      "default": "'./data/self_improve'",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "autonomy_enabled",
+      "type": "<class 'bool'>",
+      "default": "False",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "autonomy_idle_timeout_seconds",
+      "type": "<class 'int'>",
+      "default": "3600",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "autonomy_max_autonomous_runs",
+      "type": "<class 'int'>",
+      "default": "10",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "budget_enabled",
+      "type": "<class 'bool'>",
+      "default": "True",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "budget_max_tokens",
+      "type": "<class 'int'>",
+      "default": "500000",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "budget_max_cost_usd",
+      "type": "<class 'float'>",
+      "default": "10.0",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "budget_max_seconds",
+      "type": "<class 'float'>",
+      "default": "600",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "cost_persist_dir",
+      "type": "<class 'str'>",
+      "default": "'./data/costs'",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "resilience_enabled",
+      "type": "<class 'bool'>",
+      "default": "True",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "circuit_breaker_failure_threshold",
+      "type": "<class 'int'>",
+      "default": "15",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "circuit_breaker_reset_timeout",
+      "type": "<class 'float'>",
+      "default": "30.0",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "retry_max_retries",
+      "type": "<class 'int'>",
+      "default": "3",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "retry_base_delay",
+      "type": "<class 'float'>",
+      "default": "1.0",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "retry_max_delay",
+      "type": "<class 'float'>",
+      "default": "60.0",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "retry_cooldown_delay",
+      "type": "<class 'float'>",
+      "default": "30.0",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "secrets_master_password",
+      "type": "str | None",
+      "default": null,
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "secrets_persist_dir",
+      "type": "<class 'str'>",
+      "default": "'./data/secrets'",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "evaluation_framework_enabled",
+      "type": "<class 'bool'>",
+      "default": "True",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "evaluation_geval_enabled",
+      "type": "<class 'bool'>",
+      "default": "True",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "evaluation_cache_max_size",
+      "type": "<class 'int'>",
+      "default": "500",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "evaluation_quality_gate_mode",
+      "type": "<class 'str'>",
+      "default": "'any'",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "evaluation_composite_threshold",
+      "type": "<class 'float'>",
+      "default": "0.4",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "evaluation_novelty_min_score",
+      "type": "<class 'float'>",
+      "default": "0.3",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "evaluation_feasibility_min_score",
+      "type": "<class 'float'>",
+      "default": "0.4",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "evaluation_impact_min_score",
+      "type": "<class 'float'>",
+      "default": "0.3",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "evaluation_soundness_min_score",
+      "type": "<class 'float'>",
+      "default": "0.5",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "evaluation_soundness_required",
+      "type": "<class 'bool'>",
+      "default": "True",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "sandboxing_enabled",
+      "type": "<class 'bool'>",
+      "default": "False",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "sandbox_backend",
+      "type": "<class 'str'>",
+      "default": "'auto'",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "sandbox_default_timeout",
+      "type": "<class 'float'>",
+      "default": "30.0",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "sandbox_default_max_output_bytes",
+      "type": "<class 'int'>",
+      "default": "100000",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "sandbox_default_memory_mb",
+      "type": "<class 'int'>",
+      "default": "256",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "sandbox_network_enabled",
+      "type": "<class 'bool'>",
+      "default": "False",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "sandbox_docker_image_shell",
+      "type": "<class 'str'>",
+      "default": "'alpine:3.19'",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "sandbox_docker_image_python",
+      "type": "<class 'str'>",
+      "default": "'python:3.11-slim'",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "observability_enabled",
+      "type": "<class 'bool'>",
+      "default": "True",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "observability_trace_memory",
+      "type": "<class 'bool'>",
+      "default": "True",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "observability_trace_logging",
+      "type": "<class 'bool'>",
+      "default": "True",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "observability_max_memory_spans",
+      "type": "<class 'int'>",
+      "default": "10000",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "observability_otlp_enabled",
+      "type": "<class 'bool'>",
+      "default": "False",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "observability_otlp_endpoint",
+      "type": "<class 'str'>",
+      "default": "'http://localhost:4317'",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "observability_otlp_protocol",
+      "type": "<class 'str'>",
+      "default": "'grpc'",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "observability_metrics_enabled",
+      "type": "<class 'bool'>",
+      "default": "True",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "caching_enabled",
+      "type": "<class 'bool'>",
+      "default": "True",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "caching_type",
+      "type": "<class 'str'>",
+      "default": "'memory'",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "caching_max_size",
+      "type": "<class 'int'>",
+      "default": "1000",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "caching_similarity_threshold",
+      "type": "<class 'float'>",
+      "default": "0.95",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "caching_ttl_seconds",
+      "type": "<class 'int'>",
+      "default": "3600",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "caching_persist_dir",
+      "type": "<class 'str'>",
+      "default": "'./data/chroma'",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "cost_routing_enabled",
+      "type": "<class 'bool'>",
+      "default": "True",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "cost_routing_strategy",
+      "type": "<class 'str'>",
+      "default": "'cheapest'",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "cost_routing_per_provider_limits",
+      "type": "dict[str, float]",
+      "default": "{}",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "cost_routing_latency_window",
+      "type": "<class 'int'>",
+      "default": "100",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "metacognitive_enabled",
+      "type": "<class 'bool'>",
+      "default": "False",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "metacognitive_plateau_window",
+      "type": "<class 'int'>",
+      "default": "3",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "metacognitive_plateau_threshold",
+      "type": "<class 'float'>",
+      "default": "0.02",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "metacognitive_max_evals",
+      "type": "<class 'int'>",
+      "default": "5",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "model_routing_enabled",
+      "type": "<class 'bool'>",
+      "default": "True",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "model_routing",
+      "type": "dict[str, dict]",
+      "default": "{}",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "model_fallback_chain",
+      "type": "list[str]",
+      "default": "[]",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "litellm_num_retries",
+      "type": "<class 'int'>",
+      "default": "3",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "litellm_allowed_fails",
+      "type": "<class 'int'>",
+      "default": "5",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "litellm_cooldown_time",
+      "type": "<class 'int'>",
+      "default": "60",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "circuit_breaker_cooldown_percent",
+      "type": "<class 'float'>",
+      "default": "0.1",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "plugin_verification_enabled",
+      "type": "<class 'bool'>",
+      "default": "False",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "plugin_allowlist_path",
+      "type": "<class 'str'>",
+      "default": "'./data/plugins/allowlist.json'",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "knowledge_graph_path",
+      "type": "<class 'str'>",
+      "default": "'./data/knowledge_graph.json'",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "world_model_path",
+      "type": "<class 'str'>",
+      "default": "'./data/world_model.json'",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "governance_enabled",
+      "type": "<class 'bool'>",
+      "default": "True",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "governance_audit_path",
+      "type": "<class 'str'>",
+      "default": "'./data/governance_audit.jsonl'",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "governance_policy_path",
+      "type": "str | None",
+      "default": null,
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "governance_approval_timeout",
+      "type": "<class 'float'>",
+      "default": "3600",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "goals_path",
+      "type": "<class 'str'>",
+      "default": "'./data/goals.json'",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "skills_enabled",
+      "type": "<class 'bool'>",
+      "default": "True",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "skills_persist_dir",
+      "type": "<class 'str'>",
+      "default": "'./data/skills'",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "multi_agent_enabled",
+      "type": "<class 'bool'>",
+      "default": "True",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "compaction_enabled",
+      "type": "<class 'bool'>",
+      "default": "True",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "compaction_smart_truncation",
+      "type": "<class 'bool'>",
+      "default": "True",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "compaction_summarization",
+      "type": "<class 'bool'>",
+      "default": "True",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "compaction_budget_management",
+      "type": "<class 'bool'>",
+      "default": "True",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "compaction_fallback_model",
+      "type": "<class 'str'>",
+      "default": "'gpt-4o'",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "compaction_stage_budgets",
+      "type": "<class 'str'>",
+      "default": "'{\"gap_analysis\":{\"base\":6000,\"min_budget\":3000,\"max_budget\":10000},\"idea_generation\":{\"base\":8000,\"min_budget\":4000,\"max_budget\":15000},\"novelty_checking\":{\"base\":4000,\"min_budget\":2000,\"max_budget\":8000},\"feasibility_scoring\":{\"base\":2000,\"min_budget\":1000,\"max_budget\":4000},\"proposal_synthesis\":{\"base\":10000,\"min_budget\":5000,\"max_budget\":20000}}'",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "compaction_paper_limits",
+      "type": "<class 'str'>",
+      "default": "'{\"gap_analysis\":30,\"idea_generation\":20,\"novelty_checking\":10,\"feasibility_scoring\":0,\"proposal_synthesis\":15}'",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "compaction_abstract_chars_tight",
+      "type": "<class 'int'>",
+      "default": "80",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "compaction_abstract_chars_loose",
+      "type": "<class 'int'>",
+      "default": "150",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "constraint_max_size",
+      "type": "<class 'int'>",
+      "default": "5000",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "constraint_max_growth_pct",
+      "type": "<class 'float'>",
+      "default": "0.3",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "constraint_min_sections",
+      "type": "<class 'int'>",
+      "default": "3",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "constraint_allow_empty",
+      "type": "<class 'bool'>",
+      "default": "False",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "versioning_enabled",
+      "type": "<class 'bool'>",
+      "default": "True",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "activation_enabled",
+      "type": "<class 'bool'>",
+      "default": "True",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "activation_decay_rate",
+      "type": "<class 'float'>",
+      "default": "0.5",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "activation_spreading_rate",
+      "type": "<class 'float'>",
+      "default": "0.1",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "activation_noise_std",
+      "type": "<class 'float'>",
+      "default": "0.02",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "dependency_tracking_enabled",
+      "type": "<class 'bool'>",
+      "default": "True",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "reactive_streams_enabled",
+      "type": "<class 'bool'>",
+      "default": "True",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "tree_of_thought_enabled",
+      "type": "<class 'bool'>",
+      "default": "True",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "tree_of_thought_max_depth",
+      "type": "<class 'int'>",
+      "default": "3",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "tree_of_thought_beam_width",
+      "type": "<class 'int'>",
+      "default": "2",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "research_subagent_enabled",
+      "type": "<class 'bool'>",
+      "default": "False",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "research_subagent_max_iterations",
+      "type": "<class 'int'>",
+      "default": "20",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "research_subagent_context_budget",
+      "type": "<class 'int'>",
+      "default": "100000",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "notification_webhook_url",
+      "type": "str | None",
+      "default": null,
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "autonomy_schedule_enabled",
+      "type": "<class 'bool'>",
+      "default": "False",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "autonomy_schedule_interval_seconds",
+      "type": "<class 'int'>",
+      "default": "3600",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "mcp_enabled",
+      "type": "<class 'bool'>",
+      "default": "False",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "mcp_servers_path",
+      "type": "<class 'str'>",
+      "default": "'./mcp_servers.yaml'",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "mcp_default_timeout",
+      "type": "<class 'float'>",
+      "default": "30.0",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "context_management_enabled",
+      "type": "<class 'bool'>",
+      "default": "False",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "context_trigger_fraction",
+      "type": "<class 'float'>",
+      "default": "0.85",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "context_offload_dir",
+      "type": "<class 'str'>",
+      "default": "'./data/context_offload'",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "streaming_enabled",
+      "type": "<class 'bool'>",
+      "default": "False",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "streaming_dedup_window",
+      "type": "<class 'float'>",
+      "default": "1.0",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "consolidation_enabled",
+      "type": "<class 'bool'>",
+      "default": "False",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "consolidation_similarity_threshold",
+      "type": "<class 'float'>",
+      "default": "0.9",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "consolidation_interval_hours",
+      "type": "<class 'int'>",
+      "default": "24",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "adaptation_enabled",
+      "type": "<class 'bool'>",
+      "default": "False",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "adaptation_feedback_window",
+      "type": "<class 'int'>",
+      "default": "5",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "adaptation_min_improvement",
+      "type": "<class 'float'>",
+      "default": "0.02",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "graph_rag_enabled",
+      "type": "<class 'bool'>",
+      "default": "False",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "graph_rag_walk_max_hops",
+      "type": "<class 'int'>",
+      "default": "2",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "graph_rag_walk_max_results",
+      "type": "<class 'int'>",
+      "default": "20",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "graph_rag_weight",
+      "type": "<class 'float'>",
+      "default": "0.3",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "graph_rag_extract_on_ingest",
+      "type": "<class 'bool'>",
+      "default": "True",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "tool_discovery_enabled",
+      "type": "<class 'bool'>",
+      "default": "False",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "tool_discovery_bm25_dir",
+      "type": "<class 'str'>",
+      "default": "'./data/tool_bm25'",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "tool_discovery_rrf_k",
+      "type": "<class 'int'>",
+      "default": "60",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "tool_discovery_trust_penalty",
+      "type": "<class 'float'>",
+      "default": "0.2",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "tool_discovery_relevance_weight",
+      "type": "<class 'float'>",
+      "default": "0.7",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "tool_discovery_recency_weight",
+      "type": "<class 'float'>",
+      "default": "0.1",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "negotiation_enabled",
+      "type": "<class 'bool'>",
+      "default": "False",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "negotiation_max_rounds",
+      "type": "<class 'int'>",
+      "default": "5",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "negotiation_consensus_threshold",
+      "type": "<class 'float'>",
+      "default": "0.7",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "negotiation_consensus_algorithm",
+      "type": "<class 'str'>",
+      "default": "'weighted_score'",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "negotiation_deadlock_threshold",
+      "type": "<class 'float'>",
+      "default": "0.02",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "negotiation_proposal_timeout",
+      "type": "<class 'float'>",
+      "default": "60.0",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "negotiation_critique_timeout",
+      "type": "<class 'float'>",
+      "default": "30.0",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "negotiation_min_agents",
+      "type": "<class 'int'>",
+      "default": "2",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "session_enabled",
+      "type": "<class 'bool'>",
+      "default": "False",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "session_data_dir",
+      "type": "<class 'str'>",
+      "default": "'./data/sessions'",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "session_default_max_runs",
+      "type": "<class 'int'>",
+      "default": "10",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "session_default_max_cost_usd",
+      "type": "<class 'float'>",
+      "default": "50.0",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "session_default_max_tokens",
+      "type": "<class 'int'>",
+      "default": "5000000",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "session_default_max_duration_hours",
+      "type": "<class 'float'>",
+      "default": "24.0",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "session_gc_idle_timeout_hours",
+      "type": "<class 'float'>",
+      "default": "48.0",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "session_gc_expiry_hours",
+      "type": "<class 'float'>",
+      "default": "168.0",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "cross_stage_context_enabled",
+      "type": "<class 'bool'>",
+      "default": "True",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "cross_stage_context_namespace",
+      "type": "<class 'str'>",
+      "default": "'cross_stage'",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "prompt_layers_enabled",
+      "type": "<class 'bool'>",
+      "default": "True",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "stage_max_retries",
+      "type": "<class 'int'>",
+      "default": "3",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "stage_default_timeout",
+      "type": "<class 'float'>",
+      "default": "1800.0",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "stage_timeouts",
+      "type": "<class 'dict'>",
+      "default": "{}",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "llm_rate_limit_retries",
+      "type": "<class 'int'>",
+      "default": "3",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "stage_retry_base_delay",
+      "type": "<class 'float'>",
+      "default": "2.0",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "stage_retry_max_delay",
+      "type": "<class 'float'>",
+      "default": "120.0",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "stage_retry_jitter",
+      "type": "<class 'float'>",
+      "default": "0.1",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "per_proposal_timeout",
+      "type": "<class 'float'>",
+      "default": "300.0",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "heartbeat_enabled",
+      "type": "<class 'bool'>",
+      "default": "True",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "heartbeat_interval_seconds",
+      "type": "<class 'float'>",
+      "default": "30.0",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "heartbeat_timeout_seconds",
+      "type": "<class 'float'>",
+      "default": "300.0",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "counterfactual_enabled",
+      "type": "<class 'bool'>",
+      "default": "True",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "counterfactual_refutation_tests",
+      "type": "<class 'bool'>",
+      "default": "True",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "retrieval_quality_scoring_enabled",
+      "type": "<class 'bool'>",
+      "default": "True",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "retrieval_quality_threshold",
+      "type": "<class 'float'>",
+      "default": "0.4",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "retrieval_adaptive_requery",
+      "type": "<class 'bool'>",
+      "default": "True",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "retrieval_max_requeries",
+      "type": "<class 'int'>",
+      "default": "2",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "evolution_engine_enabled",
+      "type": "<class 'bool'>",
+      "default": "False",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "evolution_engine_decay_rate",
+      "type": "<class 'float'>",
+      "default": "0.95",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "ab_testing_enabled",
+      "type": "<class 'bool'>",
+      "default": "False",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "ab_testing_min_confidence",
+      "type": "<class 'float'>",
+      "default": "0.6",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "refinement_loop_enabled",
+      "type": "<class 'bool'>",
+      "default": "False",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "refinement_max_iterations",
+      "type": "<class 'int'>",
+      "default": "3",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "quality_backloop_enabled",
+      "type": "<class 'bool'>",
+      "default": "False",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "quality_backloop_min_composite",
+      "type": "<class 'float'>",
+      "default": "0.4",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "quality_backloop_max_retries",
+      "type": "<class 'int'>",
+      "default": "2",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "input_guardrails_active",
+      "type": "<class 'bool'>",
+      "default": "False",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "contradiction_detection_enabled",
+      "type": "<class 'bool'>",
+      "default": "False",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "contradiction_scan_interval",
+      "type": "<class 'int'>",
+      "default": "10",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "faithfulness_check_enabled",
+      "type": "<class 'bool'>",
+      "default": "False",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "forest_of_thought_enabled",
+      "type": "<class 'bool'>",
+      "default": "False",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "forest_of_thought_n_trees",
+      "type": "<class 'int'>",
+      "default": "3",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "reasoning_verification_enabled",
+      "type": "<class 'bool'>",
+      "default": "False",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "dynamic_agents_enabled",
+      "type": "<class 'bool'>",
+      "default": "False",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "dynamic_agents_max_per_run",
+      "type": "<class 'int'>",
+      "default": "5",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "sub_goal_generation_enabled",
+      "type": "<class 'bool'>",
+      "default": "False",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "citation_novelty_enabled",
+      "type": "<class 'bool'>",
+      "default": "False",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "citation_traversal_max_hops",
+      "type": "<class 'int'>",
+      "default": "3",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "embedding_novelty_enabled",
+      "type": "<class 'bool'>",
+      "default": "False",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "webhook_enabled",
+      "type": "<class 'bool'>",
+      "default": "False",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "webhook_url",
+      "type": "str | None",
+      "default": null,
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "webhook_secret",
+      "type": "str | None",
+      "default": null,
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "sentry_dsn",
+      "type": "<class 'str'>",
+      "default": "''",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "sentry_environment",
+      "type": "<class 'str'>",
+      "default": "'production'",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "sentry_traces_sample_rate",
+      "type": "<class 'float'>",
+      "default": "0.1",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "websocket_enabled",
+      "type": "<class 'bool'>",
+      "default": "True",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "experiment_enabled",
+      "type": "<class 'bool'>",
+      "default": "False",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "experiment_default_timeout",
+      "type": "<class 'float'>",
+      "default": "30.0",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "experiment_max_code_size",
+      "type": "<class 'int'>",
+      "default": "10000",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "decision_gate_enabled",
+      "type": "<class 'bool'>",
+      "default": "True",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "decision_gate_quality_threshold",
+      "type": "<class 'float'>",
+      "default": "0.45",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "decision_gate_abort_threshold",
+      "type": "<class 'float'>",
+      "default": "0.15",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "decision_gate_max_retries",
+      "type": "<class 'int'>",
+      "default": "1",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "contract_enforcement_mode",
+      "type": "<class 'str'>",
+      "default": "'warn'",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "provenance_check_enabled",
+      "type": "<class 'bool'>",
+      "default": "True",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "provenance_min_coverage",
+      "type": "<class 'float'>",
+      "default": "0.4",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "run_artifacts_enabled",
+      "type": "<class 'bool'>",
+      "default": "True",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "run_artifacts_dir",
+      "type": "<class 'str'>",
+      "default": "'./data/runs'",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "warm_start_enabled",
+      "type": "<class 'bool'>",
+      "default": "True",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "abandonment_tracking_enabled",
+      "type": "<class 'bool'>",
+      "default": "True",
+      "required": false,
+      "description": ""
+    },
+    {
+      "name": "abandonment_tracking_path",
+      "type": "<class 'str'>",
+      "default": "'./data/abandoned_directions.jsonl'",
+      "required": false,
+      "description": ""
+    }
+  ]
+}
