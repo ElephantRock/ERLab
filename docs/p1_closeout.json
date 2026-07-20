@@ -1,0 +1,31 @@
+{
+  "wave": "P1",
+  "ranking_infrastructure_status": "complete",
+  "benchmark_status": "complete",
+  "quality_improvement_status": "not_proven",
+  "production_activation_status": "not_started",
+  "live_reranker_evaluations": [],
+  "commit_chain": [
+    {"hash": "02f9d5d", "wave": "P1.0", "message": "docs: audit ERLab ranking and truncation surfaces"},
+    {"hash": "8d2240e", "wave": "P1.1", "message": "test: freeze P1 discovery and retrieval ranking benchmarks"},
+    {"hash": "a4952a8", "wave": "P1.2", "message": "feat: add canonical ranking contracts and durable evidence"},
+    {"hash": "4925d4d", "wave": "P1.3+4", "message": "feat: reproduce legacy lexical baseline and add hybrid RRF ranking"},
+    {"hash": "d97e3f8", "wave": "P1.7", "message": "feat: add research-relevance features and policy calibration"}
+  ],
+  "benchmark": {
+    "discovery_cases": 9,
+    "retrieval_cases": 3,
+    "domains": ["machine_learning", "biomedical", "nlp"],
+    "rubric": "research_utility_0_to_3_v1"
+  },
+  "policies": ["legacy_lexical_top20_v1", "hybrid_rrf_v1"],
+  "metrics": ["nDCG@5", "nDCG@10", "MRR@10", "Precision@5", "Recall@20"],
+  "known_limitations": [
+    "Synthetic benchmark (12 cases, single-annotator)",
+    "Hybrid RRF not evaluated with real semantic scores",
+    "Production TrimmerStage not yet replaced",
+    "No durable ranking evidence in DB",
+    "Frontend TS baseline (101 errors) open"
+  ],
+  "next_wave": "P1 production wiring or P2 query planning"
+}
