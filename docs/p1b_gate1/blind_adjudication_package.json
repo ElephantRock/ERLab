@@ -1,18 +1,71 @@
 {
-  "package_version": "blind_adjudication_v1",
+  "package_version": "blind_adjudication_v2",
+  "package_compliance": {
+    "includes": [
+      "case_id",
+      "ranking_surface",
+      "research_question",
+      "ranking_intent",
+      "adjudication_context",
+      "domain",
+      "relevance_rubric_version",
+      "primary_slice (context only)",
+      "secondary_slices (context only)",
+      "candidates with id/title/abstract/content_hash/source_rank/near_duplicate_of"
+    ],
+    "excludes": [
+      "provisional relevance grades",
+      "provisional confidence",
+      "provisional rationales",
+      "policy scores",
+      "semantic scores",
+      "baseline ranks",
+      "candidate policy ranks",
+      "split labels (biasing)",
+      "author identity / provenance"
+    ],
+    "candidate_ordering": "deterministically shuffled per case (seeded by case_id, sha256-derived LCG) so order does not leak provisional rank"
+  },
   "benchmark_version": "discovery_ranking_v2+retrieval_ranking_v2",
-  "rubric_version": "research_utility_0_to_3_v1",
-  "instructions": "For each (case_id, candidate_id), assign a relevance grade 0-3 (0=irrelevant, 3=highly useful) and an annotation confidence 0.0-1.0, plus a short rubric-based rationale. Do NOT consult any policy output, score, or rank while annotating. Return the same JSON shape populated under 'judgments'.",
+  "rubric": {
+    "rubric_version": "research_utility_0_to_3_v1",
+    "primary_grade_scale": "0-3 holistic research utility",
+    "criteria": {
+      "topical_relevance": "Does the candidate address the same research question / intent as the query? (0 = unrelated topic, 3 = directly on-topic)",
+      "evidence_utility": "Would a researcher asking this query find this candidate useful as evidence? (0 = not useful, 3 = highly useful)",
+      "methodological_fit": "Does the candidate's method or study type match what the query is asking for (method, application, review, primary study)? (0 = wrong type, 3 = exactly the right type)"
+    },
+    "grade_anchors": {
+      "3": "Highly useful: directly on-topic, strong evidence, right type.",
+      "2": "Useful: relevant but with caveats (broader scope, adjacent method, secondary source, partial match).",
+      "1": "Marginally relevant: touches the topic but is not useful as primary evidence for the query.",
+      "0": "Irrelevant: wrong meaning, wrong domain, or unrelated topic. Includes lexical traps (high token overlap, wrong meaning) and acronym collisions."
+    },
+    "missing_abstract_policy": "When a candidate has no abstract, base the grade on the title and domain context only, and lower annotation_confidence accordingly. Do NOT assume relevance from the title alone if it is ambiguous.",
+    "specialist_review_flag_policy": "If the candidate requires specialist domain knowledge that the annotator cannot reliably judge, set specialist_review_needed=true rather than forcing a grade. Such candidates are excluded from policy evaluation or routed for external review."
+  },
+  "instructions": "For each (case_id, candidate_id), independently assign: (1) relevance grade 0-3 per the rubric; (2) annotation confidence 0.0-1.0; (3) a brief rubric-referenced rationale; (4) specialist_review_needed (true if the candidate requires specialist knowledge you cannot reliably judge). Do NOT consult any provisional judgment, policy score, semantic score, or rank while annotating. Return the populated package with a 'judgments' object per case: {candidate_id: {grade, confidence, rationale, specialist_review_needed}}.",
+  "output_schema_example": {
+    "<case_id>": {
+      "<candidate_id>": {
+        "grade": "0|1|2|3",
+        "confidence": "0.0-1.0",
+        "rationale": "short rubric-referenced reason",
+        "specialist_review_needed": "true|false"
+      }
+    }
+  },
   "cases": [
     {
       "case_id": "ml_disc_lt_001",
+      "ranking_surface": "discovery_ranking",
+      "research_question": "gradient descent optimization for neural networks",
+      "ranking_intent": "general_research_relevance",
+      "adjudication_context": "Discovery surface: a researcher is exploring the literature for an open-ended research question. Rank by how useful each candidate is as a starting point.",
       "domain": "machine_learning",
-      "surface": "discovery_ranking",
-      "intent": "general_research_relevance",
+      "relevance_rubric_version": "research_utility_0_to_3_v1",
       "primary_slice": "lexical_trap",
       "secondary_slices": [],
-      "split": "calibration",
-      "query_text": "gradient descent optimization for neural networks",
       "candidates": [
         {
           "candidate_id": "ml_lt_001_a",
@@ -23,10 +76,10 @@
           "near_duplicate_of": null
         },
         {
-          "candidate_id": "ml_lt_001_b",
-          "title": "Adam: A Method for Stochastic Optimization",
-          "abstract": "We propose Adam, an efficient stochastic gradient descent method for first-order gradient-based optimization.",
-          "content_hash": "6ee330653b4e86ce0e552335c8ac69fdf49abddd25e65dc981506e7861dfca8b",
+          "candidate_id": "ml_lt_001_d",
+          "title": "Neural Network Regularization via Dropout",
+          "abstract": "Dropout prevents overfitting in deep neural networks during gradient-based training.",
+          "content_hash": "aac0080e410c35206db3eac3c84915bc2104464cedf9cdf660e9edf8d09cdf82",
           "source_rank": null,
           "near_duplicate_of": null
         },
@@ -39,10 +92,10 @@
           "near_duplicate_of": null
         },
         {
-          "candidate_id": "ml_lt_001_d",
-          "title": "Neural Network Regularization via Dropout",
-          "abstract": "Dropout prevents overfitting in deep neural networks during gradient-based training.",
-          "content_hash": "aac0080e410c35206db3eac3c84915bc2104464cedf9cdf660e9edf8d09cdf82",
+          "candidate_id": "ml_lt_001_b",
+          "title": "Adam: A Method for Stochastic Optimization",
+          "abstract": "We propose Adam, an efficient stochastic gradient descent method for first-order gradient-based optimization.",
+          "content_hash": "6ee330653b4e86ce0e552335c8ac69fdf49abddd25e65dc981506e7861dfca8b",
           "source_rank": null,
           "near_duplicate_of": null
         }
@@ -50,30 +103,15 @@
     },
     {
       "case_id": "bio_disc_lt_001",
+      "ranking_surface": "discovery_ranking",
+      "research_question": "drug resistance mechanisms in cancer therapy",
+      "ranking_intent": "evidence_support",
+      "adjudication_context": "Discovery surface: the researcher wants PRIMARY EVIDENCE (empirical results, RCTs, measured outcomes). Reviews and editorials are lower utility unless they directly synthesize the requested evidence.",
       "domain": "biomedical",
-      "surface": "discovery_ranking",
-      "intent": "evidence_support",
+      "relevance_rubric_version": "research_utility_0_to_3_v1",
       "primary_slice": "lexical_trap",
       "secondary_slices": [],
-      "split": "development",
-      "query_text": "drug resistance mechanisms in cancer therapy",
       "candidates": [
-        {
-          "candidate_id": "bio_lt_001_a",
-          "title": "Mechanisms of Drug Resistance in Cancer Chemotherapy",
-          "abstract": "We review acquired and intrinsic resistance mechanisms including efflux pumps and apoptosis evasion.",
-          "content_hash": "a766768d74324f63e14dffc851c19ff259ef360cc5b03e4c8243ef97663c857f",
-          "source_rank": null,
-          "near_duplicate_of": null
-        },
-        {
-          "candidate_id": "bio_lt_001_b",
-          "title": "Overcoming Tyrosine Kinase Inhibitor Resistance in Lung Cancer",
-          "abstract": "We characterize resistance mechanisms to TKI therapy in non-small-cell lung cancer.",
-          "content_hash": "2faa4d729cae3b493bb3cc31889349609b261cb6240fd4929d1e78100c86da45",
-          "source_rank": null,
-          "near_duplicate_of": null
-        },
         {
           "candidate_id": "bio_lt_001_c",
           "title": "Resistance Welding of Drug-Eluting Cardiovascular Stents",
@@ -89,19 +127,44 @@
           "content_hash": "e65ff347614daef410b4dfd2ea8e088af62d6b6119d2da5c64a392f1817a6f7e",
           "source_rank": null,
           "near_duplicate_of": null
+        },
+        {
+          "candidate_id": "bio_lt_001_b",
+          "title": "Overcoming Tyrosine Kinase Inhibitor Resistance in Lung Cancer",
+          "abstract": "We characterize resistance mechanisms to TKI therapy in non-small-cell lung cancer.",
+          "content_hash": "2faa4d729cae3b493bb3cc31889349609b261cb6240fd4929d1e78100c86da45",
+          "source_rank": null,
+          "near_duplicate_of": null
+        },
+        {
+          "candidate_id": "bio_lt_001_a",
+          "title": "Mechanisms of Drug Resistance in Cancer Chemotherapy",
+          "abstract": "We review acquired and intrinsic resistance mechanisms including efflux pumps and apoptosis evasion.",
+          "content_hash": "a766768d74324f63e14dffc851c19ff259ef360cc5b03e4c8243ef97663c857f",
+          "source_rank": null,
+          "near_duplicate_of": null
         }
       ]
     },
     {
       "case_id": "nlp_disc_lt_001",
+      "ranking_surface": "discovery_ranking",
+      "research_question": "neural machine translation attention models",
+      "ranking_intent": "general_research_relevance",
+      "adjudication_context": "Discovery surface: a researcher is exploring the literature for an open-ended research question. Rank by how useful each candidate is as a starting point.",
       "domain": "nlp",
-      "surface": "discovery_ranking",
-      "intent": "general_research_relevance",
+      "relevance_rubric_version": "research_utility_0_to_3_v1",
       "primary_slice": "lexical_trap",
       "secondary_slices": [],
-      "split": "held_out",
-      "query_text": "neural machine translation attention models",
       "candidates": [
+        {
+          "candidate_id": "nlp_lt_001_d",
+          "title": "Evaluating Machine Translation with BLEU",
+          "abstract": "BLEU is a standard metric for evaluating machine translation quality.",
+          "content_hash": "8e0122b74908a75a7383b9146f6768702ef2ca239a484f746c74ffe650e9bd2f",
+          "source_rank": null,
+          "near_duplicate_of": null
+        },
         {
           "candidate_id": "nlp_lt_001_a",
           "title": "Neural Machine Translation by Jointly Learning to Align and Translate",
@@ -125,35 +188,20 @@
           "content_hash": "2164cae6891fe9670957bed19b090b94dc1e044ca3acbe60dc2629749a0f1728",
           "source_rank": null,
           "near_duplicate_of": null
-        },
-        {
-          "candidate_id": "nlp_lt_001_d",
-          "title": "Evaluating Machine Translation with BLEU",
-          "abstract": "BLEU is a standard metric for evaluating machine translation quality.",
-          "content_hash": "8e0122b74908a75a7383b9146f6768702ef2ca239a484f746c74ffe650e9bd2f",
-          "source_rank": null,
-          "near_duplicate_of": null
         }
       ]
     },
     {
       "case_id": "ml_disc_sp_001",
+      "ranking_surface": "discovery_ranking",
+      "research_question": "efficiently training very large language models",
+      "ranking_intent": "general_research_relevance",
+      "adjudication_context": "Discovery surface: a researcher is exploring the literature for an open-ended research question. Rank by how useful each candidate is as a starting point.",
       "domain": "machine_learning",
-      "surface": "discovery_ranking",
-      "intent": "general_research_relevance",
+      "relevance_rubric_version": "research_utility_0_to_3_v1",
       "primary_slice": "semantic_paraphrase",
       "secondary_slices": [],
-      "split": "development",
-      "query_text": "efficiently training very large language models",
       "candidates": [
-        {
-          "candidate_id": "ml_sp_001_a",
-          "title": "Efficient Memory Management for Large Language Model Training",
-          "abstract": "ZeRO partitions optimizer states across devices to reduce the memory footprint of gigantic models.",
-          "content_hash": "6707b8a4f811b968583654a5a74b6ed5a98a8dcb8f61c8117606098f1233673c",
-          "source_rank": null,
-          "near_duplicate_of": null
-        },
         {
           "candidate_id": "ml_sp_001_b",
           "title": "Scaling Laws for Neural Language Models",
@@ -177,32 +225,33 @@
           "content_hash": "496e84a7c556c20c8b72c76cad246dd91f58fd0eb5a5d35a5103917930cb4c99",
           "source_rank": null,
           "near_duplicate_of": null
+        },
+        {
+          "candidate_id": "ml_sp_001_a",
+          "title": "Efficient Memory Management for Large Language Model Training",
+          "abstract": "ZeRO partitions optimizer states across devices to reduce the memory footprint of gigantic models.",
+          "content_hash": "6707b8a4f811b968583654a5a74b6ed5a98a8dcb8f61c8117606098f1233673c",
+          "source_rank": null,
+          "near_duplicate_of": null
         }
       ]
     },
     {
       "case_id": "bio_disc_sp_001",
+      "ranking_surface": "discovery_ranking",
+      "research_question": "reducing false positives in cancer screening",
+      "ranking_intent": "evidence_support",
+      "adjudication_context": "Discovery surface: the researcher wants PRIMARY EVIDENCE (empirical results, RCTs, measured outcomes). Reviews and editorials are lower utility unless they directly synthesize the requested evidence.",
       "domain": "biomedical",
-      "surface": "discovery_ranking",
-      "intent": "evidence_support",
+      "relevance_rubric_version": "research_utility_0_to_3_v1",
       "primary_slice": "semantic_paraphrase",
       "secondary_slices": [],
-      "split": "held_out",
-      "query_text": "reducing false positives in cancer screening",
       "candidates": [
         {
           "candidate_id": "bio_sp_001_a",
           "title": "Improving Specificity of Mammography with AI-assisted Triage",
           "abstract": "We lower unnecessary recall rates by triaging mammograms with a deep model.",
           "content_hash": "0fe18dd90f4aa9d03d2f2c064f028c98a3382774dc66441cc23c1b8cd461f957",
-          "source_rank": null,
-          "near_duplicate_of": null
-        },
-        {
-          "candidate_id": "bio_sp_001_b",
-          "title": "Overdiagnosis in Prostate Cancer Screening: A Systematic Review",
-          "abstract": "We quantify harms of excessive prostate-specific antigen testing.",
-          "content_hash": "1c971cc60d527d9c2c438369ee8e90083be381c3750977e5e866e5317df1fd31",
           "source_rank": null,
           "near_duplicate_of": null
         },
@@ -221,37 +270,30 @@
           "content_hash": "0a14e71c4afdfc733194d670f0ff57bc12ce658caca9f9bad8314ff13db9f380",
           "source_rank": null,
           "near_duplicate_of": null
+        },
+        {
+          "candidate_id": "bio_sp_001_b",
+          "title": "Overdiagnosis in Prostate Cancer Screening: A Systematic Review",
+          "abstract": "We quantify harms of excessive prostate-specific antigen testing.",
+          "content_hash": "1c971cc60d527d9c2c438369ee8e90083be381c3750977e5e866e5317df1fd31",
+          "source_rank": null,
+          "near_duplicate_of": null
         }
       ]
     },
     {
       "case_id": "nlp_disc_sp_001",
+      "ranking_surface": "discovery_ranking",
+      "research_question": "helping models follow human instructions",
+      "ranking_intent": "general_research_relevance",
+      "adjudication_context": "Discovery surface: a researcher is exploring the literature for an open-ended research question. Rank by how useful each candidate is as a starting point.",
       "domain": "nlp",
-      "surface": "discovery_ranking",
-      "intent": "general_research_relevance",
+      "relevance_rubric_version": "research_utility_0_to_3_v1",
       "primary_slice": "semantic_paraphrase",
       "secondary_slices": [
         "lexical_trap"
       ],
-      "split": "calibration",
-      "query_text": "helping models follow human instructions",
       "candidates": [
-        {
-          "candidate_id": "nlp_sp_001_a",
-          "title": "Training Language Models to Follow Instructions with Human Feedback",
-          "abstract": "We fine-tune large models using RLHF to align outputs with user intent.",
-          "content_hash": "502f06fb1afe60f2841c95127ad1f9649b06792c64d30dcaae8d7d18bf87b7df",
-          "source_rank": null,
-          "near_duplicate_of": null
-        },
-        {
-          "candidate_id": "nlp_sp_001_b",
-          "title": "Constitutional AI: Harmlessness from AI Feedback",
-          "abstract": "Models self-critique using a constitution to produce helpful, harmless responses.",
-          "content_hash": "d380c8a758d4d0ee6dabb4a9bf00cf674265182cc56ef2cfcfbfe087234c8095",
-          "source_rank": null,
-          "near_duplicate_of": null
-        },
         {
           "candidate_id": "nlp_sp_001_c",
           "title": "InstructGPT and the Alignment Problem",
@@ -267,19 +309,44 @@
           "content_hash": "a4133384c04888bffedb83f749641888289cd1fef2677017805d1b488a649c36",
           "source_rank": null,
           "near_duplicate_of": null
+        },
+        {
+          "candidate_id": "nlp_sp_001_a",
+          "title": "Training Language Models to Follow Instructions with Human Feedback",
+          "abstract": "We fine-tune large models using RLHF to align outputs with user intent.",
+          "content_hash": "502f06fb1afe60f2841c95127ad1f9649b06792c64d30dcaae8d7d18bf87b7df",
+          "source_rank": null,
+          "near_duplicate_of": null
+        },
+        {
+          "candidate_id": "nlp_sp_001_b",
+          "title": "Constitutional AI: Harmlessness from AI Feedback",
+          "abstract": "Models self-critique using a constitution to produce helpful, harmless responses.",
+          "content_hash": "d380c8a758d4d0ee6dabb4a9bf00cf674265182cc56ef2cfcfbfe087234c8095",
+          "source_rank": null,
+          "near_duplicate_of": null
         }
       ]
     },
     {
       "case_id": "ml_disc_mv_001",
+      "ranking_surface": "discovery_ranking",
+      "research_question": "self-supervised representation learning methods",
+      "ranking_intent": "method_relevance",
+      "adjudication_context": "Discovery surface: the researcher wants METHODS or ALGORITHMS, not applications or surveys. Penalize reviews and downstream application papers unless they introduce a method.",
       "domain": "machine_learning",
-      "surface": "discovery_ranking",
-      "intent": "method_relevance",
+      "relevance_rubric_version": "research_utility_0_to_3_v1",
       "primary_slice": "method_vs_application",
       "secondary_slices": [],
-      "split": "held_out",
-      "query_text": "self-supervised representation learning methods",
       "candidates": [
+        {
+          "candidate_id": "ml_mv_001_d",
+          "title": "A Survey of Representation Learning",
+          "abstract": "Broad survey covering supervised and self-supervised approaches.",
+          "content_hash": "4aedac3b097c5bf67256e5160bbc2b47cb12abe1bca96a35c9ce2c477088f296",
+          "source_rank": null,
+          "near_duplicate_of": null
+        },
         {
           "candidate_id": "ml_mv_001_a",
           "title": "Masked Autoencoders Are Scalable Vision Learners",
@@ -303,40 +370,25 @@
           "content_hash": "4dc515aad2b4047c70d6e44b78ab7257fd8d22ebe851c5570a8222fd9fc0d2b3",
           "source_rank": null,
           "near_duplicate_of": null
-        },
-        {
-          "candidate_id": "ml_mv_001_d",
-          "title": "A Survey of Representation Learning",
-          "abstract": "Broad survey covering supervised and self-supervised approaches.",
-          "content_hash": "4aedac3b097c5bf67256e5160bbc2b47cb12abe1bca96a35c9ce2c477088f296",
-          "source_rank": null,
-          "near_duplicate_of": null
         }
       ]
     },
     {
       "case_id": "bio_disc_mv_001",
+      "ranking_surface": "discovery_ranking",
+      "research_question": "single-cell clustering algorithms",
+      "ranking_intent": "method_relevance",
+      "adjudication_context": "Discovery surface: the researcher wants METHODS or ALGORITHMS, not applications or surveys. Penalize reviews and downstream application papers unless they introduce a method.",
       "domain": "biomedical",
-      "surface": "discovery_ranking",
-      "intent": "method_relevance",
+      "relevance_rubric_version": "research_utility_0_to_3_v1",
       "primary_slice": "method_vs_application",
       "secondary_slices": [],
-      "split": "calibration",
-      "query_text": "single-cell clustering algorithms",
       "candidates": [
         {
           "candidate_id": "bio_mv_001_a",
           "title": "Leiden: Community Detection in Large Networks",
           "abstract": "We propose a scalable community-detection algorithm applicable to single-cell graphs.",
           "content_hash": "8302f563e8ea9b529aef795c0a3dff32e8d1d0842e513c7d7096983274abf3c1",
-          "source_rank": null,
-          "near_duplicate_of": null
-        },
-        {
-          "candidate_id": "bio_mv_001_b",
-          "title": "Clustering Pancreatic Islet Cells with Leiden",
-          "abstract": "We apply Leiden clustering to identify pancreatic cell subtypes.",
-          "content_hash": "49f3229d719238e545917910c357d20e1b3f14f41c822961157f3863b0b997da",
           "source_rank": null,
           "near_duplicate_of": null
         },
@@ -355,24 +407,33 @@
           "content_hash": "55cb6e5bfaba3a77bf2d4e7a86a7e90eb8377b56174d3ab1e9e491b78387529c",
           "source_rank": null,
           "near_duplicate_of": null
+        },
+        {
+          "candidate_id": "bio_mv_001_b",
+          "title": "Clustering Pancreatic Islet Cells with Leiden",
+          "abstract": "We apply Leiden clustering to identify pancreatic cell subtypes.",
+          "content_hash": "49f3229d719238e545917910c357d20e1b3f14f41c822961157f3863b0b997da",
+          "source_rank": null,
+          "near_duplicate_of": null
         }
       ]
     },
     {
       "case_id": "nlp_disc_mv_001",
+      "ranking_surface": "discovery_ranking",
+      "research_question": "coreference resolution algorithms",
+      "ranking_intent": "method_relevance",
+      "adjudication_context": "Discovery surface: the researcher wants METHODS or ALGORITHMS, not applications or surveys. Penalize reviews and downstream application papers unless they introduce a method.",
       "domain": "nlp",
-      "surface": "discovery_ranking",
-      "intent": "method_relevance",
+      "relevance_rubric_version": "research_utility_0_to_3_v1",
       "primary_slice": "method_vs_application",
       "secondary_slices": [],
-      "split": "development",
-      "query_text": "coreference resolution algorithms",
       "candidates": [
         {
-          "candidate_id": "nlp_mv_001_a",
-          "title": "End-to-end Neural Coreference Resolution",
-          "abstract": "We propose an end-to-end neural model for coreference resolution.",
-          "content_hash": "d90d59cd910c03ecd898e3dea068fcd5db419d02105b2c2b352b532c1d825334",
+          "candidate_id": "nlp_mv_001_c",
+          "title": "SpanBERT: Improving Pre-training by Representing Spans",
+          "abstract": "Pre-training objective that helps coreference-related tasks.",
+          "content_hash": "9fc0c14d188ae35265fb75f1a062147fb65af4c99bbf2f11fe70898430bb3c8c",
           "source_rank": null,
           "near_duplicate_of": null
         },
@@ -385,10 +446,10 @@
           "near_duplicate_of": null
         },
         {
-          "candidate_id": "nlp_mv_001_c",
-          "title": "SpanBERT: Improving Pre-training by Representing Spans",
-          "abstract": "Pre-training objective that helps coreference-related tasks.",
-          "content_hash": "9fc0c14d188ae35265fb75f1a062147fb65af4c99bbf2f11fe70898430bb3c8c",
+          "candidate_id": "nlp_mv_001_a",
+          "title": "End-to-end Neural Coreference Resolution",
+          "abstract": "We propose an end-to-end neural model for coreference resolution.",
+          "content_hash": "d90d59cd910c03ecd898e3dea068fcd5db419d02105b2c2b352b532c1d825334",
           "source_rank": null,
           "near_duplicate_of": null
         },
@@ -404,13 +465,14 @@
     },
     {
       "case_id": "ml_disc_rv_001",
+      "ranking_surface": "discovery_ranking",
+      "research_question": "graph contrastive learning empirical results",
+      "ranking_intent": "evidence_support",
+      "adjudication_context": "Discovery surface: the researcher wants PRIMARY EVIDENCE (empirical results, RCTs, measured outcomes). Reviews and editorials are lower utility unless they directly synthesize the requested evidence.",
       "domain": "machine_learning",
-      "surface": "discovery_ranking",
-      "intent": "evidence_support",
+      "relevance_rubric_version": "research_utility_0_to_3_v1",
       "primary_slice": "review_vs_primary",
       "secondary_slices": [],
-      "split": "calibration",
-      "query_text": "graph contrastive learning empirical results",
       "candidates": [
         {
           "candidate_id": "ml_rv_001_a",
@@ -448,19 +510,20 @@
     },
     {
       "case_id": "bio_disc_rv_001",
+      "ranking_surface": "discovery_ranking",
+      "research_question": "clinical trial results for GLP-1 receptor agonists",
+      "ranking_intent": "evidence_support",
+      "adjudication_context": "Discovery surface: the researcher wants PRIMARY EVIDENCE (empirical results, RCTs, measured outcomes). Reviews and editorials are lower utility unless they directly synthesize the requested evidence.",
       "domain": "biomedical",
-      "surface": "discovery_ranking",
-      "intent": "evidence_support",
+      "relevance_rubric_version": "research_utility_0_to_3_v1",
       "primary_slice": "review_vs_primary",
       "secondary_slices": [],
-      "split": "held_out",
-      "query_text": "clinical trial results for GLP-1 receptor agonists",
       "candidates": [
         {
-          "candidate_id": "bio_rv_001_a",
-          "title": "Semaglutide and Cardiovascular Outcomes in Obesity (SELECT Trial)",
-          "abstract": "Randomized controlled trial reporting reduced MACE with semaglutide.",
-          "content_hash": "7cde8e72903315d74941c29d25e918bb5e8b1936bf3800eb0a85419240b77338",
+          "candidate_id": "bio_rv_001_c",
+          "title": "Tirzepatide efficacy in type 2 diabetes (SURPASS-2)",
+          "abstract": "Phase 3 trial results for dual GIP/GLP-1 agonist.",
+          "content_hash": "eb1c927000d6639488606cbe8491c7478e0d7642d6b332fc3549f63bcdb626c9",
           "source_rank": null,
           "near_duplicate_of": null
         },
@@ -473,10 +536,10 @@
           "near_duplicate_of": null
         },
         {
-          "candidate_id": "bio_rv_001_c",
-          "title": "Tirzepatide efficacy in type 2 diabetes (SURPASS-2)",
-          "abstract": "Phase 3 trial results for dual GIP/GLP-1 agonist.",
-          "content_hash": "eb1c927000d6639488606cbe8491c7478e0d7642d6b332fc3549f63bcdb626c9",
+          "candidate_id": "bio_rv_001_a",
+          "title": "Semaglutide and Cardiovascular Outcomes in Obesity (SELECT Trial)",
+          "abstract": "Randomized controlled trial reporting reduced MACE with semaglutide.",
+          "content_hash": "7cde8e72903315d74941c29d25e918bb5e8b1936bf3800eb0a85419240b77338",
           "source_rank": null,
           "near_duplicate_of": null
         },
@@ -492,22 +555,15 @@
     },
     {
       "case_id": "nlp_disc_rv_001",
+      "ranking_surface": "discovery_ranking",
+      "research_question": "chain-of-thought prompting experimental gains",
+      "ranking_intent": "evidence_support",
+      "adjudication_context": "Discovery surface: the researcher wants PRIMARY EVIDENCE (empirical results, RCTs, measured outcomes). Reviews and editorials are lower utility unless they directly synthesize the requested evidence.",
       "domain": "nlp",
-      "surface": "discovery_ranking",
-      "intent": "evidence_support",
+      "relevance_rubric_version": "research_utility_0_to_3_v1",
       "primary_slice": "review_vs_primary",
       "secondary_slices": [],
-      "split": "development",
-      "query_text": "chain-of-thought prompting experimental gains",
       "candidates": [
-        {
-          "candidate_id": "nlp_rv_001_a",
-          "title": "Chain-of-Thought Prompting Elicits Reasoning in Large Language Models",
-          "abstract": "We report accuracy gains on GSM8K and other math benchmarks via CoT.",
-          "content_hash": "a2d37e2553af5228afbfd4da112d658c8354ee2cd7d83fae7bd6053785367a96",
-          "source_rank": null,
-          "near_duplicate_of": null
-        },
         {
           "candidate_id": "nlp_rv_001_b",
           "title": "A Survey of Prompting Methods for LLMs",
@@ -531,35 +587,28 @@
           "content_hash": "b2cbe5f90c2b689f3a4c775cafa9f3d82aaf0ae7657cc484e5ed25a1eaf6285d",
           "source_rank": null,
           "near_duplicate_of": null
+        },
+        {
+          "candidate_id": "nlp_rv_001_a",
+          "title": "Chain-of-Thought Prompting Elicits Reasoning in Large Language Models",
+          "abstract": "We report accuracy gains on GSM8K and other math benchmarks via CoT.",
+          "content_hash": "a2d37e2553af5228afbfd4da112d658c8354ee2cd7d83fae7bd6053785367a96",
+          "source_rank": null,
+          "near_duplicate_of": null
         }
       ]
     },
     {
       "case_id": "ml_disc_ma_001",
+      "ranking_surface": "discovery_ranking",
+      "research_question": "diffusion models for image generation",
+      "ranking_intent": "general_research_relevance",
+      "adjudication_context": "Discovery surface: a researcher is exploring the literature for an open-ended research question. Rank by how useful each candidate is as a starting point.",
       "domain": "machine_learning",
-      "surface": "discovery_ranking",
-      "intent": "general_research_relevance",
+      "relevance_rubric_version": "research_utility_0_to_3_v1",
       "primary_slice": "missing_abstract",
       "secondary_slices": [],
-      "split": "development",
-      "query_text": "diffusion models for image generation",
       "candidates": [
-        {
-          "candidate_id": "ml_ma_001_a",
-          "title": "Denoising Diffusion Probabilistic Models",
-          "abstract": "We introduce DDPMs for high-quality image synthesis.",
-          "content_hash": "7c0907e05fa841c80ad968716d25ddeca15d21d82afe84754c6ba72a889f5aac",
-          "source_rank": null,
-          "near_duplicate_of": null
-        },
-        {
-          "candidate_id": "ml_ma_001_b",
-          "title": "Score-Based Generative Modeling Through SDEs",
-          "abstract": "",
-          "content_hash": "e8b6938a2e6e7f591075e8a5b85f59f3534cf5d64510e8120e53bb7a20330117",
-          "source_rank": null,
-          "near_duplicate_of": null
-        },
         {
           "candidate_id": "ml_ma_001_c",
           "title": "High-Resolution Image Synthesis with Latent Diffusion Models",
@@ -575,18 +624,35 @@
           "content_hash": "3beb0faa3bc311e7ac318c0f1b4af20246b6c156c0fcf0a5dfe4c8212d838245",
           "source_rank": null,
           "near_duplicate_of": null
+        },
+        {
+          "candidate_id": "ml_ma_001_b",
+          "title": "Score-Based Generative Modeling Through SDEs",
+          "abstract": "",
+          "content_hash": "e8b6938a2e6e7f591075e8a5b85f59f3534cf5d64510e8120e53bb7a20330117",
+          "source_rank": null,
+          "near_duplicate_of": null
+        },
+        {
+          "candidate_id": "ml_ma_001_a",
+          "title": "Denoising Diffusion Probabilistic Models",
+          "abstract": "We introduce DDPMs for high-quality image synthesis.",
+          "content_hash": "7c0907e05fa841c80ad968716d25ddeca15d21d82afe84754c6ba72a889f5aac",
+          "source_rank": null,
+          "near_duplicate_of": null
         }
       ]
     },
     {
       "case_id": "bio_disc_ma_001",
+      "ranking_surface": "discovery_ranking",
+      "research_question": "lipid nanoparticle mRNA vaccine delivery",
+      "ranking_intent": "general_research_relevance",
+      "adjudication_context": "Discovery surface: a researcher is exploring the literature for an open-ended research question. Rank by how useful each candidate is as a starting point.",
       "domain": "biomedical",
-      "surface": "discovery_ranking",
-      "intent": "general_research_relevance",
+      "relevance_rubric_version": "research_utility_0_to_3_v1",
       "primary_slice": "missing_abstract",
       "secondary_slices": [],
-      "split": "calibration",
-      "query_text": "lipid nanoparticle mRNA vaccine delivery",
       "candidates": [
         {
           "candidate_id": "bio_ma_001_a",
@@ -597,18 +663,18 @@
           "near_duplicate_of": null
         },
         {
-          "candidate_id": "bio_ma_001_b",
-          "title": "Ionizable Lipids for mRNA Formulation",
-          "abstract": "",
-          "content_hash": "3f293824830ec0d9b6602208978955022a6c7b1cc7c12406e977d4e7088e4646",
-          "source_rank": null,
-          "near_duplicate_of": null
-        },
-        {
           "candidate_id": "bio_ma_001_c",
           "title": "Pfizer-BioNTech BNT162b2 Vaccine Immunogenicity",
           "abstract": "We report phase-1 immunogenicity data for the BNT162b2 mRNA vaccine.",
           "content_hash": "6777ff9b3a92ed6f2c41598d73d6ebc3f58daa2d93996f441750441cd64367e4",
+          "source_rank": null,
+          "near_duplicate_of": null
+        },
+        {
+          "candidate_id": "bio_ma_001_b",
+          "title": "Ionizable Lipids for mRNA Formulation",
+          "abstract": "",
+          "content_hash": "3f293824830ec0d9b6602208978955022a6c7b1cc7c12406e977d4e7088e4646",
           "source_rank": null,
           "near_duplicate_of": null
         },
@@ -624,30 +690,15 @@
     },
     {
       "case_id": "nlp_disc_ma_001",
+      "ranking_surface": "discovery_ranking",
+      "research_question": "low-resource machine translation",
+      "ranking_intent": "general_research_relevance",
+      "adjudication_context": "Discovery surface: a researcher is exploring the literature for an open-ended research question. Rank by how useful each candidate is as a starting point.",
       "domain": "nlp",
-      "surface": "discovery_ranking",
-      "intent": "general_research_relevance",
+      "relevance_rubric_version": "research_utility_0_to_3_v1",
       "primary_slice": "missing_abstract",
       "secondary_slices": [],
-      "split": "held_out",
-      "query_text": "low-resource machine translation",
       "candidates": [
-        {
-          "candidate_id": "nlp_ma_001_a",
-          "title": "Improving Low-Resource Neural MT with Transfer Learning",
-          "abstract": "We pre-train on high-resource pairs and transfer to low-resource languages.",
-          "content_hash": "182e272cd5f5ec97c34148efb86d1a5f27dfef67483935785ec90005bd8332b0",
-          "source_rank": null,
-          "near_duplicate_of": null
-        },
-        {
-          "candidate_id": "nlp_ma_001_b",
-          "title": "Multilingual Pretraining for Low-Resource Translation",
-          "abstract": "",
-          "content_hash": "c34c663e7f4246d53d5f8b12cfcc0130d74acfe2b05e05896577417ee50470ad",
-          "source_rank": null,
-          "near_duplicate_of": null
-        },
         {
           "candidate_id": "nlp_ma_001_c",
           "title": "Back-Translation for Low-Resource NMT",
@@ -663,24 +714,41 @@
           "content_hash": "4513bfef7b94656c5c5d0a3ed85ce2dd4a1c1e226919a8fbc1884759c204fb43",
           "source_rank": null,
           "near_duplicate_of": null
+        },
+        {
+          "candidate_id": "nlp_ma_001_b",
+          "title": "Multilingual Pretraining for Low-Resource Translation",
+          "abstract": "",
+          "content_hash": "c34c663e7f4246d53d5f8b12cfcc0130d74acfe2b05e05896577417ee50470ad",
+          "source_rank": null,
+          "near_duplicate_of": null
+        },
+        {
+          "candidate_id": "nlp_ma_001_a",
+          "title": "Improving Low-Resource Neural MT with Transfer Learning",
+          "abstract": "We pre-train on high-resource pairs and transfer to low-resource languages.",
+          "content_hash": "182e272cd5f5ec97c34148efb86d1a5f27dfef67483935785ec90005bd8332b0",
+          "source_rank": null,
+          "near_duplicate_of": null
         }
       ]
     },
     {
       "case_id": "ml_disc_nd_001",
+      "ranking_surface": "discovery_ranking",
+      "research_question": "vision transformer for image classification",
+      "ranking_intent": "general_research_relevance",
+      "adjudication_context": "Discovery surface: a researcher is exploring the literature for an open-ended research question. Rank by how useful each candidate is as a starting point.",
       "domain": "machine_learning",
-      "surface": "discovery_ranking",
-      "intent": "general_research_relevance",
+      "relevance_rubric_version": "research_utility_0_to_3_v1",
       "primary_slice": "near_duplicate",
       "secondary_slices": [],
-      "split": "held_out",
-      "query_text": "vision transformer for image classification",
       "candidates": [
         {
-          "candidate_id": "ml_nd_001_a",
-          "title": "An Image is Worth 16x16 Words: Transformers for Image Recognition",
-          "abstract": "We apply a pure Transformer to image classification by splitting images into patches.",
-          "content_hash": "98d53e7754778b8377431d7c3ea3cb05314b98b31016f5fff0f1fc10d0ed59d8",
+          "candidate_id": "ml_nd_001_d",
+          "title": "ResNet: Deep Residual Learning for Image Recognition",
+          "abstract": "We introduce residual connections enabling training of very deep CNNs.",
+          "content_hash": "a3428790d8e4f5903fb2e0858ffd0b4bca29b52e103c504d1be0ee7959e468a5",
           "source_rank": null,
           "near_duplicate_of": null
         },
@@ -709,10 +777,10 @@
           "near_duplicate_of": null
         },
         {
-          "candidate_id": "ml_nd_001_d",
-          "title": "ResNet: Deep Residual Learning for Image Recognition",
-          "abstract": "We introduce residual connections enabling training of very deep CNNs.",
-          "content_hash": "a3428790d8e4f5903fb2e0858ffd0b4bca29b52e103c504d1be0ee7959e468a5",
+          "candidate_id": "ml_nd_001_a",
+          "title": "An Image is Worth 16x16 Words: Transformers for Image Recognition",
+          "abstract": "We apply a pure Transformer to image classification by splitting images into patches.",
+          "content_hash": "98d53e7754778b8377431d7c3ea3cb05314b98b31016f5fff0f1fc10d0ed59d8",
           "source_rank": null,
           "near_duplicate_of": null
         }
@@ -720,27 +788,20 @@
     },
     {
       "case_id": "bio_disc_nd_001",
+      "ranking_surface": "discovery_ranking",
+      "research_question": "CRISPR diagnostics with Cas12",
+      "ranking_intent": "evidence_support",
+      "adjudication_context": "Discovery surface: the researcher wants PRIMARY EVIDENCE (empirical results, RCTs, measured outcomes). Reviews and editorials are lower utility unless they directly synthesize the requested evidence.",
       "domain": "biomedical",
-      "surface": "discovery_ranking",
-      "intent": "evidence_support",
+      "relevance_rubric_version": "research_utility_0_to_3_v1",
       "primary_slice": "near_duplicate",
       "secondary_slices": [],
-      "split": "development",
-      "query_text": "CRISPR diagnostics with Cas12",
       "candidates": [
         {
-          "candidate_id": "bio_nd_001_a",
-          "title": "DETECTR: DNA Detection with CRISPR-Cas12a",
-          "abstract": "We use Cas12a collateral cleavage for attomolar DNA detection.",
-          "content_hash": "d28871f39fbab8af1e64191d950cfe492ee2e47d244df520b40ebb265185e594",
-          "source_rank": null,
-          "near_duplicate_of": null
-        },
-        {
-          "candidate_id": "bio_nd_001_b",
-          "title": "Cas12a-Based DNA Endonuclease Detection (DETECTR)",
-          "abstract": "Using Cas12a collateral cleavage, we achieve attomolar DNA detection.",
-          "content_hash": "180b8e46ef83857f7673d9a82b1815a3321d507c578e33cbf5679eb6600dd4f2",
+          "candidate_id": "bio_nd_001_d",
+          "title": "Cas14: Targeted Nucleic Acid Detection",
+          "abstract": "We characterize Cas14 for detection of ssDNA.",
+          "content_hash": "cddb901fdabd7d8c0d09dbf62947848e64350e5ab0ae8e84d5624c7d07e053e5",
           "source_rank": null,
           "near_duplicate_of": null
         },
@@ -761,10 +822,18 @@
           "near_duplicate_of": null
         },
         {
-          "candidate_id": "bio_nd_001_d",
-          "title": "Cas14: Targeted Nucleic Acid Detection",
-          "abstract": "We characterize Cas14 for detection of ssDNA.",
-          "content_hash": "cddb901fdabd7d8c0d09dbf62947848e64350e5ab0ae8e84d5624c7d07e053e5",
+          "candidate_id": "bio_nd_001_a",
+          "title": "DETECTR: DNA Detection with CRISPR-Cas12a",
+          "abstract": "We use Cas12a collateral cleavage for attomolar DNA detection.",
+          "content_hash": "d28871f39fbab8af1e64191d950cfe492ee2e47d244df520b40ebb265185e594",
+          "source_rank": null,
+          "near_duplicate_of": null
+        },
+        {
+          "candidate_id": "bio_nd_001_b",
+          "title": "Cas12a-Based DNA Endonuclease Detection (DETECTR)",
+          "abstract": "Using Cas12a collateral cleavage, we achieve attomolar DNA detection.",
+          "content_hash": "180b8e46ef83857f7673d9a82b1815a3321d507c578e33cbf5679eb6600dd4f2",
           "source_rank": null,
           "near_duplicate_of": null
         }
@@ -772,22 +841,15 @@
     },
     {
       "case_id": "nlp_disc_nd_001",
+      "ranking_surface": "discovery_ranking",
+      "research_question": "BERT pre-training for language understanding",
+      "ranking_intent": "evidence_support",
+      "adjudication_context": "Discovery surface: the researcher wants PRIMARY EVIDENCE (empirical results, RCTs, measured outcomes). Reviews and editorials are lower utility unless they directly synthesize the requested evidence.",
       "domain": "nlp",
-      "surface": "discovery_ranking",
-      "intent": "evidence_support",
+      "relevance_rubric_version": "research_utility_0_to_3_v1",
       "primary_slice": "near_duplicate",
       "secondary_slices": [],
-      "split": "calibration",
-      "query_text": "BERT pre-training for language understanding",
       "candidates": [
-        {
-          "candidate_id": "nlp_nd_001_a",
-          "title": "BERT: Pre-training of Deep Bidirectional Transformers",
-          "abstract": "We pre-train a bidirectional Transformer for language understanding tasks.",
-          "content_hash": "bce2b65353b4fa910c7cc7d019941e43c0fab312c948bb8cc534a1e67222a81e",
-          "source_rank": null,
-          "near_duplicate_of": null
-        },
         {
           "candidate_id": "nlp_nd_001_b",
           "title": "Bidirectional Encoder Representations from Transformers (BERT)",
@@ -797,12 +859,12 @@
           "near_duplicate_of": null
         },
         {
-          "candidate_id": "nlp_nd_001_b2",
-          "title": "Understanding BERT Pre-training for Language",
-          "abstract": "A bidirectional Transformer is pre-trained for language understanding tasks.",
-          "content_hash": "61f205a4fe5a68354d091b9597008a2595721ab9b67392b0c77f7f0341ec6e65",
+          "candidate_id": "nlp_nd_001_a",
+          "title": "BERT: Pre-training of Deep Bidirectional Transformers",
+          "abstract": "We pre-train a bidirectional Transformer for language understanding tasks.",
+          "content_hash": "bce2b65353b4fa910c7cc7d019941e43c0fab312c948bb8cc534a1e67222a81e",
           "source_rank": null,
-          "near_duplicate_of": "nlp_nd_001_b"
+          "near_duplicate_of": null
         },
         {
           "candidate_id": "nlp_nd_001_c",
@@ -819,18 +881,27 @@
           "content_hash": "edfda8ad557c373bcb524fbb2a9c3dbbd1fc3b82588ad911e82486c6669d215a",
           "source_rank": null,
           "near_duplicate_of": null
+        },
+        {
+          "candidate_id": "nlp_nd_001_b2",
+          "title": "Understanding BERT Pre-training for Language",
+          "abstract": "A bidirectional Transformer is pre-trained for language understanding tasks.",
+          "content_hash": "61f205a4fe5a68354d091b9597008a2595721ab9b67392b0c77f7f0341ec6e65",
+          "source_rank": null,
+          "near_duplicate_of": "nlp_nd_001_b"
         }
       ]
     },
     {
       "case_id": "ml_disc_sr_001",
+      "ranking_surface": "discovery_ranking",
+      "research_question": "state space models for long sequences",
+      "ranking_intent": "general_research_relevance",
+      "adjudication_context": "Discovery surface: a researcher is exploring the literature for an open-ended research question. Rank by how useful each candidate is as a starting point.",
       "domain": "machine_learning",
-      "surface": "discovery_ranking",
-      "intent": "general_research_relevance",
+      "relevance_rubric_version": "research_utility_0_to_3_v1",
       "primary_slice": "source_rank_conflict",
       "secondary_slices": [],
-      "split": "calibration",
-      "query_text": "state space models for long sequences",
       "candidates": [
         {
           "candidate_id": "ml_sr_001_a",
@@ -841,10 +912,10 @@
           "near_duplicate_of": null
         },
         {
-          "candidate_id": "ml_sr_001_b",
-          "title": "A Non-Relevant Nature Perspective on AI Funding",
-          "abstract": "An editorial on AI research funding policy.",
-          "content_hash": "0357362e39972b0b3238a2337d05abd1fc9ed92e22aec67c20a5dc096604cd40",
+          "candidate_id": "ml_sr_001_d",
+          "title": "Recurrent Memory Transformers for Long Context",
+          "abstract": "Augmenting Transformers with recurrent memory for long sequences.",
+          "content_hash": "350a94d75907002c2c8f6cbb8d3b8e904458f8026a1ad00cc108847577987942",
           "source_rank": null,
           "near_duplicate_of": null
         },
@@ -857,10 +928,10 @@
           "near_duplicate_of": null
         },
         {
-          "candidate_id": "ml_sr_001_d",
-          "title": "Recurrent Memory Transformers for Long Context",
-          "abstract": "Augmenting Transformers with recurrent memory for long sequences.",
-          "content_hash": "350a94d75907002c2c8f6cbb8d3b8e904458f8026a1ad00cc108847577987942",
+          "candidate_id": "ml_sr_001_b",
+          "title": "A Non-Relevant Nature Perspective on AI Funding",
+          "abstract": "An editorial on AI research funding policy.",
+          "content_hash": "0357362e39972b0b3238a2337d05abd1fc9ed92e22aec67c20a5dc096604cd40",
           "source_rank": null,
           "near_duplicate_of": null
         }
@@ -868,27 +939,20 @@
     },
     {
       "case_id": "bio_disc_sr_001",
+      "ranking_surface": "discovery_ranking",
+      "research_question": "CAR-T cell therapy for solid tumors",
+      "ranking_intent": "evidence_support",
+      "adjudication_context": "Discovery surface: the researcher wants PRIMARY EVIDENCE (empirical results, RCTs, measured outcomes). Reviews and editorials are lower utility unless they directly synthesize the requested evidence.",
       "domain": "biomedical",
-      "surface": "discovery_ranking",
-      "intent": "evidence_support",
+      "relevance_rubric_version": "research_utility_0_to_3_v1",
       "primary_slice": "source_rank_conflict",
       "secondary_slices": [],
-      "split": "development",
-      "query_text": "CAR-T cell therapy for solid tumors",
       "candidates": [
         {
           "candidate_id": "bio_sr_001_a",
           "title": "Overcoming Challenges in CAR-T Therapy for Solid Tumors",
           "abstract": "We review strategies to improve CAR-T efficacy in solid tumors.",
           "content_hash": "694077a0c1c5ce5f3c25574a911292b96880db5a85c77bc7299aa29417b6a364",
-          "source_rank": null,
-          "near_duplicate_of": null
-        },
-        {
-          "candidate_id": "bio_sr_001_b",
-          "title": "A NEJM Perspective on Telemedicine Adoption",
-          "abstract": "Editorial on telemedicine policy, unrelated to CAR-T.",
-          "content_hash": "29848e20fee8ce517e45f9e66fc0738442294776b6e63ee6a5550cb05a43fd86",
           "source_rank": null,
           "near_duplicate_of": null
         },
@@ -907,32 +971,33 @@
           "content_hash": "ed834cf422df49d36c8a8a62eb4ca0db032ea96dab5d59bc01bf521491f1d107",
           "source_rank": null,
           "near_duplicate_of": null
+        },
+        {
+          "candidate_id": "bio_sr_001_b",
+          "title": "A NEJM Perspective on Telemedicine Adoption",
+          "abstract": "Editorial on telemedicine policy, unrelated to CAR-T.",
+          "content_hash": "29848e20fee8ce517e45f9e66fc0738442294776b6e63ee6a5550cb05a43fd86",
+          "source_rank": null,
+          "near_duplicate_of": null
         }
       ]
     },
     {
       "case_id": "nlp_disc_sr_001",
+      "ranking_surface": "discovery_ranking",
+      "research_question": "retrieval-augmented generation evaluation benchmarks",
+      "ranking_intent": "evidence_support",
+      "adjudication_context": "Discovery surface: the researcher wants PRIMARY EVIDENCE (empirical results, RCTs, measured outcomes). Reviews and editorials are lower utility unless they directly synthesize the requested evidence.",
       "domain": "nlp",
-      "surface": "discovery_ranking",
-      "intent": "evidence_support",
+      "relevance_rubric_version": "research_utility_0_to_3_v1",
       "primary_slice": "source_rank_conflict",
       "secondary_slices": [],
-      "split": "held_out",
-      "query_text": "retrieval-augmented generation evaluation benchmarks",
       "candidates": [
         {
           "candidate_id": "nlp_sr_001_a",
           "title": "ARES: Automated RAG Evaluation System",
           "abstract": "We propose an automated evaluation framework for RAG pipelines.",
           "content_hash": "922a7e740561cc512fb26f75421586e9ab1d1a54c2592d87341e3f97d210a20e",
-          "source_rank": null,
-          "near_duplicate_of": null
-        },
-        {
-          "candidate_id": "nlp_sr_001_b",
-          "title": "A Science Perspective on Peer-Review Bias",
-          "abstract": "Editorial on journal peer-review practices.",
-          "content_hash": "26c7613b53379532ca0d54f521a7d57990616f0c11ce6934d67d3be5ff215ec9",
           "source_rank": null,
           "near_duplicate_of": null
         },
@@ -951,21 +1016,38 @@
           "content_hash": "686860b3f0c912f9453c068456fe39e1350169b46ea6e8eb7ca68ecd5ea5455b",
           "source_rank": null,
           "near_duplicate_of": null
+        },
+        {
+          "candidate_id": "nlp_sr_001_b",
+          "title": "A Science Perspective on Peer-Review Bias",
+          "abstract": "Editorial on journal peer-review practices.",
+          "content_hash": "26c7613b53379532ca0d54f521a7d57990616f0c11ce6934d67d3be5ff215ec9",
+          "source_rank": null,
+          "near_duplicate_of": null
         }
       ]
     },
     {
       "case_id": "ml_disc_ac_001",
+      "ranking_surface": "discovery_ranking",
+      "research_question": "RLHF alignment of large language models",
+      "ranking_intent": "general_research_relevance",
+      "adjudication_context": "Discovery surface: a researcher is exploring the literature for an open-ended research question. Rank by how useful each candidate is as a starting point.",
       "domain": "machine_learning",
-      "surface": "discovery_ranking",
-      "intent": "general_research_relevance",
+      "relevance_rubric_version": "research_utility_0_to_3_v1",
       "primary_slice": "acronym_vs_expanded",
       "secondary_slices": [
         "lexical_trap"
       ],
-      "split": "development",
-      "query_text": "RLHF alignment of large language models",
       "candidates": [
+        {
+          "candidate_id": "ml_ac_001_d",
+          "title": "Constitutional AI: Alignment via Self-Correction",
+          "abstract": "We align models using a written constitution rather than RLHF.",
+          "content_hash": "774265e531ab0f13e6cf27820c18d37963564919d7f2179ad88d10b28b02cff8",
+          "source_rank": null,
+          "near_duplicate_of": null
+        },
         {
           "candidate_id": "ml_ac_001_a",
           "title": "Training a Helpful and Harmless Assistant with RLHF",
@@ -989,28 +1071,21 @@
           "content_hash": "f8250cebf2b900608ee89194ba5785b8410ec10328bec98c8c944bed20643e9a",
           "source_rank": null,
           "near_duplicate_of": null
-        },
-        {
-          "candidate_id": "ml_ac_001_d",
-          "title": "Constitutional AI: Alignment via Self-Correction",
-          "abstract": "We align models using a written constitution rather than RLHF.",
-          "content_hash": "774265e531ab0f13e6cf27820c18d37963564919d7f2179ad88d10b28b02cff8",
-          "source_rank": null,
-          "near_duplicate_of": null
         }
       ]
     },
     {
       "case_id": "bio_disc_ac_001",
+      "ranking_surface": "discovery_ranking",
+      "research_question": "ADC antibody-drug conjugates in oncology",
+      "ranking_intent": "general_research_relevance",
+      "adjudication_context": "Discovery surface: a researcher is exploring the literature for an open-ended research question. Rank by how useful each candidate is as a starting point.",
       "domain": "biomedical",
-      "surface": "discovery_ranking",
-      "intent": "general_research_relevance",
+      "relevance_rubric_version": "research_utility_0_to_3_v1",
       "primary_slice": "acronym_vs_expanded",
       "secondary_slices": [
         "lexical_trap"
       ],
-      "split": "held_out",
-      "query_text": "ADC antibody-drug conjugates in oncology",
       "candidates": [
         {
           "candidate_id": "bio_ac_001_a",
@@ -1021,10 +1096,10 @@
           "near_duplicate_of": null
         },
         {
-          "candidate_id": "bio_ac_001_b",
-          "title": "Trastuzumab Deruxtecan in HER2-Low Breast Cancer",
-          "abstract": "Phase 3 trial of an ADC in HER2-low tumors.",
-          "content_hash": "271818844c0d22c5f2e3c425192357eb122ddb850b1015db45621e5bf899b0b7",
+          "candidate_id": "bio_ac_001_d",
+          "title": "Site-Specific Conjugation for Next-Generation ADCs",
+          "abstract": "We improve ADC homogeneity via site-specific conjugation.",
+          "content_hash": "312a0c9eed2f527873a1b0bf7d46333937c64b5ce4037a3285bb2d9d30aed502",
           "source_rank": null,
           "near_duplicate_of": null
         },
@@ -1037,10 +1112,10 @@
           "near_duplicate_of": null
         },
         {
-          "candidate_id": "bio_ac_001_d",
-          "title": "Site-Specific Conjugation for Next-Generation ADCs",
-          "abstract": "We improve ADC homogeneity via site-specific conjugation.",
-          "content_hash": "312a0c9eed2f527873a1b0bf7d46333937c64b5ce4037a3285bb2d9d30aed502",
+          "candidate_id": "bio_ac_001_b",
+          "title": "Trastuzumab Deruxtecan in HER2-Low Breast Cancer",
+          "abstract": "Phase 3 trial of an ADC in HER2-low tumors.",
+          "content_hash": "271818844c0d22c5f2e3c425192357eb122ddb850b1015db45621e5bf899b0b7",
           "source_rank": null,
           "near_duplicate_of": null
         }
@@ -1048,15 +1123,16 @@
     },
     {
       "case_id": "nlp_disc_ac_001",
+      "ranking_surface": "discovery_ranking",
+      "research_question": "NER named entity recognition methods",
+      "ranking_intent": "general_research_relevance",
+      "adjudication_context": "Discovery surface: a researcher is exploring the literature for an open-ended research question. Rank by how useful each candidate is as a starting point.",
       "domain": "nlp",
-      "surface": "discovery_ranking",
-      "intent": "general_research_relevance",
+      "relevance_rubric_version": "research_utility_0_to_3_v1",
       "primary_slice": "acronym_vs_expanded",
       "secondary_slices": [
         "lexical_trap"
       ],
-      "split": "calibration",
-      "query_text": "NER named entity recognition methods",
       "candidates": [
         {
           "candidate_id": "nlp_ac_001_a",
@@ -1094,13 +1170,14 @@
     },
     {
       "case_id": "ml_disc_nf_001",
+      "ranking_surface": "discovery_ranking",
+      "research_question": "does scaling data improve model performance",
+      "ranking_intent": "evidence_support",
+      "adjudication_context": "Discovery surface: the researcher wants PRIMARY EVIDENCE (empirical results, RCTs, measured outcomes). Reviews and editorials are lower utility unless they directly synthesize the requested evidence.",
       "domain": "machine_learning",
-      "surface": "discovery_ranking",
-      "intent": "evidence_support",
+      "relevance_rubric_version": "research_utility_0_to_3_v1",
       "primary_slice": "negated_findings",
       "secondary_slices": [],
-      "split": "held_out",
-      "query_text": "does scaling data improve model performance",
       "candidates": [
         {
           "candidate_id": "ml_nf_001_a",
@@ -1111,10 +1188,10 @@
           "near_duplicate_of": null
         },
         {
-          "candidate_id": "ml_nf_001_b",
-          "title": "When More Data Hurts: Data Quality Trade-offs",
-          "abstract": "We show that naively scaling noisy data degrades model performance.",
-          "content_hash": "3efbf5c2ed455dabd566fa935d00a09b54e847b32c42c8e053021ab148b6f51d",
+          "candidate_id": "ml_nf_001_d",
+          "title": "Are Scaling Laws Universal? Negative Results",
+          "abstract": "We present settings where standard scaling laws do not hold.",
+          "content_hash": "d83ff9faa3687200505fdef6d39a8a3fe989ab70a664ca3c3cec4d3e5769f272",
           "source_rank": null,
           "near_duplicate_of": null
         },
@@ -1127,10 +1204,10 @@
           "near_duplicate_of": null
         },
         {
-          "candidate_id": "ml_nf_001_d",
-          "title": "Are Scaling Laws Universal? Negative Results",
-          "abstract": "We present settings where standard scaling laws do not hold.",
-          "content_hash": "d83ff9faa3687200505fdef6d39a8a3fe989ab70a664ca3c3cec4d3e5769f272",
+          "candidate_id": "ml_nf_001_b",
+          "title": "When More Data Hurts: Data Quality Trade-offs",
+          "abstract": "We show that naively scaling noisy data degrades model performance.",
+          "content_hash": "3efbf5c2ed455dabd566fa935d00a09b54e847b32c42c8e053021ab148b6f51d",
           "source_rank": null,
           "near_duplicate_of": null
         }
@@ -1138,22 +1215,15 @@
     },
     {
       "case_id": "bio_disc_nf_001",
+      "ranking_surface": "discovery_ranking",
+      "research_question": "does metformin reduce cancer incidence",
+      "ranking_intent": "evidence_support",
+      "adjudication_context": "Discovery surface: the researcher wants PRIMARY EVIDENCE (empirical results, RCTs, measured outcomes). Reviews and editorials are lower utility unless they directly synthesize the requested evidence.",
       "domain": "biomedical",
-      "surface": "discovery_ranking",
-      "intent": "evidence_support",
+      "relevance_rubric_version": "research_utility_0_to_3_v1",
       "primary_slice": "negated_findings",
       "secondary_slices": [],
-      "split": "calibration",
-      "query_text": "does metformin reduce cancer incidence",
       "candidates": [
-        {
-          "candidate_id": "bio_nf_001_a",
-          "title": "Metformin and Cancer Incidence: A Meta-analysis",
-          "abstract": "Pooled observational data suggest reduced cancer incidence with metformin.",
-          "content_hash": "868a9b09c6cad4ba6b19421d985e5b2bd341eec3c93f183af32c076688ecb4eb",
-          "source_rank": null,
-          "near_duplicate_of": null
-        },
         {
           "candidate_id": "bio_nf_001_b",
           "title": "Metformin Shows No Effect on Cancer in the MICE Trial",
@@ -1163,10 +1233,10 @@
           "near_duplicate_of": null
         },
         {
-          "candidate_id": "bio_nf_001_c",
-          "title": "Metformin Mechanisms in Tumor Metabolism",
-          "abstract": "Preclinical evidence for AMPK-mediated anti-tumor effects.",
-          "content_hash": "a1d48a0a025c94e6e9d16b32f2e5f7d74adfc08efb2c9cb941649925d33ae595",
+          "candidate_id": "bio_nf_001_a",
+          "title": "Metformin and Cancer Incidence: A Meta-analysis",
+          "abstract": "Pooled observational data suggest reduced cancer incidence with metformin.",
+          "content_hash": "868a9b09c6cad4ba6b19421d985e5b2bd341eec3c93f183af32c076688ecb4eb",
           "source_rank": null,
           "near_duplicate_of": null
         },
@@ -1177,32 +1247,33 @@
           "content_hash": "aa3385ce718917011c1888102559e7195c7d222240ff37e0a1e700cbed100859",
           "source_rank": null,
           "near_duplicate_of": null
+        },
+        {
+          "candidate_id": "bio_nf_001_c",
+          "title": "Metformin Mechanisms in Tumor Metabolism",
+          "abstract": "Preclinical evidence for AMPK-mediated anti-tumor effects.",
+          "content_hash": "a1d48a0a025c94e6e9d16b32f2e5f7d74adfc08efb2c9cb941649925d33ae595",
+          "source_rank": null,
+          "near_duplicate_of": null
         }
       ]
     },
     {
       "case_id": "nlp_disc_nf_001",
+      "ranking_surface": "discovery_ranking",
+      "research_question": "does chain-of-thought help on reasoning benchmarks",
+      "ranking_intent": "evidence_support",
+      "adjudication_context": "Discovery surface: the researcher wants PRIMARY EVIDENCE (empirical results, RCTs, measured outcomes). Reviews and editorials are lower utility unless they directly synthesize the requested evidence.",
       "domain": "nlp",
-      "surface": "discovery_ranking",
-      "intent": "evidence_support",
+      "relevance_rubric_version": "research_utility_0_to_3_v1",
       "primary_slice": "negated_findings",
       "secondary_slices": [],
-      "split": "development",
-      "query_text": "does chain-of-thought help on reasoning benchmarks",
       "candidates": [
         {
           "candidate_id": "nlp_nf_001_a",
           "title": "Chain-of-Thought Prompting Elicits Reasoning in LLMs",
           "abstract": "CoT prompting improves accuracy on GSM8K and other reasoning benchmarks.",
           "content_hash": "3ba391896afbe782aa3ea5f3648c90252fcc300ebf56fc1e65c038630b220cf1",
-          "source_rank": null,
-          "near_duplicate_of": null
-        },
-        {
-          "candidate_id": "nlp_nf_001_b",
-          "title": "Chain-of-Thought Fails on Narrow Reasoning Tasks",
-          "abstract": "We find no benefit of CoT on constrained logical-reasoning benchmarks.",
-          "content_hash": "500b2f5c4ffb7ebc3625ad7bba5ff1f62169c941a8bc9da937d8b899677085e6",
           "source_rank": null,
           "near_duplicate_of": null
         },
@@ -1221,27 +1292,28 @@
           "content_hash": "5e95ad74a8b525d6b0aa264ac13fd7f7133f9ca4ba6cd699a7ddd2331a65ba49",
           "source_rank": null,
           "near_duplicate_of": null
+        },
+        {
+          "candidate_id": "nlp_nf_001_b",
+          "title": "Chain-of-Thought Fails on Narrow Reasoning Tasks",
+          "abstract": "We find no benefit of CoT on constrained logical-reasoning benchmarks.",
+          "content_hash": "500b2f5c4ffb7ebc3625ad7bba5ff1f62169c941a8bc9da937d8b899677085e6",
+          "source_rank": null,
+          "near_duplicate_of": null
         }
       ]
     },
     {
       "case_id": "ml_disc_ei_001",
+      "ranking_surface": "discovery_ranking",
+      "research_question": "ResNet",
+      "ranking_intent": "literature_mapping",
+      "adjudication_context": "Discovery surface: the researcher wants to map the literature around a specific named entity (paper, model, gene, drug). Canonical and directly-named works rank highest.",
       "domain": "machine_learning",
-      "surface": "discovery_ranking",
-      "intent": "literature_mapping",
+      "relevance_rubric_version": "research_utility_0_to_3_v1",
       "primary_slice": "exact_identifier",
       "secondary_slices": [],
-      "split": "calibration",
-      "query_text": "ResNet",
       "candidates": [
-        {
-          "candidate_id": "ml_ei_001_a",
-          "title": "Deep Residual Learning for Image Recognition (ResNet)",
-          "abstract": "We introduce residual connections enabling training of very deep networks.",
-          "content_hash": "e881b8b99fd617e1d7e4bed13c186c3bd105d94ba6d93f2054d3233fb7c2e19e",
-          "source_rank": null,
-          "near_duplicate_of": null
-        },
         {
           "candidate_id": "ml_ei_001_b",
           "title": "Identity Mappings in Deep Residual Networks",
@@ -1265,18 +1337,27 @@
           "content_hash": "c2a480be9d1895c0262e1bae8dc4e94952a34e94950682f903ac28dc811d2d96",
           "source_rank": null,
           "near_duplicate_of": null
+        },
+        {
+          "candidate_id": "ml_ei_001_a",
+          "title": "Deep Residual Learning for Image Recognition (ResNet)",
+          "abstract": "We introduce residual connections enabling training of very deep networks.",
+          "content_hash": "e881b8b99fd617e1d7e4bed13c186c3bd105d94ba6d93f2054d3233fb7c2e19e",
+          "source_rank": null,
+          "near_duplicate_of": null
         }
       ]
     },
     {
       "case_id": "bio_disc_ei_001",
+      "ranking_surface": "discovery_ranking",
+      "research_question": "AlphaFold",
+      "ranking_intent": "literature_mapping",
+      "adjudication_context": "Discovery surface: the researcher wants to map the literature around a specific named entity (paper, model, gene, drug). Canonical and directly-named works rank highest.",
       "domain": "biomedical",
-      "surface": "discovery_ranking",
-      "intent": "literature_mapping",
+      "relevance_rubric_version": "research_utility_0_to_3_v1",
       "primary_slice": "exact_identifier",
       "secondary_slices": [],
-      "split": "development",
-      "query_text": "AlphaFold",
       "candidates": [
         {
           "candidate_id": "bio_ei_001_a",
@@ -1287,10 +1368,10 @@
           "near_duplicate_of": null
         },
         {
-          "candidate_id": "bio_ei_001_b",
-          "title": "AlphaFold-Multimer: Complex Prediction",
-          "abstract": "We extend AlphaFold to predict multi-chain complexes.",
-          "content_hash": "3f4d8b04560a313940d70d21b28329f3e1972e04c3c95ff39796aa0f2f0fbcc9",
+          "candidate_id": "bio_ei_001_d",
+          "title": "ESMFold: Fast Protein Structure Prediction",
+          "abstract": "A language-model-based structure predictor, distinct from AlphaFold.",
+          "content_hash": "597a64b5694abab0c0257af1d5cf2abc47b6605352e2a0116c520183c6614a45",
           "source_rank": null,
           "near_duplicate_of": null
         },
@@ -1303,10 +1384,10 @@
           "near_duplicate_of": null
         },
         {
-          "candidate_id": "bio_ei_001_d",
-          "title": "ESMFold: Fast Protein Structure Prediction",
-          "abstract": "A language-model-based structure predictor, distinct from AlphaFold.",
-          "content_hash": "597a64b5694abab0c0257af1d5cf2abc47b6605352e2a0116c520183c6614a45",
+          "candidate_id": "bio_ei_001_b",
+          "title": "AlphaFold-Multimer: Complex Prediction",
+          "abstract": "We extend AlphaFold to predict multi-chain complexes.",
+          "content_hash": "3f4d8b04560a313940d70d21b28329f3e1972e04c3c95ff39796aa0f2f0fbcc9",
           "source_rank": null,
           "near_duplicate_of": null
         }
@@ -1314,14 +1395,23 @@
     },
     {
       "case_id": "nlp_disc_ei_001",
+      "ranking_surface": "discovery_ranking",
+      "research_question": "GPT-3",
+      "ranking_intent": "literature_mapping",
+      "adjudication_context": "Discovery surface: the researcher wants to map the literature around a specific named entity (paper, model, gene, drug). Canonical and directly-named works rank highest.",
       "domain": "nlp",
-      "surface": "discovery_ranking",
-      "intent": "literature_mapping",
+      "relevance_rubric_version": "research_utility_0_to_3_v1",
       "primary_slice": "exact_identifier",
       "secondary_slices": [],
-      "split": "held_out",
-      "query_text": "GPT-3",
       "candidates": [
+        {
+          "candidate_id": "nlp_ei_001_d",
+          "title": "What Does GPT-3 Know About the World?",
+          "abstract": "We probe GPT-3 for factual and commonsense knowledge.",
+          "content_hash": "c3ed8b673e9b86cde1cff1683817e7576c6388cbf72adc1be223578f6e38ef8b",
+          "source_rank": null,
+          "near_duplicate_of": null
+        },
         {
           "candidate_id": "nlp_ei_001_a",
           "title": "Language Models are Few-Shot Learners (GPT-3)",
@@ -1345,48 +1435,25 @@
           "content_hash": "c7dc237b2918b259b9f5c3de31d0bb11f98ea201882075915fa11cc4499a00b2",
           "source_rank": null,
           "near_duplicate_of": null
-        },
-        {
-          "candidate_id": "nlp_ei_001_d",
-          "title": "What Does GPT-3 Know About the World?",
-          "abstract": "We probe GPT-3 for factual and commonsense knowledge.",
-          "content_hash": "c3ed8b673e9b86cde1cff1683817e7576c6388cbf72adc1be223578f6e38ef8b",
-          "source_rank": null,
-          "near_duplicate_of": null
         }
       ]
     },
     {
       "case_id": "ml_disc_nt_001",
+      "ranking_surface": "discovery_ranking",
+      "research_question": "image segmentation with transformers",
+      "ranking_intent": "general_research_relevance",
+      "adjudication_context": "Discovery surface: a researcher is exploring the literature for an open-ended research question. Rank by how useful each candidate is as a starting point.",
       "domain": "machine_learning",
-      "surface": "discovery_ranking",
-      "intent": "general_research_relevance",
+      "relevance_rubric_version": "research_utility_0_to_3_v1",
       "primary_slice": "neutral",
       "secondary_slices": [],
-      "split": "development",
-      "query_text": "image segmentation with transformers",
       "candidates": [
-        {
-          "candidate_id": "ml_nt_001_a",
-          "title": "Segment Anything (SAM)",
-          "abstract": "We introduce a foundation model for promptable image segmentation.",
-          "content_hash": "b8a28cdd2943f74be6494a6c6cf0288f91f497d7759da935aeadc6fb3ed48ce4",
-          "source_rank": null,
-          "near_duplicate_of": null
-        },
         {
           "candidate_id": "ml_nt_001_b",
           "title": "Mask2Former for Universal Image Segmentation",
           "abstract": "A masked-transformer architecture unifying segmentation tasks.",
           "content_hash": "4ec98de26fb31d5478dabcc9801e7573e6a064f3e3eca9f74cf73808dcabb2a8",
-          "source_rank": null,
-          "near_duplicate_of": null
-        },
-        {
-          "candidate_id": "ml_nt_001_c",
-          "title": "U-Net for Biomedical Image Segmentation",
-          "abstract": "A CNN architecture widely used for biomedical segmentation.",
-          "content_hash": "3d73abee2dc89676a162576ffa5fbedc2c58a4b3f7279af40888e96e49ebec68",
           "source_rank": null,
           "near_duplicate_of": null
         },
@@ -1397,18 +1464,35 @@
           "content_hash": "a087cc3c2c5917c6488e8f6b9fb3705454a775224fcce5ad51ec59f2def7b82d",
           "source_rank": null,
           "near_duplicate_of": null
+        },
+        {
+          "candidate_id": "ml_nt_001_a",
+          "title": "Segment Anything (SAM)",
+          "abstract": "We introduce a foundation model for promptable image segmentation.",
+          "content_hash": "b8a28cdd2943f74be6494a6c6cf0288f91f497d7759da935aeadc6fb3ed48ce4",
+          "source_rank": null,
+          "near_duplicate_of": null
+        },
+        {
+          "candidate_id": "ml_nt_001_c",
+          "title": "U-Net for Biomedical Image Segmentation",
+          "abstract": "A CNN architecture widely used for biomedical segmentation.",
+          "content_hash": "3d73abee2dc89676a162576ffa5fbedc2c58a4b3f7279af40888e96e49ebec68",
+          "source_rank": null,
+          "near_duplicate_of": null
         }
       ]
     },
     {
       "case_id": "bio_disc_nt_001",
+      "ranking_surface": "discovery_ranking",
+      "research_question": "spatial transcriptomics methods",
+      "ranking_intent": "general_research_relevance",
+      "adjudication_context": "Discovery surface: a researcher is exploring the literature for an open-ended research question. Rank by how useful each candidate is as a starting point.",
       "domain": "biomedical",
-      "surface": "discovery_ranking",
-      "intent": "general_research_relevance",
+      "relevance_rubric_version": "research_utility_0_to_3_v1",
       "primary_slice": "neutral",
       "secondary_slices": [],
-      "split": "held_out",
-      "query_text": "spatial transcriptomics methods",
       "candidates": [
         {
           "candidate_id": "bio_nt_001_a",
@@ -1446,27 +1530,28 @@
     },
     {
       "case_id": "nlp_disc_nt_001",
+      "ranking_surface": "discovery_ranking",
+      "research_question": "semantic parsing for question answering",
+      "ranking_intent": "general_research_relevance",
+      "adjudication_context": "Discovery surface: a researcher is exploring the literature for an open-ended research question. Rank by how useful each candidate is as a starting point.",
       "domain": "nlp",
-      "surface": "discovery_ranking",
-      "intent": "general_research_relevance",
+      "relevance_rubric_version": "research_utility_0_to_3_v1",
       "primary_slice": "neutral",
       "secondary_slices": [],
-      "split": "calibration",
-      "query_text": "semantic parsing for question answering",
       "candidates": [
-        {
-          "candidate_id": "nlp_nt_001_a",
-          "title": "Spider: A Large Human-Labeled Dataset for Semantic Parsing",
-          "abstract": "We release a benchmark for complex, cross-database semantic parsing.",
-          "content_hash": "a006e27c2bef7ee60b6cd0289c0a2d60392b9f5064f427fa3c595fd02c36fc97",
-          "source_rank": null,
-          "near_duplicate_of": null
-        },
         {
           "candidate_id": "nlp_nt_001_b",
           "title": "Grammar-Constrained Semantic Parsing with Transformers",
           "abstract": "We decode into grammatical logical forms for question answering.",
           "content_hash": "e825da266343fc03f4433c380b6e0038ba04f9e5ccb2a94aa64abd39fafb5a81",
+          "source_rank": null,
+          "near_duplicate_of": null
+        },
+        {
+          "candidate_id": "nlp_nt_001_d",
+          "title": "Weakly Supervised Semantic Parsing",
+          "abstract": "We train semantic parsers from denotations rather than logical forms.",
+          "content_hash": "19aa6c2a0d461d33aa821a001b118a161b2f0b7cd2c0ee8a64f4421bc69e8721",
           "source_rank": null,
           "near_duplicate_of": null
         },
@@ -1479,10 +1564,10 @@
           "near_duplicate_of": null
         },
         {
-          "candidate_id": "nlp_nt_001_d",
-          "title": "Weakly Supervised Semantic Parsing",
-          "abstract": "We train semantic parsers from denotations rather than logical forms.",
-          "content_hash": "19aa6c2a0d461d33aa821a001b118a161b2f0b7cd2c0ee8a64f4421bc69e8721",
+          "candidate_id": "nlp_nt_001_a",
+          "title": "Spider: A Large Human-Labeled Dataset for Semantic Parsing",
+          "abstract": "We release a benchmark for complex, cross-database semantic parsing.",
+          "content_hash": "a006e27c2bef7ee60b6cd0289c0a2d60392b9f5064f427fa3c595fd02c36fc97",
           "source_rank": null,
           "near_duplicate_of": null
         }
@@ -1490,14 +1575,23 @@
     },
     {
       "case_id": "ml_ret_lt_001",
+      "ranking_surface": "retrieval_ranking",
+      "research_question": "attention mechanism long context",
+      "ranking_intent": "general_research_relevance",
+      "adjudication_context": "Retrieval surface: short keyword-style query against a candidate pool. Rank by topical + evidence utility.",
       "domain": "machine_learning",
-      "surface": "retrieval_ranking",
-      "intent": "general_research_relevance",
+      "relevance_rubric_version": "research_utility_0_to_3_v1",
       "primary_slice": "lexical_trap",
       "secondary_slices": [],
-      "split": "held_out",
-      "query_text": "attention mechanism long context",
       "candidates": [
+        {
+          "candidate_id": "mlr_lt_001_d",
+          "title": "Long-Context Transformers: A Survey",
+          "abstract": "Survey of methods extending Transformer context length.",
+          "content_hash": "facb1e280f2386c6bde1146bdab099aec04a5826080286602c715d872403ed44",
+          "source_rank": null,
+          "near_duplicate_of": null
+        },
         {
           "candidate_id": "mlr_lt_001_a",
           "title": "Longformer: Long-Document Transformer",
@@ -1521,27 +1615,28 @@
           "content_hash": "6d6b66d1bf23910c8b690ee73dd760f7d6abc7e9beaa0385e922ea6d7e5da74b",
           "source_rank": null,
           "near_duplicate_of": null
-        },
-        {
-          "candidate_id": "mlr_lt_001_d",
-          "title": "Long-Context Transformers: A Survey",
-          "abstract": "Survey of methods extending Transformer context length.",
-          "content_hash": "facb1e280f2386c6bde1146bdab099aec04a5826080286602c715d872403ed44",
-          "source_rank": null,
-          "near_duplicate_of": null
         }
       ]
     },
     {
       "case_id": "bio_ret_lt_001",
+      "ranking_surface": "retrieval_ranking",
+      "research_question": "cell cycle regulation tumor",
+      "ranking_intent": "evidence_support",
+      "adjudication_context": "Retrieval surface: rank by strength of primary evidence.",
       "domain": "biomedical",
-      "surface": "retrieval_ranking",
-      "intent": "evidence_support",
+      "relevance_rubric_version": "research_utility_0_to_3_v1",
       "primary_slice": "lexical_trap",
       "secondary_slices": [],
-      "split": "calibration",
-      "query_text": "cell cycle regulation tumor",
       "candidates": [
+        {
+          "candidate_id": "bior_lt_001_d",
+          "title": "Targeting CDK4/6 in Breast Cancer",
+          "abstract": "We evaluate CDK4/6 inhibitors in ER+ breast tumors.",
+          "content_hash": "74351982ffcc8d1a2f0fe05216cf5906c587bae1609c944f21ffbd2f0cd6c0d7",
+          "source_rank": null,
+          "near_duplicate_of": null
+        },
         {
           "candidate_id": "bior_lt_001_a",
           "title": "Cyclin-CDK Regulation in Tumor Progression",
@@ -1565,40 +1660,25 @@
           "content_hash": "468b22a0697edd723a0ea255a46fb39c3f50368260de316c0f8e30e6c0387327",
           "source_rank": null,
           "near_duplicate_of": null
-        },
-        {
-          "candidate_id": "bior_lt_001_d",
-          "title": "Targeting CDK4/6 in Breast Cancer",
-          "abstract": "We evaluate CDK4/6 inhibitors in ER+ breast tumors.",
-          "content_hash": "74351982ffcc8d1a2f0fe05216cf5906c587bae1609c944f21ffbd2f0cd6c0d7",
-          "source_rank": null,
-          "near_duplicate_of": null
         }
       ]
     },
     {
       "case_id": "nlp_ret_lt_001",
+      "ranking_surface": "retrieval_ranking",
+      "research_question": "word embeddings semantic similarity",
+      "ranking_intent": "general_research_relevance",
+      "adjudication_context": "Retrieval surface: short keyword-style query against a candidate pool. Rank by topical + evidence utility.",
       "domain": "nlp",
-      "surface": "retrieval_ranking",
-      "intent": "general_research_relevance",
+      "relevance_rubric_version": "research_utility_0_to_3_v1",
       "primary_slice": "lexical_trap",
       "secondary_slices": [],
-      "split": "development",
-      "query_text": "word embeddings semantic similarity",
       "candidates": [
         {
           "candidate_id": "nlpr_lt_001_a",
           "title": "word2vec: Efficient Word Embeddings",
           "abstract": "We learn dense word vectors capturing semantic similarity.",
           "content_hash": "1993b63b5a2fb840eceb25dfe0eb1ca20e44ca06b551f3cd6ab6bd1f64daffdb",
-          "source_rank": null,
-          "near_duplicate_of": null
-        },
-        {
-          "candidate_id": "nlpr_lt_001_b",
-          "title": "GloVe: Global Vectors for Word Representation",
-          "abstract": "We train word embeddings from co-occurrence statistics.",
-          "content_hash": "41d5c414850936c54ca8899a70e84e7ea7f48d0a00fde6d132810d1aff758741",
           "source_rank": null,
           "near_duplicate_of": null
         },
@@ -1617,35 +1697,28 @@
           "content_hash": "e7ee4d127a34498355e62899532499dd50e0aa22297995a61c1d58a732325196",
           "source_rank": null,
           "near_duplicate_of": null
+        },
+        {
+          "candidate_id": "nlpr_lt_001_b",
+          "title": "GloVe: Global Vectors for Word Representation",
+          "abstract": "We train word embeddings from co-occurrence statistics.",
+          "content_hash": "41d5c414850936c54ca8899a70e84e7ea7f48d0a00fde6d132810d1aff758741",
+          "source_rank": null,
+          "near_duplicate_of": null
         }
       ]
     },
     {
       "case_id": "ml_ret_sp_001",
+      "ranking_surface": "retrieval_ranking",
+      "research_question": "speeding up inference on edge devices",
+      "ranking_intent": "method_relevance",
+      "adjudication_context": "Retrieval surface: rank by method/algorithm relevance.",
       "domain": "machine_learning",
-      "surface": "retrieval_ranking",
-      "intent": "method_relevance",
+      "relevance_rubric_version": "research_utility_0_to_3_v1",
       "primary_slice": "semantic_paraphrase",
       "secondary_slices": [],
-      "split": "calibration",
-      "query_text": "speeding up inference on edge devices",
       "candidates": [
-        {
-          "candidate_id": "mlr_sp_001_a",
-          "title": "Quantization for Efficient Neural Inference",
-          "abstract": "INT8 quantization reduces model size and latency for edge deployment.",
-          "content_hash": "527b614bf248685a3961670a05be5d6352861b975364bc5cd742fd3b2d29702e",
-          "source_rank": null,
-          "near_duplicate_of": null
-        },
-        {
-          "candidate_id": "mlr_sp_001_b",
-          "title": "Knowledge Distillation for Compact Models",
-          "abstract": "We transfer large-model knowledge into small student models.",
-          "content_hash": "0b5d2da742c59ec919a6942596366f631d41eaf279f6c7db7579c42ba7ea9981",
-          "source_rank": null,
-          "near_duplicate_of": null
-        },
         {
           "candidate_id": "mlr_sp_001_c",
           "title": "Pruning Filters for Efficient ConvNets",
@@ -1661,27 +1734,36 @@
           "content_hash": "35d213e38c09e266c37c3225d18c76a8d9b2b9421d26253e95ef6d1d08033a41",
           "source_rank": null,
           "near_duplicate_of": null
+        },
+        {
+          "candidate_id": "mlr_sp_001_b",
+          "title": "Knowledge Distillation for Compact Models",
+          "abstract": "We transfer large-model knowledge into small student models.",
+          "content_hash": "0b5d2da742c59ec919a6942596366f631d41eaf279f6c7db7579c42ba7ea9981",
+          "source_rank": null,
+          "near_duplicate_of": null
+        },
+        {
+          "candidate_id": "mlr_sp_001_a",
+          "title": "Quantization for Efficient Neural Inference",
+          "abstract": "INT8 quantization reduces model size and latency for edge deployment.",
+          "content_hash": "527b614bf248685a3961670a05be5d6352861b975364bc5cd742fd3b2d29702e",
+          "source_rank": null,
+          "near_duplicate_of": null
         }
       ]
     },
     {
       "case_id": "bio_ret_sp_001",
+      "ranking_surface": "retrieval_ranking",
+      "research_question": "non-invasive prenatal testing accuracy",
+      "ranking_intent": "evidence_support",
+      "adjudication_context": "Retrieval surface: rank by strength of primary evidence.",
       "domain": "biomedical",
-      "surface": "retrieval_ranking",
-      "intent": "evidence_support",
+      "relevance_rubric_version": "research_utility_0_to_3_v1",
       "primary_slice": "semantic_paraphrase",
       "secondary_slices": [],
-      "split": "development",
-      "query_text": "non-invasive prenatal testing accuracy",
       "candidates": [
-        {
-          "candidate_id": "bior_sp_001_a",
-          "title": "Cell-Free DNA Screening for Fetal Aneuploidy",
-          "abstract": "We evaluate NIPT sensitivity and specificity across large cohorts.",
-          "content_hash": "e521f955303dc40c238bd5f117492196419a2a79a15e71c8180bd7f0f7c7be81",
-          "source_rank": null,
-          "near_duplicate_of": null
-        },
         {
           "candidate_id": "bior_sp_001_b",
           "title": "False-Positive Rates in Non-Invasive Prenatal Screening",
@@ -1691,10 +1773,10 @@
           "near_duplicate_of": null
         },
         {
-          "candidate_id": "bior_sp_001_c",
-          "title": "Genome-Wide NIPT for Subchromosomal Events",
-          "abstract": "We extend NIPT to detect microdeletions and microduplications.",
-          "content_hash": "3059dcdd49a22664b19c4ad5945d41f03f1c7c2f04dc744bf55b5ed3730b08fc",
+          "candidate_id": "bior_sp_001_a",
+          "title": "Cell-Free DNA Screening for Fetal Aneuploidy",
+          "abstract": "We evaluate NIPT sensitivity and specificity across large cohorts.",
+          "content_hash": "e521f955303dc40c238bd5f117492196419a2a79a15e71c8180bd7f0f7c7be81",
           "source_rank": null,
           "near_duplicate_of": null
         },
@@ -1705,18 +1787,27 @@
           "content_hash": "1a488e05dc042ec8cfd42f8da82bb267de130db857027b5285ceb86c5c75de8a",
           "source_rank": null,
           "near_duplicate_of": null
+        },
+        {
+          "candidate_id": "bior_sp_001_c",
+          "title": "Genome-Wide NIPT for Subchromosomal Events",
+          "abstract": "We extend NIPT to detect microdeletions and microduplications.",
+          "content_hash": "3059dcdd49a22664b19c4ad5945d41f03f1c7c2f04dc744bf55b5ed3730b08fc",
+          "source_rank": null,
+          "near_duplicate_of": null
         }
       ]
     },
     {
       "case_id": "nlp_ret_sp_001",
+      "ranking_surface": "retrieval_ranking",
+      "research_question": "detecting harmful content online",
+      "ranking_intent": "general_research_relevance",
+      "adjudication_context": "Retrieval surface: short keyword-style query against a candidate pool. Rank by topical + evidence utility.",
       "domain": "nlp",
-      "surface": "retrieval_ranking",
-      "intent": "general_research_relevance",
+      "relevance_rubric_version": "research_utility_0_to_3_v1",
       "primary_slice": "semantic_paraphrase",
       "secondary_slices": [],
-      "split": "held_out",
-      "query_text": "detecting harmful content online",
       "candidates": [
         {
           "candidate_id": "nlpr_sp_001_a",
@@ -1727,10 +1818,10 @@
           "near_duplicate_of": null
         },
         {
-          "candidate_id": "nlpr_sp_001_b",
-          "title": "Hate Speech Detection in Social Media",
-          "abstract": "We address cross-lingual hate-speech detection.",
-          "content_hash": "77661cb356c6f449a1e49580d0f49690be0c23daa44fc6f6e5a609eb7e2e5f18",
+          "candidate_id": "nlpr_sp_001_d",
+          "title": "Detecting Misinformation with Stance Detection",
+          "abstract": "We detect misinformation via stance classification.",
+          "content_hash": "e452e2ca2b9389085d6932e8bbd1a14958d5daac36ce7e368908d4aecc7ab94d",
           "source_rank": null,
           "near_duplicate_of": null
         },
@@ -1743,10 +1834,10 @@
           "near_duplicate_of": null
         },
         {
-          "candidate_id": "nlpr_sp_001_d",
-          "title": "Detecting Misinformation with Stance Detection",
-          "abstract": "We detect misinformation via stance classification.",
-          "content_hash": "e452e2ca2b9389085d6932e8bbd1a14958d5daac36ce7e368908d4aecc7ab94d",
+          "candidate_id": "nlpr_sp_001_b",
+          "title": "Hate Speech Detection in Social Media",
+          "abstract": "We address cross-lingual hate-speech detection.",
+          "content_hash": "77661cb356c6f449a1e49580d0f49690be0c23daa44fc6f6e5a609eb7e2e5f18",
           "source_rank": null,
           "near_duplicate_of": null
         }
@@ -1754,30 +1845,15 @@
     },
     {
       "case_id": "ml_ret_mv_001",
+      "ranking_surface": "retrieval_ranking",
+      "research_question": "contrastive loss formulation",
+      "ranking_intent": "method_relevance",
+      "adjudication_context": "Retrieval surface: rank by method/algorithm relevance.",
       "domain": "machine_learning",
-      "surface": "retrieval_ranking",
-      "intent": "method_relevance",
+      "relevance_rubric_version": "research_utility_0_to_3_v1",
       "primary_slice": "method_vs_application",
       "secondary_slices": [],
-      "split": "development",
-      "query_text": "contrastive loss formulation",
       "candidates": [
-        {
-          "candidate_id": "mlr_mv_001_a",
-          "title": "SimCLR: A Simple Contrastive Learning Framework",
-          "abstract": "We introduce a contrastive loss based on InfoNCE over augmented views.",
-          "content_hash": "da2bcb74c69eef70fef7f4748681d7784fa0cea116d51c573902e5267238cc2e",
-          "source_rank": null,
-          "near_duplicate_of": null
-        },
-        {
-          "candidate_id": "mlr_mv_001_b",
-          "title": "Contrastive Representations for Medical Image Retrieval",
-          "abstract": "We use contrastive pre-training for a clinical image retrieval application.",
-          "content_hash": "4116daa2e1b82ee4015691861baec516bdf787c3de57c9545816364713d6def7",
-          "source_rank": null,
-          "near_duplicate_of": null
-        },
         {
           "candidate_id": "mlr_mv_001_c",
           "title": "MoCo: Momentum Contrast for Unsupervised Representation",
@@ -1793,35 +1869,36 @@
           "content_hash": "2cdbda5a852c56ff44c69c262704fe9eeca6a1083929b837491206bed6707da0",
           "source_rank": null,
           "near_duplicate_of": null
+        },
+        {
+          "candidate_id": "mlr_mv_001_a",
+          "title": "SimCLR: A Simple Contrastive Learning Framework",
+          "abstract": "We introduce a contrastive loss based on InfoNCE over augmented views.",
+          "content_hash": "da2bcb74c69eef70fef7f4748681d7784fa0cea116d51c573902e5267238cc2e",
+          "source_rank": null,
+          "near_duplicate_of": null
+        },
+        {
+          "candidate_id": "mlr_mv_001_b",
+          "title": "Contrastive Representations for Medical Image Retrieval",
+          "abstract": "We use contrastive pre-training for a clinical image retrieval application.",
+          "content_hash": "4116daa2e1b82ee4015691861baec516bdf787c3de57c9545816364713d6def7",
+          "source_rank": null,
+          "near_duplicate_of": null
         }
       ]
     },
     {
       "case_id": "bio_ret_mv_001",
+      "ranking_surface": "retrieval_ranking",
+      "research_question": "fold-recognition algorithms",
+      "ranking_intent": "method_relevance",
+      "adjudication_context": "Retrieval surface: rank by method/algorithm relevance.",
       "domain": "biomedical",
-      "surface": "retrieval_ranking",
-      "intent": "method_relevance",
+      "relevance_rubric_version": "research_utility_0_to_3_v1",
       "primary_slice": "method_vs_application",
       "secondary_slices": [],
-      "split": "held_out",
-      "query_text": "fold-recognition algorithms",
       "candidates": [
-        {
-          "candidate_id": "bior_mv_001_a",
-          "title": "HHsearch: Protein Homology Detection by HMM-HMM",
-          "abstract": "We propose an HMM-HMM method sensitive enough for remote fold recognition.",
-          "content_hash": "992c8ddf149dba22e7b038ea74290bd013f7eb8bde540329b45e8a37b5430527",
-          "source_rank": null,
-          "near_duplicate_of": null
-        },
-        {
-          "candidate_id": "bior_mv_001_b",
-          "title": "Fold-Recognition for Metagenomic Protein Function",
-          "abstract": "We apply fold-recognition to annotate metagenomic sequences.",
-          "content_hash": "9f061f324ae2f440b0a7be1dfee52c9422b1786437cb286b88b7029d091341a0",
-          "source_rank": null,
-          "near_duplicate_of": null
-        },
         {
           "candidate_id": "bior_mv_001_c",
           "title": "DeepMind AlphaFold for Fold Recognition",
@@ -1837,24 +1914,41 @@
           "content_hash": "804b7450c9eb6a91f7b307717cdcbd6027272bf91ee803a5b3463eb7382eb54a",
           "source_rank": null,
           "near_duplicate_of": null
+        },
+        {
+          "candidate_id": "bior_mv_001_b",
+          "title": "Fold-Recognition for Metagenomic Protein Function",
+          "abstract": "We apply fold-recognition to annotate metagenomic sequences.",
+          "content_hash": "9f061f324ae2f440b0a7be1dfee52c9422b1786437cb286b88b7029d091341a0",
+          "source_rank": null,
+          "near_duplicate_of": null
+        },
+        {
+          "candidate_id": "bior_mv_001_a",
+          "title": "HHsearch: Protein Homology Detection by HMM-HMM",
+          "abstract": "We propose an HMM-HMM method sensitive enough for remote fold recognition.",
+          "content_hash": "992c8ddf149dba22e7b038ea74290bd013f7eb8bde540329b45e8a37b5430527",
+          "source_rank": null,
+          "near_duplicate_of": null
         }
       ]
     },
     {
       "case_id": "nlp_ret_mv_001",
+      "ranking_surface": "retrieval_ranking",
+      "research_question": "dependency parsing algorithms",
+      "ranking_intent": "method_relevance",
+      "adjudication_context": "Retrieval surface: rank by method/algorithm relevance.",
       "domain": "nlp",
-      "surface": "retrieval_ranking",
-      "intent": "method_relevance",
+      "relevance_rubric_version": "research_utility_0_to_3_v1",
       "primary_slice": "method_vs_application",
       "secondary_slices": [],
-      "split": "calibration",
-      "query_text": "dependency parsing algorithms",
       "candidates": [
         {
-          "candidate_id": "nlpr_mv_001_a",
-          "title": "A Fast and Accurate Dependency Parser using Neural Networks",
-          "abstract": "We propose a neural transition-based dependency parser.",
-          "content_hash": "8d6c3de075533914f65b3105d32cb4b238c15a6245533f15e625515dce726fef",
+          "candidate_id": "nlpr_mv_001_c",
+          "title": "Biaffine Attention for Dependency Parsing",
+          "abstract": "We score arcs with biaffine attention.",
+          "content_hash": "c072eb0f8f35b23bff621c874dda528d25bd56c57174d3f1c665071290243580",
           "source_rank": null,
           "near_duplicate_of": null
         },
@@ -1867,10 +1961,10 @@
           "near_duplicate_of": null
         },
         {
-          "candidate_id": "nlpr_mv_001_c",
-          "title": "Biaffine Attention for Dependency Parsing",
-          "abstract": "We score arcs with biaffine attention.",
-          "content_hash": "c072eb0f8f35b23bff621c874dda528d25bd56c57174d3f1c665071290243580",
+          "candidate_id": "nlpr_mv_001_a",
+          "title": "A Fast and Accurate Dependency Parser using Neural Networks",
+          "abstract": "We propose a neural transition-based dependency parser.",
+          "content_hash": "8d6c3de075533914f65b3105d32cb4b238c15a6245533f15e625515dce726fef",
           "source_rank": null,
           "near_duplicate_of": null
         },
@@ -1886,13 +1980,14 @@
     },
     {
       "case_id": "ml_ret_rv_001",
+      "ranking_surface": "retrieval_ranking",
+      "research_question": "federated learning communication efficiency results",
+      "ranking_intent": "evidence_support",
+      "adjudication_context": "Retrieval surface: rank by strength of primary evidence.",
       "domain": "machine_learning",
-      "surface": "retrieval_ranking",
-      "intent": "evidence_support",
+      "relevance_rubric_version": "research_utility_0_to_3_v1",
       "primary_slice": "review_vs_primary",
       "secondary_slices": [],
-      "split": "held_out",
-      "query_text": "federated learning communication efficiency results",
       "candidates": [
         {
           "candidate_id": "mlr_rv_001_a",
@@ -1903,10 +1998,10 @@
           "near_duplicate_of": null
         },
         {
-          "candidate_id": "mlr_rv_001_b",
-          "title": "Federated Learning: A Survey",
-          "abstract": "We review FL algorithms including communication-efficiency strategies.",
-          "content_hash": "cfe35c28607393ac496a371b50e2bece7e9403d9cb35b6259c63f35a788bb206",
+          "candidate_id": "mlr_rv_001_d",
+          "title": "Trends in Distributed Machine Learning",
+          "abstract": "Narrative review of distributed training paradigms.",
+          "content_hash": "3d74c2c50a53b4a28312f0027d0287b6069b6034b4c404d58921e5bd42b3759e",
           "source_rank": null,
           "near_duplicate_of": null
         },
@@ -1919,10 +2014,10 @@
           "near_duplicate_of": null
         },
         {
-          "candidate_id": "mlr_rv_001_d",
-          "title": "Trends in Distributed Machine Learning",
-          "abstract": "Narrative review of distributed training paradigms.",
-          "content_hash": "3d74c2c50a53b4a28312f0027d0287b6069b6034b4c404d58921e5bd42b3759e",
+          "candidate_id": "mlr_rv_001_b",
+          "title": "Federated Learning: A Survey",
+          "abstract": "We review FL algorithms including communication-efficiency strategies.",
+          "content_hash": "cfe35c28607393ac496a371b50e2bece7e9403d9cb35b6259c63f35a788bb206",
           "source_rank": null,
           "near_duplicate_of": null
         }
@@ -1930,30 +2025,15 @@
     },
     {
       "case_id": "bio_ret_rv_001",
+      "ranking_surface": "retrieval_ranking",
+      "research_question": "psilocybin depression clinical trial",
+      "ranking_intent": "evidence_support",
+      "adjudication_context": "Retrieval surface: rank by strength of primary evidence.",
       "domain": "biomedical",
-      "surface": "retrieval_ranking",
-      "intent": "evidence_support",
+      "relevance_rubric_version": "research_utility_0_to_3_v1",
       "primary_slice": "review_vs_primary",
       "secondary_slices": [],
-      "split": "development",
-      "query_text": "psilocybin depression clinical trial",
       "candidates": [
-        {
-          "candidate_id": "bior_rv_001_a",
-          "title": "Psilocybin Therapy for Treatment-Resistant Depression (JAMA Psychiatry)",
-          "abstract": "Randomized trial shows rapid antidepressant effects of psilocybin.",
-          "content_hash": "dc7c30aba858fa5dd8cdac10df3272ff02fe73efc938ea4306bd759af0bbd030",
-          "source_rank": null,
-          "near_duplicate_of": null
-        },
-        {
-          "candidate_id": "bior_rv_001_b",
-          "title": "Psychedelics in Psychiatry: A Narrative Review",
-          "abstract": "We synthesize evidence on psychedelic-assisted therapy.",
-          "content_hash": "6c89b4c4a66511dc221b0b860c213ff0c4b213e419b23f79df032ed92c80d9fb",
-          "source_rank": null,
-          "near_duplicate_of": null
-        },
         {
           "candidate_id": "bior_rv_001_c",
           "title": "Psilocybin for Cancer-Related Anxiety (J Psychopharmacol)",
@@ -1969,27 +2049,36 @@
           "content_hash": "b755112a8159b315a28ee3b422625e469d0dd2b3ee351518709353503b1fe93d",
           "source_rank": null,
           "near_duplicate_of": null
+        },
+        {
+          "candidate_id": "bior_rv_001_a",
+          "title": "Psilocybin Therapy for Treatment-Resistant Depression (JAMA Psychiatry)",
+          "abstract": "Randomized trial shows rapid antidepressant effects of psilocybin.",
+          "content_hash": "dc7c30aba858fa5dd8cdac10df3272ff02fe73efc938ea4306bd759af0bbd030",
+          "source_rank": null,
+          "near_duplicate_of": null
+        },
+        {
+          "candidate_id": "bior_rv_001_b",
+          "title": "Psychedelics in Psychiatry: A Narrative Review",
+          "abstract": "We synthesize evidence on psychedelic-assisted therapy.",
+          "content_hash": "6c89b4c4a66511dc221b0b860c213ff0c4b213e419b23f79df032ed92c80d9fb",
+          "source_rank": null,
+          "near_duplicate_of": null
         }
       ]
     },
     {
       "case_id": "nlp_ret_rv_001",
+      "ranking_surface": "retrieval_ranking",
+      "research_question": "BERT fine-tuning GLUE benchmark results",
+      "ranking_intent": "evidence_support",
+      "adjudication_context": "Retrieval surface: rank by strength of primary evidence.",
       "domain": "nlp",
-      "surface": "retrieval_ranking",
-      "intent": "evidence_support",
+      "relevance_rubric_version": "research_utility_0_to_3_v1",
       "primary_slice": "review_vs_primary",
       "secondary_slices": [],
-      "split": "calibration",
-      "query_text": "BERT fine-tuning GLUE benchmark results",
       "candidates": [
-        {
-          "candidate_id": "nlpr_rv_001_a",
-          "title": "BERT: Pre-training of Deep Bidirectional Transformers",
-          "abstract": "We report GLUE gains from BERT fine-tuning.",
-          "content_hash": "47ab20bde8ed41f6bb65b79a9f0a8128b4bcf43b648252a354fbaff9080bb354",
-          "source_rank": null,
-          "near_duplicate_of": null
-        },
         {
           "candidate_id": "nlpr_rv_001_b",
           "title": "A Survey of Pre-Trained Language Models",
@@ -1999,10 +2088,10 @@
           "near_duplicate_of": null
         },
         {
-          "candidate_id": "nlpr_rv_001_c",
-          "title": "What Does BERT Look at? (Attention Analysis)",
-          "abstract": "We analyze BERT attention heads empirically.",
-          "content_hash": "c0bed0ffb87773647186f0f08635cafe731ed9a3299d28163bb6e41be0627769",
+          "candidate_id": "nlpr_rv_001_a",
+          "title": "BERT: Pre-training of Deep Bidirectional Transformers",
+          "abstract": "We report GLUE gains from BERT fine-tuning.",
+          "content_hash": "47ab20bde8ed41f6bb65b79a9f0a8128b4bcf43b648252a354fbaff9080bb354",
           "source_rank": null,
           "near_duplicate_of": null
         },
@@ -2013,35 +2102,28 @@
           "content_hash": "b86cd5a5b4772212923d669015ad24a5f1221c74698f31b65c17fdff71f412a9",
           "source_rank": null,
           "near_duplicate_of": null
+        },
+        {
+          "candidate_id": "nlpr_rv_001_c",
+          "title": "What Does BERT Look at? (Attention Analysis)",
+          "abstract": "We analyze BERT attention heads empirically.",
+          "content_hash": "c0bed0ffb87773647186f0f08635cafe731ed9a3299d28163bb6e41be0627769",
+          "source_rank": null,
+          "near_duplicate_of": null
         }
       ]
     },
     {
       "case_id": "ml_ret_ma_001",
+      "ranking_surface": "retrieval_ranking",
+      "research_question": "reinforcement learning robotics",
+      "ranking_intent": "general_research_relevance",
+      "adjudication_context": "Retrieval surface: short keyword-style query against a candidate pool. Rank by topical + evidence utility.",
       "domain": "machine_learning",
-      "surface": "retrieval_ranking",
-      "intent": "general_research_relevance",
+      "relevance_rubric_version": "research_utility_0_to_3_v1",
       "primary_slice": "missing_abstract",
       "secondary_slices": [],
-      "split": "calibration",
-      "query_text": "reinforcement learning robotics",
       "candidates": [
-        {
-          "candidate_id": "mlr_ma_001_a",
-          "title": "Deep Reinforcement Learning for Robotic Manipulation",
-          "abstract": "We train robotic arms with deep RL for dexterous manipulation.",
-          "content_hash": "bb8531b50ed7a27acfeae706204f94870565b33a663eb0d7f3223a541dadf635",
-          "source_rank": null,
-          "near_duplicate_of": null
-        },
-        {
-          "candidate_id": "mlr_ma_001_b",
-          "title": "Sim-to-Real Transfer for Robotic Locomotion",
-          "abstract": "",
-          "content_hash": "6d44de7b0081c83051e988c56d56ea53bf12d4617403ba7867c56a0ccadf9cfd",
-          "source_rank": null,
-          "near_duplicate_of": null
-        },
         {
           "candidate_id": "mlr_ma_001_c",
           "title": "Asymmetric Self-Play for Robotic Skill Acquisition",
@@ -2057,35 +2139,36 @@
           "content_hash": "02661999815849af42d827d5c826f630425296beee9c46c5251ec103462a3b65",
           "source_rank": null,
           "near_duplicate_of": null
+        },
+        {
+          "candidate_id": "mlr_ma_001_a",
+          "title": "Deep Reinforcement Learning for Robotic Manipulation",
+          "abstract": "We train robotic arms with deep RL for dexterous manipulation.",
+          "content_hash": "bb8531b50ed7a27acfeae706204f94870565b33a663eb0d7f3223a541dadf635",
+          "source_rank": null,
+          "near_duplicate_of": null
+        },
+        {
+          "candidate_id": "mlr_ma_001_b",
+          "title": "Sim-to-Real Transfer for Robotic Locomotion",
+          "abstract": "",
+          "content_hash": "6d44de7b0081c83051e988c56d56ea53bf12d4617403ba7867c56a0ccadf9cfd",
+          "source_rank": null,
+          "near_duplicate_of": null
         }
       ]
     },
     {
       "case_id": "bio_ret_ma_001",
+      "ranking_surface": "retrieval_ranking",
+      "research_question": "circulating tumor DNA ctDNA",
+      "ranking_intent": "evidence_support",
+      "adjudication_context": "Retrieval surface: rank by strength of primary evidence.",
       "domain": "biomedical",
-      "surface": "retrieval_ranking",
-      "intent": "evidence_support",
+      "relevance_rubric_version": "research_utility_0_to_3_v1",
       "primary_slice": "missing_abstract",
       "secondary_slices": [],
-      "split": "held_out",
-      "query_text": "circulating tumor DNA ctDNA",
       "candidates": [
-        {
-          "candidate_id": "bior_ma_001_a",
-          "title": "ctDNA as a Liquid Biopsy for Cancer Monitoring",
-          "abstract": "We use ctDNA to track tumor burden non-invasively.",
-          "content_hash": "0a8f074bd6cd33458cef42cd53cfd00f5cecf9f6848778fe1d0696ec6ebac7b9",
-          "source_rank": null,
-          "near_duplicate_of": null
-        },
-        {
-          "candidate_id": "bior_ma_001_b",
-          "title": "Minimal Residual Disease Detection with ctDNA",
-          "abstract": "",
-          "content_hash": "a61726be5f288f34c8ab6a43f9eafda68987de8ef3407fbf21033be72d86119c",
-          "source_rank": null,
-          "near_duplicate_of": null
-        },
         {
           "candidate_id": "bior_ma_001_c",
           "title": "methylation-based ctDNA for Early Cancer Detection",
@@ -2101,19 +2184,44 @@
           "content_hash": "31520658fac5fcaad028949595ef6304ed02472bc2ecda37fbd7260d9efd75ea",
           "source_rank": null,
           "near_duplicate_of": null
+        },
+        {
+          "candidate_id": "bior_ma_001_a",
+          "title": "ctDNA as a Liquid Biopsy for Cancer Monitoring",
+          "abstract": "We use ctDNA to track tumor burden non-invasively.",
+          "content_hash": "0a8f074bd6cd33458cef42cd53cfd00f5cecf9f6848778fe1d0696ec6ebac7b9",
+          "source_rank": null,
+          "near_duplicate_of": null
+        },
+        {
+          "candidate_id": "bior_ma_001_b",
+          "title": "Minimal Residual Disease Detection with ctDNA",
+          "abstract": "",
+          "content_hash": "a61726be5f288f34c8ab6a43f9eafda68987de8ef3407fbf21033be72d86119c",
+          "source_rank": null,
+          "near_duplicate_of": null
         }
       ]
     },
     {
       "case_id": "nlp_ret_ma_001",
+      "ranking_surface": "retrieval_ranking",
+      "research_question": "dialogue state tracking",
+      "ranking_intent": "general_research_relevance",
+      "adjudication_context": "Retrieval surface: short keyword-style query against a candidate pool. Rank by topical + evidence utility.",
       "domain": "nlp",
-      "surface": "retrieval_ranking",
-      "intent": "general_research_relevance",
+      "relevance_rubric_version": "research_utility_0_to_3_v1",
       "primary_slice": "missing_abstract",
       "secondary_slices": [],
-      "split": "development",
-      "query_text": "dialogue state tracking",
       "candidates": [
+        {
+          "candidate_id": "nlpr_ma_001_d",
+          "title": "End-to-End Dialogue State Tracking with Pretraining",
+          "abstract": "",
+          "content_hash": "724e7b0a70bcef63a6ab31c1e101a570995593bc18c21d19c13e8d6be9d7ed96",
+          "source_rank": null,
+          "near_duplicate_of": null
+        },
         {
           "candidate_id": "nlpr_ma_001_a",
           "title": "Trade: Transferable Dialogue State Generator",
@@ -2137,32 +2245,25 @@
           "content_hash": "2027d1c88e772dbfd553b0131ee8e2733ecf65a1133b3fecd839ef83a722c612",
           "source_rank": null,
           "near_duplicate_of": null
-        },
-        {
-          "candidate_id": "nlpr_ma_001_d",
-          "title": "End-to-End Dialogue State Tracking with Pretraining",
-          "abstract": "",
-          "content_hash": "724e7b0a70bcef63a6ab31c1e101a570995593bc18c21d19c13e8d6be9d7ed96",
-          "source_rank": null,
-          "near_duplicate_of": null
         }
       ]
     },
     {
       "case_id": "ml_ret_nd_001",
+      "ranking_surface": "retrieval_ranking",
+      "research_question": "mixup data augmentation",
+      "ranking_intent": "general_research_relevance",
+      "adjudication_context": "Retrieval surface: short keyword-style query against a candidate pool. Rank by topical + evidence utility.",
       "domain": "machine_learning",
-      "surface": "retrieval_ranking",
-      "intent": "general_research_relevance",
+      "relevance_rubric_version": "research_utility_0_to_3_v1",
       "primary_slice": "near_duplicate",
       "secondary_slices": [],
-      "split": "development",
-      "query_text": "mixup data augmentation",
       "candidates": [
         {
-          "candidate_id": "mlr_nd_001_a",
-          "title": "mixup: Beyond Empirical Risk Minimization",
-          "abstract": "We train on convex combinations of input pairs and labels.",
-          "content_hash": "86d0aca72c7ddb67a00280cc260b4b00c45dc41487709aa415e0a9b690c6b6c1",
+          "candidate_id": "mlr_nd_001_d",
+          "title": "AutoAugment: Learning Augmentation Policies",
+          "abstract": "We learn augmentation policies from data.",
+          "content_hash": "7735e8000e652ded4238edf5e8ecd2090d4617fa07f8514e97799911f480e2ba",
           "source_rank": null,
           "near_duplicate_of": null
         },
@@ -2175,12 +2276,12 @@
           "near_duplicate_of": null
         },
         {
-          "candidate_id": "mlr_nd_001_b2",
-          "title": "mixup Training for Better Generalization",
-          "abstract": "Convex combinations of input pairs and labels improve generalization.",
-          "content_hash": "9c6f024c23a711e63500c63123d4e1a1d135e10688ce2a606ed9964c76e499d9",
+          "candidate_id": "mlr_nd_001_a",
+          "title": "mixup: Beyond Empirical Risk Minimization",
+          "abstract": "We train on convex combinations of input pairs and labels.",
+          "content_hash": "86d0aca72c7ddb67a00280cc260b4b00c45dc41487709aa415e0a9b690c6b6c1",
           "source_rank": null,
-          "near_duplicate_of": "mlr_nd_001_b"
+          "near_duplicate_of": null
         },
         {
           "candidate_id": "mlr_nd_001_c",
@@ -2191,25 +2292,50 @@
           "near_duplicate_of": null
         },
         {
-          "candidate_id": "mlr_nd_001_d",
-          "title": "AutoAugment: Learning Augmentation Policies",
-          "abstract": "We learn augmentation policies from data.",
-          "content_hash": "7735e8000e652ded4238edf5e8ecd2090d4617fa07f8514e97799911f480e2ba",
+          "candidate_id": "mlr_nd_001_b2",
+          "title": "mixup Training for Better Generalization",
+          "abstract": "Convex combinations of input pairs and labels improve generalization.",
+          "content_hash": "9c6f024c23a711e63500c63123d4e1a1d135e10688ce2a606ed9964c76e499d9",
           "source_rank": null,
-          "near_duplicate_of": null
+          "near_duplicate_of": "mlr_nd_001_b"
         }
       ]
     },
     {
       "case_id": "bio_ret_nd_001",
+      "ranking_surface": "retrieval_ranking",
+      "research_question": "paxlovid nirmatrelvir ritonavir covid",
+      "ranking_intent": "evidence_support",
+      "adjudication_context": "Retrieval surface: rank by strength of primary evidence.",
       "domain": "biomedical",
-      "surface": "retrieval_ranking",
-      "intent": "evidence_support",
+      "relevance_rubric_version": "research_utility_0_to_3_v1",
       "primary_slice": "near_duplicate",
       "secondary_slices": [],
-      "split": "calibration",
-      "query_text": "paxlovid nirmatrelvir ritonavir covid",
       "candidates": [
+        {
+          "candidate_id": "bior_nd_001_d",
+          "title": "Remdesivir for Severe Covid-19",
+          "abstract": "Intravenous remdesivir shortened recovery time.",
+          "content_hash": "17db91f7a0b84478db354e4a75d890085471df1a6b344ad6c7a4efe20f12e850",
+          "source_rank": null,
+          "near_duplicate_of": null
+        },
+        {
+          "candidate_id": "bior_nd_001_c",
+          "title": "Molnupiravir for Covid-19 (MOVe-OUT)",
+          "abstract": "We report molnupiravir efficacy in mild Covid-19.",
+          "content_hash": "1b9c471ccd075cdf45b98cbab50e90cf09a9218159659114423d3c16e7e3a934",
+          "source_rank": null,
+          "near_duplicate_of": null
+        },
+        {
+          "candidate_id": "bior_nd_001_b2",
+          "title": "EPIC-HR: Nirmatrelvir-Ritonavir for Covid-19",
+          "abstract": "High-risk adults receiving nirmatrelvir-ritonavir had lower Covid-19 hospitalization.",
+          "content_hash": "700c9317ed59f06f44b65ce58cb34b85b1531b4a5f7c9495666cf28b484e1b6f",
+          "source_rank": null,
+          "near_duplicate_of": "bior_nd_001_b"
+        },
         {
           "candidate_id": "bior_nd_001_a",
           "title": "Oral Nirmatrelvir for High-Risk Covid-19 (EPIC-HR)",
@@ -2225,43 +2351,28 @@
           "content_hash": "e314a8030155e9a5f8e84e0d5d1a4da128485e08c2e872f13be27c6322124f4d",
           "source_rank": null,
           "near_duplicate_of": null
-        },
-        {
-          "candidate_id": "bior_nd_001_b2",
-          "title": "EPIC-HR: Nirmatrelvir-Ritonavir for Covid-19",
-          "abstract": "High-risk adults receiving nirmatrelvir-ritonavir had lower Covid-19 hospitalization.",
-          "content_hash": "700c9317ed59f06f44b65ce58cb34b85b1531b4a5f7c9495666cf28b484e1b6f",
-          "source_rank": null,
-          "near_duplicate_of": "bior_nd_001_b"
-        },
-        {
-          "candidate_id": "bior_nd_001_c",
-          "title": "Molnupiravir for Covid-19 (MOVe-OUT)",
-          "abstract": "We report molnupiravir efficacy in mild Covid-19.",
-          "content_hash": "1b9c471ccd075cdf45b98cbab50e90cf09a9218159659114423d3c16e7e3a934",
-          "source_rank": null,
-          "near_duplicate_of": null
-        },
-        {
-          "candidate_id": "bior_nd_001_d",
-          "title": "Remdesivir for Severe Covid-19",
-          "abstract": "Intravenous remdesivir shortened recovery time.",
-          "content_hash": "17db91f7a0b84478db354e4a75d890085471df1a6b344ad6c7a4efe20f12e850",
-          "source_rank": null,
-          "near_duplicate_of": null
         }
       ]
     },
     {
       "case_id": "nlp_ret_nd_001",
+      "ranking_surface": "retrieval_ranking",
+      "research_question": "t5 text-to-text transformer",
+      "ranking_intent": "evidence_support",
+      "adjudication_context": "Retrieval surface: rank by strength of primary evidence.",
       "domain": "nlp",
-      "surface": "retrieval_ranking",
-      "intent": "evidence_support",
+      "relevance_rubric_version": "research_utility_0_to_3_v1",
       "primary_slice": "near_duplicate",
       "secondary_slices": [],
-      "split": "held_out",
-      "query_text": "t5 text-to-text transformer",
       "candidates": [
+        {
+          "candidate_id": "nlpr_nd_001_c",
+          "title": "FLAN: Instruction-Tuning for Generalization",
+          "abstract": "We instruction-tune over many tasks for zero-shot generalization.",
+          "content_hash": "158ee2045bcd7df86b75e2a9a0696b8f3eaea9fa887d68b8a6a510b3be059207",
+          "source_rank": null,
+          "near_duplicate_of": null
+        },
         {
           "candidate_id": "nlpr_nd_001_a",
           "title": "Exploring the Limits of Transfer Learning with T5",
@@ -2279,57 +2390,34 @@
           "near_duplicate_of": null
         },
         {
-          "candidate_id": "nlpr_nd_001_b2",
-          "title": "Text-to-Text Transfer Transformer (T5)",
-          "abstract": "Unified encoder-decoder Transformer casting all NLP tasks as text-to-text.",
-          "content_hash": "4a0856961b258a713f184deaa80748a5419d324bf409e1e401438ecc8ca51a7d",
-          "source_rank": null,
-          "near_duplicate_of": "nlpr_nd_001_b"
-        },
-        {
-          "candidate_id": "nlpr_nd_001_c",
-          "title": "FLAN: Instruction-Tuning for Generalization",
-          "abstract": "We instruction-tune over many tasks for zero-shot generalization.",
-          "content_hash": "158ee2045bcd7df86b75e2a9a0696b8f3eaea9fa887d68b8a6a510b3be059207",
-          "source_rank": null,
-          "near_duplicate_of": null
-        },
-        {
           "candidate_id": "nlpr_nd_001_d",
           "title": "UnifiedQA: Retrieval-Free Question Answering",
           "abstract": "We pretrain a QA model on multiple QA formats.",
           "content_hash": "4060a38f0901c0545cdc89d79b28384d4246f7fe31f117506781071d4e7d8e48",
           "source_rank": null,
           "near_duplicate_of": null
+        },
+        {
+          "candidate_id": "nlpr_nd_001_b2",
+          "title": "Text-to-Text Transfer Transformer (T5)",
+          "abstract": "Unified encoder-decoder Transformer casting all NLP tasks as text-to-text.",
+          "content_hash": "4a0856961b258a713f184deaa80748a5419d324bf409e1e401438ecc8ca51a7d",
+          "source_rank": null,
+          "near_duplicate_of": "nlpr_nd_001_b"
         }
       ]
     },
     {
       "case_id": "ml_ret_sr_001",
+      "ranking_surface": "retrieval_ranking",
+      "research_question": "mixture of experts sparse models",
+      "ranking_intent": "general_research_relevance",
+      "adjudication_context": "Retrieval surface: short keyword-style query against a candidate pool. Rank by topical + evidence utility.",
       "domain": "machine_learning",
-      "surface": "retrieval_ranking",
-      "intent": "general_research_relevance",
+      "relevance_rubric_version": "research_utility_0_to_3_v1",
       "primary_slice": "source_rank_conflict",
       "secondary_slices": [],
-      "split": "held_out",
-      "query_text": "mixture of experts sparse models",
       "candidates": [
-        {
-          "candidate_id": "mlr_sr_001_a",
-          "title": "Mixtral of Experts (MoE)",
-          "abstract": "We release a sparse mixture-of-experts model with strong quality.",
-          "content_hash": "ccbe27fff43206999d0196051ec83bbaab6ab684bf8220f530f16eec20b3c123",
-          "source_rank": null,
-          "near_duplicate_of": null
-        },
-        {
-          "candidate_id": "mlr_sr_001_b",
-          "title": "A Nature Editorial on Compute Carbon Footprint",
-          "abstract": "Editorial on energy use in AI, unrelated to MoE architectures.",
-          "content_hash": "615cf56ca5768c0ecf76fcf0438c03512e094f66b40908e9b1c0307372b08d37",
-          "source_rank": null,
-          "near_duplicate_of": null
-        },
         {
           "candidate_id": "mlr_sr_001_c",
           "title": "Outrageously Large Neural Networks: The Sparsely-Gated MoE Layer",
@@ -2345,35 +2433,36 @@
           "content_hash": "2ae3d1b38546c5048efe27a08edaf1c0f0317e0b09b1e36cb8ad7a8db07bfedd",
           "source_rank": null,
           "near_duplicate_of": null
+        },
+        {
+          "candidate_id": "mlr_sr_001_a",
+          "title": "Mixtral of Experts (MoE)",
+          "abstract": "We release a sparse mixture-of-experts model with strong quality.",
+          "content_hash": "ccbe27fff43206999d0196051ec83bbaab6ab684bf8220f530f16eec20b3c123",
+          "source_rank": null,
+          "near_duplicate_of": null
+        },
+        {
+          "candidate_id": "mlr_sr_001_b",
+          "title": "A Nature Editorial on Compute Carbon Footprint",
+          "abstract": "Editorial on energy use in AI, unrelated to MoE architectures.",
+          "content_hash": "615cf56ca5768c0ecf76fcf0438c03512e094f66b40908e9b1c0307372b08d37",
+          "source_rank": null,
+          "near_duplicate_of": null
         }
       ]
     },
     {
       "case_id": "bio_ret_sr_001",
+      "ranking_surface": "retrieval_ranking",
+      "research_question": "glycemic control type 2 diabetes",
+      "ranking_intent": "evidence_support",
+      "adjudication_context": "Retrieval surface: rank by strength of primary evidence.",
       "domain": "biomedical",
-      "surface": "retrieval_ranking",
-      "intent": "evidence_support",
+      "relevance_rubric_version": "research_utility_0_to_3_v1",
       "primary_slice": "source_rank_conflict",
       "secondary_slices": [],
-      "split": "calibration",
-      "query_text": "glycemic control type 2 diabetes",
       "candidates": [
-        {
-          "candidate_id": "bior_sr_001_a",
-          "title": "Continuous Glucose Monitoring in Type 2 Diabetes",
-          "abstract": "We report glycemic improvements with CGM in insulin-treated T2D.",
-          "content_hash": "20396fb87c49b65a51e5411a498af8e577f4ee5a48dda7978b61afd7392912c8",
-          "source_rank": null,
-          "near_duplicate_of": null
-        },
-        {
-          "candidate_id": "bior_sr_001_b",
-          "title": "A Lancet Editorial on Global Diabetes Policy",
-          "abstract": "Editorial on diabetes policy, not glycemic-control evidence.",
-          "content_hash": "07a5ddd5603db84441788c42ab28901ee766590c8db1231469e55f04189e8a29",
-          "source_rank": null,
-          "near_duplicate_of": null
-        },
         {
           "candidate_id": "bior_sr_001_c",
           "title": "Empagliflozin and Glycemic Outcomes (EMPA-REG)",
@@ -2389,27 +2478,36 @@
           "content_hash": "bc8834b2f976cf7d6d26b9a56bee106f77b3df7d9312468a41c444f5de008a18",
           "source_rank": null,
           "near_duplicate_of": null
+        },
+        {
+          "candidate_id": "bior_sr_001_a",
+          "title": "Continuous Glucose Monitoring in Type 2 Diabetes",
+          "abstract": "We report glycemic improvements with CGM in insulin-treated T2D.",
+          "content_hash": "20396fb87c49b65a51e5411a498af8e577f4ee5a48dda7978b61afd7392912c8",
+          "source_rank": null,
+          "near_duplicate_of": null
+        },
+        {
+          "candidate_id": "bior_sr_001_b",
+          "title": "A Lancet Editorial on Global Diabetes Policy",
+          "abstract": "Editorial on diabetes policy, not glycemic-control evidence.",
+          "content_hash": "07a5ddd5603db84441788c42ab28901ee766590c8db1231469e55f04189e8a29",
+          "source_rank": null,
+          "near_duplicate_of": null
         }
       ]
     },
     {
       "case_id": "nlp_ret_sr_001",
+      "ranking_surface": "retrieval_ranking",
+      "research_question": "open-domain question answering retriever",
+      "ranking_intent": "general_research_relevance",
+      "adjudication_context": "Retrieval surface: short keyword-style query against a candidate pool. Rank by topical + evidence utility.",
       "domain": "nlp",
-      "surface": "retrieval_ranking",
-      "intent": "general_research_relevance",
+      "relevance_rubric_version": "research_utility_0_to_3_v1",
       "primary_slice": "source_rank_conflict",
       "secondary_slices": [],
-      "split": "development",
-      "query_text": "open-domain question answering retriever",
       "candidates": [
-        {
-          "candidate_id": "nlpr_sr_001_a",
-          "title": "Dense Passage Retrieval for Open-Domain QA",
-          "abstract": "We learn dense retrievers for open-domain question answering.",
-          "content_hash": "a6058fbe0cdaf79938715ba918152eab212d2fa88a06a89f4e284c68b93dae19",
-          "source_rank": null,
-          "near_duplicate_of": null
-        },
         {
           "candidate_id": "nlpr_sr_001_b",
           "title": "A Science Editorial on Open-Access Publishing",
@@ -2433,34 +2531,35 @@
           "content_hash": "6aaa2d06a3cec8ccd56248c6dea691ae9a2a1fa7b28a37eafe4f06a0d0667b17",
           "source_rank": null,
           "near_duplicate_of": null
+        },
+        {
+          "candidate_id": "nlpr_sr_001_a",
+          "title": "Dense Passage Retrieval for Open-Domain QA",
+          "abstract": "We learn dense retrievers for open-domain question answering.",
+          "content_hash": "a6058fbe0cdaf79938715ba918152eab212d2fa88a06a89f4e284c68b93dae19",
+          "source_rank": null,
+          "near_duplicate_of": null
         }
       ]
     },
     {
       "case_id": "ml_ret_ac_001",
+      "ranking_surface": "retrieval_ranking",
+      "research_question": "LORA low-rank adaptation",
+      "ranking_intent": "general_research_relevance",
+      "adjudication_context": "Retrieval surface: short keyword-style query against a candidate pool. Rank by topical + evidence utility.",
       "domain": "machine_learning",
-      "surface": "retrieval_ranking",
-      "intent": "general_research_relevance",
+      "relevance_rubric_version": "research_utility_0_to_3_v1",
       "primary_slice": "acronym_vs_expanded",
       "secondary_slices": [
         "lexical_trap"
       ],
-      "split": "calibration",
-      "query_text": "LORA low-rank adaptation",
       "candidates": [
         {
           "candidate_id": "mlr_ac_001_a",
           "title": "LoRA: Low-Rank Adaptation of Large Language Models",
           "abstract": "We freeze base weights and train low-rank adapters.",
           "content_hash": "f79544e0defb6978f0be64b298e8ddab774f28a51af2ad96331c9d01e11f0cd0",
-          "source_rank": null,
-          "near_duplicate_of": null
-        },
-        {
-          "candidate_id": "mlr_ac_001_b",
-          "title": "QLoRA: Quantized LoRA for Efficient Fine-Tuning",
-          "abstract": "We quantize base weights and apply LoRA adapters.",
-          "content_hash": "433ff7e3fc1aa35672c4b779da701291050768acd0106bf28f32efbd23fe665b",
           "source_rank": null,
           "near_duplicate_of": null
         },
@@ -2479,37 +2578,30 @@
           "content_hash": "33fae5721308d0f4b8cbdf9caa2403b2c40373419e2a0bd34ff6630f34877004",
           "source_rank": null,
           "near_duplicate_of": null
+        },
+        {
+          "candidate_id": "mlr_ac_001_b",
+          "title": "QLoRA: Quantized LoRA for Efficient Fine-Tuning",
+          "abstract": "We quantize base weights and apply LoRA adapters.",
+          "content_hash": "433ff7e3fc1aa35672c4b779da701291050768acd0106bf28f32efbd23fe665b",
+          "source_rank": null,
+          "near_duplicate_of": null
         }
       ]
     },
     {
       "case_id": "bio_ret_ac_001",
+      "ranking_surface": "retrieval_ranking",
+      "research_question": "PCSK9 inhibitors cholesterol",
+      "ranking_intent": "evidence_support",
+      "adjudication_context": "Retrieval surface: rank by strength of primary evidence.",
       "domain": "biomedical",
-      "surface": "retrieval_ranking",
-      "intent": "evidence_support",
+      "relevance_rubric_version": "research_utility_0_to_3_v1",
       "primary_slice": "acronym_vs_expanded",
       "secondary_slices": [
         "lexical_trap"
       ],
-      "split": "development",
-      "query_text": "PCSK9 inhibitors cholesterol",
       "candidates": [
-        {
-          "candidate_id": "bior_ac_001_a",
-          "title": "PCSK9 Monoclonal Antibodies for Hypercholesterolemia",
-          "abstract": "We review PCSK9 inhibitors for LDL-C lowering.",
-          "content_hash": "b461d0a787bedc067b6ab086a4c6b4bba429cebd71f368875f72a2185f9c007d",
-          "source_rank": null,
-          "near_duplicate_of": null
-        },
-        {
-          "candidate_id": "bior_ac_001_b",
-          "title": "Alirocumab and Cardiovascular Events (ODYSSEY)",
-          "abstract": "Phase 3 trial of a PCSK9 inhibitor.",
-          "content_hash": "faa7119adbeab848b41f7c2cef00338950f481b8c2eca747e25bff534f12d040",
-          "source_rank": null,
-          "near_duplicate_of": null
-        },
         {
           "candidate_id": "bior_ac_001_c",
           "title": "PCSK: A Parallel Computing Systems Kit",
@@ -2525,29 +2617,38 @@
           "content_hash": "79412a0401fd92d66dd62018fd4d893dd78a1c8b08dc578a314cf5a20586db45",
           "source_rank": null,
           "near_duplicate_of": null
+        },
+        {
+          "candidate_id": "bior_ac_001_b",
+          "title": "Alirocumab and Cardiovascular Events (ODYSSEY)",
+          "abstract": "Phase 3 trial of a PCSK9 inhibitor.",
+          "content_hash": "faa7119adbeab848b41f7c2cef00338950f481b8c2eca747e25bff534f12d040",
+          "source_rank": null,
+          "near_duplicate_of": null
+        },
+        {
+          "candidate_id": "bior_ac_001_a",
+          "title": "PCSK9 Monoclonal Antibodies for Hypercholesterolemia",
+          "abstract": "We review PCSK9 inhibitors for LDL-C lowering.",
+          "content_hash": "b461d0a787bedc067b6ab086a4c6b4bba429cebd71f368875f72a2185f9c007d",
+          "source_rank": null,
+          "near_duplicate_of": null
         }
       ]
     },
     {
       "case_id": "nlp_ret_ac_001",
+      "ranking_surface": "retrieval_ranking",
+      "research_question": "BERT bidirectional encoder",
+      "ranking_intent": "general_research_relevance",
+      "adjudication_context": "Retrieval surface: short keyword-style query against a candidate pool. Rank by topical + evidence utility.",
       "domain": "nlp",
-      "surface": "retrieval_ranking",
-      "intent": "general_research_relevance",
+      "relevance_rubric_version": "research_utility_0_to_3_v1",
       "primary_slice": "acronym_vs_expanded",
       "secondary_slices": [
         "lexical_trap"
       ],
-      "split": "held_out",
-      "query_text": "BERT bidirectional encoder",
       "candidates": [
-        {
-          "candidate_id": "nlpr_ac_001_a",
-          "title": "BERT: Pre-training of Deep Bidirectional Transformers",
-          "abstract": "We pre-train a bidirectional Transformer encoder.",
-          "content_hash": "075b1b52d8cf1861594005485e6e13fe186b76217a7f3c3e0f4fc33d00dc5d55",
-          "source_rank": null,
-          "near_duplicate_of": null
-        },
         {
           "candidate_id": "nlpr_ac_001_b",
           "title": "DistilBERT: A Distilled Version of BERT",
@@ -2571,35 +2672,28 @@
           "content_hash": "4cacf2f2ed04b2f32a5f1b49a2c2877850bb002b759a2154977c1ffe243baab8",
           "source_rank": null,
           "near_duplicate_of": null
+        },
+        {
+          "candidate_id": "nlpr_ac_001_a",
+          "title": "BERT: Pre-training of Deep Bidirectional Transformers",
+          "abstract": "We pre-train a bidirectional Transformer encoder.",
+          "content_hash": "075b1b52d8cf1861594005485e6e13fe186b76217a7f3c3e0f4fc33d00dc5d55",
+          "source_rank": null,
+          "near_duplicate_of": null
         }
       ]
     },
     {
       "case_id": "ml_ret_nf_001",
+      "ranking_surface": "retrieval_ranking",
+      "research_question": "does pretraining help low-data",
+      "ranking_intent": "evidence_support",
+      "adjudication_context": "Retrieval surface: rank by strength of primary evidence.",
       "domain": "machine_learning",
-      "surface": "retrieval_ranking",
-      "intent": "evidence_support",
+      "relevance_rubric_version": "research_utility_0_to_3_v1",
       "primary_slice": "negated_findings",
       "secondary_slices": [],
-      "split": "development",
-      "query_text": "does pretraining help low-data",
       "candidates": [
-        {
-          "candidate_id": "mlr_nf_001_a",
-          "title": "Pretraining on Large Corpora Helps Low-Data Tasks",
-          "abstract": "We show that pretraining improves downstream accuracy on small datasets.",
-          "content_hash": "88b7b0d8c82fb36e714b6ccacd8caba57b280d57a1867cf84a50c6125c56a597",
-          "source_rank": null,
-          "near_duplicate_of": null
-        },
-        {
-          "candidate_id": "mlr_nf_001_b",
-          "title": "When Pretraining Hurts: Negative Transfer in Low-Data",
-          "abstract": "We identify cases where pretraining degrades low-data performance.",
-          "content_hash": "325af923777f5f7d2cc44280066ef017bdde08d20d59df31da180374d544df07",
-          "source_rank": null,
-          "near_duplicate_of": null
-        },
         {
           "candidate_id": "mlr_nf_001_c",
           "title": "Domain Mismatch Reduces Pretraining Benefit",
@@ -2615,18 +2709,35 @@
           "content_hash": "052bd36e501abfcda75cf11395102b3a33dd389129ea5a4e735eb30cadce19c7",
           "source_rank": null,
           "near_duplicate_of": null
+        },
+        {
+          "candidate_id": "mlr_nf_001_a",
+          "title": "Pretraining on Large Corpora Helps Low-Data Tasks",
+          "abstract": "We show that pretraining improves downstream accuracy on small datasets.",
+          "content_hash": "88b7b0d8c82fb36e714b6ccacd8caba57b280d57a1867cf84a50c6125c56a597",
+          "source_rank": null,
+          "near_duplicate_of": null
+        },
+        {
+          "candidate_id": "mlr_nf_001_b",
+          "title": "When Pretraining Hurts: Negative Transfer in Low-Data",
+          "abstract": "We identify cases where pretraining degrades low-data performance.",
+          "content_hash": "325af923777f5f7d2cc44280066ef017bdde08d20d59df31da180374d544df07",
+          "source_rank": null,
+          "near_duplicate_of": null
         }
       ]
     },
     {
       "case_id": "bio_ret_nf_001",
+      "ranking_surface": "retrieval_ranking",
+      "research_question": "vitamin d supplementation fracture prevention",
+      "ranking_intent": "evidence_support",
+      "adjudication_context": "Retrieval surface: rank by strength of primary evidence.",
       "domain": "biomedical",
-      "surface": "retrieval_ranking",
-      "intent": "evidence_support",
+      "relevance_rubric_version": "research_utility_0_to_3_v1",
       "primary_slice": "negated_findings",
       "secondary_slices": [],
-      "split": "held_out",
-      "query_text": "vitamin d supplementation fracture prevention",
       "candidates": [
         {
           "candidate_id": "bior_nf_001_a",
@@ -2637,10 +2748,10 @@
           "near_duplicate_of": null
         },
         {
-          "candidate_id": "bior_nf_001_b",
-          "title": "Vitamin D Alone Does Not Prevent Fractures (VITAL)",
-          "abstract": "We find no fracture reduction with vitamin D alone.",
-          "content_hash": "865c938e25709bc03fbf73132e764fc1cc9f88a42ca2a38728fef91345aa5350",
+          "candidate_id": "bior_nf_001_d",
+          "title": "Vitamin D Status and Bone Mineral Density",
+          "abstract": "We associate vitamin D levels with BMD.",
+          "content_hash": "c894d19fcb3d3ea6cdebabfec8bcbe4e035bbe87b82a79187c36781233d2143f",
           "source_rank": null,
           "near_duplicate_of": null
         },
@@ -2653,10 +2764,10 @@
           "near_duplicate_of": null
         },
         {
-          "candidate_id": "bior_nf_001_d",
-          "title": "Vitamin D Status and Bone Mineral Density",
-          "abstract": "We associate vitamin D levels with BMD.",
-          "content_hash": "c894d19fcb3d3ea6cdebabfec8bcbe4e035bbe87b82a79187c36781233d2143f",
+          "candidate_id": "bior_nf_001_b",
+          "title": "Vitamin D Alone Does Not Prevent Fractures (VITAL)",
+          "abstract": "We find no fracture reduction with vitamin D alone.",
+          "content_hash": "865c938e25709bc03fbf73132e764fc1cc9f88a42ca2a38728fef91345aa5350",
           "source_rank": null,
           "near_duplicate_of": null
         }
@@ -2664,27 +2775,20 @@
     },
     {
       "case_id": "nlp_ret_nf_001",
+      "ranking_surface": "retrieval_ranking",
+      "research_question": "does scaling model size improve safety",
+      "ranking_intent": "evidence_support",
+      "adjudication_context": "Retrieval surface: rank by strength of primary evidence.",
       "domain": "nlp",
-      "surface": "retrieval_ranking",
-      "intent": "evidence_support",
+      "relevance_rubric_version": "research_utility_0_to_3_v1",
       "primary_slice": "negated_findings",
       "secondary_slices": [],
-      "split": "calibration",
-      "query_text": "does scaling model size improve safety",
       "candidates": [
         {
           "candidate_id": "nlpr_nf_001_a",
           "title": "Scaling Language Models Improves Helpfulness",
           "abstract": "We report improved helpfulness with scale.",
           "content_hash": "ef053261fdd5df99b08070f6bdeaaa378b952497b87be16a4481d69e378b688d",
-          "source_rank": null,
-          "near_duplicate_of": null
-        },
-        {
-          "candidate_id": "nlpr_nf_001_b",
-          "title": "Scaling Alone Does Not Improve Safety",
-          "abstract": "We find that larger models remain unsafe without explicit safety training.",
-          "content_hash": "ca2f07efd2b1a3ac957bdaa52e286e504b69f85de9fff389978b381a1e5be5ef",
           "source_rank": null,
           "near_duplicate_of": null
         },
@@ -2703,27 +2807,28 @@
           "content_hash": "28cfb7c0f910a214dbfafa27abf1c96842f57c19b57059735273cdf10506ef38",
           "source_rank": null,
           "near_duplicate_of": null
+        },
+        {
+          "candidate_id": "nlpr_nf_001_b",
+          "title": "Scaling Alone Does Not Improve Safety",
+          "abstract": "We find that larger models remain unsafe without explicit safety training.",
+          "content_hash": "ca2f07efd2b1a3ac957bdaa52e286e504b69f85de9fff389978b381a1e5be5ef",
+          "source_rank": null,
+          "near_duplicate_of": null
         }
       ]
     },
     {
       "case_id": "ml_ret_ei_001",
+      "ranking_surface": "retrieval_ranking",
+      "research_question": "DDPM",
+      "ranking_intent": "literature_mapping",
+      "adjudication_context": "Retrieval surface: rank by directness of match to the named entity.",
       "domain": "machine_learning",
-      "surface": "retrieval_ranking",
-      "intent": "literature_mapping",
+      "relevance_rubric_version": "research_utility_0_to_3_v1",
       "primary_slice": "exact_identifier",
       "secondary_slices": [],
-      "split": "held_out",
-      "query_text": "DDPM",
       "candidates": [
-        {
-          "candidate_id": "mlr_ei_001_a",
-          "title": "Denoising Diffusion Probabilistic Models (DDPM)",
-          "abstract": "We generate high-quality images via a denoising diffusion process.",
-          "content_hash": "a8b5b9016702c84421e4b8882410a67798d105294fcad971facbe5e409c2b33d",
-          "source_rank": null,
-          "near_duplicate_of": null
-        },
         {
           "candidate_id": "mlr_ei_001_b",
           "title": "DDPMs via Stochastic Differential Equations",
@@ -2733,10 +2838,10 @@
           "near_duplicate_of": null
         },
         {
-          "candidate_id": "mlr_ei_001_c",
-          "title": "Improved DDPM: Better Sampling and Likelihood",
-          "abstract": "We improve DDPM sampling efficiency and likelihood estimation.",
-          "content_hash": "cdfaed928c4a3c6737f36ebfe98254a69713d7dc5246d30c555673fa271f287f",
+          "candidate_id": "mlr_ei_001_a",
+          "title": "Denoising Diffusion Probabilistic Models (DDPM)",
+          "abstract": "We generate high-quality images via a denoising diffusion process.",
+          "content_hash": "a8b5b9016702c84421e4b8882410a67798d105294fcad971facbe5e409c2b33d",
           "source_rank": null,
           "near_duplicate_of": null
         },
@@ -2747,19 +2852,36 @@
           "content_hash": "0814768f6b1608ae5536532aab987220229eef3494f7d4678dd38f7356091883",
           "source_rank": null,
           "near_duplicate_of": null
+        },
+        {
+          "candidate_id": "mlr_ei_001_c",
+          "title": "Improved DDPM: Better Sampling and Likelihood",
+          "abstract": "We improve DDPM sampling efficiency and likelihood estimation.",
+          "content_hash": "cdfaed928c4a3c6737f36ebfe98254a69713d7dc5246d30c555673fa271f287f",
+          "source_rank": null,
+          "near_duplicate_of": null
         }
       ]
     },
     {
       "case_id": "bio_ret_ei_001",
+      "ranking_surface": "retrieval_ranking",
+      "research_question": "CRISPR-Cas9",
+      "ranking_intent": "literature_mapping",
+      "adjudication_context": "Retrieval surface: rank by directness of match to the named entity.",
       "domain": "biomedical",
-      "surface": "retrieval_ranking",
-      "intent": "literature_mapping",
+      "relevance_rubric_version": "research_utility_0_to_3_v1",
       "primary_slice": "exact_identifier",
       "secondary_slices": [],
-      "split": "development",
-      "query_text": "CRISPR-Cas9",
       "candidates": [
+        {
+          "candidate_id": "bior_ei_001_d",
+          "title": "Off-Target Effects of CRISPR-Cas9",
+          "abstract": "We characterize CRISPR-Cas9 off-target cleavage.",
+          "content_hash": "3c064c6a0e04c96eb5d6fb15ea326e8ea98268b1afc4d99adf5a24bac75a0b7a",
+          "source_rank": null,
+          "near_duplicate_of": null
+        },
         {
           "candidate_id": "bior_ei_001_a",
           "title": "A Programmable Dual-RNA-Guided DNA Endonuclease (Cas9)",
@@ -2783,28 +2905,21 @@
           "content_hash": "46ce7c25eb60a59504487c4061cab5ed4f705c404e1e0edaf534fb003347812f",
           "source_rank": null,
           "near_duplicate_of": null
-        },
-        {
-          "candidate_id": "bior_ei_001_d",
-          "title": "Off-Target Effects of CRISPR-Cas9",
-          "abstract": "We characterize CRISPR-Cas9 off-target cleavage.",
-          "content_hash": "3c064c6a0e04c96eb5d6fb15ea326e8ea98268b1afc4d99adf5a24bac75a0b7a",
-          "source_rank": null,
-          "near_duplicate_of": null
         }
       ]
     },
     {
       "case_id": "nlp_ret_ei_001",
+      "ranking_surface": "retrieval_ranking",
+      "research_question": "Whisper",
+      "ranking_intent": "literature_mapping",
+      "adjudication_context": "Retrieval surface: rank by directness of match to the named entity.",
       "domain": "nlp",
-      "surface": "retrieval_ranking",
-      "intent": "literature_mapping",
+      "relevance_rubric_version": "research_utility_0_to_3_v1",
       "primary_slice": "exact_identifier",
       "secondary_slices": [
         "lexical_trap"
       ],
-      "split": "calibration",
-      "query_text": "Whisper",
       "candidates": [
         {
           "candidate_id": "nlpr_ei_001_a",
@@ -2815,18 +2930,18 @@
           "near_duplicate_of": null
         },
         {
-          "candidate_id": "nlpr_ei_001_b",
-          "title": "Fine-Tuning Whisper for Low-Resource Languages",
-          "abstract": "We adapt Whisper to under-served languages.",
-          "content_hash": "32e9cf62a01bb94b2920ec43fdc7857decfe381a202a5adf30521a901a30a0e5",
-          "source_rank": null,
-          "near_duplicate_of": null
-        },
-        {
           "candidate_id": "nlpr_ei_001_c",
           "title": "Distil-Whisper: Faster Streaming ASR",
           "abstract": "We distill Whisper for real-time transcription.",
           "content_hash": "0bfffbe1f78322c57e30bdbab5dfd736b22c33fa9d5fcdb7f351b9b6f220ae3c",
+          "source_rank": null,
+          "near_duplicate_of": null
+        },
+        {
+          "candidate_id": "nlpr_ei_001_b",
+          "title": "Fine-Tuning Whisper for Low-Resource Languages",
+          "abstract": "We adapt Whisper to under-served languages.",
+          "content_hash": "32e9cf62a01bb94b2920ec43fdc7857decfe381a202a5adf30521a901a30a0e5",
           "source_rank": null,
           "near_duplicate_of": null
         },
@@ -2842,22 +2957,15 @@
     },
     {
       "case_id": "ml_ret_nt_001",
+      "ranking_surface": "retrieval_ranking",
+      "research_question": "graph convolutional networks",
+      "ranking_intent": "general_research_relevance",
+      "adjudication_context": "Retrieval surface: short keyword-style query against a candidate pool. Rank by topical + evidence utility.",
       "domain": "machine_learning",
-      "surface": "retrieval_ranking",
-      "intent": "general_research_relevance",
+      "relevance_rubric_version": "research_utility_0_to_3_v1",
       "primary_slice": "neutral",
       "secondary_slices": [],
-      "split": "calibration",
-      "query_text": "graph convolutional networks",
       "candidates": [
-        {
-          "candidate_id": "mlr_nt_001_a",
-          "title": "Semi-Supervised Classification with GCNs",
-          "abstract": "We introduce graph convolutional networks for node classification.",
-          "content_hash": "f9ebd8825bf4ca036f9737b8c84e3397c7c5789661e33d2b6be6e3a1eb4532c5",
-          "source_rank": null,
-          "near_duplicate_of": null
-        },
         {
           "candidate_id": "mlr_nt_001_b",
           "title": "GraphSAGE: Inductive Learning on Large Graphs",
@@ -2881,18 +2989,27 @@
           "content_hash": "b5f72916e83e3b5492caefa7624092c9bf63581e3959e22746d6f706516309d6",
           "source_rank": null,
           "near_duplicate_of": null
+        },
+        {
+          "candidate_id": "mlr_nt_001_a",
+          "title": "Semi-Supervised Classification with GCNs",
+          "abstract": "We introduce graph convolutional networks for node classification.",
+          "content_hash": "f9ebd8825bf4ca036f9737b8c84e3397c7c5789661e33d2b6be6e3a1eb4532c5",
+          "source_rank": null,
+          "near_duplicate_of": null
         }
       ]
     },
     {
       "case_id": "bio_ret_nt_001",
+      "ranking_surface": "retrieval_ranking",
+      "research_question": "organoid models drug screening",
+      "ranking_intent": "general_research_relevance",
+      "adjudication_context": "Retrieval surface: short keyword-style query against a candidate pool. Rank by topical + evidence utility.",
       "domain": "biomedical",
-      "surface": "retrieval_ranking",
-      "intent": "general_research_relevance",
+      "relevance_rubric_version": "research_utility_0_to_3_v1",
       "primary_slice": "neutral",
       "secondary_slices": [],
-      "split": "held_out",
-      "query_text": "organoid models drug screening",
       "candidates": [
         {
           "candidate_id": "bior_nt_001_a",
@@ -2903,18 +3020,18 @@
           "near_duplicate_of": null
         },
         {
-          "candidate_id": "bior_nt_001_b",
-          "title": "Intestinal Organoids for Personalized Therapy",
-          "abstract": "We guide therapy choices using intestinal organoid responses.",
-          "content_hash": "16883701e14ab5fb4a58e7a465b5d96f6c4b265696f2d86ad4611e675f7afef4",
-          "source_rank": null,
-          "near_duplicate_of": null
-        },
-        {
           "candidate_id": "bior_nt_001_c",
           "title": "Brain Organoids for Neurodevelopmental Studies",
           "abstract": "We model neurodevelopment using cerebral organoids.",
           "content_hash": "5279643a266d2eb43d7c5569fb9c494c4b0ac5192df95bc3a8b6e9e3bd9f5dc1",
+          "source_rank": null,
+          "near_duplicate_of": null
+        },
+        {
+          "candidate_id": "bior_nt_001_b",
+          "title": "Intestinal Organoids for Personalized Therapy",
+          "abstract": "We guide therapy choices using intestinal organoid responses.",
+          "content_hash": "16883701e14ab5fb4a58e7a465b5d96f6c4b265696f2d86ad4611e675f7afef4",
           "source_rank": null,
           "near_duplicate_of": null
         },
@@ -2930,30 +3047,15 @@
     },
     {
       "case_id": "nlp_ret_nt_001",
+      "ranking_surface": "retrieval_ranking",
+      "research_question": "speech recognition acoustic model",
+      "ranking_intent": "general_research_relevance",
+      "adjudication_context": "Retrieval surface: short keyword-style query against a candidate pool. Rank by topical + evidence utility.",
       "domain": "nlp",
-      "surface": "retrieval_ranking",
-      "intent": "general_research_relevance",
+      "relevance_rubric_version": "research_utility_0_to_3_v1",
       "primary_slice": "neutral",
       "secondary_slices": [],
-      "split": "development",
-      "query_text": "speech recognition acoustic model",
       "candidates": [
-        {
-          "candidate_id": "nlpr_nt_001_a",
-          "title": "Wav2Vec 2.0: Self-Supervised Speech Pretraining",
-          "abstract": "We pretrain speech representations for ASR.",
-          "content_hash": "f74dacb7a15f77e80be2c997d4a05511ae04a6ea19ffeae839361333fb45f0dd",
-          "source_rank": null,
-          "near_duplicate_of": null
-        },
-        {
-          "candidate_id": "nlpr_nt_001_b",
-          "title": "Conformer: Convolution-Augmented Transformer for ASR",
-          "abstract": "We combine convolutions and attention for acoustic modeling.",
-          "content_hash": "de681e743722fcbbda9659f44fac11aef64d682d3abe4a4717febfca9fded07b",
-          "source_rank": null,
-          "near_duplicate_of": null
-        },
         {
           "candidate_id": "nlpr_nt_001_c",
           "title": "Listen Attend and Spell (LAS)",
@@ -2967,6 +3069,22 @@
           "title": "CTC-Based Acoustic Modeling",
           "abstract": "We use connectionist temporal classification for ASR.",
           "content_hash": "4d22e3f1ddefe3f4cbd265743db9dc95e2b9707a1c8179c27bfcad4d2ff083de",
+          "source_rank": null,
+          "near_duplicate_of": null
+        },
+        {
+          "candidate_id": "nlpr_nt_001_a",
+          "title": "Wav2Vec 2.0: Self-Supervised Speech Pretraining",
+          "abstract": "We pretrain speech representations for ASR.",
+          "content_hash": "f74dacb7a15f77e80be2c997d4a05511ae04a6ea19ffeae839361333fb45f0dd",
+          "source_rank": null,
+          "near_duplicate_of": null
+        },
+        {
+          "candidate_id": "nlpr_nt_001_b",
+          "title": "Conformer: Convolution-Augmented Transformer for ASR",
+          "abstract": "We combine convolutions and attention for acoustic modeling.",
+          "content_hash": "de681e743722fcbbda9659f44fac11aef64d682d3abe4a4717febfca9fded07b",
           "source_rank": null,
           "near_duplicate_of": null
         }

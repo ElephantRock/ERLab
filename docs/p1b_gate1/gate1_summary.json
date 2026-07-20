@@ -1,5 +1,6 @@
 {
   "gate": "GATE 1 (after P1B.1)",
+  "package_version": "blind_adjudication_v2",
   "benchmark_version": "discovery_ranking_v2+retrieval_ranking_v2",
   "discovery_cases": 33,
   "retrieval_cases": 33,
@@ -27,10 +28,42 @@
   "provisional_fingerprint": "d9581928e2af1ff5aa49d3f84edef4c3f04c57bdcfabdab2f1248fe2dd6fc8c8",
   "single_pass_judgments_pending_blind_adjudication": 270,
   "frozen_fingerprint_status": "NOT COMPUTABLE until blind adjudication completes",
+  "protocol_compliance": {
+    "includes": [
+      "case_id",
+      "ranking_surface",
+      "research_question",
+      "ranking_intent",
+      "adjudication_context",
+      "domain",
+      "relevance_rubric_version",
+      "primary_slice (context only)",
+      "secondary_slices (context only)",
+      "candidates with id/title/abstract/content_hash/source_rank/near_duplicate_of"
+    ],
+    "excludes": [
+      "provisional relevance grades",
+      "provisional confidence",
+      "provisional rationales",
+      "policy scores",
+      "semantic scores",
+      "baseline ranks",
+      "candidate policy ranks",
+      "split labels (biasing)",
+      "author identity / provenance"
+    ],
+    "candidate_ordering": "deterministically shuffled per case (seeded by case_id, sha256-derived LCG) so order does not leak provisional rank"
+  },
   "deliverables": [
     "docs/p1b_gate1/slice_coverage_report.json",
-    "docs/p1b_gate1/blind_adjudication_package.json",
+    "docs/p1b_gate1/blind_adjudication_package.json (v2, protocol-compliant)",
     "docs/p1b_gate1/gate1_summary.json (this file)"
   ],
-  "next_action_required": "Independent blind second-pass annotation of every (case_id, candidate_id) in blind_adjudication_package.json. Do NOT consult grades, confidence, rationales, policy scores, or ranks while annotating. Return populated judgments for reconciliation and adjudication of disagreements."
+  "adjudicator_must_assign_per_candidate": [
+    "grade (0-3)",
+    "confidence (0.0-1.0)",
+    "brief rubric-referenced rationale",
+    "specialist_review_needed (true|false)"
+  ],
+  "next_action_required": "Independent blind second-pass annotation of every (case_id, candidate_id) in blind_adjudication_package.json using the embedded rubric. Do NOT consult provisional judgments (benchmark_v2_*_cases.py), policy scores, semantic scores, or ranks while annotating. Return the populated package. After annotation: reconcile blind vs provisional, adjudicate material disagreements, exclude or flag specialist-review cases, then freeze."
 }

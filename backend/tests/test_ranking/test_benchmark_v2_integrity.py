@@ -21,6 +21,7 @@ from backend.ranking.benchmark_v2_registry import (
     ALL_V2_CASES,
     BENCHMARK_V2,
     build_blind_adjudication_package,
+    build_blind_adjudication_package_v2,
     compute_benchmark_v2_fingerprint,
     compute_provisional_fingerprint,
     is_frozen,
@@ -179,6 +180,110 @@ class TestBlindAdjudicationPackage:
         for case_entry in pkg["cases"]:
             assert "primary_slice" in case_entry
             assert "secondary_slices" in case_entry
+
+
+class TestBlindAdjudicationPackageV2Protocol:
+    """Enforces the frozen Gate 1 protocol on the v2 package.
+
+    The protocol (frozen in Decision 3 / Gate 1):
+      INCLUDES per case:  case_id, ranking_surface, research question /
+      ranking intent, candidate_id, title, abstract/canonical text, rubric,
+      domain/context needed for judgment.
+      EXCLUDES: provisional grades, confidence, rationales, policy scores,
+      semantic scores, baseline ranks, candidate policy ranks, split labels,
+      author identity/provenance.
+      Candidate order: deterministically shuffled, NOT provisional/baseline
+      rank order.
+    """
+
+    REQUIRED_CASE_KEYS = {
+        "case_id", "ranking_surface", "research_question", "ranking_intent",
+        "adjudication_context", "domain", "candidates",
+    }
+    FORBIDDEN_CASE_KEYS = {"split", "judgments"}
+    FORBIDDEN_CAND_KEYS = {
+        "grade", "confidence", "rationale",
+        "policy_score", "semantic_score", "rank", "baseline_rank",
+    }
+    REQUIRED_CAND_KEYS = {
+        "candidate_id", "title", "abstract", "content_hash",
+    }
+
+    def test_package_version_is_v2(self):
+        pkg = build_blind_adjudication_package_v2()
+        assert pkg["package_version"] == "blind_adjudication_v2"
+
+    def test_package_has_all_cases(self):
+        pkg = build_blind_adjudication_package_v2()
+        assert len(pkg["cases"]) == len(ALL_V2_CASES)
+
+    def test_package_embeds_full_rubric(self):
+        pkg = build_blind_adjudication_package_v2()
+        assert "rubric" in pkg
+        assert pkg["rubric"]["rubric_version"] == "research_utility_0_to_3_v1"
+        # The rubric must define criteria + grade anchors so judgments are
+        # criterion-anchored, not subjective.
+        assert "criteria" in pkg["rubric"]
+        assert "grade_anchors" in pkg["rubric"]
+        for grade in ("0", "1", "2", "3"):
+            assert grade in pkg["rubric"]["grade_anchors"]
+
+    def test_case_keys_compliant(self):
+        pkg = build_blind_adjudication_package_v2()
+        for entry in pkg["cases"]:
+            keys = set(entry.keys())
+            missing = self.REQUIRED_CASE_KEYS - keys
+            assert not missing, f"{entry['case_id']} missing: {missing}"
+            leaked = self.FORBIDDEN_CASE_KEYS & keys
+            assert not leaked, f"{entry['case_id']} leaked forbidden: {leaked}"
+
+    def test_candidate_keys_compliant(self):
+        pkg = build_blind_adjudication_package_v2()
+        for entry in pkg["cases"]:
+            for cand in entry["candidates"]:
+                keys = set(cand.keys())
+                missing = self.REQUIRED_CAND_KEYS - keys
+                assert not missing, (
+                    f"{entry['case_id']}/{cand['candidate_id']} missing: {missing}"
+                )
+                leaked = self.FORBIDDEN_CAND_KEYS & keys
+                assert not leaked, (
+                    f"{entry['case_id']}/{cand['candidate_id']} leaked: {leaked}"
+                )
+
+    def test_candidate_order_is_shuffled_not_author_order(self):
+        """At least the majority of cases must have a non-author candidate order."""
+        pkg = build_blind_adjudication_package_v2()
+        shuffled_count = 0
+        for entry, orig in zip(pkg["cases"], ALL_V2_CASES):
+            author_order = [c.candidate_id for c in orig.candidates]
+            pkg_order = [c["candidate_id"] for c in entry["candidates"]]
+            if author_order != pkg_order:
+                shuffled_count += 1
+        # Some cases may collide by chance (esp. 4-candidate cases); require
+        # a clear majority to be reordered.
+        assert shuffled_count >= len(ALL_V2_CASES) * 0.8, (
+            f"only {shuffled_count}/{len(ALL_V2_CASES)} cases shuffled"
+        )
+
+    def test_shuffle_is_reproducible(self):
+        p1 = build_blind_adjudication_package_v2()
+        p2 = build_blind_adjudication_package_v2()
+        for e1, e2 in zip(p1["cases"], p2["cases"]):
+            o1 = [c["candidate_id"] for c in e1["candidates"]]
+            o2 = [c["candidate_id"] for c in e2["candidates"]]
+            assert o1 == o2, f"{e1['case_id']}: shuffle not reproducible"
+
+    def test_no_author_identity_or_provenance_leaked(self):
+        pkg = build_blind_adjudication_package_v2()
+        for entry in pkg["cases"]:
+            for cand in entry["candidates"]:
+                # No annotator names or provenance strings on candidates.
+                assert "annotator" not in cand
+                assert "provenance" not in cand
+                assert "initial" not in cand
+            assert "annotator" not in entry
+            assert "provenance" not in entry
 
 
 class TestBenchmarkV2Version:

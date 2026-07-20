@@ -71,6 +71,55 @@ ANNOTATOR_SECOND_PASS = "blind_adjudicator"
 ANNOTATOR_ADJUDICATOR = "adjudicator"
 
 
+# ── Rubric definition (research_utility_0_to_3_v1) ───────────────────
+#
+# Explicit, criterion-anchored definition of the grading rubric so that
+# every annotator (initial author, blind adjudicator, final adjudicator)
+# applies the same criteria. The holistic 0-3 grade is the primary key;
+# the three sub-dimensions are evidence that anchors the holistic grade.
+
+RESEARCH_UTILITY_RUBRIC_V1 = {
+    "rubric_version": "research_utility_0_to_3_v1",
+    "primary_grade_scale": "0-3 holistic research utility",
+    "criteria": {
+        "topical_relevance": (
+            "Does the candidate address the same research question / intent "
+            "as the query? (0 = unrelated topic, 3 = directly on-topic)"
+        ),
+        "evidence_utility": (
+            "Would a researcher asking this query find this candidate useful "
+            "as evidence? (0 = not useful, 3 = highly useful)"
+        ),
+        "methodological_fit": (
+        "Does the candidate's method or study type match what the query is "
+            "asking for (method, application, review, primary study)? "
+            "(0 = wrong type, 3 = exactly the right type)"
+        ),
+    },
+    "grade_anchors": {
+        "3": "Highly useful: directly on-topic, strong evidence, right type.",
+        "2": "Useful: relevant but with caveats (broader scope, adjacent "
+             "method, secondary source, partial match).",
+        "1": "Marginally relevant: touches the topic but is not useful as "
+             "primary evidence for the query.",
+        "0": "Irrelevant: wrong meaning, wrong domain, or unrelated topic. "
+             "Includes lexical traps (high token overlap, wrong meaning) "
+             "and acronym collisions.",
+    },
+    "missing_abstract_policy": (
+        "When a candidate has no abstract, base the grade on the title and "
+        "domain context only, and lower annotation_confidence accordingly. "
+        "Do NOT assume relevance from the title alone if it is ambiguous."
+    ),
+    "specialist_review_flag_policy": (
+        "If the candidate requires specialist domain knowledge that the "
+        "annotator cannot reliably judge, set specialist_review_needed=true "
+        "rather than forcing a grade. Such candidates are excluded from "
+        "policy evaluation or routed for external review."
+    ),
+}
+
+
 @dataclass(frozen=True)
 class AnnotationPass:
     """One annotation pass for one (case, candidate) judgment.
