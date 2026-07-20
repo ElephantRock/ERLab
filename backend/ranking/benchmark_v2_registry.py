@@ -61,6 +61,7 @@ from backend.ranking.benchmark_v2_schema import (
     DISAGREE_RESOLVED,
     DISAGREE_SINGLE_PASS,
     DISAGREE_UNRESOLVED,
+    JudgmentProvenance,
     REQUIRED_ADVERSARIAL_SLICES,
     RESEARCH_UTILITY_RUBRIC_V1,
 )
@@ -182,20 +183,23 @@ def _case_fingerprint_payload(case: BenchmarkCaseV2, use_final_grade: bool) -> d
 
 
 def compute_benchmark_v2_fingerprint() -> str:
-    """Frozen fingerprint of the v2 benchmark.
+    """Frozen fingerprint of the v2 benchmark (post-Gate-1).
 
-    REQUIRES that all judgments are adjudicated (no single-pass / unresolved).
-    Raises ``RuntimeError`` if any judgment is still pending — this prevents
-    freezing the benchmark before adjudication completes.
+    Computed over the FROZEN adjudicated view: same candidate pools / splits /
+    queries as the provisional v2, but with each judgment's grade set to the
+    adjudicated final grade from the blind adjudication pass.
+
+    REQUIRES that the frozen-adjudication module covers every judgment.
+    Raises ``RuntimeError`` otherwise.
     """
-    pending = unresolved_disagreements()
-    if pending:
+    if not is_gate1_complete():
         raise RuntimeError(
-            f"cannot freeze v2 fingerprint: {len(pending)} judgments still "
-            f"pending adjudication (first: {pending[0]}). Run the blind "
-            f"adjudication pass first, or use compute_provisional_fingerprint()."
+            "cannot freeze v2 fingerprint: frozen adjudication module does not "
+            "cover every v2 judgment. Run the blind adjudication pass and "
+            "regenerate benchmark_v2_frozen_adjudication.py."
         )
-    payload = [_case_fingerprint_payload(c, use_final_grade=True) for c in ALL_V2_CASES]
+    frozen = frozen_v2_cases()
+    payload = [_case_fingerprint_payload(c, use_final_grade=True) for c in frozen]
     blob = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode()
     return hashlib.sha256(blob).hexdigest()
 
@@ -210,6 +214,93 @@ def compute_provisional_fingerprint() -> str:
     payload = [_case_fingerprint_payload(c, use_final_grade=False) for c in ALL_V2_CASES]
     blob = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode()
     return hashlib.sha256(blob).hexdigest()
+
+
+# ── Frozen adjudicated view ──────────────────────────────────────────
+#
+# After Gate 1 blind adjudication, the authoritative evaluation view is
+# the FROZEN set of cases: same candidate pools / splits / queries as the
+# provisional v2 cases, but with each JudgmentProvenance carrying the full
+# annotation trail (initial + blind second-pass + adjudicated grade).
+#
+# Source of truth: backend/ranking/benchmark_v2_frozen_adjudication.py
+# (generated from the SHA-256-verified adjudication package).
+
+from backend.ranking.benchmark_v2_frozen_adjudication import (  # noqa: E402
+    get_frozen_adjudication,
+    frozen_provenance_count,
+)
+
+
+def _frozen_judgment(case_id: str, candidate_id: str, initial_prov) -> JudgmentProvenance | None:
+    """Overlay the frozen second-pass + adjudicated grade onto an initial pass."""
+    frozen = get_frozen_adjudication(case_id, candidate_id)
+    if frozen is None:
+        return None
+    second_pass, adjudicated_grade, disagreement_status = frozen
+    # adjudicated_confidence: use the second-pass confidence; the adjudicator
+    # confirmed the grade and did not revise confidence separately.
+    return JudgmentProvenance(
+        initial=initial_prov.initial,
+        second_pass=second_pass,
+        adjudicated_grade=adjudicated_grade,
+        adjudicated_confidence=second_pass.annotation_confidence,
+        disagreement_status=disagreement_status,
+    )
+
+
+def frozen_v2_cases() -> tuple[BenchmarkCaseV2, ...]:
+    """Return v2 cases overlaid with frozen adjudication provenance.
+
+    Each case is reconstructed with full JudgmentProvenance (initial + blind
+    second-pass + adjudicated grade). Raises if any case/candidate lacks a
+    frozen record (which would indicate the adjudication package is incomplete
+    or the registry drifted from the frozen module).
+    """
+    from backend.ranking.benchmark_v2_schema import BenchmarkCaseV2 as _C
+    frozen_cases: list[BenchmarkCaseV2] = []
+    for case in ALL_V2_CASES:
+        new_judgments = {}
+        for cid, prov in case.judgments.items():
+            fj = _frozen_judgment(case.case_id, cid, prov)
+            if fj is None:
+                raise RuntimeError(
+                    f"{case.case_id}/{cid}: no frozen adjudication record; "
+                    f"regenerate benchmark_v2_frozen_adjudication.py"
+                )
+            new_judgments[cid] = fj
+        frozen_cases.append(_C(
+            case_id=case.case_id,
+            research_domain=case.research_domain,
+            ranking_surface=case.ranking_surface,
+            ranking_intent=case.ranking_intent,
+            query_text=case.query_text,
+            candidates=case.candidates,
+            judgments=new_judgments,
+            split=case.split,
+            primary_slice=case.primary_slice,
+            secondary_slices=case.secondary_slices,
+        ))
+    return tuple(frozen_cases)
+
+
+def frozen_v2_discovery_cases() -> tuple[BenchmarkCaseV2, ...]:
+    return tuple(c for c in frozen_v2_cases() if c.ranking_surface == "discovery_ranking")
+
+
+def frozen_v2_retrieval_cases() -> tuple[BenchmarkCaseV2, ...]:
+    return tuple(c for c in frozen_v2_cases() if c.ranking_surface == "retrieval_ranking")
+
+
+def is_gate1_complete() -> bool:
+    """True iff the frozen adjudication module covers every v2 judgment.
+
+    This is the post-Gate-1 freeze predicate. When True,
+    ``compute_benchmark_v2_fingerprint()`` will succeed and the benchmark is
+    ready for P1B.2 (embedding snapshot generation).
+    """
+    total = sum(len(c.judgments) for c in ALL_V2_CASES)
+    return frozen_provenance_count() == total
 
 
 # ── Coverage report ──────────────────────────────────────────────────

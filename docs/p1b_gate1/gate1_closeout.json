@@ -1,0 +1,45 @@
+{
+  "gate": "GATE 1",
+  "status": "CLOSED",
+  "benchmark_version": "discovery_ranking_v2+retrieval_ranking_v2",
+  "adjudication_package_sha256": "d61641b0f205492603cc1ff9d42038a3c86d73c331e58674f7a5e099a5d8a5e0",
+  "adjudication_package_sha256_verified": true,
+  "cases": 66,
+  "judgments": 270,
+  "agreement_counts": {
+    "exact": 179,
+    "minor": 90,
+    "material": 1,
+    "unable": 0
+  },
+  "agreement_rates": {
+    "exact": 0.663,
+    "minor": 0.3333,
+    "material": 0.0037,
+    "unable": 0.0
+  },
+  "delta_distribution": {
+    "-2": 1,
+    "-1": 60,
+    "0": 179,
+    "1": 30
+  },
+  "material_disagreement_count": 1,
+  "material_disagreements_adjudicated": [
+    {
+      "case_id": "bio_ret_rv_001",
+      "candidate_id": "bior_rv_001_c",
+      "provisional_grade": 3,
+      "blind_grade": 1,
+      "adjudicated_grade": 1,
+      "reason": "endpoint mismatch (anxiety vs depression) under evidence_support intent"
+    }
+  ],
+  "specialist_review_flags": 0,
+  "gate1_complete": true,
+  "frozen_fingerprint": "0ffbfdb164053ad19c869cbba44678c0aa76aa140557320383a82efcebcb96e4",
+  "provisional_fingerprint_audit_only": "d9581928e2af1ff5aa49d3f84edef4c3f04c57bdcfabdab2f1248fe2dd6fc8c8",
+  "p1b_2_authorized": true,
+  "p1b_3_authorized_after_snapshot_verification": true,
+  "p1b_4_plus_authorized": false
+}

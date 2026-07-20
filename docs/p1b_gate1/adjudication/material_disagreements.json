@@ -1,0 +1,19 @@
+[
+  {
+    "case_id": "bio_ret_rv_001",
+    "candidate_id": "bior_rv_001_c",
+    "research_domain": "biomedical",
+    "surface": "retrieval_ranking",
+    "primary_slice": "review_vs_primary",
+    "provisional_grade": 3,
+    "provisional_confidence": 0.9,
+    "provisional_rationale": "primary psilocybin RCT",
+    "blind_grade": 1,
+    "blind_confidence": 0.87,
+    "blind_rationale": "Touches the topic but does not directly answer the requested empirical question, so evidence utility is marginal.",
+    "specialist_review_needed": false,
+    "delta": -2,
+    "agreement": "material",
+    "proposed_adjudicated_grade": 1
+  }
+]

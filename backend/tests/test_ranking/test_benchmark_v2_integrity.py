@@ -24,12 +24,19 @@ from backend.ranking.benchmark_v2_registry import (
     build_blind_adjudication_package_v2,
     compute_benchmark_v2_fingerprint,
     compute_provisional_fingerprint,
-    is_frozen,
+    frozen_v2_cases,
+    frozen_v2_discovery_cases,
+    frozen_v2_retrieval_cases,
+    is_gate1_complete,
     slice_coverage_report,
-    unresolved_disagreements,
     validate_benchmark_v2,
 )
-from backend.ranking.benchmark_v2_schema import REQUIRED_ADVERSARIAL_SLICES, ALL_SLICE_TYPES
+from backend.ranking.benchmark_v2_schema import (
+    DISAGREE_NONE,
+    DISAGREE_RESOLVED,
+    REQUIRED_ADVERSARIAL_SLICES,
+    ALL_SLICE_TYPES,
+)
 
 
 class TestBenchmarkV2QualityFloor:
@@ -129,15 +136,54 @@ class TestBenchmarkV2SchemaIntegrity:
 
 
 class TestBenchmarkV2FreezeDiscipline:
-    def test_pre_adjudication_is_not_frozen(self):
-        """At Gate 1, every judgment is single-pass. is_frozen() must be False."""
-        pending = unresolved_disagreements()
-        assert len(pending) > 0, "expected single-pass judgments pre-adjudication"
-        assert is_frozen() is False
+    def test_gate1_is_complete(self):
+        """Post-adjudication: every v2 judgment has a frozen record."""
+        assert is_gate1_complete() is True
 
-    def test_frozen_fingerprint_raises_pre_adjudication(self):
-        with pytest.raises(RuntimeError, match="pending adjudication"):
-            compute_benchmark_v2_fingerprint()
+    def test_frozen_fingerprint_computes_post_adjudication(self):
+        """The frozen fingerprint must compute and be deterministic."""
+        fp1 = compute_benchmark_v2_fingerprint()
+        fp2 = compute_benchmark_v2_fingerprint()
+        assert fp1 == fp2
+        assert len(fp1) == 64
+
+    def test_frozen_view_has_full_provenance(self):
+        """Every frozen judgment carries initial + second_pass + adjudicated grade."""
+        frozen = frozen_v2_cases()
+        assert len(frozen) == len(ALL_V2_CASES)
+        for case in frozen:
+            for cid, prov in case.judgments.items():
+                assert prov.second_pass is not None, (
+                    f"{case.case_id}/{cid}: missing blind second-pass"
+                )
+                assert prov.adjudicated_grade is not None, (
+                    f"{case.case_id}/{cid}: missing adjudicated grade"
+                )
+                assert prov.disagreement_status in (DISAGREE_NONE, DISAGREE_RESOLVED), (
+                    f"{case.case_id}/{cid}: bad disagreement_status {prov.disagreement_status}"
+                )
+
+    def test_frozen_view_validates(self):
+        frozen = frozen_v2_cases()
+        errors: list[str] = []
+        for case in frozen:
+            errors.extend(case.validate())
+        assert errors == [], f"frozen view validation errors: {errors[:5]}"
+
+    def test_frozen_view_preserves_candidate_pools_and_splits(self):
+        """Frozen cases must not alter candidate pools, splits, or queries."""
+        frozen_by_id = {c.case_id: c for c in frozen_v2_cases()}
+        for orig in ALL_V2_CASES:
+            fz = frozen_by_id[orig.case_id]
+            assert fz.split == orig.split
+            assert fz.query_text == orig.query_text
+            assert fz.primary_slice == orig.primary_slice
+            assert tuple(c.candidate_id for c in fz.candidates) == tuple(
+                c.candidate_id for c in orig.candidates
+            )
+            assert [c.content_hash for c in fz.candidates] == [
+                c.content_hash for c in orig.candidates
+            ]
 
     def test_provisional_fingerprint_is_deterministic(self):
         fp1 = compute_provisional_fingerprint()
