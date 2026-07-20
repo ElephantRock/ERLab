@@ -1,0 +1,188 @@
+{
+  "gate": "GATE 2 (after P1B.3)",
+  "frozen_benchmark_fingerprint": "0ffbfdb164053ad19c869cbba44678c0aa76aa140557320383a82efcebcb96e4",
+  "frozen_snapshot_fingerprint": "2d8b26f709c03b6bbc7d5c4ab7ca65255e0e1f8eb65aa5562b205e0602084000",
+  "snapshot_provider_model": "text-embedding-qwen3-embedding-0.6b",
+  "splits_used_for_selection": [
+    "calibration",
+    "development"
+  ],
+  "n_selection_cases": 44,
+  "n_held_out_cases": 22,
+  "frozen_thresholds": {
+    "ndcg_at_10_improvement_absolute": 0.03,
+    "bootstrap_lower_bound": 0.0,
+    "recall_at_20_change_floor": -0.01,
+    "critical_slice_decline_floor": -0.05,
+    "deterministic_replay_required": 1.0
+  },
+  "frozen_hyperparameters": {
+    "rrf_k": 60,
+    "weighted_lexical": 0.5,
+    "weighted_semantic": 0.5,
+    "final_limit": 20
+  },
+  "macro_metrics": {
+    "legacy_lexical_top20_v1": {
+      "ndcg_at_5": 0.9495,
+      "ndcg_at_10": 0.9495,
+      "mrr_at_10": 1.0,
+      "precision_at_5": 0.7591,
+      "recall_at_20": 1.0
+    },
+    "semantic_only_v1": {
+      "ndcg_at_5": 0.9321,
+      "ndcg_at_10": 0.9321,
+      "mrr_at_10": 0.9886,
+      "precision_at_5": 0.7591,
+      "recall_at_20": 1.0
+    },
+    "hybrid_rrf_v1": {
+      "ndcg_at_5": 0.9561,
+      "ndcg_at_10": 0.9561,
+      "mrr_at_10": 1.0,
+      "precision_at_5": 0.7591,
+      "recall_at_20": 1.0
+    },
+    "hybrid_weighted_v1": {
+      "ndcg_at_5": 0.9394,
+      "ndcg_at_10": 0.9394,
+      "mrr_at_10": 1.0,
+      "precision_at_5": 0.7591,
+      "recall_at_20": 1.0
+    }
+  },
+  "latency_seconds": {
+    "legacy_lexical_top20_v1": 0.0038,
+    "semantic_only_v1": 0.0278,
+    "hybrid_rrf_v1": 0.0298,
+    "hybrid_weighted_v1": 0.0288
+  },
+  "bootstrap_ci_vs_legacy_ndcg10": {
+    "semantic_only_v1": {
+      "mean_delta": -0.017409,
+      "lower": -0.04101,
+      "upper": 0.004837,
+      "p_positive": 0.064,
+      "n": 44
+    },
+    "hybrid_rrf_v1": {
+      "mean_delta": 0.006546,
+      "lower": -0.000438,
+      "upper": 0.015491,
+      "p_positive": 0.9656,
+      "n": 44
+    },
+    "hybrid_weighted_v1": {
+      "mean_delta": -0.01016,
+      "lower": -0.029658,
+      "upper": 0.007107,
+      "p_positive": 0.1454,
+      "n": 44
+    }
+  },
+  "per_slice_ndcg10": {
+    "legacy_lexical_top20_v1": {
+      "lexical_trap": 0.9164,
+      "semantic_paraphrase": 0.9453,
+      "method_vs_application": 0.9556,
+      "review_vs_primary": 0.9774,
+      "missing_abstract": 0.9902,
+      "near_duplicate": 0.9764,
+      "source_rank_conflict": 0.907,
+      "acronym_vs_expanded": 0.9645,
+      "negated_findings": 0.9599,
+      "exact_identifier": 0.9415,
+      "neutral": 0.9104
+    },
+    "semantic_only_v1": {
+      "lexical_trap": 0.9164,
+      "semantic_paraphrase": 0.9455,
+      "method_vs_application": 0.8966,
+      "review_vs_primary": 0.9206,
+      "missing_abstract": 0.9824,
+      "near_duplicate": 0.9726,
+      "source_rank_conflict": 0.874,
+      "acronym_vs_expanded": 1.0,
+      "negated_findings": 0.9625,
+      "exact_identifier": 0.8451,
+      "neutral": 0.9373
+    },
+    "hybrid_rrf_v1": {
+      "lexical_trap": 0.9164,
+      "semantic_paraphrase": 0.9515,
+      "method_vs_application": 0.9616,
+      "review_vs_primary": 0.9739,
+      "missing_abstract": 0.9902,
+      "near_duplicate": 0.9806,
+      "source_rank_conflict": 0.9146,
+      "acronym_vs_expanded": 1.0,
+      "negated_findings": 0.9599,
+      "exact_identifier": 0.9347,
+      "neutral": 0.9332
+    },
+    "hybrid_weighted_v1": {
+      "lexical_trap": 0.9164,
+      "semantic_paraphrase": 0.9515,
+      "method_vs_application": 0.9307,
+      "review_vs_primary": 0.9242,
+      "missing_abstract": 0.9824,
+      "near_duplicate": 0.9779,
+      "source_rank_conflict": 0.9146,
+      "acronym_vs_expanded": 0.9645,
+      "negated_findings": 0.9625,
+      "exact_identifier": 0.8392,
+      "neutral": 0.9689
+    }
+  },
+  "held_out_legacy_baseline_only": {
+    "macro": {
+      "ndcg_at_5": 0.9354,
+      "ndcg_at_10": 0.9354,
+      "mrr_at_10": 1.0,
+      "precision_at_5": 0.7727,
+      "recall_at_20": 1.0
+    },
+    "note": "Held-out reported ONLY for legacy baseline per Decision 3. Candidate policies NOT evaluated on held_out because none passed the gate."
+  },
+  "gate_verdicts": {
+    "legacy_lexical_top20_v1": "baseline",
+    "semantic_only_v1": {
+      "checks": {
+        "ndcg10_improvement_ge_0.03": false,
+        "bootstrap_lb_gt_0": false,
+        "recall20_delta_ge_-0.01": true,
+        "worst_slice_delta_ge_-0.05": false,
+        "deterministic_replay_100pct": true
+      },
+      "delta_ndcg10": -0.0174,
+      "worst_slice_delta": -0.0964,
+      "verdict": "FAIL"
+    },
+    "hybrid_rrf_v1": {
+      "checks": {
+        "ndcg10_improvement_ge_0.03": false,
+        "bootstrap_lb_gt_0": false,
+        "recall20_delta_ge_-0.01": true,
+        "worst_slice_delta_ge_-0.05": true,
+        "deterministic_replay_100pct": true
+      },
+      "delta_ndcg10": 0.0066,
+      "worst_slice_delta": -0.0068,
+      "verdict": "FAIL"
+    },
+    "hybrid_weighted_v1": {
+      "checks": {
+        "ndcg10_improvement_ge_0.03": false,
+        "bootstrap_lb_gt_0": false,
+        "recall20_delta_ge_-0.01": true,
+        "worst_slice_delta_ge_-0.05": false,
+        "deterministic_replay_100pct": true
+      },
+      "delta_ndcg10": -0.0101,
+      "worst_slice_delta": -0.1023,
+      "verdict": "FAIL"
+    }
+  },
+  "overall_verdict": "NO POLICY PASSES"
+}
