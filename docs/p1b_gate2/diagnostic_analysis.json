@@ -1,0 +1,2216 @@
+{
+  "benchmark_fingerprint": "0ffbfdb164053ad19c869cbba44678c0aa76aa140557320383a82efcebcb96e4",
+  "snapshot_fingerprint": "2d8b26f709c03b6bbc7d5c4ab7ca65255e0e1f8eb65aa5562b205e0602084000",
+  "n_selection_cases": 44,
+  "section_1_case_level": {
+    "rows": [
+      {
+        "case_id": "ml_disc_lt_001",
+        "slice": "lexical_trap",
+        "surface": "discovery_ranking",
+        "domain": "machine_learning",
+        "legacy_ndcg10": 1.0,
+        "semantic_ndcg10": 1.0,
+        "hybrid_rrf_ndcg10": 1.0,
+        "weighted_ndcg10": 1.0,
+        "delta_rrf_vs_legacy": 0.0,
+        "delta_semantic_vs_legacy": 0.0,
+        "max_rank_change_legacy_to_rrf": 0,
+        "classification": "no_effective_change"
+      },
+      {
+        "case_id": "bio_disc_lt_001",
+        "slice": "lexical_trap",
+        "surface": "discovery_ranking",
+        "domain": "biomedical",
+        "legacy_ndcg10": 0.858,
+        "semantic_ndcg10": 0.858,
+        "hybrid_rrf_ndcg10": 0.858,
+        "weighted_ndcg10": 0.858,
+        "delta_rrf_vs_legacy": 0.0,
+        "delta_semantic_vs_legacy": 0.0,
+        "max_rank_change_legacy_to_rrf": 0,
+        "classification": "no_effective_change"
+      },
+      {
+        "case_id": "ml_disc_sp_001",
+        "slice": "semantic_paraphrase",
+        "surface": "discovery_ranking",
+        "domain": "machine_learning",
+        "legacy_ndcg10": 1.0,
+        "semantic_ndcg10": 0.963,
+        "hybrid_rrf_ndcg10": 0.9872,
+        "weighted_ndcg10": 0.9872,
+        "delta_rrf_vs_legacy": -0.0128,
+        "delta_semantic_vs_legacy": -0.037,
+        "max_rank_change_legacy_to_rrf": 1,
+        "classification": "hybrid_marginal_loss"
+      },
+      {
+        "case_id": "nlp_disc_sp_001",
+        "slice": "semantic_paraphrase",
+        "surface": "discovery_ranking",
+        "domain": "nlp",
+        "legacy_ndcg10": 0.9219,
+        "semantic_ndcg10": 0.9595,
+        "hybrid_rrf_ndcg10": 0.9595,
+        "weighted_ndcg10": 0.9595,
+        "delta_rrf_vs_legacy": 0.0376,
+        "delta_semantic_vs_legacy": 0.0376,
+        "max_rank_change_legacy_to_rrf": 1,
+        "classification": "hybrid_marginal_win"
+      },
+      {
+        "case_id": "bio_disc_mv_001",
+        "slice": "method_vs_application",
+        "surface": "discovery_ranking",
+        "domain": "biomedical",
+        "legacy_ndcg10": 1.0,
+        "semantic_ndcg10": 0.8636,
+        "hybrid_rrf_ndcg10": 1.0,
+        "weighted_ndcg10": 0.8636,
+        "delta_rrf_vs_legacy": 0.0,
+        "delta_semantic_vs_legacy": -0.1364,
+        "max_rank_change_legacy_to_rrf": 0,
+        "classification": "no_effective_change"
+      },
+      {
+        "case_id": "nlp_disc_mv_001",
+        "slice": "method_vs_application",
+        "surface": "discovery_ranking",
+        "domain": "nlp",
+        "legacy_ndcg10": 0.963,
+        "semantic_ndcg10": 0.8636,
+        "hybrid_rrf_ndcg10": 0.9872,
+        "weighted_ndcg10": 1.0,
+        "delta_rrf_vs_legacy": 0.0242,
+        "delta_semantic_vs_legacy": -0.0994,
+        "max_rank_change_legacy_to_rrf": 1,
+        "classification": "hybrid_marginal_win"
+      },
+      {
+        "case_id": "ml_disc_rv_001",
+        "slice": "review_vs_primary",
+        "surface": "discovery_ranking",
+        "domain": "machine_learning",
+        "legacy_ndcg10": 0.9364,
+        "semantic_ndcg10": 0.7233,
+        "hybrid_rrf_ndcg10": 0.9364,
+        "weighted_ndcg10": 0.7233,
+        "delta_rrf_vs_legacy": 0.0,
+        "delta_semantic_vs_legacy": -0.213,
+        "max_rank_change_legacy_to_rrf": 0,
+        "classification": "no_effective_change"
+      },
+      {
+        "case_id": "nlp_disc_rv_001",
+        "slice": "review_vs_primary",
+        "surface": "discovery_ranking",
+        "domain": "nlp",
+        "legacy_ndcg10": 1.0,
+        "semantic_ndcg10": 1.0,
+        "hybrid_rrf_ndcg10": 1.0,
+        "weighted_ndcg10": 1.0,
+        "delta_rrf_vs_legacy": 0.0,
+        "delta_semantic_vs_legacy": 0.0,
+        "max_rank_change_legacy_to_rrf": 0,
+        "classification": "no_effective_change"
+      },
+      {
+        "case_id": "ml_disc_ma_001",
+        "slice": "missing_abstract",
+        "surface": "discovery_ranking",
+        "domain": "machine_learning",
+        "legacy_ndcg10": 1.0,
+        "semantic_ndcg10": 1.0,
+        "hybrid_rrf_ndcg10": 1.0,
+        "weighted_ndcg10": 1.0,
+        "delta_rrf_vs_legacy": 0.0,
+        "delta_semantic_vs_legacy": 0.0,
+        "max_rank_change_legacy_to_rrf": 1,
+        "classification": "no_effective_change"
+      },
+      {
+        "case_id": "bio_disc_ma_001",
+        "slice": "missing_abstract",
+        "surface": "discovery_ranking",
+        "domain": "biomedical",
+        "legacy_ndcg10": 1.0,
+        "semantic_ndcg10": 1.0,
+        "hybrid_rrf_ndcg10": 1.0,
+        "weighted_ndcg10": 1.0,
+        "delta_rrf_vs_legacy": 0.0,
+        "delta_semantic_vs_legacy": 0.0,
+        "max_rank_change_legacy_to_rrf": 1,
+        "classification": "no_effective_change"
+      },
+      {
+        "case_id": "bio_disc_nd_001",
+        "slice": "near_duplicate",
+        "surface": "discovery_ranking",
+        "domain": "biomedical",
+        "legacy_ndcg10": 0.9833,
+        "semantic_ndcg10": 0.9947,
+        "hybrid_rrf_ndcg10": 1.0,
+        "weighted_ndcg10": 1.0,
+        "delta_rrf_vs_legacy": 0.0167,
+        "delta_semantic_vs_legacy": 0.0114,
+        "max_rank_change_legacy_to_rrf": 1,
+        "classification": "hybrid_marginal_win"
+      },
+      {
+        "case_id": "nlp_disc_nd_001",
+        "slice": "near_duplicate",
+        "surface": "discovery_ranking",
+        "domain": "nlp",
+        "legacy_ndcg10": 1.0,
+        "semantic_ndcg10": 0.984,
+        "hybrid_rrf_ndcg10": 1.0,
+        "weighted_ndcg10": 1.0,
+        "delta_rrf_vs_legacy": 0.0,
+        "delta_semantic_vs_legacy": -0.016,
+        "max_rank_change_legacy_to_rrf": 1,
+        "classification": "no_effective_change"
+      },
+      {
+        "case_id": "ml_disc_sr_001",
+        "slice": "source_rank_conflict",
+        "surface": "discovery_ranking",
+        "domain": "machine_learning",
+        "legacy_ndcg10": 1.0,
+        "semantic_ndcg10": 1.0,
+        "hybrid_rrf_ndcg10": 1.0,
+        "weighted_ndcg10": 1.0,
+        "delta_rrf_vs_legacy": 0.0,
+        "delta_semantic_vs_legacy": 0.0,
+        "max_rank_change_legacy_to_rrf": 1,
+        "classification": "no_effective_change"
+      },
+      {
+        "case_id": "bio_disc_sr_001",
+        "slice": "source_rank_conflict",
+        "surface": "discovery_ranking",
+        "domain": "biomedical",
+        "legacy_ndcg10": 0.8452,
+        "semantic_ndcg10": 0.8452,
+        "hybrid_rrf_ndcg10": 0.8452,
+        "weighted_ndcg10": 0.8452,
+        "delta_rrf_vs_legacy": 0.0,
+        "delta_semantic_vs_legacy": 0.0,
+        "max_rank_change_legacy_to_rrf": 0,
+        "classification": "no_effective_change"
+      },
+      {
+        "case_id": "ml_disc_ac_001",
+        "slice": "acronym_vs_expanded",
+        "surface": "discovery_ranking",
+        "domain": "machine_learning",
+        "legacy_ndcg10": 1.0,
+        "semantic_ndcg10": 1.0,
+        "hybrid_rrf_ndcg10": 1.0,
+        "weighted_ndcg10": 1.0,
+        "delta_rrf_vs_legacy": 0.0,
+        "delta_semantic_vs_legacy": 0.0,
+        "max_rank_change_legacy_to_rrf": 0,
+        "classification": "no_effective_change"
+      },
+      {
+        "case_id": "nlp_disc_ac_001",
+        "slice": "acronym_vs_expanded",
+        "surface": "discovery_ranking",
+        "domain": "nlp",
+        "legacy_ndcg10": 1.0,
+        "semantic_ndcg10": 1.0,
+        "hybrid_rrf_ndcg10": 1.0,
+        "weighted_ndcg10": 1.0,
+        "delta_rrf_vs_legacy": 0.0,
+        "delta_semantic_vs_legacy": 0.0,
+        "max_rank_change_legacy_to_rrf": 1,
+        "classification": "no_effective_change"
+      },
+      {
+        "case_id": "bio_disc_nf_001",
+        "slice": "negated_findings",
+        "surface": "discovery_ranking",
+        "domain": "biomedical",
+        "legacy_ndcg10": 0.8502,
+        "semantic_ndcg10": 0.8502,
+        "hybrid_rrf_ndcg10": 0.8502,
+        "weighted_ndcg10": 0.8502,
+        "delta_rrf_vs_legacy": 0.0,
+        "delta_semantic_vs_legacy": 0.0,
+        "max_rank_change_legacy_to_rrf": 1,
+        "classification": "no_effective_change"
+      },
+      {
+        "case_id": "nlp_disc_nf_001",
+        "slice": "negated_findings",
+        "surface": "discovery_ranking",
+        "domain": "nlp",
+        "legacy_ndcg10": 1.0,
+        "semantic_ndcg10": 1.0,
+        "hybrid_rrf_ndcg10": 1.0,
+        "weighted_ndcg10": 1.0,
+        "delta_rrf_vs_legacy": 0.0,
+        "delta_semantic_vs_legacy": 0.0,
+        "max_rank_change_legacy_to_rrf": 0,
+        "classification": "no_effective_change"
+      },
+      {
+        "case_id": "ml_disc_ei_001",
+        "slice": "exact_identifier",
+        "surface": "discovery_ranking",
+        "domain": "machine_learning",
+        "legacy_ndcg10": 1.0,
+        "semantic_ndcg10": 1.0,
+        "hybrid_rrf_ndcg10": 1.0,
+        "weighted_ndcg10": 1.0,
+        "delta_rrf_vs_legacy": 0.0,
+        "delta_semantic_vs_legacy": 0.0,
+        "max_rank_change_legacy_to_rrf": 1,
+        "classification": "no_effective_change"
+      },
+      {
+        "case_id": "bio_disc_ei_001",
+        "slice": "exact_identifier",
+        "surface": "discovery_ranking",
+        "domain": "biomedical",
+        "legacy_ndcg10": 0.9608,
+        "semantic_ndcg10": 0.7441,
+        "hybrid_rrf_ndcg10": 0.91,
+        "weighted_ndcg10": 0.7441,
+        "delta_rrf_vs_legacy": -0.0508,
+        "delta_semantic_vs_legacy": -0.2167,
+        "max_rank_change_legacy_to_rrf": 2,
+        "classification": "hybrid_material_loss"
+      },
+      {
+        "case_id": "ml_disc_nt_001",
+        "slice": "neutral",
+        "surface": "discovery_ranking",
+        "domain": "machine_learning",
+        "legacy_ndcg10": 0.819,
+        "semantic_ndcg10": 0.9296,
+        "hybrid_rrf_ndcg10": 0.819,
+        "weighted_ndcg10": 0.9296,
+        "delta_rrf_vs_legacy": 0.0,
+        "delta_semantic_vs_legacy": 0.1106,
+        "max_rank_change_legacy_to_rrf": 0,
+        "classification": "no_effective_change"
+      },
+      {
+        "case_id": "nlp_disc_nt_001",
+        "slice": "neutral",
+        "surface": "discovery_ranking",
+        "domain": "nlp",
+        "legacy_ndcg10": 0.9631,
+        "semantic_ndcg10": 0.9631,
+        "hybrid_rrf_ndcg10": 0.9631,
+        "weighted_ndcg10": 0.9631,
+        "delta_rrf_vs_legacy": 0.0,
+        "delta_semantic_vs_legacy": 0.0,
+        "max_rank_change_legacy_to_rrf": 0,
+        "classification": "no_effective_change"
+      },
+      {
+        "case_id": "bio_ret_lt_001",
+        "slice": "lexical_trap",
+        "surface": "retrieval_ranking",
+        "domain": "biomedical",
+        "legacy_ndcg10": 0.8076,
+        "semantic_ndcg10": 0.8076,
+        "hybrid_rrf_ndcg10": 0.8076,
+        "weighted_ndcg10": 0.8076,
+        "delta_rrf_vs_legacy": 0.0,
+        "delta_semantic_vs_legacy": 0.0,
+        "max_rank_change_legacy_to_rrf": 0,
+        "classification": "no_effective_change"
+      },
+      {
+        "case_id": "nlp_ret_lt_001",
+        "slice": "lexical_trap",
+        "surface": "retrieval_ranking",
+        "domain": "nlp",
+        "legacy_ndcg10": 1.0,
+        "semantic_ndcg10": 1.0,
+        "hybrid_rrf_ndcg10": 1.0,
+        "weighted_ndcg10": 1.0,
+        "delta_rrf_vs_legacy": 0.0,
+        "delta_semantic_vs_legacy": 0.0,
+        "max_rank_change_legacy_to_rrf": 0,
+        "classification": "no_effective_change"
+      },
+      {
+        "case_id": "ml_ret_sp_001",
+        "slice": "semantic_paraphrase",
+        "surface": "retrieval_ranking",
+        "domain": "machine_learning",
+        "legacy_ndcg10": 0.8595,
+        "semantic_ndcg10": 0.8595,
+        "hybrid_rrf_ndcg10": 0.8595,
+        "weighted_ndcg10": 0.8595,
+        "delta_rrf_vs_legacy": 0.0,
+        "delta_semantic_vs_legacy": 0.0,
+        "max_rank_change_legacy_to_rrf": 0,
+        "classification": "no_effective_change"
+      },
+      {
+        "case_id": "bio_ret_sp_001",
+        "slice": "semantic_paraphrase",
+        "surface": "retrieval_ranking",
+        "domain": "biomedical",
+        "legacy_ndcg10": 1.0,
+        "semantic_ndcg10": 1.0,
+        "hybrid_rrf_ndcg10": 1.0,
+        "weighted_ndcg10": 1.0,
+        "delta_rrf_vs_legacy": 0.0,
+        "delta_semantic_vs_legacy": 0.0,
+        "max_rank_change_legacy_to_rrf": 0,
+        "classification": "no_effective_change"
+      },
+      {
+        "case_id": "ml_ret_mv_001",
+        "slice": "method_vs_application",
+        "surface": "retrieval_ranking",
+        "domain": "machine_learning",
+        "legacy_ndcg10": 1.0,
+        "semantic_ndcg10": 1.0,
+        "hybrid_rrf_ndcg10": 1.0,
+        "weighted_ndcg10": 1.0,
+        "delta_rrf_vs_legacy": 0.0,
+        "delta_semantic_vs_legacy": 0.0,
+        "max_rank_change_legacy_to_rrf": 0,
+        "classification": "no_effective_change"
+      },
+      {
+        "case_id": "nlp_ret_mv_001",
+        "slice": "method_vs_application",
+        "surface": "retrieval_ranking",
+        "domain": "nlp",
+        "legacy_ndcg10": 0.8592,
+        "semantic_ndcg10": 0.8592,
+        "hybrid_rrf_ndcg10": 0.8592,
+        "weighted_ndcg10": 0.8592,
+        "delta_rrf_vs_legacy": 0.0,
+        "delta_semantic_vs_legacy": 0.0,
+        "max_rank_change_legacy_to_rrf": 1,
+        "classification": "no_effective_change"
+      },
+      {
+        "case_id": "bio_ret_rv_001",
+        "slice": "review_vs_primary",
+        "surface": "retrieval_ranking",
+        "domain": "biomedical",
+        "legacy_ndcg10": 0.9733,
+        "semantic_ndcg10": 0.9592,
+        "hybrid_rrf_ndcg10": 0.9592,
+        "weighted_ndcg10": 0.9733,
+        "delta_rrf_vs_legacy": -0.0141,
+        "delta_semantic_vs_legacy": -0.0141,
+        "max_rank_change_legacy_to_rrf": 1,
+        "classification": "hybrid_marginal_loss"
+      },
+      {
+        "case_id": "nlp_ret_rv_001",
+        "slice": "review_vs_primary",
+        "surface": "retrieval_ranking",
+        "domain": "nlp",
+        "legacy_ndcg10": 1.0,
+        "semantic_ndcg10": 1.0,
+        "hybrid_rrf_ndcg10": 1.0,
+        "weighted_ndcg10": 1.0,
+        "delta_rrf_vs_legacy": 0.0,
+        "delta_semantic_vs_legacy": 0.0,
+        "max_rank_change_legacy_to_rrf": 1,
+        "classification": "no_effective_change"
+      },
+      {
+        "case_id": "ml_ret_ma_001",
+        "slice": "missing_abstract",
+        "surface": "retrieval_ranking",
+        "domain": "machine_learning",
+        "legacy_ndcg10": 0.9608,
+        "semantic_ndcg10": 0.9296,
+        "hybrid_rrf_ndcg10": 0.9608,
+        "weighted_ndcg10": 0.9296,
+        "delta_rrf_vs_legacy": 0.0,
+        "delta_semantic_vs_legacy": -0.0312,
+        "max_rank_change_legacy_to_rrf": 0,
+        "classification": "no_effective_change"
+      },
+      {
+        "case_id": "nlp_ret_ma_001",
+        "slice": "missing_abstract",
+        "surface": "retrieval_ranking",
+        "domain": "nlp",
+        "legacy_ndcg10": 1.0,
+        "semantic_ndcg10": 1.0,
+        "hybrid_rrf_ndcg10": 1.0,
+        "weighted_ndcg10": 1.0,
+        "delta_rrf_vs_legacy": 0.0,
+        "delta_semantic_vs_legacy": 0.0,
+        "max_rank_change_legacy_to_rrf": 1,
+        "classification": "no_effective_change"
+      },
+      {
+        "case_id": "ml_ret_nd_001",
+        "slice": "near_duplicate",
+        "surface": "retrieval_ranking",
+        "domain": "machine_learning",
+        "legacy_ndcg10": 0.9223,
+        "semantic_ndcg10": 0.9118,
+        "hybrid_rrf_ndcg10": 0.9223,
+        "weighted_ndcg10": 0.9118,
+        "delta_rrf_vs_legacy": 0.0,
+        "delta_semantic_vs_legacy": -0.0106,
+        "max_rank_change_legacy_to_rrf": 0,
+        "classification": "no_effective_change"
+      },
+      {
+        "case_id": "bio_ret_nd_001",
+        "slice": "near_duplicate",
+        "surface": "retrieval_ranking",
+        "domain": "biomedical",
+        "legacy_ndcg10": 1.0,
+        "semantic_ndcg10": 1.0,
+        "hybrid_rrf_ndcg10": 1.0,
+        "weighted_ndcg10": 1.0,
+        "delta_rrf_vs_legacy": 0.0,
+        "delta_semantic_vs_legacy": 0.0,
+        "max_rank_change_legacy_to_rrf": 0,
+        "classification": "no_effective_change"
+      },
+      {
+        "case_id": "bio_ret_sr_001",
+        "slice": "source_rank_conflict",
+        "surface": "retrieval_ranking",
+        "domain": "biomedical",
+        "legacy_ndcg10": 0.8915,
+        "semantic_ndcg10": 0.6915,
+        "hybrid_rrf_ndcg10": 0.8915,
+        "weighted_ndcg10": 0.8915,
+        "delta_rrf_vs_legacy": 0.0,
+        "delta_semantic_vs_legacy": -0.2,
+        "max_rank_change_legacy_to_rrf": 0,
+        "classification": "no_effective_change"
+      },
+      {
+        "case_id": "nlp_ret_sr_001",
+        "slice": "source_rank_conflict",
+        "surface": "retrieval_ranking",
+        "domain": "nlp",
+        "legacy_ndcg10": 0.8915,
+        "semantic_ndcg10": 0.9595,
+        "hybrid_rrf_ndcg10": 0.9219,
+        "weighted_ndcg10": 0.9219,
+        "delta_rrf_vs_legacy": 0.0304,
+        "delta_semantic_vs_legacy": 0.068,
+        "max_rank_change_legacy_to_rrf": 1,
+        "classification": "hybrid_marginal_win"
+      },
+      {
+        "case_id": "ml_ret_ac_001",
+        "slice": "acronym_vs_expanded",
+        "surface": "retrieval_ranking",
+        "domain": "machine_learning",
+        "legacy_ndcg10": 1.0,
+        "semantic_ndcg10": 1.0,
+        "hybrid_rrf_ndcg10": 1.0,
+        "weighted_ndcg10": 1.0,
+        "delta_rrf_vs_legacy": 0.0,
+        "delta_semantic_vs_legacy": 0.0,
+        "max_rank_change_legacy_to_rrf": 0,
+        "classification": "no_effective_change"
+      },
+      {
+        "case_id": "bio_ret_ac_001",
+        "slice": "acronym_vs_expanded",
+        "surface": "retrieval_ranking",
+        "domain": "biomedical",
+        "legacy_ndcg10": 0.858,
+        "semantic_ndcg10": 1.0,
+        "hybrid_rrf_ndcg10": 1.0,
+        "weighted_ndcg10": 0.858,
+        "delta_rrf_vs_legacy": 0.142,
+        "delta_semantic_vs_legacy": 0.142,
+        "max_rank_change_legacy_to_rrf": 1,
+        "classification": "hybrid_clear_win"
+      },
+      {
+        "case_id": "ml_ret_nf_001",
+        "slice": "negated_findings",
+        "surface": "retrieval_ranking",
+        "domain": "machine_learning",
+        "legacy_ndcg10": 1.0,
+        "semantic_ndcg10": 1.0,
+        "hybrid_rrf_ndcg10": 1.0,
+        "weighted_ndcg10": 1.0,
+        "delta_rrf_vs_legacy": 0.0,
+        "delta_semantic_vs_legacy": 0.0,
+        "max_rank_change_legacy_to_rrf": 0,
+        "classification": "no_effective_change"
+      },
+      {
+        "case_id": "nlp_ret_nf_001",
+        "slice": "negated_findings",
+        "surface": "retrieval_ranking",
+        "domain": "nlp",
+        "legacy_ndcg10": 0.9896,
+        "semantic_ndcg10": 1.0,
+        "hybrid_rrf_ndcg10": 0.9896,
+        "weighted_ndcg10": 1.0,
+        "delta_rrf_vs_legacy": 0.0,
+        "delta_semantic_vs_legacy": 0.0104,
+        "max_rank_change_legacy_to_rrf": 0,
+        "classification": "no_effective_change"
+      },
+      {
+        "case_id": "bio_ret_ei_001",
+        "slice": "exact_identifier",
+        "surface": "retrieval_ranking",
+        "domain": "biomedical",
+        "legacy_ndcg10": 0.8051,
+        "semantic_ndcg10": 0.8288,
+        "hybrid_rrf_ndcg10": 0.8288,
+        "weighted_ndcg10": 0.8051,
+        "delta_rrf_vs_legacy": 0.0237,
+        "delta_semantic_vs_legacy": 0.0237,
+        "max_rank_change_legacy_to_rrf": 1,
+        "classification": "hybrid_marginal_win"
+      },
+      {
+        "case_id": "nlp_ret_ei_001",
+        "slice": "exact_identifier",
+        "surface": "retrieval_ranking",
+        "domain": "nlp",
+        "legacy_ndcg10": 1.0,
+        "semantic_ndcg10": 0.8076,
+        "hybrid_rrf_ndcg10": 1.0,
+        "weighted_ndcg10": 0.8076,
+        "delta_rrf_vs_legacy": 0.0,
+        "delta_semantic_vs_legacy": -0.1924,
+        "max_rank_change_legacy_to_rrf": 1,
+        "classification": "no_effective_change"
+      },
+      {
+        "case_id": "ml_ret_nt_001",
+        "slice": "neutral",
+        "surface": "retrieval_ranking",
+        "domain": "machine_learning",
+        "legacy_ndcg10": 1.0,
+        "semantic_ndcg10": 0.8737,
+        "hybrid_rrf_ndcg10": 1.0,
+        "weighted_ndcg10": 1.0,
+        "delta_rrf_vs_legacy": 0.0,
+        "delta_semantic_vs_legacy": -0.1263,
+        "max_rank_change_legacy_to_rrf": 0,
+        "classification": "no_effective_change"
+      },
+      {
+        "case_id": "nlp_ret_nt_001",
+        "slice": "neutral",
+        "surface": "retrieval_ranking",
+        "domain": "nlp",
+        "legacy_ndcg10": 0.8595,
+        "semantic_ndcg10": 0.9829,
+        "hybrid_rrf_ndcg10": 0.9506,
+        "weighted_ndcg10": 0.9829,
+        "delta_rrf_vs_legacy": 0.0911,
+        "delta_semantic_vs_legacy": 0.1234,
+        "max_rank_change_legacy_to_rrf": 1,
+        "classification": "hybrid_clear_win"
+      }
+    ],
+    "classification_counts": {
+      "no_effective_change": 34,
+      "hybrid_marginal_loss": 2,
+      "hybrid_marginal_win": 5,
+      "hybrid_material_loss": 1,
+      "hybrid_clear_win": 2
+    }
+  },
+  "section_2_slice": {
+    "lexical_trap": {
+      "n": 4,
+      "legacy_lexical_top20_v1": 0.9164,
+      "semantic_only_v1": 0.9164,
+      "hybrid_rrf_v1": 0.9164,
+      "hybrid_weighted_v1": 0.9164,
+      "delta_semantic_only_v1": 0.0,
+      "delta_hybrid_rrf_v1": 0.0,
+      "delta_hybrid_weighted_v1": 0.0
+    },
+    "semantic_paraphrase": {
+      "n": 4,
+      "legacy_lexical_top20_v1": 0.9453,
+      "semantic_only_v1": 0.9455,
+      "hybrid_rrf_v1": 0.9515,
+      "hybrid_weighted_v1": 0.9515,
+      "delta_semantic_only_v1": 0.0002,
+      "delta_hybrid_rrf_v1": 0.0062,
+      "delta_hybrid_weighted_v1": 0.0062
+    },
+    "method_vs_application": {
+      "n": 4,
+      "legacy_lexical_top20_v1": 0.9556,
+      "semantic_only_v1": 0.8966,
+      "hybrid_rrf_v1": 0.9616,
+      "hybrid_weighted_v1": 0.9307,
+      "delta_semantic_only_v1": -0.059,
+      "delta_hybrid_rrf_v1": 0.006,
+      "delta_hybrid_weighted_v1": -0.0249
+    },
+    "review_vs_primary": {
+      "n": 4,
+      "legacy_lexical_top20_v1": 0.9774,
+      "semantic_only_v1": 0.9206,
+      "hybrid_rrf_v1": 0.9739,
+      "hybrid_weighted_v1": 0.9242,
+      "delta_semantic_only_v1": -0.0568,
+      "delta_hybrid_rrf_v1": -0.0035,
+      "delta_hybrid_weighted_v1": -0.0532
+    },
+    "missing_abstract": {
+      "n": 4,
+      "legacy_lexical_top20_v1": 0.9902,
+      "semantic_only_v1": 0.9824,
+      "hybrid_rrf_v1": 0.9902,
+      "hybrid_weighted_v1": 0.9824,
+      "delta_semantic_only_v1": -0.0078,
+      "delta_hybrid_rrf_v1": 0.0,
+      "delta_hybrid_weighted_v1": -0.0078
+    },
+    "near_duplicate": {
+      "n": 4,
+      "legacy_lexical_top20_v1": 0.9764,
+      "semantic_only_v1": 0.9726,
+      "hybrid_rrf_v1": 0.9806,
+      "hybrid_weighted_v1": 0.9779,
+      "delta_semantic_only_v1": -0.0038,
+      "delta_hybrid_rrf_v1": 0.0042,
+      "delta_hybrid_weighted_v1": 0.0015
+    },
+    "source_rank_conflict": {
+      "n": 4,
+      "legacy_lexical_top20_v1": 0.907,
+      "semantic_only_v1": 0.874,
+      "hybrid_rrf_v1": 0.9146,
+      "hybrid_weighted_v1": 0.9146,
+      "delta_semantic_only_v1": -0.033,
+      "delta_hybrid_rrf_v1": 0.0076,
+      "delta_hybrid_weighted_v1": 0.0076
+    },
+    "acronym_vs_expanded": {
+      "n": 4,
+      "legacy_lexical_top20_v1": 0.9645,
+      "semantic_only_v1": 1.0,
+      "hybrid_rrf_v1": 1.0,
+      "hybrid_weighted_v1": 0.9645,
+      "delta_semantic_only_v1": 0.0355,
+      "delta_hybrid_rrf_v1": 0.0355,
+      "delta_hybrid_weighted_v1": 0.0
+    },
+    "negated_findings": {
+      "n": 4,
+      "legacy_lexical_top20_v1": 0.9599,
+      "semantic_only_v1": 0.9625,
+      "hybrid_rrf_v1": 0.9599,
+      "hybrid_weighted_v1": 0.9625,
+      "delta_semantic_only_v1": 0.0026,
+      "delta_hybrid_rrf_v1": 0.0,
+      "delta_hybrid_weighted_v1": 0.0026
+    },
+    "exact_identifier": {
+      "n": 4,
+      "legacy_lexical_top20_v1": 0.9415,
+      "semantic_only_v1": 0.8451,
+      "hybrid_rrf_v1": 0.9347,
+      "hybrid_weighted_v1": 0.8392,
+      "delta_semantic_only_v1": -0.0964,
+      "delta_hybrid_rrf_v1": -0.0068,
+      "delta_hybrid_weighted_v1": -0.1023
+    },
+    "neutral": {
+      "n": 4,
+      "legacy_lexical_top20_v1": 0.9104,
+      "semantic_only_v1": 0.9373,
+      "hybrid_rrf_v1": 0.9332,
+      "hybrid_weighted_v1": 0.9689,
+      "delta_semantic_only_v1": 0.0269,
+      "delta_hybrid_rrf_v1": 0.0228,
+      "delta_hybrid_weighted_v1": 0.0585
+    }
+  },
+  "section_3_surface_domain": {
+    "by_surface": {
+      "discovery_ranking": {
+        "n": 22,
+        "legacy_lexical_top20_v1": 0.9591,
+        "semantic_only_v1": 0.9337,
+        "hybrid_rrf_v1": 0.9598,
+        "hybrid_weighted_v1": 0.942,
+        "delta_semantic_only_v1": -0.0254,
+        "delta_hybrid_rrf_v1": 0.0007,
+        "delta_hybrid_weighted_v1": -0.0171
+      },
+      "retrieval_ranking": {
+        "n": 22,
+        "legacy_lexical_top20_v1": 0.9399,
+        "semantic_only_v1": 0.9305,
+        "hybrid_rrf_v1": 0.9523,
+        "hybrid_weighted_v1": 0.9367,
+        "delta_semantic_only_v1": -0.0094,
+        "delta_hybrid_rrf_v1": 0.0124,
+        "delta_hybrid_weighted_v1": -0.0032
+      }
+    },
+    "by_domain": {
+      "machine_learning": {
+        "n": 15,
+        "legacy_lexical_top20_v1": 0.9665,
+        "semantic_only_v1": 0.946,
+        "hybrid_rrf_v1": 0.9657,
+        "hybrid_weighted_v1": 0.9561,
+        "delta_semantic_only_v1": -0.0205,
+        "delta_hybrid_rrf_v1": -0.0008,
+        "delta_hybrid_weighted_v1": -0.0104
+      },
+      "biomedical": {
+        "n": 14,
+        "legacy_lexical_top20_v1": 0.9166,
+        "semantic_only_v1": 0.8888,
+        "hybrid_rrf_v1": 0.925,
+        "hybrid_weighted_v1": 0.8926,
+        "delta_semantic_only_v1": -0.0278,
+        "delta_hybrid_rrf_v1": 0.0084,
+        "delta_hybrid_weighted_v1": -0.024
+      },
+      "nlp": {
+        "n": 15,
+        "legacy_lexical_top20_v1": 0.9632,
+        "semantic_only_v1": 0.9586,
+        "hybrid_rrf_v1": 0.9754,
+        "hybrid_weighted_v1": 0.9663,
+        "delta_semantic_only_v1": -0.0046,
+        "delta_hybrid_rrf_v1": 0.0122,
+        "delta_hybrid_weighted_v1": 0.0031
+      }
+    }
+  },
+  "section_4_lexical_ceiling": {
+    "n_cases": 44,
+    "perfect_legacy_ndcg10": 22,
+    "perfect_rate": 0.5,
+    "all_g3_have_query_terms": 37,
+    "trivially_separable": 12,
+    "trivially_separable_rate": 0.2727,
+    "genuine_low_overlap_relevant": 19,
+    "genuine_low_overlap_rate": 0.4318,
+    "verdict": "moderate_headroom",
+    "per_case": [
+      {
+        "case_id": "ml_disc_lt_001",
+        "slice": "lexical_trap",
+        "legacy_ndcg10": 1.0,
+        "perfect": true,
+        "all_g3_have_query_terms": true,
+        "genuine_low_overlap_relevant": false
+      },
+      {
+        "case_id": "bio_disc_lt_001",
+        "slice": "lexical_trap",
+        "legacy_ndcg10": 0.858,
+        "perfect": false,
+        "all_g3_have_query_terms": true,
+        "genuine_low_overlap_relevant": false
+      },
+      {
+        "case_id": "ml_disc_sp_001",
+        "slice": "semantic_paraphrase",
+        "legacy_ndcg10": 1.0,
+        "perfect": true,
+        "all_g3_have_query_terms": true,
+        "genuine_low_overlap_relevant": true
+      },
+      {
+        "case_id": "nlp_disc_sp_001",
+        "slice": "semantic_paraphrase",
+        "legacy_ndcg10": 0.9219,
+        "perfect": false,
+        "all_g3_have_query_terms": false,
+        "genuine_low_overlap_relevant": true
+      },
+      {
+        "case_id": "bio_disc_mv_001",
+        "slice": "method_vs_application",
+        "legacy_ndcg10": 1.0,
+        "perfect": true,
+        "all_g3_have_query_terms": true,
+        "genuine_low_overlap_relevant": false
+      },
+      {
+        "case_id": "nlp_disc_mv_001",
+        "slice": "method_vs_application",
+        "legacy_ndcg10": 0.963,
+        "perfect": false,
+        "all_g3_have_query_terms": true,
+        "genuine_low_overlap_relevant": false
+      },
+      {
+        "case_id": "ml_disc_rv_001",
+        "slice": "review_vs_primary",
+        "legacy_ndcg10": 0.9364,
+        "perfect": false,
+        "all_g3_have_query_terms": true,
+        "genuine_low_overlap_relevant": false
+      },
+      {
+        "case_id": "nlp_disc_rv_001",
+        "slice": "review_vs_primary",
+        "legacy_ndcg10": 1.0,
+        "perfect": true,
+        "all_g3_have_query_terms": true,
+        "genuine_low_overlap_relevant": false
+      },
+      {
+        "case_id": "ml_disc_ma_001",
+        "slice": "missing_abstract",
+        "legacy_ndcg10": 1.0,
+        "perfect": true,
+        "all_g3_have_query_terms": true,
+        "genuine_low_overlap_relevant": true
+      },
+      {
+        "case_id": "bio_disc_ma_001",
+        "slice": "missing_abstract",
+        "legacy_ndcg10": 1.0,
+        "perfect": true,
+        "all_g3_have_query_terms": true,
+        "genuine_low_overlap_relevant": true
+      },
+      {
+        "case_id": "bio_disc_nd_001",
+        "slice": "near_duplicate",
+        "legacy_ndcg10": 0.9833,
+        "perfect": false,
+        "all_g3_have_query_terms": false,
+        "genuine_low_overlap_relevant": true
+      },
+      {
+        "case_id": "nlp_disc_nd_001",
+        "slice": "near_duplicate",
+        "legacy_ndcg10": 1.0,
+        "perfect": true,
+        "all_g3_have_query_terms": true,
+        "genuine_low_overlap_relevant": true
+      },
+      {
+        "case_id": "ml_disc_sr_001",
+        "slice": "source_rank_conflict",
+        "legacy_ndcg10": 1.0,
+        "perfect": true,
+        "all_g3_have_query_terms": true,
+        "genuine_low_overlap_relevant": false
+      },
+      {
+        "case_id": "bio_disc_sr_001",
+        "slice": "source_rank_conflict",
+        "legacy_ndcg10": 0.8452,
+        "perfect": false,
+        "all_g3_have_query_terms": true,
+        "genuine_low_overlap_relevant": false
+      },
+      {
+        "case_id": "ml_disc_ac_001",
+        "slice": "acronym_vs_expanded",
+        "legacy_ndcg10": 1.0,
+        "perfect": true,
+        "all_g3_have_query_terms": true,
+        "genuine_low_overlap_relevant": true
+      },
+      {
+        "case_id": "nlp_disc_ac_001",
+        "slice": "acronym_vs_expanded",
+        "legacy_ndcg10": 1.0,
+        "perfect": true,
+        "all_g3_have_query_terms": true,
+        "genuine_low_overlap_relevant": false
+      },
+      {
+        "case_id": "bio_disc_nf_001",
+        "slice": "negated_findings",
+        "legacy_ndcg10": 0.8502,
+        "perfect": false,
+        "all_g3_have_query_terms": true,
+        "genuine_low_overlap_relevant": false
+      },
+      {
+        "case_id": "nlp_disc_nf_001",
+        "slice": "negated_findings",
+        "legacy_ndcg10": 1.0,
+        "perfect": true,
+        "all_g3_have_query_terms": true,
+        "genuine_low_overlap_relevant": false
+      },
+      {
+        "case_id": "ml_disc_ei_001",
+        "slice": "exact_identifier",
+        "legacy_ndcg10": 1.0,
+        "perfect": true,
+        "all_g3_have_query_terms": true,
+        "genuine_low_overlap_relevant": false
+      },
+      {
+        "case_id": "bio_disc_ei_001",
+        "slice": "exact_identifier",
+        "legacy_ndcg10": 0.9608,
+        "perfect": false,
+        "all_g3_have_query_terms": true,
+        "genuine_low_overlap_relevant": false
+      },
+      {
+        "case_id": "ml_disc_nt_001",
+        "slice": "neutral",
+        "legacy_ndcg10": 0.819,
+        "perfect": false,
+        "all_g3_have_query_terms": true,
+        "genuine_low_overlap_relevant": false
+      },
+      {
+        "case_id": "nlp_disc_nt_001",
+        "slice": "neutral",
+        "legacy_ndcg10": 0.9631,
+        "perfect": false,
+        "all_g3_have_query_terms": true,
+        "genuine_low_overlap_relevant": false
+      },
+      {
+        "case_id": "bio_ret_lt_001",
+        "slice": "lexical_trap",
+        "legacy_ndcg10": 0.8076,
+        "perfect": false,
+        "all_g3_have_query_terms": false,
+        "genuine_low_overlap_relevant": true
+      },
+      {
+        "case_id": "nlp_ret_lt_001",
+        "slice": "lexical_trap",
+        "legacy_ndcg10": 1.0,
+        "perfect": true,
+        "all_g3_have_query_terms": true,
+        "genuine_low_overlap_relevant": false
+      },
+      {
+        "case_id": "ml_ret_sp_001",
+        "slice": "semantic_paraphrase",
+        "legacy_ndcg10": 0.8595,
+        "perfect": false,
+        "all_g3_have_query_terms": false,
+        "genuine_low_overlap_relevant": true
+      },
+      {
+        "case_id": "bio_ret_sp_001",
+        "slice": "semantic_paraphrase",
+        "legacy_ndcg10": 1.0,
+        "perfect": true,
+        "all_g3_have_query_terms": false,
+        "genuine_low_overlap_relevant": true
+      },
+      {
+        "case_id": "ml_ret_mv_001",
+        "slice": "method_vs_application",
+        "legacy_ndcg10": 1.0,
+        "perfect": true,
+        "all_g3_have_query_terms": true,
+        "genuine_low_overlap_relevant": false
+      },
+      {
+        "case_id": "nlp_ret_mv_001",
+        "slice": "method_vs_application",
+        "legacy_ndcg10": 0.8592,
+        "perfect": false,
+        "all_g3_have_query_terms": true,
+        "genuine_low_overlap_relevant": false
+      },
+      {
+        "case_id": "bio_ret_rv_001",
+        "slice": "review_vs_primary",
+        "legacy_ndcg10": 0.9733,
+        "perfect": false,
+        "all_g3_have_query_terms": true,
+        "genuine_low_overlap_relevant": true
+      },
+      {
+        "case_id": "nlp_ret_rv_001",
+        "slice": "review_vs_primary",
+        "legacy_ndcg10": 1.0,
+        "perfect": true,
+        "all_g3_have_query_terms": true,
+        "genuine_low_overlap_relevant": false
+      },
+      {
+        "case_id": "ml_ret_ma_001",
+        "slice": "missing_abstract",
+        "legacy_ndcg10": 0.9608,
+        "perfect": false,
+        "all_g3_have_query_terms": false,
+        "genuine_low_overlap_relevant": true
+      },
+      {
+        "case_id": "nlp_ret_ma_001",
+        "slice": "missing_abstract",
+        "legacy_ndcg10": 1.0,
+        "perfect": true,
+        "all_g3_have_query_terms": true,
+        "genuine_low_overlap_relevant": false
+      },
+      {
+        "case_id": "ml_ret_nd_001",
+        "slice": "near_duplicate",
+        "legacy_ndcg10": 0.9223,
+        "perfect": false,
+        "all_g3_have_query_terms": true,
+        "genuine_low_overlap_relevant": false
+      },
+      {
+        "case_id": "bio_ret_nd_001",
+        "slice": "near_duplicate",
+        "legacy_ndcg10": 1.0,
+        "perfect": true,
+        "all_g3_have_query_terms": true,
+        "genuine_low_overlap_relevant": false
+      },
+      {
+        "case_id": "bio_ret_sr_001",
+        "slice": "source_rank_conflict",
+        "legacy_ndcg10": 0.8915,
+        "perfect": false,
+        "all_g3_have_query_terms": true,
+        "genuine_low_overlap_relevant": true
+      },
+      {
+        "case_id": "nlp_ret_sr_001",
+        "slice": "source_rank_conflict",
+        "legacy_ndcg10": 0.8915,
+        "perfect": false,
+        "all_g3_have_query_terms": false,
+        "genuine_low_overlap_relevant": true
+      },
+      {
+        "case_id": "ml_ret_ac_001",
+        "slice": "acronym_vs_expanded",
+        "legacy_ndcg10": 1.0,
+        "perfect": true,
+        "all_g3_have_query_terms": true,
+        "genuine_low_overlap_relevant": true
+      },
+      {
+        "case_id": "bio_ret_ac_001",
+        "slice": "acronym_vs_expanded",
+        "legacy_ndcg10": 0.858,
+        "perfect": false,
+        "all_g3_have_query_terms": true,
+        "genuine_low_overlap_relevant": false
+      },
+      {
+        "case_id": "ml_ret_nf_001",
+        "slice": "negated_findings",
+        "legacy_ndcg10": 1.0,
+        "perfect": true,
+        "all_g3_have_query_terms": true,
+        "genuine_low_overlap_relevant": true
+      },
+      {
+        "case_id": "nlp_ret_nf_001",
+        "slice": "negated_findings",
+        "legacy_ndcg10": 0.9896,
+        "perfect": false,
+        "all_g3_have_query_terms": true,
+        "genuine_low_overlap_relevant": true
+      },
+      {
+        "case_id": "bio_ret_ei_001",
+        "slice": "exact_identifier",
+        "legacy_ndcg10": 0.8051,
+        "perfect": false,
+        "all_g3_have_query_terms": true,
+        "genuine_low_overlap_relevant": false
+      },
+      {
+        "case_id": "nlp_ret_ei_001",
+        "slice": "exact_identifier",
+        "legacy_ndcg10": 1.0,
+        "perfect": true,
+        "all_g3_have_query_terms": true,
+        "genuine_low_overlap_relevant": false
+      },
+      {
+        "case_id": "ml_ret_nt_001",
+        "slice": "neutral",
+        "legacy_ndcg10": 1.0,
+        "perfect": true,
+        "all_g3_have_query_terms": true,
+        "genuine_low_overlap_relevant": true
+      },
+      {
+        "case_id": "nlp_ret_nt_001",
+        "slice": "neutral",
+        "legacy_ndcg10": 0.8595,
+        "perfect": false,
+        "all_g3_have_query_terms": true,
+        "genuine_low_overlap_relevant": true
+      }
+    ]
+  },
+  "section_5_embedding_snapshot": {
+    "overall_sim_grade_rank_corr": 0.514,
+    "mean_cosine_by_grade": {
+      "0": 0.4953,
+      "1": 0.6446,
+      "2": 0.6733,
+      "3": 0.721
+    },
+    "lexical_trap_cases_distinguished": 4,
+    "lexical_trap_cases_total": 4,
+    "paraphrase_cases_top_sim_is_g3": 3,
+    "paraphrase_cases_total": 4,
+    "slice_separation_g3_vs_g0": {
+      "acronym_vs_expanded": {
+        "mean_sim_g3": 0.7243,
+        "mean_sim_g0": 0.5287,
+        "g3_gt_g0": true
+      },
+      "exact_identifier": {
+        "mean_sim_g3": 0.6818,
+        "mean_sim_g0": 0.416,
+        "g3_gt_g0": true
+      },
+      "lexical_trap": {
+        "mean_sim_g3": 0.6674,
+        "mean_sim_g0": 0.4617,
+        "g3_gt_g0": true
+      },
+      "semantic_paraphrase": {
+        "mean_sim_g3": 0.6713,
+        "mean_sim_g0": 0.6069,
+        "g3_gt_g0": true
+      },
+      "source_rank_conflict": {
+        "mean_sim_g3": 0.6524,
+        "mean_sim_g0": 0.4957,
+        "g3_gt_g0": true
+      }
+    },
+    "per_case": [
+      {
+        "case_id": "ml_disc_lt_001",
+        "slice": "lexical_trap",
+        "sim_grade_rank_corr": 0.95,
+        "top_sim_candidate": "ml_lt_001_a",
+        "top_sim_grade": 3
+      },
+      {
+        "case_id": "bio_disc_lt_001",
+        "slice": "lexical_trap",
+        "sim_grade_rank_corr": 0.65,
+        "top_sim_candidate": "bio_lt_001_a",
+        "top_sim_grade": 2
+      },
+      {
+        "case_id": "ml_disc_sp_001",
+        "slice": "semantic_paraphrase",
+        "sim_grade_rank_corr": 0.35,
+        "top_sim_candidate": "ml_sp_001_a",
+        "top_sim_grade": 3
+      },
+      {
+        "case_id": "nlp_disc_sp_001",
+        "slice": "semantic_paraphrase",
+        "sim_grade_rank_corr": 0.65,
+        "top_sim_candidate": "nlp_sp_001_a",
+        "top_sim_grade": 3
+      },
+      {
+        "case_id": "bio_disc_mv_001",
+        "slice": "method_vs_application",
+        "sim_grade_rank_corr": 0.65,
+        "top_sim_candidate": "bio_mv_001_d",
+        "top_sim_grade": 2
+      },
+      {
+        "case_id": "nlp_disc_mv_001",
+        "slice": "method_vs_application",
+        "sim_grade_rank_corr": 0.65,
+        "top_sim_candidate": "nlp_mv_001_c",
+        "top_sim_grade": 2
+      },
+      {
+        "case_id": "ml_disc_rv_001",
+        "slice": "review_vs_primary",
+        "sim_grade_rank_corr": -0.3,
+        "top_sim_candidate": "ml_rv_001_b",
+        "top_sim_grade": 1
+      },
+      {
+        "case_id": "nlp_disc_rv_001",
+        "slice": "review_vs_primary",
+        "sim_grade_rank_corr": 0.9,
+        "top_sim_candidate": "nlp_rv_001_c",
+        "top_sim_grade": 3
+      },
+      {
+        "case_id": "ml_disc_ma_001",
+        "slice": "missing_abstract",
+        "sim_grade_rank_corr": 0.8,
+        "top_sim_candidate": "ml_ma_001_d",
+        "top_sim_grade": 3
+      },
+      {
+        "case_id": "bio_disc_ma_001",
+        "slice": "missing_abstract",
+        "sim_grade_rank_corr": 0.8,
+        "top_sim_candidate": "bio_ma_001_a",
+        "top_sim_grade": 3
+      },
+      {
+        "case_id": "bio_disc_nd_001",
+        "slice": "near_duplicate",
+        "sim_grade_rank_corr": 0.8,
+        "top_sim_candidate": "bio_nd_001_b2",
+        "top_sim_grade": 3
+      },
+      {
+        "case_id": "nlp_disc_nd_001",
+        "slice": "near_duplicate",
+        "sim_grade_rank_corr": 0.625,
+        "top_sim_candidate": "nlp_nd_001_b",
+        "top_sim_grade": 3
+      },
+      {
+        "case_id": "ml_disc_sr_001",
+        "slice": "source_rank_conflict",
+        "sim_grade_rank_corr": 0.95,
+        "top_sim_candidate": "ml_sr_001_a",
+        "top_sim_grade": 3
+      },
+      {
+        "case_id": "bio_disc_sr_001",
+        "slice": "source_rank_conflict",
+        "sim_grade_rank_corr": 0.35,
+        "top_sim_candidate": "bio_sr_001_a",
+        "top_sim_grade": 2
+      },
+      {
+        "case_id": "ml_disc_ac_001",
+        "slice": "acronym_vs_expanded",
+        "sim_grade_rank_corr": 0.95,
+        "top_sim_candidate": "ml_ac_001_a",
+        "top_sim_grade": 3
+      },
+      {
+        "case_id": "nlp_disc_ac_001",
+        "slice": "acronym_vs_expanded",
+        "sim_grade_rank_corr": 0.8,
+        "top_sim_candidate": "nlp_ac_001_d",
+        "top_sim_grade": 3
+      },
+      {
+        "case_id": "bio_disc_nf_001",
+        "slice": "negated_findings",
+        "sim_grade_rank_corr": 0.35,
+        "top_sim_candidate": "bio_nf_001_a",
+        "top_sim_grade": 2
+      },
+      {
+        "case_id": "nlp_disc_nf_001",
+        "slice": "negated_findings",
+        "sim_grade_rank_corr": 0.5,
+        "top_sim_candidate": "nlp_nf_001_a",
+        "top_sim_grade": 3
+      },
+      {
+        "case_id": "ml_disc_ei_001",
+        "slice": "exact_identifier",
+        "sim_grade_rank_corr": 0.8,
+        "top_sim_candidate": "ml_ei_001_a",
+        "top_sim_grade": 3
+      },
+      {
+        "case_id": "bio_disc_ei_001",
+        "slice": "exact_identifier",
+        "sim_grade_rank_corr": -0.55,
+        "top_sim_candidate": "bio_ei_001_d",
+        "top_sim_grade": 1
+      },
+      {
+        "case_id": "ml_disc_nt_001",
+        "slice": "neutral",
+        "sim_grade_rank_corr": 0.15,
+        "top_sim_candidate": "ml_nt_001_b",
+        "top_sim_grade": 3
+      },
+      {
+        "case_id": "nlp_disc_nt_001",
+        "slice": "neutral",
+        "sim_grade_rank_corr": 0.5,
+        "top_sim_candidate": "nlp_nt_001_b",
+        "top_sim_grade": 3
+      },
+      {
+        "case_id": "bio_ret_lt_001",
+        "slice": "lexical_trap",
+        "sim_grade_rank_corr": -0.15,
+        "top_sim_candidate": "bior_lt_001_a",
+        "top_sim_grade": 2
+      },
+      {
+        "case_id": "nlp_ret_lt_001",
+        "slice": "lexical_trap",
+        "sim_grade_rank_corr": 0.8,
+        "top_sim_candidate": "nlpr_lt_001_a",
+        "top_sim_grade": 3
+      },
+      {
+        "case_id": "ml_ret_sp_001",
+        "slice": "semantic_paraphrase",
+        "sim_grade_rank_corr": -0.4,
+        "top_sim_candidate": "mlr_sp_001_d",
+        "top_sim_grade": 2
+      },
+      {
+        "case_id": "bio_ret_sp_001",
+        "slice": "semantic_paraphrase",
+        "sim_grade_rank_corr": 0.8,
+        "top_sim_candidate": "bior_sp_001_d",
+        "top_sim_grade": 3
+      },
+      {
+        "case_id": "ml_ret_mv_001",
+        "slice": "method_vs_application",
+        "sim_grade_rank_corr": 0.95,
+        "top_sim_candidate": "mlr_mv_001_a",
+        "top_sim_grade": 3
+      },
+      {
+        "case_id": "nlp_ret_mv_001",
+        "slice": "method_vs_application",
+        "sim_grade_rank_corr": 0.1,
+        "top_sim_candidate": "nlpr_mv_001_b",
+        "top_sim_grade": 2
+      },
+      {
+        "case_id": "bio_ret_rv_001",
+        "slice": "review_vs_primary",
+        "sim_grade_rank_corr": 0.35,
+        "top_sim_candidate": "bior_rv_001_a",
+        "top_sim_grade": 3
+      },
+      {
+        "case_id": "nlp_ret_rv_001",
+        "slice": "review_vs_primary",
+        "sim_grade_rank_corr": 0.8,
+        "top_sim_candidate": "nlpr_rv_001_a",
+        "top_sim_grade": 3
+      },
+      {
+        "case_id": "ml_ret_ma_001",
+        "slice": "missing_abstract",
+        "sim_grade_rank_corr": 0.15,
+        "top_sim_candidate": "mlr_ma_001_a",
+        "top_sim_grade": 3
+      },
+      {
+        "case_id": "nlp_ret_ma_001",
+        "slice": "missing_abstract",
+        "sim_grade_rank_corr": 0.5,
+        "top_sim_candidate": "nlpr_ma_001_d",
+        "top_sim_grade": 3
+      },
+      {
+        "case_id": "ml_ret_nd_001",
+        "slice": "near_duplicate",
+        "sim_grade_rank_corr": 0.0,
+        "top_sim_candidate": "mlr_nd_001_b",
+        "top_sim_grade": 3
+      },
+      {
+        "case_id": "bio_ret_nd_001",
+        "slice": "near_duplicate",
+        "sim_grade_rank_corr": 0.875,
+        "top_sim_candidate": "bior_nd_001_b",
+        "top_sim_grade": 3
+      },
+      {
+        "case_id": "bio_ret_sr_001",
+        "slice": "source_rank_conflict",
+        "sim_grade_rank_corr": -0.55,
+        "top_sim_candidate": "bior_sr_001_b",
+        "top_sim_grade": 0
+      },
+      {
+        "case_id": "nlp_ret_sr_001",
+        "slice": "source_rank_conflict",
+        "sim_grade_rank_corr": 0.65,
+        "top_sim_candidate": "nlpr_sr_001_a",
+        "top_sim_grade": 3
+      },
+      {
+        "case_id": "ml_ret_ac_001",
+        "slice": "acronym_vs_expanded",
+        "sim_grade_rank_corr": 0.95,
+        "top_sim_candidate": "mlr_ac_001_a",
+        "top_sim_grade": 3
+      },
+      {
+        "case_id": "bio_ret_ac_001",
+        "slice": "acronym_vs_expanded",
+        "sim_grade_rank_corr": 0.95,
+        "top_sim_candidate": "bior_ac_001_b",
+        "top_sim_grade": 3
+      },
+      {
+        "case_id": "ml_ret_nf_001",
+        "slice": "negated_findings",
+        "sim_grade_rank_corr": 0.5,
+        "top_sim_candidate": "mlr_nf_001_b",
+        "top_sim_grade": 3
+      },
+      {
+        "case_id": "nlp_ret_nf_001",
+        "slice": "negated_findings",
+        "sim_grade_rank_corr": 0.95,
+        "top_sim_candidate": "nlpr_nf_001_b",
+        "top_sim_grade": 3
+      },
+      {
+        "case_id": "bio_ret_ei_001",
+        "slice": "exact_identifier",
+        "sim_grade_rank_corr": 0.0,
+        "top_sim_candidate": "bior_ei_001_b",
+        "top_sim_grade": 2
+      },
+      {
+        "case_id": "nlp_ret_ei_001",
+        "slice": "exact_identifier",
+        "sim_grade_rank_corr": 0.35,
+        "top_sim_candidate": "nlpr_ei_001_c",
+        "top_sim_grade": 2
+      },
+      {
+        "case_id": "ml_ret_nt_001",
+        "slice": "neutral",
+        "sim_grade_rank_corr": 0.4,
+        "top_sim_candidate": "mlr_nt_001_c",
+        "top_sim_grade": 2
+      },
+      {
+        "case_id": "nlp_ret_nt_001",
+        "slice": "neutral",
+        "sim_grade_rank_corr": 0.4,
+        "top_sim_candidate": "nlpr_nt_001_b",
+        "top_sim_grade": 3
+      }
+    ]
+  },
+  "section_6_rrf_mechanics": {
+    "n_cases": 44,
+    "semantic_correction_blocked_count": 2,
+    "lexical_dominance_count": 14,
+    "sem_wins_rrf_loses": [
+      {
+        "case_id": "ml_disc_nt_001",
+        "slice": "neutral",
+        "legacy": 0.819,
+        "semantic": 0.9296,
+        "rrf": 0.819,
+        "sem_rank1": "ml_nt_001_b",
+        "rrf_rank1": "ml_nt_001_a",
+        "lex_rank1": "ml_nt_001_a"
+      },
+      {
+        "case_id": "nlp_ret_nf_001",
+        "slice": "negated_findings",
+        "legacy": 0.9896,
+        "semantic": 1.0,
+        "rrf": 0.9896,
+        "sem_rank1": "nlpr_nf_001_b",
+        "rrf_rank1": "nlpr_nf_001_b",
+        "lex_rank1": "nlpr_nf_001_b"
+      }
+    ],
+    "per_case": [
+      {
+        "case_id": "ml_disc_lt_001",
+        "slice": "lexical_trap",
+        "legacy_ndcg10": 1.0,
+        "semantic_ndcg10": 1.0,
+        "rrf_ndcg10": 1.0,
+        "lex_rank1": "ml_lt_001_a",
+        "sem_rank1": "ml_lt_001_a",
+        "rrf_rank1": "ml_lt_001_a",
+        "sem_beats_legacy": false,
+        "rrf_captures": false
+      },
+      {
+        "case_id": "bio_disc_lt_001",
+        "slice": "lexical_trap",
+        "legacy_ndcg10": 0.858,
+        "semantic_ndcg10": 0.858,
+        "rrf_ndcg10": 0.858,
+        "lex_rank1": "bio_lt_001_a",
+        "sem_rank1": "bio_lt_001_a",
+        "rrf_rank1": "bio_lt_001_a",
+        "sem_beats_legacy": false,
+        "rrf_captures": false
+      },
+      {
+        "case_id": "ml_disc_sp_001",
+        "slice": "semantic_paraphrase",
+        "legacy_ndcg10": 1.0,
+        "semantic_ndcg10": 0.963,
+        "rrf_ndcg10": 0.9872,
+        "lex_rank1": "ml_sp_001_a",
+        "sem_rank1": "ml_sp_001_a",
+        "rrf_rank1": "ml_sp_001_a",
+        "sem_beats_legacy": false,
+        "rrf_captures": false
+      },
+      {
+        "case_id": "nlp_disc_sp_001",
+        "slice": "semantic_paraphrase",
+        "legacy_ndcg10": 0.9219,
+        "semantic_ndcg10": 0.9595,
+        "rrf_ndcg10": 0.9595,
+        "lex_rank1": "nlp_sp_001_a",
+        "sem_rank1": "nlp_sp_001_a",
+        "rrf_rank1": "nlp_sp_001_a",
+        "sem_beats_legacy": true,
+        "rrf_captures": true
+      },
+      {
+        "case_id": "bio_disc_mv_001",
+        "slice": "method_vs_application",
+        "legacy_ndcg10": 1.0,
+        "semantic_ndcg10": 0.8636,
+        "rrf_ndcg10": 1.0,
+        "lex_rank1": "bio_mv_001_c",
+        "sem_rank1": "bio_mv_001_d",
+        "rrf_rank1": "bio_mv_001_c",
+        "sem_beats_legacy": false,
+        "rrf_captures": false
+      },
+      {
+        "case_id": "nlp_disc_mv_001",
+        "slice": "method_vs_application",
+        "legacy_ndcg10": 0.963,
+        "semantic_ndcg10": 0.8636,
+        "rrf_ndcg10": 0.9872,
+        "lex_rank1": "nlp_mv_001_a",
+        "sem_rank1": "nlp_mv_001_c",
+        "rrf_rank1": "nlp_mv_001_a",
+        "sem_beats_legacy": false,
+        "rrf_captures": true
+      },
+      {
+        "case_id": "ml_disc_rv_001",
+        "slice": "review_vs_primary",
+        "legacy_ndcg10": 0.9364,
+        "semantic_ndcg10": 0.7233,
+        "rrf_ndcg10": 0.9364,
+        "lex_rank1": "ml_rv_001_a",
+        "sem_rank1": "ml_rv_001_b",
+        "rrf_rank1": "ml_rv_001_a",
+        "sem_beats_legacy": false,
+        "rrf_captures": false
+      },
+      {
+        "case_id": "nlp_disc_rv_001",
+        "slice": "review_vs_primary",
+        "legacy_ndcg10": 1.0,
+        "semantic_ndcg10": 1.0,
+        "rrf_ndcg10": 1.0,
+        "lex_rank1": "nlp_rv_001_a",
+        "sem_rank1": "nlp_rv_001_c",
+        "rrf_rank1": "nlp_rv_001_a",
+        "sem_beats_legacy": false,
+        "rrf_captures": false
+      },
+      {
+        "case_id": "ml_disc_ma_001",
+        "slice": "missing_abstract",
+        "legacy_ndcg10": 1.0,
+        "semantic_ndcg10": 1.0,
+        "rrf_ndcg10": 1.0,
+        "lex_rank1": "ml_ma_001_a",
+        "sem_rank1": "ml_ma_001_d",
+        "rrf_rank1": "ml_ma_001_a",
+        "sem_beats_legacy": false,
+        "rrf_captures": false
+      },
+      {
+        "case_id": "bio_disc_ma_001",
+        "slice": "missing_abstract",
+        "legacy_ndcg10": 1.0,
+        "semantic_ndcg10": 1.0,
+        "rrf_ndcg10": 1.0,
+        "lex_rank1": "bio_ma_001_a",
+        "sem_rank1": "bio_ma_001_a",
+        "rrf_rank1": "bio_ma_001_a",
+        "sem_beats_legacy": false,
+        "rrf_captures": false
+      },
+      {
+        "case_id": "bio_disc_nd_001",
+        "slice": "near_duplicate",
+        "legacy_ndcg10": 0.9833,
+        "semantic_ndcg10": 0.9947,
+        "rrf_ndcg10": 1.0,
+        "lex_rank1": "bio_nd_001_a",
+        "sem_rank1": "bio_nd_001_b2",
+        "rrf_rank1": "bio_nd_001_a",
+        "sem_beats_legacy": true,
+        "rrf_captures": true
+      },
+      {
+        "case_id": "nlp_disc_nd_001",
+        "slice": "near_duplicate",
+        "legacy_ndcg10": 1.0,
+        "semantic_ndcg10": 0.984,
+        "rrf_ndcg10": 1.0,
+        "lex_rank1": "nlp_nd_001_a",
+        "sem_rank1": "nlp_nd_001_b",
+        "rrf_rank1": "nlp_nd_001_a",
+        "sem_beats_legacy": false,
+        "rrf_captures": false
+      },
+      {
+        "case_id": "ml_disc_sr_001",
+        "slice": "source_rank_conflict",
+        "legacy_ndcg10": 1.0,
+        "semantic_ndcg10": 1.0,
+        "rrf_ndcg10": 1.0,
+        "lex_rank1": "ml_sr_001_c",
+        "sem_rank1": "ml_sr_001_a",
+        "rrf_rank1": "ml_sr_001_a",
+        "sem_beats_legacy": false,
+        "rrf_captures": false
+      },
+      {
+        "case_id": "bio_disc_sr_001",
+        "slice": "source_rank_conflict",
+        "legacy_ndcg10": 0.8452,
+        "semantic_ndcg10": 0.8452,
+        "rrf_ndcg10": 0.8452,
+        "lex_rank1": "bio_sr_001_a",
+        "sem_rank1": "bio_sr_001_a",
+        "rrf_rank1": "bio_sr_001_a",
+        "sem_beats_legacy": false,
+        "rrf_captures": false
+      },
+      {
+        "case_id": "ml_disc_ac_001",
+        "slice": "acronym_vs_expanded",
+        "legacy_ndcg10": 1.0,
+        "semantic_ndcg10": 1.0,
+        "rrf_ndcg10": 1.0,
+        "lex_rank1": "ml_ac_001_a",
+        "sem_rank1": "ml_ac_001_a",
+        "rrf_rank1": "ml_ac_001_a",
+        "sem_beats_legacy": false,
+        "rrf_captures": false
+      },
+      {
+        "case_id": "nlp_disc_ac_001",
+        "slice": "acronym_vs_expanded",
+        "legacy_ndcg10": 1.0,
+        "semantic_ndcg10": 1.0,
+        "rrf_ndcg10": 1.0,
+        "lex_rank1": "nlp_ac_001_a",
+        "sem_rank1": "nlp_ac_001_d",
+        "rrf_rank1": "nlp_ac_001_a",
+        "sem_beats_legacy": false,
+        "rrf_captures": false
+      },
+      {
+        "case_id": "bio_disc_nf_001",
+        "slice": "negated_findings",
+        "legacy_ndcg10": 0.8502,
+        "semantic_ndcg10": 0.8502,
+        "rrf_ndcg10": 0.8502,
+        "lex_rank1": "bio_nf_001_a",
+        "sem_rank1": "bio_nf_001_a",
+        "rrf_rank1": "bio_nf_001_a",
+        "sem_beats_legacy": false,
+        "rrf_captures": false
+      },
+      {
+        "case_id": "nlp_disc_nf_001",
+        "slice": "negated_findings",
+        "legacy_ndcg10": 1.0,
+        "semantic_ndcg10": 1.0,
+        "rrf_ndcg10": 1.0,
+        "lex_rank1": "nlp_nf_001_a",
+        "sem_rank1": "nlp_nf_001_a",
+        "rrf_rank1": "nlp_nf_001_a",
+        "sem_beats_legacy": false,
+        "rrf_captures": false
+      },
+      {
+        "case_id": "ml_disc_ei_001",
+        "slice": "exact_identifier",
+        "legacy_ndcg10": 1.0,
+        "semantic_ndcg10": 1.0,
+        "rrf_ndcg10": 1.0,
+        "lex_rank1": "ml_ei_001_a",
+        "sem_rank1": "ml_ei_001_a",
+        "rrf_rank1": "ml_ei_001_a",
+        "sem_beats_legacy": false,
+        "rrf_captures": false
+      },
+      {
+        "case_id": "bio_disc_ei_001",
+        "slice": "exact_identifier",
+        "legacy_ndcg10": 0.9608,
+        "semantic_ndcg10": 0.7441,
+        "rrf_ndcg10": 0.91,
+        "lex_rank1": "bio_ei_001_a",
+        "sem_rank1": "bio_ei_001_d",
+        "rrf_rank1": "bio_ei_001_a",
+        "sem_beats_legacy": false,
+        "rrf_captures": false
+      },
+      {
+        "case_id": "ml_disc_nt_001",
+        "slice": "neutral",
+        "legacy_ndcg10": 0.819,
+        "semantic_ndcg10": 0.9296,
+        "rrf_ndcg10": 0.819,
+        "lex_rank1": "ml_nt_001_a",
+        "sem_rank1": "ml_nt_001_b",
+        "rrf_rank1": "ml_nt_001_a",
+        "sem_beats_legacy": true,
+        "rrf_captures": false
+      },
+      {
+        "case_id": "nlp_disc_nt_001",
+        "slice": "neutral",
+        "legacy_ndcg10": 0.9631,
+        "semantic_ndcg10": 0.9631,
+        "rrf_ndcg10": 0.9631,
+        "lex_rank1": "nlp_nt_001_b",
+        "sem_rank1": "nlp_nt_001_b",
+        "rrf_rank1": "nlp_nt_001_b",
+        "sem_beats_legacy": false,
+        "rrf_captures": false
+      },
+      {
+        "case_id": "bio_ret_lt_001",
+        "slice": "lexical_trap",
+        "legacy_ndcg10": 0.8076,
+        "semantic_ndcg10": 0.8076,
+        "rrf_ndcg10": 0.8076,
+        "lex_rank1": "bior_lt_001_a",
+        "sem_rank1": "bior_lt_001_a",
+        "rrf_rank1": "bior_lt_001_a",
+        "sem_beats_legacy": false,
+        "rrf_captures": false
+      },
+      {
+        "case_id": "nlp_ret_lt_001",
+        "slice": "lexical_trap",
+        "legacy_ndcg10": 1.0,
+        "semantic_ndcg10": 1.0,
+        "rrf_ndcg10": 1.0,
+        "lex_rank1": "nlpr_lt_001_a",
+        "sem_rank1": "nlpr_lt_001_a",
+        "rrf_rank1": "nlpr_lt_001_a",
+        "sem_beats_legacy": false,
+        "rrf_captures": false
+      },
+      {
+        "case_id": "ml_ret_sp_001",
+        "slice": "semantic_paraphrase",
+        "legacy_ndcg10": 0.8595,
+        "semantic_ndcg10": 0.8595,
+        "rrf_ndcg10": 0.8595,
+        "lex_rank1": "mlr_sp_001_d",
+        "sem_rank1": "mlr_sp_001_d",
+        "rrf_rank1": "mlr_sp_001_d",
+        "sem_beats_legacy": false,
+        "rrf_captures": false
+      },
+      {
+        "case_id": "bio_ret_sp_001",
+        "slice": "semantic_paraphrase",
+        "legacy_ndcg10": 1.0,
+        "semantic_ndcg10": 1.0,
+        "rrf_ndcg10": 1.0,
+        "lex_rank1": "bior_sp_001_d",
+        "sem_rank1": "bior_sp_001_d",
+        "rrf_rank1": "bior_sp_001_d",
+        "sem_beats_legacy": false,
+        "rrf_captures": false
+      },
+      {
+        "case_id": "ml_ret_mv_001",
+        "slice": "method_vs_application",
+        "legacy_ndcg10": 1.0,
+        "semantic_ndcg10": 1.0,
+        "rrf_ndcg10": 1.0,
+        "lex_rank1": "mlr_mv_001_a",
+        "sem_rank1": "mlr_mv_001_a",
+        "rrf_rank1": "mlr_mv_001_a",
+        "sem_beats_legacy": false,
+        "rrf_captures": false
+      },
+      {
+        "case_id": "nlp_ret_mv_001",
+        "slice": "method_vs_application",
+        "legacy_ndcg10": 0.8592,
+        "semantic_ndcg10": 0.8592,
+        "rrf_ndcg10": 0.8592,
+        "lex_rank1": "nlpr_mv_001_b",
+        "sem_rank1": "nlpr_mv_001_b",
+        "rrf_rank1": "nlpr_mv_001_b",
+        "sem_beats_legacy": false,
+        "rrf_captures": false
+      },
+      {
+        "case_id": "bio_ret_rv_001",
+        "slice": "review_vs_primary",
+        "legacy_ndcg10": 0.9733,
+        "semantic_ndcg10": 0.9592,
+        "rrf_ndcg10": 0.9592,
+        "lex_rank1": "bior_rv_001_a",
+        "sem_rank1": "bior_rv_001_a",
+        "rrf_rank1": "bior_rv_001_a",
+        "sem_beats_legacy": false,
+        "rrf_captures": false
+      },
+      {
+        "case_id": "nlp_ret_rv_001",
+        "slice": "review_vs_primary",
+        "legacy_ndcg10": 1.0,
+        "semantic_ndcg10": 1.0,
+        "rrf_ndcg10": 1.0,
+        "lex_rank1": "nlpr_rv_001_a",
+        "sem_rank1": "nlpr_rv_001_a",
+        "rrf_rank1": "nlpr_rv_001_a",
+        "sem_beats_legacy": false,
+        "rrf_captures": false
+      },
+      {
+        "case_id": "ml_ret_ma_001",
+        "slice": "missing_abstract",
+        "legacy_ndcg10": 0.9608,
+        "semantic_ndcg10": 0.9296,
+        "rrf_ndcg10": 0.9608,
+        "lex_rank1": "mlr_ma_001_a",
+        "sem_rank1": "mlr_ma_001_a",
+        "rrf_rank1": "mlr_ma_001_a",
+        "sem_beats_legacy": false,
+        "rrf_captures": false
+      },
+      {
+        "case_id": "nlp_ret_ma_001",
+        "slice": "missing_abstract",
+        "legacy_ndcg10": 1.0,
+        "semantic_ndcg10": 1.0,
+        "rrf_ndcg10": 1.0,
+        "lex_rank1": "nlpr_ma_001_c",
+        "sem_rank1": "nlpr_ma_001_d",
+        "rrf_rank1": "nlpr_ma_001_d",
+        "sem_beats_legacy": false,
+        "rrf_captures": false
+      },
+      {
+        "case_id": "ml_ret_nd_001",
+        "slice": "near_duplicate",
+        "legacy_ndcg10": 0.9223,
+        "semantic_ndcg10": 0.9118,
+        "rrf_ndcg10": 0.9223,
+        "lex_rank1": "mlr_nd_001_b",
+        "sem_rank1": "mlr_nd_001_b",
+        "rrf_rank1": "mlr_nd_001_b",
+        "sem_beats_legacy": false,
+        "rrf_captures": false
+      },
+      {
+        "case_id": "bio_ret_nd_001",
+        "slice": "near_duplicate",
+        "legacy_ndcg10": 1.0,
+        "semantic_ndcg10": 1.0,
+        "rrf_ndcg10": 1.0,
+        "lex_rank1": "bior_nd_001_b",
+        "sem_rank1": "bior_nd_001_b",
+        "rrf_rank1": "bior_nd_001_b",
+        "sem_beats_legacy": false,
+        "rrf_captures": false
+      },
+      {
+        "case_id": "bio_ret_sr_001",
+        "slice": "source_rank_conflict",
+        "legacy_ndcg10": 0.8915,
+        "semantic_ndcg10": 0.6915,
+        "rrf_ndcg10": 0.8915,
+        "lex_rank1": "bior_sr_001_a",
+        "sem_rank1": "bior_sr_001_b",
+        "rrf_rank1": "bior_sr_001_a",
+        "sem_beats_legacy": false,
+        "rrf_captures": false
+      },
+      {
+        "case_id": "nlp_ret_sr_001",
+        "slice": "source_rank_conflict",
+        "legacy_ndcg10": 0.8915,
+        "semantic_ndcg10": 0.9595,
+        "rrf_ndcg10": 0.9219,
+        "lex_rank1": "nlpr_sr_001_a",
+        "sem_rank1": "nlpr_sr_001_a",
+        "rrf_rank1": "nlpr_sr_001_a",
+        "sem_beats_legacy": true,
+        "rrf_captures": true
+      },
+      {
+        "case_id": "ml_ret_ac_001",
+        "slice": "acronym_vs_expanded",
+        "legacy_ndcg10": 1.0,
+        "semantic_ndcg10": 1.0,
+        "rrf_ndcg10": 1.0,
+        "lex_rank1": "mlr_ac_001_a",
+        "sem_rank1": "mlr_ac_001_a",
+        "rrf_rank1": "mlr_ac_001_a",
+        "sem_beats_legacy": false,
+        "rrf_captures": false
+      },
+      {
+        "case_id": "bio_ret_ac_001",
+        "slice": "acronym_vs_expanded",
+        "legacy_ndcg10": 0.858,
+        "semantic_ndcg10": 1.0,
+        "rrf_ndcg10": 1.0,
+        "lex_rank1": "bior_ac_001_a",
+        "sem_rank1": "bior_ac_001_b",
+        "rrf_rank1": "bior_ac_001_b",
+        "sem_beats_legacy": true,
+        "rrf_captures": true
+      },
+      {
+        "case_id": "ml_ret_nf_001",
+        "slice": "negated_findings",
+        "legacy_ndcg10": 1.0,
+        "semantic_ndcg10": 1.0,
+        "rrf_ndcg10": 1.0,
+        "lex_rank1": "mlr_nf_001_a",
+        "sem_rank1": "mlr_nf_001_b",
+        "rrf_rank1": "mlr_nf_001_a",
+        "sem_beats_legacy": false,
+        "rrf_captures": false
+      },
+      {
+        "case_id": "nlp_ret_nf_001",
+        "slice": "negated_findings",
+        "legacy_ndcg10": 0.9896,
+        "semantic_ndcg10": 1.0,
+        "rrf_ndcg10": 0.9896,
+        "lex_rank1": "nlpr_nf_001_b",
+        "sem_rank1": "nlpr_nf_001_b",
+        "rrf_rank1": "nlpr_nf_001_b",
+        "sem_beats_legacy": true,
+        "rrf_captures": false
+      },
+      {
+        "case_id": "bio_ret_ei_001",
+        "slice": "exact_identifier",
+        "legacy_ndcg10": 0.8051,
+        "semantic_ndcg10": 0.8288,
+        "rrf_ndcg10": 0.8288,
+        "lex_rank1": "bior_ei_001_b",
+        "sem_rank1": "bior_ei_001_b",
+        "rrf_rank1": "bior_ei_001_b",
+        "sem_beats_legacy": true,
+        "rrf_captures": true
+      },
+      {
+        "case_id": "nlp_ret_ei_001",
+        "slice": "exact_identifier",
+        "legacy_ndcg10": 1.0,
+        "semantic_ndcg10": 0.8076,
+        "rrf_ndcg10": 1.0,
+        "lex_rank1": "nlpr_ei_001_a",
+        "sem_rank1": "nlpr_ei_001_c",
+        "rrf_rank1": "nlpr_ei_001_a",
+        "sem_beats_legacy": false,
+        "rrf_captures": false
+      },
+      {
+        "case_id": "ml_ret_nt_001",
+        "slice": "neutral",
+        "legacy_ndcg10": 1.0,
+        "semantic_ndcg10": 0.8737,
+        "rrf_ndcg10": 1.0,
+        "lex_rank1": "mlr_nt_001_a",
+        "sem_rank1": "mlr_nt_001_c",
+        "rrf_rank1": "mlr_nt_001_a",
+        "sem_beats_legacy": false,
+        "rrf_captures": false
+      },
+      {
+        "case_id": "nlp_ret_nt_001",
+        "slice": "neutral",
+        "legacy_ndcg10": 0.8595,
+        "semantic_ndcg10": 0.9829,
+        "rrf_ndcg10": 0.9506,
+        "lex_rank1": "nlpr_nt_001_a",
+        "sem_rank1": "nlpr_nt_001_b",
+        "rrf_rank1": "nlpr_nt_001_b",
+        "sem_beats_legacy": true,
+        "rrf_captures": true
+      }
+    ]
+  },
+  "section_7_judgment_sensitivity": {
+    "n_low_confidence_judgments": 8,
+    "baseline_mean_delta_rrf_vs_legacy": 0.0065,
+    "max_single_judgment_case_delta_shift": 0.0911,
+    "max_implied_mean_delta_shift": 0.00207,
+    "gap_to_threshold": 0.0235,
+    "verdict_under_max_perturbation": "stable",
+    "perturbations": [
+      {
+        "case_id": "ml_disc_ma_001",
+        "candidate_id": "ml_ma_001_b",
+        "orig_grade": 2,
+        "conf": 0.62,
+        "perturbation": 1,
+        "new_grade": 3,
+        "case_delta_shift": 0.0
+      },
+      {
+        "case_id": "ml_disc_ma_001",
+        "candidate_id": "ml_ma_001_b",
+        "orig_grade": 2,
+        "conf": 0.62,
+        "perturbation": -1,
+        "new_grade": 1,
+        "case_delta_shift": 0.0
+      },
+      {
+        "case_id": "ml_disc_ma_001",
+        "candidate_id": "ml_ma_001_d",
+        "orig_grade": 3,
+        "conf": 0.68,
+        "perturbation": -1,
+        "new_grade": 2,
+        "case_delta_shift": -0.0369
+      },
+      {
+        "case_id": "bio_disc_ma_001",
+        "candidate_id": "bio_ma_001_b",
+        "orig_grade": 2,
+        "conf": 0.62,
+        "perturbation": 1,
+        "new_grade": 3,
+        "case_delta_shift": 0.0369
+      },
+      {
+        "case_id": "bio_disc_ma_001",
+        "candidate_id": "bio_ma_001_b",
+        "orig_grade": 2,
+        "conf": 0.62,
+        "perturbation": -1,
+        "new_grade": 1,
+        "case_delta_shift": -0.0242
+      },
+      {
+        "case_id": "bio_disc_ma_001",
+        "candidate_id": "bio_ma_001_d",
+        "orig_grade": 2,
+        "conf": 0.62,
+        "perturbation": 1,
+        "new_grade": 3,
+        "case_delta_shift": 0.0
+      },
+      {
+        "case_id": "bio_disc_ma_001",
+        "candidate_id": "bio_ma_001_d",
+        "orig_grade": 2,
+        "conf": 0.62,
+        "perturbation": -1,
+        "new_grade": 1,
+        "case_delta_shift": 0.0
+      },
+      {
+        "case_id": "ml_ret_ma_001",
+        "candidate_id": "mlr_ma_001_b",
+        "orig_grade": 2,
+        "conf": 0.62,
+        "perturbation": 1,
+        "new_grade": 3,
+        "case_delta_shift": 0.0
+      },
+      {
+        "case_id": "ml_ret_ma_001",
+        "candidate_id": "mlr_ma_001_b",
+        "orig_grade": 2,
+        "conf": 0.62,
+        "perturbation": -1,
+        "new_grade": 1,
+        "case_delta_shift": 0.0
+      },
+      {
+        "case_id": "ml_ret_ma_001",
+        "candidate_id": "mlr_ma_001_d",
+        "orig_grade": 1,
+        "conf": 0.6,
+        "perturbation": 1,
+        "new_grade": 2,
+        "case_delta_shift": 0.0
+      },
+      {
+        "case_id": "ml_ret_ma_001",
+        "candidate_id": "mlr_ma_001_d",
+        "orig_grade": 1,
+        "conf": 0.6,
+        "perturbation": -1,
+        "new_grade": 0,
+        "case_delta_shift": 0.0
+      },
+      {
+        "case_id": "nlp_ret_ma_001",
+        "candidate_id": "nlpr_ma_001_b",
+        "orig_grade": 3,
+        "conf": 0.68,
+        "perturbation": -1,
+        "new_grade": 2,
+        "case_delta_shift": 0.0
+      },
+      {
+        "case_id": "nlp_ret_ma_001",
+        "candidate_id": "nlpr_ma_001_d",
+        "orig_grade": 3,
+        "conf": 0.68,
+        "perturbation": -1,
+        "new_grade": 2,
+        "case_delta_shift": -0.0911
+      }
+    ]
+  },
+  "section_8_statistical_power": {
+    "n_cases": 44,
+    "n_nonzero_paired_delta": 10,
+    "mean_paired_delta": 0.006546,
+    "sd_paired_delta": 0.027508,
+    "minimum_detectable_effect_paired_t_95pct": 0.008128,
+    "frozen_threshold": 0.03,
+    "mde_exceeds_threshold": false,
+    "bootstrap_ci": {
+      "mean_delta": 0.00207,
+      "lower": 0.0,
+      "upper": 0.00621,
+      "p_positive": 0.637,
+      "n": 44
+    },
+    "interpretation": "adequately_powered"
+  }
+}
