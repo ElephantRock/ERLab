@@ -1,0 +1,36 @@
+{
+  "gate": "GATE 1 (after P1B.1)",
+  "benchmark_version": "discovery_ranking_v2+retrieval_ranking_v2",
+  "discovery_cases": 33,
+  "retrieval_cases": 33,
+  "total_cases": 66,
+  "domains": [
+    "machine_learning",
+    "biomedical",
+    "nlp"
+  ],
+  "splits": {
+    "calibration": 22,
+    "development": 22,
+    "held_out": 22
+  },
+  "domain_counts": {
+    "machine_learning": 22,
+    "biomedical": 22,
+    "nlp": 22
+  },
+  "surface_counts": {
+    "discovery": 33,
+    "retrieval": 33
+  },
+  "missing_required_slices": [],
+  "provisional_fingerprint": "d9581928e2af1ff5aa49d3f84edef4c3f04c57bdcfabdab2f1248fe2dd6fc8c8",
+  "single_pass_judgments_pending_blind_adjudication": 270,
+  "frozen_fingerprint_status": "NOT COMPUTABLE until blind adjudication completes",
+  "deliverables": [
+    "docs/p1b_gate1/slice_coverage_report.json",
+    "docs/p1b_gate1/blind_adjudication_package.json",
+    "docs/p1b_gate1/gate1_summary.json (this file)"
+  ],
+  "next_action_required": "Independent blind second-pass annotation of every (case_id, candidate_id) in blind_adjudication_package.json. Do NOT consult grades, confidence, rationales, policy scores, or ranks while annotating. Return populated judgments for reconciliation and adjudication of disagreements."
+}

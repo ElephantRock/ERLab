@@ -1,0 +1,173 @@
+{
+  "by_slice": {
+    "acronym_vs_expanded": {
+      "discovery": 3,
+      "domains": [
+        "biomedical",
+        "machine_learning",
+        "nlp"
+      ],
+      "retrieval": 3,
+      "splits": [
+        "calibration",
+        "development",
+        "held_out"
+      ]
+    },
+    "exact_identifier": {
+      "discovery": 3,
+      "domains": [
+        "biomedical",
+        "machine_learning",
+        "nlp"
+      ],
+      "retrieval": 3,
+      "splits": [
+        "calibration",
+        "development",
+        "held_out"
+      ]
+    },
+    "lexical_trap": {
+      "discovery": 7,
+      "domains": [
+        "biomedical",
+        "machine_learning",
+        "nlp"
+      ],
+      "retrieval": 7,
+      "splits": [
+        "calibration",
+        "development",
+        "held_out"
+      ]
+    },
+    "method_vs_application": {
+      "discovery": 3,
+      "domains": [
+        "biomedical",
+        "machine_learning",
+        "nlp"
+      ],
+      "retrieval": 3,
+      "splits": [
+        "calibration",
+        "development",
+        "held_out"
+      ]
+    },
+    "missing_abstract": {
+      "discovery": 3,
+      "domains": [
+        "biomedical",
+        "machine_learning",
+        "nlp"
+      ],
+      "retrieval": 3,
+      "splits": [
+        "calibration",
+        "development",
+        "held_out"
+      ]
+    },
+    "near_duplicate": {
+      "discovery": 3,
+      "domains": [
+        "biomedical",
+        "machine_learning",
+        "nlp"
+      ],
+      "retrieval": 3,
+      "splits": [
+        "calibration",
+        "development",
+        "held_out"
+      ]
+    },
+    "negated_findings": {
+      "discovery": 3,
+      "domains": [
+        "biomedical",
+        "machine_learning",
+        "nlp"
+      ],
+      "retrieval": 3,
+      "splits": [
+        "calibration",
+        "development",
+        "held_out"
+      ]
+    },
+    "neutral": {
+      "discovery": 3,
+      "domains": [
+        "biomedical",
+        "machine_learning",
+        "nlp"
+      ],
+      "retrieval": 3,
+      "splits": [
+        "calibration",
+        "development",
+        "held_out"
+      ]
+    },
+    "review_vs_primary": {
+      "discovery": 3,
+      "domains": [
+        "biomedical",
+        "machine_learning",
+        "nlp"
+      ],
+      "retrieval": 3,
+      "splits": [
+        "calibration",
+        "development",
+        "held_out"
+      ]
+    },
+    "semantic_paraphrase": {
+      "discovery": 3,
+      "domains": [
+        "biomedical",
+        "machine_learning",
+        "nlp"
+      ],
+      "retrieval": 3,
+      "splits": [
+        "calibration",
+        "development",
+        "held_out"
+      ]
+    },
+    "source_rank_conflict": {
+      "discovery": 3,
+      "domains": [
+        "biomedical",
+        "machine_learning",
+        "nlp"
+      ],
+      "retrieval": 3,
+      "splits": [
+        "calibration",
+        "development",
+        "held_out"
+      ]
+    }
+  },
+  "domain_counts": {
+    "biomedical": 22,
+    "machine_learning": 22,
+    "nlp": 22
+  },
+  "missing_required_slices": [],
+  "split_counts": {
+    "calibration": 22,
+    "development": 22,
+    "held_out": 22
+  },
+  "surface_counts": {
+    "discovery": 33,
+    "retrieval": 33
+  }
+}
