@@ -239,3 +239,159 @@ P1B.7  Replace TrimmerStage and wire retrieval ranking
 P1B.8  Add operator inspection commands
 P1B.9  Production seal, adversarial review, five-run closeout
 ```
+
+## 13. Authorization (recorded before implementation)
+
+### Scope authorized
+
+```
+P1B.1  benchmark expansion + blind adjudication   AUTHORIZED
+P1B.2  governed real-embedding snapshot             AUTHORIZED after judgment/split freeze (Gate 1)
+P1B.3  frozen policy evaluation                     AUTHORIZED after snapshot verification
+P1B.4+                                                  NOT YET AUTHORIZED
+```
+
+P2 remains BLOCKED. P1 stays OPEN. No production policy is selected in this scope.
+
+### Decision 1 — Embeddings: C. Cached real embeddings
+
+The official quality benchmark must use real-provider embeddings generated once through
+`EffectiveEmbeddingConfiguration → VerifiedEmbeddingRuntime → authorized embeddings → immutable snapshot`.
+Every policy comparison runs against the frozen snapshot.
+
+Frozen definition of "deterministic replay":
+
+> Given the same benchmark definition, relevance judgments, configuration, ranking policy,
+> and embedding-snapshot fingerprint, ranking outputs and evaluation metrics must be exactly
+> reproducible. It does NOT mean repeated external-provider calls return byte-identical vectors.
+
+Required snapshot contents:
+
+```
+snapshot schema version
+benchmark version and fingerprint
+capability binding ID
+generation capability-check ID
+provider/model/deployment evidence
+embedding contract version
+dimension and numeric representation
+normalization posture
+query IDs and canonical text hashes
+candidate IDs and canonical text hashes
+exact query vectors
+exact candidate vectors
+per-vector fingerprints
+complete snapshot fingerprint
+created timestamp
+```
+
+Replay must FAIL (not silently regenerate) when any of:
+
+```
+candidate text hash differs
+query text hash differs
+binding evidence differs
+dimension differs
+normalization contract differs
+vector artifact fingerprint differs
+benchmark fingerprint differs
+```
+
+A deterministic governed stub embedder is retained ONLY for infrastructure tests
+(integration, binding-equality, snapshot writer/reader, failure injection, architecture).
+It is marked: `benchmark infrastructure fixture`, `not eligible for ranking-quality approval`,
+`not production-selectable`.
+
+A separate optional command may regenerate a candidate snapshot under a new real binding;
+it creates a new snapshot version and new evaluation and must not overwrite the approved snapshot.
+
+### Decision 2 — Reranker: C. Defer conditionally
+
+Evaluate first, in order:
+
+```
+legacy_lexical_top20_v1
+semantic_only_v1
+hybrid_rrf_v1
+hybrid_weighted_v1   (only if weights frozen without held-out tuning)
+```
+
+- If `hybrid_rrf_v1` passes the frozen gate: production candidate policy = `hybrid_rrf_v1`,
+  `reranker_policy = none`, `reranker_enabled = false`. The disabled reranker control must be
+  truthfully dispositioned (reranker construction calls 0, reranker requests 0, persisted records
+  record `reranker_policy = none`). Disabling has an observable, tested effect: no reranker execution.
+- If `hybrid_rrf_v1` fails: STOP after P1B.3 for design review. Do NOT auto-build a learned MLP
+  (≈60 cases is too small to train/validate without overfitting). The follow-on decision would
+  evaluate an existing production cross-encoder, an existing ERLab scoring model, an external
+  reranker provider, an LLM reranker, or revised non-learned feature fusion. Any reranker receives
+  its own frozen quality/latency/cost/failure-policy/reproducibility contract.
+
+The P1 threshold must not be weakened merely to avoid implementing a reranker.
+
+### Decision 3 — Judgments: A, with blinded adjudication
+
+Sequence:
+
+```
+author benchmark cases
+→ author provisional judgments
+→ freeze candidate pools
+→ freeze provisional split assignment
+→ produce unlabeled adjudication package
+→ independent second-pass annotation
+→ compare judgments
+→ adjudicate disagreements
+→ freeze final judgments and splits
+→ compute final benchmark fingerprint
+→ begin semantic evaluation
+```
+
+The blind adjudication pass receives candidate cases WITHOUT exposing:
+`original relevance grade`, `original confidence`, `policy scores`, `policy ranks`,
+`baseline ranks where avoidable`.
+
+Each judgment artifact preserves:
+
+```
+case ID
+candidate ID
+primary relevance grade 0–3
+annotation confidence
+brief criterion-based rationale
+annotation provenance
+initial annotation
+second-pass annotation
+adjudicated annotation
+disagreement status
+```
+
+Quality floor for the expanded benchmark:
+
+```
+discovery cases                 ≥ 30
+retrieval cases                 ≥ 30
+domains                         ≥ 3
+adversarial slice types         all required slices represented
+double-annotated cases          preferably 100% for this expansion
+unresolved judgment conflicts   0
+```
+
+Closeout must describe the benchmark honestly as
+`controlled expert-reviewed benchmark`, NOT `population-level human relevance ground truth`.
+Where neither annotation can justify a grade reliably, mark the case for exclusion or external
+review rather than forcing a judgment.
+
+### Decision 4 — Scope: B. P1B.1–P1B.3 only, with mandatory gates
+
+Will execute: P1B.1, P1B.2, P1B.3.
+Will NOT execute until reviewed: reranker implementation, production policy selection,
+DB ranking evidence, TrimmerStage replacement, operator commands, production activation.
+
+**Gate 1 — after P1B.1.** Pause with: expanded benchmark cases, candidate-pool fingerprints,
+provisional judgments, blind-adjudication package, split assignments, slice coverage report.
+Judgments and held-out split must be approved before generating official benchmark scores.
+
+**Gate 2 — after P1B.3.** Pause with: legacy baseline metrics, semantic-only metrics, hybrid RRF
+metrics, weighted-policy metrics (where applicable), paired confidence intervals, domain and intent
+slices, adversarial-slice results, latency, snapshot and replay evidence, quality-gate verdict.
+No production policy is selected merely because it has the highest point estimate.
