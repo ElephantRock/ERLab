@@ -76,12 +76,19 @@ def preflight_provider():
     from backend.config import get_settings
 
     s = get_settings()
-    base = s.embedding_base_url or s.lmstudio_base_url
+    base = (s.embedding_base_url or s.lmstudio_base_url).rstrip("/")
+    # Normalize: providers may configure base_url with or without a trailing
+    # /v1. The OpenAI-compatible paths are /v1/models and /v1/embeddings, so
+    # build the api_root accordingly (avoid /v1/v1/...).
+    if base.endswith("/v1"):
+        api_root = base
+    else:
+        api_root = f"{base}/v1"
     print(f"[preflight] provider={s.embedding_provider} model={s.embedding_model}")
-    print(f"[preflight] endpoint={base}")
+    print(f"[preflight] endpoint={base} (api_root={api_root})")
     try:
         with httpx.Client(timeout=20) as c:
-            r = c.get(f"{base}/v1/models")
+            r = c.get(f"{api_root}/models")
             r.raise_for_status()
             ids = [m.get("id") for m in r.json().get("data", [])]
             if s.embedding_model not in ids:
@@ -91,7 +98,7 @@ def preflight_provider():
             # Trivial embedding probe to confirm the model is LOADED (not just
             # registered — LM Studio lists models that aren't loaded yet).
             er = c.post(
-                f"{base}/v1/embeddings",
+                f"{api_root}/embeddings",
                 json={"model": s.embedding_model, "input": "preflight"},
                 timeout=60,
             )
@@ -106,6 +113,37 @@ def preflight_provider():
             return dim
     except Exception as e:
         raise RuntimeError(f"[preflight] provider not usable: {e}") from e
+
+
+def _build_fresh_adapter(effective_config):
+    """Construct a fresh GovernedEmbeddingAdapter for the embed phase.
+
+    The probe phase (register_profile_and_run_probe) runs in its own event
+    loop and the LMStudioEmbeddingProvider's httpx.AsyncClient is bound to
+    that loop. To embed in a new event loop we build a fresh provider+adapter
+    with the same effective config; the verified runtime then reads the
+    binding/check the probe just published from the DB.
+    """
+    from backend.config import get_settings
+    from backend.pipeline.knowledge.embedding_providers import create_embedding_provider
+    from backend.pipeline.knowledge.embedding_service import EmbeddingService
+    from backend.pipeline.governed_embedding_adapter import GovernedEmbeddingAdapter
+
+    settings = get_settings()
+    provider = create_embedding_provider(
+        provider_name=settings.embedding_provider,
+        model=settings.embedding_model,
+        api_key=settings.openai_api_key,
+        base_url=settings.embedding_base_url or settings.lmstudio_base_url,
+        dimension=settings.embedding_dimension or None,
+    )
+    emb_service = EmbeddingService(provider)
+    return GovernedEmbeddingAdapter(
+        embedding_service=emb_service,
+        provider_kind=effective_config.provider_kind,
+        requested_model=effective_config.requested_model,
+        configured_dimension=effective_config.expected_dimension,
+    )
 
 
 def register_profile_and_run_probe():
@@ -282,12 +320,19 @@ def generate():
     # 1. preflight (fail loudly if model not loaded)
     preflight_provider()
 
-    # 2+3. register profile + run governed dual_probe
-    governed_adapter, effective_config, sf, pub = register_profile_and_run_probe()
+    # 2+3. register profile + run governed dual_probe (in its own event loop).
+    # The probe's adapter binds an httpx.AsyncClient to this loop; the loop
+    # closes when register_profile_and_run_probe returns. We then build a
+    # FRESH adapter + runtime for the embed phase below, reusing the same
+    # binding/check the probe just wrote to the DB.
+    _governed_adapter_probe, effective_config, sf, pub = register_profile_and_run_probe()
 
-    # 4. build the verified runtime (fail-closed)
+    # 4. build a fresh verified runtime for the embed phase (fail-closed).
+    # The runtime reads the binding/check the probe just published, so this
+    # succeeds iff the governed dual_probe genuinely passed.
+    fresh_adapter = _build_fresh_adapter(effective_config)
     runtime = build_verified_embedding_runtime(
-        embedding_adapter=governed_adapter,
+        embedding_adapter=fresh_adapter,
         effective_config=effective_config,
         session_factory=sf,
     )
