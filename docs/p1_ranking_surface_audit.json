@@ -1,0 +1,91 @@
+{
+  "audit_version": "p1_ranking_audit_v1",
+  "ranking_surfaces": [
+    {
+      "surface_id": "trimmer_stage",
+      "classification": "discovery_ranking",
+      "file": "backend/pipeline/dag/trimmer.py",
+      "symbol": "TrimmerStage",
+      "input_artifact": "ctx.all_papers",
+      "candidate_count_before": "all_ingested_papers",
+      "candidate_count_after": "20",
+      "score_components": ["keyword_overlap_on_domain"],
+      "configuration_fields": ["trim_top_k"],
+      "fallback": "keyword_overlap_heuristic",
+      "durable_evidence": "none",
+      "production_reachable": true,
+      "disposition": "primary_p1_target",
+      "notes": "Configured LLM reranker never wired. Primary quality bottleneck."
+    },
+    {
+      "surface_id": "search_service_dedup",
+      "classification": "deduplication",
+      "file": "backend/pipeline/literature/search_service.py",
+      "symbol": "_deduplicate_with_provenance",
+      "input_artifact": "SourceSearchOutcome results",
+      "candidate_count_before": "sum_of_source_results",
+      "candidate_count_after": "deduplicated_count",
+      "score_components": ["source_priority"],
+      "configuration_fields": [],
+      "fallback": "source_priority_order",
+      "durable_evidence": "PaperDiscovery.source_rank",
+      "production_reachable": true,
+      "disposition": "secondary_p1_target",
+      "notes": "RelevanceFilter inactive in production. PubMed/CrossRef emit constant 1.0."
+    },
+    {
+      "surface_id": "two_stage_retriever",
+      "classification": "retrieval_ranking",
+      "file": "backend/pipeline/knowledge/retriever.py",
+      "symbol": "TwoStageRetriever._retrieve_inner",
+      "input_artifact": "BM25 + semantic parallel retrieval",
+      "candidate_count_before": "bm25_overfetch * n_results + semantic_top_n",
+      "candidate_count_after": "n_results",
+      "score_components": ["bm25_score", "semantic_distance", "rrf_score", "reranker_score"],
+      "configuration_fields": ["retrieval_mode", "reranker_enabled", "rrf_k"],
+      "fallback": "rrf_fusion",
+      "durable_evidence": "none_scores_transient",
+      "production_reachable": true,
+      "disposition": "secondary_p1_target",
+      "notes": "Proper hybrid pipeline. Scores never persisted."
+    },
+    {
+      "surface_id": "graph_rag_retriever",
+      "classification": "retrieval_ranking",
+      "file": "backend/pipeline/knowledge/graph_rag_retriever.py",
+      "symbol": "GraphRAGRetriever._three_way_rrf",
+      "input_artifact": "BM25 + semantic + graph walk",
+      "candidate_count_before": "variable",
+      "candidate_count_after": "n_results",
+      "score_components": ["bm25_score", "semantic_distance", "graph_walk_score"],
+      "configuration_fields": ["graph_rag_weight"],
+      "fallback": "three_way_rrf",
+      "durable_evidence": "none",
+      "production_reachable": true,
+      "disposition": "not_in_p1_scope"
+    }
+  ],
+  "non_ranking_sorts": [
+    {"file": "pipeline/stages.py", "lines": "431,577,887,979", "context": "context_window_slicing", "disposition": "not_ranking"},
+    {"file": "pipeline/gap_analysis/gap_analyzer.py", "line": "83,249", "context": "context_window_slicing", "disposition": "not_ranking"},
+    {"file": "pipeline/generation/ideator_agent.py", "line": "127", "context": "context_window_slicing", "disposition": "not_ranking"}
+  ],
+  "persisted_score_columns": [
+    {"table": "run_papers", "column": "relevance_score", "type": "Float|None", "populated": false},
+    {"table": "paper_discoveries", "column": "source_rank", "type": "Int|None", "populated": true},
+    {"table": "vector_retrieval_results", "column": "rank", "type": "Int", "populated": true}
+  ],
+  "ranking_settings": {
+    "retrieval_mode": {"default": "hybrid", "p05_field_id": "retrieval_mode"},
+    "reranker_enabled": {"default": true, "p05_field_id": "reranker_enabled"},
+    "reranker_type": {"default": "cross_encoder", "p05_field_id": "reranker_type"},
+    "rrf_k": {"default": 60, "p05_field_id": "rrf_k"},
+    "novelty_top_k": {"default": 20, "p05_field_id": "novelty_top_k"}
+  },
+  "unconfigurable_defaults": {
+    "trim_top_k": {"value": 20, "location": "pipeline.yaml:65"},
+    "limit_per_source": {"value": 20, "location": "search_service.py:35,90"},
+    "overfetch": {"value": 3, "location": "retriever.py:69"},
+    "relevance_filter_threshold": {"value": 0.3, "location": "relevance_filter.py:17"}
+  }
+}
