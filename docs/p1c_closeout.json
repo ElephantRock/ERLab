@@ -1,0 +1,70 @@
+{
+  "wave": "P1C",
+  "closeout_kind": "host_availability_failure",
+  "branch": "D",
+  "summary_statement": "P1C could not be completed. No materially stronger embedding model on the available host can complete governed snapshot generation. The experiment terminates at Branch D: no practical model candidate is available in the current environment.",
+  "hypothesis": "A materially stronger governed embedding model may create enough relevance separation for semantic or hybrid ranking to pass the existing frozen gate.",
+  "hypothesis_tested": false,
+  "reason_not_tested": "No candidate model could complete governed snapshot generation on the LM Studio host. Models crash under sustained load with segfault exit codes; only the P1B control (qwen3-embedding-0.6b) sustains the workload.",
+  "status": {
+    "P0": "CLOSED",
+    "P1A": "CLOSED",
+    "P1B": "CLOSED — genuine negative result",
+    "P1C": "CLOSED — Branch D (host availability)",
+    "P1": "OPEN and paused",
+    "P2": "BLOCKED",
+    "Frontend": "OPEN and independently actionable"
+  },
+  "entry_commit": "540de0c",
+  "p1c_commit_chain": [
+    {"hash": "pending", "wave": "P1C.0", "message": "freeze P1C experiment contract"},
+    {"hash": "pending", "wave": "P1C.close", "message": "P1C closeout — Branch D"}
+  ],
+  "frozen_candidate_set": {
+    "control": {"model": "text-embedding-qwen3-embedding-0.6b", "dim": 1024, "p1b_snapshot_fingerprint": "2d8b26f709c03b6bbc7d5c4ab7ca65259a87e8f06ef80b3da0e9e50df69b38d2"},
+    "candidate": {"model": "text-embedding-all-minilm-l12-v2", "dim": 384, "snapshot_generated": false, "reason": "crashes during 336-item embed despite bounded retry"},
+    "excluded": {
+      "bge_m3_variants": ["bortunac/text-embedding-bge-m3-embeddings", "forrint/text-embedding-bge-m3-embeddings"],
+      "nomic_variants": ["text-embedding-nomic-embed-text-v2-moe", "text-embedding-nomic-embed-text-v1.5"],
+      "jina_v5": ["jina-embeddings-v5-text-small-retrieval"],
+      "voyage": ["voyage-4-nano"],
+      "exclusion_reason": "0/3 stable on real benchmark text; crash under sustained load"
+    }
+  },
+  "governed_path_attempted": {
+    "preflight": "passed",
+    "register_embedding_profile": "passed (profile 31c24530...)",
+    "run_capability_check_dual_probe": "passed (multiple check_ids; binding 4fb4af72...)",
+    "build_verified_embedding_runtime": "passed",
+    "embed_336_items_authorized": "FAILED — model crashes on real benchmark text after a few items"
+  },
+  "integrity_accounting": {
+    "benchmark_changes": 0,
+    "judgment_changes": 0,
+    "threshold_changes": 0,
+    "p1b_snapshot_overwrites": 0,
+    "production_changes": 0,
+    "reranker_built": 0,
+    "successful_new_snapshots": 0,
+    "gate_verdicts_on_new_candidates": 0
+  },
+  "p1b_preserved_untouched": {
+    "benchmark_fingerprint": "0ffbfdb164053ad19c869cbba44678c0aa76aa140557320383a82efcebcb96e4",
+    "control_snapshot_fingerprint": "2d8b26f709c03b6bbc7d5c4ab7ca65259a87e8f06ef80b3da0e9e50df69b38d2",
+    "p1b_closeout": "docs/p1b_closeout.md (unchanged)",
+    "gate2_diagnostic": "docs/p1b_gate2/diagnostic_analysis.md (unchanged)"
+  },
+  "re_evaluation_conditions": [
+    "the host's LM Studio stability is repaired (models stop crashing under sustained load)",
+    "a different governed embedding endpoint is configured (real OpenAI key with text-embedding-3-large, stable Ollama serving bge-m3, hosted Voyage/Cohere, etc.)",
+    "the operator loads a specific stronger model and confirms it sustains the full 336-item embed workload before P1C is reopened"
+  ],
+  "tooling_added": {
+    "generate_embedding_snapshot.py": {
+      "P1C_SNAPSHOT_TAG_env": "configurable snapshot output dir under docs/p1c_snapshots/<tag>/",
+      "_embed_one_with_retry": "bounded (8) single-text retry with exponential backoff for transient provider crashes; authority errors still abort"
+    },
+    "note": "These are generation-tooling robustness improvements, not policy or gate changes. They were necessary to even attempt P1C on the unstable host."
+  },
+  "recommended_next_move": "Keep P1 paused; redirect engineering to the independent frontend track (TS baseline, 101 errors). Do not begin P2 or build a reranker. The ranking roadmap is blocked on host/provider availability, not engineering effort."
+}

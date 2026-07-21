@@ -55,7 +55,15 @@ from backend.ranking.embedding_snapshot import (
 )
 
 
-SNAPSHOT_DIR = _REPO_ROOT / "docs" / "p1b_snapshot"
+# P1C: snapshot dir is configurable so multiple candidate models can each
+# produce their own snapshot under docs/p1c_snapshots/<model_tag>/ without
+# overwriting the frozen P1B control snapshot at docs/p1b_snapshot/.
+import os as _os
+_P1C_TAG = _os.environ.get("P1C_SNAPSHOT_TAG", "").strip()
+if _P1C_TAG:
+    SNAPSHOT_DIR = _REPO_ROOT / "docs" / "p1c_snapshots" / _P1C_TAG
+else:
+    SNAPSHOT_DIR = _REPO_ROOT / "docs" / "p1b_snapshot"
 
 
 def _candidate_canonical_text(case, cand) -> str:
@@ -265,22 +273,68 @@ def register_profile_and_run_probe():
     return governed_adapter, effective_config, sf, pub
 
 
+async def _embed_one_with_retry(runtime, text: str, *, is_query: bool, max_retries: int = 8):
+    """Embed a single text through the authorized runtime with bounded retry.
+
+    The LM Studio host exhibits transient model-crash/reload instability
+    under load (the model returns 400 'model has crashed' or 'Model
+    reloaded..' for a few seconds, then recovers). This helper retries a
+    SINGLE-text authorized embed with exponential backoff so a snapshot can
+    complete despite transient crashes.
+
+    This is generation-tooling robustness, NOT policy/gate weakening:
+      - it only retries transient provider failures (it does NOT catch
+        CapabilityAuthorizationError — authority failures still abort)
+      - it embeds one text per request (LM Studio crashes more on batches)
+      - the retry count is bounded and the final failure raises
+    """
+    import asyncio as _aio
+    last_exc = None
+    for attempt in range(max_retries):
+        try:
+            if is_query:
+                return await runtime.embed_query_authorized(text)
+            else:
+                receipt = await runtime.embed_documents_authorized([text])
+                # unwrap single-element batch
+                class _Single:
+                    embedding = receipt.embeddings[0]
+                    capability_binding_id = receipt.capability_binding_id
+                    capability_check_id = receipt.capability_check_id
+                    runtime_config_fingerprint = receipt.runtime_config_fingerprint
+                    authorized_at = receipt.authorized_at
+                return _Single()
+        except Exception as e:
+            # Transient provider errors (model crash/reload) -> retry.
+            # Authority errors (CapabilityAuthorizationError) MUST NOT be
+            # retried silently — but they're a different exception type that
+            # we let propagate by checking the message here.
+            msg = str(e)
+            if "CapabilityAuthorization" in type(e).__name__ or "authority" in msg.lower():
+                raise
+            last_exc = e
+            await _aio.sleep(min(2.0 ** attempt, 30.0))
+    raise RuntimeError(f"embed failed after {max_retries} retries: {last_exc}")
+
+
 async def _embed_all(runtime, cases):
     """Embed every query + candidate through the authorized runtime.
 
-    Returns (items, binding_receipt) where binding_receipt is evidence
-    captured from the authorized receipts (binding_id, check_id, runtime_fp).
+    Uses single-text authorized embeds with bounded retry to tolerate the
+    LM Studio host's transient model-crash/reload instability. Every vector
+    still carries the full authorized-receipt binding evidence.
+
+    Returns (items, binding_evidence).
     """
-    # Deduplicate candidate texts across the whole benchmark so each unique
-    # text is embedded once (some candidates may recur, though in this
-    # benchmark they don't).
     items: list[SnapshotItem] = []
     binding_evidence = {}
+    total = sum(1 + len(c.candidates) for c in cases)
+    done = 0
 
     for case in cases:
         # Query
         q_text = _query_canonical_text(case)
-        q_receipt = await runtime.embed_query_authorized(q_text)
+        q_receipt = await _embed_one_with_retry(runtime, q_text, is_query=True)
         items.append(SnapshotItem(
             item_id=case.case_id,
             item_role="query",
@@ -292,22 +346,26 @@ async def _embed_all(runtime, cases):
         binding_evidence["capability_binding_id"] = q_receipt.capability_binding_id
         binding_evidence["capability_check_id"] = q_receipt.capability_check_id
         binding_evidence["generation_runtime_fingerprint"] = q_receipt.runtime_config_fingerprint
+        done += 1
 
-        # Candidates — batch per case
-        cand_texts = [_candidate_canonical_text(case, c) for c in case.candidates]
-        c_receipt = await runtime.embed_documents_authorized(cand_texts)
-        for cand, text, vec in zip(case.candidates, cand_texts, c_receipt.embeddings):
+        # Candidates — one at a time with retry (batches crash more on this host)
+        for cand in case.candidates:
+            text = _candidate_canonical_text(case, cand)
+            c_receipt = await _embed_one_with_retry(runtime, text, is_query=False)
             items.append(SnapshotItem(
                 item_id=cand.candidate_id,
                 item_role="candidate",
                 canonical_text=text,
                 text_hash=canonical_text_hash(text),
-                vector=tuple(vec),
-                vector_fingerprint=vector_fingerprint(vec),
+                vector=tuple(c_receipt.embedding),
+                vector_fingerprint=vector_fingerprint(c_receipt.embedding),
             ))
-        binding_evidence["capability_binding_id"] = c_receipt.capability_binding_id
-        binding_evidence["capability_check_id"] = c_receipt.capability_check_id
-        binding_evidence["generation_runtime_fingerprint"] = c_receipt.runtime_config_fingerprint
+            binding_evidence["capability_binding_id"] = c_receipt.capability_binding_id
+            binding_evidence["capability_check_id"] = c_receipt.capability_check_id
+            binding_evidence["generation_runtime_fingerprint"] = c_receipt.runtime_config_fingerprint
+            done += 1
+            if done % 50 == 0:
+                print(f"[embed]   ...{done}/{total}")
 
     return items, binding_evidence
 
