@@ -1,0 +1,52 @@
+{
+  "_wave": "F1.3.0",
+  "_kind": "query_lifecycle_inventory",
+  "_audit_at_commit": "4becafd",
+  "_source_level_count": {
+    "high_severity": 2,
+    "medium_severity": 12,
+    "low_severity": 12,
+    "total": 26
+  },
+  "occurrences": [
+    {"id": "H-1", "file": "src/pages/dashboard.tsx", "lines": "49-59", "pattern": "catch-and-return-empty + rejected-to-empty-component", "operation": "getPending, getOpsDashboard", "current_fallback": "error/empty states collapsed into [] — dashboard looks healthy during outage", "severity": "HIGH", "repair": "F1.3.2 — 4 independent resource lifecycles"},
+    {"id": "H-2", "file": "src/pages/dashboard.tsx", "lines": "47-55", "pattern": "rejected-to-empty-component", "operation": "listRuns, listIdeas", "current_fallback": "failed runs/ideas queries render as 'no active run / no proposals' (looks like fresh install)", "severity": "HIGH", "repair": "F1.3.2 — 4 independent resource lifecycles"},
+    {"id": "M-1", "file": "src/pages/settings.tsx", "lines": "115-117", "pattern": ".catch(() => {})", "operation": "getDetailedStatus", "current_fallback": "Version/Provider/DB shows '—' with no failure signal", "severity": "MEDIUM", "repair": "F1.3.3 — explicit failure state"},
+    {"id": "M-2", "file": "src/pages/settings.tsx", "lines": "119-121", "pattern": ".catch(() => {})", "operation": "getEvolutionStatus", "current_fallback": "evolution section shows 'Disabled / — / 0' (looks like feature off)", "severity": "MEDIUM", "repair": "F1.3.3 — explicit failure state"},
+    {"id": "M-3", "file": "src/pages/settings.tsx", "lines": "130-136", "pattern": ".catch(() => {})", "operation": "listUsers", "current_fallback": "user table shows 'No users found' (looks like empty DB)", "severity": "MEDIUM", "repair": "F1.3.3 — explicit failure state"},
+    {"id": "M-4", "file": "src/pages/plugins.tsx", "lines": "18-36", "pattern": "no isError check", "operation": "listPlugins", "current_fallback": "failed query falls through to 'No plugins found'", "severity": "MEDIUM", "repair": "F1.3.4 — explicit failure state"},
+    {"id": "M-5", "file": "src/pages/gaps-explorer.tsx", "lines": "73-77", "pattern": "no isError check", "operation": "GET /gaps/clusters via apiFetchUnchecked", "current_fallback": "clusters tab shows 'No cluster data available'", "severity": "MEDIUM", "repair": "F1.3.4 — explicit failure state"},
+    {"id": "M-6", "file": "src/pages/knowledge-graph.tsx", "lines": "40-60", "pattern": "no isError check (3 queries)", "operation": "getWorldModel, getGraphStats, getEntities", "current_fallback": "failed queries render empty canvas / omitted stats — appears as valid empty graph", "severity": "MEDIUM", "repair": "F1.3.4 — explicit failure state"},
+    {"id": "M-7", "file": "src/pages/autonomous.tsx", "lines": "51-62", "pattern": "console.warn swallow", "operation": "getSchedulerStatus, getEvolutionStatus (Promise.all)", "current_fallback": "scheduler shows 'unknown', evolution shows 'No / 0'", "severity": "MEDIUM", "repair": "F1.3.6 — replace with visible failure"},
+    {"id": "M-8", "file": "src/components/notifications/notification-bell.tsx", "lines": "35-53", "pattern": "console.warn swallow (x2)", "operation": "getNotifications (unread + full)", "current_fallback": "badge stays at previous value (or 0), dropdown shows 'No notifications'", "severity": "MEDIUM", "repair": "F1.3.6 — replace with visible failure"},
+    {"id": "M-9", "file": "src/components/layout/app-shell.tsx", "lines": "34-38", "pattern": "no isError check", "operation": "listRuns", "current_fallback": "active-run pill silently absent (same as no active run)", "severity": "MEDIUM", "repair": "F1.3.4 — check isError"},
+    {"id": "M-10", "file": "src/components/idea/comment-thread.tsx", "lines": "19-38", "pattern": "no isError check", "operation": "listComments", "current_fallback": "'No comments yet' (same as empty thread)", "severity": "MEDIUM", "repair": "F1.3.4 — check isError"},
+    {"id": "M-11", "file": "src/components/ideas/revision-history-drawer.tsx", "lines": "47-50", "pattern": "no isError check", "operation": "getSectionRevisions", "current_fallback": "'No revision history available' (same as no revisions)", "severity": "MEDIUM", "repair": "F1.3.4 — check isError"},
+    {"id": "M-12", "file": "src/components/settings/stage-model-editor.tsx", "lines": "57-65", "pattern": "no isError check (cert + overrides)", "operation": "getCertification, getOverrides", "current_fallback": "every model renders 'uncertified', overrides render as empty", "severity": "MEDIUM", "repair": "F1.3.4 — check isError"},
+    {"id": "L-1", "file": "src/pages/run-detail.tsx", "lines": "121-201", "pattern": "no isError check on secondary query", "operation": "getRunIdeas", "current_fallback": "'No ideas generated' (secondary surface)", "severity": "LOW", "repair": "deferred to F1.7"},
+    {"id": "L-2", "file": "src/pages/traces.tsx", "lines": "65-72", "pattern": "console.warn swallow", "operation": "getTrace (on-demand)", "current_fallback": "span detail panel never opens (no toast)", "severity": "LOW", "repair": "deferred to F1.7"},
+    {"id": "L-3", "file": "src/components/pipeline/estimate-card.tsx", "lines": "24-53", "pattern": "catch-and-return-null (hidden card)", "operation": "getEstimate", "current_fallback": "entire card hidden on failure, no explanation", "severity": "LOW", "repair": "deferred to F1.7"}
+  ],
+  "low_benign": [
+    "L-4 dashboard.tsx:57 — ?? [] inside ready data (not a swallow)",
+    "L-5 evidence-panel.tsx:168-169 — ?? [] on loaded refs (prop guard)",
+    "L-6 tree-visualization.tsx:96,114 — ?? [] on Map.get",
+    "L-7 idea-detail.tsx:145,150,749 — ?? [] on loaded idea fields",
+    "L-8 score-report.tsx:169 — ?? [] on axes prop",
+    "L-9 idea-card.tsx:141-155 — try/catch formatDate returns ''",
+    "L-10 sessions.tsx:63-68 — try/catch formatDate returns dateStr",
+    "L-11 global-search-dialog.tsx:21-28 — try/catch localStorage parse returns []",
+    "L-12 error-boundary.tsx:22-26 — try/catch Sentry init (telemetry only)"
+  ],
+  "already_fixed": [
+    "costs.tsx — useResource + DataView",
+    "memory.tsx — isError-driven stats-unavailable banner + DataView recall",
+    "knowledge-graph.tsx detail subquery — toast on error",
+    "stage-model-selector.tsx — error state on fetch failure",
+    "gap-detail.tsx — isError checked on both queries (F1.2)"
+  ],
+  "fully_clean_pages": [
+    "governance.tsx", "ops.tsx", "literature.tsx", "knowledge-search.tsx",
+    "gap-detail.tsx", "pipeline-new.tsx", "sessions.tsx", "ideas-browser.tsx"
+  ]
+}
