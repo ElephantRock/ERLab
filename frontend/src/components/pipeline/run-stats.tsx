@@ -1,5 +1,3 @@
-import React from "react";
-
 interface RunStatsData {
   total_runs: number;
   by_status: Record<string, number>;

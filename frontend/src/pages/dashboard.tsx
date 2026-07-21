@@ -28,7 +28,6 @@ import {
   AlertTriangle,
   Shield,
   Clock,
-  Inbox,
   FlaskConical,
 } from "lucide-react";
 

@@ -60,7 +60,7 @@ export default function PipelineNew() {
   const [ideasError, setIdeasError] = useState<string | null>(null);
   const [ideasLoading, setIdeasLoading] = useState(false);
   const [activeStrategy, setActiveStrategy] = useState("fast_scan");
-  const { sessionId, setSessionId } = useSession();
+  const { sessionId } = useSession();
   const { stages, isComplete, isConnected } = usePipelineProgress(runId);
 
   const [isCancelling, setIsCancelling] = useState(false);
@@ -74,7 +74,6 @@ export default function PipelineNew() {
 
   // ── System status (truthful — from real query, not hardcoded) ──
   const systemStatusResource = useResource(["system-status"], () => getSystemStatus(), { staleTime: 30000 });
-  const systemStatus = systemStatusResource.status === "ready" ? systemStatusResource.data : null;
 
   // ── Estimate (real, from backend) ──
   const estimateResource = useResource(["estimate", activeStrategy], () => getEstimate(activeStrategy), { staleTime: 60000 });
@@ -98,11 +97,15 @@ export default function PipelineNew() {
 
   useEffect(() => {
     if (!isComplete || !runId) return;
+    // Capture runId into a const so the nested async closure sees a
+    // fixed `string` rather than the reopened `string | null` (TS does
+    // not preserve the outer narrowing inside function closures).
+    const activeRunId = runId;
     async function fetchIdeas() {
       setIdeasLoading(true);
       setIdeasError(null);
       try {
-        const ideasData = await getRunIdeas(runId);
+        const ideasData = await getRunIdeas(activeRunId);
         setIdeas(ideasData.ideas);
       } catch {
         setIdeas([]);
@@ -225,7 +228,7 @@ export default function PipelineNew() {
                   <DataView resource={systemStatusResource} testId="sys-status" loading={{ lines: 3 }}>
                     {(status) => (
                       <div className="space-y-2">
-                        <SystemRow label="Provider" value={status.config?.default_provider ?? "—"} />
+                        <SystemRow label="Provider" value={String(status.config?.default_provider ?? "—")} />
                         <SystemRow label="Governance" value={status.config?.governance_enabled ? "Enabled" : "Disabled"} />
                         <SystemRow label="Memory" value={status.config?.memory_enabled ? "Enabled" : "Disabled"} />
                       </div>

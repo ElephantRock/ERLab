@@ -172,7 +172,7 @@ function NavGroupSection({ group, collapsed }: { group: NavGroup; collapsed: boo
           key={`${group.label}-${item.to}`}
           to={item.to}
           end={item.to === "/"}
-          className={({ isActive }) =>
+          className={() =>
             cn(
               "flex items-center gap-2.5 px-2 py-1.5 rounded transition-colors duration-150",
               collapsed && "justify-center",

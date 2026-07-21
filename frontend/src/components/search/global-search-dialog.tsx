@@ -1,17 +1,12 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Lightbulb, GitBranch, BookMarked, Play, Search } from "lucide-react";
 import { globalSearch } from "@/api/search";
 import { toast } from "sonner";
 import type {
   GlobalSearchResponse,
-  IdeaSearchItem,
-  GapSearchItem,
-  PaperSearchItem,
-  RunSearchItem,
 } from "@/api/types";
 
 const STORAGE_KEY = "erock:recent-searches";

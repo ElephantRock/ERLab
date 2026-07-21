@@ -1,0 +1,46 @@
+src/components/onboarding/onboarding-overlay.tsx(124,49): error TS2532: Object is possibly 'undefined'.
+src/components/onboarding/onboarding-overlay.tsx(126,30): error TS2532: Object is possibly 'undefined'.
+src/components/onboarding/onboarding-overlay.tsx(130,45): error TS2532: Object is possibly 'undefined'.
+src/components/onboarding/onboarding-overlay.tsx(139,18): error TS2532: Object is possibly 'undefined'.
+src/components/onboarding/onboarding-overlay.tsx(142,53): error TS2532: Object is possibly 'undefined'.
+src/components/onboarding/onboarding-overlay.tsx(151,18): error TS2532: Object is possibly 'undefined'.
+src/components/onboarding/onboarding-overlay.tsx(181,18): error TS2532: Object is possibly 'undefined'.
+src/components/pipeline/run-config-form.tsx(106,7): error TS2322: Type 'string' is not assignable to type '"concise" | "standard" | "detailed" | undefined'.
+src/components/pipeline/run-config-form.tsx(107,7): error TS2322: Type 'string' is not assignable to type '"standard" | "light" | "thorough" | undefined'.
+src/components/pipeline/run-config-form.tsx(108,7): error TS2322: Type 'string' is not assignable to type '"focused" | "balanced" | "exploratory" | undefined'.
+src/components/settings/stage-model-editor.tsx(323,20): error TS2532: Object is possibly 'undefined'.
+src/pages/gaps-explorer.tsx(174,60): error TS2345: Argument of type 'number | undefined' is not assignable to parameter of type 'SetStateAction<number>'.
+src/pages/ideas-browser.tsx(136,51): error TS2345: Argument of type 'number | undefined' is not assignable to parameter of type 'SetStateAction<number>'.
+src/pages/pipeline-new.tsx(104,45): error TS2345: Argument of type 'string | null' is not assignable to parameter of type 'string'.
+src/pages/run-detail.tsx(93,32): error TS2345: Argument of type 'number' is not assignable to parameter of type 'string'.
+src/pages/run-detail.tsx(165,38): error TS18048: 'run' is possibly 'undefined'.
+src/pages/run-detail.tsx(166,67): error TS18048: 'run' is possibly 'undefined'.
+src/pages/run-detail.tsx(166,96): error TS18048: 'run' is possibly 'undefined'.
+src/pages/run-detail.tsx(178,21): error TS18048: 'run' is possibly 'undefined'.
+src/pages/run-detail.tsx(180,64): error TS18048: 'run' is possibly 'undefined'.
+src/pages/run-detail.tsx(190,62): error TS18048: 'run' is possibly 'undefined'.
+src/pages/run-detail.tsx(191,14): error TS18048: 'run' is possibly 'undefined'.
+src/pages/run-detail.tsx(238,48): error TS18048: 'run' is possibly 'undefined'.
+src/pages/run-detail.tsx(239,45): error TS18048: 'run' is possibly 'undefined'.
+src/pages/run-detail.tsx(240,47): error TS18048: 'run' is possibly 'undefined'.
+src/pages/run-detail.tsx(240,62): error TS18048: 'run' is possibly 'undefined'.
+src/pages/run-detail.tsx(241,55): error TS18048: 'run' is possibly 'undefined'.
+src/pages/run-detail.tsx(242,48): error TS18048: 'run' is possibly 'undefined'.
+src/pages/run-detail.tsx(242,76): error TS18048: 'run' is possibly 'undefined'.
+src/pages/run-detail.tsx(250,19): error TS18048: 'run' is possibly 'undefined'.
+src/pages/run-detail.tsx(250,42): error TS18048: 'run' is possibly 'undefined'.
+src/pages/run-detail.tsx(296,8): error TS18048: 'run' is possibly 'undefined'.
+src/pages/run-detail.tsx(334,35): error TS18048: 'run' is possibly 'undefined'.
+src/pages/run-detail.tsx(335,33): error TS18048: 'run' is possibly 'undefined'.
+src/pages/run-detail.tsx(366,8): error TS18048: 'run' is possibly 'undefined'.
+src/pages/run-detail.tsx(366,35): error TS18048: 'run' is possibly 'undefined'.
+src/pages/run-detail.tsx(373,73): error TS18048: 'run' is possibly 'undefined'.
+src/pages/run-detail.tsx(381,8): error TS18048: 'run' is possibly 'undefined'.
+src/pages/run-detail.tsx(386,38): error TS18048: 'run' is possibly 'undefined'.
+src/pages/run-detail.tsx(400,8): error TS18048: 'run' is possibly 'undefined'.
+src/pages/run-detail.tsx(407,18): error TS18048: 'run' is possibly 'undefined'.
+src/pages/run-detail.tsx(407,51): error TS18048: 'run' is possibly 'undefined'.
+src/pages/run-detail.tsx(412,43): error TS18048: 'run' is possibly 'undefined'.
+src/pages/run-detail.tsx(446,8): error TS18048: 'run' is possibly 'undefined'.
+src/pages/run-detail.tsx(446,38): error TS18048: 'run' is possibly 'undefined'.
+src/pages/run-detail.tsx(446,58): error TS18048: 'run' is possibly 'undefined'.

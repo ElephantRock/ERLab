@@ -1,7 +1,6 @@
 import { useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ErrorCard } from "@/components/ui/error-card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { CheckCircle2, AlertTriangle, Lightbulb, Shield, Eye, Sparkles, FileQuestion } from "lucide-react";
 import type { EnsembleReview, PerspectiveReview } from "@/api/types";

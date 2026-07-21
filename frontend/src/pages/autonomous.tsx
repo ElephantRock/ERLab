@@ -14,8 +14,7 @@ import { ConsciousnessStateBadge } from "@/components/autonomous/consciousness-s
 import { CycleProgress } from "@/components/autonomous/cycle-progress";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Cpu, Loader2, AlertCircle, Play, StopCircle, Clock, Activity } from "lucide-react";
+import { Cpu, Loader2, Play, StopCircle, Clock, Activity } from "lucide-react";
 import { ErrorCard } from "@/components/ui/error-card";
 import { EmptyState } from "@/components/ui/empty-state";
 import type { AutonomousCycleHistoryEntry, ConsciousnessState } from "@/api/autonomous";
@@ -27,7 +26,7 @@ export default function AutonomousPage() {
   const [error, setError] = useState<string | null>(null);
   const [domain, setDomain] = useState("AI/NLP");
   const [maxRuns, setMaxRuns] = useState(3);
-  const [consciousnessState, setConsciousnessState] = useState<ConsciousnessState>("idle");
+  const [consciousnessState] = useState<ConsciousnessState>("idle");
   const [stopConfirmId, setStopConfirmId] = useState<string | null>(null);
 
   // Scheduler + evolution state

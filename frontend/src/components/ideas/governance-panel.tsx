@@ -222,9 +222,9 @@ function TimelineEntry({ event }: { event: TimelineEvent }) {
           </span>
         </div>
         <span className="text-muted-foreground">by {event.actor}</span>
-        {event.type === "decision" && event.detail.note && (
+        {event.type === "decision" && typeof event.detail.note === "string" && event.detail.note && (
           <p className="text-muted-foreground mt-1 italic">
-            "{String(event.detail.note)}"
+            "{event.detail.note}"
           </p>
         )}
       </div>

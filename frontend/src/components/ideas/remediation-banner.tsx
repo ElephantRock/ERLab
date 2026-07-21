@@ -62,9 +62,6 @@ export function RemediationBanner({
   const errorCount = remediationHints.filter(
     (h) => h.severity === "error",
   ).length;
-  const warningCount = remediationHints.filter(
-    (h) => h.severity === "warning",
-  ).length;
 
   return (
     <Card

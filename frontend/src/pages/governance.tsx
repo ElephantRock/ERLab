@@ -6,7 +6,7 @@
  * Real-time refresh after each action.
  */
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState } from "react";
 import { getPending, approveDecision, denyDecision } from "@/api/governance";
 import type { PendingApproval } from "@/api/governance";
 import { ApprovalCard } from "@/components/governance/approval-card";
@@ -20,18 +20,6 @@ export default function GovernancePage() {
   const [items, setItems] = useState<PendingApproval[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
-  const loadPending = useCallback(async () => {
-    try {
-      const data = await getPending();
-      setItems(data.pending);
-      setError(null);
-    } catch (err) {
-      setError("Failed to load pending approvals");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
 
   useEffect(() => {
     let cancelled = false;

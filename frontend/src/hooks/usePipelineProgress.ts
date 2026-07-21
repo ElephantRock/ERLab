@@ -112,7 +112,7 @@ export function usePipelineProgress(runId: string | null) {
           setIsConnected(true);
           setError(null);
         },
-        onError: (err: Error) => {
+        onError: (_err: Error) => {
           // SSE failed — fall back to polling
           if (!cancelledRef.current) {
             setIsConnected(false);

@@ -90,7 +90,7 @@ export default function RunDetail() {
 
   const { data: ideasData } = useQuery({
     queryKey: ["run", runId, "ideas"],
-    queryFn: () => getRunIdeas(runId),
+    queryFn: () => getRunIdeas(String(runId)),
     enabled: !isNaN(runId) && !!run,
     refetchInterval: isRunning ? 5000 : false,
   });
@@ -159,6 +159,13 @@ export default function RunDetail() {
         <div className="h-64 w-full bg-muted rounded" />
       </div>
     );
+  }
+
+  // After the loading and not-found guards above, run is defined.
+  // This explicit narrow lets TypeScript carry PipelineRunDetail (not
+  // PipelineRunDetail | undefined) through the rest of the render.
+  if (!run) {
+    return null;
   }
 
   const ideas = ideasData?.ideas ?? [];

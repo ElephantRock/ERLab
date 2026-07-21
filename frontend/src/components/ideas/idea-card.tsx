@@ -1,6 +1,6 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { ScoreBadge } from "@/components/ideas/score-badge";
-import type { IdeaSummary, QualitySummary } from "@/api/types";
+import type { IdeaSummary } from "@/api/types";
 import {
   FileText, Lightbulb, Shield, BookOpen, CheckCircle2,
   AlertTriangle, Clock, ChevronRight,
@@ -15,7 +15,6 @@ interface IdeaCardProps {
 export function IdeaCard({ idea, onClick }: IdeaCardProps) {
   const gov = idea.governance_status ?? null;
   const qs = idea.quality_summary ?? null;
-  const refs = idea.reference_count ?? 0;
 
   return (
     <Card

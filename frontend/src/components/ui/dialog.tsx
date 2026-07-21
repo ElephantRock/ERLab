@@ -9,7 +9,9 @@ interface DialogProps {
 
 export function Dialog({ open, onOpenChange, children }: DialogProps) {
   return (
-    <DialogContext.Provider value={{ open: open ?? false, onOpenChange }}>
+    <DialogContext.Provider
+      value={{ open: open ?? false, onOpenChange: onOpenChange ?? (() => {}) }}
+    >
       {children}
     </DialogContext.Provider>
   );

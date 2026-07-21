@@ -26,7 +26,6 @@ import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getMemoryStats, recallMemories, deleteMemory } from "@/api/memory";
 import type {
-  MemoryStats as MemoryStatsData,
   MemoryRecallResult,
   MemoryRecallResponse,
 } from "@/api/memory";

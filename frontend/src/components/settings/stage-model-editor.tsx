@@ -320,7 +320,7 @@ export function StageModelEditor() {
                   variant="outline"
                   className={`ml-1.5 text-xs ${categoryColors[stage.category]}`}
                 >
-                  {stage.category[0].toUpperCase()}
+                  {(stage.category[0] ?? "").toUpperCase()}
                 </Badge>
               </div>
 

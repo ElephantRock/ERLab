@@ -3,11 +3,9 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useSettings } from "@/contexts/settings-context";
 import { useAuth } from "@/contexts/auth-context";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { ErrorCard } from "@/components/ui/error-card";
 import { ModelStatusPanel } from "@/components/settings/model-status-panel";
 import { StageModelEditor } from "@/components/settings/stage-model-editor";
 import { testConnection, getDetailedStatus, type DetailedStatus } from "@/api/client";
@@ -16,7 +14,6 @@ import { listUsers, type AuthUser } from "@/api/auth";
 import { RoleBadge } from "@/components/auth/role-badge";
 import {
   Server,
-  Cpu,
   Settings2,
   Palette,
   HelpCircle,

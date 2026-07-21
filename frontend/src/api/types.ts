@@ -340,6 +340,9 @@ export interface ResearchGap {
   confidence: number;
   potential_impact: string;
   idea_count: number;
+  // Backend exposes pipeline_run_id (int | null) on the gap response
+  // (see backend/api/routes/gaps.py and ResearchGapDB model).
+  pipeline_run_id?: number | null;
   truth?: { frequency: number; confidence: number; evidence_count: number };
   related_clusters?: number[] | null;
   related_ideas?: RelatedIdea[] | null;
@@ -399,7 +402,10 @@ export interface SessionListResponse {
 export interface SystemStatus {
   app_name: string;
   version: string;
-  config: Record<string, boolean>;
+  // Config holds mixed-typed flag/string values (e.g. default_provider is a
+  // string, governance_enabled/memory_enabled are booleans). Typed as the
+  // union to match what the backend actually returns.
+  config: Record<string, boolean | string>;
   defaults: Record<string, number>;
 }
 

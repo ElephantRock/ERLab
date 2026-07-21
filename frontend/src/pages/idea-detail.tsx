@@ -23,6 +23,7 @@ import { useResource } from "@/lib/useResource";
 import { DataView } from "@/components/ui/data-view";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { getIdea, refineIdea } from "@/api/ideas";
+import type { IdeaDetail } from "@/api/types";
 import { ScoreReport, type ScoreAxis } from "@/components/ui/score-report";
 import { ExportDialog } from "@/components/export/export-dialog";
 import { FeedbackForm } from "@/components/ideas/feedback-form";
@@ -31,7 +32,6 @@ import { ShareDialog } from "@/components/idea/share-dialog";
 import { NoveltyReportView } from "@/components/ideas/novelty-report-view";
 import { FeasibilityReportView } from "@/components/ideas/feasibility-report-view";
 import { MarkdownRenderer } from "@/components/markdown/markdown-renderer";
-import { EvidencePanel } from "@/components/ideas/evidence-panel";
 import { GovernancePanel } from "@/components/ideas/governance-panel";
 import { FixSectionButton } from "@/components/ideas/fix-section-button";
 import { RevisionHistoryDrawer } from "@/components/ideas/revision-history-drawer";
@@ -715,9 +715,9 @@ function ReviewCard({
   );
 }
 
-function EvidenceSummary({ idea }: { idea: Record<string, unknown> }) {
+function EvidenceSummary({ idea }: { idea: IdeaDetail }) {
   const refs = idea.proposal_references;
-  const supportingPapers = (idea.supporting_papers as Array<{ role?: string }>) || [];
+  const supportingPapers = idea.supporting_papers ?? [];
   const sourceGaps = idea.source_gaps;
 
   const refCount = Array.isArray(refs) ? refs.length : typeof refs === "string" ? 1 : 0;

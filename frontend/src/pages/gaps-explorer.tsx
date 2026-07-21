@@ -171,7 +171,7 @@ export default function GapsExplorer() {
                 </label>
                 <Slider
                   value={[minConfidence]}
-                  onValueChange={(v) => { setMinConfidence(v[0]); setPage(0); }}
+                  onValueChange={(v) => { setMinConfidence(v[0] ?? 0); setPage(0); }}
                   min={0} max={1} step={0.1}
                   aria-label="Minimum confidence filter"
                 />

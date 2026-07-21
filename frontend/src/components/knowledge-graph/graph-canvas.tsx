@@ -62,9 +62,9 @@ export function GraphCanvas({
   className,
 }: GraphCanvasProps) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const [dimensions, setDimensions] = useState({ width: 800, height: 500 });
-  const [dragOffset, setDragOffset] = useState<{ x: number; y: number } | null>(null);
-  const [dragNodeId, setDragNodeId] = useState<string | null>(null);
+  const [dimensions] = useState({ width: 800, height: 500 });
+  const [, setDragOffset] = useState<{ x: number; y: number } | null>(null);
+  const [, setDragNodeId] = useState<string | null>(null);
 
   const nodes = useMemo(
     () => layoutNodes(entities, dimensions.width, dimensions.height),
@@ -76,13 +76,6 @@ export function GraphCanvas({
     nodes.forEach((n) => m.set(n.id, n));
     return m;
   }, [nodes]);
-
-  const handleResize = useCallback(() => {
-    if (containerRef.current) {
-      const { clientWidth, clientHeight } = containerRef.current;
-      setDimensions({ width: clientWidth || 800, height: clientHeight || 500 });
-    }
-  }, []);
 
   // Mouse handlers for drag
   const handleMouseDown = useCallback(

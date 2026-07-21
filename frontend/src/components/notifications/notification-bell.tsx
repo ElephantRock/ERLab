@@ -29,7 +29,7 @@ export function NotificationBell() {
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
-  const [total, setTotal] = useState(0);
+  const [, setTotal] = useState(0);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const fetchUnread = useCallback(async () => {

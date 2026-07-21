@@ -15,7 +15,6 @@
  * because the honesty is in the "no breakdown" admission.
  */
 
-import * as React from "react";
 import * as Tooltip from "@radix-ui/react-tooltip";
 import { cn } from "@/lib/utils";
 import { getScoreBg } from "@/lib/score-utils";

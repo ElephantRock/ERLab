@@ -66,7 +66,7 @@
  */
 
 import * as React from "react";
-import { RefreshCw } from "lucide-react";
+import { CircleSlash, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { EmptyState } from "./empty-state";
 import { ErrorCard } from "./error-card";
@@ -150,22 +150,13 @@ export interface DataViewProps<T> {
 /**
  * Default icon for the generic empty state. Avoids coupling DataView to a
  * specific domain icon — pages pass their own via `empty.icon`.
+ *
+ * Uses the real lucide-react CircleSlash icon (a circle with a horizontal
+ * line — the same visual the prior hand-rolled SVG rendered) so the type
+ * is the exact LucideIcon contract expected by EmptyState's icon prop,
+ * with no type assertion needed.
  */
-const DEFAULT_EMPTY_ICON: LucideIcon = ({ className, ...props }) => (
-  <svg
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    className={className}
-    {...props}
-  >
-    <circle cx="12" cy="12" r="10" />
-    <path d="M8 12h8" />
-  </svg>
-);
+const DEFAULT_EMPTY_ICON: LucideIcon = CircleSlash;
 
 /**
  * Render a `ResourceState`. Pattern-match on `status`; each branch is

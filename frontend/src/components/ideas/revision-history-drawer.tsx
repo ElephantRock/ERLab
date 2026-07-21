@@ -214,7 +214,7 @@ function ReceiptBadge({ receipt }: { receipt: Record<string, unknown> }) {
   const endpoint = String(receipt.endpoint ?? "");
   const timestamp = receipt.timestamp as string | undefined;
   const contextLength = receipt.context_length as number | null;
-  const modelMismatch = requested && requested !== served;
+  const modelMismatch = Boolean(requested && requested !== served);
 
   return (
     <div

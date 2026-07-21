@@ -64,14 +64,17 @@ interface RunConfigFormProps {
 export function RunConfigForm({ onSubmit, isLoading, initialDomain = "", onStrategyChange }: RunConfigFormProps) {
   const { sessionId, setSessionId } = useSession();
   const [domain, setDomain] = useState(initialDomain);
-  const [maxGaps, setMaxGaps] = useState(VALIDATION.max_gaps.default);
-  const [ideasPerRound, setIdeasPerRound] = useState(VALIDATION.ideas_per_round.default);
-  const [generationRounds, setGenerationRounds] = useState(VALIDATION.generation_rounds.default);
+  const [maxGaps, setMaxGaps] = useState<number>(VALIDATION.max_gaps.default);
+  const [ideasPerRound, setIdeasPerRound] = useState<number>(VALIDATION.ideas_per_round.default);
+  const [generationRounds, setGenerationRounds] = useState<number>(VALIDATION.generation_rounds.default);
   const [exportFormat, setExportFormat] = useState<string>(VALIDATION.export_formats[0]);
   const [searchQueries, setSearchQueries] = useState("");
-  const [proposalDepth, setProposalDepth] = useState<string>("standard");
-  const [noveltyDepth, setNoveltyDepth] = useState<string>("standard");
-  const [ideaDiversity, setIdeaDiversity] = useState<string>("balanced");
+  // Literal-union types from PipelineRunConfig (api/types.ts) — typing the
+  // useState generics with these gives both compile-time safety on the
+  // setters and assignability to the config fields without a cast.
+  const [proposalDepth, setProposalDepth] = useState<"concise" | "standard" | "detailed">("standard");
+  const [noveltyDepth, setNoveltyDepth] = useState<"light" | "standard" | "thorough">("standard");
+  const [ideaDiversity, setIdeaDiversity] = useState<"focused" | "balanced" | "exploratory">("balanced");
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const [strategy, setStrategy] = useState<string>("fast_scan");
   const [modelOverrides, setModelOverrides] = useState<Record<string, string>>({});

@@ -5,7 +5,7 @@ import { searchLiterature, ingestPaper } from "@/api/literature";
 import { PaperCard } from "@/components/literature/paper-card";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Search, BookOpen, AlertCircle, Inbox } from "lucide-react";
+import { Search, BookOpen, Inbox } from "lucide-react";
 import { ErrorCard } from "@/components/ui/error-card";
 import { EmptyState } from "@/components/ui/empty-state";
 import type { Paper } from "@/api/literature";

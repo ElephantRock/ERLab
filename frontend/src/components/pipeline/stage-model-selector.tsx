@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import { useResource } from "@/lib/useResource";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 interface ModelOption {
   id: string;

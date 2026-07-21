@@ -1,10 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Play,
   Lightbulb,
-  BookOpen,
   ChevronRight,
   X,
   FlaskConical,
@@ -92,6 +91,16 @@ export function OnboardingOverlay({ onStartPipeline, onDismiss }: OnboardingOver
     }
   }
 
+  // Current onboarding step. STEPS has exactly 3 entries and `step` is
+  // bounded to [0, 2] by handleNext (setStep only when step < 2). The
+  // explicit guard narrows away the `| undefined` that noUncheckedIndexedAccess
+  // adds to array index access; if a future change breaks the invariant,
+  // this returns null instead of crashing on a property access.
+  const current = STEPS[step];
+  if (!current) {
+    return null;
+  }
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
       <Card className="w-full max-w-lg mx-4 shadow-xl">
@@ -122,13 +131,13 @@ export function OnboardingOverlay({ onStartPipeline, onDismiss }: OnboardingOver
 
         <CardHeader className="pb-2">
           <div className="flex items-center gap-3">
-            <div className={`rounded-full p-2 ${STEPS[step].color}`}>
+            <div className={`rounded-full p-2 ${current.color}`}>
               {(() => {
-                const Icon = STEPS[step].icon;
+                const Icon = current.icon;
                 return <Icon className="h-5 w-5" />;
               })()}
             </div>
-            <CardTitle className="text-xl">{STEPS[step].title}</CardTitle>
+            <CardTitle className="text-xl">{current.title}</CardTitle>
           </div>
         </CardHeader>
 
@@ -137,10 +146,10 @@ export function OnboardingOverlay({ onStartPipeline, onDismiss }: OnboardingOver
           {step === 0 && (
             <>
               <p className="text-sm text-muted-foreground leading-relaxed">
-                {STEPS[0].description}
+                {current.description}
               </p>
               <div className="rounded-lg bg-muted/50 p-4">
-                <p className="text-sm font-medium">{STEPS[0].detail}</p>
+                <p className="text-sm font-medium">{current.detail}</p>
               </div>
             </>
           )}
@@ -149,7 +158,7 @@ export function OnboardingOverlay({ onStartPipeline, onDismiss }: OnboardingOver
           {step === 1 && (
             <>
               <p className="text-sm text-muted-foreground leading-relaxed">
-                {STEPS[1].description}
+                {current.description}
               </p>
               <div className="space-y-3 pt-2">
                 <input
@@ -179,7 +188,7 @@ export function OnboardingOverlay({ onStartPipeline, onDismiss }: OnboardingOver
           {step === 2 && (
             <>
               <p className="text-sm text-muted-foreground leading-relaxed">
-                {STEPS[2].description}
+                {current.description}
               </p>
               <ul className="space-y-2">
                 {PROPOSAL_SECTIONS.map((section) => (

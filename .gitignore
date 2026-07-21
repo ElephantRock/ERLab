@@ -74,3 +74,6 @@ nul
 # The .fingerprint sidecar + docs/p1b_snapshot/MANIFEST.md are committed
 # as provenance; the vectors themselves are regenerated, not stored.
 docs/p1b_snapshot/snapshot.json
+
+# TypeScript incremental build cache
+frontend/tsconfig.tsbuildinfo

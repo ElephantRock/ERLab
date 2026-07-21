@@ -16,7 +16,6 @@ import { useResource } from "@/lib/useResource";
 import { DataView } from "@/components/ui/data-view";
 import { listIdeas } from "@/api/ideas";
 import { ScoreReport } from "@/components/ui/score-report";
-import { ExportDialog } from "@/components/export/export-dialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -32,7 +31,6 @@ import {
   Search, ChevronLeft, ChevronRight, Play, Inbox, SlidersHorizontal,
   ChevronRight as Chevron,
 } from "lucide-react";
-import { cn } from "@/lib/utils";
 
 const SORT_OPTIONS = [
   { value: "date", label: "Newest First" },
@@ -69,7 +67,6 @@ export default function IdeasBrowser() {
     () => listIdeas(queryParams),
   );
 
-  const ideas = resource.status === "ready" ? resource.data.ideas : [];
   const total = resource.status === "ready" ? resource.data.total : 0;
 
   return (
@@ -136,7 +133,7 @@ export default function IdeasBrowser() {
             </label>
             <Slider
               value={[minScore]}
-              onValueChange={(v) => { setMinScore(v[0]); setPage(0); }}
+              onValueChange={(v) => { setMinScore(v[0] ?? 0); setPage(0); }}
               min={0} max={1} step={0.1}
               aria-label="Minimum overall score filter"
             />
