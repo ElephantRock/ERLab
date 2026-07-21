@@ -74,13 +74,16 @@ export default function Settings() {
 
   // ── Backend info ────────────────────────────────────────────────
   const [detailedStatus, setDetailedStatus] = useState<DetailedStatus | null>(null);
+  const [detailedStatusError, setDetailedStatusError] = useState<string | null>(null);
 
   // ── Evolution (read-only) ───────────────────────────────────────
   const [evolutionStatus, setEvolutionStatus] = useState<EvolutionStatus | null>(null);
+  const [evolutionStatusError, setEvolutionStatusError] = useState<string | null>(null);
 
   // ── User management ─────────────────────────────────────────────
   const { user: currentUser } = useAuth();
   const [users, setUsers] = useState<AuthUser[]>([]);
+  const [usersError, setUsersError] = useState<string | null>(null);
 
   // ── Defaults ────────────────────────────────────────────────────
   const [defaultDomain, setDefaultDomain] = useState(() => {
@@ -111,14 +114,14 @@ export default function Settings() {
 
     autoTest();
 
-    // Fetch detailed status + evolution in parallel
+    // Fetch detailed status + evolution — F1.3: failures surface as error states, not silent defaults
     getDetailedStatus()
-      .then((data) => !cancelled && setDetailedStatus(data))
-      .catch(() => {});
+      .then((data) => { if (!cancelled) { setDetailedStatus(data); setDetailedStatusError(null); } })
+      .catch(() => { if (!cancelled) setDetailedStatusError("Failed to load backend status"); });
 
     getEvolutionStatus()
-      .then((data) => !cancelled && setEvolutionStatus(data))
-      .catch(() => {});
+      .then((data) => { if (!cancelled) { setEvolutionStatus(data); setEvolutionStatusError(null); } })
+      .catch(() => { if (!cancelled) setEvolutionStatusError("Failed to load evolution status"); });
 
     return () => {
       cancelled = true;
@@ -130,8 +133,8 @@ export default function Settings() {
   useEffect(() => {
     if (currentUser?.role === "admin") {
       listUsers()
-        .then((data) => setUsers(data))
-        .catch(() => {});
+        .then((data) => { setUsers(data); setUsersError(null); })
+        .catch(() => setUsersError("Failed to load users"));
     }
   }, [currentUser?.role]);
 
@@ -253,6 +256,9 @@ export default function Settings() {
 
           {/* Backend info inline with connection */}
           <Separator />
+          {detailedStatusError ? (
+            <p className="text-xs text-destructive" data-testid="detailed-status-error">{detailedStatusError}</p>
+          ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 text-sm">
             <div>
               <span className="text-xs text-muted-foreground block">Version</span>
@@ -273,6 +279,7 @@ export default function Settings() {
               </span>
             </div>
           </div>
+          )}
         </CardContent>
       </Card>
 
@@ -371,6 +378,10 @@ export default function Settings() {
                 Self-Improvement
               </h3>
               <div className="space-y-2 text-sm pl-6">
+                {evolutionStatusError ? (
+                  <p className="text-xs text-destructive" data-testid="evolution-status-error">{evolutionStatusError}</p>
+                ) : (
+                <>
                 <div className="flex items-center gap-2">
                   <span className="font-medium">Evolution:</span>
                   <span data-testid="evolution-enabled-status">
@@ -407,6 +418,8 @@ export default function Settings() {
                 <p className="text-xs text-muted-foreground mt-2">
                   Evolution parameters are managed by the system and cannot be edited.
                 </p>
+                </>
+                )}
               </div>
             </div>
 
@@ -419,7 +432,9 @@ export default function Settings() {
                   User Management
                 </h3>
                 <div className="space-y-3 pl-6">
-                  {users.length === 0 ? (
+                  {usersError ? (
+                    <p className="text-xs text-destructive" data-testid="users-error">{usersError}</p>
+                  ) : users.length === 0 ? (
                     <p className="text-sm text-muted-foreground">No users found.</p>
                   ) : (
                     <div className="rounded-md border">

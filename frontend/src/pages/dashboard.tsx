@@ -14,6 +14,12 @@
  * - What's flagged for quality? (REFINE)
  * - What's waiting for governance? (GOVERN)
  *
+ * F1.3: Each of the four resources has an INDEPENDENT lifecycle. A failure
+ * in one resource (e.g. governance) does not erase the data from another
+ * (e.g. runs). A failed resource renders an explicit failure widget, NOT
+ * an empty array or a zero count. A backend outage renders a degraded
+ * dashboard with visible failures, not a calm dashboard that looks healthy.
+ *
  * INTERFACE_CONTRACT compliance:
  * - §1 useResource (not raw useQuery)
  * - §3 ui-scale typography (no text-[8px]/[9px]/[10px], no telemetry headings)
@@ -29,6 +35,8 @@ import {
   Shield,
   Clock,
   FlaskConical,
+  Loader2,
+  AlertCircle,
 } from "lucide-react";
 
 import { listRuns } from "@/api/pipeline";
@@ -40,28 +48,60 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
+// ── Per-widget failure indicator ────────────────────────────────────
+
+function WidgetError({ message, onRetry }: { message: string; onRetry: () => void }) {
+  return (
+    <Card className="border-destructive/20" data-testid="widget-error">
+      <CardContent className="p-4 flex items-center gap-3">
+        <AlertCircle className="h-4 w-4 text-destructive shrink-0" />
+        <p className="text-ui-meta text-muted-foreground flex-1">{message}</p>
+        <Button variant="outline" size="sm" onClick={onRetry} data-testid="widget-retry">
+          Retry
+        </Button>
+      </CardContent>
+    </Card>
+  );
+}
+
+function WidgetLoading({ label }: { label: string }) {
+  return (
+    <Card className="opacity-60">
+      <CardContent className="p-4 flex items-center gap-3">
+        <Loader2 className="h-4 w-4 animate-spin text-muted-foreground shrink-0" />
+        <p className="text-ui-meta text-muted-foreground">{label}</p>
+      </CardContent>
+    </Card>
+  );
+}
+
 export default function Dashboard() {
   const navigate = useNavigate();
 
   // Each queue uses useResource (the sanctioned fetch hook).
+  // F1.3: resources remain INDEPENDENT — a failure in one does not collapse the others.
   const runs = useResource(["runs", { limit: 5 }], () => listRuns({ limit: 5 }));
   const ideas = useResource(["ideas", { limit: 6 }], () => listIdeas({ limit: 6 }));
   const governance = useResource(["governance-pending"], () => getPending());
   const ops = useResource(["ops-dashboard", 7], () => getOpsDashboard(7));
 
-  // Derive the action items from resource data (ready state only — DataView handles loading/error).
+  // ── Derive data ONLY from ready resources ────────────────────────
+  // Error/loading resources do NOT contribute to counts or data.
   const activeRun = runs.status === "ready" ? runs.data.runs.find((r) => r.status === "running") : null;
   const latestRun = runs.status === "ready" ? runs.data.runs[0] : null;
   const recentIdeas = ideas.status === "ready" ? ideas.data.ideas.filter((i) => i.has_proposal).slice(0, 4) : [];
   const governancePending = governance.status === "ready" ? governance.data.pending ?? [] : [];
   const qualityFailures = ops.status === "ready" ? ops.data.quality_trends?.common_failures ?? [] : [];
   const totalIdeas = ideas.status === "ready" ? ideas.data.total : 0;
-  const attentionCount = qualityFailures.reduce((a, f) => a + f.count, 0) + governancePending.length;
 
   return (
     <div className="space-y-6 animate-fade-in max-w-5xl mx-auto" data-testid="dashboard">
       {/* ── Active Run / Quick Start ──────────────────────────── */}
-      {activeRun ? (
+      {runs.status === "loading" ? (
+        <WidgetLoading label="Loading runs..." />
+      ) : runs.status === "error" ? (
+        <WidgetError message="Failed to load runs" onRetry={runs.retry} />
+      ) : activeRun ? (
         <Card className="card-shadow border-accent/20" data-testid="active-run-card">
           <CardContent className="p-5 flex items-center justify-between gap-4">
             <div className="flex items-center gap-3">
@@ -98,47 +138,70 @@ export default function Dashboard() {
         </Card>
       )}
 
-      {/* ── Needs Attention ───────────────────────────────────── */}
-      {attentionCount > 0 && (
-        <div>
-          <h2 className="text-ui-heading font-display font-semibold mb-3">Needs Attention</h2>
-          <div className="grid gap-3 md:grid-cols-2">
-            {/* Governance pending */}
-            {governancePending.length > 0 && (
-              <ActionCard
-                icon={Shield}
-                title={`${governancePending.length} awaiting governance`}
-                description="Proposals pending approval or denial"
-                action="Review"
-                onClick={() => navigate("/governance")}
-                tone="warning"
-                testId="action-governance"
-              />
-            )}
-            {/* Quality failures */}
-            {qualityFailures.length > 0 && (
-              <ActionCard
-                icon={AlertTriangle}
-                title={`${qualityFailures.reduce((a, f) => a + f.count, 0)} quality issues`}
-                description={qualityFailures[0]?.failure ?? "Sections failing quality checks"}
-                action="Fix"
-                onClick={() => navigate("/ideas")}
-                tone="warning"
-                testId="action-quality"
-              />
-            )}
-          </div>
-        </div>
-      )}
+      {/* ── Needs Attention (governance + quality) ────────────── */}
+      <div>
+        <h2 className="text-ui-heading font-display font-semibold mb-3">Needs Attention</h2>
+        <div className="grid gap-3 md:grid-cols-2">
+          {/* Governance widget — independent lifecycle */}
+          {governance.status === "loading" ? (
+            <WidgetLoading label="Loading governance queue..." />
+          ) : governance.status === "error" ? (
+            <WidgetError message="Failed to load governance queue" onRetry={governance.retry} />
+          ) : governancePending.length > 0 ? (
+            <ActionCard
+              icon={Shield}
+              title={`${governancePending.length} awaiting governance`}
+              description="Proposals pending approval or denial"
+              action="Review"
+              onClick={() => navigate("/governance")}
+              tone="warning"
+              testId="action-governance"
+            />
+          ) : (
+            <Card>
+              <CardContent className="p-4 flex items-center gap-3 text-muted-foreground">
+                <Shield className="h-4 w-4 opacity-50" />
+                <p className="text-ui-meta">No governance items pending.</p>
+              </CardContent>
+            </Card>
+          )}
 
-      {/* ── Recent Proposals (Triage shortcut) ────────────────── */}
+          {/* Quality widget — independent lifecycle */}
+          {ops.status === "loading" ? (
+            <WidgetLoading label="Loading quality trends..." />
+          ) : ops.status === "error" ? (
+            <WidgetError message="Failed to load quality trends" onRetry={ops.retry} />
+          ) : qualityFailures.length > 0 ? (
+            <ActionCard
+              icon={AlertTriangle}
+              title={`${qualityFailures.reduce((a, f) => a + f.count, 0)} quality issues`}
+              description={qualityFailures[0]?.failure ?? "Sections failing quality checks"}
+              action="Fix"
+              onClick={() => navigate("/ideas")}
+              tone="warning"
+              testId="action-quality"
+            />
+          ) : (
+            <Card>
+              <CardContent className="p-4 flex items-center gap-3 text-muted-foreground">
+                <AlertTriangle className="h-4 w-4 opacity-50" />
+                <p className="text-ui-meta">No quality issues detected.</p>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      </div>
+
+      {/* ── Recent Proposals ──────────────────────────────────── */}
       <div>
         <div className="flex items-end justify-between mb-3">
           <div>
             <h2 className="text-ui-heading font-display font-semibold">Recent Proposals</h2>
-            <p className="text-ui-meta text-muted-foreground mt-0.5">
-              {totalIdeas > 0 ? `${totalIdeas} total` : "No proposals yet"}
-            </p>
+            {ideas.status === "ready" && (
+              <p className="text-ui-meta text-muted-foreground mt-0.5">
+                {totalIdeas > 0 ? `${totalIdeas} total` : "No proposals yet"}
+              </p>
+            )}
           </div>
           {totalIdeas > 0 && (
             <Button variant="link" size="sm" className="p-0 text-ui-label text-accent"
@@ -148,7 +211,11 @@ export default function Dashboard() {
           )}
         </div>
 
-        {recentIdeas.length > 0 ? (
+        {ideas.status === "loading" ? (
+          <WidgetLoading label="Loading proposals..." />
+        ) : ideas.status === "error" ? (
+          <WidgetError message="Failed to load proposals" onRetry={ideas.retry} />
+        ) : recentIdeas.length > 0 ? (
           <div className="grid gap-3 md:grid-cols-2">
             {recentIdeas.map((idea) => (
               <CompactProposalRow

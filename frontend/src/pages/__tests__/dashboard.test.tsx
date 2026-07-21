@@ -118,14 +118,20 @@ describe("Dashboard — Action Queue", () => {
     await waitFor(() => { expect(screen.getByText("Latest Run")).toBeInTheDocument(); });
   });
 
-  it("degrades gracefully when APIs fail", async () => {
+  it("degrades gracefully when APIs fail — F1.3: failures are visible, not swallowed", async () => {
     mockedListRuns.mockRejectedValue(new Error("Network"));
     mockedListIdeas.mockRejectedValue(new Error("Network"));
     mockedOps.mockRejectedValue(new Error("Network"));
     mockedPending.mockRejectedValue(new Error("Network"));
     renderDashboard();
-    // The quick-start card should still render (it doesn't depend on API data)
-    await waitFor(() => { expect(screen.getByTestId("quick-start")).toBeInTheDocument(); });
+    // F1.3: each failed resource renders an explicit error widget, NOT an
+    // empty-success fallback. The dashboard is degraded but truthful.
+    await waitFor(() => {
+      const errorWidgets = screen.getAllByTestId("widget-error");
+      expect(errorWidgets.length).toBeGreaterThanOrEqual(3);
+    });
+    // Quick-start card should NOT appear (runs failed, so it shows error not empty)
+    expect(screen.queryByTestId("quick-start")).not.toBeInTheDocument();
   });
 
   it("does NOT render SYS_OK or telemetry headers", async () => {
