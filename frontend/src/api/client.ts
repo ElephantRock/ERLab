@@ -52,40 +52,67 @@ export function buildAuthHeaders(extra?: Record<string, string>): Record<string,
   return headers;
 }
 
-// ── JSON fetch ──────────────────────────────────────────────────
+// ── Transport primitives (F1.1a seal) ───────────────────────────────
+//
+// The transport owns ONLY network concerns: auth headers, HTTP method,
+// status handling, JSON/empty-body transport, normalized errors. It must
+// never fabricate a generic domain value.
+//
+// apiFetchJson returns `unknown` — the caller (contract layer or legacy
+// apiFetch<T>) is responsible for validation.
+// apiFetchVoid is for endpoints that genuinely return no body.
+// apiFetch<T> is a legacy adapter preserved for the ~78 pre-contract call
+// sites; it delegates to apiFetchJson and casts the result to T. New code
+// should use the contract layer (contracts/common.ts callContract) or
+// apiFetchJson directly.
 
-export async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
+async function doFetch(path: string, options?: RequestInit): Promise<Response> {
   const headers = buildAuthHeaders({
     "Content-Type": "application/json",
     ...(options?.headers as Record<string, string> | undefined),
   });
+  return fetch(buildUrl(path), { ...options, headers });
+}
 
-  const res = await fetch(buildUrl(path), {
-    ...options,
-    headers,
-  });
+async function handleHttpError(res: Response): Promise<never> {
+  const body = await res.json().catch(() => ({ detail: res.statusText }));
+  const message =
+    body.detail ||
+    (body.error && typeof body.error === "object" ? body.error.message : null) ||
+    (typeof body.error === "string" ? body.error : null) ||
+    res.statusText;
+  throw new ApiError(res.status, message);
+}
 
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({ detail: res.statusText }));
-    // Backend returns {detail: "..."} or {error: {message: "...", code: "..."}} or {error: "string"}
-    const message =
-      body.detail ||
-      (body.error && typeof body.error === 'object' ? body.error.message : null) ||
-      (typeof body.error === 'string' ? body.error : null) ||
-      res.statusText;
-    throw new ApiError(res.status, message);
+/** Transport for JSON-returning endpoints. Returns `unknown` — NOT a typed
+ *  domain value. The caller must validate (contract layer) or explicitly
+ *  cast (legacy apiFetch<T>). Throws ApiError on non-2xx. Throws on 204
+ *  (a JSON endpoint receiving 204 is a contract violation at this layer).
+ */
+export async function apiFetchJson(path: string, options?: RequestInit): Promise<unknown> {
+  const res = await doFetch(path, options);
+  if (!res.ok) return handleHttpError(res);
+  if (res.status === 204) {
+    throw new ApiError(204, "expected JSON response but received 204 No Content");
   }
-
-  // F1.1 M9: a 204 No Content returns null explicitly (not `undefined as T`).
-  // The pre-F1.1 code did `return undefined as T` — an unchecked cast that
-  // lied to callers expecting a body. Direct apiFetch callers that hit a 204
-  // now receive `null`; endpoints that genuinely return void should migrate
-  // to the contract layer (callContract with emptyBody:"required"), which
-  // documents the empty-body policy per endpoint. No backend route currently
-  // returns 204 (all reset/cancel/delete endpoints return JSON), so this
-  // branch is defensive — but it no longer fabricates a typed value.
-  if (res.status === 204) return null as T;
   return res.json();
+}
+
+/** Transport for void endpoints (no response body). Throws ApiError on
+ *  non-2xx. Accepts 200-with-body or 204-no-body. */
+export async function apiFetchVoid(path: string, options?: RequestInit): Promise<void> {
+  const res = await doFetch(path, options);
+  if (!res.ok) return handleHttpError(res);
+  // 204 or any 2xx is valid for void; body is discarded
+}
+
+/** Legacy generic fetch — preserved for ~78 pre-contract call sites.
+ *  Delegates to apiFetchJson and casts the result to T. New code should
+ *  use the contract layer or apiFetchJson. The cast is explicit and
+ *  documented: the transport does NOT validate the shape.
+ */
+export async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
+  return (await apiFetchJson(path, options)) as T;
 }
 
 // ── Binary/blob fetch ───────────────────────────────────────────

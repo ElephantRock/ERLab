@@ -91,10 +91,9 @@ describe("apiFetch", () => {
     }
   });
 
-  it("returns null for 204 response (F1.1 M9: was undefined-as-T)", async () => {
+  it("throws on 204 response (F1.1a seal: apiFetch delegates to apiFetchJson which rejects 204)", async () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response(null, { status: 204 }));
-    const data = await apiFetch("/test");
-    expect(data).toBeNull();
+    await expect(apiFetch("/test")).rejects.toThrow(/204/);
   });
 
   it("injects X-API-Key header when key is in localStorage", async () => {

@@ -3,6 +3,7 @@
 import { useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/auth-context";
+import { forgotPassword } from "@/api/auth";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -27,13 +28,8 @@ export default function LoginPage() {
 
     try {
       if (mode === "forgot") {
-        const res = await fetch("/api/v1/auth/forgot-password", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email }),
-        });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data?.error?.message || data?.detail || "Reset failed");
+        // F1.1a-1: migrated from raw fetch() to the canonical auth client.
+        const data = await forgotPassword(email);
         setSuccess(data.message || "Reset instructions sent.");
         return;
       }

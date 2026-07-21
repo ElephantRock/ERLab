@@ -22,7 +22,7 @@ import {
   decodeObject,
   decodeString,
   decodeStringRecord,
-  type EndpointContract,
+  type JsonContract,
 } from "./common";
 
 // ── Domain types (authoritative for this endpoint) ───────────────────
@@ -85,12 +85,12 @@ const stageInfoDecoder = decodeObject<StageModelStageInfo>({
 
 // ── Contracts ────────────────────────────────────────────────────────
 
-export const getStageModelConfigContract: EndpointContract<StageModelConfig> = {
+export const getStageModelConfigContract: JsonContract<StageModelConfig> = {
   id: "models.getStageModelConfig",
   method: "GET",
   pathPattern: "/settings/models",
-  emptyBody: "forbidden",
-  decodeResponse: decodeObject<StageModelConfig>({
+  responseKind: "json",
+  decoder: decodeObject<StageModelConfig>({
     required: {
       models: decodeArray(modelOptionDecoder),
       stages: decodeArray(stageInfoDecoder),
@@ -99,12 +99,12 @@ export const getStageModelConfigContract: EndpointContract<StageModelConfig> = {
   }),
 };
 
-export const updateStageModelConfigContract: EndpointContract<StageModelUpdateResult> = {
+export const updateStageModelConfigContract: JsonContract<StageModelUpdateResult> = {
   id: "models.updateStageModelConfig",
   method: "PUT",
   pathPattern: "/settings/models",
-  emptyBody: "forbidden",
-  decodeResponse: decodeObject<StageModelUpdateResult>({
+  responseKind: "json",
+  decoder: decodeObject<StageModelUpdateResult>({
     required: {
       assignments: decodeStringRecord,
       message: decodeString,
@@ -112,12 +112,12 @@ export const updateStageModelConfigContract: EndpointContract<StageModelUpdateRe
   }),
 };
 
-export const resetStageModelConfigContract: EndpointContract<StageModelResetResult> = {
+export const resetStageModelConfigContract: JsonContract<StageModelResetResult> = {
   id: "models.resetStageModelConfig",
   method: "DELETE",
   pathPattern: "/settings/models",
-  emptyBody: "forbidden",
-  decodeResponse: decodeObject<StageModelResetResult>({
+  responseKind: "json",
+  decoder: decodeObject<StageModelResetResult>({
     required: {
       assignments: decodeStringRecord,
       message: decodeString,

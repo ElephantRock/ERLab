@@ -24,7 +24,7 @@
  * Decoders are small and explicit per the F1.1 directive.
  */
 
-import { apiFetch } from "@/api/client";
+import { apiFetchJson, apiFetchVoid } from "@/api/client";
 
 // ── Contract failure ─────────────────────────────────────────────────
 
@@ -79,28 +79,30 @@ export interface DecodeContext {
   readonly endpointId: string;
 }
 
-// ── Endpoint contract ────────────────────────────────────────────────
+// ── Endpoint contract (discriminated union, F1.1a seal) ─────────────
 
-export type EmptyBodyPolicy = "forbidden" | "allowed" | "required";
-
-export interface EndpointContract<TResponse> {
+/** Base fields shared by all endpoint contracts. */
+interface ContractBase {
   /** Stable identifier for diagnostics, e.g. "gaps.getGap". */
   readonly id: string;
   readonly method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
   /** Path template; use `buildPath` to substitute params. */
   readonly pathPattern: string;
-  /** Status codes that count as success for this endpoint. Default [200]. */
-  readonly successStatuses?: readonly number[];
-  /**
-   * Empty-body policy:
-   *   "forbidden" — a payload is required; 204/empty body is a contract error
-   *   "allowed"   — payload or empty body are both valid (decoder gets unknown)
-   *   "required"  — the endpoint returns no body; decode is skipped, returns void
-   */
-  readonly emptyBody: EmptyBodyPolicy;
-  /** Decoder for the response payload. Required unless emptyBody === "required". */
-  readonly decodeResponse?: ResponseDecoder<TResponse>;
 }
+
+/** Contract for an endpoint that returns a JSON body decoded to T. */
+export interface JsonContract<T> extends ContractBase {
+  readonly responseKind: "json";
+  readonly decoder: ResponseDecoder<T>;
+}
+
+/** Contract for an endpoint that returns no body (void). */
+export interface VoidContract extends ContractBase {
+  readonly responseKind: "void";
+}
+
+/** Discriminated union of all endpoint contracts. */
+export type EndpointContract<TResponse = never> = JsonContract<TResponse> | VoidContract;
 
 // ── Primitive decoders ───────────────────────────────────────────────
 
@@ -321,28 +323,33 @@ export function withQuery(path: string, params: Record<string, unknown>): string
 // ── Contract executor ────────────────────────────────────────────────
 
 /**
- * Execute an endpoint contract: call apiFetch, then validate the response
- * against the declared decoder + empty-body policy.
+ * Execute a JSON endpoint contract: call apiFetchJson, then decode the
+ * response via the declared decoder.
  *
- * - Transport errors (non-2xx, network failure) propagate as `ApiError`
- *   from apiFetch — unchanged.
- * - 2xx + decoder failure raises `ApiContractError` — the caller (query
- *   layer) treats this as a failed query state.
- * - `emptyBody: "required"` endpoints return `void` (no decoder run).
- *
- * `correlationId` is extracted from the response headers if present
- * (X-Request-ID) and attached to contract errors for diagnostics.
+ * - Transport errors (non-2xx, network failure) propagate as `ApiError`.
+ * - 2xx + decoder failure raises `ApiContractError`.
+ * - 204 on a JSON endpoint raises `ApiError` from the transport layer
+ *   (apiFetchJson rejects 204 as a contract violation).
  */
-export async function callContract<TResponse>(
-  contract: EndpointContract<TResponse>,
-  options: {
-    params?: Record<string, string | number>;
-    query?: Record<string, unknown>;
-    body?: unknown;
-    signal?: AbortSignal;
-    extraHeaders?: Record<string, string>;
-  } = {},
-): Promise<TResponse> {
+export async function callContract<T>(
+  contract: JsonContract<T>,
+  options?: ContractCallOptions,
+): Promise<T>;
+
+/**
+ * Execute a void endpoint contract: call apiFetchVoid.
+ * Returns void — no decoder, no body parsing.
+ */
+export async function callContract(
+  contract: VoidContract,
+  options?: ContractCallOptions,
+): Promise<void>;
+
+/** Implementation (not callable directly — the overloads above select it). */
+export async function callContract<T>(
+  contract: JsonContract<T> | VoidContract,
+  options: ContractCallOptions = {},
+): Promise<T | void> {
   const path = withQuery(
     options.params ? buildPath(contract.pathPattern, options.params) : contract.pathPattern,
     options.query ?? {},
@@ -357,48 +364,22 @@ export async function callContract<TResponse>(
     init.body = JSON.stringify(options.body);
   }
 
-  // apiFetch returns `T` but we deliberately take `unknown` here — the
-  // transport's generic T is an unchecked assertion we no longer trust.
-  // The decoder is what makes the value usable.
-  const raw: unknown = await (apiFetch as unknown as (p: string, o?: RequestInit) => Promise<unknown>)(path, init);
-
-  if (contract.emptyBody === "required") {
-    if (raw !== undefined && raw !== null) {
-      throw new ApiContractError(
-        "api_response_payload_when_empty_expected",
-        contract.id,
-        `endpoint declared emptyBody:"required" but received a payload`,
-        200,
-      );
-    }
-    return undefined as TResponse;
+  if (contract.responseKind === "void") {
+    await apiFetchVoid(path, init);
+    return;
   }
 
-  if (raw === undefined || raw === null) {
-    if (contract.emptyBody === "forbidden") {
-      throw new ApiContractError(
-        "api_response_empty_when_payload_expected",
-        contract.id,
-        `endpoint declared emptyBody:"forbidden" but received an empty body`,
-        200,
-      );
-    }
-    // emptyBody: "allowed" — return null/undefined as-is, typed via TResponse
-    return raw as TResponse;
-  }
+  // JSON contract: transport returns unknown, decoder validates
+  const raw: unknown = await apiFetchJson(path, init);
+  return contract.decoder.decode(raw, { endpointId: contract.id });
+}
 
-  if (!contract.decodeResponse) {
-    // No decoder declared but payload present and emptyBody !== "required".
-    // This is a misconfigured contract; fail loud rather than trusting raw.
-    throw new ApiContractError(
-      "api_response_contract_mismatch",
-      contract.id,
-      `endpoint has no decodeResponse but received a payload (misconfigured contract)`,
-      200,
-    );
-  }
-
-  return contract.decodeResponse.decode(raw, { endpointId: contract.id });
+export interface ContractCallOptions {
+  params?: Record<string, string | number>;
+  query?: Record<string, unknown>;
+  body?: unknown;
+  signal?: AbortSignal;
+  extraHeaders?: Record<string, string>;
 }
 
 /**

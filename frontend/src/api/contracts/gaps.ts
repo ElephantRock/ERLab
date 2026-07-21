@@ -18,11 +18,13 @@
 
 import type { ResearchGap } from "@/api/types";
 import {
+  decodeArray,
+  decodeEnum,
   decodeNumber,
   decodeObject,
   decodeString,
-  decodeEnum,
-  type EndpointContract,
+  type JsonContract,
+  type ResponseDecoder,
 } from "./common";
 
 // ── Truthful mutation result types ───────────────────────────────────
@@ -44,10 +46,57 @@ export interface GapStatusMutationResult {
 
 // ── Decoders ─────────────────────────────────────────────────────────
 //
-// For getGap, the full ResearchGap shape is validated on material fields
-// (id, title, status-bearing fields) and trusted on optional/unknown
-// fields — the backend genuinely returns the full gap there. For mutations,
-// only the fields actually returned are decoded.
+// F1.1a-4: ResearchGap is decoded COMPLETELY — every declared field is
+// validated, not just "material" ones. Optional fields are validated when
+// present and skipped when null/absent (decodeObject skips null optionals).
+// Unknown extra backend fields are preserved via the forward-compat spread
+// but remain accessible only as `unknown`, not under typed ResearchGap
+// field names.
+
+// Sub-decoders for optional nested types
+const truthDecoder = decodeObject<{ frequency: number; confidence: number; evidence_count: number }>({
+  required: { frequency: decodeNumber, confidence: decodeNumber, evidence_count: decodeNumber },
+});
+
+// RelatedIdea and MatchedPaper are loose-mirrored; validate as objects
+// with at least an id. Extra fields pass through as unknown.
+const relatedIdeaDecoder = decodeObject<{ id: number }>({
+  required: { id: decodeNumber },
+});
+const matchedPaperDecoder = decodeObject<{ id: number }>({
+  required: { id: decodeNumber },
+});
+
+const researchGapDecoder: ResponseDecoder<ResearchGap> = {
+  decode(value, ctx) {
+    const dec = decodeObject<ResearchGap>({
+      required: {
+        id: decodeNumber,
+        title: decodeString,
+        description: decodeString,
+        gap_type: decodeString,
+        confidence: decodeNumber,
+        potential_impact: decodeString,
+        idea_count: decodeNumber,
+      },
+      optional: {
+        pipeline_run_id: decodeNumber,
+        truth: truthDecoder,
+        related_clusters: decodeArray(decodeNumber),
+        related_ideas: decodeArray(relatedIdeaDecoder),
+        matched_papers_preview: decodeArray(matchedPaperDecoder),
+        status: decodeString,
+        user_rating: decodeNumber,
+        user_notes: decodeString,
+      },
+    });
+    return dec.decode(value, ctx);
+  },
+};
+
+const getGapResponseDecoder = decodeObject<{ gap: ResearchGap }>({
+  required: { gap: researchGapDecoder },
+});
 
 const gapFeedbackResultDecoder = decodeObject<GapFeedbackMutationResult>({
   required: { id: decodeNumber },
@@ -64,46 +113,32 @@ const gapStatusResultDecoder = decodeObject<GapStatusMutationResult>({
   },
 });
 
-// getGap response: { gap: ResearchGap }. The decoder validates MATERIAL
-// fields of the gap (id, title — identity/display) and preserves all
-// extra backend fields via decodeObject's forward-compat spread. The
-// returned object is typed as ResearchGap because the backend genuinely
-// returns the full shape here (gaps.py:378-393), and the material fields
-// are runtime-verified. Optional fields are trusted when present.
-const researchGapDecoder = decodeObject<ResearchGap>({
-  required: { id: decodeNumber, title: decodeString },
-});
+// ── Contracts (F1.1a: discriminated JsonContract) ────────────────────
 
-const getGapResponseDecoder = decodeObject<{ gap: ResearchGap }>({
-  required: { gap: researchGapDecoder },
-});
-
-// ── Contracts ────────────────────────────────────────────────────────
-
-export const getGapContract: EndpointContract<{ gap: ResearchGap }> = {
+export const getGapContract: JsonContract<{ gap: ResearchGap }> = {
   id: "gaps.getGap",
   method: "GET",
   pathPattern: "/gaps/{id}",
-  emptyBody: "forbidden",
-  decodeResponse: getGapResponseDecoder,
+  responseKind: "json",
+  decoder: getGapResponseDecoder,
 };
 
-export const submitGapFeedbackContract: EndpointContract<{ gap: GapFeedbackMutationResult }> = {
+export const submitGapFeedbackContract: JsonContract<{ gap: GapFeedbackMutationResult }> = {
   id: "gaps.submitGapFeedback",
   method: "POST",
   pathPattern: "/gaps/{gapId}/feedback",
-  emptyBody: "forbidden",
-  decodeResponse: decodeObject<{ gap: GapFeedbackMutationResult }>({
+  responseKind: "json",
+  decoder: decodeObject<{ gap: GapFeedbackMutationResult }>({
     required: { gap: gapFeedbackResultDecoder },
   }),
 };
 
-export const updateGapStatusContract: EndpointContract<{ gap: GapStatusMutationResult }> = {
+export const updateGapStatusContract: JsonContract<{ gap: GapStatusMutationResult }> = {
   id: "gaps.updateGapStatus",
   method: "PATCH",
   pathPattern: "/gaps/{gapId}/status",
-  emptyBody: "forbidden",
-  decodeResponse: decodeObject<{ gap: GapStatusMutationResult }>({
+  responseKind: "json",
+  decoder: decodeObject<{ gap: GapStatusMutationResult }>({
     required: { gap: gapStatusResultDecoder },
   }),
 };
