@@ -30,14 +30,16 @@ export function NotificationBell() {
   const [items, setItems] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [, setTotal] = useState(0);
+  const [fetchError, setFetchError] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const fetchUnread = useCallback(async () => {
     try {
       const res = await getNotifications({ limit: 50, read: false });
       setUnreadCount(res.total);
-    } catch (err) {
-      console.warn("[notifications] Failed to fetch unread count:", err);
+      setFetchError(false);
+    } catch {
+      setFetchError(true);
     }
   }, []);
 
@@ -47,8 +49,9 @@ export function NotificationBell() {
       setItems(res.notifications);
       setTotal(res.total);
       setUnreadCount(res.notifications.filter((n) => !n.read).length);
-    } catch (err) {
-      console.warn("[notifications] Failed to load notifications:", err);
+      setFetchError(false);
+    } catch {
+      setFetchError(true);
     }
   }, []);
 
@@ -78,7 +81,7 @@ export function NotificationBell() {
       await markAllRead();
       setUnreadCount(0);
       setItems((prev) => prev.map((n) => ({ ...n, read: true })));
-    } catch (err) {
+    } catch {
       toast.error("Failed to mark notifications as read");
     }
   };
@@ -88,7 +91,7 @@ export function NotificationBell() {
       await markRead(id);
       setItems((prev) => prev.map((n) => (n.id === id ? { ...n, read: true } : n)));
       setUnreadCount((prev) => Math.max(0, prev - 1));
-    } catch (err) {
+    } catch {
       toast.error("Failed to mark notification as read");
     }
   };
@@ -103,14 +106,22 @@ export function NotificationBell() {
         data-testid="notification-bell"
       >
         <Bell className="h-4 w-4" />
-        {unreadCount > 0 && (
+        {fetchError ? (
+          <span
+            className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-[10px] font-bold text-white"
+            data-testid="unread-badge"
+            title="Failed to load notifications"
+          >
+            !
+          </span>
+        ) : unreadCount > 0 ? (
           <span
             className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-[10px] font-bold text-white"
             data-testid="unread-badge"
           >
             {unreadCount > 9 ? "9+" : unreadCount}
           </span>
-        )}
+        ) : null}
       </Button>
       {open && (
         <div className="absolute right-0 top-full mt-2 w-80 max-h-96 overflow-y-auto rounded-md border bg-popover shadow-lg z-50">
@@ -127,7 +138,14 @@ export function NotificationBell() {
             )}
           </div>
           <div className="divide-y">
-            {items.length === 0 && (
+            {fetchError ? (
+              <div
+                className="px-3 py-4 text-center text-sm text-destructive"
+                data-testid="notifications-error"
+              >
+                Failed to load notifications
+              </div>
+            ) : items.length === 0 && (
               <div className="px-3 py-4 text-center text-sm text-muted-foreground">
                 No notifications
               </div>

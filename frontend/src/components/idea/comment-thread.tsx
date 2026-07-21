@@ -16,7 +16,7 @@ export function CommentThread({ ideaId }: CommentThreadProps) {
   const [replyTo, setReplyTo] = useState<number | null>(null);
   const queryClient = useQueryClient();
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["comments", ideaId],
     queryFn: () => listComments(ideaId),
   });
@@ -54,6 +54,13 @@ export function CommentThread({ ideaId }: CommentThreadProps) {
         {/* Comment list */}
         {isLoading ? (
           <p className="text-sm text-muted-foreground">Loading comments...</p>
+        ) : isError ? (
+          <div className="text-sm text-destructive" data-testid="comments-error">
+            Failed to load comments.{" "}
+            <button onClick={() => refetch()} className="underline">
+              Retry
+            </button>
+          </div>
         ) : topLevel.length === 0 ? (
           <p className="text-sm text-muted-foreground">
             No comments yet. Be the first!

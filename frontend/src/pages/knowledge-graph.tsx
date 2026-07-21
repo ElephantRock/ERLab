@@ -37,19 +37,24 @@ export default function KnowledgeGraphPage() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
   // ── World model query ────────────────────────────────────────
-  const { data: worldModel } = useQuery({
+  const { data: worldModel, isError: worldModelError } = useQuery({
     queryKey: ["knowledge-graph-world-model"],
     queryFn: () => getWorldModel(),
   });
 
   // ── Stats query ───────────────────────────────────────────────
-  const { data: stats, isLoading: statsLoading } = useQuery({
+  const { data: stats, isLoading: statsLoading, isError: statsError } = useQuery({
     queryKey: ["knowledge-graph-stats"],
     queryFn: () => getGraphStats(),
   });
 
   // ── Entities query (HB-02: max 100) ──────────────────────────
-  const { data: entities, isLoading: entitiesLoading } = useQuery({
+  const {
+    data: entities,
+    isLoading: entitiesLoading,
+    isError: entitiesError,
+    refetch: refetchEntities,
+  } = useQuery({
     queryKey: ["knowledge-graph-entities", typeFilter, searchTerm],
     queryFn: () =>
       getEntities({
@@ -130,11 +135,20 @@ export default function KnowledgeGraphPage() {
           )}
         </div>
       )}
+      {statsError && (
+        <div className="text-sm text-destructive" data-testid="kg-stats-error">
+          Failed to load graph stats.
+        </div>
+      )}
 
       {/* World Model Panel */}
-      {worldModel && (
+      {worldModelError ? (
+        <div className="text-sm text-destructive" data-testid="kg-world-model-error">
+          Failed to load world model.
+        </div>
+      ) : worldModel ? (
         <WorldModelPanel model={worldModel} />
-      )}
+      ) : null}
 
       {/* Filters */}
       <div className="flex gap-3 items-center">
@@ -170,6 +184,16 @@ export default function KnowledgeGraphPage() {
         <div className="flex items-center justify-center h-64 text-muted-foreground">
           <Loader2 className="h-6 w-6 animate-spin mr-2" />
           Loading graph...
+        </div>
+      ) : entitiesError ? (
+        <div
+          className="text-center py-12 text-sm text-destructive"
+          data-testid="kg-entities-error"
+        >
+          Failed to load entities.{" "}
+          <button onClick={() => refetchEntities()} className="underline">
+            Retry
+          </button>
         </div>
       ) : entities && entities.length > 0 ? (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">

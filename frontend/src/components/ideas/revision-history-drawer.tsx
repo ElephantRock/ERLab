@@ -44,7 +44,7 @@ export function RevisionHistoryDrawer({
   const queryClient = useQueryClient();
   const [restoringId, setRestoringId] = useState<number | null>(null);
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["section-revisions", ideaId, sectionKey],
     queryFn: () => getSectionRevisions(ideaId, sectionKey),
   });
@@ -80,7 +80,19 @@ export function RevisionHistoryDrawer({
           </div>
         )}
 
-        {data && data.revisions.length === 0 && !data.synthetic_original && (
+        {isError && (
+          <div
+            className="text-sm text-destructive"
+            data-testid={`revision-error-${sectionKey}`}
+          >
+            Failed to load revision history.{" "}
+            <button onClick={() => refetch()} className="underline">
+              Retry
+            </button>
+          </div>
+        )}
+
+        {!isError && data && data.revisions.length === 0 && !data.synthetic_original && (
           <p className="text-sm text-muted-foreground">No revision history available.</p>
         )}
 

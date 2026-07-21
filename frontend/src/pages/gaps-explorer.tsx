@@ -70,7 +70,7 @@ export default function GapsExplorer() {
 
   // Clusters use useQuery with enabled flag (conditional fetch — the contract
   // allows this for freshness/conditional queries with a cited reason).
-  const { data: clusterData } = useQuery({
+  const { data: clusterData, isError: clustersError, refetch: refetchClusters } = useQuery({
     queryKey: ["gap-clusters"],
     queryFn: () => apiFetchUnchecked("/gaps/clusters") as Promise<{ clusters: unknown[]; total_papers: number }>,
     enabled: activeTab === "clusters",
@@ -241,7 +241,17 @@ export default function GapsExplorer() {
         </>
       ) : (
         <div>
-          {clusterData?.clusters?.length ? (
+          {clustersError ? (
+            <div
+              className="text-ui-meta text-destructive py-4"
+              data-testid="clusters-error"
+            >
+              Failed to load clusters.{" "}
+              <button onClick={() => refetchClusters()} className="underline">
+                Retry
+              </button>
+            </div>
+          ) : clusterData?.clusters?.length ? (
             <ClusterScatterPlot
               clusters={clusterData.clusters as never[]}
               onClusterClick={handleClusterClick}

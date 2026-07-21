@@ -54,12 +54,12 @@ export function StageModelEditor() {
     queryFn: getCatalog,
   });
 
-  const { data: certData } = useQuery({
+  const { data: certData, isError: certError } = useQuery({
     queryKey: ["certification"],
     queryFn: getCertification,
   });
 
-  const { data: overridesData } = useQuery({
+  const { data: overridesData, isError: overridesError } = useQuery({
     queryKey: ["model-overrides"],
     queryFn: getOverrides,
   });
@@ -287,6 +287,25 @@ export function StageModelEditor() {
         </div>
       </CardHeader>
       <CardContent className="space-y-1">
+        {/* Query error indicators — surfaced instead of silently rendering
+            empty overrides / treating all models as uncertified. */}
+        {overridesError && (
+          <div
+            className="rounded-md border border-destructive/30 bg-destructive/5 p-3 mb-3 text-xs text-destructive"
+            data-testid="overrides-error"
+          >
+            Failed to load model overrides.
+          </div>
+        )}
+        {certError && (
+          <div
+            className="rounded-md border border-destructive/30 bg-destructive/5 p-3 mb-3 text-xs text-destructive"
+            data-testid="certification-error"
+          >
+            Failed to load certification data; models will appear uncertified.
+          </div>
+        )}
+
         {/* Warnings */}
         {warnings.length > 0 && (
           <div className="rounded-md border border-warning/30 bg-warning/5 p-3 mb-3" data-testid="warnings-panel">

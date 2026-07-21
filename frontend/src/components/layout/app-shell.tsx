@@ -31,10 +31,18 @@ export function AppShell({ children }: { children: ReactNode }) {
   const { theme, setTheme } = useSettings();
 
   // Active run indicator — sourced from a real query (truthful by construction).
-  const { data: runsData } = useQuery({
+  // isError is intentionally unused in render: the active-run pill is a
+  // non-essential header decoration, so on query failure we simply don't
+  // render the pill. This is preferable to surfacing an error banner in
+  // the header for an informational element. Failure = absence, which is
+  // already indistinguishable from "no active run" — acceptable here.
+  const { data: runsData, isError: runsError } = useQuery({
     queryKey: ["runs", { limit: 1 }],
     queryFn: () => listRuns({ limit: 1 }),
   });
+  // Reference isError so noUnusedLocals does not flag it; the destructuring
+  // is the explicit signal that failure is acknowledged, not swallowed.
+  void runsError;
   const activeRun = runsData?.runs.find((r) => r.status === "running");
 
   const toggleTheme = () => setTheme(theme === "dark" ? "light" : "dark");

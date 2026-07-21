@@ -15,7 +15,7 @@ export default function PluginsPage() {
   const [newPluginName, setNewPluginName] = useState("");
   const [newPluginDesc, setNewPluginDesc] = useState("");
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["plugins"],
     queryFn: listPlugins,
   });
@@ -118,6 +118,13 @@ export default function PluginsPage() {
           {Array.from({ length: 4 }).map((_, i) => (
             <Skeleton key={i} className="h-20 w-full" />
           ))}
+        </div>
+      ) : isError ? (
+        <div className="text-sm text-destructive p-4" data-testid="plugins-error">
+          Failed to load plugins.{" "}
+          <button onClick={() => refetch()} className="underline">
+            Retry
+          </button>
         </div>
       ) : (
         <div className="space-y-3" data-testid="plugin-list">

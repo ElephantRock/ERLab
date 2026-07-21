@@ -31,6 +31,7 @@ export default function AutonomousPage() {
   const [schedulerStatus, setSchedulerStatus] = useState<SchedulerStatus | null>(null);
   const [evolutionStatus, setEvolutionStatus] = useState<EvolutionStatus | null>(null);
   const [schedulerLoading, setSchedulerLoading] = useState(false);
+  const [schedulerError, setSchedulerError] = useState<string | null>(null);
 
   useEffect(() => {
     loadHistory();
@@ -41,7 +42,7 @@ export default function AutonomousPage() {
     try {
       const data = await getAutonomousHistory();
       setCycles(data.cycles);
-    } catch (err) {
+    } catch {
       setError("Failed to load history");
     } finally {
       setIsLoading(false);
@@ -56,8 +57,9 @@ export default function AutonomousPage() {
       ]);
       setSchedulerStatus(sched);
       setEvolutionStatus(evo);
-    } catch (err) {
-      console.warn("[autonomous] Failed to load status:", err);
+      setSchedulerError(null);
+    } catch {
+      setSchedulerError("Failed to load scheduler and evolution status");
     }
   }
 
@@ -67,7 +69,7 @@ export default function AutonomousPage() {
     try {
       await startScheduler();
       await loadSchedulerAndEvolution();
-    } catch (err) {
+    } catch {
       setError("Failed to start scheduler");
     } finally {
       setSchedulerLoading(false);
@@ -80,7 +82,7 @@ export default function AutonomousPage() {
     try {
       await stopScheduler();
       await loadSchedulerAndEvolution();
-    } catch (err) {
+    } catch {
       setError("Failed to stop scheduler");
     } finally {
       setSchedulerLoading(false);
@@ -93,7 +95,7 @@ export default function AutonomousPage() {
     try {
       await triggerAutonomous({ domain, max_runs: maxRuns });
       await loadHistory();
-    } catch (err) {
+    } catch {
       setError("Failed to start cycle");
     } finally {
       setIsStarting(false);
@@ -110,7 +112,7 @@ export default function AutonomousPage() {
     try {
       await stopAutonomousCycle(cycleId);
       await loadHistory();
-    } catch (err) {
+    } catch {
       setError("Failed to stop cycle");
     }
   }
@@ -195,6 +197,14 @@ export default function AutonomousPage() {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
+          {schedulerError && (
+            <div
+              className="text-sm text-destructive"
+              data-testid="scheduler-status-error"
+            >
+              {schedulerError}
+            </div>
+          )}
           <div className="flex items-center gap-2 text-sm">
             <span className="font-medium">Status:</span>
             <span data-testid="scheduler-status-text">
