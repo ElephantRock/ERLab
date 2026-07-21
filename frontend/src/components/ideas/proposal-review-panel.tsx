@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import { CheckCircle2, AlertTriangle, Lightbulb, Shield, Eye, Sparkles, FileQuestion } from "lucide-react";
 import type { EnsembleReview, PerspectiveReview } from "@/api/types";
+import { decodeEnsembleReview } from "@/api/contracts/ideas";
 import { cn } from "@/lib/utils";
 
 function scoreColor(score: number): string {
@@ -65,10 +66,13 @@ export function ProposalReviewPanel({
 }) {
   const review = useMemo<EnsembleReview | null>(() => {
     if (!proposalSections) return null;
-    const raw = proposalSections.ensemble_review;
-    if (!raw || typeof raw !== "object") return null;
-    if (Array.isArray(raw)) return null;  // arrays are objects in JS
-    return raw as EnsembleReview;
+    // F1.1 M1: decode through the runtime decoder instead of an unchecked
+    // `as EnsembleReview` cast. The decoder validates material fields
+    // (overall_score, summary, perspective identity) and returns null
+    // when no review is present. A present-but-malformed object throws
+    // ApiContractError, which the nearest error boundary surfaces — it
+    // does not silently coerce into a partial review.
+    return decodeEnsembleReview(proposalSections.ensemble_review);
   }, [proposalSections]);
 
   // No proposal at all

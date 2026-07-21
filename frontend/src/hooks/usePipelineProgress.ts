@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { apiFetch, sseFetch } from "@/api/client";
 import { PIPELINE_STAGES } from "@/lib/constants";
+import type { PipelineRunDetail, PipelineRunSummary } from "@/api/types";
 
 export interface StageProgress {
   key: string;
@@ -9,14 +10,11 @@ export interface StageProgress {
   elapsed: number;
 }
 
-interface RunDetail {
-  id: number;
-  status: string;
-  current_stage: string | null;
-  stages_completed: string[];
-  created_at: string;
-  completed_at: string | null;
-}
+// F1.1 M6: previously this hook declared a local `RunDetail` interface
+// that duplicated a subset of PipelineRunDetail. Now uses the canonical
+// type from api/types.ts — the backend returns the full shape at
+// /pipeline/runs/detail/{id} and /pipeline/runs, so the wider type is
+// truthful (the hook only reads a subset of the fields).
 
 /**
  * usePipelineProgress — tracks pipeline stage progress.
@@ -132,13 +130,13 @@ export function usePipelineProgress(runId: string | null) {
   const pollOnce = useCallback(async (): Promise<boolean> => {
     if (!runId || cancelledRef.current) return false;
     try {
-      let data: RunDetail | null = null;
+      let data: PipelineRunDetail | null = null;
       try {
-        data = await apiFetch<RunDetail>(`/pipeline/runs/detail/${runId}`);
+        data = await apiFetch<PipelineRunDetail>(`/pipeline/runs/detail/${runId}`);
       } catch {
         try {
-          const list = await apiFetch<{ runs: RunDetail[] }>(`/pipeline/runs?limit=5`);
-          data = list.runs.find((r: RunDetail) => String(r.id) === runId) ?? null;
+          const list = await apiFetch<{ runs: PipelineRunSummary[]; total: number }>(`/pipeline/runs?limit=5`);
+          data = (list.runs.find((r) => String(r.id) === runId) as PipelineRunDetail | undefined) ?? null;
         } catch {
           // Both failed
         }

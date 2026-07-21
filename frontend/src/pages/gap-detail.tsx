@@ -1,7 +1,7 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { getGap, updateGapStatus } from "@/api/gaps";
+import { getGap, updateGapStatus, asGapStatus } from "@/api/gaps";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ArrowLeft, ArrowRight, BookOpen, GitBranch, Lightbulb, BarChart3, FileText } from "lucide-react";
@@ -100,7 +100,14 @@ export default function GapDetailPage() {
           <select
             value={gap.status || "identified"}
             onChange={async (e) => {
-              try { await updateGapStatus(gapId, e.target.value); } catch (err) { toast.error("Failed to update gap status"); } 
+              // Narrow the select's string value to GapStatus. The <option>s
+              // below only offer the three valid values, so this guard is
+              // honest; if a future option is added without updating the
+              // union, the guard returns null and we no-op rather than
+              // sending an invalid status to the backend.
+              const next = asGapStatus(e.target.value);
+              if (!next) return;
+              try { await updateGapStatus(gapId, next); } catch { toast.error("Failed to update gap status"); }
             }}
             className="px-2 py-0.5 text-xs border rounded-md bg-background"
             aria-label="Gap lifecycle status"

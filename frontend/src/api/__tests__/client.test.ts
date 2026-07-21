@@ -91,10 +91,10 @@ describe("apiFetch", () => {
     }
   });
 
-  it("returns undefined for 204 response", async () => {
+  it("returns null for 204 response (F1.1 M9: was undefined-as-T)", async () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response(null, { status: 204 }));
     const data = await apiFetch("/test");
-    expect(data).toBeUndefined();
+    expect(data).toBeNull();
   });
 
   it("injects X-API-Key header when key is in localStorage", async () => {

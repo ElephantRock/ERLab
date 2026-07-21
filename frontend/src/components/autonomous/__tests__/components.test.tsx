@@ -10,7 +10,9 @@ import { render, screen } from "@testing-library/react";
 import { getAutonomousHistory, stopAutonomousCycle } from "@/api/autonomous";
 import { apiFetch } from "@/api/client";
 import { CycleProgress } from "@/components/autonomous/cycle-progress";
-import { ConsciousnessStateBadge } from "@/components/autonomous/consciousness-state";
+// F1.1 H2: ConsciousnessStateBadge import removed — the component was
+// deleted (it rendered a badge backed by a non-existent backend endpoint).
+// The ConsciousnessStateBadge describe block below was also removed.
 import type { AutonomousCycleHistoryEntry } from "@/api/autonomous";
 
 // ── Mock apiFetch ───────────────────────────────────────────────
@@ -97,26 +99,5 @@ describe("CycleProgress", () => {
   });
 });
 
-// ── TEST-26-02-03: ConsciousnessState shows current state badge ──
-
-describe("ConsciousnessStateBadge", () => {
-  it("TEST-26-02-03: ConsciousnessState shows current state badge", () => {
-    render(<ConsciousnessStateBadge state="exploring" />);
-
-    expect(screen.getByTestId("consciousness-state")).toBeInTheDocument();
-    expect(screen.getByTestId("consciousness-badge")).toHaveTextContent("Exploring");
-  });
-
-  it("shows seconds when provided", () => {
-    render(<ConsciousnessStateBadge state="generating" secondsInState={42.7} />);
-
-    expect(screen.getByTestId("consciousness-badge")).toHaveTextContent("Generating");
-    expect(screen.getByTestId("consciousness-seconds")).toHaveTextContent("43s");
-  });
-
-  it("renders idle state by default", () => {
-    render(<ConsciousnessStateBadge state="idle" />);
-
-    expect(screen.getByTestId("consciousness-badge")).toHaveTextContent("Idle");
-  });
-});
+// F1.1 H2: ConsciousnessStateBadge describe block removed — the component
+// was deleted (backed by a non-existent endpoint /pipeline/autonomous/consciousness).

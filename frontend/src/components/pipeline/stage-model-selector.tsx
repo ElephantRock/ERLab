@@ -1,27 +1,11 @@
 import { useState, useEffect } from "react";
 import { useResource } from "@/lib/useResource";
-
-interface ModelOption {
-  id: string;
-  name: string;
-  provider: string;
-  model: string;
-  location: string;
-  type: string;
-}
-
-interface StageInfo {
-  name: string;
-  label: string;
-  category: string;
-  default_model: string;
-}
-
-interface ModelConfigResponse {
-  models: ModelOption[];
-  stages: StageInfo[];
-  assignments: Record<string, string>;
-}
+import {
+  getStageModelConfig,
+  updateStageModelConfig,
+  resetStageModelConfig,
+  type StageModelConfig,
+} from "@/api/clients/models-client";
 
 interface StageModelSelectorProps {
   /** Current assignments, passed up to parent form */
@@ -29,22 +13,18 @@ interface StageModelSelectorProps {
   onChange: (assignments: Record<string, string>) => void;
 }
 
-const API_BASE = import.meta.env.VITE_API_URL || "";
-
 export function StageModelSelector({ value, onChange }: StageModelSelectorProps) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Fetch model config through useResource (the only sanctioned fetch path;
-  // INTERFACE_CONTRACT §1). The previous hand-rolled useEffect+fetch had no
-  // caching/retry and silently swallowed errors.
-  const resource = useResource<ModelConfigResponse>(
+  // Fetch model config through the canonical typed client (F1.1 H1).
+  // Previously this was a raw fetch() that bypassed apiFetch's auth-header
+  // injection (X-API-Key / JWT) and ApiError normalization — it would
+  // silently fail in any deployment with auth enabled. The typed client
+  // routes through apiFetch + a runtime decoder.
+  const resource = useResource<StageModelConfig>(
     ["settings", "models"],
-    async () => {
-      const resp = await fetch(`${API_BASE}/api/v1/settings/models`);
-      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-      return (await resp.json()) as ModelConfigResponse;
-    },
+    () => getStageModelConfig(),
   );
 
   const loading = resource.status === "loading";
@@ -80,16 +60,8 @@ export function StageModelSelector({ value, onChange }: StageModelSelectorProps)
     setSaving(true);
     setError(null);
     try {
-      const resp = await fetch(`${API_BASE}/api/v1/settings/models`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(value),
-      });
-      if (!resp.ok) {
-        const err = await resp.json();
-        throw new Error(err.error?.message || `HTTP ${resp.status}`);
-      }
-    } catch (err) {
+      await updateStageModelConfig(value);
+    } catch {
       setError("Save failed");
     } finally {
       setSaving(false);
@@ -98,10 +70,10 @@ export function StageModelSelector({ value, onChange }: StageModelSelectorProps)
 
   async function handleReset() {
     try {
-      await fetch(`${API_BASE}/api/v1/settings/models`, { method: "DELETE" });
+      await resetStageModelConfig();
       onChange({});
     } catch {
-      // ignore
+      setError("Reset failed");
     }
   }
 

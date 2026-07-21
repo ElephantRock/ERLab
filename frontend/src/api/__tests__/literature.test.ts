@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { searchLiterature, ingestPaper } from "@/api/literature";
-import type { Paper, SearchResponse, IngestResponse } from "@/api/literature";
+import type { Paper, SearchResponse, LiteratureIngestResponse } from "@/api/literature";
 import { apiFetch } from "@/api/client";
 
 vi.mock("@/api/client", () => ({
@@ -56,7 +56,7 @@ describe("BATCH-23/TASK-02: Literature API Client", () => {
   });
 
   it("TEST-23-02-07: ingestPaper() calls POST /literature/ingest with paper body", async () => {
-    const expected: IngestResponse = { status: "ingested", id: "ss-abc123" };
+    const expected: LiteratureIngestResponse = { status: "ingested", id: "ss-abc123" };
     mockApiFetch.mockResolvedValueOnce(expected);
 
     const result = await ingestPaper(samplePaper);

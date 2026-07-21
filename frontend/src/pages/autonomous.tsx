@@ -10,14 +10,13 @@ import {
   type EvolutionStatus,
   type SchedulerStatus,
 } from "@/api/autonomous";
-import { ConsciousnessStateBadge } from "@/components/autonomous/consciousness-state";
 import { CycleProgress } from "@/components/autonomous/cycle-progress";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Cpu, Loader2, Play, StopCircle, Clock, Activity } from "lucide-react";
 import { ErrorCard } from "@/components/ui/error-card";
 import { EmptyState } from "@/components/ui/empty-state";
-import type { AutonomousCycleHistoryEntry, ConsciousnessState } from "@/api/autonomous";
+import type { AutonomousCycleHistoryEntry } from "@/api/autonomous";
 
 export default function AutonomousPage() {
   const [cycles, setCycles] = useState<AutonomousCycleHistoryEntry[]>([]);
@@ -26,7 +25,6 @@ export default function AutonomousPage() {
   const [error, setError] = useState<string | null>(null);
   const [domain, setDomain] = useState("AI/NLP");
   const [maxRuns, setMaxRuns] = useState(3);
-  const [consciousnessState] = useState<ConsciousnessState>("idle");
   const [stopConfirmId, setStopConfirmId] = useState<string | null>(null);
 
   // Scheduler + evolution state
@@ -136,9 +134,6 @@ export default function AutonomousPage() {
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Autonomous Cycles</h1>
           <p className="text-muted-foreground">Monitor and control autonomous research cycles.</p>
-        </div>
-        <div data-testid="consciousness-display">
-          <ConsciousnessStateBadge state={consciousnessState} />
         </div>
       </div>
 

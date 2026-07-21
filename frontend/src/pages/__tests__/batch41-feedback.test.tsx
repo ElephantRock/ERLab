@@ -28,6 +28,11 @@ vi.mock("@/api/gaps", () => ({
   listGaps: vi.fn(),
   submitGapFeedback: vi.fn(),
   updateGapStatus: vi.fn(),
+  // asGapStatus is a real narrowing helper, not an API call — pass it
+  // through so the page's runtime guard works under the mock.
+  asGapStatus: (v: string) =>
+    (["identified", "investigating", "addressed"] as readonly string[]).includes(v) ? (v as any) : null,
+  GAP_STATUSES: ["identified", "investigating", "addressed"],
 }));
 
 import { getGap, submitGapFeedback, updateGapStatus } from "@/api/gaps";

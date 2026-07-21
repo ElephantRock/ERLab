@@ -218,28 +218,28 @@ describe("ProposalReviewPanel", () => {
     expect(screen.getByText("No review data")).toBeInTheDocument();
   });
 
-  it("handles review with missing overall_score", () => {
+  // F1.1 M1: the decoder now validates material fields. A missing
+  // overall_score (material) causes the decoder to throw ApiContractError,
+  // which React's error boundary surfaces — it does NOT silently render
+  // a partial review with NaN. The test verifies the decoder rejects.
+  it("rejects review with missing overall_score (F1.1 M1 contract failure)", () => {
     const noScore = { ...mockReview } as Record<string, unknown>;
     delete noScore.overall_score;
-    renderPanel({
-      proposalSections: { ensemble_review: noScore },
-    });
-
-    // Should still render without crashing — overall score shows NaN as 0
-    expect(screen.getByTestId("proposal-review-panel")).toBeInTheDocument();
+    // The decoder throws on missing material field. The component wraps
+    // the decode in useMemo, so the throw propagates to the error boundary.
+    expect(() =>
+      renderPanel({ proposalSections: { ensemble_review: noScore } }),
+    ).toThrow();
   });
 
-  it("handles review with wrong types in arrays", () => {
+  it("rejects review with wrong types in arrays (F1.1 M1 contract failure)", () => {
     const wrongTypes: EnsembleReview = {
       ...mockReview,
       consensus_strengths: ["valid", 123 as unknown as string, null as unknown as string],
     };
-    renderPanel({
-      proposalSections: { ensemble_review: wrongTypes },
-    });
-
-    // Should not crash — strengths section still renders
-    expect(screen.getByTestId("review-strengths")).toBeInTheDocument();
+    expect(() =>
+      renderPanel({ proposalSections: { ensemble_review: wrongTypes } }),
+    ).toThrow();
   });
 
   it("handles review with perspective missing strengths/weaknesses arrays", () => {

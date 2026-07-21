@@ -1,5 +1,34 @@
+/**
+ * Gaps API — F1.1 canonical boundary.
+ *
+ * getGap, submitGapFeedback, and updateGapStatus are now routed through the
+ * contract layer (clients/gaps-client.ts + contracts/gaps.ts) with runtime
+ * response decoders. The mutation functions return TRUTHFUL partial result
+ * types (GapFeedbackMutationResult / GapStatusMutationResult), NOT the full
+ * ResearchGap — see contracts/gaps.ts for why (the backend returns only
+ * {id, user_rating, user_notes} / {id, status}).
+ *
+ * listGaps remains on the pre-contract apiFetch path for now (it's a
+ * lower-risk read; migration tracks under the F1.1 scope-controlled
+ * ratchet). It will move to the contract layer when its decoder is added.
+ */
+
 import { apiFetch } from "./client";
-import type { GapListResponse, ResearchGap } from "./types";
+import type { GapListResponse } from "./types";
+import {
+  getGap as getGapViaContract,
+  submitGapFeedback as submitGapFeedbackViaContract,
+  updateGapStatus as updateGapStatusViaContract,
+  type GapStatus,
+} from "./clients/gaps-client";
+
+// Re-export the truthful mutation result types + GapStatus so consumers
+// can type their handlers without a second import path.
+export type {
+  GapFeedbackMutationResult,
+  GapStatusMutationResult,
+  GapStatus,
+} from "./clients/gaps-client";
 
 export function listGaps(params?: {
   run_id?: number;
@@ -25,16 +54,16 @@ export function listGaps(params?: {
   return apiFetch(`/gaps/${qs ? `?${qs}` : ""}`);
 }
 
-export function getGap(id: number): Promise<{ gap: ResearchGap }> {
-  return apiFetch(`/gaps/${id}`);
-}
+export const getGap = getGapViaContract;
 
-export function submitGapFeedback(gapId: number, rating: number, notes?: string): Promise<{ gap: ResearchGap }> {
-  const params = new URLSearchParams({ rating: String(rating) });
-  if (notes) params.set("notes", notes);
-  return apiFetch(`/gaps/${gapId}/feedback?${params}`, { method: "POST" });
-}
+export const submitGapFeedback = submitGapFeedbackViaContract;
 
-export function updateGapStatus(gapId: number, status: string): Promise<{ gap: ResearchGap }> {
-  return apiFetch(`/gaps/${gapId}/status?status=${encodeURIComponent(status)}`, { method: "PATCH" });
+export const updateGapStatus = updateGapStatusViaContract;
+
+// Re-export GapStatus as a value namespace for runtime narrowing helpers.
+export const GAP_STATUSES: readonly GapStatus[] = ["identified", "investigating", "addressed"] as const;
+
+/** Narrow an unknown string to GapStatus; returns null if invalid. */
+export function asGapStatus(value: string): GapStatus | null {
+  return (GAP_STATUSES as readonly string[]).includes(value) ? (value as GapStatus) : null;
 }

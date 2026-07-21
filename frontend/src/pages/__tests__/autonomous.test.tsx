@@ -37,7 +37,6 @@ vi.mock("@/api/autonomous", () => ({
   getAutonomousHistory: vi.fn(),
   stopAutonomousCycle: vi.fn(),
   triggerAutonomous: vi.fn(),
-  getConsciousnessState: vi.fn(),
   getSchedulerStatus: vi.fn(),
   getEvolutionStatus: vi.fn(),
   startScheduler: vi.fn(),
@@ -50,7 +49,6 @@ import {
   triggerAutonomous,
   getSchedulerStatus,
   getEvolutionStatus,
-  getConsciousnessState,
 } from "@/api/autonomous";
 
 function setupMocks() {
@@ -73,7 +71,6 @@ function setupMocks() {
     overlays_generated: 0,
     recent_outcomes: [],
   });
-  vi.mocked(getConsciousnessState).mockResolvedValue({ state: "idle", seconds_in_state: 0, next_action: "" });
 }
 
 // ── Helper ──────────────────────────────────────────────────────
@@ -170,16 +167,7 @@ describe("BATCH-26/TASK-03: Autonomous Dashboard Page", () => {
     expect(screen.getByTestId("cycle-progress-auto_20260502_150000")).toBeInTheDocument();
   });
 
-  // ── TEST-26-03-05: Consciousness state displayed ───────────
-  it("TEST-26-03-05: Consciousness state displayed", async () => {
-    setupMocks();
-    renderAutonomousPage();
-
-    await waitFor(() => {
-      expect(screen.getByTestId("autonomous-start-form")).toBeInTheDocument();
-    });
-
-    expect(screen.getByTestId("consciousness-display")).toBeInTheDocument();
-    expect(screen.getByTestId("consciousness-badge")).toHaveTextContent("Idle");
-  });
+  // F1.1 H2: TEST-26-03-05 (consciousness state displayed) removed — the
+  // ConsciousnessStateBadge component was deleted (backed by a
+  // non-existent endpoint /pipeline/autonomous/consciousness).
 });

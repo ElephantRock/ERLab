@@ -76,7 +76,15 @@ export async function apiFetch<T>(path: string, options?: RequestInit): Promise<
     throw new ApiError(res.status, message);
   }
 
-  if (res.status === 204) return undefined as T;
+  // F1.1 M9: a 204 No Content returns null explicitly (not `undefined as T`).
+  // The pre-F1.1 code did `return undefined as T` — an unchecked cast that
+  // lied to callers expecting a body. Direct apiFetch callers that hit a 204
+  // now receive `null`; endpoints that genuinely return void should migrate
+  // to the contract layer (callContract with emptyBody:"required"), which
+  // documents the empty-body policy per endpoint. No backend route currently
+  // returns 204 (all reset/cancel/delete endpoints return JSON), so this
+  // branch is defensive — but it no longer fabricates a typed value.
+  if (res.status === 204) return null as T;
   return res.json();
 }
 

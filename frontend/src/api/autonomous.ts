@@ -14,22 +14,6 @@ export interface AutonomousHistoryResponse {
   cycles: AutonomousCycleHistoryEntry[];
 }
 
-/** Consciousness state enum matching backend ConsciousnessState. */
-export type ConsciousnessState =
-  | "idle"
-  | "exploring"
-  | "generating"
-  | "evaluating"
-  | "synthesizing"
-  | "resting";
-
-/** Consciousness state info from the backend. */
-export interface ConsciousnessStateInfo {
-  state: ConsciousnessState;
-  seconds_in_state: number;
-  next_action: string;
-}
-
 /** Stop a running autonomous cycle. HB-01: Requires explicit cycle_id. */
 export function stopAutonomousCycle(cycleId: string): Promise<{ status: string; cycle_id: string }> {
   return apiFetch(`/pipeline/autonomous/stop?cycle_id=${encodeURIComponent(cycleId)}`, {
@@ -42,10 +26,14 @@ export function getAutonomousHistory(): Promise<AutonomousHistoryResponse> {
   return apiFetch("/pipeline/autonomous/history");
 }
 
-/** Get the current consciousness state. */
-export function getConsciousnessState(): Promise<ConsciousnessStateInfo> {
-  return apiFetch("/pipeline/autonomous/consciousness");
-}
+// F1.1 H2: getConsciousnessState() and the ConsciousnessState /
+// ConsciousnessStateInfo types were removed. The function called
+// /pipeline/autonomous/consciousness, which does not exist in the backend
+// (no such route in backend/api/routes/pipeline.py). The orchestrator has
+// an internal consciousness state machine but it is not exposed via API.
+// The page (autonomous.tsx) imported the type but hardcoded "idle" and
+// never called the function; the ConsciousnessStateBadge component
+// rendered a badge for a state that was always "idle". All dead — removed.
 
 /** Evolution status response from GET /status/evolution. */
 export interface EvolutionStatus {

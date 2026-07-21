@@ -27,7 +27,12 @@ export interface SearchResponse {
   papers: Paper[];
 }
 
-export interface IngestResponse {
+// F1.1 M4: renamed from IngestResponse to LiteratureIngestResponse to
+// disambiguate from the knowledge-ingest IngestResponse in api/types.ts
+// (which has a different shape: {status, filename, chunks}). The two
+// endpoints (/literature/ingest vs /knowledge/ingest) genuinely return
+// different fields — the name collision was a maintenance trap.
+export interface LiteratureIngestResponse {
   status: string;
   id: string;
 }
@@ -45,8 +50,8 @@ export function searchLiterature(
 }
 
 /** Ingest a paper into the knowledge base. */
-export function ingestPaper(paper: Paper): Promise<IngestResponse> {
-  return apiFetch<IngestResponse>("/literature/ingest", {
+export function ingestPaper(paper: Paper): Promise<LiteratureIngestResponse> {
+  return apiFetch<LiteratureIngestResponse>("/literature/ingest", {
     method: "POST",
     body: JSON.stringify(paper),
   });

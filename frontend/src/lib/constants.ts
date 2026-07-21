@@ -12,13 +12,17 @@ import {
   type LucideIcon,
 } from "lucide-react";
 
-export interface StageInfo {
+// F1.1 M4: renamed from StageInfo to PipelineStage to disambiguate from
+// the backend-mirror StageInfo in api/settings.ts ({name, label, category,
+// needs_llm}). This is a UI presentation constant (key + label + icon);
+// the backend mirror is a different shape for a different purpose.
+export interface PipelineStage {
   key: string;
   label: string;
   icon: LucideIcon;
 }
 
-export const PIPELINE_STAGES: readonly StageInfo[] = [
+export const PIPELINE_STAGES: readonly PipelineStage[] = [
   { key: "literature_search", label: "Literature Search", icon: Search },
   { key: "ingestion", label: "PDF Ingestion", icon: FileText },
   { key: "gap_analysis", label: "Gap Analysis", icon: GitBranch },
