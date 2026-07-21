@@ -273,48 +273,129 @@ def register_profile_and_run_probe():
     return governed_adapter, effective_config, sf, pub
 
 
-async def _embed_one_with_retry(runtime, text: str, *, is_query: bool, max_retries: int = 8):
+class SnapshotGenerationFailure(Exception):
+    """Terminal failure of a snapshot generation attempt.
+
+    Carries a bounded failure_code vocabulary so a repeatedly-crashing
+    provider cannot appear merely slow: the closeout records exactly which
+    terminal condition fired and on which item.
+    """
+
+    # Closed failure-code vocabulary
+    CODE_AUTHORITY_FAILURE = "authority_failure"            # governance: abort, no retry
+    CODE_RETRY_EXHAUSTED = "retry_exhausted"                # transient failures > max_retries
+    CODE_NON_TRANSIENT_PROVIDER = "non_transient_provider"  # provider error not classified transient
+    CODE_EMPTY_VECTOR = "empty_vector"                      # provider returned no vectors
+
+    def __init__(self, code: str, *, item_id: str, attempts: int, detail: str):
+        self.code = code
+        self.item_id = item_id
+        self.attempts = attempts
+        self.detail = detail
+        super().__init__(
+            f"snapshot generation failed [{code}] on item {item_id!r} "
+            f"after {attempts} attempt(s): {detail}"
+        )
+
+
+# Transient provider-failure signatures (substring match on the error
+# message from the LM Studio / OpenAI-compatible HTTP layer). These are the
+# only failures eligible for bounded retry. Anything else is terminal.
+_TRANSIENT_SIGNATURES = (
+    "model has crashed",
+    "model reloaded",
+    "no models loaded",
+    "model is unloaded",
+    "connection reset",
+    "read timeout",
+    "remote protocol error",
+    "503",  # service unavailable
+    "502",  # bad gateway
+)
+
+
+def _is_transient_provider_error(exc: BaseException) -> bool:
+    """Classify whether ``exc`` is a transient provider failure eligible for retry.
+
+    Authority/governance failures (CapabilityAuthorizationError) are NEVER
+    transient — they abort immediately. Non-transient provider errors
+    (e.g. 400 with a real error body that isn't a crash/reload signature,
+    401 auth, 404 model-not-found) are also terminal.
+    """
+    from backend.pipeline.capability.capability_errors import CapabilityAuthorizationError
+    if isinstance(exc, CapabilityAuthorizationError):
+        return False
+    msg = str(exc).lower()
+    return any(sig in msg for sig in _TRANSIENT_SIGNATURES)
+
+
+async def _embed_one_with_retry(runtime, text: str, *, is_query: bool, item_id: str,
+                                max_retries: int = 8):
     """Embed a single text through the authorized runtime with bounded retry.
 
-    The LM Studio host exhibits transient model-crash/reload instability
-    under load (the model returns 400 'model has crashed' or 'Model
-    reloaded..' for a few seconds, then recovers). This helper retries a
-    SINGLE-text authorized embed with exponential backoff so a snapshot can
-    complete despite transient crashes.
+    Retry policy (frozen by the P1C closeout qualification, 2026-07-21):
 
-    This is generation-tooling robustness, NOT policy/gate weakening:
-      - it only retries transient provider failures (it does NOT catch
-        CapabilityAuthorizationError — authority failures still abort)
-      - it embeds one text per request (LM Studio crashes more on batches)
-      - the retry count is bounded and the final failure raises
+      authority or binding failure    → fail immediately, no retry
+      transient provider failure      → bounded retry (max_retries, exp backoff)
+      candidate snapshot failure      → no partial snapshot promoted as valid
+      retry exhaustion                → explicit SnapshotGenerationFailure(RETRY_EXHAUSTED)
+      control snapshot                → never overwritten (enforced by write_snapshot)
+      retry policy                    → experiment-harness only, NOT a production default
+
+    Per-item attempt counts are recorded on the terminal exception so a
+    repeatedly-crashing provider cannot appear merely slow.
     """
     import asyncio as _aio
-    last_exc = None
+    from backend.pipeline.capability.capability_errors import CapabilityAuthorizationError
+
+    attempts = 0
+    last_exc: BaseException | None = None
     for attempt in range(max_retries):
+        attempts += 1
         try:
             if is_query:
                 return await runtime.embed_query_authorized(text)
-            else:
-                receipt = await runtime.embed_documents_authorized([text])
-                # unwrap single-element batch
-                class _Single:
-                    embedding = receipt.embeddings[0]
-                    capability_binding_id = receipt.capability_binding_id
-                    capability_check_id = receipt.capability_check_id
-                    runtime_config_fingerprint = receipt.runtime_config_fingerprint
-                    authorized_at = receipt.authorized_at
-                return _Single()
+            receipt = await runtime.embed_documents_authorized([text])
+            if not receipt.embeddings:
+                raise SnapshotGenerationFailure(
+                    SnapshotGenerationFailure.CODE_EMPTY_VECTOR,
+                    item_id=item_id, attempts=attempts,
+                    detail="provider returned zero vectors",
+                )
+            class _Single:
+                embedding = receipt.embeddings[0]
+                capability_binding_id = receipt.capability_binding_id
+                capability_check_id = receipt.capability_check_id
+                runtime_config_fingerprint = receipt.runtime_config_fingerprint
+                authorized_at = receipt.authorized_at
+            return _Single()
+        except SnapshotGenerationFailure:
+            raise  # already classified terminal
+        except CapabilityAuthorizationError as e:
+            # Governance failure: abort immediately, no retry, explicit code.
+            raise SnapshotGenerationFailure(
+                SnapshotGenerationFailure.CODE_AUTHORITY_FAILURE,
+                item_id=item_id, attempts=attempts,
+                detail=f"{type(e).__name__}: {e}",
+            ) from e
         except Exception as e:
-            # Transient provider errors (model crash/reload) -> retry.
-            # Authority errors (CapabilityAuthorizationError) MUST NOT be
-            # retried silently — but they're a different exception type that
-            # we let propagate by checking the message here.
-            msg = str(e)
-            if "CapabilityAuthorization" in type(e).__name__ or "authority" in msg.lower():
-                raise
             last_exc = e
+            if not _is_transient_provider_error(e):
+                # Non-transient provider error (e.g. real 400/401/404): terminal.
+                raise SnapshotGenerationFailure(
+                    SnapshotGenerationFailure.CODE_NON_TRANSIENT_PROVIDER,
+                    item_id=item_id, attempts=attempts,
+                    detail=f"{type(e).__name__}: {e}",
+                ) from e
+            # transient: backoff and retry
             await _aio.sleep(min(2.0 ** attempt, 30.0))
-    raise RuntimeError(f"embed failed after {max_retries} retries: {last_exc}")
+    # retry exhausted
+    raise SnapshotGenerationFailure(
+        SnapshotGenerationFailure.CODE_RETRY_EXHAUSTED,
+        item_id=item_id, attempts=attempts,
+        detail=f"transient failures persisted across {attempts} attempts; last: "
+               f"{type(last_exc).__name__ if last_exc else 'unknown'}: {last_exc}",
+    )
 
 
 async def _embed_all(runtime, cases):
@@ -334,7 +415,9 @@ async def _embed_all(runtime, cases):
     for case in cases:
         # Query
         q_text = _query_canonical_text(case)
-        q_receipt = await _embed_one_with_retry(runtime, q_text, is_query=True)
+        q_receipt = await _embed_one_with_retry(
+            runtime, q_text, is_query=True, item_id=case.case_id,
+        )
         items.append(SnapshotItem(
             item_id=case.case_id,
             item_role="query",
@@ -351,7 +434,9 @@ async def _embed_all(runtime, cases):
         # Candidates — one at a time with retry (batches crash more on this host)
         for cand in case.candidates:
             text = _candidate_canonical_text(case, cand)
-            c_receipt = await _embed_one_with_retry(runtime, text, is_query=False)
+            c_receipt = await _embed_one_with_retry(
+                runtime, text, is_query=False, item_id=cand.candidate_id,
+            )
             items.append(SnapshotItem(
                 item_id=cand.candidate_id,
                 item_role="candidate",

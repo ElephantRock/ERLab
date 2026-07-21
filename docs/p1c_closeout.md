@@ -164,8 +164,55 @@ docs/p1c_closeout.md                this file
 docs/p1c_closeout.json              machine-readable closeout
 backend/ranking/generate_embedding_snapshot.py
     + P1C_SNAPSHOT_TAG env (multiple tagged snapshots)
+    + SnapshotGenerationFailure (closed failure-code vocabulary)
     + _embed_one_with_retry (bounded single-text retry for host instability)
+backend/tests/test_ranking/test_snapshot_retry_boundaries.py
+    16 tests pinning the six retry boundaries
 ```
 
 No new benchmark, snapshot, evaluation, or production code beyond the
 contract and the generation-harness robustness improvements.
+
+## 10. Retry-tooling boundary preservation (qualification 2026-07-21)
+
+The generalized snapshot harness and its retry logic are qualified by
+16 tests in `test_snapshot_retry_boundaries.py`. The six frozen boundaries:
+
+```
+authority or binding failure    → fail immediately, no retry
+                                  (CODE_AUTHORITY_FAILURE; CapabilityAuthorizationError
+                                   detected by TYPE, not message string)
+transient provider failure      → bounded retry (max 8, exp backoff to 30s)
+                                  (signatures: 'model has crashed', 'model reloaded',
+                                   'no models loaded', 'connection reset', 502/503)
+candidate snapshot failure      → no partial snapshot promoted as valid
+                                  (write_snapshot writes both files together after
+                                   all items succeed; a mid-flight failure leaves
+                                   no snapshot.json in the output dir)
+retry exhaustion                → explicit SnapshotGenerationFailure(RETRY_EXHAUSTED)
+                                  with per-item attempt count and terminal code
+control snapshot                → never overwritten
+                                  (write_snapshot refuses overwrite;
+                                   P1C_SNAPSHOT_TAG routes candidates to
+                                   docs/p1c_snapshots/<tag>/, never docs/p1b_snapshot/)
+retry policy                    → experiment-harness ONLY
+                                  (lives in generate_embedding_snapshot.py;
+                                   production VerifiedEmbeddingRuntime and
+                                   GovernedEmbeddingAdapter do NOT import or call it)
+```
+
+Per-item attempt counts and terminal failure codes are recorded on every
+`SnapshotGenerationFailure` so a repeatedly-crashing provider cannot appear
+merely slow. The closed failure-code vocabulary is:
+
+```
+authority_failure         governance abort (no retry)
+retry_exhausted           transient failures persisted > max_retries
+non_transient_provider    provider error not classified transient (401/404/...)
+empty_vector              provider returned zero vectors
+```
+
+Non-transient provider errors (401 unauthorized, 404 not found, invalid
+api key, real 400 with a non-crash body) are terminal — they do not retry.
+This prevents the harness from silently retrying past a real configuration
+or auth problem.
