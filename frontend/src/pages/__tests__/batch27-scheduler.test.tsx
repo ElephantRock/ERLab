@@ -76,7 +76,7 @@ vi.mock("@/api/client", () => ({
     provider: "openai",
     db_status: "ok",
   }),
-  apiFetch: vi.fn(),
+  apiFetchUnchecked: vi.fn(),
   ApiError: class extends Error {},
   sseUrl: vi.fn(),
   getApiUrl: () => "",

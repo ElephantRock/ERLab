@@ -59,9 +59,9 @@ export function buildAuthHeaders(extra?: Record<string, string>): Record<string,
 // never fabricate a generic domain value.
 //
 // apiFetchJson returns `unknown` — the caller (contract layer or legacy
-// apiFetch<T>) is responsible for validation.
+// apiFetchUnchecked<T>) is responsible for validation.
 // apiFetchVoid is for endpoints that genuinely return no body.
-// apiFetch<T> is a legacy adapter preserved for the ~78 pre-contract call
+// apiFetchUnchecked<T> is a legacy adapter preserved for the ~78 pre-contract call
 // sites; it delegates to apiFetchJson and casts the result to T. New code
 // should use the contract layer (contracts/common.ts callContract) or
 // apiFetchJson directly.
@@ -86,7 +86,7 @@ async function handleHttpError(res: Response): Promise<never> {
 
 /** Transport for JSON-returning endpoints. Returns `unknown` — NOT a typed
  *  domain value. The caller must validate (contract layer) or explicitly
- *  cast (legacy apiFetch<T>). Throws ApiError on non-2xx. Throws on 204
+ *  cast (legacy apiFetchUnchecked<T>). Throws ApiError on non-2xx. Throws on 204
  *  (a JSON endpoint receiving 204 is a contract violation at this layer).
  */
 export async function apiFetchJson(path: string, options?: RequestInit): Promise<unknown> {
@@ -106,12 +106,18 @@ export async function apiFetchVoid(path: string, options?: RequestInit): Promise
   // 204 or any 2xx is valid for void; body is discarded
 }
 
-/** Legacy generic fetch — preserved for ~78 pre-contract call sites.
- *  Delegates to apiFetchJson and casts the result to T. New code should
- *  use the contract layer or apiFetchJson. The cast is explicit and
- *  documented: the transport does NOT validate the shape.
+/** UNCHECKED legacy generic fetch — preserved for pre-contract call sites.
+ *
+ * **WARNING**: This function casts arbitrary JSON to T WITHOUT runtime
+ * validation. It is an explicitly unsafe adapter. The caller count is
+ * frozen in `api-unchecked-budget.json` and enforced by
+ * `scripts/check-api-unchecked-budget.cjs` in CI. The budget may only
+ * DECREASE — new callers must use the contract layer (callContract) or
+ * apiFetchJson with an explicit decoder.
+ *
+ * Delegates to apiFetchJson and casts the result to T.
  */
-export async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
+export async function apiFetchUnchecked<T>(path: string, options?: RequestInit): Promise<T> {
   return (await apiFetchJson(path, options)) as T;
 }
 
@@ -213,7 +219,7 @@ export interface DetailedStatus {
 
 /** Fetch detailed status from the backend. */
 export async function getDetailedStatus(): Promise<DetailedStatus> {
-  return apiFetch<DetailedStatus>("/status/detailed");
+  return apiFetchUnchecked<DetailedStatus>("/status/detailed");
 }
 
 // ── SSE with durable replay ─────────────────────────────────────

@@ -13,13 +13,13 @@ import type {
   ModelBreakdown,
   RunCostBreakdown,
 } from "@/api/costs";
-import { apiFetch } from "@/api/client";
+import { apiFetchUnchecked } from "@/api/client";
 
 vi.mock("@/api/client", () => ({
-  apiFetch: vi.fn(),
+  apiFetchUnchecked: vi.fn(),
 }));
 
-const mockApiFetch = vi.mocked(apiFetch);
+const mockApiFetch = vi.mocked(apiFetchUnchecked);
 
 describe("BATCH-18/TASK-01: Cost API Client", () => {
   beforeEach(() => {

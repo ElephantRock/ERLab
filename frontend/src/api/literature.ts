@@ -1,4 +1,4 @@
-import { apiFetch } from "./client";
+import { apiFetchUnchecked } from "./client";
 
 // ── Types ──
 
@@ -44,14 +44,14 @@ export function searchLiterature(
   query: string,
   maxResults: number = 10,
 ): Promise<SearchResponse> {
-  return apiFetch<SearchResponse>(
+  return apiFetchUnchecked<SearchResponse>(
     `/literature/search?q=${encodeURIComponent(query)}&max_results=${maxResults}`,
   );
 }
 
 /** Ingest a paper into the knowledge base. */
 export function ingestPaper(paper: Paper): Promise<LiteratureIngestResponse> {
-  return apiFetch<LiteratureIngestResponse>("/literature/ingest", {
+  return apiFetchUnchecked<LiteratureIngestResponse>("/literature/ingest", {
     method: "POST",
     body: JSON.stringify(paper),
   });

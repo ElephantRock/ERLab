@@ -1,4 +1,4 @@
-import { apiFetch } from "./client";
+import { apiFetchUnchecked } from "./client";
 
 // --- Types ---
 
@@ -49,23 +49,23 @@ export interface SharedIdeaResponse {
 // --- API Functions ---
 
 export function listComments(ideaId: number): Promise<CommentListResponse> {
-  return apiFetch(`/ideas/${ideaId}/comments`);
+  return apiFetchUnchecked(`/ideas/${ideaId}/comments`);
 }
 
 export function addComment(
   ideaId: number,
   req: CommentCreateRequest,
 ): Promise<CommentItem> {
-  return apiFetch(`/ideas/${ideaId}/comments`, {
+  return apiFetchUnchecked(`/ideas/${ideaId}/comments`, {
     method: "POST",
     body: JSON.stringify(req),
   });
 }
 
 export function createShareLink(ideaId: number): Promise<ShareLinkResponse> {
-  return apiFetch(`/ideas/${ideaId}/share`, { method: "POST" });
+  return apiFetchUnchecked(`/ideas/${ideaId}/share`, { method: "POST" });
 }
 
 export function getSharedIdea(token: string): Promise<SharedIdeaResponse> {
-  return apiFetch(`/shared/${token}`);
+  return apiFetchUnchecked(`/shared/${token}`);
 }

@@ -8,7 +8,7 @@
  *   GET /knowledge-graph/subgraph/{id}?depth=2
  */
 
-import { apiFetch } from "./client";
+import { apiFetchUnchecked } from "./client";
 
 // ── Types ─────────────────────────────────────────────────────────
 
@@ -66,7 +66,7 @@ export interface WorldModel {
 
 /** GET /knowledge-graph/stats → graph statistics */
 export function getGraphStats(): Promise<GraphStats> {
-  return apiFetch<GraphStats>("/knowledge-graph/stats");
+  return apiFetchUnchecked<GraphStats>("/knowledge-graph/stats");
 }
 
 /** GET /knowledge-graph/entities → entity list with optional filters (HB-02: max 100) */
@@ -80,22 +80,22 @@ export function getEntities(params?: {
   if (params?.search) query.set("search", params.search);
   if (params?.limit) query.set("limit", String(params.limit));
   const qs = query.toString();
-  return apiFetch<GraphEntity[]>(`/knowledge-graph/entities${qs ? `?${qs}` : ""}`);
+  return apiFetchUnchecked<GraphEntity[]>(`/knowledge-graph/entities${qs ? `?${qs}` : ""}`);
 }
 
 /** GET /knowledge-graph/entity/{id} → entity with relationships */
 export function getEntity(id: string): Promise<EntityDetail> {
-  return apiFetch<EntityDetail>(`/knowledge-graph/entity/${encodeURIComponent(id)}`);
+  return apiFetchUnchecked<EntityDetail>(`/knowledge-graph/entity/${encodeURIComponent(id)}`);
 }
 
 /** GET /knowledge-graph/subgraph/{id}?depth=N → connected subgraph */
 export function getSubgraph(id: string, depth = 2): Promise<Subgraph> {
-  return apiFetch<Subgraph>(
+  return apiFetchUnchecked<Subgraph>(
     `/knowledge-graph/subgraph/${encodeURIComponent(id)}?depth=${depth}`,
   );
 }
 
 /** GET /knowledge-graph/world-model → high-level world model summary */
 export function getWorldModel(): Promise<WorldModel> {
-  return apiFetch<WorldModel>("/knowledge-graph/world-model");
+  return apiFetchUnchecked<WorldModel>("/knowledge-graph/world-model");
 }

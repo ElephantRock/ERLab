@@ -189,7 +189,7 @@ describe("decodeEnsembleReview", () => {
 vi.mock("@/api/client", () => ({
   apiFetchJson: vi.fn(),
   apiFetchVoid: vi.fn(),
-  apiFetch: vi.fn(),
+  apiFetchUnchecked: vi.fn(),
   ApiError: class ApiError extends Error {
     constructor(public status: number, public detail: string) { super(detail); this.name = "ApiError"; }
   },

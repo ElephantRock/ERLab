@@ -1,6 +1,6 @@
 /** Auth API client (BATCH-28). */
 
-import { apiFetch } from "./client";
+import { apiFetchUnchecked } from "./client";
 
 // ── Types ──────────────────────────────────────────────────────────
 
@@ -23,7 +23,7 @@ export async function register(
   email: string,
   password: string,
 ): Promise<AuthResponse> {
-  return apiFetch<AuthResponse>("/auth/register", {
+  return apiFetchUnchecked<AuthResponse>("/auth/register", {
     method: "POST",
     body: JSON.stringify({ username, email, password }),
   });
@@ -33,32 +33,42 @@ export async function login(
   username: string,
   password: string,
 ): Promise<AuthResponse> {
-  return apiFetch<AuthResponse>("/auth/login", {
+  return apiFetchUnchecked<AuthResponse>("/auth/login", {
     method: "POST",
     body: JSON.stringify({ username, password }),
   });
 }
 
 export async function getMe(): Promise<AuthUser> {
-  return apiFetch<AuthUser>("/auth/me");
+  return apiFetchUnchecked<AuthUser>("/auth/me");
 }
 
 export async function listUsers(): Promise<AuthUser[]> {
-  return apiFetch<AuthUser[]>("/auth/users");
+  return apiFetchUnchecked<AuthUser[]>("/auth/users");
 }
 
-// F1.1a-1: forgotPassword migrates the raw fetch() in login.tsx through the
-// canonical transport (apiFetch). The endpoint is public (no auth header
-// needed) but routing through apiFetch gives consistent error normalization,
-// status handling, and future auth-policy flexibility.
-export interface ForgotPasswordResponse {
+// F1.1b: forgotPassword is migrated through a JsonContract with a runtime
+// decoder. The endpoint is public (no auth header needed) but the response
+// is validated — a malformed success (missing `message`) is a contract
+// failure, not an unchecked cast.
+import { callContract, decodeObject, decodeString, type JsonContract } from "./contracts/common";
+
+export interface ForgotPasswordResult {
   message: string;
   reset_token?: string;
 }
 
-export async function forgotPassword(email: string): Promise<ForgotPasswordResponse> {
-  return apiFetch<ForgotPasswordResponse>("/auth/forgot-password", {
-    method: "POST",
-    body: JSON.stringify({ email }),
-  });
+const forgotPasswordContract: JsonContract<ForgotPasswordResult> = {
+  id: "auth.forgotPassword",
+  method: "POST",
+  pathPattern: "/auth/forgot-password",
+  responseKind: "json",
+  decoder: decodeObject<ForgotPasswordResult>({
+    required: { message: decodeString },
+    optional: { reset_token: decodeString },
+  }),
+};
+
+export async function forgotPassword(email: string): Promise<ForgotPasswordResult> {
+  return callContract(forgotPasswordContract, { body: { email } });
 }

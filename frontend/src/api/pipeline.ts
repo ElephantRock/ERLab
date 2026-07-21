@@ -1,4 +1,4 @@
-import { apiFetch } from "./client";
+import { apiFetchUnchecked } from "./client";
 import type {
   PipelineRunRequest,
   PipelineRunSummary,
@@ -10,7 +10,7 @@ import type {
 } from "./types";
 
 export function triggerRun(req: PipelineRunRequest): Promise<TriggerRunResponse> {
-  return apiFetch("/pipeline/run", {
+  return apiFetchUnchecked("/pipeline/run", {
     method: "POST",
     body: JSON.stringify(req),
   });
@@ -26,23 +26,23 @@ export function listRuns(params?: {
   if (params?.offset) search.set("offset", String(params.offset));
   if (params?.session_id) search.set("session_id", params.session_id);
   const qs = search.toString();
-  return apiFetch(`/pipeline/runs${qs ? `?${qs}` : ""}`);
+  return apiFetchUnchecked(`/pipeline/runs${qs ? `?${qs}` : ""}`);
 }
 
 export function getRunDetail(id: number): Promise<PipelineRunDetail> {
-  return apiFetch(`/pipeline/runs/detail/${id}`);
+  return apiFetchUnchecked(`/pipeline/runs/detail/${id}`);
 }
 
 export function cancelRun(runId: string): Promise<{ status: string; run_id: string }> {
-  return apiFetch(`/pipeline/runs/${runId}`, { method: "DELETE" });
+  return apiFetchUnchecked(`/pipeline/runs/${runId}`, { method: "DELETE" });
 }
 
 export function getRunIdeas(runId: string): Promise<{ ideas: IdeaSummary[]; total: number }> {
-  return apiFetch(`/pipeline/runs/${runId}/ideas`);
+  return apiFetchUnchecked(`/pipeline/runs/${runId}/ideas`);
 }
 
 export function resumeRun(runId: string): Promise<{ status: string; run_id: string; ideas_count: number; gaps_count: number; proposals_count: number }> {
-  return apiFetch(`/pipeline/resume/${runId}`, {
+  return apiFetchUnchecked(`/pipeline/resume/${runId}`, {
     method: "POST",
   });
 }
@@ -70,11 +70,11 @@ export interface EstimateResponse {
 }
 
 export function getEstimate(strategy: string): Promise<EstimateResponse> {
-  return apiFetch(`/pipeline/estimate?strategy=${encodeURIComponent(strategy)}`);
+  return apiFetchUnchecked(`/pipeline/estimate?strategy=${encodeURIComponent(strategy)}`);
 }
 
 export function triggerAutonomous(req: AutonomousCycleRequest): Promise<AutonomousCycleResponse> {
-  return apiFetch("/pipeline/autonomous", {
+  return apiFetchUnchecked("/pipeline/autonomous", {
     method: "POST",
     body: JSON.stringify(req),
   });

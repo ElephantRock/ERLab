@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import {
   ApiError,
-  apiFetch,
+  apiFetchUnchecked,
   apiFetchBlob,
   apiFetchFormData,
   sseFetch,
@@ -63,7 +63,7 @@ describe("buildAuthHeaders", () => {
   });
 });
 
-describe("apiFetch", () => {
+describe("apiFetchUnchecked", () => {
   beforeEach(() => {
     localStorage.clear();
     vi.restoreAllMocks();
@@ -73,7 +73,7 @@ describe("apiFetch", () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValue(
       new Response(JSON.stringify({ id: 1, name: "test" }), { status: 200, headers: { "Content-Type": "application/json" } }),
     );
-    const data = await apiFetch<{ id: number; name: string }>("/test");
+    const data = await apiFetchUnchecked<{ id: number; name: string }>("/test");
     expect(data).toEqual({ id: 1, name: "test" });
   });
 
@@ -82,7 +82,7 @@ describe("apiFetch", () => {
       new Response(JSON.stringify({ detail: "Bad request" }), { status: 400 }),
     );
     try {
-      await apiFetch("/test");
+      await apiFetchUnchecked("/test");
       expect.unreachable("Should have thrown");
     } catch (err) {
       expect(err).toBeInstanceOf(ApiError);
@@ -91,9 +91,9 @@ describe("apiFetch", () => {
     }
   });
 
-  it("throws on 204 response (F1.1a seal: apiFetch delegates to apiFetchJson which rejects 204)", async () => {
+  it("throws on 204 response (F1.1a seal: apiFetchUnchecked delegates to apiFetchJson which rejects 204)", async () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response(null, { status: 204 }));
-    await expect(apiFetch("/test")).rejects.toThrow(/204/);
+    await expect(apiFetchUnchecked("/test")).rejects.toThrow(/204/);
   });
 
   it("injects X-API-Key header when key is in localStorage", async () => {
@@ -101,7 +101,7 @@ describe("apiFetch", () => {
     const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
       new Response(JSON.stringify({ ok: true }), { status: 200 }),
     );
-    await apiFetch("/test");
+    await apiFetchUnchecked("/test");
     const opts = fetchSpy.mock.calls[0][1] as RequestInit;
     expect((opts.headers as Record<string, string>)["X-API-Key"]).toBe("my-secret-key");
   });
@@ -110,7 +110,7 @@ describe("apiFetch", () => {
     const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
       new Response(JSON.stringify({ ok: true }), { status: 200 }),
     );
-    await apiFetch("/test");
+    await apiFetchUnchecked("/test");
     const opts = fetchSpy.mock.calls[0][1] as RequestInit;
     expect((opts.headers as Record<string, string>)["X-API-Key"]).toBeUndefined();
   });

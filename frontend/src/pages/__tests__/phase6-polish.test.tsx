@@ -57,7 +57,7 @@ vi.mock("@/api/literature", () => ({
 }));
 
 vi.mock("@/api/client", () => ({
-  apiFetch: vi.fn(),
+  apiFetchUnchecked: vi.fn(),
   apiFetchBlob: vi.fn(),
   testConnection: vi.fn().mockResolvedValue({ ok: true, version: "0.1.0" }),
   getDetailedStatus: vi.fn().mockResolvedValue(null),

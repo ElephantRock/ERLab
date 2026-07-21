@@ -1,4 +1,4 @@
-import { apiFetch } from "./client";
+import { apiFetchUnchecked } from "./client";
 import type { SessionListResponse } from "./types";
 
 /**
@@ -6,5 +6,5 @@ import type { SessionListResponse } from "./types";
  * GET /pipeline/runs/sessions
  */
 export function getSessionList(): Promise<SessionListResponse> {
-  return apiFetch("/pipeline/runs/sessions");
+  return apiFetchUnchecked("/pipeline/runs/sessions");
 }

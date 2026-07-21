@@ -12,7 +12,8 @@
     "lint": "eslint .",
     "lint:budget": "node scripts/check-lint-budget.cjs",
     "lint:fix": "eslint . --fix",
-    "ts:budget": "node scripts/check-ts-budget.cjs"
+    "ts:budget": "node scripts/check-ts-budget.cjs",
+    "api:budget": "node scripts/check-api-unchecked-budget.cjs"
   },
   "dependencies": {
     "@radix-ui/react-dialog": "^1.1.4",

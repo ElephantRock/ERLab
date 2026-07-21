@@ -2,14 +2,14 @@
  * F1.1 — Stage-model endpoint contracts (H1 repair).
  *
  * The pre-F1.1 `stage-model-selector.tsx` made three raw `fetch()` calls to
- * `/settings/models` (GET/PUT/DELETE), bypassing `apiFetch` entirely — no
+ * `/settings/models` (GET/PUT/DELETE), bypassing `apiFetchUnchecked` entirely — no
  * `X-API-Key`/JWT auth headers, no `ApiError` normalization, and using
  * `import.meta.env.VITE_API_URL` instead of `getApiUrl()` (ignoring the
  * user-configured base URL). This would silently fail in any deployment
  * with auth enabled.
  *
  * These contracts migrate all three operations through the canonical
- * `apiFetch` transport + runtime decoders.
+ * `apiFetchUnchecked` transport + runtime decoders.
  *
  * Backend source of truth: backend/api/routes/model_config.py
  *   GET    /settings/models  → {models, stages, assignments}

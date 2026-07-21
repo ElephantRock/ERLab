@@ -10,7 +10,7 @@ import { AuthProvider } from "@/contexts/auth-context";
 vi.mock("@/api/client", () => ({
   testConnection: vi.fn().mockResolvedValue({ ok: true, version: "0.1.0" }),
   getDetailedStatus: vi.fn().mockResolvedValue({ version: "0.1.0", provider: "openai", db_status: "ok" }),
-  apiFetch: vi.fn(),
+  apiFetchUnchecked: vi.fn(),
   getApiUrl: () => "",
   getApiKey: () => "",
   buildUrl: (path: string) => `/api/v1${path}`,

@@ -8,7 +8,7 @@
  *   POST /governance/{id}/deny        → {status, decision_id, amendment}
  */
 
-import { apiFetch } from "./client";
+import { apiFetchUnchecked } from "./client";
 
 // ── Types ────────────────────────────────────────────────────────
 
@@ -37,19 +37,19 @@ export interface DenyResponse {
 
 /** Fetch all pending governance approvals. */
 export function getPending(): Promise<PendingResponse> {
-  return apiFetch<PendingResponse>("/governance/pending");
+  return apiFetchUnchecked<PendingResponse>("/governance/pending");
 }
 
 /** Approve a pending governance decision by its ID. */
 export function approveDecision(id: string): Promise<ApproveResponse> {
-  return apiFetch<ApproveResponse>(`/governance/${id}/approve`, {
+  return apiFetchUnchecked<ApproveResponse>(`/governance/${id}/approve`, {
     method: "POST",
   });
 }
 
 /** Deny a pending governance decision with an optional amendment. */
 export function denyDecision(id: string, amendment?: string): Promise<DenyResponse> {
-  return apiFetch<DenyResponse>(`/governance/${id}/deny`, {
+  return apiFetchUnchecked<DenyResponse>(`/governance/${id}/deny`, {
     method: "POST",
     body: JSON.stringify({ amendment: amendment ?? null }),
   });
@@ -91,7 +91,7 @@ export function createGovernanceDecision(
   decision: GovernanceDecisionType,
   note?: string,
 ): Promise<GovernanceDecisionEntry> {
-  return apiFetch(`/ideas/${ideaId}/governance/decision`, {
+  return apiFetchUnchecked(`/ideas/${ideaId}/governance/decision`, {
     method: "POST",
     body: JSON.stringify({ decision, note: note ?? null }),
   });
@@ -100,11 +100,11 @@ export function createGovernanceDecision(
 export function listGovernanceDecisions(
   ideaId: number,
 ): Promise<GovernanceDecisionListResponse> {
-  return apiFetch(`/ideas/${ideaId}/governance/decisions`);
+  return apiFetchUnchecked(`/ideas/${ideaId}/governance/decisions`);
 }
 
 export function getGovernanceTimeline(
   ideaId: number,
 ): Promise<TimelineResponse> {
-  return apiFetch(`/ideas/${ideaId}/governance/timeline`);
+  return apiFetchUnchecked(`/ideas/${ideaId}/governance/timeline`);
 }

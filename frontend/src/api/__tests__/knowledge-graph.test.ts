@@ -6,13 +6,13 @@ import type {
   EntityDetail,
   Subgraph,
 } from "@/api/knowledge-graph";
-import { apiFetch } from "@/api/client";
+import { apiFetchUnchecked } from "@/api/client";
 
 vi.mock("@/api/client", () => ({
-  apiFetch: vi.fn(),
+  apiFetchUnchecked: vi.fn(),
 }));
 
-const mockApiFetch = vi.mocked(apiFetch);
+const mockApiFetch = vi.mocked(apiFetchUnchecked);
 
 describe("BATCH-25/TASK-02: Knowledge Graph API Client", () => {
   beforeEach(() => {

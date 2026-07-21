@@ -79,7 +79,7 @@ vi.mock("@/api/auth", () => ({
 vi.mock("@/api/client", () => ({
   testConnection: vi.fn().mockResolvedValue({ ok: true }),
   getDetailedStatus: vi.fn().mockResolvedValue(null),
-  apiFetch: vi.fn().mockResolvedValue({ clusters: [], total_papers: 0 }),
+  apiFetchUnchecked: vi.fn().mockResolvedValue({ clusters: [], total_papers: 0 }),
   getApiUrl: () => "",
   getApiKey: () => "",
   buildUrl: (p: string) => p,

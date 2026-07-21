@@ -5,7 +5,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 // Mock the client module
 const mockFetch = vi.fn();
 vi.mock("@/api/client", () => ({
-  apiFetch: (...args: unknown[]) => mockFetch(...args),
+  apiFetchUnchecked: (...args: unknown[]) => mockFetch(...args),
 }));
 
 import { register, login, getMe, listUsers } from "@/api/auth";

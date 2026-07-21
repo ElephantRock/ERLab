@@ -18,7 +18,7 @@ const mockGetDetailedStatus = vi.fn();
 vi.mock("@/api/client", () => ({
   testConnection: (...args: unknown[]) => mockTestConnection(...args),
   getDetailedStatus: (...args: unknown[]) => mockGetDetailedStatus(...args),
-  apiFetch: vi.fn(),
+  apiFetchUnchecked: vi.fn(),
   getApiUrl: () => "",
   getApiKey: () => "",
   buildUrl: (path: string) => `/api/v1${path}`,

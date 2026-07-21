@@ -10,7 +10,7 @@
  *   GET /costs/run/{id}    → {run_id, summary, by_provider, by_stage}
  */
 
-import { apiFetch } from "./client";
+import { apiFetchUnchecked } from "./client";
 
 // ── Types ────────────────────────────────────────────────────────
 
@@ -46,21 +46,21 @@ export interface RunCostBreakdown {
 // ── API Functions ────────────────────────────────────────────────
 
 export function getCostSummary(): Promise<CostSummary> {
-  return apiFetch<CostSummary>("/costs/summary");
+  return apiFetchUnchecked<CostSummary>("/costs/summary");
 }
 
 export function getCostByProvider(): Promise<ProviderBreakdown> {
-  return apiFetch<ProviderBreakdown>("/costs/by-provider");
+  return apiFetchUnchecked<ProviderBreakdown>("/costs/by-provider");
 }
 
 export function getCostByStage(): Promise<StageBreakdown> {
-  return apiFetch<StageBreakdown>("/costs/by-stage");
+  return apiFetchUnchecked<StageBreakdown>("/costs/by-stage");
 }
 
 export function getCostByModel(): Promise<ModelBreakdown> {
-  return apiFetch<ModelBreakdown>("/costs/by-model");
+  return apiFetchUnchecked<ModelBreakdown>("/costs/by-model");
 }
 
 export function getRunCostBreakdown(runId: string): Promise<RunCostBreakdown> {
-  return apiFetch<RunCostBreakdown>(`/costs/run/${runId}`);
+  return apiFetchUnchecked<RunCostBreakdown>(`/costs/run/${runId}`);
 }

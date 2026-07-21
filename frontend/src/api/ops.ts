@@ -1,6 +1,6 @@
 /** Ops Dashboard API client. */
 
-import { apiFetch } from "./client";
+import { apiFetchUnchecked } from "./client";
 
 export interface OpsDashboard {
   window: { days: number; from: string; to: string };
@@ -57,5 +57,5 @@ export function getOpsDashboard(
   if (days) params.set("days", String(days));
   if (limit) params.set("limit", String(limit));
   const qs = params.toString();
-  return apiFetch(`/ops/dashboard${qs ? `?${qs}` : ""}`);
+  return apiFetchUnchecked(`/ops/dashboard${qs ? `?${qs}` : ""}`);
 }

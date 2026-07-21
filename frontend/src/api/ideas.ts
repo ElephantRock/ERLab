@@ -1,4 +1,4 @@
-import { apiFetch } from "./client";
+import { apiFetchUnchecked } from "./client";
 import type {
   IdeaListResponse,
   IdeaDetail,
@@ -25,18 +25,18 @@ export function listIdeas(params?: {
   if (params?.limit) search.set("limit", String(params.limit));
   if (params?.offset) search.set("offset", String(params.offset));
   const qs = search.toString();
-  return apiFetch(`/ideas/${qs ? `?${qs}` : ""}`);
+  return apiFetchUnchecked(`/ideas/${qs ? `?${qs}` : ""}`);
 }
 
 export function getIdea(id: number): Promise<{ idea: IdeaDetail }> {
-  return apiFetch(`/ideas/${id}`);
+  return apiFetchUnchecked(`/ideas/${id}`);
 }
 
 export function submitFeedback(
   id: number,
   req: IdeaFeedbackRequest,
 ): Promise<{ id: number; user_rating: number; user_notes: string | null }> {
-  return apiFetch(`/ideas/${id}/feedback`, {
+  return apiFetchUnchecked(`/ideas/${id}/feedback`, {
     method: "POST",
     body: JSON.stringify(req),
   });
@@ -45,7 +45,7 @@ export function submitFeedback(
 export function refineIdea(
   id: number,
 ): Promise<{ id: number; novelty_score: number; feasibility_score: number; proposal_title: string }> {
-  return apiFetch(`/ideas/${id}/refine`, { method: "POST" });
+  return apiFetchUnchecked(`/ideas/${id}/refine`, { method: "POST" });
 }
 
 // --- Section refinement (Release 2) ---
@@ -56,7 +56,7 @@ export function refineSection(
   expectedCurrentHash: string,
   triggerDetail?: Record<string, unknown>,
 ): Promise<SectionRefinementResponse> {
-  return apiFetch(`/ideas/${ideaId}/sections/${sectionKey}/refine`, {
+  return apiFetchUnchecked(`/ideas/${ideaId}/sections/${sectionKey}/refine`, {
     method: "POST",
     body: JSON.stringify({
       expected_current_hash: expectedCurrentHash,
@@ -71,7 +71,7 @@ export function restoreSection(
   revisionId: number,
   expectedCurrentHash: string,
 ): Promise<SectionRefinementResponse> {
-  return apiFetch(`/ideas/${ideaId}/sections/${sectionKey}/restore/${revisionId}`, {
+  return apiFetchUnchecked(`/ideas/${ideaId}/sections/${sectionKey}/restore/${revisionId}`, {
     method: "POST",
     body: JSON.stringify({ expected_current_hash: expectedCurrentHash }),
   });
@@ -81,5 +81,5 @@ export function getSectionRevisions(
   ideaId: number,
   sectionKey: string,
 ): Promise<RevisionHistoryResponse> {
-  return apiFetch(`/ideas/${ideaId}/sections/${sectionKey}/revisions`);
+  return apiFetchUnchecked(`/ideas/${ideaId}/sections/${sectionKey}/revisions`);
 }

@@ -18,10 +18,10 @@ export function StageModelSelector({ value, onChange }: StageModelSelectorProps)
   const [error, setError] = useState<string | null>(null);
 
   // Fetch model config through the canonical typed client (F1.1 H1).
-  // Previously this was a raw fetch() that bypassed apiFetch's auth-header
+  // Previously this was a raw fetch() that bypassed apiFetchUnchecked's auth-header
   // injection (X-API-Key / JWT) and ApiError normalization — it would
   // silently fail in any deployment with auth enabled. The typed client
-  // routes through apiFetch + a runtime decoder.
+  // routes through apiFetchUnchecked + a runtime decoder.
   const resource = useResource<StageModelConfig>(
     ["settings", "models"],
     () => getStageModelConfig(),

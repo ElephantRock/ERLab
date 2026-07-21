@@ -56,11 +56,11 @@ vi.mock("@/components/gaps/cluster-scatter", () => ({
 }));
 
 vi.mock("@/api/client", () => ({
-  apiFetch: vi.fn(),
+  apiFetchUnchecked: vi.fn(),
 }));
 
 import { listGaps } from "@/api/gaps";
-import { apiFetch } from "@/api/client";
+import { apiFetchUnchecked } from "@/api/client";
 
 function createQueryClient() {
   return new QueryClient({
@@ -108,7 +108,7 @@ beforeEach(() => {
 describe("Cluster click → filter behavior", () => {
   it("switches to gaps tab and shows filter badge when cluster clicked", async () => {
     vi.mocked(listGaps).mockResolvedValue(sampleGaps);
-    vi.mocked(apiFetch).mockResolvedValue(mockClusters);
+    vi.mocked(apiFetchUnchecked).mockResolvedValue(mockClusters);
 
     renderGapsExplorer();
 
@@ -132,7 +132,7 @@ describe("Cluster click → filter behavior", () => {
 
   it("clears cluster filter when Clear button clicked", async () => {
     vi.mocked(listGaps).mockResolvedValue(sampleGaps);
-    vi.mocked(apiFetch).mockResolvedValue(mockClusters);
+    vi.mocked(apiFetchUnchecked).mockResolvedValue(mockClusters);
 
     renderGapsExplorer();
 
@@ -153,7 +153,7 @@ describe("Cluster click → filter behavior", () => {
 
   it("toggles cluster filter off when same cluster clicked again", async () => {
     vi.mocked(listGaps).mockResolvedValue(sampleGaps);
-    vi.mocked(apiFetch).mockResolvedValue(mockClusters);
+    vi.mocked(apiFetchUnchecked).mockResolvedValue(mockClusters);
 
     renderGapsExplorer();
 

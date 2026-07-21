@@ -1,4 +1,4 @@
-import { apiFetch } from "./client";
+import { apiFetchUnchecked } from "./client";
 
 // ── Catalog (GET /settings/catalog) ──────────────────────────────
 
@@ -63,11 +63,11 @@ export interface AssignmentsResponse {
 // ── API Functions ────────────────────────────────────────────────
 
 export function getCatalog(): Promise<CatalogResponse> {
-  return apiFetch<CatalogResponse>("/settings/catalog");
+  return apiFetchUnchecked<CatalogResponse>("/settings/catalog");
 }
 
 export function getAssignments(): Promise<AssignmentsResponse> {
-  return apiFetch<AssignmentsResponse>("/settings/assignments");
+  return apiFetchUnchecked<AssignmentsResponse>("/settings/assignments");
 }
 
 // ── Stage Metadata (GET /settings/stages) ──────────────────────
@@ -85,7 +85,7 @@ export interface StagesResponse {
 }
 
 export function getStages(): Promise<StagesResponse> {
-  return apiFetch<StagesResponse>("/settings/stages");
+  return apiFetchUnchecked<StagesResponse>("/settings/stages");
 }
 
 // ── Certification (GET /settings/certification) ─────────────────
@@ -104,7 +104,7 @@ export interface CertificationResponse {
 }
 
 export function getCertification(): Promise<CertificationResponse> {
-  return apiFetch<CertificationResponse>("/settings/certification");
+  return apiFetchUnchecked<CertificationResponse>("/settings/certification");
 }
 
 // ── Model Overrides (GET/PUT/DELETE /settings/overrides) ───────
@@ -135,7 +135,7 @@ export interface OverrideValidateResponse {
 }
 
 export function getOverrides(): Promise<OverridesResponse> {
-  return apiFetch<OverridesResponse>("/settings/overrides");
+  return apiFetchUnchecked<OverridesResponse>("/settings/overrides");
 }
 
 export function updateOverrides(
@@ -143,7 +143,7 @@ export function updateOverrides(
   dryRun?: boolean,
 ): Promise<OverrideUpdateResponse> {
   const qs = dryRun ? "?dry_run=true" : "";
-  return apiFetch<OverrideUpdateResponse>(`/settings/overrides${qs}`, {
+  return apiFetchUnchecked<OverrideUpdateResponse>(`/settings/overrides${qs}`, {
     method: "PUT",
     body: JSON.stringify(body),
   });
@@ -152,16 +152,16 @@ export function updateOverrides(
 export function validateOverrides(
   body: Record<string, string>,
 ): Promise<OverrideValidateResponse> {
-  return apiFetch<OverrideValidateResponse>("/settings/overrides/validate", {
+  return apiFetchUnchecked<OverrideValidateResponse>("/settings/overrides/validate", {
     method: "POST",
     body: JSON.stringify(body),
   });
 }
 
 export function removeOverride(stage: string): Promise<{ message: string; overrides: Record<string, string> }> {
-  return apiFetch(`/settings/overrides/${stage}`, { method: "DELETE" });
+  return apiFetchUnchecked(`/settings/overrides/${stage}`, { method: "DELETE" });
 }
 
 export function clearAllOverrides(): Promise<{ message: string; overrides: Record<string, string> }> {
-  return apiFetch("/settings/overrides", { method: "DELETE" });
+  return apiFetchUnchecked("/settings/overrides", { method: "DELETE" });
 }

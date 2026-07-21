@@ -8,12 +8,12 @@
  * ResearchGap — see contracts/gaps.ts for why (the backend returns only
  * {id, user_rating, user_notes} / {id, status}).
  *
- * listGaps remains on the pre-contract apiFetch path for now (it's a
+ * listGaps remains on the pre-contract apiFetchUnchecked path for now (it's a
  * lower-risk read; migration tracks under the F1.1 scope-controlled
  * ratchet). It will move to the contract layer when its decoder is added.
  */
 
-import { apiFetch } from "./client";
+import { apiFetchUnchecked } from "./client";
 import type { GapListResponse } from "./types";
 import {
   getGap as getGapViaContract,
@@ -51,7 +51,7 @@ export function listGaps(params?: {
   if (params?.sort_by) search.set("sort_by", params.sort_by);
   if (params?.sort_order) search.set("sort_order", params.sort_order);
   const qs = search.toString();
-  return apiFetch(`/gaps/${qs ? `?${qs}` : ""}`);
+  return apiFetchUnchecked(`/gaps/${qs ? `?${qs}` : ""}`);
 }
 
 export const getGap = getGapViaContract;

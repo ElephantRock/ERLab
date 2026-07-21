@@ -27,7 +27,7 @@ vi.mock("@/api/client", () => ({
   getApiKey: () => "",
   buildUrl: (p: string) => p,
   buildAuthHeaders: () => ({}),
-  apiFetch: vi.fn(),
+  apiFetchUnchecked: vi.fn(),
 }));
 
 vi.mock("@/api/autonomous", () => ({

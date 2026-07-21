@@ -1,13 +1,13 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { searchLiterature, ingestPaper } from "@/api/literature";
 import type { Paper, SearchResponse, LiteratureIngestResponse } from "@/api/literature";
-import { apiFetch } from "@/api/client";
+import { apiFetchUnchecked } from "@/api/client";
 
 vi.mock("@/api/client", () => ({
-  apiFetch: vi.fn(),
+  apiFetchUnchecked: vi.fn(),
 }));
 
-const mockApiFetch = vi.mocked(apiFetch);
+const mockApiFetch = vi.mocked(apiFetchUnchecked);
 
 const samplePaper: Paper = {
   id: "ss-abc123",

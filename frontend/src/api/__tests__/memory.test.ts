@@ -1,13 +1,13 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { getMemoryStats, recallMemories, deleteMemory } from "@/api/memory";
 import type { MemoryStats, MemoryRecallResponse, MemoryDeleteResponse } from "@/api/memory";
-import { apiFetch } from "@/api/client";
+import { apiFetchUnchecked } from "@/api/client";
 
 vi.mock("@/api/client", () => ({
-  apiFetch: vi.fn(),
+  apiFetchUnchecked: vi.fn(),
 }));
 
-const mockApiFetch = vi.mocked(apiFetch);
+const mockApiFetch = vi.mocked(apiFetchUnchecked);
 
 describe("BATCH-19/TASK-01: Memory API Client", () => {
   beforeEach(() => {

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { apiFetch, sseFetch } from "@/api/client";
+import { apiFetchUnchecked, sseFetch } from "@/api/client";
 import { PIPELINE_STAGES } from "@/lib/constants";
 import type { PipelineRunDetail, PipelineRunSummary } from "@/api/types";
 
@@ -132,10 +132,10 @@ export function usePipelineProgress(runId: string | null) {
     try {
       let data: PipelineRunDetail | null = null;
       try {
-        data = await apiFetch<PipelineRunDetail>(`/pipeline/runs/detail/${runId}`);
+        data = await apiFetchUnchecked<PipelineRunDetail>(`/pipeline/runs/detail/${runId}`);
       } catch {
         try {
-          const list = await apiFetch<{ runs: PipelineRunSummary[]; total: number }>(`/pipeline/runs?limit=5`);
+          const list = await apiFetchUnchecked<{ runs: PipelineRunSummary[]; total: number }>(`/pipeline/runs?limit=5`);
           data = (list.runs.find((r) => String(r.id) === runId) as PipelineRunDetail | undefined) ?? null;
         } catch {
           // Both failed

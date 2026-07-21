@@ -5,13 +5,13 @@ import type {
   ApproveResponse,
   DenyResponse,
 } from "@/api/governance";
-import { apiFetch } from "@/api/client";
+import { apiFetchUnchecked } from "@/api/client";
 
 vi.mock("@/api/client", () => ({
-  apiFetch: vi.fn(),
+  apiFetchUnchecked: vi.fn(),
 }));
 
-const mockApiFetch = vi.mocked(apiFetch);
+const mockApiFetch = vi.mocked(apiFetchUnchecked);
 
 describe("BATCH-20/TASK-01: Governance API Client", () => {
   beforeEach(() => {

@@ -28,7 +28,7 @@ vi.mock("@/api/pipeline", () => ({
 
 vi.mock("@/api/client", () => ({
   apiFetchBlob: vi.fn(),
-  apiFetch: vi.fn(),
+  apiFetchUnchecked: vi.fn(),
   getApiUrl: () => "",
   getApiKey: () => "",
   buildUrl: (p: string) => p,

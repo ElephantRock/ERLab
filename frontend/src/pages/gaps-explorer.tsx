@@ -25,7 +25,7 @@ import { GitBranch, ChevronLeft, ChevronRight, Search } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { ClusterScatterPlot } from "@/components/gaps/cluster-scatter";
 import { useQuery } from "@tanstack/react-query";
-import { apiFetch } from "@/api/client";
+import { apiFetchUnchecked } from "@/api/client";
 
 const SORT_OPTIONS = [
   { value: "confidence", label: "Confidence" },
@@ -72,7 +72,7 @@ export default function GapsExplorer() {
   // allows this for freshness/conditional queries with a cited reason).
   const { data: clusterData } = useQuery({
     queryKey: ["gap-clusters"],
-    queryFn: () => apiFetch("/gaps/clusters") as Promise<{ clusters: unknown[]; total_papers: number }>,
+    queryFn: () => apiFetchUnchecked("/gaps/clusters") as Promise<{ clusters: unknown[]; total_papers: number }>,
     enabled: activeTab === "clusters",
   });
 

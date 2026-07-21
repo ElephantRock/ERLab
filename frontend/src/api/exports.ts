@@ -1,4 +1,4 @@
-import { apiFetch, apiFetchBlob } from "./client";
+import { apiFetchUnchecked, apiFetchBlob } from "./client";
 
 // --- Export ---
 
@@ -44,7 +44,7 @@ export interface PluginListResponse {
 }
 
 export function listPlugins(): Promise<PluginListResponse> {
-  return apiFetch("/plugins/");
+  return apiFetchUnchecked("/plugins/");
 }
 
 export function installPlugin(req: {
@@ -52,7 +52,7 @@ export function installPlugin(req: {
   version?: string;
   description?: string;
 }): Promise<Plugin> {
-  return apiFetch("/plugins/install", {
+  return apiFetchUnchecked("/plugins/install", {
     method: "POST",
     body: JSON.stringify(req),
   });

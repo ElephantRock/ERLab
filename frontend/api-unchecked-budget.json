@@ -1,0 +1,101 @@
+{
+  "_comment": "Unchecked apiFetchUnchecked<T> caller budget (F1.1b ratchet). The guard (scripts/check-api-unchecked-budget.cjs) compares against this file. The budget may only DECREASE — migrate callers to the contract layer (callContract) or apiFetchJson with a decoder.",
+  "_frozen_at": "a27fd77 (F1.1a seal)",
+  "total_callers": 78,
+  "caller_files": 23,
+  "callers": [
+    {
+      "file": "src/api/auth.ts",
+      "count": 4
+    },
+    {
+      "file": "src/api/autonomous.ts",
+      "count": 6
+    },
+    {
+      "file": "src/api/client.ts",
+      "count": 1
+    },
+    {
+      "file": "src/api/collaboration.ts",
+      "count": 4
+    },
+    {
+      "file": "src/api/costs.ts",
+      "count": 5
+    },
+    {
+      "file": "src/api/exports.ts",
+      "count": 2
+    },
+    {
+      "file": "src/api/gaps.ts",
+      "count": 1
+    },
+    {
+      "file": "src/api/governance.ts",
+      "count": 6
+    },
+    {
+      "file": "src/api/ideas.ts",
+      "count": 7
+    },
+    {
+      "file": "src/api/knowledge-graph.ts",
+      "count": 5
+    },
+    {
+      "file": "src/api/knowledge.ts",
+      "count": 2
+    },
+    {
+      "file": "src/api/literature.ts",
+      "count": 2
+    },
+    {
+      "file": "src/api/memory.ts",
+      "count": 3
+    },
+    {
+      "file": "src/api/notifications.ts",
+      "count": 3
+    },
+    {
+      "file": "src/api/ops.ts",
+      "count": 1
+    },
+    {
+      "file": "src/api/pipeline.ts",
+      "count": 8
+    },
+    {
+      "file": "src/api/search.ts",
+      "count": 1
+    },
+    {
+      "file": "src/api/sessions.ts",
+      "count": 1
+    },
+    {
+      "file": "src/api/settings.ts",
+      "count": 9
+    },
+    {
+      "file": "src/api/status.ts",
+      "count": 1
+    },
+    {
+      "file": "src/api/traces.ts",
+      "count": 3
+    },
+    {
+      "file": "src/hooks/usePipelineProgress.ts",
+      "count": 2
+    },
+    {
+      "file": "src/pages/gaps-explorer.tsx",
+      "count": 1
+    }
+  ],
+  "_updated": "2026-07-21T12:08:05.854Z"
+}

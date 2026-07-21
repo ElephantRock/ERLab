@@ -1,4 +1,4 @@
-import { apiFetch } from "./client";
+import { apiFetchUnchecked } from "./client";
 import type { AutonomousCycleResponse } from "./types";
 
 /** Autonomous cycle history entry. */
@@ -16,14 +16,14 @@ export interface AutonomousHistoryResponse {
 
 /** Stop a running autonomous cycle. HB-01: Requires explicit cycle_id. */
 export function stopAutonomousCycle(cycleId: string): Promise<{ status: string; cycle_id: string }> {
-  return apiFetch(`/pipeline/autonomous/stop?cycle_id=${encodeURIComponent(cycleId)}`, {
+  return apiFetchUnchecked(`/pipeline/autonomous/stop?cycle_id=${encodeURIComponent(cycleId)}`, {
     method: "POST",
   });
 }
 
 /** Get autonomous cycle history. */
 export function getAutonomousHistory(): Promise<AutonomousHistoryResponse> {
-  return apiFetch("/pipeline/autonomous/history");
+  return apiFetchUnchecked("/pipeline/autonomous/history");
 }
 
 // F1.1 H2: getConsciousnessState() and the ConsciousnessState /
@@ -48,7 +48,7 @@ export interface EvolutionStatus {
 
 /** Get evolution status from the backend. */
 export function getEvolutionStatus(): Promise<EvolutionStatus> {
-  return apiFetch("/status/evolution");
+  return apiFetchUnchecked("/status/evolution");
 }
 
 /** Scheduler status response. */
@@ -60,17 +60,17 @@ export interface SchedulerStatus {
 
 /** Start the autonomous pipeline scheduler. */
 export function startScheduler(): Promise<{ status: string; interval_seconds?: number }> {
-  return apiFetch("/pipeline/scheduler/start", { method: "POST" });
+  return apiFetchUnchecked("/pipeline/scheduler/start", { method: "POST" });
 }
 
 /** Stop the autonomous pipeline scheduler. */
 export function stopScheduler(): Promise<{ status: string }> {
-  return apiFetch("/pipeline/scheduler/stop", { method: "POST" });
+  return apiFetchUnchecked("/pipeline/scheduler/stop", { method: "POST" });
 }
 
 /** Get scheduler status. */
 export function getSchedulerStatus(): Promise<SchedulerStatus> {
-  return apiFetch("/pipeline/scheduler/status");
+  return apiFetchUnchecked("/pipeline/scheduler/status");
 }
 
 /** Re-export triggerAutonomous from pipeline.ts for convenience. */

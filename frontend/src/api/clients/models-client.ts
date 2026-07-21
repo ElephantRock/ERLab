@@ -2,8 +2,8 @@
  * F1.1 — Typed client for the stage-model endpoint contracts (H1 repair).
  *
  * Replaces the three raw `fetch()` calls in stage-model-selector.tsx with
- * canonical `apiFetch`-transported, decoder-validated operations. Auth
- * headers (X-API-Key / JWT) are now injected by apiFetch's
+ * canonical `apiFetchUnchecked`-transported, decoder-validated operations. Auth
+ * headers (X-API-Key / JWT) are now injected by apiFetchUnchecked's
  * buildAuthHeaders, and failures normalize through ApiError / ApiContractError.
  */
 

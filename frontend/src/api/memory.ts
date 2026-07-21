@@ -11,7 +11,7 @@
  * with a broad query (e.g., "*"). Memory types include: semantic, episodic, procedural.
  */
 
-import { apiFetch } from "./client";
+import { apiFetchUnchecked } from "./client";
 
 // ── Types ────────────────────────────────────────────────────────
 
@@ -42,7 +42,7 @@ export interface MemoryDeleteResponse {
 // ── API Functions ────────────────────────────────────────────────
 
 export function getMemoryStats(): Promise<MemoryStats> {
-  return apiFetch<MemoryStats>("/memory/stats");
+  return apiFetchUnchecked<MemoryStats>("/memory/stats");
 }
 
 export function recallMemories(
@@ -56,11 +56,11 @@ export function recallMemories(
   if (params?.top_k !== undefined) {
     searchParams.set("top_k", String(params.top_k));
   }
-  return apiFetch<MemoryRecallResponse>(`/memory/recall?${searchParams.toString()}`);
+  return apiFetchUnchecked<MemoryRecallResponse>(`/memory/recall?${searchParams.toString()}`);
 }
 
 export function deleteMemory(id: string): Promise<MemoryDeleteResponse> {
-  return apiFetch<MemoryDeleteResponse>(`/memory/${id}`, {
+  return apiFetchUnchecked<MemoryDeleteResponse>(`/memory/${id}`, {
     method: "DELETE",
   });
 }

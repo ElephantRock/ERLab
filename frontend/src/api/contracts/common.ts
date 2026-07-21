@@ -1,17 +1,17 @@
 /**
  * F1.1 — Canonical endpoint-contract primitives.
  *
- * The transport layer (apiFetch in src/api/client.ts) owns HTTP concerns:
+ * The transport layer (apiFetchUnchecked in src/api/client.ts) owns HTTP concerns:
  * auth headers, method, body, status handling, JSON/text/empty-body
  * transport, normalized network/HTTP errors. It MUST NOT claim that an
  * arbitrary JSON payload satisfies a domain interface.
  *
- * This module layers on top of apiFetch to add runtime response validation.
+ * This module layers on top of apiFetchUnchecked to add runtime response validation.
  * The flow is:
  *
  *   page/component
  *     → typed endpoint client  (clients/*-client.ts)
- *     → apiFetch transport     (client.ts)
+ *     → apiFetchUnchecked transport     (client.ts)
  *     → runtime decoder        (here + contracts/*)
  *     → validated domain value
  *
@@ -384,7 +384,7 @@ export interface ContractCallOptions {
 
 /**
  * Extract a request-correlation identifier from a fetch Response, if the
- * backend provides one (X-Request-ID). Currently unused by apiFetch (which
+ * backend provides one (X-Request-ID). Currently unused by apiFetchUnchecked (which
  * doesn't expose headers) — retained here for F1.6 error observability when
  * the transport is extended to surface response headers.
  */

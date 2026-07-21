@@ -1,4 +1,4 @@
-import { apiFetch } from "./client";
+import { apiFetchUnchecked } from "./client";
 import type { GlobalSearchResponse } from "./types";
 
 export function globalSearch(
@@ -9,5 +9,5 @@ export function globalSearch(
   if (types && types.length > 0) {
     params.set("types", types.join(","));
   }
-  return apiFetch(`/search/?${params.toString()}`);
+  return apiFetchUnchecked(`/search/?${params.toString()}`);
 }

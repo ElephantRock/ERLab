@@ -8,7 +8,7 @@
  *   GET /traces/metrics     → {p50_ms, p99_ms, error_rate}
  */
 
-import { apiFetch } from "./client";
+import { apiFetchUnchecked } from "./client";
 
 // ── Types ────────────────────────────────────────────────────────
 
@@ -38,13 +38,13 @@ export interface TraceMetrics {
 // ── API Functions ────────────────────────────────────────────────
 
 export function getTraceSummary(): Promise<TraceSummary> {
-  return apiFetch<TraceSummary>("/traces/summary");
+  return apiFetchUnchecked<TraceSummary>("/traces/summary");
 }
 
 export function getTrace(traceId: string): Promise<TraceDetail> {
-  return apiFetch<TraceDetail>(`/traces/trace/${traceId}`);
+  return apiFetchUnchecked<TraceDetail>(`/traces/trace/${traceId}`);
 }
 
 export function getTraceMetrics(): Promise<TraceMetrics> {
-  return apiFetch<TraceMetrics>("/traces/metrics");
+  return apiFetchUnchecked<TraceMetrics>("/traces/metrics");
 }

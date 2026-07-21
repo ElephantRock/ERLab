@@ -8,20 +8,20 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { getAutonomousHistory, stopAutonomousCycle } from "@/api/autonomous";
-import { apiFetch } from "@/api/client";
+import { apiFetchUnchecked } from "@/api/client";
 import { CycleProgress } from "@/components/autonomous/cycle-progress";
 // F1.1 H2: ConsciousnessStateBadge import removed — the component was
 // deleted (it rendered a badge backed by a non-existent backend endpoint).
 // The ConsciousnessStateBadge describe block below was also removed.
 import type { AutonomousCycleHistoryEntry } from "@/api/autonomous";
 
-// ── Mock apiFetch ───────────────────────────────────────────────
+// ── Mock apiFetchUnchecked ───────────────────────────────────────────────
 
 vi.mock("@/api/client", () => ({
-  apiFetch: vi.fn(),
+  apiFetchUnchecked: vi.fn(),
 }));
 
-const mockApiFetch = vi.mocked(apiFetch);
+const mockApiFetch = vi.mocked(apiFetchUnchecked);
 
 // ── TEST-26-02-01: API client calls correct endpoints ───────────
 
