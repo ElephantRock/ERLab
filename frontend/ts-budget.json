@@ -1,0 +1,7 @@
+{
+  "_comment": "TypeScript error baseline (F0.5 ratchet). The guard (scripts/check-ts-budget.cjs) compares against this file. The budget may only DECREASE — run `npm run ts:budget -- --update-baseline` after fixing errors to lower it. Hand-edit only with a TS-EXCEPTION comment explaining why.",
+  "_frozen_at": "01f4bb2 (F0 recovery: 101 -> 0 errors)",
+  "total": 0,
+  "byCode": {},
+  "_updated": "2026-07-21T00:00:00.000Z"
+}

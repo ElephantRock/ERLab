@@ -11,7 +11,8 @@
     "test:watch": "vitest",
     "lint": "eslint .",
     "lint:budget": "node scripts/check-lint-budget.cjs",
-    "lint:fix": "eslint . --fix"
+    "lint:fix": "eslint . --fix",
+    "ts:budget": "node scripts/check-ts-budget.cjs"
   },
   "dependencies": {
     "@radix-ui/react-dialog": "^1.1.4",

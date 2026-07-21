@@ -69,6 +69,13 @@ jobs:
       - name: Lint
         run: npm run lint
 
+      - name: TypeScript error-budget ratchet (F0.5)
+        # Explicit TS-error gate. Fails with a clear delta message if the
+        # count rises above the frozen baseline (0 as of 01f4bb2). This is
+        # redundant with `npm run build` below but produces a much clearer
+        # regression signal and refuses to silently weaken.
+        run: npm run ts:budget
+
       - name: Build
         run: npm run build
 
