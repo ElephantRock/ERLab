@@ -1,0 +1,107 @@
+{
+  "_wave": "F1.0",
+  "_kind": "runtime_contract_audit",
+  "_audit_at_commit": "3bcb620",
+  "_audit_method": "read-only trace of router, pages, api modules, backend cross-check",
+  "headline": {
+    "production_routes": 20,
+    "production_pages": 20,
+    "api_client_functions": 76,
+    "functions_via_central_apiFetch": 75,
+    "functions_via_raw_fetch": 1,
+    "raw_fetch_intentional_health_probe": 1,
+    "api_type_declarations_approx": 110,
+    "generated_openapi_types": 0,
+    "ad_hoc_fetch_in_src_api_star": 0,
+    "json_parse_as_X_on_api_responses": 0
+  },
+  "architecture": {
+    "central_fetch_wrapper": "src/api/client.ts:57 apiFetch",
+    "auth_header_injection": "src/api/client.ts:42 buildAuthHeaders (X-API-Key, Authorization Bearer JWT)",
+    "response_validation": "none (res.json() cast to T at compile time only)",
+    "error_normalization": "partial — normalizes 3 backend error shapes into ApiError; res.json() failure falls back to statusText",
+    "_204_handling": "returns undefined as T (unsafe — src/api/client.ts:79)",
+    "resource_state_pattern": "src/lib/useResource.ts discriminated ResourceState union + DataView component",
+    "pattern_adoption": "mixed — pages inconsistently use useResource / useQuery / manual useEffect",
+    "typed_client_layer": "missing — types in src/api/types.ts are compile-time only; no runtime schema validation",
+    "openapi_codegen": "none configured"
+  },
+  "findings": {
+    "high": [
+      {"id": "H1", "summary": "stage-model-selector raw fetch bypasses apiFetch + auth headers", "location": "components/pipeline/stage-model-selector.tsx:44,83,101", "phase": "F1.1"},
+      {"id": "H2", "summary": "getConsciousnessState calls non-existent endpoint; dead code", "location": "api/autonomous.ts:46; pages/autonomous.tsx:29", "phase": "F1.1"},
+      {"id": "H3", "summary": "submitGapFeedback/updateGapStatus return {gap: ResearchGap} but backend returns only {id, user_rating, user_notes} / {id, status}", "location": "api/gaps.ts:32,38 vs backend/api/routes/gaps.py:520,538", "phase": "F1.1"},
+      {"id": "H4", "summary": "dashboard has zero error UI across 4 resources; failures swallow to empty arrays", "location": "pages/dashboard.tsx:56-57,166-182", "phase": "F1.3"},
+      {"id": "H5", "summary": "literature ingestMutation: no onError, no pending UI on ingest button", "location": "pages/literature.tsx:39-44", "phase": "F1.4"},
+      {"id": "H6", "summary": "/gaps/:id/papers navigation target route is not registered; hits fallback redirect", "location": "pages/gap-detail.tsx:237", "phase": "F1.2"}
+    ],
+    "medium": [
+      {"id": "M1", "summary": "proposal-review-panel casts raw as EnsembleReview with weak guard", "location": "components/ideas/proposal-review-panel.tsx:71", "phase": "F1.1"},
+      {"id": "M2", "summary": "settings: three .catch(()=>{}) swallows on getDetailedStatus/getEvolutionStatus/listUsers", "location": "pages/settings.tsx:117,121,134", "phase": "F1.3"},
+      {"id": "M3", "summary": "plugins list query has no error UI; failed listPlugins renders as 'No plugins found'", "location": "pages/plugins.tsx:36", "phase": "F1.3"},
+      {"id": "M4", "summary": "duplicate types: IngestResponse (2 shapes), StageInfo (3 declarations), truth source_count vs evidence_count", "location": "api/types.ts:382, api/literature.ts:30, lib/constants.ts:15, api/settings.ts:75, components/pipeline/stage-model-selector.tsx:13", "phase": "F1.1"},
+      {"id": "M5", "summary": "gaps-explorer clusters query has no error path", "location": "pages/gaps-explorer.tsx:244", "phase": "F1.3"},
+      {"id": "M6", "summary": "RunDetail hook-local interface duplicates PipelineRunDetail", "location": "hooks/usePipelineProgress.ts:12", "phase": "F1.1"},
+      {"id": "M7", "summary": "console.warn swallows: traces handleTraceClick, autonomous scheduler/evolution, notification-bell fetches", "location": "pages/traces.tsx:70; pages/autonomous.tsx:62; components/notifications/notification-bell.tsx:40,51", "phase": "F1.3"},
+      {"id": "M8", "summary": "gap-detail status update mutation: no pending state (double-submit risk)", "location": "pages/gap-detail.tsx:101-104", "phase": "F1.4"},
+      {"id": "M9", "summary": "apiFetch returns undefined as T on 204", "location": "api/client.ts:79", "phase": "F1.1"}
+    ],
+    "low": [
+      {"id": "L1", "summary": "Paper type omits embedding: list[float] | None", "location": "api/literature.ts:11"},
+      {"id": "L2", "summary": "login forgot-password uses ad-hoc fetch (public endpoint)", "location": "pages/login.tsx:30-38"},
+      {"id": "L3", "summary": "various as Record<string, unknown> narrows on untyped config blobs", "location": "pages/run-detail.tsx:259; pages/idea-detail.tsx:777"},
+      {"id": "L4", "summary": "placeholder.tsx is dead (not routed)", "location": "pages/placeholder.tsx"},
+      {"id": "L5", "summary": "AuthUser.role narrowed to admin|user; backend role: str wider", "location": "api/auth.ts:7"}
+    ]
+  },
+  "zero_finding_categories": [
+    "generated_openapi_types",
+    "ad_hoc_fetch_in_src_api_star",
+    "json_parse_as_X_on_api_responses"
+  ],
+  "page_lifecycle_posture": {
+    "missing_or_partial_failure_ui": ["dashboard (H4)", "gaps-explorer clusters (M5)", "settings (M2)", "knowledge-graph", "plugins (M3)"],
+    "mutations_missing_error_handling": ["literature ingestMutation (H5)"],
+    "mutations_missing_pending_state": ["gap-detail status update (M8)"]
+  },
+  "type_classification": {
+    "backend_derived": 6,
+    "manually_mirrored": 95,
+    "locally_extended": 2,
+    "generated": 0,
+    "stale": 1,
+    "unknown_or_dead": 2
+  },
+  "repair_plan": {
+    "F1.1": ["H1", "H2", "H3", "M1", "M4", "M6", "M9", "central typed client + schema-validation tests"],
+    "F1.2": ["H6", "String(runId) contract test"],
+    "F1.3": ["H4", "M2", "M3", "M5", "M7"],
+    "F1.4": ["H5", "M8"],
+    "F1.5": ["critical product-flow integration tests"],
+    "F1.6": ["runtime error observability (error boundary)"],
+    "F1.7": ["architecture seal (10 zero-count assertions)", "five-run closeout", "L1-L5 cleanup unless blocking"]
+  },
+  "routes": [
+    {"path": "/login", "component": "src/pages/login.tsx", "params": [], "lazy": false},
+    {"path": "/", "component": "src/pages/dashboard.tsx", "params": [], "lazy": true},
+    {"path": "/pipeline/new", "component": "src/pages/pipeline-new.tsx", "params": [], "lazy": true},
+    {"path": "/runs/:id", "component": "src/pages/run-detail.tsx", "params": ["id"], "lazy": true},
+    {"path": "/ideas", "component": "src/pages/ideas-browser.tsx", "params": [], "lazy": true},
+    {"path": "/ideas/:id", "component": "src/pages/idea-detail.tsx", "params": ["id"], "lazy": true},
+    {"path": "/gaps", "component": "src/pages/gaps-explorer.tsx", "params": [], "lazy": true},
+    {"path": "/gaps/:id", "component": "src/pages/gap-detail.tsx", "params": ["id"], "lazy": true},
+    {"path": "/knowledge", "component": "src/pages/knowledge-search.tsx", "params": [], "lazy": true},
+    {"path": "/settings", "component": "src/pages/settings.tsx", "params": [], "lazy": true},
+    {"path": "/costs", "component": "src/pages/costs.tsx", "params": [], "lazy": true},
+    {"path": "/memory", "component": "src/pages/memory.tsx", "params": [], "lazy": true},
+    {"path": "/governance", "component": "src/pages/governance.tsx", "params": [], "lazy": true},
+    {"path": "/traces", "component": "src/pages/traces.tsx", "params": [], "lazy": true},
+    {"path": "/sessions", "component": "src/pages/sessions.tsx", "params": [], "lazy": true},
+    {"path": "/literature", "component": "src/pages/literature.tsx", "params": [], "lazy": true},
+    {"path": "/knowledge-graph", "component": "src/pages/knowledge-graph.tsx", "params": [], "lazy": true},
+    {"path": "/autonomous", "component": "src/pages/autonomous.tsx", "params": [], "lazy": true},
+    {"path": "/plugins", "component": "src/pages/plugins.tsx", "params": [], "lazy": true},
+    {"path": "/ops", "component": "src/pages/ops.tsx", "params": [], "lazy": true},
+    {"path": "*", "component": "Navigate to /", "params": [], "lazy": false, "note": "fallback"}
+  ]
+}
