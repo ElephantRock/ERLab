@@ -1,10 +1,13 @@
+import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { getGap, updateGapStatus, asGapStatus } from "@/api/gaps";
+import { getGapPapers } from "@/api/clients/gap-papers-client";
+import { parseRouteId } from "@/lib/route-ids";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowLeft, ArrowRight, BookOpen, GitBranch, Lightbulb, BarChart3, FileText } from "lucide-react";
+import { ArrowLeft, ArrowRight, BookOpen, GitBranch, Lightbulb, BarChart3, FileText, Loader2, AlertCircle } from "lucide-react";
 import { GapFeedbackForm } from "@/components/gaps/gap-feedback-form";
 import type { ResearchGap, RelatedIdea, MatchedPaper } from "@/api/types";
 
@@ -16,22 +19,65 @@ const GAP_TYPE_COLORS: Record<string, string> = {
   "cross-domain": "bg-warning/10 text-warning",
 };
 
+// ── Route wrapper: validates ID before any hooks that fetch ──────────
+
 export default function GapDetailPage() {
   const { id } = useParams<{ id: string }>();
+  const parsed = parseRouteId(id);
+
+  if (parsed.kind !== "valid") {
+    return <InvalidRouteId entity="gap" raw={parsed.kind === "invalid" ? parsed.raw : undefined} />;
+  }
+
+  return <GapDetailContent gapId={parsed.value} />;
+}
+
+// ── Invalid route-ID state (zero requests) ───────────────────────────
+
+function InvalidRouteId({ entity, raw }: { entity: string; raw?: string }) {
   const navigate = useNavigate();
-  const gapId = Number(id);
+  return (
+    <div className="space-y-4 text-center py-12">
+      <AlertCircle className="h-12 w-12 mx-auto text-destructive opacity-50" />
+      <h2 className="text-xl font-semibold">Invalid {entity} ID</h2>
+      <p className="text-muted-foreground">
+        {raw !== undefined
+          ? `The URL parameter "${raw}" is not a valid ${entity} identifier.`
+          : `No ${entity} ID was provided in the URL.`}
+      </p>
+      <Button variant="outline" onClick={() => navigate("/gaps")}>
+        <ArrowLeft className="mr-2 h-4 w-4" />
+        Back to Gaps Explorer
+      </Button>
+    </div>
+  );
+}
+
+// ── Content component: receives a guaranteed valid positive integer ──
+
+function GapDetailContent({ gapId }: { gapId: number }) {
+  const navigate = useNavigate();
+  const [papersExpanded, setPapersExpanded] = useState(false);
 
   const { data, isLoading, isError } = useQuery({
     queryKey: ["gap", gapId],
     queryFn: () => getGap(gapId),
-    enabled: !isNaN(gapId),
+  });
+
+  // Lazy gap-papers expansion — only fetched when user activates it
+  const papersQuery = useQuery({
+    queryKey: ["gap-papers", gapId],
+    queryFn: () => getGapPapers(gapId),
+    enabled: papersExpanded,
   });
 
   const gap: ResearchGap | undefined = data?.gap;
-
-  // Related ideas and matched papers come inline from the gap detail API
   const relatedIdeas: RelatedIdea[] | null = gap?.related_ideas ?? null;
-  const matchedPapers: MatchedPaper[] | null = gap?.matched_papers_preview ?? null;
+  const previewPapers: MatchedPaper[] | null = gap?.matched_papers_preview ?? null;
+
+  // Use expanded endpoint results when available, otherwise the preview
+  const displayPapers: MatchedPaper[] | null = papersQuery.data?.papers ?? null;
+  const papersTotal: number | null = papersQuery.data?.total ?? null;
 
   if (isLoading) {
     return (
@@ -50,7 +96,7 @@ export default function GapDetailPage() {
         <GitBranch className="h-12 w-12 mx-auto text-muted-foreground opacity-50" />
         <h2 className="text-xl font-semibold">Gap not found</h2>
         <p className="text-muted-foreground">
-          The research gap with ID {id} could not be found.
+          The research gap with ID {gapId} could not be found.
         </p>
         <Button variant="outline" onClick={() => navigate("/gaps")}>
           <ArrowLeft className="mr-2 h-4 w-4" />
@@ -75,7 +121,6 @@ export default function GapDetailPage() {
         </Button>
         <h1 className="text-2xl font-bold tracking-tight">{gap.title}</h1>
         <div className="flex items-center gap-3 mt-2">
-          {/* Gap type badge */}
           <span
             className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${
               GAP_TYPE_COLORS[gap.gap_type] || "bg-muted/50 text-muted-foreground"
@@ -83,7 +128,6 @@ export default function GapDetailPage() {
           >
             {gap.gap_type || "unknown"}
           </span>
-          {/* Confidence */}
           <div className="flex items-center gap-2">
             <BarChart3 className="h-4 w-4 text-muted-foreground" />
             <div className="w-32 bg-muted/50 rounded-full h-2">
@@ -96,15 +140,9 @@ export default function GapDetailPage() {
               {Math.round(gap.confidence * 100)}% confidence
             </span>
           </div>
-          {/* Status dropdown (BATCH-41) */}
           <select
             value={gap.status || "identified"}
             onChange={async (e) => {
-              // Narrow the select's string value to GapStatus. The <option>s
-              // below only offer the three valid values, so this guard is
-              // honest; if a future option is added without updating the
-              // union, the guard returns null and we no-op rather than
-              // sending an invalid status to the backend.
               const next = asGapStatus(e.target.value);
               if (!next) return;
               try { await updateGapStatus(gapId, next); } catch { toast.error("Failed to update gap status"); }
@@ -177,7 +215,7 @@ export default function GapDetailPage() {
         </div>
       )}
 
-      {/* Related Ideas (from API, not heuristic search) */}
+      {/* Related Ideas */}
       {relatedIdeas && relatedIdeas.length > 0 && (
         <div className="bg-card border rounded-lg p-4">
           <h2 className="text-lg font-semibold mb-3 flex items-center gap-2">
@@ -208,8 +246,8 @@ export default function GapDetailPage() {
         </div>
       )}
 
-      {/* Matched Papers (heuristic keyword overlap) */}
-      {matchedPapers && matchedPapers.length > 0 && (
+      {/* Matched Papers */}
+      {previewPapers && previewPapers.length > 0 && (
         <div className="bg-card border rounded-lg p-4">
           <h2 className="text-lg font-semibold mb-3 flex items-center gap-2">
             <FileText className="h-5 w-5" />
@@ -218,8 +256,31 @@ export default function GapDetailPage() {
           <p className="text-xs text-muted-foreground mb-3">
             Papers matched by keyword overlap. Not a guaranteed provenance link.
           </p>
+
+          {/* Render expanded results if loaded, otherwise the preview */}
+          {papersExpanded && papersQuery.isLoading && (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground py-4">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Loading more matched papers...
+            </div>
+          )}
+
+          {papersExpanded && papersQuery.isError && (
+            <div className="text-sm text-destructive py-2 flex items-center justify-between">
+              <span>Failed to load papers.</span>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => papersQuery.refetch()}
+              >
+                Retry
+              </Button>
+            </div>
+          )}
+
+          {/* Papers list: expanded endpoint results when available, preview otherwise */}
           <ul className="space-y-2">
-            {matchedPapers.map((paper) => (
+            {(displayPapers ?? previewPapers).map((paper) => (
               <li key={paper.id} className="text-sm border-l-2 border-muted pl-3">
                 <p className="font-medium">{paper.title}</p>
                 <div className="flex items-center gap-3 text-xs text-muted-foreground mt-1">
@@ -237,14 +298,34 @@ export default function GapDetailPage() {
               </li>
             ))}
           </ul>
-          <Button
-            variant="outline"
-            size="sm"
-            className="mt-3"
-            onClick={() => navigate(`/gaps/${gapId}/papers`)}
-          >
-            View All Matched Papers
-          </Button>
+
+          {/* Truthful coverage label when expanded */}
+          {papersExpanded && !papersQuery.isLoading && !papersQuery.isError && displayPapers && papersTotal !== null && (
+            <p className="text-xs text-muted-foreground mt-2">
+              {displayPapers.length === papersTotal
+                ? `Showing all ${papersTotal} matched papers`
+                : `Showing ${displayPapers.length} of ${papersTotal} matched papers`}
+            </p>
+          )}
+
+          {/* Expansion toggle: only shown before first expansion */}
+          {!papersExpanded && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="mt-3"
+              onClick={() => setPapersExpanded(true)}
+            >
+              Show more matched papers
+            </Button>
+          )}
+
+          {/* Successful empty from endpoint */}
+          {papersExpanded && !papersQuery.isLoading && !papersQuery.isError && displayPapers && displayPapers.length === 0 && (
+            <p className="text-xs text-muted-foreground mt-2">
+              No additional matched papers found.
+            </p>
+          )}
         </div>
       )}
 
@@ -254,7 +335,7 @@ export default function GapDetailPage() {
         {gap.pipeline_run_id && <p>Pipeline Run: {gap.pipeline_run_id}</p>}
       </div>
 
-      {/* Feedback Form (BATCH-41) */}
+      {/* Feedback Form */}
       <div className="bg-card border rounded-lg p-4">
         <GapFeedbackForm
           gapId={gap.id}

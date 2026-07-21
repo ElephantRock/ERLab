@@ -23,12 +23,14 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { PIPELINE_STAGES } from "@/lib/constants";
+import { parseRouteId } from "@/lib/route-ids";
 import { cn } from "@/lib/utils";
 import {
   ArrowLeft,
   CheckCircle2,
   Circle,
   Loader2,
+  AlertCircle,
   AlertTriangle,
   Play,
   Lightbulb,
@@ -61,9 +63,37 @@ function fmtDuration(sec: number): string {
 
 export default function RunDetail() {
   const { id } = useParams<{ id: string }>();
+  const parsed = parseRouteId(id);
+
+  if (parsed.kind !== "valid") {
+    return <InvalidRunId raw={parsed.kind === "invalid" ? parsed.raw : undefined} />;
+  }
+
+  return <RunDetailContent runId={parsed.value} />;
+}
+
+function InvalidRunId({ raw }: { raw?: string }) {
+  const navigate = useNavigate();
+  return (
+    <div className="space-y-4 text-center py-12">
+      <AlertCircle className="h-12 w-12 mx-auto text-destructive opacity-50" />
+      <h2 className="text-xl font-semibold">Invalid run ID</h2>
+      <p className="text-muted-foreground">
+        {raw !== undefined
+          ? `The URL parameter "${raw}" is not a valid run identifier.`
+          : `No run ID was provided in the URL.`}
+      </p>
+      <Button variant="ghost" onClick={() => navigate("/pipeline/new")} data-testid="back-btn">
+        <ArrowLeft className="mr-2 h-4 w-4" />
+        Back
+      </Button>
+    </div>
+  );
+}
+
+function RunDetailContent({ runId }: { runId: number }) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const runId = Number(id);
 
   const [isResuming, setIsResuming] = useState(false);
   const [exporting, setExporting] = useState<string | null>(null);
@@ -145,7 +175,7 @@ export default function RunDetail() {
           <CardContent className="p-8 text-center" data-testid="run-not-found">
             <AlertTriangle className="h-8 w-8 mx-auto mb-2 text-destructive" />
             <p className="text-ui-heading font-medium">Run not found</p>
-            <p className="text-ui-meta text-muted-foreground mt-1">No pipeline run found with ID {id}.</p>
+            <p className="text-ui-meta text-muted-foreground mt-1">No pipeline run found with ID {runId}.</p>
           </CardContent>
         </Card>
       </div>

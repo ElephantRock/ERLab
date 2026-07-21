@@ -20,6 +20,7 @@
  */
 
 import { useResource } from "@/lib/useResource";
+import { parseRouteId } from "@/lib/route-ids";
 import { DataView } from "@/components/ui/data-view";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { getIdea, refineIdea } from "@/api/ideas";
@@ -41,7 +42,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { useParams, useNavigate } from "react-router-dom";
 import {
-  ArrowLeft, RefreshCw, Loader2, CheckCircle2, AlertTriangle,
+  ArrowLeft, AlertCircle, RefreshCw, Loader2, CheckCircle2, AlertTriangle,
   Copy, Check, History, Shield,
   FlaskConical, BookOpen, ClipboardCheck,
 } from "lucide-react";
@@ -52,9 +53,37 @@ import type { ExperimentResult } from "@/api/types";
 
 export default function IdeaDetail() {
   const { id } = useParams<{ id: string }>();
+  const parsed = parseRouteId(id);
+
+  if (parsed.kind !== "valid") {
+    return <InvalidIdeaId raw={parsed.kind === "invalid" ? parsed.raw : undefined} />;
+  }
+
+  return <IdeaDetailContent ideaId={parsed.value} />;
+}
+
+function InvalidIdeaId({ raw }: { raw?: string }) {
+  const navigate = useNavigate();
+  return (
+    <div className="space-y-4 text-center py-12">
+      <AlertCircle className="h-12 w-12 mx-auto text-destructive opacity-50" />
+      <h2 className="text-xl font-semibold">Invalid idea ID</h2>
+      <p className="text-muted-foreground">
+        {raw !== undefined
+          ? `The URL parameter "${raw}" is not a valid idea identifier.`
+          : `No idea ID was provided in the URL.`}
+      </p>
+      <Button variant="outline" onClick={() => navigate("/ideas")}>
+        <ArrowLeft className="mr-2 h-4 w-4" />
+        Back to Ideas
+      </Button>
+    </div>
+  );
+}
+
+function IdeaDetailContent({ ideaId }: { ideaId: number }) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const ideaId = Number(id);
   const [copiedSection, setCopiedSection] = useState<string | null>(null);
   const [revisionSection, setRevisionSection] = useState<string | null>(null);
   const [highlightedSection, setHighlightedSection] = useState<string | null>(null);
