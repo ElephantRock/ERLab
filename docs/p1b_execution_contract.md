@@ -9,9 +9,15 @@
 ## Status
 - P0: CLOSED (governance foundation complete)
 - P1A: CLOSED (audit, benchmark infrastructure, contracts, baseline, RRF, evaluation)
-- P1B: READY (semantic evaluation, reranking, production activation)
-- P1: OPEN
-- P2: BLOCKED by P1 closure
+- P1B: CLOSED at Gate 2 — evaluation complete; no candidate policy passed the frozen quality gate; legacy remains authoritative (see docs/p1b_closeout.md)
+- P1: OPEN — quality objective unmet
+- P2: BLOCKED by P1
+
+P1B.4+ (reranker, production selection, durable evidence, TrimmerStage
+replacement, operator commands, production seal) was NEVER STARTED. Any
+future ranking work requires a new versioned experiment and new evidence
+capable of changing the result; it must not overwrite the frozen benchmark,
+judgments, snapshot, or this negative result.
 
 ## 1. Production ranking surfaces (from P1.0 audit)
 

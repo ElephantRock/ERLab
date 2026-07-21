@@ -1,0 +1,133 @@
+{
+  "wave": "P1B",
+  "closeout_kind": "genuine_negative_result",
+  "summary_statement": "The frozen benchmark, governed semantic snapshot, and predeclared quality gate were applied without post-result tuning. No evaluated candidate policy demonstrated sufficient quality improvement for production activation. The legacy ranking policy therefore remains authoritative.",
+  "status": {
+    "P0": "CLOSED",
+    "P1A": "CLOSED",
+    "P1B": "CLOSED at Gate 2 (evaluation complete; no policy activated)",
+    "P1": "OPEN — quality objective unmet",
+    "P2": "BLOCKED by P1"
+  },
+  "authorization_honored": {
+    "1_embeddings": "C_cached_real_embeddings",
+    "2_reranker": "C_defer_conditionally (hybrid_rrf failed -> no reranker built or authorized)",
+    "3_judgments": "A_blinded_adjudication",
+    "4_scope": "B_p1b_1_through_p1b_3_only"
+  },
+  "entry_commit": "b95ec20",
+  "closeout_commit_chain": [
+    {"hash": "42449db", "wave": "P1B.0", "message": "record authorization for P1B.1-P1B.3"},
+    {"hash": "9d2b922", "wave": "P1B.1", "message": "expand benchmark to 66 cases with blind-adjudication schema v2"},
+    {"hash": "8d48024", "wave": "P1B.1", "message": "freeze Gate 1 deliverables for blind adjudication"},
+    {"hash": "13f24d3", "wave": "P1B.1", "message": "protocol-compliant blind adjudication package v2 + rubric"},
+    {"hash": "777fcf7", "wave": "P1B.1", "message": "close Gate 1 — blind adjudication reconciled, benchmark frozen"},
+    {"hash": "0dfcb60", "wave": "P1B.2", "message": "immutable embedding snapshot format + integrity gates"},
+    {"hash": "3643631", "wave": "P1B.2", "message": "governed embedding snapshot generation harness"},
+    {"hash": "e6f5ef7", "wave": "P1B.2", "message": "generate governed embedding snapshot via qwen3-embedding-0.6b"},
+    {"hash": "c17d894", "wave": "P1B.3", "message": "frozen policy evaluation — NO policy passes the gate"},
+    {"hash": "e7554a1", "wave": "P1B.G2", "message": "Gate 2 diagnostic analysis — recommends Branch D"}
+  ],
+  "frozen_artifacts": {
+    "benchmark_version": "discovery_ranking_v2+retrieval_ranking_v2",
+    "benchmark_fingerprint": "0ffbfdb164053ad19c869cbba44678c0aa76aa140557320383a82efcebcb96e4",
+    "benchmark_cases": 66,
+    "selection_splits": ["calibration", "development"],
+    "n_selection_cases": 44,
+    "n_held_out_cases": 22,
+    "snapshot_fingerprint": "2d8b26f709c03b6bbc7d5c4ab7ca65259a87e8f06ef80b3da0e9e50df69b38d2",
+    "snapshot_provider_model": "text-embedding-qwen3-embedding-0.6b",
+    "snapshot_dimension": 1024,
+    "snapshot_governed_path": "EffectiveEmbeddingConfiguration -> run_capability_check (dual_probe PASSED) -> embedding_capability_binding -> VerifiedEmbeddingRuntime -> embed_*_authorized",
+    "capability_binding_id": "6058e7d9960c5ff7e7225ee421c818fc0dfb61798990e2fafa7725ceb9486374",
+    "frozen_hyperparameters": {"rrf_k": 60, "weighted_lexical": 0.5, "weighted_semantic": 0.5, "final_limit": 20}
+  },
+  "frozen_quality_gate": {
+    "ndcg_at_10_improvement_absolute": 0.03,
+    "bootstrap_lower_bound": 0.0,
+    "recall_at_20_change_floor": -0.01,
+    "critical_slice_decline_floor": -0.05,
+    "deterministic_replay_required": 1.0
+  },
+  "candidate_policy_results": {
+    "legacy_lexical_top20_v1": {"macro_ndcg10": 0.9495, "role": "baseline"},
+    "semantic_only_v1": {
+      "macro_ndcg10": 0.9321,
+      "delta_vs_legacy": -0.0174,
+      "bootstrap_ci_95": [-0.0410, 0.0048],
+      "p_positive": 0.0640,
+      "worst_slice_delta": -0.0964,
+      "verdict": "FAIL"
+    },
+    "hybrid_rrf_v1": {
+      "macro_ndcg10": 0.9561,
+      "delta_vs_legacy": 0.0065,
+      "bootstrap_ci_95": [-0.0004, 0.0155],
+      "p_positive": 0.9660,
+      "worst_slice_delta": -0.0068,
+      "verdict": "FAIL"
+    },
+    "hybrid_weighted_v1": {
+      "macro_ndcg10": 0.9394,
+      "delta_vs_legacy": -0.0102,
+      "bootstrap_ci_95": [-0.0297, 0.0071],
+      "p_positive": 0.1454,
+      "worst_slice_delta": -0.1023,
+      "verdict": "FAIL"
+    }
+  },
+  "branch_d_evidence": {
+    "benchmark_validity": "adequate (43% of cases have genuine low-overlap relevant candidates)",
+    "statistical_power": "adequate (paired-t MDE 0.0081 << 0.03 threshold)",
+    "embedding_signal": "credible but insufficient (rho=0.514, monotonic by grade; traps distinguished 4/4; paraphrases retrieved 3/4; g3-g2 separation only 0.05)",
+    "rrf_suppression_of_signal": "not present (only 2/44 cases)",
+    "branches_rejected": ["A_semantic_suppressed_by_rrf", "B_weak_embedding", "C_insufficient_headroom"]
+  },
+  "change_accounting": {
+    "production_changes": 0,
+    "threshold_changes": 0,
+    "benchmark_changes_after_scoring": 0,
+    "embedding_snapshot_overwrites": 0,
+    "reranker_built": 0,
+    "llm_reranker_built": 0
+  },
+  "phase_completion": {
+    "ranking_infrastructure": "complete",
+    "benchmark_and_adjudication": "complete",
+    "semantic_evaluation": "complete",
+    "candidate_policy_evaluation": "complete",
+    "quality_improvement_proved": "no",
+    "production_policy_activated": "no"
+  },
+  "resulting_posture": {
+    "legacy_lexical_top20_v1": "remains production-authoritative",
+    "hybrid_rrf_v1": "not activated (failed frozen gate)",
+    "reranker": "not built",
+    "trimmerstage": "unchanged",
+    "P1B": "CLOSED at Gate 2",
+    "P1": "OPEN",
+    "P2": "BLOCKED by P1"
+  },
+  "re_evaluation_conditions": [
+    "a materially stronger governed embedding model",
+    "a production-capable cross-encoder or reranker (with its own frozen contract)",
+    "a new deterministic fusion hypothesis justified by diagnostics",
+    "a broader independently judged real-world benchmark"
+  ],
+  "re_evaluation_rule": "Any future evaluation must create a new versioned experiment and must NOT overwrite the current benchmark, judgments, embedding snapshot, or this negative result.",
+  "test_count": {
+    "ranking_tests_passing": 121,
+    "new_tests_added_in_p1b": 77
+  },
+  "key_artifacts": {
+    "benchmark": "backend/ranking/benchmark_v2_schema.py + benchmark_v2_*_cases.py",
+    "frozen_adjudication": "backend/ranking/benchmark_v2_frozen_adjudication.py",
+    "snapshot_format": "backend/ranking/embedding_snapshot.py",
+    "snapshot_harness": "backend/ranking/generate_embedding_snapshot.py",
+    "evaluation": "backend/ranking/p1b3_evaluation.py",
+    "diagnostic": "backend/ranking/p1b_gate2_diagnostic.py",
+    "gate1_record": "docs/p1b_gate1/",
+    "snapshot_artifact": "docs/p1b_snapshot/ (gitignored, regenerable)",
+    "gate2_record": "docs/p1b_gate2/"
+  }
+}
