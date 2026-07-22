@@ -1,0 +1,56 @@
+{
+  "_wave": "F1.5",
+  "_kind": "critical_flow_spec",
+  "journeys": [
+    {
+      "id": "A",
+      "name": "Research inspection",
+      "starting_route": "/",
+      "auth": "authenticated",
+      "routes_traversed": ["/", "/runs/:id", "/ideas/:id"],
+      "api_operations": ["listRuns", "listIdeas", "getPending", "getOpsDashboard", "getRunDetail", "getRunIdeas", "getIdea"],
+      "query_keys": ["[\"runs\",{limit:5}]", "[\"ideas\",{limit:6}]", "[\"governance-pending\"]", "[\"ops-dashboard\",7]", "[\"run\",runId]", "[\"run\",runId,\"ideas\"]", "[\"idea\",ideaId]"],
+      "terminal_success": "idea detail renders proposal content",
+      "failure_states": ["dashboard partial failure", "run not found", "idea not found"]
+    },
+    {
+      "id": "B",
+      "name": "Literature ingestion",
+      "starting_route": "/literature",
+      "auth": "authenticated",
+      "routes_traversed": ["/literature"],
+      "api_operations": ["searchLiterature", "ingestPaper"],
+      "query_keys": ["[\"literature-search\",query]"],
+      "terminal_success": "toast success + card resets + results refetch",
+      "failure_states": ["ingest failure (visible error)", "duplicate submit blocked"]
+    },
+    {
+      "id": "C",
+      "name": "Gap progression",
+      "starting_route": "/gaps/:id",
+      "auth": "authenticated",
+      "routes_traversed": ["/gaps/12", "/gaps/13"],
+      "api_operations": ["getGap", "updateGapStatus", "getGapPapers"],
+      "query_keys": ["[\"gap\",gapId]", "[\"gap-papers\",gapId]"],
+      "terminal_success": "select shows updated status + papers show coverage",
+      "failure_states": ["status mutation failure (toast + status preserved)", "A/B late-mutation isolation"]
+    }
+  ],
+  "harness_boundary": {
+    "mock_at": "transport (apiFetchJson/apiFetchVoid)",
+    "production_runs": ["pages", "clients", "callContract", "decoders", "QueryClient", "router"],
+    "allowed_mocks": ["apiFetchJson", "apiFetchVoid", "apiFetchUnchecked", "apiFetchBlob", "sseFetch", "toast/sonner", "GraphCanvas/EntityDetail (browser-only)", "getMe (auth posture)"]
+  },
+  "required_tests": [
+    "golden research inspection flow",
+    "literature ingest success flow",
+    "literature ingest failure → manual retry flow",
+    "gap status success → authoritative refetch flow",
+    "same-router gap A/B late-mutation isolation",
+    "dashboard partial-failure flow",
+    "malformed matched-papers response → contract failure",
+    "authenticated protected deep link",
+    "unauthenticated protected deep link",
+    "unknown route fallback"
+  ]
+}

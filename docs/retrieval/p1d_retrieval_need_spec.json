@@ -1,0 +1,160 @@
+{
+  "spec_version": "p1d_retrieval_need_spec_v1_1",
+  "status": "draft",
+  "revision": "P1D.0a — corrects risk/non-invertibility terminology, missed-evidence rationale, and task objective/risk separation per external review",
+  "created": "2026-07-22",
+  "authority": "P1D.0 — draft for user review. NOT frozen. No gate closed.",
+  "source_plan": "P1D — Needs-Led Retrieval Architecture Plan (pasted 2026-07-22)",
+  "mission": "Determine the lowest-complexity retrieval system that satisfies ERLab's real research workflows. The program does NOT begin from the assumption that ERLab needs a larger embedding model.",
+  "terminology_revision_note": "v1 conflated 'non-invertible' across two different meanings. v1.1 separates them: (1) GLOBALLY NON-COMPENSABLE risk — false support is the only one; it creates affirmative but incorrect evidence and cannot be traded off against any recall gain, anywhere. (2) TASK-SPECIFIC HARD GATE — each task family has a defining risk with a minimum threshold; a candidate must meet the absolute threshold AND remain within a small allowed paired regression margin. These are distinct concepts and must not share the label 'non-invertible'.",
+  "task_families": [
+    {
+      "family_id": "paper_discovery",
+      "name": "Paper discovery",
+      "retrieved_unit": "Paper or abstract",
+      "task_objective": "Broadly surface relevant papers on a research question.",
+      "primary_integrity_risk": "agenda_mismatch",
+      "primary_coverage_risk": "missed_relevant_evidence",
+      "definition": "Broad topical search for relevant papers on a research question. Returns whole-paper or abstract-level results. Tolerates broader recall; the cost of a missed relevant paper is high.",
+      "ranking_surface_in_benchmark": "discovery_ranking",
+      "acceptance_focus": "paper recall@20, paper recall@50, false-negative rate (missed relevant).",
+      "notes": "Closest fit to the existing benchmark's discovery_ranking surface and general_research_relevance / literature_mapping intents."
+    },
+    {
+      "family_id": "evidence_retrieval",
+      "name": "Evidence retrieval",
+      "retrieved_unit": "Exact passage",
+      "task_objective": "Retrieve a specific passage that directly supports a claim.",
+      "primary_integrity_risk": "false_support",
+      "primary_coverage_risk": "missed_relevant_evidence",
+      "definition": "Retrieve a specific passage that directly supports (or is needed to support) a claim. Returns passage-level, not paper-level, evidence. Precision-critical: a topically similar but evidentially wrong passage is a failure.",
+      "ranking_surface_in_benchmark": "retrieval_ranking (partial)",
+      "acceptance_focus": "passage recall@20, usable precision@5, first relevant rank.",
+      "notes": "The frozen benchmark operates at candidate (title+abstract) granularity, NOT passage granularity. ERLab's real evidence-retrieval need may exceed what this benchmark can validate. Flagged in P1D.1 saturation analysis. NOTE v1.1: the task OBJECTIVE is to retrieve supporting evidence (coverage risk = missed supporting evidence); the defining INTEGRITY risk is false support. These are distinct axes and must not be conflated."
+    },
+    {
+      "family_id": "contradiction_retrieval",
+      "name": "Contradiction retrieval",
+      "retrieved_unit": "Exact passage",
+      "task_objective": "Surface passages that conflict with, negate, or qualify a claim.",
+      "primary_integrity_risk": "missed_contradiction",
+      "primary_coverage_risk": "missed_relevant_evidence",
+      "definition": "Retrieve passages that conflict with, negate, or qualify a claim. Operationally similar to evidence retrieval but inverts the polarity: the goal is to surface opposing evidence, not supporting evidence. A missed contradiction is a research-integrity failure.",
+      "ranking_surface_in_benchmark": "retrieval_ranking (negated_findings slice, partial)",
+      "acceptance_focus": "missed-contradiction rate, negated/qualifying-evidence recall.",
+      "notes": "The benchmark's negated_findings slice is the only proxy. It treats negated-result papers as grade-3 (highly relevant), which captures surface relevance but NOT the 'is there a contradicting result I am missing' workflow. Weak proxy."
+    },
+    {
+      "family_id": "method_retrieval",
+      "name": "Method retrieval",
+      "retrieved_unit": "Method section or passage",
+      "task_objective": "Retrieve methods/algorithms usable to understand or reproduce an approach.",
+      "primary_integrity_risk": "agenda_mismatch",
+      "primary_coverage_risk": "missed_relevant_evidence",
+      "definition": "Retrieve methods, algorithms, or methodological descriptions usable to understand or reproduce an approach. Must distinguish a method paper from an application of that method.",
+      "ranking_surface_in_benchmark": "retrieval_ranking + discovery_ranking (method_vs_application slice)",
+      "acceptance_focus": "method-vs-application discrimination rate, usable precision@5.",
+      "notes": "The benchmark's method_vs_application slice is a good direct proxy for this family."
+    },
+    {
+      "family_id": "multi_paper_synthesis",
+      "name": "Multi-paper synthesis",
+      "retrieved_unit": "Diverse passages from several papers",
+      "task_objective": "Retrieve a diverse, non-redundant evidence set spanning multiple papers/labs/lineages.",
+      "primary_integrity_risk": "redundancy",
+      "primary_coverage_risk": "missed_relevant_evidence",
+      "definition": "Retrieve a diverse, non-redundant set of evidence spanning multiple papers/labs/lineages for synthesis (e.g., a literature review or meta-analysis foundation). Redundancy and source concentration are failures even when individual results are relevant.",
+      "ranking_surface_in_benchmark": "discovery + retrieval (near_duplicate slice, partial)",
+      "acceptance_focus": "unique relevant papers@10, source diversity, duplicate-result rate.",
+      "notes": "The benchmark's near_duplicate slice tests that duplicates don't dominate, which is adjacent but NOT the same as measuring diversity. Diversity-as-a-goal is not directly measured by the frozen benchmark."
+    },
+    {
+      "family_id": "research_gap_analysis",
+      "name": "Research-gap analysis",
+      "retrieved_unit": "Papers and agenda-level passages",
+      "task_objective": "Distinguish papers addressing the SAME research question from topically similar papers studying a different agenda.",
+      "primary_integrity_risk": "agenda_mismatch",
+      "primary_coverage_risk": "missed_relevant_evidence",
+      "definition": "Distinguish papers that address the SAME research question from papers that are merely topically similar but study a different population, intervention, outcome, method, or agenda. Agenda mismatch is the characteristic failure.",
+      "ranking_surface_in_benchmark": "discovery + retrieval (semantic_paraphrase, lexical_trap, source_rank_conflict, acronym_vs_expanded slices — partial)",
+      "acceptance_focus": "agenda-mismatch rate, precision@5 on PICO-discriminating queries.",
+      "notes": "No single slice directly measures agenda mismatch. It is emergent across several slices. The benchmark's topical-relevance sub-dimension approximates it but does not isolate PICO (population/intervention/comparison/outcome) alignment."
+    }
+  ],
+  "risk_hierarchy": [
+    {
+      "rank": 1,
+      "risk_id": "false_support",
+      "name": "False support",
+      "definition": "A passage appears to support a claim but does not. The researcher builds on evidence that isn't actually there.",
+      "why_high": "Silent. Creates AFFIRMATIVE BUT INCORRECT evidence — the researcher not only misses the truth, they are actively misled toward a false conclusion. Contaminates downstream analysis. Hardest to detect after the fact.",
+      "metric_proxy": "usable precision@5, false-support rate",
+      "compensability": "globally_non_compensable",
+      "compensability_meaning": "No recall gain, anywhere in the system, compensates for a material increase in false support. This is the ONLY risk with this status.",
+      "note_v1_1": "v1 called this 'non-invertible' and used the same word for task-specific hard gates, causing a contradiction. v1.1 reserves globally_non_compensable for false support alone."
+    },
+    {
+      "rank": 2,
+      "risk_id": "missed_contradiction",
+      "name": "Missed contradiction",
+      "definition": "Contrary or qualifying evidence exists but is not retrieved. The researcher proceeds as if their claim is unopposed.",
+      "why_high": "Silent. Omits evidence without fabricating affirmative support (unlike false support), but still undermines the validity of any synthesis. Especially dangerous in biomedical evidence-retrieval workflows.",
+      "metric_proxy": "missed-contradiction rate, negated-findings recall",
+      "compensability": "task_hard_gated"
+    },
+    {
+      "rank": 3,
+      "risk_id": "agenda_mismatch",
+      "name": "Agenda mismatch",
+      "definition": "The result is topically similar but answers a different research question (different population, intervention, outcome, method, or agenda).",
+      "why_high": "Looks relevant, passes a glance, but wastes the researcher's time and can mislead if not caught. Common with dense retrieval.",
+      "metric_proxy": "agenda-mismatch rate, precision@5 on PICO queries",
+      "compensability": "task_hard_gated"
+    },
+    {
+      "rank": 4,
+      "risk_id": "missed_relevant_evidence",
+      "name": "Missed relevant evidence",
+      "definition": "Relevant evidence is absent from the usable result set (below the cutoff, or not retrieved at all).",
+      "why_high": "SILENT, NOT VISIBLE. v1 incorrectly called this 'visible absence'. In practice a researcher generally does not know that an unseen paper or passage exists; the gap is undetected unless the researcher already suspects it. The defensible distinction from false support is not visible-vs-silent but affirmative-vs-omissive: false support FABRICATES incorrect affirmative evidence; missed evidence OMITS evidence without fabricating support. Both are silent. Both are serious.",
+      "metric_proxy": "recall@20, recall@50",
+      "compensability": "task_hard_gated",
+      "note_v1_1": "v1 rationale ('visible absence — researcher knows they may be missing something') was incorrect and is retracted. Missed evidence is silent."
+    },
+    {
+      "rank": 5,
+      "risk_id": "redundancy",
+      "name": "Redundancy",
+      "definition": "Results repeat the same paper, lab, or evidence lineage.",
+      "why_high": "Annoying and inflates perceived evidence breadth, but each redundant result is individually relevant. Lowest integrity cost.",
+      "metric_proxy": "unique relevant papers@10, duplicate-result rate, source diversity",
+      "compensability": "task_hard_gated"
+    },
+    {
+      "rank": 6,
+      "risk_id": "latency_resource_cost",
+      "name": "Latency and resource cost",
+      "definition": "The system is accurate but operationally impractical (too slow, too memory-heavy, too expensive to run).",
+      "why_high": "An operational, not retrieval-quality, failure. Can gate deployment entirely (as P1C demonstrated). Tracked separately in the operational envelope.",
+      "metric_proxy": "median/p95 query latency, peak memory, index size, indexing duration, provider cost",
+      "compensability": "operationally_gated",
+      "note": "Ranked last among RESEARCH-INTEGRITY risks, but a latency/resource failure is independently disqualifying for deployment (see operational_envelope.json). The two gate types are separate."
+    }
+  ],
+  "compensability_scale": {
+    "globally_non_compensable": "No recall gain anywhere compensates. Reserved exclusively for false_support. A material regression fails the product gate regardless of macro improvements.",
+    "task_hard_gated": "Within the relevant task family, the candidate must meet a frozen absolute threshold on this risk AND remain within an allowed paired regression margin. NOT automatically failed by a microscopic regression (normal measurement/annotation variance must not make activation impossible).",
+    "operationally_gated": "A separate gate (operational envelope). Failure here blocks deployment regardless of quality."
+  },
+  "task_hard_gate_rule": {
+    "rule": "A task-hard-gated risk requires the candidate to (a) meet the frozen absolute threshold for that risk on the relevant task family, AND (b) remain within the allowed paired regression margin. This is NOT a zero-tolerance rule — a microscopic regression within the allowed margin does not fail the gate, because forcing zero regression would make activation impossible under normal measurement noise.",
+    "thresholds_to_be_frozen_at_P1D_6": "The absolute thresholds and paired-regression margins for each hard-gated risk are defined at P1D.6, not here. This spec establishes which risks ARE hard-gated and for which tasks; P1D.6 sets the numbers."
+  },
+  "risk_hierarchy_invariants": [
+    "false_support is the only globally_non_compensable risk: no recall gain anywhere compensates for a material increase in false support.",
+    "missed_contradiction, agenda_mismatch, missed_relevant_evidence, and redundancy are task_hard_gated: each has a frozen absolute threshold plus an allowed paired regression margin, frozen at P1D.6.",
+    "missed_relevant_evidence is SILENT, not visible. v1's 'visible absence' rationale is retracted.",
+    "false_support is distinguished from missed_relevant_evidence by affirmative-vs-omissive: false support fabricates incorrect affirmative evidence; missed evidence omits without fabricating.",
+    "latency_resource_cost is a separate operational gate, independently disqualifying for deployment."
+  ]
+}
