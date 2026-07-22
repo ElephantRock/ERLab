@@ -18,7 +18,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, waitFor, fireEvent, act } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { MemoryRouter, Routes, Route } from "react-router-dom";
+import { MemoryRouter, Routes, Route, useNavigate } from "react-router-dom";
 import React from "react";
 
 // ── Transport mock: intercept global fetch ──────────────────────────
@@ -42,6 +42,7 @@ vi.mock("sonner", () => ({
 
 // ── Production route registry with eager imports ─────────────────────
 import { createRoutes, ProtectedRoute } from "../../AppRoutes";
+import { buildMutationCacheForClient } from "@/lib/mutation-cache";
 
 import Dashboard from "../../pages/dashboard";
 import RunDetail from "../../pages/run-detail";
@@ -150,6 +151,15 @@ const mockLit = {
 };
 const mockIngest = { status: "ingested", id: "ss-1" };
 
+/**
+ * F1.5c: backend-side persisted ingestion state.
+ * The defaultHandler starts with no papers ingested. Each successful POST
+ * /literature/ingest appends the paper ID, so subsequent GET /literature/ingested
+ * reflects the persisted set. The UI derives its badge from this response.
+ */
+const ingestedState: { ids: string[] } = { ids: [] };
+function resetIngestedState() { ingestedState.ids = []; }
+
 function defaultHandler(path: string): MockResponse {
   const p = path.split("?")[0];
   if (p === "/pipeline/runs") return { body: mockRuns };
@@ -165,7 +175,12 @@ function defaultHandler(path: string): MockResponse {
   if (p === "/gaps/12/status") return { body: { gap: { id: 12, status: "investigating" } } };
   if (p === "/gaps/13/status") return { body: { gap: { id: 13, status: "investigating" } } };
   if (p.startsWith("/literature/search")) return { body: mockLit };
-  if (p === "/literature/ingest") return { body: mockIngest };
+  if (p === "/literature/ingested") return { body: { ids: [...ingestedState.ids] } };
+  if (p === "/literature/ingest") {
+    // F1.5c: simulate backend persistence — append to the authoritative set.
+    if (!ingestedState.ids.includes("ss-1")) ingestedState.ids.push("ss-1");
+    return { body: mockIngest };
+  }
   return { status: 404, body: { detail: "Not found" } };
 }
 
@@ -198,10 +213,28 @@ function installHandler(handler: (path: string, init?: RequestInit) => MockRespo
 
 // ── Harness ──────────────────────────────────────────────────────────
 
-function makeQC() {
-  return new QueryClient({
+/**
+ * Construct a test QueryClient with the PRODUCTION MutationCache.
+ * F1.5c: every test QueryClient must install the same cache-owned
+ * invalidation the production QueryClient (main.tsx) uses, so tests
+ * exercise the real cache-integrity contract — component-level
+ * invalidations are no longer relied on.
+ */
+function makeQC(): QueryClient {
+  // `let` is required: `ref` is captured by the closure and assigned after
+  // the QueryClient is constructed. eslint sees no reassignment in the
+  // local flow but the assignment is real (post-construction).
+  // eslint-disable-next-line prefer-const
+  let ref: QueryClient | undefined;
+  const qc = new QueryClient({
     defaultOptions: { queries: { retry: false, gcTime: 0 } },
+    mutationCache: buildMutationCacheForClient(() => {
+      if (!ref) throw new Error("QueryClient accessed before initialization");
+      return ref;
+    }),
   });
+  ref = qc;
+  return qc;
 }
 
 function renderApp(initialPath: string, authUser: unknown = { id: 1, username: "test" }) {
@@ -225,17 +258,25 @@ function renderApp(initialPath: string, authUser: unknown = { id: 1, username: "
   };
 }
 
-/** Count fetch calls matching a path substring (after stripping base URL). */
+/**
+ * Count fetch calls whose path (after stripping base URL and query string)
+ * exactly matches the given path. We use exact matching (not substring)
+ * because paths like /literature/ingest and /literature/ingested share a
+ * prefix and substring matching would conflate them.
+ */
 function countCalls(pathFragment: string): number {
-  return fetchMock.mock.calls.filter(([url]) => stripPath(String(url)).includes(pathFragment)).length;
+  return fetchMock.mock.calls.filter(([url]) => {
+    const stripped = stripPath(String(url)).split("?")[0];
+    return stripped === pathFragment;
+  }).length;
 }
 
-/** Check if any fetch call matches path + optional method. */
+/** Check if any fetch call's path exactly matches + optional method. */
 function hasCall(pathFragment: string, method?: string): boolean {
   return fetchMock.mock.calls.some(([url, init]) => {
-    const p = stripPath(String(url));
+    const stripped = stripPath(String(url)).split("?")[0];
     const m = (init as RequestInit)?.method;
-    return p.includes(pathFragment) && (!method || m === method);
+    return stripped === pathFragment && (!method || m === method);
   });
 }
 
@@ -244,6 +285,7 @@ function hasCall(pathFragment: string, method?: string): boolean {
 describe("F1.5b Critical Product-Flow Integration (sealed)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    resetIngestedState();
     installHandler((path) => defaultHandler(path));
   });
   afterEach(() => {
@@ -319,22 +361,22 @@ describe("F1.5b Critical Product-Flow Integration (sealed)", () => {
   });
 
   // ════════════════════════════════════════════════════════════════
-  // (2) Gap A/B cache isolation — late A mutation cannot corrupt B
+  // (2) Gap A/B — routed cross-route transition with late mutation
   //
   // Real production scenario: user on /gaps/12 fires a status mutation,
-  // the in-flight mutation outlasts their interest in gap 13 in the same
-  // session. We prove three properties at the QueryClient level:
-  //   (i)   gap 13 actually loads its authoritative state
-  //   (ii)  Alpha's onSuccess invalidation is scoped to ["gap", 12]
-  //   (iii) gap 13's cache entry is untouched by Alpha's completion
-  //
-  // We keep gap 12 (and its mutation observer) mounted, and populate
-  // gap 13's cache in the SAME QueryClient via setQueryData — modeling
-  // gap 13 having been loaded in the same session (previous visit or
-  // background warm). Alpha's late mutation completion then fires its
-  // onSuccess in the same QC, and we verify gap 13 is not invalidated.
+  // then navigates within the SAME router to /gaps/13 while the PATCH is
+  // still in flight. We prove:
+  //   (i)   GET /gaps/13 actually executes (gap 13 is routed to, not just seeded)
+  //   (ii)  gap 13 renders its authoritative backend status
+  //   (iii) Alpha's late mutation completion still invalidates ["gap", 12]
+  //         AFTER GapDetailContent(12) has unmounted — proving mutation
+  //         side-effects are cache-scoped, not component-scoped
+  //   (iv)  ["gap", 13] is never invalidated
+  //   (v)   gap 13's rendered status remains "addressed"
+  //   (vi)  Navigating back to /gaps/12 fetches the authoritative updated
+  //         status ("investigating") — late completion was not lost
   // ════════════════════════════════════════════════════════════════
-  it("gap A/B: same router + QC, gap 13 loads, late A mutation cannot alter gap 13", async () => {
+  it("gap A/B: routed /gaps/12 → /gaps/13 transition; late mutation survives unmount; back-nav shows authoritative update", async () => {
     const invalidateSpy = vi.spyOn(QueryClient.prototype, "invalidateQueries");
 
     // Late-A: gap 12 PATCH never resolves until we say so
@@ -345,19 +387,40 @@ describe("F1.5b Critical Product-Flow Integration (sealed)", () => {
       return defaultHandler(path);
     });
 
-    // Use a session-grade QueryClient (gcTime > 0) so unobserved cache
-    // entries persist — modeling a real production session where the
-    // production QueryClient (default gcTime 5min) retains prior visits.
-    // The default test makeQC uses gcTime: 0, which would erase gap 13
-    // immediately and prevent us from asserting cache isolation.
+    // Use a session-grade QueryClient (gcTime > 0) so cache entries persist
+    // across navigation — matches the production default.
+    // F1.5c: install the PRODUCTION MutationCache via buildMutationCacheForClient
+    // (getter pattern). This ensures cache-owned invalidations fire regardless
+    // of component mount state — the same behavior the production QueryClient
+    // in main.tsx provides. Without this, the test would silently pass with
+    // a no-op MutationCache and fail to exercise the F1.5c contract.
+    // eslint-disable-next-line prefer-const
+    let qcRef: QueryClient | undefined;
     const qc = new QueryClient({
       defaultOptions: {
         queries: { retry: false, gcTime: 5 * 60 * 1000, staleTime: 0 },
       },
+      mutationCache: buildMutationCacheForClient(() => {
+        if (!qcRef) throw new Error("QueryClient accessed before initialization");
+        return qcRef;
+      }),
     });
+    qcRef = qc;
+
+    // Capture the production navigate() from inside the router so we can
+    // drive a SAME-router navigation (no unmount of the router itself,
+    // only of GapDetailContent(12)).
+    const navigateRef: { current: ((to: string) => void) | null } = { current: null };
+    function NavigateProbe() {
+      const navigate = useNavigate();
+      navigateRef.current = (to: string) => navigate(to);
+      return null;
+    }
+
     render(
       <QueryClientProvider client={qc}>
         <MemoryRouter initialEntries={["/gaps/12"]}>
+          <NavigateProbe />
           <Routes>
             <Route path="/*" element={
               <ProtectedRoute user={{}} loading={false}>
@@ -369,39 +432,42 @@ describe("F1.5b Critical Product-Flow Integration (sealed)", () => {
       </QueryClientProvider>,
     );
 
-    // (a) Gap 12 (Alpha) renders
+    // (a) /gaps/12 renders Alpha
     await waitFor(() => expect(screen.getByText("Gap in transformer scaling")).toBeInTheDocument());
+    const gap12CallsAtMutationStart = countCalls("/gaps/12");
 
-    // (b) Populate gap 13's cache in the SAME QueryClient — models gap 13
-    //     having been loaded earlier in this session (previous visit or
-    //     background warm). This is the cache entry Alpha's late mutation
-    //     must NOT corrupt.
-    qc.setQueryData(["gap", 13], mockGapDetail13);
-    const gap13CallsBeforeLateA = countCalls("/gaps/13");
-    const gap13CacheBefore = qc.getQueryData(["gap", 13]);
-    expect(gap13CacheBefore).toBeDefined();
-
-    // (c) Mutation for Alpha begins (PATCH held pending)
-    const initialGap12Calls = countCalls("/gaps/12");
+    // (b) Mutation for Alpha begins (PATCH held pending)
     await act(async () => {
       fireEvent.change(screen.getByTestId("gap-status-select"), { target: { value: "investigating" } });
     });
     await waitFor(() => expect(hasCall("/gaps/12/status", "PATCH")).toBe(true));
 
-    // (d) Alpha mutation resolves late — its onSuccess fires in the SAME
-    //     QueryClient. Because invalidation is scoped to ["gap", 12], gap 13
-    //     is neither invalidated nor refetched.
-    // Wrap the late resolution + subsequent invalidation-driven refetch
-    // in waitFor to absorb all resulting state updates into the act pool.
-    await waitFor(async () => {
-      resolveA({ body: { gap: { id: 12, status: "investigating" } } });
-      // Give the mutation pipeline a tick to run onSuccess → invalidate → refetch
-      await new Promise((r) => setTimeout(r, 50));
-      expect(hasCall("/gaps/12/status", "PATCH")).toBe(true);
-    });
+    // (c) Same router navigates to /gaps/13. GapDetailContent(12) unmounts.
+    expect(navigateRef.current).not.toBeNull();
+    await act(async () => { navigateRef.current!("/gaps/13"); });
 
-    // (e) Invalidation was scoped to ["gap", 12] only — never touched gap 13.
-    // The invalidateQueries argument shape is { queryKey: ["gap", gapId] }.
+    // (d) GET /gaps/13 actually executes (proves real routing, not cache seed)
+    await waitFor(() => expect(countCalls("/gaps/13")).toBeGreaterThanOrEqual(1));
+    // (e) gap 13 renders its authoritative backend status ("addressed")
+    await waitFor(() => expect(screen.getByText("Gap Beta")).toBeInTheDocument());
+    const betaSelect = screen.getByTestId("gap-status-select") as HTMLSelectElement;
+    expect(betaSelect.value).toBe("addressed");
+
+    const gap13CallsBeforeLateA = countCalls("/gaps/13");
+
+    // (f) Alpha mutation resolves late — AFTER GapDetailContent(12) unmounted.
+    //     This proves mutation onSuccess is cache-scoped: the invalidation
+    //     must still fire against ["gap", 12] in the shared QueryClient.
+    await act(async () => {
+      resolveA({ body: { gap: { id: 12, status: "investigating" } } });
+    });
+    // Allow the mutation pipeline to run onSuccess → invalidate → refetch
+    await new Promise((r) => setTimeout(r, 200));
+
+    // (g) Invalidation was scoped to ["gap", 12] only — and DID fire despite
+    //     GapDetailContent(12) being unmounted. This is the load-bearing
+    //     assertion: mutation completion authority is retained by the
+    //     QueryClient, not by a mounted page observer.
     const gap12Invalidations = invalidateSpy.mock.calls.filter(([arg]) => {
       const key = (arg as { queryKey?: unknown })?.queryKey;
       return Array.isArray(key) && key[0] === "gap" && key[1] === 12;
@@ -413,39 +479,78 @@ describe("F1.5b Critical Product-Flow Integration (sealed)", () => {
     expect(gap12Invalidations.length).toBeGreaterThan(0);
     expect(gap13Invalidations.length).toBe(0);
 
-    // (f) gap 12 GET was triggered by Alpha's onSuccess invalidation
-    await waitFor(() => {
-      expect(countCalls("/gaps/12")).toBeGreaterThan(initialGap12Calls);
-    });
+    // (h) The cache-level invalidation marked ["gap", 12] stale. No
+    //     component is currently mounted at /gaps/12, so no immediate
+    //     refetch occurs — the refetch fires when the user navigates
+    //     back. We assert the invalidation itself happened via the spy
+    //     (already done above) and that gap 13 was untouched (below).
+    //     The back-navigation refetch is proven in step (k).
 
-    // (g) No additional gap 13 GET was triggered by Alpha's completion
+    // (i) gap 13 was NOT refetched by Alpha's completion.
     expect(countCalls("/gaps/13")).toBe(gap13CallsBeforeLateA);
 
-    // (h) gap 13 cache entry is byte-for-byte unchanged — Alpha's
-    //     completion did not alter gap 13's authoritative state.
-    expect(qc.getQueryData(["gap", 13])).toEqual(gap13CacheBefore);
-
-    // (i) gap 13 status in cache is still "addressed" (its backend value),
+    // (j) gap 13's rendered status remains "addressed" (its backend value),
     //     not "investigating" (Alpha's value).
-    const gap13CacheFinal = qc.getQueryData(["gap", 13]);
-    const gap13Status = (gap13CacheFinal as { gap?: { status?: string } } | undefined)?.gap?.status;
-    expect(gap13Status).toBe("addressed");
+    expect(betaSelect.value).toBe("addressed");
+
+    // (k) Navigate back to /gaps/12 within the same router. The cache was
+    //     invalidated by the late onSuccess, so the route renders the
+    //     AUTHORITATIVE updated status. This proves the late completion
+    //     was not lost — its invalidation made the back-navigation refetch
+    //     the updated state.
+    // The default gap-12 detail handler returns status "identified" — to
+    // model the persisted backend update, override /gaps/12 to return the
+    // post-mutation status once the late PATCH has resolved.
+    installHandler((path) => {
+      if (path.split("?")[0] === "/gaps/12") {
+        return { body: { gap: { ...mockGapDetail.gap, status: "investigating" } } };
+      }
+      return defaultHandler(path);
+    });
+    const gap12CallsBeforeBackNav = countCalls("/gaps/12");
+    // staleTime is 0, so navigation-driven remount triggers a refetch of
+    // the now-stale entry the late invalidation produced.
+    await act(async () => { navigateRef.current!("/gaps/12"); });
+    await waitFor(() => expect(screen.getByText("Gap in transformer scaling")).toBeInTheDocument());
+    // (l) The back-navigation refetched gap 12 — proving the late
+    //     completion's cache invalidation survived unmount and made the
+    //     revisit observe the authoritative updated state.
+    await waitFor(() => expect(countCalls("/gaps/12")).toBeGreaterThan(gap12CallsBeforeBackNav));
+    // (m) The re-mounted Alpha shows the authoritative updated status.
+    const alphaSelectAfterBack = await waitFor(() =>
+      screen.getByTestId("gap-status-select") as HTMLSelectElement,
+    );
+    await waitFor(() => expect(alphaSelectAfterBack.value).toBe("investigating"));
+
+    // (n) Final consistency: gap 12 was fetched more times overall than at
+    //     mutation start, because the late invalidation produced a back-nav
+    //     refetch in addition to the initial mount.
+    expect(countCalls("/gaps/12")).toBeGreaterThan(gap12CallsAtMutationStart);
 
     invalidateSpy.mockRestore();
   });
 
   // ════════════════════════════════════════════════════════════════
   // (3) Literature success: pending → duplicate blocked → invalidation
-  //     → declared refetch → authoritative ingested state
+  //     → declared refetch → authoritative ingested state derived from
+  //     backend response (not local client state)
   // ════════════════════════════════════════════════════════════════
-  it("literature success: pending visible → duplicate blocked → declared key invalidated → authoritative ingested state", async () => {
+  it("literature success: pending visible → duplicate blocked → declared keys invalidated → backend-derived ingested state", async () => {
     const invalidateSpy = vi.spyOn(QueryClient.prototype, "invalidateQueries");
 
     // Hold the ingest pending long enough to observe state, then resolve
     let resolveIngest: (v: MockResponse) => void = () => {};
     installHandler((path) => {
       if (path === "/literature/ingest") {
-        return new Promise<MockResponse>((r) => { resolveIngest = r; });
+        return new Promise<MockResponse>((r) => {
+          // Intercept the resolve so we can mutate the backend-persisted
+          // ingestedState before the response is delivered — the real
+          // backend would do this as part of the POST handler.
+          resolveIngest = (v: MockResponse) => {
+            if (!ingestedState.ids.includes("ss-1")) ingestedState.ids.push("ss-1");
+            r(v);
+          };
+        });
       }
       return defaultHandler(path);
     });
@@ -459,6 +564,10 @@ describe("F1.5b Critical Product-Flow Integration (sealed)", () => {
 
     // Paper appears as ingestible
     await waitFor(() => expect(screen.getByTestId("ingest-button")).toBeInTheDocument());
+
+    // (a.0) literature-ingested was called before mutation (baseline state)
+    const ingestedCallsBefore = countCalls("/literature/ingested");
+    expect(ingestedCallsBefore).toBeGreaterThanOrEqual(1);
 
     // First click → confirmation; second click → mutation starts (pending)
     await act(async () => { fireEvent.click(screen.getByTestId("ingest-button")); });
@@ -475,20 +584,84 @@ describe("F1.5b Critical Product-Flow Integration (sealed)", () => {
     await act(async () => { fireEvent.click(screen.getByTestId("ingest-button")); });
     expect(countCalls("/literature/ingest")).toBe(callsDuringPending);
 
-    // (c) Valid contract response succeeds → declared key invalidated
+    // (c) Valid contract response succeeds → BOTH declared keys invalidated.
+    //     ["literature-ingested] is the authoritative source for the badge.
     await act(async () => { resolveIngest({ body: mockIngest }); });
     await waitFor(() => {
       expect(invalidateSpy).toHaveBeenCalledWith(
         expect.objectContaining({ queryKey: ["literature-search"] }),
       );
     });
+    await waitFor(() => {
+      expect(invalidateSpy).toHaveBeenCalledWith(
+        expect.objectContaining({ queryKey: ["literature-ingested"] }),
+      );
+    });
 
-    // (d) Authoritative ingested state becomes visibly reachable
-    await waitFor(() => expect(screen.getByTestId("ingested-badge")).toBeInTheDocument());
+    // (d) literature-ingested was called again after success (refetch)
+    await waitFor(() => {
+      expect(countCalls("/literature/ingested")).toBeGreaterThan(ingestedCallsBefore);
+    });
+
+    // (e) Authoritative ingested state derives from refreshed backend data.
+    //     The backend response now lists ss-1 as ingested, and the badge
+    //     appears because the UI reads from that response.
+    await waitFor(() => expect(screen.getByTestId("ingested-badge")).toBeInTheDocument(), { timeout: 5000 });
     expect(screen.getByTestId("ingested-badge")).toHaveTextContent("Ingested");
     expect(screen.getByTestId("ingest-button")).toBeDisabled();
 
     invalidateSpy.mockRestore();
+  });
+
+  // ════════════════════════════════════════════════════════════════
+  // (3b) Literature terminal state survives remount — derived from backend
+  // ════════════════════════════════════════════════════════════════
+  it("literature terminal state survives remount: badge derives from backend response, not local state", async () => {
+    // Seed the backend with an already-ingested paper — models "user returns
+    // to the page after a prior ingest in a previous session".
+    ingestedState.ids.push("ss-1");
+
+    // First mount: badge should appear immediately from backend data
+    const qc1 = makeQC();
+    const view1 = renderApp("/literature");
+    const input1 = screen.getByTestId("literature-search-input") as HTMLInputElement;
+    await act(async () => { fireEvent.change(input1, { target: { value: "attention" } }); });
+    await act(async () => { fireEvent.submit(input1.closest("form")!); });
+    await waitFor(() => expect(screen.getByTestId("ingested-badge")).toBeInTheDocument());
+    expect(screen.getByTestId("ingest-button")).toBeDisabled();
+
+    // Unmount entirely — local component state is destroyed.
+    view1.unmount();
+
+    // Re-mount at /literature with a FRESH QueryClient — simulates reload.
+    // No local state survives. The only source of the badge is the backend
+    // /literature/ingested response, which still lists ss-1.
+    const freshQC = makeQC();
+    render(
+      <QueryClientProvider client={freshQC}>
+        <MemoryRouter initialEntries={["/literature"]}>
+          <Routes>
+            <Route path="/*" element={
+              <ProtectedRoute user={{ id: 1, username: "test" }} loading={false}>
+                {productionRouteSet}
+              </ProtectedRoute>
+            } />
+          </Routes>
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+    const input2 = screen.getByTestId("literature-search-input") as HTMLInputElement;
+    await act(async () => { fireEvent.change(input2, { target: { value: "attention" } }); });
+    await act(async () => { fireEvent.submit(input2.closest("form")!); });
+
+    // The badge reappears — proving it's backend-derived, not local.
+    await waitFor(() => expect(screen.getByTestId("ingested-badge")).toBeInTheDocument());
+    expect(screen.getByTestId("ingest-button")).toBeDisabled();
+
+    // Silence the unused-var lint without weakening the assertion: qc1 was
+    // the QueryClient for the first mount and is captured here to document
+    // that the fresh mount deliberately does NOT reuse it.
+    expect(qc1).toBeDefined();
   });
 
   // ════════════════════════════════════════════════════════════════
@@ -502,6 +675,8 @@ describe("F1.5b Critical Product-Flow Integration (sealed)", () => {
         ingestCount++;
         ingestObserved.push(ingestCount);
         if (ingestCount === 1) return { status: 500, body: { detail: "err" } };
+        // F1.5c: simulate backend persistence on the successful retry.
+        if (!ingestedState.ids.includes("ss-1")) ingestedState.ids.push("ss-1");
         return { body: mockIngest };
       }
       return defaultHandler(path);
