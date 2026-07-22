@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { searchLiterature, ingestPaper } from "@/api/literature";
+import { searchLiterature, ingestPaper, listIngestedPapers } from "@/api/literature";
 import type { Paper, SearchResponse, LiteratureIngestResponse } from "@/api/literature";
 import { apiFetchUnchecked, apiFetchJson } from "@/api/client";
 
@@ -68,5 +68,21 @@ describe("BATCH-23/TASK-02: Literature API Client", () => {
     expect(result).toEqual(expected);
     expect(result.status).toBe("ingested");
     expect(result.id).toBe("ss-abc123");
+  });
+
+  // ── F1.5c: listIngestedPapers uses callContract → apiFetchJson ──
+  it("F1.5c: listIngestedPapers() returns authoritative persisted paper IDs", async () => {
+    mockApiFetchJson.mockResolvedValueOnce({ ids: ["ss-1", "arxiv-2"] });
+
+    const result = await listIngestedPapers();
+
+    expect(mockApiFetchJson).toHaveBeenCalled();
+    expect(result.ids).toEqual(["ss-1", "arxiv-2"]);
+  });
+
+  it("F1.5c: listIngestedPapers() rejects malformed responses (missing ids)", async () => {
+    mockApiFetchJson.mockResolvedValueOnce({ wrong: "shape" });
+
+    await expect(listIngestedPapers()).rejects.toThrow();
   });
 });

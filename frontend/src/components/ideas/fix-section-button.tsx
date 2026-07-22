@@ -33,6 +33,10 @@ export function FixSectionButton({
   const queryClient = useQueryClient();
   const [confirmed, setConfirmed] = useState(false);
 
+  // F1.5c: success-path invalidations declared in meta — cache-owned,
+  // survives unmount. onError invalidation (409-conflict refresh) stays
+  // component-level: errors don't change backend state, and cache-level
+  // onError is out of scope here.
   const mutation = useMutation({
     mutationFn: () =>
       refineSection(
@@ -41,6 +45,13 @@ export function FixSectionButton({
         currentHash,
         failureHints ? { failure_hints: failureHints } : undefined,
       ),
+    mutationKey: ["idea", ideaId, "refine-section", sectionKey],
+    meta: {
+      invalidateQueries: [
+        ["idea", ideaId],
+        ["section-revisions", ideaId, sectionKey],
+      ],
+    },
     onSuccess: (data) => {
       const improved =
         data.quality_checks_after.filter((c) => c.passed).length >=
@@ -50,10 +61,6 @@ export function FixSectionButton({
           ? "Section regenerated — quality improved"
           : "Section regenerated — see revision history",
       );
-      queryClient.invalidateQueries({ queryKey: ["idea", ideaId] });
-      queryClient.invalidateQueries({
-        queryKey: ["section-revisions", ideaId, sectionKey],
-      });
       setConfirmed(false);
     },
     onError: (err: Error) => {

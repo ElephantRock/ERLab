@@ -9,7 +9,7 @@
  */
 
 import { useState, useMemo } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
   getCatalog,
@@ -37,7 +37,6 @@ import {
 } from "lucide-react";
 
 export function StageModelEditor() {
-  const queryClient = useQueryClient();
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState<Record<string, string>>({});
   const [warnings, setWarnings] = useState<OverrideWarning[]>([]);
@@ -94,11 +93,15 @@ export function StageModelEditor() {
   const displayOverrides = editing ? draft : overrides;
 
   // ── Mutations ────────────────────────────────────────────────
+  // F1.5c: invalidations declared in meta — cache-owned, survive unmount.
 
   const saveMutation = useMutation({
     mutationFn: (body: Record<string, string>) => updateOverrides(body, false),
+    mutationKey: ["model-overrides", "save"],
+    meta: {
+      invalidateQueries: [["model-overrides"]],
+    },
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["model-overrides"] });
       setEditing(false);
       setWarnings([]);
       if (data.warnings.length > 0) {
@@ -113,8 +116,11 @@ export function StageModelEditor() {
 
   const removeMutation = useMutation({
     mutationFn: (stage: string) => removeOverride(stage),
+    mutationKey: ["model-overrides", "remove"],
+    meta: {
+      invalidateQueries: [["model-overrides"]],
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["model-overrides"] });
       toast.success("Stage reset to auto-routing");
     },
     onError: () => toast.error("Failed to reset stage"),
@@ -122,8 +128,11 @@ export function StageModelEditor() {
 
   const clearAllMutation = useMutation({
     mutationFn: () => clearAllOverrides(),
+    mutationKey: ["model-overrides", "clear-all"],
+    meta: {
+      invalidateQueries: [["model-overrides"]],
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["model-overrides"] });
       toast.success("All stage overrides cleared");
     },
     onError: () => toast.error("Failed to clear overrides"),

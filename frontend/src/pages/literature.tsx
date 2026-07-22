@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { useSearchParams } from "react-router-dom";
-import { searchLiterature, ingestPaper } from "@/api/literature";
+import { searchLiterature, ingestPaper, listIngestedPapers } from "@/api/literature";
 import { PaperCard } from "@/components/literature/paper-card";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -15,13 +15,6 @@ export default function LiteraturePage() {
   const [query, setQuery] = useState("");
   const [submittedQuery, setSubmittedQuery] = useState<string | null>(null);
   const [urlParams] = useSearchParams();
-  // F1.5b: track successfully ingested paper IDs so the production UI can
-  // surface an authoritative terminal state per paper. This is client-side
-  // state that becomes authoritative after the mutation's onSuccess runs
-  // and the search query refetches (declared invalidation).
-  const [ingestedIds, setIngestedIds] = useState<Set<string>>(new Set());
-
-  const queryClient = useQueryClient();
 
   // Auto-search from URL param (e.g., from global search navigation)
   useEffect(() => {
@@ -42,17 +35,36 @@ export default function LiteraturePage() {
     enabled: !!submittedQuery,
   });
 
-  // F1.4.1: ingestMutation now has truthful pending, success, and failure behavior.
-  // F1.5b: onSuccess also records the ingested paper id so the production UI
-  // can render an authoritative "Ingested" terminal state alongside the
-  // declared invalidation of ["literature-search"].
+  // F1.5c: backend-derived persisted ingestion state.
+  // The "Ingested" badge is derived from this query's response, NOT from
+  // ephemeral client state. The mutation's onSuccess invalidates this key,
+  // so the badge always reflects backend truth and survives reload/remount.
+  const { data: ingestedData } = useQuery({
+    queryKey: ["literature-ingested"],
+    queryFn: () => listIngestedPapers(),
+  });
+  const ingestedIds = new Set(ingestedData?.ids ?? []);
+
+  // F1.4.1 + F1.5c: ingest mutation.
+  // - retry: false (non-idempotent POST)
+  // - meta.invalidatePrefixes: ["literature-search"] (refresh all cached
+  //   searches) — cache-owned, survives unmount.
+  // - meta.invalidateQueries: ["literature-ingested"] (the authoritative
+  //   backend-derived ingested-ids list that drives the badge) —
+  //   cache-owned, survives unmount.
+  // - onSuccess/onError: component-level toasts (UX feedback only).
+  //   The badge itself is NOT local state — it derives from the refetched
+  //   ["literature-ingested"] response.
   const ingestMutation = useMutation({
     mutationFn: (paper: Paper) => ingestPaper(paper),
     retry: false,
+    mutationKey: ["literature", "ingest"],
+    meta: {
+      invalidatePrefixes: [["literature-search"]],
+      invalidateQueries: [["literature-ingested"]],
+    },
     onSuccess: (_data, paper) => {
       toast.success(`Ingested: ${paper.title.slice(0, 50)}...`);
-      setIngestedIds((prev) => new Set(prev).add(paper.id));
-      queryClient.invalidateQueries({ queryKey: ["literature-search"] });
     },
     onError: (_error, paper) => {
       toast.error(`Failed to ingest: ${paper.title.slice(0, 50)}...`);
@@ -68,7 +80,7 @@ export default function LiteraturePage() {
   function handleIngest(paper: Paper) {
     // F1.4.1: prevent duplicate submission — disable while pending
     if (ingestMutation.isPending) return;
-    // F1.5b: also refuse if this paper is already in the authoritative
+    // F1.5c: also refuse if this paper is already in the backend-authoritative
     // ingested set (terminal state).
     if (ingestedIds.has(paper.id)) return;
     ingestMutation.mutate(paper);

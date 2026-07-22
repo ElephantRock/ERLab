@@ -7,7 +7,7 @@
  */
 
 import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import {
   Card,
   CardContent,
@@ -41,7 +41,6 @@ export function RevisionHistoryDrawer({
   sectionLabel: string;
   currentHash: string;
 }) {
-  const queryClient = useQueryClient();
   const [restoringId, setRestoringId] = useState<number | null>(null);
 
   const { data, isLoading, isError, refetch } = useQuery({
@@ -49,14 +48,20 @@ export function RevisionHistoryDrawer({
     queryFn: () => getSectionRevisions(ideaId, sectionKey),
   });
 
+  // F1.5c: invalidation declared in meta — cache-owned, survives unmount.
   const restoreMutation = useMutation({
     mutationFn: (revisionId: number) =>
       restoreSection(ideaId, sectionKey, revisionId, currentHash),
+    mutationKey: ["section-revisions", ideaId, sectionKey, "restore"],
+    meta: {
+      invalidateQueries: [
+        ["section-revisions", ideaId, sectionKey],
+        ["idea", ideaId],
+      ],
+    },
     onMutate: (revisionId) => setRestoringId(revisionId),
     onSuccess: () => {
       toast.success("Section restored to previous version");
-      queryClient.invalidateQueries({ queryKey: ["section-revisions", ideaId, sectionKey] });
-      queryClient.invalidateQueries({ queryKey: ["idea", ideaId] });
     },
     onError: (err: Error) => {
       toast.error("Restore failed", { description: err.message });

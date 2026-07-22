@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { getGap, updateGapStatus, asGapStatus, type GapStatus } from "@/api/gaps";
 import { getGapPapers } from "@/api/clients/gap-papers-client";
@@ -57,7 +57,6 @@ function InvalidRouteId({ entity, raw }: { entity: string; raw?: string }) {
 
 function GapDetailContent({ gapId }: { gapId: number }) {
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
   const [papersExpanded, setPapersExpanded] = useState(false);
 
   const { data, isLoading, isError } = useQuery({
@@ -72,12 +71,19 @@ function GapDetailContent({ gapId }: { gapId: number }) {
     enabled: papersExpanded,
   });
 
-  // F1.4.2: gap status mutation with pending, duplicate prevention, and invalidation
+  // F1.4.2 + F1.5c: gap status mutation.
+  // - retry: false (non-idempotent PATCH)
+  // - meta.invalidateQueries: cache-owned invalidation that fires whether
+  //   or not this component is still mounted. Without this, navigating away
+  //   mid-PATCH would silently lose the invalidation and leave the cache
+  //   stale relative to backend truth.
+  // - onError: component-level toast (UX feedback only)
   const statusMutation = useMutation({
     mutationFn: (status: GapStatus) => updateGapStatus(gapId, status),
     retry: false,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["gap", gapId] });
+    mutationKey: ["gap", gapId, "status"],
+    meta: {
+      invalidateQueries: [["gap", gapId]],
     },
     onError: () => {
       toast.error("Failed to update gap status");

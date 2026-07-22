@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { listPlugins, installPlugin, type Plugin } from "@/api/exports";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -10,7 +10,6 @@ import { Puzzle, Plus, Loader2, Search } from "lucide-react";
 import { toast } from "sonner";
 
 export default function PluginsPage() {
-  const queryClient = useQueryClient();
   const [searchText, setSearchText] = useState("");
   const [newPluginName, setNewPluginName] = useState("");
   const [newPluginDesc, setNewPluginDesc] = useState("");
@@ -20,11 +19,15 @@ export default function PluginsPage() {
     queryFn: listPlugins,
   });
 
+  // F1.5c: invalidation declared in meta — cache-owned, survives unmount.
   const installMutation = useMutation({
     mutationFn: installPlugin,
+    mutationKey: ["plugins", "install"],
+    meta: {
+      invalidateQueries: [["plugins"]],
+    },
     onSuccess: () => {
       toast.success("Plugin installed");
-      queryClient.invalidateQueries({ queryKey: ["plugins"] });
       setNewPluginName("");
       setNewPluginDesc("");
     },

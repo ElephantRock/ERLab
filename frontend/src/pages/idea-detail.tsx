@@ -22,7 +22,7 @@
 import { useResource } from "@/lib/useResource";
 import { parseRouteId } from "@/lib/route-ids";
 import { DataView } from "@/components/ui/data-view";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 import { getIdea, refineIdea } from "@/api/ideas";
 import type { IdeaDetail } from "@/api/types";
 import { ScoreReport, type ScoreAxis } from "@/components/ui/score-report";
@@ -83,7 +83,6 @@ function InvalidIdeaId({ raw }: { raw?: string }) {
 
 function IdeaDetailContent({ ideaId }: { ideaId: number }) {
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
   const [copiedSection, setCopiedSection] = useState<string | null>(null);
   const [revisionSection, setRevisionSection] = useState<string | null>(null);
   const [highlightedSection, setHighlightedSection] = useState<string | null>(null);
@@ -105,11 +104,15 @@ function IdeaDetailContent({ ideaId }: { ideaId: number }) {
     { enabled: !isNaN(ideaId) },
   );
 
+  // F1.5c: invalidation declared in meta — cache-owned, survives unmount.
   const refineMutation = useMutation({
     mutationFn: () => refineIdea(ideaId),
+    mutationKey: ["idea", ideaId, "refine"],
+    meta: {
+      invalidateQueries: [["idea", ideaId]],
+    },
     onSuccess: () => {
       toast.success("Idea refined — scores updated");
-      queryClient.invalidateQueries({ queryKey: ["idea", ideaId] });
     },
     onError: () => toast.error("Refinement failed"),
   });

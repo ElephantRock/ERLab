@@ -11,7 +11,7 @@
  */
 
 import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import {
   Card,
   CardContent,
@@ -42,7 +42,6 @@ import {
 import { cn } from "@/lib/utils";
 
 export function GovernancePanel({ ideaId }: { ideaId: number }) {
-  const queryClient = useQueryClient();
   const [note, setNote] = useState("");
   const [pendingDecision, setPendingDecision] = useState<GovernanceDecisionType | null>(null);
 
@@ -51,15 +50,19 @@ export function GovernancePanel({ ideaId }: { ideaId: number }) {
     queryFn: () => getGovernanceTimeline(ideaId),
   });
 
+  // F1.5c: invalidation declared in meta — cache-owned, survives unmount.
   const decisionMutation = useMutation({
     mutationFn: (decision: GovernanceDecisionType) =>
       createGovernanceDecision(ideaId, decision, note.trim() || undefined),
+    mutationKey: ["governance-timeline", ideaId, "decision"],
+    meta: {
+      invalidateQueries: [["governance-timeline", ideaId]],
+    },
     onMutate: (decision) => setPendingDecision(decision),
     onSuccess: () => {
       toast.success("Decision recorded");
       setNote("");
       setPendingDecision(null);
-      queryClient.invalidateQueries({ queryKey: ["governance-timeline", ideaId] });
     },
     onError: (err: Error) => {
       toast.error("Failed to record decision", { description: err.message });

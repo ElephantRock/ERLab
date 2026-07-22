@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { listComments, addComment } from "@/api/collaboration";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -14,19 +14,22 @@ export function CommentThread({ ideaId }: CommentThreadProps) {
   const [author, setAuthor] = useState("anonymous");
   const [content, setContent] = useState("");
   const [replyTo, setReplyTo] = useState<number | null>(null);
-  const queryClient = useQueryClient();
 
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["comments", ideaId],
     queryFn: () => listComments(ideaId),
   });
 
+  // F1.5c: invalidation declared in meta — cache-owned, survives unmount.
   const mutation = useMutation({
     mutationFn: () =>
       addComment(ideaId, { author, content, parent_id: replyTo }),
+    mutationKey: ["comments", ideaId, "add"],
+    meta: {
+      invalidateQueries: [["comments", ideaId]],
+    },
     onSuccess: () => {
       toast.success("Comment added");
-      queryClient.invalidateQueries({ queryKey: ["comments", ideaId] });
       setContent("");
       setReplyTo(null);
     },

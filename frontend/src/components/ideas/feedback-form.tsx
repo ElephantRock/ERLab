@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 import { submitFeedback } from "@/api/ideas";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -16,13 +16,16 @@ export function FeedbackForm({ ideaId, onSuccess }: FeedbackFormProps) {
   const [rating, setRating] = useState(0);
   const [hovered, setHovered] = useState(0);
   const [notes, setNotes] = useState("");
-  const queryClient = useQueryClient();
 
+  // F1.5c: invalidation declared in meta — cache-owned, survives unmount.
   const mutation = useMutation({
     mutationFn: () => submitFeedback(ideaId, { rating, notes: notes || null }),
+    mutationKey: ["idea", ideaId, "feedback"],
+    meta: {
+      invalidateQueries: [["idea", ideaId]],
+    },
     onSuccess: () => {
       toast.success("Feedback submitted");
-      queryClient.invalidateQueries({ queryKey: ["idea", ideaId] });
       setRating(0);
       setNotes("");
       onSuccess?.();

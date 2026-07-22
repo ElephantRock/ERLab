@@ -1,5 +1,5 @@
 import { apiFetchUnchecked } from "./client";
-import { callContract, decodeObject, decodeString, type JsonContract } from "./contracts/common";
+import { callContract, decodeObject, decodeString, decodeArray, type JsonContract } from "./contracts/common";
 
 // ── Types ──
 
@@ -26,6 +26,11 @@ export interface Paper {
 
 export interface SearchResponse {
   papers: Paper[];
+}
+
+/** Response shape of GET /literature/ingested. */
+export interface IngestedPapersResponse {
+  ids: string[];
 }
 
 // F1.1 M4: renamed from IngestResponse to LiteratureIngestResponse to
@@ -64,4 +69,23 @@ const ingestPaperContract: JsonContract<LiteratureIngestResponse> = {
 /** Ingest a paper into the knowledge base. */
 export function ingestPaper(paper: Paper): Promise<LiteratureIngestResponse> {
   return callContract(ingestPaperContract, { body: paper });
+}
+
+// F1.5c: contract-validated ingested-papers read — authoritative source of
+// persisted ingestion state. The literature UI derives its "Ingested" badge
+// from this response rather than from ephemeral client state, so the badge
+// survives reload/remount and always reflects backend truth.
+const ingestedPapersContract: JsonContract<IngestedPapersResponse> = {
+  id: "literature.listIngested",
+  method: "GET",
+  pathPattern: "/literature/ingested",
+  responseKind: "json",
+  decoder: decodeObject<IngestedPapersResponse>({
+    required: { ids: decodeArray(decodeString) },
+  }),
+};
+
+/** Fetch the authoritative set of ingested paper IDs from the backend. */
+export function listIngestedPapers(): Promise<IngestedPapersResponse> {
+  return callContract(ingestedPapersContract);
 }
