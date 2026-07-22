@@ -590,6 +590,7 @@ def build():
         "dataset_version": "p1d2_diagnostic_v1_provisional",
         "canonical_generator_path": "scripts/build_p1d2_diagnostic_expansion.py",
         "canonical_generator_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
+        "canonical_generator_hash_semantics": "raw file bytes SHA-256 (no text normalization)",
         "created": "2026-07-22", "benchmark_role": "diagnostic",
         "case_count": len(ALL_CASES), "judgment_count": len(derived_judgments),
         "source_document_count": len(ALL_CORPUS), "task_family_counts": dict(sorted(families.items())),

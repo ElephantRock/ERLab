@@ -3,7 +3,7 @@
 Checks that the blinded reviewer packages contain no answer-revealing content.
 """
 from __future__ import annotations
-import json, sys
+import json, sys, hashlib
 from pathlib import Path
 
 DOCS = Path(__file__).resolve().parent.parent / "docs" / "retrieval"
@@ -49,9 +49,21 @@ def run():
 
     # Assignment manifest checks
     am = json.loads((DOCS / "p1d2_review_assignment_manifest.json").read_text(encoding="utf-8"))
-    chk("assignment: has neutral_id_map", len(am.get("neutral_id_map", {})) > 0)
     chk("assignment: blinding attested", all(am.get("blinding_attestations", {}).values()))
     chk("assignment: 81 judgments requiring review", am.get("total_judgments_requiring_review") == 81)
+    chk("assignment: identity_map NOT embedded", am.get("identity_map_embedded") is False)
+    chk("assignment: no neutral_id_map key in public manifest", "neutral_id_map" not in am,
+        "neutral_id_map found in reviewer-accessible manifest")
+    chk("assignment: identity_map_sha256 present", len(am.get("identity_map_sha256", "")) == 64)
+    chk("assignment: identity_map_access_policy is coordinator_only", am.get("identity_map_access_policy") == "coordinator_only")
+
+    # Verify the coordinator identity map exists and its hash matches the public reference
+    coord_map_path = Path(__file__).resolve().parent.parent / "coordinator" / "p1d2_review_identity_map.json"
+    chk("coordinator identity map exists", coord_map_path.exists())
+    if coord_map_path.exists():
+        live_hash = hashlib.sha256(coord_map_path.read_bytes()).hexdigest()
+        chk("coordinator map hash matches public manifest", live_hash == am.get("identity_map_sha256"),
+            f"live={live_hash[:16]} manifest={am.get('identity_map_sha256','?')[:16]}")
 
     # Package manifest checks
     pm = json.loads((DOCS / "p1d2_review_package_manifest.json").read_text(encoding="utf-8"))

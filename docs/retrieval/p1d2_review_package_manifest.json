@@ -1,6 +1,6 @@
 {
   "assignment_manifest": {
-    "hash": "c8e9d1b816bc4f3f744972ad94b891121df3d3d597d86db3a7bf5d917982c5b9",
+    "hash": "8aefc7420af7619e84c15432874ac8898a3fa093c6c1cd99056a4aa7a65963fd",
     "path": "docs/retrieval/p1d2_review_assignment_manifest.json"
   },
   "case_count": 30,
@@ -18,17 +18,23 @@
     "no_answer_revealing_document_labels": true,
     "no_author_grades_in_packages": true,
     "no_author_rationales_in_packages": true,
+    "no_neutral_id_map_in_reviewer_accessible_paths": true,
     "no_policy_outputs_in_packages": true
   },
+  "identity_map_access_policy": "coordinator_only",
+  "identity_map_embedded_in_public_manifest": false,
+  "identity_map_sha256": "54b7da354b7c68957d2457e2583e33f6fabea611472a57f061411ac9a3976d07",
   "manifest_version": "p1d2_review_package_manifest_v1",
   "neutral_id_count": 67,
   "packages": {
     "A": {
       "hash": "880e03780d3251043995acb193eb5e614be735c45511180fc6a238b66979cf32",
+      "hash_semantics": "raw file bytes SHA-256",
       "path": "docs/retrieval/p1d2_reviewer_package_A.jsonl"
     },
     "B": {
       "hash": "880e03780d3251043995acb193eb5e614be735c45511180fc6a238b66979cf32",
+      "hash_semantics": "raw file bytes SHA-256",
       "path": "docs/retrieval/p1d2_reviewer_package_B.jsonl"
     }
   },

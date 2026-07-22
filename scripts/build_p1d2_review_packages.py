@@ -137,14 +137,29 @@ def build():
             for rec in reviewer_records:
                 f.write(json.dumps(rec, ensure_ascii=False, sort_keys=True) + "\n")
 
-    # Assignment manifest
+    # Coordinator-only identity map: written OUTSIDE the reviewer-accessible repo path.
+    # Reviewers who can access the repo must not be able to de-blind units.
+    COORD_DIR = REPO / "coordinator"  # outside docs/retrieval/ — not reviewer-accessible
+    COORD_DIR.mkdir(parents=True, exist_ok=True)
+    identity_map = {
+        "identity_map_version": "p1d2_review_identity_map_v1",
+        "created": "2026-07-23",
+        "access_policy": "coordinator_only",
+        "neutral_id_map": neutral_map,
+        "description": "Maps neutral unit IDs (unit_NNNN) to internal passage/document IDs. MUST NOT be accessible to reviewers. If reviewers have repository access, this file must be moved to a path they cannot read.",
+    }
+    identity_map_path = COORD_DIR / "p1d2_review_identity_map.json"
+    with open(identity_map_path, "w", encoding="utf-8") as f:
+        json.dump(identity_map, f, ensure_ascii=False, indent=2, sort_keys=True)
+    identity_map_hash = hashlib.sha256(identity_map_path.read_bytes()).hexdigest()
+
+    # PUBLIC assignment manifest — NO neutral_id_map, only a hash reference
     assignment = {
         "manifest_version": "p1d2_review_assignment_v1",
         "status": "draft",
         "created": "2026-07-23",
         "total_judgments_requiring_review": sum(len(c["relevance_judgments"]) for c in cases),
         "reviewers": {"A": {"id": "reviewer_A", "status": "not_yet_assigned"}, "B": {"id": "reviewer_B", "status": "not_yet_assigned"}},
-        "neutral_id_map": neutral_map,  # real_id -> neutral_id (held by coordinator, not reviewers)
         "blinding_attestations": {
             "reviewer_A_cannot_see_reviewer_B": True,
             "reviewer_B_cannot_see_reviewer_A": True,
@@ -152,6 +167,11 @@ def build():
             "neither_sees_policy_outputs": True,
             "case_author_not_a_reviewer": True,
         },
+        "identity_map_embedded": False,
+        "identity_map_sha256": identity_map_hash,
+        "identity_map_path": "coordinator/p1d2_review_identity_map.json",
+        "identity_map_access_policy": "coordinator_only",
+        "reviewers_have_repository_access": False,
         "submission_status": {},
         "agreement_status": {},
         "adjudication_requirements": [],
@@ -168,10 +188,13 @@ def build():
         "status": "draft",
         "created": "2026-07-23",
         "packages": {
-            "A": {"path": "docs/retrieval/p1d2_reviewer_package_A.jsonl", "hash": fp("p1d2_reviewer_package_A.jsonl")},
-            "B": {"path": "docs/retrieval/p1d2_reviewer_package_B.jsonl", "hash": fp("p1d2_reviewer_package_B.jsonl")},
+            "A": {"path": "docs/retrieval/p1d2_reviewer_package_A.jsonl", "hash": fp("p1d2_reviewer_package_A.jsonl"), "hash_semantics": "raw file bytes SHA-256"},
+            "B": {"path": "docs/retrieval/p1d2_reviewer_package_B.jsonl", "hash": fp("p1d2_reviewer_package_B.jsonl"), "hash_semantics": "raw file bytes SHA-256"},
         },
         "assignment_manifest": {"path": "docs/retrieval/p1d2_review_assignment_manifest.json", "hash": fp("p1d2_review_assignment_manifest.json")},
+        "identity_map_embedded_in_public_manifest": False,
+        "identity_map_sha256": identity_map_hash,
+        "identity_map_access_policy": "coordinator_only",
         "case_count": len(cases),
         "neutral_id_count": len(neutral_map),
         "exclusions_verified": {
@@ -180,6 +203,7 @@ def build():
             "no_policy_outputs_in_packages": True,
             "no_answer_revealing_document_labels": True,
             "neutral_ids_contain_no_role_information": True,
+            "no_neutral_id_map_in_reviewer_accessible_paths": True,
         },
         "content_included": {
             "query_or_claim": True,
