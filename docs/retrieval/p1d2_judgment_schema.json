@@ -1,0 +1,193 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://elephant-rock-research-lab/p1d2_judgment_schema_v1",
+  "title": "P1D.2 Relevance Judgment",
+  "description": "Schema for one (case, unit) relevance judgment in P1D.2. v1.1 adds the reviewer's review-eligibility state machine (no provisional->sealable, disagreed->adjudicated, sealable->both reviews) and blinding/independence fields. Draft; NOT frozen.",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "judgment_id",
+    "case_id",
+    "unit_id",
+    "unit_type",
+    "unit_text_hash",
+    "research_utility_grade",
+    "review_status",
+    "decision_basis",
+    "requires_external_dual_review",
+    "eligible_for_scoring",
+    "eligible_for_seal"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {"type": "string", "const": "p1d2_judgment_schema_v1"},
+    "judgment_id": {"type": "string", "pattern": "^jdg_\\w+_\\w+$"},
+    "case_id": {"type": "string"},
+    "unit_id": {"type": "string"},
+    "unit_type": {"type": "string", "enum": ["passage", "paper"]},
+    "unit_text_hash": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "research_utility_grade": {"type": "integer", "minimum": 0, "maximum": 3},
+    "topical_relevance": {"type": "integer", "minimum": 0, "maximum": 3},
+    "evidence_utility": {"type": "integer", "minimum": 0, "maximum": 3},
+    "methodological_fit": {"type": "integer", "minimum": 0, "maximum": 3},
+    "review_status": {
+      "type": "string",
+      "enum": ["provisional", "dual_reviewed", "adjudicated"],
+      "description": "State in the review state machine."
+    },
+    "decision_basis": {
+      "type": "string",
+      "enum": ["single_pass_provisional", "dual_review_agreed", "dual_review_adjudicated", "external_dual_review"],
+      "description": "How the frozen decision was reached. external_dual_review is the only basis that fully satisfies P1D.2.3 for risk-bearing cases (genuinely independent external reviewers)."
+    },
+    "requires_external_dual_review": {
+      "type": "boolean",
+      "description": "REVIEWER GUARD. True when this judgment controls a hard-gated metric and is not yet externally dual-reviewed. Forces the case to stay unsealed."
+    },
+    "eligible_for_scoring": {
+      "type": "boolean",
+      "description": "REVIEWER GUARD. False until review requirements met. Provisional judgments are NOT scoreable in a sealed evaluation."
+    },
+    "eligible_for_seal": {
+      "type": "boolean",
+      "description": "REVIEWER GUARD. False until both independent reviews present + agreement/adjudication complete. A benchmark is sealed or unsealed — no 'provisional seal'."
+    },
+    "reviewer_a_decision": {
+      "type": "object",
+      "required": ["reviewer_id", "grade", "rationale"],
+      "additionalProperties": false,
+      "properties": {
+        "reviewer_id": {"type": "string"},
+        "grade": {"type": "integer", "minimum": 0, "maximum": 3},
+        "topical_relevance": {"type": "integer", "minimum": 0, "maximum": 3},
+        "evidence_utility": {"type": "integer", "minimum": 0, "maximum": 3},
+        "methodological_fit": {"type": "integer", "minimum": 0, "maximum": 3},
+        "rationale": {"type": "string", "minLength": 5}
+      }
+    },
+    "reviewer_b_decision": {
+      "type": "object",
+      "required": ["reviewer_id", "grade", "rationale"],
+      "additionalProperties": false,
+      "properties": {
+        "reviewer_id": {"type": "string"},
+        "grade": {"type": "integer", "minimum": 0, "maximum": 3},
+        "topical_relevance": {"type": "integer", "minimum": 0, "maximum": 3},
+        "evidence_utility": {"type": "integer", "minimum": 0, "maximum": 3},
+        "methodological_fit": {"type": "integer", "minimum": 0, "maximum": 3},
+        "rationale": {"type": "string", "minLength": 5}
+      }
+    },
+    "agreement_status": {
+      "type": "string",
+      "enum": ["agreed", "disagreed_grade", "disagreed_basis", "n_a_single_pass"]
+    },
+    "adjudicated_decision": {
+      "type": "object",
+      "required": ["adjudicator_id", "grade", "rationale"],
+      "additionalProperties": false,
+      "properties": {
+        "adjudicator_id": {"type": "string"},
+        "grade": {"type": "integer", "minimum": 0, "maximum": 3},
+        "rationale": {"type": "string", "minLength": 10}
+      }
+    },
+    "adjudication_rationale": {"type": "string", "minLength": 10},
+    "qualitative_adjudication": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "truly_supports_claim": {"type": "boolean"},
+        "genuinely_contradicts_or_qualifies": {"type": "boolean"},
+        "same_research_agenda": {"type": "boolean"},
+        "distinct_evidence_lineage": {"type": "boolean"},
+        "rationale": {"type": "string", "minLength": 10}
+      }
+    },
+    "case_author_id": {"type": "string", "description": "REVIEWER GUARD. For independence: case author cannot be a reviewer of their own case."},
+    "reviewer_a_id": {"type": "string", "description": "REVIEWER GUARD. Must differ from case_author_id and reviewer_b_id."},
+    "reviewer_b_id": {"type": "string", "description": "REVIEWER GUARD. Must differ from case_author_id and reviewer_a_id."},
+    "adjudicator_id": {"type": "string", "description": "REVIEWER GUARD. Must not be a policy developer; sees both rationales."},
+    "policy_outputs_visible_to_reviewers": {"type": "boolean", "description": "REVIEWER GUARD. Must be false for sealed-product-proxy/real-project-holdout judgments."},
+    "reviewers_blinded_to_each_other": {"type": "boolean", "description": "REVIEWER GUARD. Must be true when both reviewers present."},
+    "specialist_review_needed": {"type": "boolean", "default": false},
+    "annotation_confidence": {"type": "number", "minimum": 0.0, "maximum": 1.0}
+  },
+  "allOf": [
+    {
+      "description": "REVIEWER GUARD: provisional state. review_status=provisional => decision_basis=single_pass_provisional, requires_external_dual_review=true, eligible_for_scoring=false, eligible_for_seal=false. No reviewer decisions present.",
+      "if": {
+        "required": ["review_status"],
+        "properties": {"review_status": {"const": "provisional"}}
+      },
+      "then": {
+        "required": ["decision_basis", "requires_external_dual_review", "eligible_for_scoring", "eligible_for_seal"],
+        "properties": {
+          "decision_basis": {"const": "single_pass_provisional"},
+          "requires_external_dual_review": {"const": true},
+          "eligible_for_scoring": {"const": false},
+          "eligible_for_seal": {"const": false}
+        }
+      }
+    },
+    {
+      "description": "REVIEWER GUARD: dual_reviewed state => both reviewer decisions present, agreement_status present, eligible_for_seal may be true (if agreed). decision_basis is dual_review_agreed.",
+      "if": {
+        "required": ["review_status"],
+        "properties": {"review_status": {"const": "dual_reviewed"}}
+      },
+      "then": {
+        "required": ["reviewer_a_decision", "reviewer_b_decision", "agreement_status", "decision_basis", "eligible_for_seal"],
+        "properties": {"decision_basis": {"const": "dual_review_agreed"}, "agreement_status": {"const": "agreed"}}
+      }
+    },
+    {
+      "description": "REVIEWER GUARD: adjudicated state => adjudicated_decision + rationale present, decision_basis is dual_review_adjudicated.",
+      "if": {
+        "required": ["review_status"],
+        "properties": {"review_status": {"const": "adjudicated"}}
+      },
+      "then": {
+        "required": ["reviewer_a_decision", "reviewer_b_decision", "agreement_status", "adjudicated_decision", "adjudication_rationale", "decision_basis", "eligible_for_seal"],
+        "properties": {"decision_basis": {"const": "dual_review_adjudicated"}, "agreement_status": {"enum": ["disagreed_grade", "disagreed_basis"]}}
+      }
+    },
+    {
+      "description": "REVIEWER GUARD: sealable => both independent reviews present. eligible_for_seal=true requires reviewer_a_decision and reviewer_b_decision.",
+      "if": {
+        "required": ["eligible_for_seal"],
+        "properties": {"eligible_for_seal": {"const": true}}
+      },
+      "then": {"required": ["reviewer_a_decision", "reviewer_b_decision"]}
+    },
+    {
+      "description": "REVIEWER GUARD: sealable => review_status is NOT provisional.",
+      "if": {
+        "required": ["eligible_for_seal"],
+        "properties": {"eligible_for_seal": {"const": true}}
+      },
+      "then": {"properties": {"review_status": {"enum": ["dual_reviewed", "adjudicated"]}}}
+    },
+    {
+      "description": "REVIEWER GUARD: scoreable => review_status is NOT provisional.",
+      "if": {
+        "required": ["eligible_for_scoring"],
+        "properties": {"eligible_for_scoring": {"const": true}}
+      },
+      "then": {"properties": {"review_status": {"enum": ["dual_reviewed", "adjudicated"]}}}
+    },
+    {
+      "description": "REVIEWER GUARD: disagreement requires adjudication. If agreement_status is disagreed_*, adjudicated_decision and rationale must be present.",
+      "if": {
+        "required": ["agreement_status"],
+        "properties": {"agreement_status": {"enum": ["disagreed_grade", "disagreed_basis"]}}
+      },
+      "then": {"required": ["adjudicated_decision", "adjudication_rationale"]}
+    },
+    {
+      "description": "REVIEWER GUARD: reviewers_blinded_to_each_other must be true when both reviewer decisions are present.",
+      "if": {"required": ["reviewer_a_decision", "reviewer_b_decision"]},
+      "then": {"required": ["reviewers_blinded_to_each_other"], "properties": {"reviewers_blinded_to_each_other": {"const": true}}}
+    }
+  ]
+}
