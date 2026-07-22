@@ -12,7 +12,7 @@
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
-import { QueryClient, QueryClientProvider, useQuery } from "@tanstack/react-query";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter } from "react-router-dom";
 import React from "react";
 
@@ -255,12 +255,8 @@ describe("Settings fail-closed (F1.3b)", () => {
   });
 });
 
-// ── Knowledge-graph retry recovery ───────────────────────────────────
-// Proves: failure → failure UI → retry → success replaces failure with data.
-// The KG page has complex internal dependencies (detail toast effects,
-// SVG canvas) that make full-page mounting fragile in tests. Instead we
-// prove the query-level retry contract: the page wires isError + refetch
-// on the entities query, so the React Query lifecycle guarantees recovery.
+// ── Knowledge-graph production retry recovery (F1.3d) ────────────────
+// Mounts the REAL production KG page with mocked external boundaries only.
 
 vi.mock("@/api/knowledge-graph", () => ({
   getGraphStats: vi.fn(),
@@ -270,64 +266,79 @@ vi.mock("@/api/knowledge-graph", () => ({
   getWorldModel: vi.fn(),
 }));
 
-import { getEntities } from "@/api/knowledge-graph";
+vi.mock("@/components/knowledge-graph/graph-canvas", () => ({
+  GraphCanvas: ({ entities }: { entities: unknown[] }) => (
+    <div data-testid="graph-canvas">{entities.length} entities</div>
+  ),
+}));
+vi.mock("@/components/knowledge-graph/entity-detail", () => ({
+  EntityDetail: () => <div data-testid="entity-detail" />,
+}));
+vi.mock("@/components/knowledge-graph/world-model-panel", () => ({
+  WorldModelPanel: () => <div data-testid="world-model-panel" />,
+}));
+vi.mock("sonner", () => ({
+  toast: { error: vi.fn(), success: vi.fn() },
+}));
 
-// A minimal test harness that simulates the KG page's entity-query pattern:
-// isError + refetch wired to a retry button. This proves the production
-// wiring (isError destructured, refetch called, error distinct from empty).
-function KgEntityErrorHarness({ fetchFn }: { fetchFn: () => Promise<unknown> }) {
-  const result = useQuery({
-    queryKey: ["test-kg-entities"],
-    queryFn: fetchFn,
-  });
-  if (result.isLoading) return <div data-testid="loading">Loading...</div>;
-  if (result.isError) {
-    return (
-      <div data-testid="kg-entities-error">
-        Failed to load entities.{" "}
-        <button onClick={() => result.refetch()} className="underline">Retry</button>
-      </div>
-    );
-  }
-  if (!result.data || (Array.isArray(result.data) && result.data.length === 0)) {
-    return <div data-testid="kg-empty">No entities found</div>;
-  }
-  return <div data-testid="kg-data">{JSON.stringify(result.data)}</div>;
-}
+import { getEntities, getGraphStats, getWorldModel } from "@/api/knowledge-graph";
+import KnowledgeGraphPage from "@/pages/knowledge-graph";
 
-describe("Knowledge-graph retry recovery (F1.3c)", () => {
+describe("Knowledge-graph production retry recovery (F1.3d)", () => {
   beforeEach(() => { vi.clearAllMocks(); });
 
-  it("failure → failure UI visible (not empty) → retry → data replaces failure", async () => {
+  it("production page: entity failure → error UI → retry → data replaces failure", async () => {
+    // First entities call fails, second succeeds
     vi.mocked(getEntities).mockRejectedValueOnce(new Error("Network"));
     vi.mocked(getEntities).mockResolvedValueOnce([
-      { id: 1, label: "Entity A" } as any,
+      { id: "1", label: "Entity A", type: "concept", properties: {} } as any,
     ]);
+    // Other queries succeed with correct shapes so only entities triggers failure
+    vi.mocked(getGraphStats).mockResolvedValue({
+      entity_count: 1,
+      relationship_count: 0,
+      entity_types: {},
+      relation_types: {},
+    } as any);
+    vi.mocked(getWorldModel).mockResolvedValue({
+      total_entities: 0,
+      total_relationships: 0,
+      entity_type_distribution: {},
+      relationship_type_distribution: {},
+      top_entities: [],
+      strongest_relationships: [],
+    } as any);
 
     const qc = makeQueryClient();
     render(
       <QueryClientProvider client={qc}>
         <MemoryRouter>
-          <KgEntityErrorHarness fetchFn={() => getEntities({})} />
+          <KnowledgeGraphPage />
         </MemoryRouter>
       </QueryClientProvider>,
     );
 
-    // Wait for the entities failure indicator (NOT the empty state)
+    // Wait for the production kg-entities-error element to render
     await waitFor(() => {
       expect(screen.getByTestId("kg-entities-error")).toBeInTheDocument();
-    });
-    // The empty state must NOT appear during failure
-    expect(screen.queryByTestId("kg-empty")).not.toBeInTheDocument();
+    }, { timeout: 5000 });
 
-    // Click retry
+    // The empty-graph state must NOT appear during failure
+    expect(screen.queryByText(/No entities found/i)).not.toBeInTheDocument();
+
+    // Click the production retry control
     screen.getByText("Retry").click();
 
-    // Wait for the error to clear and data to appear
+    // Wait for the error to clear and real entity data to render
     await waitFor(() => {
       expect(screen.queryByTestId("kg-entities-error")).not.toBeInTheDocument();
-    });
-    expect(screen.getByTestId("kg-data")).toBeInTheDocument();
+    }, { timeout: 5000 });
+
+    // The graph canvas rendered with real entity data (1 entity)
+    await waitFor(() => {
+      const canvas = screen.queryByTestId("graph-canvas");
+      expect(canvas).toBeInTheDocument();
+    }, { timeout: 5000 });
 
     // getEntities was called at least twice (initial fail + retry)
     expect(vi.mocked(getEntities).mock.calls.length).toBeGreaterThanOrEqual(2);
