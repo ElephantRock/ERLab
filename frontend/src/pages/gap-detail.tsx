@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { getGap, updateGapStatus, asGapStatus } from "@/api/gaps";
+import { getGap, updateGapStatus, asGapStatus, type GapStatus } from "@/api/gaps";
 import { getGapPapers } from "@/api/clients/gap-papers-client";
 import { parseRouteId } from "@/lib/route-ids";
 import { Button } from "@/components/ui/button";
@@ -57,6 +57,7 @@ function InvalidRouteId({ entity, raw }: { entity: string; raw?: string }) {
 
 function GapDetailContent({ gapId }: { gapId: number }) {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [papersExpanded, setPapersExpanded] = useState(false);
 
   const { data, isLoading, isError } = useQuery({
@@ -69,6 +70,17 @@ function GapDetailContent({ gapId }: { gapId: number }) {
     queryKey: ["gap-papers", gapId],
     queryFn: () => getGapPapers(gapId),
     enabled: papersExpanded,
+  });
+
+  // F1.4.2: gap status mutation with pending, duplicate prevention, and invalidation
+  const statusMutation = useMutation({
+    mutationFn: (status: GapStatus) => updateGapStatus(gapId, status),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["gap", gapId] });
+    },
+    onError: () => {
+      toast.error("Failed to update gap status");
+    },
   });
 
   const gap: ResearchGap | undefined = data?.gap;
@@ -142,18 +154,25 @@ function GapDetailContent({ gapId }: { gapId: number }) {
           </div>
           <select
             value={gap.status || "identified"}
-            onChange={async (e) => {
+            onChange={(e) => {
               const next = asGapStatus(e.target.value);
               if (!next) return;
-              try { await updateGapStatus(gapId, next); } catch { toast.error("Failed to update gap status"); }
+              if (next === gap.status) return;
+              if (statusMutation.isPending) return;
+              statusMutation.mutate(next);
             }}
-            className="px-2 py-0.5 text-xs border rounded-md bg-background"
+            disabled={statusMutation.isPending}
+            className="px-2 py-0.5 text-xs border rounded-md bg-background disabled:opacity-50"
             aria-label="Gap lifecycle status"
+            data-testid="gap-status-select"
           >
             <option value="identified">Identified</option>
             <option value="investigating">Investigating</option>
             <option value="addressed">Addressed</option>
           </select>
+          {statusMutation.isPending && (
+            <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" data-testid="status-pending" />
+          )}
         </div>
       </div>
 
