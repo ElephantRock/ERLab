@@ -37,11 +37,6 @@ function expectContractError(decode: () => void) {
   expect(decode).toThrow(ApiContractError);
 }
 
-// Helper: run a decoder and assert it succeeds
-function expectValid<T>(decode: () => T): T {
-  return expect(decode).not.toThrow();
-}
-
 // ── Dashboard contracts ──────────────────────────────────────────────
 
 describe("listRunsContract decoder", () => {
