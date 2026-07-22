@@ -18,7 +18,8 @@ Note: outputs live under docs/retrieval/ (NOT data/retrieval/) because data/ is
 gitignored ("Runtime data — NEVER commit"). Governance JSON follows the P1B
 precedent of keeping evaluated artifacts under docs/ (e.g. docs/p1b_gate2/).
 
-DRAFT artifact (status: draft) - NOT frozen, no gate closed.
+FROZEN artifact (status: frozen) - sealed by governance commit per external approval.
+The pre-freeze draft evidence is preserved in source commit 0100935.
 """
 from __future__ import annotations
 import sys, json
@@ -285,10 +286,11 @@ def build_distribution(rows, diag):
 
     dist = {
         "distribution_version": "p1d_failure_distribution_v1_1",
-        "status": "draft",
+        "status": "frozen",
         "revision": "P1D.1a - separates observed selection analysis from held-out design attribution; corrects 44-imperfect accounting; replaces causal claims with slice-informed hypotheses; corrects saturation arithmetic and wording per external review",
         "created": "2026-07-22",
-        "authority": "P1D.1 - draft for user review. NOT frozen. No gate closed.",
+        "frozen": "2026-07-22 by governance seal commit; source draft evidence commit 0100935",
+        "authority": "P1D.1 - FROZEN. Sealed by external review approval. Gate closed as historical characterization.",
         "source_data": {
             "benchmark_fingerprint": diag["benchmark_fingerprint"],
             "snapshot_fingerprint": diag["snapshot_fingerprint"],

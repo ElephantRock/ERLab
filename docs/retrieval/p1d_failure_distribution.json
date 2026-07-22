@@ -1,9 +1,10 @@
 {
   "distribution_version": "p1d_failure_distribution_v1_1",
-  "status": "draft",
+  "status": "frozen",
   "revision": "P1D.1a - separates observed selection analysis from held-out design attribution; corrects 44-imperfect accounting; replaces causal claims with slice-informed hypotheses; corrects saturation arithmetic and wording per external review",
   "created": "2026-07-22",
-  "authority": "P1D.1 - draft for user review. NOT frozen. No gate closed.",
+  "frozen": "2026-07-22 by governance seal commit; source draft evidence commit 0100935",
+  "authority": "P1D.1 - FROZEN. Sealed by external review approval. Gate closed as historical characterization.",
   "source_data": {
     "benchmark_fingerprint": "0ffbfdb164053ad19c869cbba44678c0aa76aa140557320383a82efcebcb96e4",
     "snapshot_fingerprint": "2d8b26f709c03b6bbc7d5c4ab7ca65255e0e1f8eb65aa5562b205e0602084000",

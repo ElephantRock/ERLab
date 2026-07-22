@@ -1,0 +1,68 @@
+{
+  "record_version": "p1d_freeze_record_v1",
+  "record_type": "governance_seal",
+  "status": "frozen",
+  "created": "2026-07-22",
+  "approval_date": "2026-07-22",
+  "authority": "External review approval (2026-07-22). Sealed by governance seal commit on the feat/quarantine-and-frontend-redesign branch. No further analytical or content revision was required after the P1D.0a/P1D.1a correction wave.",
+  "source_draft_evidence_commit": "0100935",
+  "source_draft_evidence_description": "Commit 0100935 (docs(p1d): complete P1D.0a/P1D.1a artifact package under docs/retrieval/) holds the draft (status: draft) evidence package that was verified by external review: all version markers v1.1, all statuses draft, held-out observed categories null, selection non-ceiling count 22, semantic-generalization count 2, observed embedding-indicated fraction 2/22, all-66 design priors, provenance/count assertions present, deterministic reruns, no production changes.",
+  "scope": "This seal freezes the P1D.0 and P1D.1 artifacts. It does NOT select an architecture, authorize a candidate model, or change production retrieval. It closes P1D.0 and P1D.1 and authorizes P1D.2.",
+  "frozen_artifacts": {
+    "description": "Full SHA-256 hashes of all nine P1D artifacts in their FROZEN state (status: frozen). These hashes are post-freeze; they differ from the draft-state hashes in 0100935 because the status field changed from draft to frozen. The builder's two outputs (jsonl, distribution) are regenerated as frozen and remain deterministic across reruns.",
+    "files": {
+      "docs/retrieval/p1d_retrieval_need_spec.md": "f90ce52ea5850dadb9d8624f5e23ec3d41cbcc32376bb54c071bcca873095420",
+      "docs/retrieval/p1d_retrieval_need_spec.json": "85b0557ce4c5b33d3e172a8fd0d74c483fe8fbef1c18ccec68ff333583ab8287",
+      "docs/retrieval/p1d_task_risk_matrix.json": "1812214e8d76184b441b5be68989763e52b4d6ebaa709d22624d5d44972c5ad4",
+      "docs/retrieval/p1d_operational_envelope.json": "9db5547e1331dafe20ddc66d24a7a429af3efcca65cc865ccfe6f17a4b36fcbb",
+      "docs/retrieval/p1d_slice_to_task_family_map.json": "b2ba9dade219c35d250c400143b42e50dfe638cbb3a55ee7dfc1e032a47ffb49",
+      "docs/retrieval/p1d_historical_failure_analysis.jsonl": "4b0e1b680c7d2fec223f23d37f8c92cf18bd88d86488da691ad99c579bda212e",
+      "docs/retrieval/p1d_failure_distribution.json": "28104e2e04761c5ca13b4fa4d9181cacd5ad54d162f09091ed062ed2a03ed9d2",
+      "reports/retrieval/p1d_failure_analysis.md": "9bfa05b2c2ebff46b30c7bc05734b82f7f5c3be28cffd25b2630c0a6dfa554db",
+      "scripts/build_p1d_analysis.py": "9b9f4125f1727114e32dae5fd57e4b66fc46ca83b961433ae04121e85b3ab901"
+    },
+    "count": 9
+  },
+  "gate_closures": {
+    "P1D.0": "CLOSED",
+    "P1D.0_closure_basis": "Retrieval need spec, task-risk matrix, operational envelope, and slice-to-task-family map all frozen. Six task families defined with three-axis (objective/integrity/coverage) separation. Risk hierarchy separates globally-non-compensable (false_support) from task-hard-gated risks. Operational envelope split into diagnostic-host (provisional) and production-representative (to-be-set) with measurement protocols required.",
+    "P1D.1": "CLOSED as historical characterization only",
+    "P1D.1_closure_basis": "Historical failure analysis frozen as characterization, NOT as an architecture decision. Observed selection evidence (44 cases, 22 non-ceiling) separated from held-out design priors (22 cases, observed categories null). Saturation arithmetic corrected: +0.030 macro gate is mathematically possible (max +0.0505; needs +0.060 on non-ceiling half) but the benchmark is partially saturated (50% at ceiling) with limited gate power. Slice classifications are design priors, not measured causal diagnoses."
+  },
+  "declarations": {
+    "architecture_selected": false,
+    "architecture_selected_note": "No retrieval architecture has been selected. P1D.0/P1D.1 establish needs and characterize the historical benchmark; they do not nominate or select any architecture.",
+    "candidate_model_authorized": null,
+    "candidate_model_authorized_note": "No candidate embedding model is authorized. The historical data does not isolate embedding capacity as the dominant bottleneck, and no model has passed operational preflight (P1D.5, not yet run).",
+    "production_policy_changed": false,
+    "production_policy_changed_note": "Production retrieval policy remains legacy_lexical_top20_v1, unchanged since P1B. No production code was modified in P1D.0/P1D.1 (git-verified: 0 tracked production files touched)."
+  },
+  "roadmap_after_seal": {
+    "P1D.0": "CLOSED",
+    "P1D.1": "CLOSED AS HISTORICAL CHARACTERIZATION",
+    "P1D.2": "ACTIVE",
+    "P1": "OPEN",
+    "P1D.2_first_actions": [
+      "Author 30-case diagnostic set drawn from known failure modes, weighted toward the three under-covered task families (evidence_retrieval, contradiction_retrieval, multi_paper_synthesis).",
+      "Author 48-case sealed product-validation set (8 per task family), at passage granularity for the three under-covered families.",
+      "Diagnostic set is visible during development; sealed set is hidden until one architecture is selected and frozen. No policy tuning on the sealed set."
+    ]
+  },
+  "boundaries_preserved": {
+    "description": "These three boundaries are binding and must not be violated by downstream waves. They prevent P1D.1 from being misread as a decision it does not make.",
+    "boundaries": [
+      "P1D.1 does NOT conclude that lexical retrieval satisfies ERLab. The benchmark is partially saturated (50% at ceiling) and three of six task families are weakly/minimally covered. A 'lexical is sufficient' conclusion would be a false negative and is explicitly excluded.",
+      "P1D.1 does NOT authorize an embedding model. No candidate model is selected or authorized. The historical data does not isolate embedding capacity as the dominant bottleneck (only 2/22 observed non-ceiling cases have a semantic-generalization design hypothesis), and even that signal does not exonerate or indict embeddings.",
+      "P1D.1 establishes that NEW product-grounded evaluation evidence is required. The existing 66-case benchmark cannot answer the full product-wide needs-led question. P1D.2 (diagnostic + sealed sets at passage granularity) is load-bearing, not optional."
+    ]
+  },
+  "strategic_conclusion": "The historical benchmark does not justify selecting a larger embedding model, and P1D.2 must establish the missing product-grounded evidence before any candidate architecture is nominated. This conclusion survived two rounds of external review (defect correction + provenance verification) unchanged.",
+  "verification_at_freeze": {
+    "all_artifacts_status": "frozen",
+    "builder_provenance_assertions": "pass",
+    "builder_schema_assertions": "pass (held-out observed categories null)",
+    "builder_deterministic_rerun": "pass (identical SHA-256 across reruns for both builder outputs)",
+    "production_files_modified": 0,
+    "v1_defect_terms_residual": "none (all v1 terms appear only in retraction context within revision notes)"
+  }
+}

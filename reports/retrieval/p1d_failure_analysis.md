@@ -1,7 +1,9 @@
 # P1D.1 — Historical Failure Analysis
 
-> **Status: DRAFT (revision P1D.1a) for user review. NOT frozen. No gate closed.**
-> Author: P1D.1 wave (2026-07-22). Machine-readable twins: `p1d_historical_failure_analysis.jsonl`, `p1d_failure_distribution.json` (v1.1).
+> **Status: FROZEN (revision P1D.1a). P1D.1 CLOSED as historical characterization only.**
+> Sealed by external review approval on 2026-07-22 via governance seal commit.
+> Source draft evidence preserved in commit `0100935`.
+> Author: P1D.1 wave (2026-07-22). Machine-readable twins: `p1d_historical_failure_analysis.jsonl`, `p1d_failure_distribution.json` (v1.1, frozen).
 > Data source: frozen P1B benchmark (fingerprint `0ffbfdb1…`) + `docs/p1b_gate2/diagnostic_analysis.json` (frozen).
 >
 > **Revision P1D.1a corrects three defects from v1:** (1) saturation claim overstated — the gate is NOT arithmetically impossible; (2) held-out cases were counted as observed failures — they are now separated; (3) slice-based classifications were presented as causal diagnoses — they are now explicitly slice-informed intervention hypotheses. See "Changes from v1" at the end.

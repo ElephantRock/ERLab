@@ -1,9 +1,10 @@
 {
   "envelope_version": "p1d_operational_envelope_v1_1",
-  "status": "draft",
+  "status": "frozen",
   "revision": "P1D.0a — splits envelope into diagnostic-host and production-representative; marks all numeric thresholds explicitly provisional; adds required measurement protocols per external review. v1's flat envelope mixed diagnostic and production scopes and stated thresholds without measurement scope.",
   "created": "2026-07-22",
-  "authority": "P1D.0 — draft for user review. NOT frozen. No gate closed.",
+  "frozen": "2026-07-22 by governance seal commit; source draft evidence commit 0100935",
+  "authority": "P1D.0 — FROZEN. Sealed by external review approval. P1D.0 gate CLOSED. (Numeric thresholds remain PROVISIONAL pending their measurement protocols at P1D.5; only the 4 approved_rules are authoritative.)",
   "description": "The operational gate for P1D candidate policies. Separate from the quality/risk gate: a candidate can pass quality and fail operations (or vice versa). The P1C host-crash (Branch D) is the canonical example of an operational failure that had to be kept distinct from a quality verdict.",
   "approved_rules_now": {
     "description": "The only operational rules the reviewer approves as authoritative at this stage. Everything else remains provisional.",

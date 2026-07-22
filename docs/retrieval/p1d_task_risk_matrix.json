@@ -1,9 +1,10 @@
 {
   "matrix_version": "p1d_task_risk_matrix_v1_1",
-  "status": "draft",
+  "status": "frozen",
   "revision": "P1D.0a — separates task objective/integrity/coverage; renames 'critical' cells to 'hard-gated'; resolves non-invertibility terminology conflict with need spec per external review",
   "created": "2026-07-22",
-  "authority": "P1D.0 — draft for user review. NOT frozen. No gate closed.",
+  "frozen": "2026-07-22 by governance seal commit; source draft evidence commit 0100935",
+  "authority": "P1D.0 — FROZEN. Sealed by external review approval. P1D.0 gate CLOSED.",
   "source_spec": "docs/retrieval/p1d_retrieval_need_spec.json (v1.1)",
   "description": "Cross-product of the six task families against the six ranked risks. v1.1 changes: (1) each task now has an explicit task_objective / primary_integrity_risk / primary_coverage_risk triple, so the evidence_retrieval conflation is resolved; (2) the defining-risk cells are renamed from 'critical' to 'hard_gated', matching the need spec's task_hard_gated concept (frozen absolute threshold + allowed paired regression margin, NOT zero-tolerance); (3) false_support remains the only globally_non_compensable risk, distinct from the hard-gated cells.",
   "terminology_alignment_with_need_spec": {

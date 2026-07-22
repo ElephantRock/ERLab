@@ -1,8 +1,9 @@
 {
   "map_version": "p1d_slice_to_task_family_map_v1",
-  "status": "draft",
+  "status": "frozen",
   "created": "2026-07-22",
-  "authority": "P1D.0 — draft for user review. NOT frozen. No gate closed.",
+  "frozen": "2026-07-22 by governance seal commit; source draft evidence commit 0100935",
+  "authority": "P1D.0 — FROZEN. Sealed by external review approval. P1D.0 gate CLOSED.",
   "description": "Maps each of the 11 frozen benchmark slices to one or more of the six P1D task families. This mapping is REQUIRED because the benchmark was authored around adversarial retrieval-failure MODES (slices), not product WORKFLOWS (task families) — there is no 1:1 correspondence. A case may map to multiple families. This artifact is what lets P1D.1 classify the 66 cases by task family and what makes the task-family framing usable at all.",
   "task_families": [
     "paper_discovery",

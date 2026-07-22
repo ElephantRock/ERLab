@@ -1,9 +1,10 @@
 {
   "spec_version": "p1d_retrieval_need_spec_v1_1",
-  "status": "draft",
+  "status": "frozen",
   "revision": "P1D.0a — corrects risk/non-invertibility terminology, missed-evidence rationale, and task objective/risk separation per external review",
   "created": "2026-07-22",
-  "authority": "P1D.0 — draft for user review. NOT frozen. No gate closed.",
+  "frozen": "2026-07-22 by governance seal commit; source draft evidence commit 0100935",
+  "authority": "P1D.0 — FROZEN. Sealed by external review approval. P1D.0 gate CLOSED.",
   "source_plan": "P1D — Needs-Led Retrieval Architecture Plan (pasted 2026-07-22)",
   "mission": "Determine the lowest-complexity retrieval system that satisfies ERLab's real research workflows. The program does NOT begin from the assumption that ERLab needs a larger embedding model.",
   "terminology_revision_note": "v1 conflated 'non-invertible' across two different meanings. v1.1 separates them: (1) GLOBALLY NON-COMPENSABLE risk — false support is the only one; it creates affirmative but incorrect evidence and cannot be traded off against any recall gain, anywhere. (2) TASK-SPECIFIC HARD GATE — each task family has a defining risk with a minimum threshold; a candidate must meet the absolute threshold AND remain within a small allowed paired regression margin. These are distinct concepts and must not share the label 'non-invertible'.",

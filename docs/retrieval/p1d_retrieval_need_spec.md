@@ -1,7 +1,9 @@
 # P1D.0 — ERLab Retrieval Need Specification
 
-> **Status: DRAFT (revision P1D.0a) for user review. NOT frozen. No gate closed.**
-> Machine-readable twin: `p1d_retrieval_need_spec.json` (v1.1).
+> **Status: FROZEN (revision P1D.0a). P1D.0 gate CLOSED.**
+> Sealed by external review approval on 2026-07-22 via governance seal commit.
+> Source draft evidence preserved in commit `0100935`.
+> Machine-readable twin: `p1d_retrieval_need_spec.json` (v1.1, frozen).
 > Revision P1D.0a corrects: risk/non-invertibility terminology, missed-evidence rationale, and task objective/risk separation per external review.
 
 ## Mission
