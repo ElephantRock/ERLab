@@ -220,3 +220,187 @@ class TestIngestedEndpoint:
 
         assert response.status_code == 200
         assert response.json()["ids"] == ["ss-1", "arxiv-2"]
+
+
+# ── F1.5d: POST /literature/ingest write-read consistency ──
+class TestIngestPersistence:
+    """F1.5d: prove the production ingest service path actually persists.
+
+    These tests exercise the REAL _do_ingest (no AsyncMock replacement).
+    The VectorStore class is mocked at the lowest seam so the production
+    service logic — chunk construction, store wiring, error handling —
+    all runs.
+
+    Contract under test:
+        POST /literature/ingest -> VectorStore.add_papers([paper], [chunks])
+        GET /literature/ingested -> VectorStore._collection.get(metadatas)
+
+    The mock store simulates persistence by recording add_papers inputs
+    and surfacing them via _collection.get, so a subsequent GET observes
+    the same paper_id the POST wrote.
+    """
+
+    def _persistent_store(self):
+        """Build a mock VectorStore whose add_papers records what was
+        written and whose _collection.get replays those records. This
+        simulates a real vector store: writes become visible to reads.
+        """
+        written_metadatas = []
+
+        async def _add_papers(papers, chunks):
+            # Mirror the production metadata shape written by the real
+            # VectorStore.add_papers (vector_store.py:116-126) so the GET
+            # read path sees the same field names.
+            for paper in papers:
+                written_metadatas.append({
+                    "paper_id": paper.id,
+                    "paper_title": paper.title[:500],
+                    "source": paper.source,
+                    "section": "abstract",
+                    "year": paper.year or 0,
+                    "keywords": ",".join(paper.keywords) if paper.keywords else "",
+                })
+            return 1  # one chunk upserted
+
+        mock_collection = MagicMock()
+        mock_collection.get.side_effect = lambda **kw: {"metadatas": list(written_metadatas)}
+        mock_store = MagicMock()
+        mock_store._collection = mock_collection
+        mock_store.add_papers = _add_papers
+        return mock_store
+
+    def test_post_then_get_exposes_persisted_paper_id(self, client):
+        """POST /literature/ingest persists paper_id such that a subsequent
+        GET /literature/ingested reports it. Proves write-read consistency
+        through the REAL _do_ingest service path."""
+        store = self._persistent_store()
+
+        paper_payload = {
+            "id": "ss-persist-001",
+            "source": "semantic_scholar",
+            "title": "Persistent Paper",
+            "abstract": "Abstract text.",
+            "authors": [{"name": "Author A"}],
+            "year": 2024,
+        }
+
+        with patch(
+            "backend.pipeline.knowledge.vector_store.VectorStore",
+            return_value=store,
+        ), patch(
+            "backend.pipeline.knowledge.embedding_service.EmbeddingService",
+        ), patch(
+            "backend.providers.provider_factory.create_provider",
+        ):
+            # (a) Initial GET — paper not yet persisted.
+            r0 = client.get("/api/v1/literature/ingested")
+            assert r0.status_code == 200
+            assert r0.json()["ids"] == []
+
+            # (b) POST runs the REAL _do_ingest → store.add_papers writes.
+            r1 = client.post("/api/v1/literature/ingest", json=paper_payload)
+            assert r1.status_code == 200
+            assert r1.json()["status"] == "ingested"
+            assert r1.json()["id"] == "ss-persist-001"
+
+            # (c) Second GET — paper_id now appears. This is the
+            # load-bearing write-read consistency assertion: the same
+            # paper_id written by POST is reported by GET through the
+            # shared VectorStore seam.
+            r2 = client.get("/api/v1/literature/ingested")
+            assert r2.status_code == 200
+            assert "ss-persist-001" in r2.json()["ids"]
+
+    def test_post_failure_does_not_report_ingested(self, client):
+        """When persistence fails, POST must surface the failure and a
+        subsequent GET must NOT report the paper as ingested. No fake
+        'ingested' acknowledgment is permitted."""
+        # add_papers raises → _do_ingest must propagate the failure.
+        failing_store = MagicMock()
+
+        async def _fail(papers, chunks):
+            raise RuntimeError("vector store offline")
+
+        failing_store.add_papers = _fail
+
+        paper_payload = {
+            "id": "ss-fail-001",
+            "source": "arxiv",
+            "title": "Failing Paper",
+            "abstract": "Abstract.",
+        }
+
+        with patch(
+            "backend.pipeline.knowledge.vector_store.VectorStore",
+            return_value=failing_store,
+        ), patch(
+            "backend.pipeline.knowledge.embedding_service.EmbeddingService",
+        ), patch(
+            "backend.providers.provider_factory.create_provider",
+        ):
+            # POST fails — _do_ingest catches add_papers exception and re-raises
+            # as BadRequestError.
+            r1 = client.post("/api/v1/literature/ingest", json=paper_payload)
+            assert r1.status_code == 400, f"expected 400 on persistence failure, got {r1.status_code}"
+            assert "error" in r1.json()
+
+            # GET reports empty — no false-positive ingest.
+            # (Use a separate store mock that was never written to.)
+            empty_store = MagicMock()
+            empty_collection = MagicMock()
+            empty_collection.get.return_value = {"metadatas": []}
+            empty_store._collection = empty_collection
+            with patch(
+                "backend.pipeline.knowledge.vector_store.VectorStore",
+                return_value=empty_store,
+            ):
+                r2 = client.get("/api/v1/literature/ingested")
+                assert r2.status_code == 200
+                assert "ss-fail-001" not in r2.json()["ids"]
+
+    def test_post_zero_chunks_treated_as_failure(self, client):
+        """If add_papers returns 0 chunks (e.g. embedding provider returned
+        zero vectors), POST must fail rather than claim success."""
+        zero_store = MagicMock()
+
+        async def _zero(papers, chunks):
+            return 0
+
+        zero_store.add_papers = _zero
+
+        paper_payload = {
+            "id": "ss-zero-001",
+            "source": "arxiv",
+            "title": "Zero-Chunk Paper",
+            "abstract": "Abstract.",
+        }
+
+        with patch(
+            "backend.pipeline.knowledge.vector_store.VectorStore",
+            return_value=zero_store,
+        ), patch(
+            "backend.pipeline.knowledge.embedding_service.EmbeddingService",
+        ), patch(
+            "backend.providers.provider_factory.create_provider",
+        ):
+            r = client.post("/api/v1/literature/ingest", json=paper_payload)
+            assert r.status_code == 400
+            assert "0 chunks" in r.json()["error"]["message"] or "0 chunks" in str(r.json())
+
+    def test_post_construction_failure_returns_503(self, client):
+        """If VectorStore construction itself fails (e.g. provider not
+        configured), POST must return 503 Service Unavailable, NOT 200."""
+        paper_payload = {
+            "id": "ss-503-001",
+            "source": "arxiv",
+            "title": "No Provider Paper",
+            "abstract": "Abstract.",
+        }
+
+        with patch(
+            "backend.providers.provider_factory.create_provider",
+            side_effect=RuntimeError("API key not set"),
+        ):
+            r = client.post("/api/v1/literature/ingest", json=paper_payload)
+            assert r.status_code == 503
+            assert "error" in r.json()
