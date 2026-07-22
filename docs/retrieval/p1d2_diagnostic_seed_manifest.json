@@ -1,11 +1,29 @@
 {
-  "manifest_version": "p1d2_diagnostic_seed_manifest_v1",
-  "status": "draft",
-  "created": "2026-07-22",
+  "artifact_hashes": {
+    "cases": "88e58f5292a38d4749a6d8cc9443657c75cd4fbe7f1127a8eb55410a293600d2",
+    "judgments": "423b7a104be4ffca33e8c61781065091cda6a4b8813abef0748069889ecd95f4",
+    "sources": "c41eed658642b942ddd2aefb4419f4697897d3b97afd6fdc1a5e990b8a258668"
+  },
+  "authoring_blindness": {
+    "candidate_retrieval_outputs_visible_to_author": false,
+    "embedding_model_evaluated": false,
+    "policy_specific_tuning": false,
+    "reranker_evaluated": false
+  },
   "benchmark_role": "diagnostic",
+  "candidate_pool_design": "exhaustive per-case pools with cross-case distractors; every pool unit judged exactly once",
   "case_count": 9,
-  "judgment_count": 17,
+  "created": "2026-07-22",
+  "judgment_authority": "cases are authoritative; judgments JSONL derived from cases",
+  "judgment_count": 23,
+  "manifest_version": "p1d2_diagnostic_seed_manifest_v2",
+  "review_status_note": "All judgments authored_provisional, single-pass, non-scoreable, non-sealable. Requires external dual review before scoring.",
+  "schema_versions": {
+    "case": "p1d2_case_schema_v1",
+    "judgment": "p1d2_judgment_schema_v1"
+  },
   "source_document_count": 20,
+  "status": "draft",
   "task_family_counts": {
     "contradiction_retrieval": 2,
     "evidence_retrieval": 2,
@@ -13,21 +31,5 @@
     "multi_paper_synthesis": 2,
     "paper_discovery": 1,
     "research_gap_analysis": 1
-  },
-  "schema_versions": {
-    "case": "p1d2_case_schema_v1",
-    "judgment": "p1d2_judgment_schema_v1"
-  },
-  "artifact_hashes": {
-    "sources": "834fe4605ad1036d3eac190ab6674916ebf63daa64cf6fe77b55b0a528bd9ca1",
-    "cases": "264cedfbf5b9c469ec2fdbe43c48a38313b48d74962a98b5600f5c147949192b",
-    "judgments": "484a6ddd37d70e8001a644769c838b987652e15966857d7e0a56f48ce48bbcfd"
-  },
-  "review_status_note": "All judgments provisional, single-pass, non-scoreable, non-sealable. Requires external dual review before scoring.",
-  "authoring_blindness": {
-    "candidate_retrieval_outputs_visible_to_author": false,
-    "embedding_model_evaluated": false,
-    "reranker_evaluated": false,
-    "policy_specific_tuning": false
   }
 }

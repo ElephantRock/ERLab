@@ -135,6 +135,25 @@ def valid_diagnostic_case(judgment=None):
         "query_semantic_fingerprint": H64,
         "positive_unit_fingerprint": H64,
         "synthetic_scenario_id": "ssn_false_support_01",
+        "candidate_pool": {
+            "pool_id": "pool_c1",
+            "retrieval_surface": "retrieval_ranking",
+            "candidate_unit_type": "passage",
+            "candidate_unit_ids": ["pas_001"],
+            "pool_fingerprint": H64,
+            "unjudged_unit_policy": "exhaustive_no_unjudged",
+        },
+        "claim_dimensions": {
+            "population": "adults",
+            "intervention_or_exposure": "metformin",
+            "comparison": "placebo",
+            "outcome": "cancer incidence",
+            "direction_or_polarity": "reduces",
+            "causal_vs_associational": "causal_claim",
+            "study_design_requirement": "randomized trial",
+            "qualifiers": "none",
+        },
+        "negative_failed_dimensions": [],
         "passages": {
             "pas_001": {
                 "document_id": "doc_001",

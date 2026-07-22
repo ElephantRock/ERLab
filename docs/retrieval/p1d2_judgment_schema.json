@@ -32,8 +32,8 @@
     "methodological_fit": {"type": "integer", "minimum": 0, "maximum": 3},
     "review_status": {
       "type": "string",
-      "enum": ["provisional", "dual_reviewed", "adjudicated"],
-      "description": "State in the review state machine."
+      "enum": ["provisional", "authored_provisional", "dual_reviewed", "adjudicated"],
+      "description": "State in the review state machine. v1.2 adds authored_provisional: authoring complete, judgment still single-pass and non-scoreable, awaiting independent review."
     },
     "decision_basis": {
       "type": "string",
@@ -115,10 +115,10 @@
   },
   "allOf": [
     {
-      "description": "REVIEWER GUARD: provisional state. review_status=provisional => decision_basis=single_pass_provisional, requires_external_dual_review=true, eligible_for_scoring=false, eligible_for_seal=false. No reviewer decisions present.",
+      "description": "REVIEWER GUARD: provisional/authored_provisional state. review_status in {provisional, authored_provisional} => decision_basis=single_pass_provisional, requires_external_dual_review=true, eligible_for_scoring=false, eligible_for_seal=false.",
       "if": {
         "required": ["review_status"],
-        "properties": {"review_status": {"const": "provisional"}}
+        "properties": {"review_status": {"enum": ["provisional", "authored_provisional"]}}
       },
       "then": {
         "required": ["decision_basis", "requires_external_dual_review", "eligible_for_scoring", "eligible_for_seal"],

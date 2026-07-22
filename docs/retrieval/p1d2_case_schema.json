@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://elephant-rock-research-lab/p1d2_case_schema_v1",
   "title": "P1D.2 Retrieval Case",
-  "description": "Schema for every P1D.2 retrieval case across the three evidentiary roles: diagnostic (30, visible), sealed_product_proxy (48, hidden content / manifest-only), real_project_holdout (count TBD, separate). v1.1 adds the reviewer's guards: benchmark_role, richer origin enum, deidentification, leakage control, evidence_lineage_id, source access/license. Draft for user review; NOT frozen.",
+  "description": "Schema for every P1D.2 retrieval case. v1.2 (seed-hardening patch): adds candidate_pool (scored retrieval universe), claim_dimensions (PICO + causal force), failed_dimension per negative (machine-auditable risk labels), and authored_provisional status. Draft; NOT frozen.",
   "type": "object",
   "required": [
     "schema_version",
@@ -25,291 +25,126 @@
     "review_status",
     "leakage_group_id",
     "query_semantic_fingerprint",
-    "positive_unit_fingerprint"
+    "positive_unit_fingerprint",
+    "candidate_pool",
+    "negative_failed_dimensions"
   ],
   "additionalProperties": false,
   "properties": {
-    "schema_version": {
-      "type": "string",
-      "const": "p1d2_case_schema_v1"
-    },
-    "case_id": {
-      "type": "string",
-      "pattern": "^(diag|sealed|holdout)_(pd|er|cr|mr|mps|rga)_\\d{3}$",
-      "description": "Globally unique across all three sets. Prefix: diag_/sealed_/holdout_. Family: pd=paper_discovery, er=evidence_retrieval, cr=contradiction_retrieval, mr=method_retrieval, mps=multi_paper_synthesis, rga=research_gap_analysis."
-    },
-    "benchmark_role": {
-      "type": "string",
-      "enum": ["diagnostic", "sealed_product_proxy", "real_project_holdout"],
-      "description": "REVIEWER GUARD. Replaces the generic 'sealed' value. Three distinct evidentiary roles: diagnostic (developmental), sealed_product_proxy (independent adversarial validation, may be synthetic), real_project_holdout (derived from actual ERLab projects, required for production activation). A synthetic case may NOT carry real_project_holdout."
-    },
-    "task_family": {
-      "type": "string",
-      "enum": ["paper_discovery", "evidence_retrieval", "contradiction_retrieval", "method_retrieval", "multi_paper_synthesis", "research_gap_analysis"]
-    },
-    "research_domain": {
-      "type": "string",
-      "enum": ["machine_learning", "biomedical", "nlp"]
-    },
-    "query_or_claim": {
-      "type": "string",
-      "minLength": 3,
-      "description": "The natural-language research question or claim. Verbatim; downstream code must not paraphrase."
-    },
-    "retrieved_unit": {
-      "type": "string",
-      "enum": ["paper_or_abstract", "passage"],
-      "description": "Granularity the product task requires. MUST be 'passage' for evidence_retrieval and contradiction_retrieval (enforced below)."
-    },
-    "source_document_ids": {
-      "type": "array",
-      "items": {"type": "string"},
-      "minItems": 1
-    },
-    "positive_passage_ids": {
-      "type": "array",
-      "items": {"type": "string"},
-      "description": "Passages that genuinely satisfy the query/claim. Required when retrieved_unit=passage."
-    },
-    "acceptable_alternate_passages": {
-      "type": "array",
-      "items": {"type": "string"}
-    },
-    "contradicting_or_qualifying_passages": {
-      "type": "array",
-      "items": {"type": "string"},
-      "description": "Required for contradiction_retrieval."
-    },
-    "hard_topical_negatives": {
-      "type": "array",
-      "items": {"type": "string"},
-      "minItems": 1,
-      "description": "At least one hard negative per case (completion gate: cases lacking hard negatives = 0)."
-    },
-    "agenda_mismatch_negatives": {
-      "type": "array",
-      "items": {"type": "string"}
-    },
-    "false_support_negatives": {
-      "type": "array",
-      "items": {"type": "string"},
-      "description": "Supportive-seeming language without actual support. Exercises the globally non-compensable risk."
-    },
-    "relevance_judgments": {
-      "type": "array",
-      "items": {"$ref": "https://elephant-rock-research-lab/p1d2_judgment_schema_v1"},
-      "minItems": 1
-    },
-    "risk_labels": {
-      "type": "array",
-      "items": {
-        "type": "string",
-        "enum": ["false_support", "missed_contradiction", "agenda_mismatch", "missed_relevant_evidence", "redundancy", "latency_resource_cost"]
-      },
-      "minItems": 1
-    },
-    "hard_negative_types": {
-      "type": "array",
-      "items": {
-        "type": "string",
-        "enum": [
-          "same_topic_wrong_population",
-          "same_intervention_wrong_outcome",
-          "supportive_language_without_support",
-          "negated_or_qualified_result",
-          "review_vs_primary",
-          "method_application_vs_definition",
-          "multiple_papers_one_lineage",
-          "paraphrase_low_overlap",
-          "exact_identifier_or_acronym_collision"
-        ]
-      },
-      "minItems": 1,
-      "description": "Concrete risk-shaped negative types. Generic 'wrong topic' alone fails review."
-    },
-    "annotation_rationale": {
-      "type": "string",
-      "minLength": 10
-    },
-    "case_origin": {
-      "type": "string",
-      "enum": [
-        "synthetic_realistic",
-        "synthetic_derived_from_real_structure",
-        "real_project_deidentified",
-        "real_project_unredacted_controlled"
-      ],
-      "description": "REVIEWER GUARD (richer enum). synthetic_realistic = invented; synthetic_derived_from_real_structure = abstracted from a real workflow's structure without its content; real_project_deidentified = real content with identifiers removed; real_project_unredacted_controlled = real content, access-controlled. Avoids collapsing invented and real-derived cases into one category."
-    },
-    "origin_provenance": {
-      "type": "string",
-      "minLength": 5,
-      "description": "REVIEWER GUARD. How the case was derived: which project/scenario it models, what was abstracted, who provided it. Required so origin is auditable, not just labeled."
-    },
-    "real_project_id": {
-      "type": "string",
-      "description": "REVIEWER GUARD. Present when case_origin is real_project_*. Opaque identifier of the source project. Absent for synthetic origins."
-    },
-    "synthetic_scenario_id": {
-      "type": "string",
-      "description": "REVIEWER GUARD. Present when case_origin is synthetic_*. Identifies the scenario template the case was built from. Absent for real_project_* origins."
-    },
-    "deidentification_status": {
-      "type": "string",
-      "enum": ["not_applicable_synthetic", "deidentified", "unredacted_controlled", "pending_deidentification"],
-      "description": "REVIEWER GUARD. not_applicable_synthetic for invented cases; deidentified/unredacted_controlled for real content; pending_deidentification flags a case not yet cleared for the sealed set."
-    },
+    "schema_version": {"type": "string", "const": "p1d2_case_schema_v1"},
+    "case_id": {"type": "string", "pattern": "^(diag|sealed|holdout)_(pd|er|cr|mr|mps|rga)_\\d{3}$"},
+    "benchmark_role": {"type": "string", "enum": ["diagnostic", "sealed_product_proxy", "real_project_holdout"]},
+    "task_family": {"type": "string", "enum": ["paper_discovery", "evidence_retrieval", "contradiction_retrieval", "method_retrieval", "multi_paper_synthesis", "research_gap_analysis"]},
+    "research_domain": {"type": "string", "enum": ["machine_learning", "biomedical", "nlp"]},
+    "query_or_claim": {"type": "string", "minLength": 3},
+    "retrieved_unit": {"type": "string", "enum": ["paper_or_abstract", "passage"]},
+    "source_document_ids": {"type": "array", "items": {"type": "string"}, "minItems": 1},
+    "positive_passage_ids": {"type": "array", "items": {"type": "string"}},
+    "acceptable_alternate_passages": {"type": "array", "items": {"type": "string"}},
+    "contradicting_or_qualifying_passages": {"type": "array", "items": {"type": "string"}},
+    "hard_topical_negatives": {"type": "array", "items": {"type": "string"}, "minItems": 1},
+    "agenda_mismatch_negatives": {"type": "array", "items": {"type": "string"}},
+    "false_support_negatives": {"type": "array", "items": {"type": "string"}},
+    "relevance_judgments": {"type": "array", "items": {"$ref": "https://elephant-rock-research-lab/p1d2_judgment_schema_v1"}, "minItems": 1},
+    "risk_labels": {"type": "array", "items": {"type": "string", "enum": ["false_support", "missed_contradiction", "agenda_mismatch", "missed_relevant_evidence", "redundancy", "latency_resource_cost"]}, "minItems": 1},
+    "hard_negative_types": {"type": "array", "items": {"type": "string", "enum": ["same_topic_wrong_population", "same_intervention_wrong_outcome", "supportive_language_without_support", "negated_or_qualified_result", "review_vs_primary", "method_application_vs_definition", "multiple_papers_one_lineage", "paraphrase_low_overlap", "exact_identifier_or_acronym_collision"]}, "minItems": 1},
+    "annotation_rationale": {"type": "string", "minLength": 10},
+    "case_origin": {"type": "string", "enum": ["synthetic_realistic", "synthetic_derived_from_real_structure", "real_project_deidentified", "real_project_unredacted_controlled"]},
+    "origin_provenance": {"type": "string", "minLength": 5},
+    "real_project_id": {"type": "string"},
+    "synthetic_scenario_id": {"type": "string"},
+    "deidentification_status": {"type": "string", "enum": ["not_applicable_synthetic", "deidentified", "unredacted_controlled", "pending_deidentification"]},
     "document_version": {"type": "string"},
-    "case_author_id": {
-      "type": "string",
-      "description": "REVIEWER GUARD. Pseudonymous identifier of the case author. Required for independence governance (case author cannot be both reviewers)."
-    },
-    "review_status": {
-      "type": "string",
-      "enum": ["provisional", "dual_reviewed", "adjudicated"],
-      "description": "provisional = single-pass author only (NOT sealable); dual_reviewed = two independent reviewers agreed; adjudicated = disagreements resolved."
-    },
-    "reviewer_a_id": {"type": "string", "description": "REVIEWER GUARD. Pseudonymous. Must differ from case_author_id and reviewer_b_id."},
-    "reviewer_b_id": {"type": "string", "description": "REVIEWER GUARD. Pseudonymous. Must differ from case_author_id and reviewer_a_id."},
-    "adjudicator_id": {"type": "string", "description": "REVIEWER GUARD. Pseudonymous. Required when any judgment is adjudicated. Must not be a policy developer."},
-    "policy_outputs_visible_to_reviewers": {
-      "type": "boolean",
-      "description": "REVIEWER GUARD. MUST be false for sealed cases. Reviewers cannot inspect retrieval-policy outputs."
-    },
-    "reviewers_blinded_to_each_other": {
-      "type": "boolean",
-      "description": "REVIEWER GUARD. MUST be true for dual_reviewed/adjudicated cases."
-    },
-    "independence_exception": {
-      "type": "string",
-      "description": "REVIEWER GUARD. If any independence rule is relaxed, document why. Absent means no exception."
-    },
-    "leakage_group_id": {
-      "type": "string",
-      "description": "REVIEWER GUARD (leakage control). Cases sharing a topic/source are grouped; the leakage audit uses this to flag diagnostic-vs-sealed topical overlap beyond exact string equality."
-    },
-    "document_family_id": {
-      "type": "string",
-      "description": "REVIEWER GUARD (leakage control). Groups source documents that are versions/derivatives of one another."
-    },
-    "query_semantic_fingerprint": {
-      "type": "string",
-      "pattern": "^[a-f0-9]{64}$",
-      "description": "REVIEWER GUARD (leakage control). SHA-256 of a canonical semantic form of the query. Lets the leakage audit catch near-duplicate queries across sets without exact string equality."
-    },
-    "positive_unit_fingerprint": {
-      "type": "string",
-      "pattern": "^[a-f0-9]{64}$",
-      "description": "REVIEWER GUARD (leakage control). SHA-256 of the canonical positive unit. Catches the same passage reused across sets."
-    },
-    "passages": {
+    "case_author_id": {"type": "string"},
+    "review_status": {"type": "string", "enum": ["provisional", "authored_provisional", "dual_reviewed", "adjudicated"], "description": "v1.2 adds authored_provisional: authoring complete (30 cases), judgments still single-pass and non-scoreable, awaiting independent review."},
+    "reviewer_a_id": {"type": "string"},
+    "reviewer_b_id": {"type": "string"},
+    "adjudicator_id": {"type": "string"},
+    "policy_outputs_visible_to_reviewers": {"type": "boolean"},
+    "reviewers_blinded_to_each_other": {"type": "boolean"},
+    "independence_exception": {"type": "string"},
+    "leakage_group_id": {"type": "string"},
+    "document_family_id": {"type": "string"},
+    "query_semantic_fingerprint": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "positive_unit_fingerprint": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "passages": {"type": "object", "additionalProperties": {"$ref": "#/$defs/passage_provenance"}},
+    "candidate_pool": {
       "type": "object",
-      "description": "Passage-level evidence keyed by passage_id. Required when retrieved_unit=passage.",
-      "additionalProperties": {"$ref": "#/$defs/passage_provenance"}
+      "description": "v1.2 PATCH. The scored retrieval universe for this case. Defines exactly which units the retrieval system is allowed to return, so precision/false-support metrics are well-defined. Exhaustive: every unit in candidate_unit_ids must receive a judgment.",
+      "required": ["pool_id", "retrieval_surface", "candidate_unit_type", "candidate_unit_ids", "pool_fingerprint", "unjudged_unit_policy"],
+      "additionalProperties": false,
+      "properties": {
+        "pool_id": {"type": "string", "description": "Opaque ID; pools may be shared across cases of the same surface (shared task-family corpus) or per-case."},
+        "retrieval_surface": {"type": "string", "enum": ["discovery_ranking", "retrieval_ranking"], "description": "Mirrors the P1B ranking surfaces."},
+        "candidate_unit_type": {"type": "string", "enum": ["passage", "paper"], "description": "Must match the case retrieved_unit."},
+        "candidate_unit_ids": {"type": "array", "items": {"type": "string"}, "minItems": 1, "description": "Every retrievable unit. Each MUST be judged exactly once. Cross-case distractors belong here."},
+        "pool_fingerprint": {"type": "string", "pattern": "^[a-f0-9]{64}$", "description": "SHA-256 over the sorted candidate_unit_ids. Makes pool membership auditable."},
+        "unjudged_unit_policy": {"type": "string", "enum": ["exhaustive_no_unjudged", "exclude_unjudged_from_scoring", "treat_unjudged_as_irrelevant"], "description": "How unjudged units are handled. exhaustive_no_unjudged = every unit judged (preferred for synthetic diagnostic)."}
+      }
+    },
+    "claim_dimensions": {
+      "type": "object",
+      "description": "v1.2 PATCH (per reviewer). For causal/clinical claims, freeze the explicit claim dimensions so that false-support and agenda-mismatch are machine-auditable rather than free-text. Required when task_family is evidence_retrieval or contradiction_retrieval (the causal-claim families).",
+      "additionalProperties": false,
+      "properties": {
+        "population": {"type": "string"},
+        "intervention_or_exposure": {"type": "string"},
+        "comparison": {"type": "string"},
+        "outcome": {"type": "string"},
+        "direction_or_polarity": {"type": "string", "enum": ["reduces", "increases", "no_effect", "improves", "worsens", "mixed", "not_applicable"]},
+        "causal_vs_associational": {"type": "string", "enum": ["causal_claim", "associational_claim", "descriptive"]},
+        "study_design_requirement": {"type": "string", "description": "e.g. 'randomized trial' for a causal claim."},
+        "qualifiers": {"type": "string", "description": "Explicit qualifiers/limits on the claim."}
+      }
+    },
+    "negative_failed_dimensions": {
+      "type": "array",
+      "description": "v1.2 PATCH. For each hard negative, records which claim dimension it fails on. Makes 'risk-shaped' machine-auditable rather than free-text. Each entry maps a unit_id to the failed dimension(s).",
+      "items": {
+        "type": "object",
+        "required": ["unit_id", "failed_dimensions"],
+        "additionalProperties": false,
+        "properties": {
+          "unit_id": {"type": "string"},
+          "failed_dimensions": {"type": "array", "items": {"type": "string", "enum": ["population", "intervention_or_exposure", "comparison", "outcome", "direction_or_polarity", "causal_vs_associational", "study_design_requirement", "evidence_lineage", "evidence_granularity", "meaning_or_domain"]}, "minItems": 1}
+        }
+      }
     }
   },
   "$defs": {
     "passage_provenance": {
       "type": "object",
-      "required": [
-        "document_id",
-        "document_version",
-        "section_id",
-        "passage_id",
-        "passage_locator",
-        "passage_text_hash",
-        "document_content_hash",
-        "source_access_or_license_basis",
-        "evidence_lineage_id"
-      ],
+      "required": ["document_id", "document_version", "section_id", "passage_id", "passage_locator", "passage_text_hash", "document_content_hash", "source_access_or_license_basis", "evidence_lineage_id"],
       "additionalProperties": false,
       "properties": {
-        "document_id": {"type": "string", "description": "REVIEWER GUARD. Distinct from paper_identity (opaque)."},
+        "document_id": {"type": "string"},
         "document_version": {"type": "string"},
         "section_id": {"type": "string", "enum": ["abstract", "methods", "results", "discussion", "introduction", "conclusion", "full_text"]},
         "passage_id": {"type": "string"},
-        "passage_locator": {"type": "string", "description": "REVIEWER GUARD. start/end offsets or stable locator. Exact, not approximate."},
-        "passage_text_hash": {"type": "string", "pattern": "^[a-f0-9]{64}$", "description": "SHA-256 of the exact passage text. Drift detection."},
-        "document_content_hash": {"type": "string", "pattern": "^[a-f0-9]{64}$", "description": "REVIEWER GUARD. SHA-256 of the whole source document. Drift detection at document level."},
-        "source_access_or_license_basis": {"type": "string", "description": "REVIEWER GUARD. How ERLab is permitted to use this source (license, subscription, public domain, etc.)."},
-        "evidence_lineage_id": {"type": "string", "description": "REVIEWER GUARD. REQUIRED for multi-paper-synthesis diversity measurement. Distinct papers are NOT necessarily distinct lineages; this ID groups papers sharing an evidence lineage (same lab, same dataset, same trial family)."}
+        "passage_locator": {"type": "string"},
+        "passage_text_hash": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+        "document_content_hash": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+        "source_access_or_license_basis": {"type": "string"},
+        "evidence_lineage_id": {"type": "string"}
       }
     }
   },
   "allOf": [
-    {
-      "description": "evidence_retrieval requires retrieved_unit=passage (P1D.1 coverage gap fix).",
-      "not": {
-        "required": ["task_family", "retrieved_unit"],
-        "properties": {"task_family": {"const": "evidence_retrieval"}, "retrieved_unit": {"const": "paper_or_abstract"}}
-      }
-    },
-    {
-      "description": "contradiction_retrieval requires retrieved_unit=passage.",
-      "not": {
-        "required": ["task_family", "retrieved_unit"],
-        "properties": {"task_family": {"const": "contradiction_retrieval"}, "retrieved_unit": {"const": "paper_or_abstract"}}
-      }
-    },
-    {
-      "description": "passage_requirement: if retrieved_unit=passage, positive_passage_ids and passages must be present.",
-      "if": {"required": ["retrieved_unit"], "properties": {"retrieved_unit": {"const": "passage"}}},
-      "then": {"required": ["positive_passage_ids", "passages"]}
-    },
-    {
-      "description": "contradiction_requirement: contradiction_retrieval cases must have contradicting_or_qualifying_passages.",
-      "if": {"required": ["task_family"], "properties": {"task_family": {"const": "contradiction_retrieval"}}},
-      "then": {"required": ["contradicting_or_qualifying_passages"]}
-    },
-    {
-      "description": "evidence_retrieval must exercise false_support (globally non-compensable).",
-      "if": {"required": ["task_family"], "properties": {"task_family": {"const": "evidence_retrieval"}}},
-      "then": {"required": ["risk_labels"], "properties": {"risk_labels": {"contains": {"const": "false_support"}}}}
-    },
-    {
-      "description": "contradiction_retrieval must exercise missed_contradiction.",
-      "if": {"required": ["task_family"], "properties": {"task_family": {"const": "contradiction_retrieval"}}},
-      "then": {"required": ["risk_labels"], "properties": {"risk_labels": {"contains": {"const": "missed_contradiction"}}}}
-    },
-    {
-      "description": "research_gap_analysis must exercise agenda_mismatch.",
-      "if": {"required": ["task_family"], "properties": {"task_family": {"const": "research_gap_analysis"}}},
-      "then": {"required": ["risk_labels"], "properties": {"risk_labels": {"contains": {"const": "agenda_mismatch"}}}}
-    },
-    {
-      "description": "multi_paper_synthesis must exercise redundancy AND have evidence_lineage_id in its passages (diversity measurement requires lineage).",
-      "if": {"required": ["task_family"], "properties": {"task_family": {"const": "multi_paper_synthesis"}}},
-      "then": {"required": ["risk_labels"], "properties": {"risk_labels": {"contains": {"const": "redundancy"}}}}
-    },
-    {
-      "description": "REVIEWER GUARD: real_project_holdout role requires real_project_* origin. A synthetic case cannot carry the real-project-holdout role.",
-      "if": {"required": ["benchmark_role"], "properties": {"benchmark_role": {"const": "real_project_holdout"}}},
-      "then": {"required": ["case_origin", "real_project_id"], "properties": {"case_origin": {"enum": ["real_project_deidentified", "real_project_unredacted_controlled"]}}}
-    },
-    {
-      "description": "REVIEWER GUARD: synthetic origin requires synthetic_scenario_id.",
-      "if": {"required": ["case_origin"], "properties": {"case_origin": {"enum": ["synthetic_realistic", "synthetic_derived_from_real_structure"]}}},
-      "then": {"required": ["synthetic_scenario_id"]}
-    },
-    {
-      "description": "REVIEWER GUARD: real_project origin requires real_project_id.",
-      "if": {"required": ["case_origin"], "properties": {"case_origin": {"enum": ["real_project_deidentified", "real_project_unredacted_controlled"]}}},
-      "then": {"required": ["real_project_id"]}
-    },
-    {
-      "description": "REVIEWER GUARD: provisional cases cannot be dual_reviewed. (review_status=provisional means single-pass; review_status=dual_reviewed means two reviewers agreed — these are mutually exclusive.)",
-      "if": {"required": ["review_status"], "properties": {"review_status": {"const": "provisional"}}},
-      "then": {"not": {"required": ["reviewer_a_id", "reviewer_b_id"]}}
-    },
-    {
-      "description": "REVIEWER GUARD: dual_reviewed/adjudicated cases must name both reviewers (independent) and be blinded.",
-      "if": {"required": ["review_status"], "properties": {"review_status": {"enum": ["dual_reviewed", "adjudicated"]}}},
-      "then": {"required": ["reviewer_a_id", "reviewer_b_id", "reviewers_blinded_to_each_other"], "properties": {"reviewers_blinded_to_each_other": {"const": true}}}
-    },
-    {
-      "description": "REVIEWER GUARD: sealed_product_proxy and real_project_holdout roles must NOT have policy outputs visible to reviewers.",
-      "if": {"required": ["benchmark_role"], "properties": {"benchmark_role": {"enum": ["sealed_product_proxy", "real_project_holdout"]}}},
-      "then": {"required": ["policy_outputs_visible_to_reviewers"], "properties": {"policy_outputs_visible_to_reviewers": {"const": false}}}
-    }
+    {"description": "evidence_retrieval requires retrieved_unit=passage.", "not": {"required": ["task_family", "retrieved_unit"], "properties": {"task_family": {"const": "evidence_retrieval"}, "retrieved_unit": {"const": "paper_or_abstract"}}}},
+    {"description": "contradiction_retrieval requires retrieved_unit=passage.", "not": {"required": ["task_family", "retrieved_unit"], "properties": {"task_family": {"const": "contradiction_retrieval"}, "retrieved_unit": {"const": "paper_or_abstract"}}}},
+    {"description": "passage_requirement.", "if": {"required": ["retrieved_unit"], "properties": {"retrieved_unit": {"const": "passage"}}}, "then": {"required": ["positive_passage_ids", "passages"]}},
+    {"description": "contradiction_requirement.", "if": {"required": ["task_family"], "properties": {"task_family": {"const": "contradiction_retrieval"}}}, "then": {"required": ["contradicting_or_qualifying_passages"]}},
+    {"description": "evidence_retrieval exercises false_support.", "if": {"required": ["task_family"], "properties": {"task_family": {"const": "evidence_retrieval"}}}, "then": {"required": ["risk_labels"], "properties": {"risk_labels": {"contains": {"const": "false_support"}}}}},
+    {"description": "contradiction_retrieval exercises missed_contradiction.", "if": {"required": ["task_family"], "properties": {"task_family": {"const": "contradiction_retrieval"}}}, "then": {"required": ["risk_labels"], "properties": {"risk_labels": {"contains": {"const": "missed_contradiction"}}}}},
+    {"description": "research_gap_analysis exercises agenda_mismatch.", "if": {"required": ["task_family"], "properties": {"task_family": {"const": "research_gap_analysis"}}}, "then": {"required": ["risk_labels"], "properties": {"risk_labels": {"contains": {"const": "agenda_mismatch"}}}}},
+    {"description": "multi_paper_synthesis exercises redundancy.", "if": {"required": ["task_family"], "properties": {"task_family": {"const": "multi_paper_synthesis"}}}, "then": {"required": ["risk_labels"], "properties": {"risk_labels": {"contains": {"const": "redundancy"}}}}},
+    {"description": "v1.2 PATCH: evidence_retrieval and contradiction_retrieval require claim_dimensions (causal-claim families).", "if": {"required": ["task_family"], "properties": {"task_family": {"enum": ["evidence_retrieval", "contradiction_retrieval"]}}}, "then": {"required": ["claim_dimensions"]}},
+    {"description": "real_project_holdout requires real_project_* origin.", "if": {"required": ["benchmark_role"], "properties": {"benchmark_role": {"const": "real_project_holdout"}}}, "then": {"required": ["case_origin", "real_project_id"], "properties": {"case_origin": {"enum": ["real_project_deidentified", "real_project_unredacted_controlled"]}}}},
+    {"description": "synthetic requires synthetic_scenario_id.", "if": {"required": ["case_origin"], "properties": {"case_origin": {"enum": ["synthetic_realistic", "synthetic_derived_from_real_structure"]}}}, "then": {"required": ["synthetic_scenario_id"]}},
+    {"description": "real_project requires real_project_id.", "if": {"required": ["case_origin"], "properties": {"case_origin": {"enum": ["real_project_deidentified", "real_project_unredacted_controlled"]}}}, "then": {"required": ["real_project_id"]}},
+    {"description": "provisional/authored_provisional cannot have reviewers.", "if": {"required": ["review_status"], "properties": {"review_status": {"enum": ["provisional", "authored_provisional"]}}}, "then": {"not": {"required": ["reviewer_a_id", "reviewer_b_id"]}}},
+    {"description": "dual_reviewed/adjudicated require both reviewers + blinding.", "if": {"required": ["review_status"], "properties": {"review_status": {"enum": ["dual_reviewed", "adjudicated"]}}}, "then": {"required": ["reviewer_a_id", "reviewer_b_id", "reviewers_blinded_to_each_other"], "properties": {"reviewers_blinded_to_each_other": {"const": true}}}},
+    {"description": "sealed roles must not show policy outputs to reviewers.", "if": {"required": ["benchmark_role"], "properties": {"benchmark_role": {"enum": ["sealed_product_proxy", "real_project_holdout"]}}}, "then": {"required": ["policy_outputs_visible_to_reviewers"], "properties": {"policy_outputs_visible_to_reviewers": {"const": false}}}},
+    {"description": "v1.2 PATCH: candidate_pool.candidate_unit_type must match retrieved_unit.", "if": {"required": ["candidate_pool"]}, "then": {"properties": {"candidate_pool": {"properties": {"candidate_unit_type": {"enum": ["passage", "paper"]}}}}}}
   ]
 }
