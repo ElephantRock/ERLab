@@ -1,0 +1,31 @@
+{
+  "_wave": "F1.4.0",
+  "_kind": "mutation_inventory",
+  "_audit_at_commit": "17f6f4c",
+  "_source_level_count": {
+    "total_mutations": 33,
+    "truthful": 18,
+    "missing_pending": 7,
+    "silent_failure": 1,
+    "duplicate_risk": 3,
+    "stale_cache_risk": 3,
+    "unsafe_optimistic": 1
+  },
+  "high_priority_defects": [
+    {"id": "1", "file": "src/pages/literature.tsx", "mutation": "ingestMutation (ingestPaper)", "classification": ["missing-pending", "silent-failure"], "repair": "F1.4.1"},
+    {"id": "2", "file": "src/pages/gap-detail.tsx", "mutation": "updateGapStatus", "classification": ["missing-pending", "duplicate-risk", "stale-cache-risk"], "repair": "F1.4.2"},
+    {"id": "13", "file": "src/pages/memory.tsx", "mutation": "deleteMemory", "classification": ["missing-pending"], "repair": "F1.4.3"},
+    {"id": "21", "file": "src/components/knowledge/upload-zone.tsx", "mutation": "ingestPdf", "classification": ["duplicate-risk"], "repair": "F1.4.3"},
+    {"id": "22", "file": "src/components/notifications/notification-bell.tsx", "mutation": "markAllRead", "classification": ["missing-pending"], "repair": "F1.4.3"},
+    {"id": "23", "file": "src/components/notifications/notification-bell.tsx", "mutation": "markRead", "classification": ["missing-pending"], "repair": "F1.4.3"},
+    {"id": "26", "file": "src/pages/autonomous.tsx", "mutation": "stopAutonomousCycle", "classification": ["missing-pending", "duplicate-risk"], "repair": "F1.4.3"},
+    {"id": "29", "file": "src/components/pipeline/stage-model-selector.tsx", "mutation": "handleSave (updateStageModelConfig)", "classification": ["stale-cache-risk"], "repair": "F1.4.3"},
+    {"id": "30", "file": "src/components/pipeline/stage-model-selector.tsx", "mutation": "handleReset (resetStageModelConfig)", "classification": ["unsafe-optimistic", "missing-pending", "stale-cache-risk"], "repair": "F1.4.3"}
+  ],
+  "truthful_mutations": [3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 14, 15, 16, 17, 18, 19, 20, 24, 25, 27, 28, 31, 32, 33],
+  "no_mutation_pages": [
+    "dashboard.tsx", "costs.tsx", "ops.tsx", "sessions.tsx", "traces.tsx",
+    "knowledge-graph.tsx", "knowledge-search.tsx", "gaps-explorer.tsx",
+    "ideas-browser.tsx"
+  ]
+}
