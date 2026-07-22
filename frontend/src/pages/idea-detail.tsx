@@ -42,7 +42,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { useParams, useNavigate } from "react-router-dom";
 import {
-  ArrowLeft, AlertCircle, RefreshCw, Loader2, CheckCircle2, AlertTriangle,
+  ArrowLeft, ArrowRight, AlertCircle, RefreshCw, Loader2, CheckCircle2, AlertTriangle,
   Copy, Check, History, Shield,
   FlaskConical, BookOpen, ClipboardCheck,
 } from "lucide-react";
@@ -745,6 +745,7 @@ function ReviewCard({
 }
 
 function EvidenceSummary({ idea }: { idea: IdeaDetail }) {
+  const navigate = useNavigate();
   const refs = idea.proposal_references;
   const supportingPapers = idea.supporting_papers ?? [];
   const sourceGaps = idea.source_gaps;
@@ -764,6 +765,25 @@ function EvidenceSummary({ idea }: { idea: IdeaDetail }) {
         <EvidenceRow label="Unresolved" value={unresolvedCount} tone="warning" />
       )}
       <EvidenceRow label="Source Gaps" value={gapCount} />
+      {/* F1.5b: clickable source-gap links — production navigation idea→gap */}
+      {Array.isArray(sourceGaps) && sourceGaps.length > 0 && (
+        <ul className="space-y-1 pt-1" data-testid="source-gap-links">
+          {sourceGaps.map((gap) => (
+            <li key={gap.id}>
+              <button
+                type="button"
+                role="link"
+                onClick={() => navigate(`/gaps/${gap.id}`)}
+                className="flex items-center gap-1 text-left w-full text-accent hover:underline"
+                data-testid={`source-gap-link-${gap.id}`}
+              >
+                <ArrowRight className="h-3 w-3 flex-shrink-0" />
+                <span className="truncate">{gap.title}</span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
       {refCount === 0 && citedCount === 0 && supportingCount === 0 && (
         <p className="text-muted-foreground italic text-ui-micro">No provenance data linked.</p>
       )}

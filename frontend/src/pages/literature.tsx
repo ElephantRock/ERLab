@@ -15,6 +15,11 @@ export default function LiteraturePage() {
   const [query, setQuery] = useState("");
   const [submittedQuery, setSubmittedQuery] = useState<string | null>(null);
   const [urlParams] = useSearchParams();
+  // F1.5b: track successfully ingested paper IDs so the production UI can
+  // surface an authoritative terminal state per paper. This is client-side
+  // state that becomes authoritative after the mutation's onSuccess runs
+  // and the search query refetches (declared invalidation).
+  const [ingestedIds, setIngestedIds] = useState<Set<string>>(new Set());
 
   const queryClient = useQueryClient();
 
@@ -38,15 +43,15 @@ export default function LiteraturePage() {
   });
 
   // F1.4.1: ingestMutation now has truthful pending, success, and failure behavior.
-  // - isPending tracks per-paper ingest state via mutation variables
-  // - onSuccess toasts and invalidates the literature list
-  // - onError toasts a visible failure message
-  // - retry is possible via mutate(paper) on the same mutation
+  // F1.5b: onSuccess also records the ingested paper id so the production UI
+  // can render an authoritative "Ingested" terminal state alongside the
+  // declared invalidation of ["literature-search"].
   const ingestMutation = useMutation({
     mutationFn: (paper: Paper) => ingestPaper(paper),
     retry: false,
     onSuccess: (_data, paper) => {
       toast.success(`Ingested: ${paper.title.slice(0, 50)}...`);
+      setIngestedIds((prev) => new Set(prev).add(paper.id));
       queryClient.invalidateQueries({ queryKey: ["literature-search"] });
     },
     onError: (_error, paper) => {
@@ -63,6 +68,9 @@ export default function LiteraturePage() {
   function handleIngest(paper: Paper) {
     // F1.4.1: prevent duplicate submission — disable while pending
     if (ingestMutation.isPending) return;
+    // F1.5b: also refuse if this paper is already in the authoritative
+    // ingested set (terminal state).
+    if (ingestedIds.has(paper.id)) return;
     ingestMutation.mutate(paper);
   }
 
@@ -115,6 +123,7 @@ export default function LiteraturePage() {
               paper={paper}
               onIngest={handleIngest}
               isIngesting={ingestMutation.isPending && ingestMutation.variables?.id === paper.id}
+              isIngested={ingestedIds.has(paper.id)}
               ingestError={ingestMutation.isError && ingestMutation.variables?.id === paper.id
                 ? "Ingest failed"
                 : undefined}

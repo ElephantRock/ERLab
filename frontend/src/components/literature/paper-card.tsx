@@ -2,13 +2,14 @@ import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ExternalLink, BookOpen, Loader2, AlertCircle } from "lucide-react";
+import { ExternalLink, BookOpen, Loader2, AlertCircle, CheckCircle2 } from "lucide-react";
 import type { Paper } from "@/api/literature";
 
 export interface PaperCardProps {
   paper: Paper;
   onIngest: (paper: Paper) => void;
   isIngesting?: boolean;
+  isIngested?: boolean;
   ingestError?: string;
 }
 
@@ -25,11 +26,11 @@ function sourceColor(source: string): string {
   }
 }
 
-export function PaperCard({ paper, onIngest, isIngesting, ingestError }: PaperCardProps) {
+export function PaperCard({ paper, onIngest, isIngesting, isIngested, ingestError }: PaperCardProps) {
   const [confirming, setConfirming] = useState(false);
 
   function handleIngestClick() {
-    if (isIngesting) return;
+    if (isIngesting || isIngested) return;
     if (!confirming) {
       setConfirming(true);
       return;
@@ -103,17 +104,28 @@ export function PaperCard({ paper, onIngest, isIngesting, ingestError }: PaperCa
               {ingestError}
             </span>
           )}
+          {isIngested && (
+            <span className="text-xs text-success flex items-center gap-1" data-testid="ingested-badge">
+              <CheckCircle2 className="h-3 w-3" />
+              Ingested
+            </span>
+          )}
           <Button
             size="sm"
-            variant={confirming ? "destructive" : "outline"}
+            variant={isIngested ? "secondary" : confirming ? "destructive" : "outline"}
             onClick={handleIngestClick}
-            disabled={isIngesting}
+            disabled={isIngesting || isIngested}
             data-testid="ingest-button"
           >
             {isIngesting ? (
               <>
                 <Loader2 className="h-3 w-3 mr-1 animate-spin" />
                 Ingesting...
+              </>
+            ) : isIngested ? (
+              <>
+                <CheckCircle2 className="h-3 w-3 mr-1" />
+                Ingested
               </>
             ) : (
               <>
