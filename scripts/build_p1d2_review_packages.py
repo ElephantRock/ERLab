@@ -137,16 +137,19 @@ def build():
             for rec in reviewer_records:
                 f.write(json.dumps(rec, ensure_ascii=False, sort_keys=True) + "\n")
 
-    # Coordinator-only identity map: written OUTSIDE the reviewer-accessible repo path.
-    # Reviewers who can access the repo must not be able to de-blind units.
-    COORD_DIR = REPO / "coordinator"  # outside docs/retrieval/ — not reviewer-accessible
+    # Identity map: the access boundary is the REPOSITORY, not the directory.
+    # A git repo has repo-level access, not per-directory access. If this file
+    # is committed, anyone with repo access (or history access) can de-blind.
+    # The blinding guarantee holds ONLY because reviewers receive out-of-band
+    # package exports and have no repository credentials (Mode A).
+    COORD_DIR = REPO / "coordinator"
     COORD_DIR.mkdir(parents=True, exist_ok=True)
     identity_map = {
         "identity_map_version": "p1d2_review_identity_map_v1",
         "created": "2026-07-23",
-        "access_policy": "coordinator_only",
+        "access_control_basis": "repository_not_accessible_to_reviewers",
+        "access_control_note": "The coordinator/ directory does NOT provide access separation. A git repository has repo-level access. Blinding holds ONLY because reviewers receive out-of-band exports and have no repository access. If reviewers gain repository access, this mapping is compromised and must be regenerated with new neutral IDs in external controlled storage.",
         "neutral_id_map": neutral_map,
-        "description": "Maps neutral unit IDs (unit_NNNN) to internal passage/document IDs. MUST NOT be accessible to reviewers. If reviewers have repository access, this file must be moved to a path they cannot read.",
     }
     identity_map_path = COORD_DIR / "p1d2_review_identity_map.json"
     with open(identity_map_path, "w", encoding="utf-8") as f:
@@ -167,11 +170,14 @@ def build():
             "neither_sees_policy_outputs": True,
             "case_author_not_a_reviewer": True,
         },
+        "review_delivery_model": "out_of_band_export",
+        "reviewers_have_repository_access": False,
         "identity_map_embedded": False,
         "identity_map_sha256": identity_map_hash,
-        "identity_map_path": "coordinator/p1d2_review_identity_map.json",
-        "identity_map_access_policy": "coordinator_only",
-        "reviewers_have_repository_access": False,
+        "identity_map_location": "coordinator/p1d2_review_identity_map.json (committed to this repository)",
+        "identity_map_access_control_basis": "repository_not_accessible_to_reviewers",
+        "identity_map_access_control_note": "The coordinator/ directory is organizational separation, NOT access separation. Blinding holds because the repository itself is not accessible to reviewers (out-of-band export model). If reviewers gain repository access, the map is compromised and must be externalized + regenerated.",
+        "mode_b_fallback": "If reviewers gain repository access: (1) move identity map to external controlled storage, (2) generate a new neutral-ID mapping, (3) regenerate reviewer packages with new IDs, (4) commit only new public hashes, (5) ensure reviewers cannot access old commit history containing the first map.",
         "submission_status": {},
         "agreement_status": {},
         "adjudication_requirements": [],

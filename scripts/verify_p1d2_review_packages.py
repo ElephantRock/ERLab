@@ -55,7 +55,8 @@ def run():
     chk("assignment: no neutral_id_map key in public manifest", "neutral_id_map" not in am,
         "neutral_id_map found in reviewer-accessible manifest")
     chk("assignment: identity_map_sha256 present", len(am.get("identity_map_sha256", "")) == 64)
-    chk("assignment: identity_map_access_policy is coordinator_only", am.get("identity_map_access_policy") == "coordinator_only")
+    chk("assignment: identity_map_access_control_basis is repository_not_accessible_to_reviewers",
+        am.get("identity_map_access_control_basis") == "repository_not_accessible_to_reviewers")
 
     # Verify the coordinator identity map exists and its hash matches the public reference
     coord_map_path = Path(__file__).resolve().parent.parent / "coordinator" / "p1d2_review_identity_map.json"

@@ -66,9 +66,55 @@ neither reviewer sees the author's provisional grades or rationales
 neither reviewer sees retrieval-policy outputs
 case author cannot serve as either reviewer
 policy developers cannot adjudicate
+submissions are immutable after receipt
+each submission is hashed and timestamped
+adjudication begins only after both submissions are locked
 ```
 
 Reviewers submit independently. Only the adjudicator (if needed) sees both rationales.
+
+## Access-boundary model (must be explicit before review begins)
+
+The neutral-ID identity map (mapping `unit_NNNN` to real passage/document IDs) is committed to the repository under `coordinator/`. A git repository has **repository-level access, not per-directory access**. The `coordinator/` path provides organizational separation, **not** access separation.
+
+### Mode A — reviewers have no repository access (current operating model)
+
+Blinding holds because reviewers receive **out-of-band package exports** and have **no repository credentials**. The entire repository — including `coordinator/p1d2_review_identity_map.json` — is inaccessible to them. This is the access boundary.
+
+Under this model, the committed map is safe. The manifests record:
+```json
+{
+  "review_delivery_model": "out_of_band_export",
+  "reviewers_have_repository_access": false,
+  "identity_map_access_control_basis": "repository_not_accessible_to_reviewers"
+}
+```
+
+### Mode B — reviewers have or may gain repository access
+
+If reviewers can read the repository (or its history), the committed map is compromised. The `coordinator/` directory provides no protection. The required correction:
+
+1. Move the identity map to **external controlled storage** (separate private repo, access-controlled object storage, or encrypted archive)
+2. **Generate a new neutral-ID mapping** (the old mapping is burned in git history)
+3. **Regenerate reviewer packages** using the new IDs
+4. Commit only the new public package hashes
+5. Ensure reviewers cannot access the old commit history containing the first map
+
+**Do not attempt to purge git history as a shortcut.** Regenerating neutral IDs is cleaner and less disruptive.
+
+### Before assigning reviewer A or B, record:
+
+```
+review delivery channel
+whether each reviewer has repository access
+package SHA-256 delivered to each reviewer
+delivery timestamp
+reviewer blinding attestation
+submission destination
+submission immutability mechanism
+```
+
+Each reviewer submission must be written to a location inaccessible to the other reviewer until both are locked.
 
 ## Assignment
 

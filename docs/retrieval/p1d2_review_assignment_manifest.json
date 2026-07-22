@@ -9,11 +9,14 @@
     "reviewer_B_cannot_see_reviewer_A": true
   },
   "created": "2026-07-23",
-  "identity_map_access_policy": "coordinator_only",
+  "identity_map_access_control_basis": "repository_not_accessible_to_reviewers",
+  "identity_map_access_control_note": "The coordinator/ directory is organizational separation, NOT access separation. Blinding holds because the repository itself is not accessible to reviewers (out-of-band export model). If reviewers gain repository access, the map is compromised and must be externalized + regenerated.",
   "identity_map_embedded": false,
-  "identity_map_path": "coordinator/p1d2_review_identity_map.json",
-  "identity_map_sha256": "54b7da354b7c68957d2457e2583e33f6fabea611472a57f061411ac9a3976d07",
+  "identity_map_location": "coordinator/p1d2_review_identity_map.json (committed to this repository)",
+  "identity_map_sha256": "92af882badf85cec654c8e4f1f04ebd6683471c5ff375913f0e06ed4ab268fb4",
   "manifest_version": "p1d2_review_assignment_v1",
+  "mode_b_fallback": "If reviewers gain repository access: (1) move identity map to external controlled storage, (2) generate a new neutral-ID mapping, (3) regenerate reviewer packages with new IDs, (4) commit only new public hashes, (5) ensure reviewers cannot access old commit history containing the first map.",
+  "review_delivery_model": "out_of_band_export",
   "reviewers": {
     "A": {
       "id": "reviewer_A",

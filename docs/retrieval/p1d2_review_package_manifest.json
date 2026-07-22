@@ -1,6 +1,6 @@
 {
   "assignment_manifest": {
-    "hash": "8aefc7420af7619e84c15432874ac8898a3fa093c6c1cd99056a4aa7a65963fd",
+    "hash": "7347f47b7adf174207bb0a97d3792be555136948c3282998ff2030b0f7cb5d83",
     "path": "docs/retrieval/p1d2_review_assignment_manifest.json"
   },
   "case_count": 30,
@@ -23,7 +23,7 @@
   },
   "identity_map_access_policy": "coordinator_only",
   "identity_map_embedded_in_public_manifest": false,
-  "identity_map_sha256": "54b7da354b7c68957d2457e2583e33f6fabea611472a57f061411ac9a3976d07",
+  "identity_map_sha256": "92af882badf85cec654c8e4f1f04ebd6683471c5ff375913f0e06ed4ab268fb4",
   "manifest_version": "p1d2_review_package_manifest_v1",
   "neutral_id_count": 67,
   "packages": {

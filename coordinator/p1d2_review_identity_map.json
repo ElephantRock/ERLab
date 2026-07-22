@@ -1,7 +1,7 @@
 {
-  "access_policy": "coordinator_only",
+  "access_control_basis": "repository_not_accessible_to_reviewers",
+  "access_control_note": "The coordinator/ directory does NOT provide access separation. A git repository has repo-level access. Blinding holds ONLY because reviewers receive out-of-band exports and have no repository access. If reviewers gain repository access, this mapping is compromised and must be regenerated with new neutral IDs in external controlled storage.",
   "created": "2026-07-23",
-  "description": "Maps neutral unit IDs (unit_NNNN) to internal passage/document IDs. MUST NOT be accessible to reviewers. If reviewers have repository access, this file must be moved to a path they cannot read.",
   "identity_map_version": "p1d2_review_identity_map_v1",
   "neutral_id_map": {
     "doc_bert_clinical_app_180_236": "unit_0055",
