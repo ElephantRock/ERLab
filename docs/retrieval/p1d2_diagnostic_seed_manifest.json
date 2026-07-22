@@ -1,0 +1,33 @@
+{
+  "manifest_version": "p1d2_diagnostic_seed_manifest_v1",
+  "status": "draft",
+  "created": "2026-07-22",
+  "benchmark_role": "diagnostic",
+  "case_count": 9,
+  "judgment_count": 17,
+  "source_document_count": 20,
+  "task_family_counts": {
+    "contradiction_retrieval": 2,
+    "evidence_retrieval": 2,
+    "method_retrieval": 1,
+    "multi_paper_synthesis": 2,
+    "paper_discovery": 1,
+    "research_gap_analysis": 1
+  },
+  "schema_versions": {
+    "case": "p1d2_case_schema_v1",
+    "judgment": "p1d2_judgment_schema_v1"
+  },
+  "artifact_hashes": {
+    "sources": "834fe4605ad1036d3eac190ab6674916ebf63daa64cf6fe77b55b0a528bd9ca1",
+    "cases": "264cedfbf5b9c469ec2fdbe43c48a38313b48d74962a98b5600f5c147949192b",
+    "judgments": "484a6ddd37d70e8001a644769c838b987652e15966857d7e0a56f48ce48bbcfd"
+  },
+  "review_status_note": "All judgments provisional, single-pass, non-scoreable, non-sealable. Requires external dual review before scoring.",
+  "authoring_blindness": {
+    "candidate_retrieval_outputs_visible_to_author": false,
+    "embedding_model_evaluated": false,
+    "reranker_evaluated": false,
+    "policy_specific_tuning": false
+  }
+}
