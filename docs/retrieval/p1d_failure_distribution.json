@@ -1,0 +1,76 @@
+{
+  "distribution_version": "p1d_failure_distribution_v1_1",
+  "status": "draft",
+  "revision": "P1D.1a - separates observed selection analysis from held-out design attribution; corrects 44-imperfect accounting; replaces causal claims with slice-informed hypotheses; corrects saturation arithmetic and wording per external review",
+  "created": "2026-07-22",
+  "authority": "P1D.1 - draft for user review. NOT frozen. No gate closed.",
+  "source_data": {
+    "benchmark_fingerprint": "0ffbfdb164053ad19c869cbba44678c0aa76aa140557320383a82efcebcb96e4",
+    "snapshot_fingerprint": "2d8b26f709c03b6bbc7d5c4ab7ca65255e0e1f8eb65aa5562b205e0602084000",
+    "n_cases_total": 66,
+    "n_cases_selection_split": 44,
+    "n_cases_held_out": 22,
+    "per_case_observed_source": "docs/p1b_gate2/diagnostic_analysis.json sections 1,4,5 (selection split ONLY)"
+  },
+  "critical_separation_invariant": "observed_selection44 and case_design_all66 are reported SEPARATELY and never combined. The v1 '4/44 imperfect' aggregate is retracted: 2 of those 4 SEMANTIC_GENERALIZATION cases are held-out with no observed metrics.",
+  "headline_metrics": {
+    "lexical_macro_ndcg10_selection": 0.9495,
+    "lexical_recall20_selection": 1.0,
+    "lexical_perfect_rate_selection_split": 0.5,
+    "n_cases_lexical_perfect_selection": 22,
+    "n_cases_lexical_non_ceiling_selection": 22,
+    "semantic_only_macro_ndcg10_selection": 0.9321,
+    "hybrid_rrf_macro_ndcg10_selection": 0.9561,
+    "best_candidate_delta_vs_legacy": 0.0066,
+    "frozen_gate_threshold": 0.03,
+    "gate_verdict": "NO POLICY PASSES"
+  },
+  "saturation_arithmetic_corrected": {
+    "claim_retracted": "v1 said the gate was 'arithmetically impossible' / the benchmark was at 'ceiling'. This was too strong.",
+    "correct_arithmetic": {
+      "max_mathematically_possible_macro_gain": 0.0505,
+      "max_gain_interpretation": "A candidate that scored perfectly on all 22 non-ceiling cases could reach at most +0.0505 macro. The +0.03 gate is therefore NOT arithmetically impossible.",
+      "non_ceiling_selection_avg_legacy_ndcg10": 0.899,
+      "non_ceiling_avg_needed_for_+0.030_gate": 0.959,
+      "required_improvement_on_non_ceiling_half": 0.06,
+      "correct_wording": "The benchmark is PARTIALLY saturated and gives the frozen macro gate limited power to detect improvements concentrated in a subset of workflows. A +0.03 gain remains mathematically possible but requires an average +0.06 improvement across the non-ceiling half without regression on the ceiling half."
+    }
+  },
+  "observed_failure_distribution_selection44": {
+    "description": "OBSERVED behavior on the 44 selection cases ONLY. Held-out is excluded (no per-policy metrics).",
+    "n_total": 44,
+    "n_at_ceiling": 22,
+    "n_non_ceiling": 22,
+    "ceiling_rate": 0.5,
+    "non_ceiling_semantic_generalization_design_hypothesis": 2,
+    "non_ceiling_semantic_fraction": 0.0909,
+    "important_caveat": "For non-ceiling cases, the OBSERVED fact is that lexical is imperfect. The CAUSE is not measured per-case; slice_expected_failure_mode is a DESIGN HYPOTHESIS, not a measured diagnosis. 'Semantic generalization' here means 'the slice was designed to test semantic generalization AND lexical was observed imperfect on it' - it does NOT prove the imperfection was caused by a representation deficit."
+  },
+  "case_design_distribution_all66": {
+    "description": "CASE-DESIGN attribution for ALL 66 cases, by slice_expected_failure_mode. This is a design prior (what each slice was built to exercise), NOT an observed measurement of cause. Held-out cases appear here by design; their observed behavior is unknown.",
+    "n_total": 66,
+    "counts_by_expected_failure_mode": {
+      "LEXICAL_PRECISION": 12,
+      "AGENDA_MISMATCH": 12,
+      "EVIDENCE_GRANULARITY": 12,
+      "RANKING": 12,
+      "SEMANTIC_GENERALIZATION": 6,
+      "DIVERSITY": 6,
+      "JUDGMENT_OR_BENCHMARK": 6
+    }
+  },
+  "embedding_relevance_signal_SOFTENED": {
+    "v1_claim_retracted": "v1 said the other 91% of imperfect cases were 'failures none of which a larger embedding addresses'. This was too strong: a better embedding COULD affect ranking or agenda discrimination.",
+    "correct_claim": "The current evidence establishes only that the non-SEMANTIC_GENERALIZATION categories do not, BY THEMSELVES, establish an embedding-capacity deficit. They do not rule out that an embedding could help indirectly (e.g., via ranking or agenda discrimination). The honest reading: the historical data does not isolate embedding capacity as the DOMINANT bottleneck, but does not exonerate it either.",
+    "semantic_generalization_design_hypothesis_count_selection_non_ceiling": 2,
+    "fraction_of_non_ceiling_selection": 0.0909
+  },
+  "task_family_coverage_all66": {
+    "paper_discovery": 36,
+    "research_gap_analysis": 24,
+    "evidence_retrieval": 24,
+    "multi_paper_synthesis": 12,
+    "method_retrieval": 6,
+    "contradiction_retrieval": 6
+  }
+}

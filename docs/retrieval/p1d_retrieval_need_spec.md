@@ -19,7 +19,7 @@ The experiment is **successful even when the conclusion is** "retain lexical ret
 
 ## Scope guardrail
 
-P1D is **independent of the frontend F1 roadmap.** Nothing in this spec touches production ranking, the frozen benchmark, or the frozen snapshot. All P1D artifacts are additive governance docs under `docs/retrieval/` and `data/retrieval/`.
+P1D is **independent of the frontend F1 roadmap.** Nothing in this spec touches production ranking, the frozen benchmark, or the frozen snapshot. All P1D artifacts are additive governance docs under `docs/retrieval/` (matching the P1B precedent of keeping evaluated artifacts under `docs/`; `data/` is gitignored runtime data).
 
 ---
 

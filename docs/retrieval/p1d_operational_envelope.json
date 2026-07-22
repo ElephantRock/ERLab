@@ -1,0 +1,104 @@
+{
+  "envelope_version": "p1d_operational_envelope_v1_1",
+  "status": "draft",
+  "revision": "P1D.0a — splits envelope into diagnostic-host and production-representative; marks all numeric thresholds explicitly provisional; adds required measurement protocols per external review. v1's flat envelope mixed diagnostic and production scopes and stated thresholds without measurement scope.",
+  "created": "2026-07-22",
+  "authority": "P1D.0 — draft for user review. NOT frozen. No gate closed.",
+  "description": "The operational gate for P1D candidate policies. Separate from the quality/risk gate: a candidate can pass quality and fail operations (or vice versa). The P1C host-crash (Branch D) is the canonical example of an operational failure that had to be kept distinct from a quality verdict.",
+  "approved_rules_now": {
+    "description": "The only operational rules the reviewer approves as authoritative at this stage. Everything else remains provisional.",
+    "rules": {
+      "full_workload_completion": {"value": 1.0, "scope": "all", "status": "approved", "rationale": "Hard requirement, inherited from P1C: a model that fails any benchmark query under sustained load is operationally non-viable, regardless of latency on the queries it does complete."},
+      "silent_fallback_count": {"value": 0, "scope": "all", "status": "approved", "rationale": "No silent fallback to CPU or an alternate model. Inherited from P1B/P1C zero-count integrity gates."},
+      "quality_operational_separation": {"value": "enforced", "scope": "process", "status": "approved", "rationale": "Operational failure does NOT imply poor retrieval quality; it means the hypothesis could not be tested on this host/provider. The P1C lesson, preserved in every closeout."},
+      "preflight_before_judged_run": {"value": "required", "scope": "process", "status": "approved", "rationale": "Operational viability is proven at P1D.5 preflight using unjudged/synthetic queries, BEFORE any quality evaluation at P1D.6."}
+    }
+  },
+  "grounding_data": {
+    "source": "docs/p1b_gate2/gate2_metrics_package.json (frozen P1B evidence)",
+    "observed_latency_seconds_in_memory_snapshot_336_items": {
+      "legacy_lexical_top20_v1": 0.0038,
+      "semantic_only_v1": 0.0278,
+      "hybrid_rrf_v1": 0.0298,
+      "hybrid_weighted_v1": 0.0288
+    },
+    "observed_latency_scope_caveat": "These are in-memory snapshot latencies on a 336-item corpus, NOT measured medians over a declared query count at declared concurrency. They are order-of-magnitude anchors only. The source statistic for any future threshold MUST be identified as a measured median with its protocol.",
+    "p1c_lesson": "Every materially-stronger candidate (BGE-M3 x2, nomic-v2-moe, jina-v5, voyage-4-nano) segfaulted under sustained load on the LM Studio host (100.64.0.2:1234). Operational viability must be proven BEFORE quality is evaluated, via P1D.5 preflight."
+  },
+  "envelope_split": {
+    "rationale": "v1 applied one flat envelope to both the diagnostic host and production. This conflated two scopes: the diagnostic host needs to discriminate among compact candidates on a small corpus; production needs deployment-representative limits on a larger corpus. v1.1 splits them.",
+    "diagnostic_host_envelope": "Used at P1D.5/P1D.6 on the frozen 336-item corpus (or the P1D.2 diagnostic set). Thresholds tuned to discriminate among compact candidates. See below.",
+    "production_representative_envelope": "Used at P1E on the full production corpus. Thresholds reflect deployment reality. Numbers to be set when production corpus size and deployment target are known. See below."
+  },
+  "diagnostic_host_envelope_PROVISIONAL": {
+    "status": "provisional — all numeric thresholds require a measurement protocol before freezing",
+    "scope": "frozen 336-item corpus OR P1D.2 diagnostic set, on the available LM Studio host or an equivalent local host",
+    "maximum_acceptable_provisional": {
+      "indexing_time_minutes": {
+        "value": 30,
+        "scope_unresolved": ["corpus item/token count", "batch size", "hardware (CPU model / GPU)", "whether model loading time is included"],
+        "measurement_protocol_required": "Must declare: corpus size in items AND tokens, batch size, hardware, and whether model load is included before this number is meaningful."
+      },
+      "peak_memory_gb": {
+        "value": 8,
+        "scope_unresolved": ["host RAM vs GPU VRAM vs model-process RSS vs index memory"],
+        "measurement_protocol_required": "Must measure peak RSS (model process) AND peak VRAM (if GPU) AND index memory SEPARATELY. v1's single '8GB' conflates these."
+      },
+      "index_size_mb": {
+        "value": 500,
+        "scope_unresolved": ["evaluation corpus (336 items) vs production corpus", "index type (flat / HNSW / IVF)", "vector precision (f32 / f16 / int8)"],
+        "reviewer_note": "500MB for 336 items is too permissive to discriminate among compact candidates. For the diagnostic corpus, a tighter ceiling (~10-50MB) would discriminate; 500MB is appropriate only for a production-scale index.",
+        "measurement_protocol_required": "Must declare corpus size, index type, and vector precision. Report bytes per indexed passage as a normalized metric."
+      },
+      "query_latency_median_ms": {
+        "value": 200,
+        "scope_unresolved": ["the source statistic is NOT identified as a measured median", "query count", "concurrency", "warm/cold state"],
+        "measurement_protocol_required": "Must measure as warm p50 over a declared query count (>=100) at declared concurrency (default 1). Report cold-start latency separately."
+      },
+      "query_latency_p95_ms": {
+        "value": 800,
+        "scope_unresolved": ["query count", "concurrency", "warm/cold state", "network inclusion"],
+        "measurement_protocol_required": "Must measure as warm p95 over a declared query count (>=100) at declared concurrency. Network included only if deployment is remote."
+      },
+      "provider_cost_per_million_queries_usd": {
+        "value": null,
+        "status": "acceptable as null until a hosted provider is nominated",
+        "rationale": "For local models, not applicable. For hosted providers (P1E candidate), this must be set before the hosted evaluation. No frozen value yet because no hosted candidate has been selected."
+      }
+    },
+    "hard_requirements_approved": {
+      "required_query_completion_rate": {"value": 1.0, "status": "approved (see approved_rules_now)"},
+      "silent_fallback_count": {"value": 0, "status": "approved (see approved_rules_now)"}
+    }
+  },
+  "production_representative_envelope_TO_BE_SET": {
+    "status": "not yet set — production corpus size and deployment target must be known before thresholds are meaningful",
+    "scope": "full production corpus at P1E",
+    "requires_before_freezing": ["production corpus size in items AND tokens", "deployment target (local / hosted / hybrid)", "expected query concurrency", "deployment latency SLA"],
+    "note": "Applying diagnostic-host thresholds to production would be arbitrary. v1's flat envelope did this; v1.1 does not."
+  },
+  "normalized_measurements_required": {
+    "description": "Track these alongside absolute ceilings so results are comparable across hosts/corpora/models. Absolute thresholds are host/corpus-specific; normalized metrics travel.",
+    "metrics": [
+      {"id": "embed_throughput", "name": "documents or tokens embedded per second", "why": "Host/corpus-independent throughput signal."},
+      {"id": "index_bytes_per_passage", "name": "bytes per indexed passage", "why": "Normalizes index size by corpus; the right way to compare compact candidates."},
+      {"id": "peak_ram_gb", "name": "peak host RAM (GB)", "why": "Separate from VRAM."},
+      {"id": "peak_vram_gb", "name": "peak GPU VRAM (GB)", "why": "Separate from RAM; relevant for GPU candidates."},
+      {"id": "warm_p50_ms", "name": "warm p50 query latency (ms)", "why": "At declared concurrency."},
+      {"id": "warm_p95_ms", "name": "warm p95 query latency (ms)", "why": "At declared concurrency."},
+      {"id": "cold_start_ms", "name": "cold-start latency (ms)", "why": "First-query cost; relevant for interactive surfaces."},
+      {"id": "cost_per_1000_queries_usd", "name": "cost per 1,000 queries (USD)", "why": "Hosted-provider comparison; null for local."},
+      {"id": "cost_per_corpus_reindex_usd", "name": "cost per full corpus re-index (USD)", "why": "Hosted-provider re-indexing cost; null for local."}
+    ]
+  },
+  "gate_application_rule": {
+    "rule": "A candidate must pass every APPROVED rule and every relevant PROVISIONAL threshold (once its measurement protocol is declared) to be operationally viable. Failure on any single requirement is classified OPERATIONAL FAILURE and the candidate is not quality-evaluated.",
+    "separation_from_quality": "Operational failure does NOT imply poor retrieval quality. It means the hypothesis could not be tested on this host/provider. This distinction is the P1C lesson and must be preserved in every P1D/P1E closeout.",
+    "preflight_timing": "Operational viability is proven at P1D.5 (preflight) using unjudged/synthetic queries, BEFORE any quality evaluation at P1D.6."
+  },
+  "what_is_not_frozen_here": [
+    "No latency/memory/cost value is frozen. All diagnostic-host numbers are PROVISIONAL pending their measurement protocol.",
+    "No production-representative threshold exists yet; the envelope is structurally split but the production side is empty until corpus size and deployment target are known.",
+    "These thresholds are for the candidate evaluation harness, NOT production deployment limits."
+  ]
+}

@@ -1,0 +1,136 @@
+{
+  "map_version": "p1d_slice_to_task_family_map_v1",
+  "status": "draft",
+  "created": "2026-07-22",
+  "authority": "P1D.0 — draft for user review. NOT frozen. No gate closed.",
+  "description": "Maps each of the 11 frozen benchmark slices to one or more of the six P1D task families. This mapping is REQUIRED because the benchmark was authored around adversarial retrieval-failure MODES (slices), not product WORKFLOWS (task families) — there is no 1:1 correspondence. A case may map to multiple families. This artifact is what lets P1D.1 classify the 66 cases by task family and what makes the task-family framing usable at all.",
+  "task_families": [
+    "paper_discovery",
+    "evidence_retrieval",
+    "contradiction_retrieval",
+    "method_retrieval",
+    "multi_paper_synthesis",
+    "research_gap_analysis"
+  ],
+  "mappings": {
+    "lexical_trap": {
+      "primary_families": ["research_gap_analysis", "paper_discovery"],
+      "secondary_families": ["evidence_retrieval"],
+      "mapping_rationale": "Lexical traps (high token overlap, wrong meaning) primarily threaten agenda matching: a result that shares tokens but studies a different thing. They also threaten paper discovery (irrelevant paper retrieved) and, when the trap mimics evidence, false support in evidence retrieval.",
+      "example_cases": "ml_lt_001_c 'Optimizing Network Routing with Descent Algorithms' (network routing, not gradient descent); bio_lt_001_c 'Resistance Welding of Drug-Eluting Stents' (manufacturing, not drug resistance).",
+      "coverage": "All 6 lexical_trap cases (3 disc + 3 ret) map here."
+    },
+    "semantic_paraphrase": {
+      "primary_families": ["paper_discovery", "evidence_retrieval"],
+      "secondary_families": ["research_gap_analysis"],
+      "mapping_rationale": "Paraphrase cases test whether the system retrieves relevant results that DON'T share exact terms. This is the core semantic-generalization use case for paper discovery and evidence retrieval. Agenda-mismatch is secondary (a paraphrase can still mismatch on agenda).",
+      "example_cases": "ml_sp_001_a 'Efficient Memory Management for Large Language Model Training' (ZeRO) for query 'efficiently training very large language models'.",
+      "coverage": "All 6 semantic_paraphrase cases map here."
+    },
+    "method_vs_application": {
+      "primary_families": ["method_retrieval"],
+      "secondary_families": ["paper_discovery"],
+      "mapping_rationale": "This slice is the DIRECT proxy for method retrieval: it tests whether a method paper ranks above an application of that method. The cleanest 1:1 mapping in the benchmark.",
+      "example_cases": "ml_mv_001_a 'Masked Autoencoders' (method) vs ml_mv_001_b 'Applying Self-Supervised Features to Medical Image Classification' (application).",
+      "coverage": "All 6 method_vs_application cases map here."
+    },
+    "review_vs_primary": {
+      "primary_families": ["evidence_retrieval", "multi_paper_synthesis"],
+      "secondary_families": ["paper_discovery"],
+      "mapping_rationale": "Review-vs-primary distinguishes a primary study (direct evidence) from a review (synthesis). For evidence retrieval, the primary is what's wanted; for multi-paper synthesis, the review is itself a target but must not crowd out primaries. Tests evidence-granularity-adjacent discrimination.",
+      "example_cases": "bio_rv_001_a 'Semaglutide SELECT Trial' (primary) vs bio_rv_001_b 'GLP-1 Systematic Review' (review).",
+      "coverage": "All 6 review_vs_primary cases map here."
+    },
+    "missing_abstract": {
+      "primary_families": ["paper_discovery", "evidence_retrieval"],
+      "secondary_families": [],
+      "mapping_rationale": "Missing-abstract cases test ranking when the evidential text is absent — the system must rely on title + domain context. Primary relevance to discovery (can we still find the paper?) and evidence retrieval (can we confirm evidence without the abstract?).",
+      "example_cases": "ml_ma_001_b 'Score-Based Generative Modeling Through SDEs' (empty abstract).",
+      "coverage": "All 6 missing_abstract cases map here."
+    },
+    "near_duplicate": {
+      "primary_families": ["multi_paper_synthesis"],
+      "secondary_families": ["paper_discovery"],
+      "mapping_rationale": "Near-duplicate cases test that redundant results don't dominate — the DIRECT proxy for the multi_paper_synthesis redundancy risk. The only slice that directly exercises a diversity-adjacent property.",
+      "example_cases": "ml_nd_001_b/b2 near-duplicates of the ViT paper.",
+      "coverage": "All 6 near_duplicate cases map here. Note: tests non-domination, NOT diversity-as-a-goal."
+    },
+    "source_rank_conflict": {
+      "primary_families": ["research_gap_analysis", "evidence_retrieval"],
+      "secondary_families": ["paper_discovery"],
+      "mapping_rationale": "Source-rank-conflict cases insert a high-source-priority but irrelevant result (e.g., a Nature editorial on an unrelated topic). Tests whether source authority overrides relevance — central to agenda matching and evidence-retrieval precision.",
+      "example_cases": "ml_sr_001_b 'A Non-Relevant Nature Perspective on AI Funding' for query 'state space models for long sequences'.",
+      "coverage": "All 6 source_rank_conflict cases map here."
+    },
+    "acronym_vs_expanded": {
+      "primary_families": ["research_gap_analysis", "paper_discovery"],
+      "secondary_families": ["evidence_retrieval"],
+      "mapping_rationale": "Acronym-collision cases (e.g., ADC = antibody-drug conjugate vs analog-to-digital converter) are a specialized lexical trap that primarily threatens agenda matching and discovery precision.",
+      "example_cases": "bio_ac_001_c 'Analog-to-Digital Converter Circuit Design' for query 'ADC antibody-drug conjugates'.",
+      "coverage": "All 6 acronym_vs_expanded cases map here."
+    },
+    "negated_findings": {
+      "primary_families": ["contradiction_retrieval"],
+      "secondary_families": ["evidence_retrieval", "research_gap_analysis"],
+      "mapping_rationale": "The ONLY slice that proxies contradiction retrieval: cases include negated/contradicting results that must be surfaced. The benchmark grades these as highly relevant (grade 3), which captures surface relevance but NOT the 'am I missing a contradicting result' workflow — see evidence-limitation note.",
+      "example_cases": "bio_nf_001_b 'Metformin Shows No Effect on Cancer in the MICE Trial' (negated result, grade 3).",
+      "coverage": "All 6 negated_findings cases map here. WEAK PROXY for contradiction_retrieval — flagged in need spec."
+    },
+    "exact_identifier": {
+      "primary_families": ["paper_discovery", "research_gap_analysis"],
+      "secondary_families": ["method_retrieval"],
+      "mapping_rationale": "Exact-identifier cases (query is a named entity like 'ResNet', 'AlphaFold', 'GPT-3') test precise entity retrieval and disambiguation — relevant to discovery and to confirming the exact intended target (agenda).",
+      "example_cases": "bio_ei_001_a 'AlphaFold: Highly Accurate Protein Structure Prediction'.",
+      "coverage": "All 6 exact_identifier cases map here."
+    },
+    "neutral": {
+      "primary_families": ["paper_discovery"],
+      "secondary_families": ["method_retrieval"],
+      "mapping_rationale": "Neutral cases are non-adversarial baselines — straightforward topical relevance without a trap. Primary fit is paper discovery; some are method-flavored.",
+      "example_cases": "ml_nt_001 'image segmentation with transformers' (SAM, Mask2Former, U-Net, DETR).",
+      "coverage": "All 6 neutral cases map here."
+    }
+  },
+  "task_family_coverage_from_existing_benchmark": {
+    "description": "How well each task family is covered by the existing 66 cases, via the slice mapping above. This is the key input to deciding whether P1D.2's fresh cases are load-bearing.",
+    "coverage": {
+      "paper_discovery": {
+        "slices_covering": ["lexical_trap", "semantic_paraphrase", "method_vs_application", "review_vs_primary", "missing_abstract", "near_duplicate", "source_rank_conflict", "acronym_vs_expanded", "negated_findings", "exact_identifier", "neutral"],
+        "case_count_approx": 60,
+        "verdict": "well_covered",
+        "note": "The benchmark is essentially a discovery benchmark. Near-complete coverage."
+      },
+      "method_retrieval": {
+        "slices_covering": ["method_vs_application", "exact_identifier", "neutral"],
+        "case_count_approx": 18,
+        "verdict": "moderately_covered",
+        "note": "method_vs_application is a direct proxy. Reasonable but not exhaustive."
+      },
+      "research_gap_analysis": {
+        "slices_covering": ["lexical_trap", "source_rank_conflict", "acronym_vs_expanded", "exact_identifier", "negated_findings"],
+        "case_count_approx": 30,
+        "verdict": "moderately_covered",
+        "note": "Agenda mismatch is emergent across slices, not directly measured. No PICO-discriminating cases."
+      },
+      "multi_paper_synthesis": {
+        "slices_covering": ["near_duplicate", "review_vs_primary"],
+        "case_count_approx": 12,
+        "verdict": "weakly_covered",
+        "note": "Only tests non-domination. Diversity-as-a-goal is NOT measured. No multi-paper coverage metric exists."
+      },
+      "evidence_retrieval": {
+        "slices_covering": ["semantic_paraphrase", "review_vs_primary", "missing_abstract", "source_rank_conflict"],
+        "case_count_approx": 24,
+        "verdict": "weakly_covered",
+        "note": "Operates at title+abstract granularity, NOT passage granularity. Cannot validate the actual evidence-retrieval workflow."
+      },
+      "contradiction_retrieval": {
+        "slices_covering": ["negated_findings"],
+        "case_count_approx": 6,
+        "verdict": "minimally_covered",
+        "note": "Only 6 cases, and they measure surface relevance of negated results, NOT the missed-contradiction workflow. Weakest coverage of any family."
+      }
+    },
+    "headline_finding": "Three of six task families (multi_paper_synthesis, evidence_retrieval, contradiction_retrieval) are weakly or minimally covered by the existing benchmark. This is structural evidence that P1D.2 (fresh product-grounded cases) is load-bearing, not optional — documented in p1d_failure_analysis.md."
+  }
+}

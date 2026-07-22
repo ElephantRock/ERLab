@@ -11,8 +11,12 @@ Revision P1D.1a corrects three defects from v1:
       artifact directly (no temp file), schema-conformance check.
 
 Outputs:
-  data/retrieval/p1d_historical_failure_analysis.jsonl
-  data/retrieval/p1d_failure_distribution.json
+  docs/retrieval/p1d_historical_failure_analysis.jsonl
+  docs/retrieval/p1d_failure_distribution.json
+
+Note: outputs live under docs/retrieval/ (NOT data/retrieval/) because data/ is
+gitignored ("Runtime data — NEVER commit"). Governance JSON follows the P1B
+precedent of keeping evaluated artifacts under docs/ (e.g. docs/p1b_gate2/).
 
 DRAFT artifact (status: draft) - NOT frozen, no gate closed.
 """
@@ -348,7 +352,7 @@ def main():
     rows, diag = build_rows()
     assert_schema(rows)
 
-    out_jsonl = Path("data/retrieval/p1d_historical_failure_analysis.jsonl")
+    out_jsonl = Path("docs/retrieval/p1d_historical_failure_analysis.jsonl")
     out_jsonl.parent.mkdir(parents=True, exist_ok=True)
     with open(out_jsonl, 'w', encoding='utf-8') as f:
         for r in rows:
@@ -356,7 +360,7 @@ def main():
     print(f"Wrote {len(rows)} cases to {out_jsonl}")
 
     dist = build_distribution(rows, diag)
-    out_dist = Path("data/retrieval/p1d_failure_distribution.json")
+    out_dist = Path("docs/retrieval/p1d_failure_distribution.json")
     with open(out_dist, 'w', encoding='utf-8') as f:
         json.dump(dist, f, indent=2, ensure_ascii=False)
     print(f"Wrote distribution to {out_dist}")

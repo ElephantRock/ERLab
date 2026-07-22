@@ -1,0 +1,102 @@
+{
+  "matrix_version": "p1d_task_risk_matrix_v1_1",
+  "status": "draft",
+  "revision": "P1D.0a — separates task objective/integrity/coverage; renames 'critical' cells to 'hard-gated'; resolves non-invertibility terminology conflict with need spec per external review",
+  "created": "2026-07-22",
+  "authority": "P1D.0 — draft for user review. NOT frozen. No gate closed.",
+  "source_spec": "docs/retrieval/p1d_retrieval_need_spec.json (v1.1)",
+  "description": "Cross-product of the six task families against the six ranked risks. v1.1 changes: (1) each task now has an explicit task_objective / primary_integrity_risk / primary_coverage_risk triple, so the evidence_retrieval conflation is resolved; (2) the defining-risk cells are renamed from 'critical' to 'hard_gated', matching the need spec's task_hard_gated concept (frozen absolute threshold + allowed paired regression margin, NOT zero-tolerance); (3) false_support remains the only globally_non_compensable risk, distinct from the hard-gated cells.",
+  "terminology_alignment_with_need_spec": {
+    "globally_non_compensable": "false_support only. A material regression fails the product gate regardless of macro gains.",
+    "hard_gated": "the task's defining risk. Candidate must meet the frozen absolute threshold AND remain within the allowed paired regression margin. NOT zero-tolerance; thresholds frozen at P1D.6.",
+    "former_v1_term_critical": "renamed to hard_gated in v1.1. The v1 'critical' label implied the same thing as the need-spec 'non-invertible', causing the contradiction."
+  },
+  "severity_scale": ["not_applicable", "low", "medium", "high", "hard_gated"],
+  "severity_meaning": {
+    "not_applicable": "Risk does not arise for this task family.",
+    "low": "Risk arises but is low-cost and usually self-correcting.",
+    "medium": "Risk is material and must be measured; small regressions tolerable if compensated.",
+    "high": "Risk is material and a regression is disqualifying unless clearly offset elsewhere in the SAME task.",
+    "hard_gated": "This is the task's defining risk (or, for false_support, the globally non-compensable risk). Candidate must meet the frozen absolute threshold AND remain within the allowed paired regression margin. Thresholds frozen at P1D.6."
+  },
+  "task_axes_summary": {
+    "description": "The three-axis definition per task, lifted from the need spec so the matrix is self-contained.",
+    "tasks": {
+      "paper_discovery": {"objective": "Broadly surface relevant papers.", "integrity_risk": "agenda_mismatch", "coverage_risk": "missed_relevant_evidence"},
+      "evidence_retrieval": {"objective": "Retrieve a passage supporting a claim.", "integrity_risk": "false_support", "coverage_risk": "missed_relevant_evidence"},
+      "contradiction_retrieval": {"objective": "Surface contradicting/qualifying passages.", "integrity_risk": "missed_contradiction", "coverage_risk": "missed_relevant_evidence"},
+      "method_retrieval": {"objective": "Retrieve usable methods/algorithms.", "integrity_risk": "agenda_mismatch", "coverage_risk": "missed_relevant_evidence"},
+      "multi_paper_synthesis": {"objective": "Retrieve a diverse, non-redundant set.", "integrity_risk": "redundancy", "coverage_risk": "missed_relevant_evidence"},
+      "research_gap_analysis": {"objective": "Distinguish same-question from similar-topic.", "integrity_risk": "agenda_mismatch", "coverage_risk": "missed_relevant_evidence"}
+    },
+    "evidence_retrieval_conflation_fix_note": "v1 listed 'missing supporting evidence' as the table primary risk AND false_support as the critical cell for evidence_retrieval, which read as a contradiction. v1.1 splits cleanly: task OBJECTIVE = retrieve supporting evidence (coverage); defining INTEGRITY risk = false support. Coverage and integrity are different axes."
+  },
+  "matrix": {
+    "paper_discovery": {
+      "false_support": {"severity": "medium", "failure_mode": "A topically-similar paper is returned as relevant but does not actually address the question.", "metric_proxy": "usable precision@5"},
+      "missed_contradiction": {"severity": "low", "failure_mode": "Contradictions are usually sought separately in evidence/contradiction tasks, not discovery.", "metric_proxy": "n/a (out of scope for discovery)"},
+      "agenda_mismatch": {"severity": "high", "failure_mode": "Broad topic search returns adjacent-agenda papers.", "metric_proxy": "agenda-mismatch rate"},
+      "missed_relevant_evidence": {"severity": "hard_gated", "failure_mode": "The defining coverage failure: a relevant paper is missing from the result set.", "metric_proxy": "paper recall@20, paper recall@50"},
+      "redundancy": {"severity": "low", "failure_mode": "Near-duplicate papers crowd out diverse results.", "metric_proxy": "unique relevant papers@10"},
+      "latency_resource_cost": {"severity": "medium", "failure_mode": "Discovery is interactive; latency must stay within the interactive budget.", "metric_proxy": "median/p95 query latency"}
+    },
+    "evidence_retrieval": {
+      "false_support": {"severity": "hard_gated", "is_globally_non_compensable": true, "failure_mode": "The defining integrity failure AND the globally non-compensable risk: a passage appears to support a claim but does not. Researcher builds on false evidence.", "metric_proxy": "false-support rate, usable precision@5"},
+      "missed_contradiction": {"severity": "low", "failure_mode": "Contradictions are handled by the contradiction_retrieval task, not this one.", "metric_proxy": "n/a"},
+      "agenda_mismatch": {"severity": "high", "failure_mode": "Passage is topically similar but addresses a different intervention/outcome.", "metric_proxy": "agenda-mismatch rate"},
+      "missed_relevant_evidence": {"severity": "high", "failure_mode": "The supporting passage (coverage goal) is not retrieved.", "metric_proxy": "passage recall@20"},
+      "redundancy": {"severity": "low", "failure_mode": "Multiple passages from one paper.", "metric_proxy": "unique relevant papers@10"},
+      "latency_resource_cost": {"severity": "medium", "failure_mode": "Evidence retrieval is often batched; latency budget is looser than discovery.", "metric_proxy": "p95 query latency"}
+    },
+    "contradiction_retrieval": {
+      "false_support": {"severity": "high", "failure_mode": "A passage is returned as contradicting but does not actually contradict (strawman).", "metric_proxy": "usable precision@5 on contradiction labels"},
+      "missed_contradiction": {"severity": "hard_gated", "failure_mode": "The defining integrity failure: a real contradicting/qualifying result is missed.", "metric_proxy": "missed-contradiction rate, negated-findings recall"},
+      "agenda_mismatch": {"severity": "high", "failure_mode": "Contradiction is about a different population/intervention.", "metric_proxy": "agenda-mismatch rate"},
+      "missed_relevant_evidence": {"severity": "high", "failure_mode": "Synonymous with missed_contradiction for this task.", "metric_proxy": "recall@20 on contradiction-labeled set"},
+      "redundancy": {"severity": "low", "failure_mode": "Same contradicting finding repeated.", "metric_proxy": "unique relevant papers@10"},
+      "latency_resource_cost": {"severity": "medium", "failure_mode": "Typically batched; latency budget is looser.", "metric_proxy": "p95 query latency"}
+    },
+    "method_retrieval": {
+      "false_support": {"severity": "high", "failure_mode": "An application paper is returned as if it were a method paper.", "metric_proxy": "method-vs-application discrimination rate"},
+      "missed_contradiction": {"severity": "low", "failure_mode": "Out of scope for method retrieval.", "metric_proxy": "n/a"},
+      "agenda_mismatch": {"severity": "hard_gated", "failure_mode": "The defining integrity failure: a different method with the same name/family is returned as the method sought.", "metric_proxy": "agenda-mismatch rate, method discrimination"},
+      "missed_relevant_evidence": {"severity": "high", "failure_mode": "The actual method paper is missing.", "metric_proxy": "recall@20"},
+      "redundancy": {"severity": "low", "failure_mode": "Near-duplicate method descriptions.", "metric_proxy": "unique relevant papers@10"},
+      "latency_resource_cost": {"severity": "medium", "failure_mode": "Interactive; within discovery budget.", "metric_proxy": "median/p95 query latency"}
+    },
+    "multi_paper_synthesis": {
+      "false_support": {"severity": "medium", "failure_mode": "A paper is included in the synthesis set but doesn't actually support the synthesis.", "metric_proxy": "usable precision@5"},
+      "missed_contradiction": {"severity": "high", "failure_mode": "A contradicting lineage is excluded, biasing the synthesis.", "metric_proxy": "missed-contradiction rate"},
+      "agenda_mismatch": {"severity": "medium", "failure_mode": "Adjacent-agenda papers dilute the synthesis.", "metric_proxy": "agenda-mismatch rate"},
+      "missed_relevant_evidence": {"severity": "high", "failure_mode": "An entire relevant lineage is absent.", "metric_proxy": "recall@20, recall@50"},
+      "redundancy": {"severity": "hard_gated", "failure_mode": "The defining integrity failure: redundant results crowd out diverse evidence, inflating perceived breadth.", "metric_proxy": "unique relevant papers@10, source diversity, duplicate-result rate"},
+      "latency_resource_cost": {"severity": "low", "failure_mode": "Synthesis is batched and async; latency budget is loosest.", "metric_proxy": "p95 query latency"}
+    },
+    "research_gap_analysis": {
+      "false_support": {"severity": "high", "failure_mode": "A paper is treated as addressing the gap when it studies a different agenda.", "metric_proxy": "false-support rate"},
+      "missed_contradiction": {"severity": "medium", "failure_mode": "A paper showing the gap is smaller/larger than believed is missed.", "metric_proxy": "missed-contradiction rate"},
+      "agenda_mismatch": {"severity": "hard_gated", "failure_mode": "The defining integrity failure: confusing broad topical similarity with the same research question.", "metric_proxy": "agenda-mismatch rate, precision@5 on PICO queries"},
+      "missed_relevant_evidence": {"severity": "high", "failure_mode": "A paper directly addressing the gap is absent.", "metric_proxy": "recall@20"},
+      "redundancy": {"severity": "medium", "failure_mode": "Same lab/lineage papers crowd the gap view.", "metric_proxy": "source diversity"},
+      "latency_resource_cost": {"severity": "medium", "failure_mode": "Interactive exploration; within discovery budget.", "metric_proxy": "median/p95 query latency"}
+    }
+  },
+  "hard_gated_cells_summary": {
+    "description": "These (task, risk) cells are hard-gated: candidate must meet the frozen absolute threshold AND remain within the allowed paired regression margin. Thresholds/margins frozen at P1D.6. NOT zero-tolerance.",
+    "cells": [
+      "paper_discovery / missed_relevant_evidence",
+      "evidence_retrieval / false_support (ALSO globally non-compensable)",
+      "contradiction_retrieval / missed_contradiction",
+      "method_retrieval / agenda_mismatch",
+      "multi_paper_synthesis / redundancy",
+      "research_gap_analysis / agenda_mismatch"
+    ],
+    "count": 6,
+    "note_v1_1": "v1 called these 'critical' and counted 5, which conflicted with the need-spec statement that false_support is the only non-invertible risk. v1.1 renames them 'hard_gated' (the task-specific concept) and counts 6: paper_discovery/missed_relevant_evidence was hard-gated in the matrix but not listed in v1's critical summary — added. evidence_retrieval/false_support is BOTH hard-gated (task-level) AND globally non-compensable (the only risk with global status)."
+  },
+  "globally_non_compensable_cells": {
+    "description": "Only false_support. Any material regression here fails the product gate regardless of macro gains, regardless of task.",
+    "cells": ["evidence_retrieval / false_support", "contradiction_retrieval / false_support (severity high)", "ANY task / false_support"],
+    "rule": "false_support is globally non-compensable across all tasks where it appears, not just where it is the defining risk."
+  }
+}
