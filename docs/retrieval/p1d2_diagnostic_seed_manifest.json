@@ -1,8 +1,8 @@
 {
   "artifact_hashes": {
-    "cases": "d063ebff34d5c58d87e59a30c2654d1a933e94d01f24d29395c9e9a6f9e2d277",
-    "judgments": "d54db0756c6af23462b79687d9c2a35e89597c372bbff674e6906c88cd71bf02",
-    "sources": "40f62b1721cec963bbce119523ba06f0532c8932be481be6f700e4fd19fd8985"
+    "cases": "455aecc224d9e405cfb0a68004213af8d9dd0faee06351491929c9f12ac34ec7",
+    "judgments": "6cd18bea67c98f2acb31493db62c1cf5b5adae4f19bc0a41b73545f13ad42572",
+    "sources": "7107f0c857ba798849f3a9115f2c0bb80d113fe371b21a0a0dcd2ea5f2395c0d"
   },
   "authoring_blindness": {
     "candidate_retrieval_outputs_visible_to_author": false,
@@ -12,24 +12,28 @@
   },
   "benchmark_role": "diagnostic",
   "candidate_pool_design": "exhaustive per-case pools with cross-case distractors; every pool unit judged exactly once",
-  "case_count": 9,
+  "case_count": 30,
+  "case_mode_counts": {
+    "no_positive_expected": 4,
+    "positive_present": 26
+  },
   "created": "2026-07-22",
   "judgment_authority": "cases are authoritative; judgments JSONL derived from cases",
-  "judgment_count": 24,
-  "manifest_version": "p1d2_diagnostic_seed_manifest_v2",
+  "judgment_count": 81,
+  "manifest_version": "p1d2_diagnostic_seed_manifest_v3",
   "review_status_note": "All judgments authored_provisional, single-pass, non-scoreable, non-sealable. Requires external dual review before scoring.",
   "schema_versions": {
     "case": "p1d2_case_schema_v1",
     "judgment": "p1d2_judgment_schema_v1"
   },
-  "source_document_count": 21,
+  "source_document_count": 43,
   "status": "draft",
   "task_family_counts": {
-    "contradiction_retrieval": 2,
-    "evidence_retrieval": 2,
-    "method_retrieval": 1,
-    "multi_paper_synthesis": 2,
-    "paper_discovery": 1,
-    "research_gap_analysis": 1
+    "contradiction_retrieval": 6,
+    "evidence_retrieval": 8,
+    "method_retrieval": 3,
+    "multi_paper_synthesis": 6,
+    "paper_discovery": 4,
+    "research_gap_analysis": 3
   }
 }

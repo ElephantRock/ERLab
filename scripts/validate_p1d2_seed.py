@@ -68,10 +68,12 @@ def run():
     print("=" * 60)
 
     # ── counts, uniqueness, families (carried from v1) ──
-    chk("9 unique case IDs", len({c['case_id'] for c in cases}) == 9 and len(cases) == 9)
+    chk("30 unique case IDs", len({c['case_id'] for c in cases}) == len(cases))
+    chk("exactly 30 cases", len(cases) == 30)
     fams = Counter(c["task_family"] for c in cases)
     chk("all 6 families", set(fams) == {"evidence_retrieval", "contradiction_retrieval", "multi_paper_synthesis", "paper_discovery", "method_retrieval", "research_gap_analysis"})
-    chk("er=2 cr=2 mps=2", fams["evidence_retrieval"] == 2 and fams["contradiction_retrieval"] == 2 and fams["multi_paper_synthesis"] == 2)
+    chk("target distribution er=8 cr=6 mps=6 pd=4 mr=3 rga=3",
+        fams["evidence_retrieval"] == 8 and fams["contradiction_retrieval"] == 6 and fams["multi_paper_synthesis"] == 6 and fams["paper_discovery"] == 4 and fams["method_retrieval"] == 3 and fams["research_gap_analysis"] == 3)
 
     # schema conformance
     for c in cases:
@@ -137,7 +139,7 @@ def run():
 
     # ── PATCH 5: byte-stable determinism ──
     print("\n[PATCH 5] byte-stable determinism (all 4 outputs)")
-    builder = REPO / "scripts" / "build_p1d2_diagnostic_seed.py"
+    builder = REPO / "scripts" / "build_p1d2_diagnostic_expansion.py"
     before = {a: hashlib.sha256((DOCS / f"p1d2_diagnostic_seed_{a}.jsonl").read_bytes()).hexdigest() for a in ["sources", "cases", "judgments"]}
     before_m = hashlib.sha256((DOCS / "p1d2_diagnostic_seed_manifest.json").read_bytes()).hexdigest()
     r = subprocess.run([sys.executable, str(builder)], capture_output=True, text=True)
@@ -149,13 +151,12 @@ def run():
     chk("judgments deterministic", before["judgments"] == after["judgments"])
     chk("manifest deterministic", before_m == after_m)
 
-    # ── PATCH 6: false-support claim has a fully supporting unit ──
-    print("\n[PATCH 6] false-support claims have a fully supporting unit")
+    # ── PATCH 6: false-support claim has a fully supporting unit (positive_present only) ──
+    print("\n[PATCH 6] false-support claims have a fully supporting unit (positive_present only)")
     for c in cases:
-        if "false_support" in c["risk_labels"]:
-            # there must be at least one grade-3 judgment (fully supports)
+        if "false_support" in c["risk_labels"] and c.get("case_mode") == "positive_present":
             has_g3 = any(j["research_utility_grade"] == 3 for j in c["relevance_judgments"])
-            chk(f"{c['case_id']} false-support case has a fully-supporting unit", has_g3)
+            chk(f"{c['case_id']} false-support (positive_present) has a fully-supporting unit", has_g3)
 
     # ── PATCH 7: qualifying evidence not mislabeled as generic negative ──
     print("\n[PATCH 7] qualifying evidence correctly labeled")

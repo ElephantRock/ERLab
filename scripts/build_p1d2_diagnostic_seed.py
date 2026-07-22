@@ -241,7 +241,9 @@ def build_case(case_id, task_family, domain, query, retrieved_unit, surface, ris
                pool_passage_keys, pos_keys, judgment_grades, claim_dims, neg_failed_dims,
                rationale, origin_provenance, scenario_id, leakage_group, document_family,
                contradiction_keys=None):
-    """Build a case with exhaustive candidate pool + inline judgments."""
+    """Build a case with exhaustive candidate pool + inline judgments.
+    case_mode and expected_positive_count are derived from the judgments:
+    if any grade-3 positive exists -> positive_present; else no_positive_expected (negative control)."""
     # The pool = all passages this case exposes to the retriever, with judgments for each
     pool_passages = [PASS[k] for k in pool_passage_keys]
     pool_ids = [p["passage_id"] for p in pool_passages]
@@ -254,6 +256,12 @@ def build_case(case_id, task_family, domain, query, retrieved_unit, surface, ris
         jid = f"jdg_{case_id}_{p['passage_id']}"
         grade, kw = judgment_grades.get(p["passage_id"], (0, {}))
         inlined.append(judgment(jid, case_id, p, grade, **kw))
+
+    # derive case_mode from whether a grade-3 positive exists
+    g3_count = sum(1 for j in inlined if j["research_utility_grade"] == 3)
+    has_positive = g3_count > 0
+    case_mode = "positive_present" if has_positive else "no_positive_expected"
+    scoring_profile = "ranked_relevance" if has_positive else "negative_control"
 
     c = {
         "schema_version": SV_CASE, "case_id": case_id, "benchmark_role": "diagnostic",
@@ -268,7 +276,7 @@ def build_case(case_id, task_family, domain, query, retrieved_unit, surface, ris
         "case_author_id": AUTHOR, "review_status": "authored_provisional",
         "leakage_group_id": leakage_group, "document_family_id": document_family,
         "query_semantic_fingerprint": qfp(query),
-        "positive_unit_fingerprint": PASS[pos_keys[0]]["passage_text_hash"],
+        "positive_unit_fingerprint": PASS[pos_keys[0]]["passage_text_hash"] if pos_keys else sha256(""),
         "synthetic_scenario_id": scenario_id,
         "passages": {p["passage_id"]: {k: v for k, v in p.items() if k != "passage_text"} for p in pool_passages},
         "candidate_pool": {
@@ -279,6 +287,9 @@ def build_case(case_id, task_family, domain, query, retrieved_unit, surface, ris
             "unjudged_unit_policy": "exhaustive_no_unjudged",
         },
         "negative_failed_dimensions": neg_failed_dims,
+        "case_mode": case_mode,
+        "scoring_profile": scoring_profile,
+        "expected_positive_count": g3_count,
     }
     if contradiction_keys:
         c["contradicting_or_qualifying_passages"] = [PASS[k]["passage_id"] for k in contradiction_keys]

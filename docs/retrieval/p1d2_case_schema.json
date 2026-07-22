@@ -27,7 +27,10 @@
     "query_semantic_fingerprint",
     "positive_unit_fingerprint",
     "candidate_pool",
-    "negative_failed_dimensions"
+    "negative_failed_dimensions",
+    "case_mode",
+    "scoring_profile",
+    "expected_positive_count"
   ],
   "additionalProperties": false,
   "properties": {
@@ -47,7 +50,7 @@
     "false_support_negatives": {"type": "array", "items": {"type": "string"}},
     "relevance_judgments": {"type": "array", "items": {"$ref": "https://elephant-rock-research-lab/p1d2_judgment_schema_v1"}, "minItems": 1},
     "risk_labels": {"type": "array", "items": {"type": "string", "enum": ["false_support", "missed_contradiction", "agenda_mismatch", "missed_relevant_evidence", "redundancy", "latency_resource_cost"]}, "minItems": 1},
-    "hard_negative_types": {"type": "array", "items": {"type": "string", "enum": ["same_topic_wrong_population", "same_intervention_wrong_outcome", "supportive_language_without_support", "negated_or_qualified_result", "review_vs_primary", "method_application_vs_definition", "multiple_papers_one_lineage", "paraphrase_low_overlap", "exact_identifier_or_acronym_collision"]}, "minItems": 1},
+    "hard_negative_types": {"type": "array", "items": {"type": "string", "enum": ["same_topic_wrong_population", "same_topic_different_agenda", "same_intervention_wrong_outcome", "supportive_language_without_support", "negated_or_qualified_result", "review_vs_primary", "method_application_vs_definition", "multiple_papers_one_lineage", "paraphrase_low_overlap", "exact_identifier_or_acronym_collision"]}, "minItems": 1},
     "annotation_rationale": {"type": "string", "minLength": 10},
     "case_origin": {"type": "string", "enum": ["synthetic_realistic", "synthetic_derived_from_real_structure", "real_project_deidentified", "real_project_unredacted_controlled"]},
     "origin_provenance": {"type": "string", "minLength": 5},
@@ -106,9 +109,24 @@
         "additionalProperties": false,
         "properties": {
           "unit_id": {"type": "string"},
-          "failed_dimensions": {"type": "array", "items": {"type": "string", "enum": ["population", "intervention_or_exposure", "comparison", "outcome", "direction_or_polarity", "causal_vs_associational", "study_design_requirement", "evidence_lineage", "evidence_granularity", "meaning_or_domain"]}, "minItems": 1}
+          "failed_dimensions": {"type": "array", "items": {"type": "string", "enum": ["population", "intervention_or_exposure", "comparison", "outcome", "direction_or_polarity", "causal_vs_associational", "study_design_requirement", "evidence_lineage", "evidence_granularity", "meaning_or_domain", "qualifiers"]}, "minItems": 1}
         }
       }
+    },
+    "case_mode": {
+      "type": "string",
+      "enum": ["positive_present", "no_positive_expected"],
+      "description": "v1.3 PATCH (scoring guard). positive_present = conventional ranked-retrieval case with at least one grade-3 positive. no_positive_expected = negative-control case where no passage fully supports the claim (e.g. a genuine research gap); recall/nDCG are NOT computed for these — only false-match and abstention behavior. Prevents no-positive cases from polluting recall denominators."
+    },
+    "scoring_profile": {
+      "type": "string",
+      "enum": ["ranked_relevance", "negative_control"],
+      "description": "v1.3 PATCH. Must be ranked_relevance when case_mode=positive_present; negative_control when case_mode=no_positive_expected. Drives which metrics apply."
+    },
+    "expected_positive_count": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "v1.3 PATCH. The number of grade-3 positives the case contains. 0 for no_positive_expected cases (negative controls). Must match the actual count of grade-3 judgments in the case."
     }
   },
   "$defs": {
@@ -145,6 +163,8 @@
     {"description": "provisional/authored_provisional cannot have reviewers.", "if": {"required": ["review_status"], "properties": {"review_status": {"enum": ["provisional", "authored_provisional"]}}}, "then": {"not": {"required": ["reviewer_a_id", "reviewer_b_id"]}}},
     {"description": "dual_reviewed/adjudicated require both reviewers + blinding.", "if": {"required": ["review_status"], "properties": {"review_status": {"enum": ["dual_reviewed", "adjudicated"]}}}, "then": {"required": ["reviewer_a_id", "reviewer_b_id", "reviewers_blinded_to_each_other"], "properties": {"reviewers_blinded_to_each_other": {"const": true}}}},
     {"description": "sealed roles must not show policy outputs to reviewers.", "if": {"required": ["benchmark_role"], "properties": {"benchmark_role": {"enum": ["sealed_product_proxy", "real_project_holdout"]}}}, "then": {"required": ["policy_outputs_visible_to_reviewers"], "properties": {"policy_outputs_visible_to_reviewers": {"const": false}}}},
-    {"description": "v1.2 PATCH: candidate_pool.candidate_unit_type must match retrieved_unit.", "if": {"required": ["candidate_pool"]}, "then": {"properties": {"candidate_pool": {"properties": {"candidate_unit_type": {"enum": ["passage", "paper"]}}}}}}
+    {"description": "v1.2 PATCH: candidate_pool.candidate_unit_type must match retrieved_unit.", "if": {"required": ["candidate_pool"]}, "then": {"properties": {"candidate_pool": {"properties": {"candidate_unit_type": {"enum": ["passage", "paper"]}}}}}},
+    {"description": "v1.3 PATCH: case_mode/scoring_profile consistency. positive_present requires ranked_relevance; no_positive_expected requires negative_control.", "if": {"required": ["case_mode"], "properties": {"case_mode": {"const": "positive_present"}}}, "then": {"properties": {"scoring_profile": {"const": "ranked_relevance"}}}},
+    {"description": "v1.3 PATCH: no_positive_expected requires negative_control scoring.", "if": {"required": ["case_mode"], "properties": {"case_mode": {"const": "no_positive_expected"}}}, "then": {"properties": {"scoring_profile": {"const": "negative_control"}}}}
   ]
 }

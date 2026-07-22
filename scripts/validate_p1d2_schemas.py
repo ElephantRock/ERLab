@@ -154,6 +154,9 @@ def valid_diagnostic_case(judgment=None):
             "qualifiers": "none",
         },
         "negative_failed_dimensions": [],
+        "case_mode": "positive_present",
+        "scoring_profile": "ranked_relevance",
+        "expected_positive_count": 1,
         "passages": {
             "pas_001": {
                 "document_id": "doc_001",
