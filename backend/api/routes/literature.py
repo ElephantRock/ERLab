@@ -116,39 +116,81 @@ async def list_ingested_papers():
 
 
 async def _do_ingest(paper: Paper) -> dict:
-    """Internal ingest logic, extracted for testability."""
+    """Persist a paper into the vector store with paper_id metadata.
+
+    F1.5d: This is the truthful ingest path. The paper is written via
+    VectorStore.add_papers, which embeds the chunk text and upserts into
+    the chromadb collection with metadata {"paper_id": paper.id, ...}.
+    GET /literature/ingested reads that exact metadata, so the write
+    and read paths share one source of truth.
+
+    Failures MUST surface as errors — never return a fake success when
+    nothing was persisted. The prior ImportError-fallback was a
+    correctness defect (claimed "ingested" without writing anything).
+    """
+    from backend.config import get_settings
+    from backend.pipeline.ingestion.chunker import DocumentChunk
+    from backend.pipeline.knowledge.embedding_service import EmbeddingService
+    from backend.pipeline.knowledge.vector_store import VectorStore
+    from backend.providers.provider_factory import create_provider
+    from backend.api.errors import ServiceUnavailableError
+
+    # 1. Build chunk text from paper title + abstract + authors.
+    #    One chunk is sufficient for title+abstract papers (matches the
+    #    IngestionStage idiom in backend/pipeline/stages.py:511-524).
+    parts = [paper.title]
+    if paper.abstract:
+        parts.append(paper.abstract)
+    if paper.authors:
+        parts.append(", ".join(a.name for a in paper.authors))
+    text = "\n\n".join(p for p in parts if p)
+
+    chunks = [
+        DocumentChunk(
+            text=text,
+            paper_id=paper.id,
+            section="abstract",
+            chunk_index=0,
+        )
+    ]
+
+    # 2. Construct the VectorStore exactly like list_ingested_papers and
+    #    knowledge.ingest_pdf so the read path observes the same collection.
     try:
-        from backend.pipeline.knowledge.ingestion import ingest_document
+        settings = get_settings()
+        provider = create_provider()
+        embedding = EmbeddingService(provider)
+        store = VectorStore(settings.chroma_persist_dir, embedding)
+    except Exception as e:
+        # Provider/key/chroma not configured — raise, do NOT fake success.
+        logger.error("Vector store construction failed for paper %s: %s", paper.id, e)
+        raise ServiceUnavailableError(
+            detail=f"Knowledge base unavailable: {e}",
+            hint="Set EROCK_OPENAI_API_KEY (or switch EROCK_EMBEDDING_PROVIDER to ollama) and ensure chromadb is installed.",
+        ) from e
 
-        content = f"# {paper.title}\n\n"
-        if paper.abstract:
-            content += f"## Abstract\n\n{paper.abstract}\n\n"
-        if paper.authors:
-            author_names = ", ".join(a.name for a in paper.authors)
-            content += f"## Authors\n\n{author_names}\n\n"
-
-        metadata = {
-            "source": paper.source,
-            "paper_id": paper.id,
-            "title": paper.title,
-            "year": str(paper.year) if paper.year else "",
-            "doi": paper.doi or "",
-            "url": paper.url or "",
-            "type": "academic_paper",
-        }
-
-        await ingest_document(content=content, metadata=metadata, doc_id=f"paper_{paper.id}")
-        return {"status": "ingested", "id": paper.id}
-
-    except ImportError:
-        logger.info("Ingestion module not available, paper %s acknowledged", paper.id)
-        return {"status": "ingested", "id": paper.id}
+    # 3. Persist. add_papers embeds, dedupes by "{paper.id}_chunk_{i}",
+    #    and writes metadata {paper_id, paper_title, source, section,
+    #    year, keywords}. Returns the number of chunks upserted.
+    try:
+        stored = await store.add_papers([paper], [chunks])
     except Exception as e:
         logger.error("Ingestion failed for paper %s: %s", paper.id, e)
         raise BadRequestError(
             detail=f"Ingestion failed: {e}",
-            hint="Check that the knowledge base is properly configured.",
+            hint="Check that the embedding provider is reachable and the paper has non-empty content.",
         ) from e
+
+    if stored == 0:
+        # add_papers silently drops zero-vector chunks (provider offline).
+        # Surface this as failure so clients know nothing was persisted
+        # and the GET /literature/ingested read path will not report the id.
+        raise BadRequestError(
+            detail="Ingestion wrote 0 chunks — embedding provider may be offline",
+            hint="Switch EROCK_EMBEDDING_PROVIDER to a working provider (openai/gemini/ollama).",
+        )
+
+    return {"status": "ingested", "id": paper.id, "chunks": stored}
 
 
 @router.post(
