@@ -137,19 +137,32 @@ def run():
             field_diffs.append(jid)
     chk("no field-level differences", not field_diffs, str(field_diffs[:3]))
 
-    # ── PATCH 5: byte-stable determinism ──
-    print("\n[PATCH 5] byte-stable determinism (all 4 outputs)")
+    # ── PATCH 5: byte-stable determinism + single-writer invariant ──
+    print("\n[PATCH 5] byte-stable determinism + single-writer invariant")
     builder = REPO / "scripts" / "build_p1d2_diagnostic_expansion.py"
+    base_lib = REPO / "scripts" / "build_p1d2_diagnostic_seed.py"
+
+    # Single-writer: base library must NOT have a __main__ that writes
+    base_src = base_lib.read_text(encoding="utf-8")
+    chk("base builder is NOT a writer (no build() in __main__)", 'build()' not in base_src.split('if __name__')[1] if '__main__' in base_src else True)
+
     before = {a: hashlib.sha256((DOCS / f"p1d2_diagnostic_seed_{a}.jsonl").read_bytes()).hexdigest() for a in ["sources", "cases", "judgments"]}
     before_m = hashlib.sha256((DOCS / "p1d2_diagnostic_seed_manifest.json").read_bytes()).hexdigest()
     r = subprocess.run([sys.executable, str(builder)], capture_output=True, text=True)
-    chk("builder rerun exit 0", r.returncode == 0, r.stderr[:100])
+    chk("canonical builder rerun exit 0", r.returncode == 0, r.stderr[:100])
     after = {a: hashlib.sha256((DOCS / f"p1d2_diagnostic_seed_{a}.jsonl").read_bytes()).hexdigest() for a in ["sources", "cases", "judgments"]}
     after_m = hashlib.sha256((DOCS / "p1d2_diagnostic_seed_manifest.json").read_bytes()).hexdigest()
     chk("sources deterministic", before["sources"] == after["sources"])
     chk("cases deterministic", before["cases"] == after["cases"])
     chk("judgments deterministic", before["judgments"] == after["judgments"])
     chk("manifest deterministic", before_m == after_m)
+
+    # Manifest records canonical generator path + hash
+    chk("manifest has canonical_generator_path", manifest.get("canonical_generator_path") == "scripts/build_p1d2_diagnostic_expansion.py")
+    live_gen_hash = hashlib.sha256(builder.read_bytes()).hexdigest()
+    chk("manifest canonical_generator_sha256 matches live", manifest.get("canonical_generator_sha256") == live_gen_hash,
+        f"manifest={manifest.get('canonical_generator_sha256','?')[:16]} live={live_gen_hash[:16]}")
+    chk("manifest has dataset_version", "dataset_version" in manifest)
 
     # ── PATCH 6: false-support claim has a fully supporting unit (positive_present only) ──
     print("\n[PATCH 6] false-support claims have a fully supporting unit (positive_present only)")

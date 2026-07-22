@@ -1,7 +1,9 @@
-"""P1D.2b expansion: adds 21 cases (010-030) to the 9-case seed (001-009).
+"""P1D.2b CANONICAL SOLE WRITER for the 30-case diagnostic set.
 
-Imports the base builder's infrastructure (CORPUS, PASS, helpers) and extends
-them. The combined output (30 cases) is emitted by build().
+This is the ONLY script that writes the final diagnostic artifact paths.
+build_p1d2_diagnostic_seed.py is a library (no __main__, no writes) imported here.
+
+Writers capable of producing final diagnostic paths = 1 (this file).
 
 Primary traps covered by the 21 new cases:
   - exact identifier / acronym collision (er_005: GPT as model vs GPT as protein)
@@ -19,7 +21,7 @@ Primary traps covered by the 21 new cases:
   method/app (mr_003), no_positive_expected controls (rga_002, rga_003).
 """
 from __future__ import annotations
-import importlib.util, sys, json
+import importlib.util, sys, json, hashlib
 from pathlib import Path
 
 # Import the base builder as a module
@@ -585,11 +587,15 @@ def build():
 
     manifest = {
         "manifest_version": "p1d2_diagnostic_seed_manifest_v3", "status": "draft",
+        "dataset_version": "p1d2_diagnostic_v1_provisional",
+        "canonical_generator_path": "scripts/build_p1d2_diagnostic_expansion.py",
+        "canonical_generator_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
         "created": "2026-07-22", "benchmark_role": "diagnostic",
         "case_count": len(ALL_CASES), "judgment_count": len(derived_judgments),
         "source_document_count": len(ALL_CORPUS), "task_family_counts": dict(sorted(families.items())),
         "case_mode_counts": dict(sorted(case_modes.items())),
-        "schema_versions": {"case": SV_CASE, "judgment": SV_JUDG},
+        "case_schema_version": SV_CASE,
+        "judgment_schema_version": SV_JUDG,
         "artifact_hashes": {
             "sources": fp("p1d2_diagnostic_seed_sources.jsonl"),
             "cases": fp("p1d2_diagnostic_seed_cases.jsonl"),
@@ -599,6 +605,7 @@ def build():
         "authoring_blindness": {"candidate_retrieval_outputs_visible_to_author": False, "embedding_model_evaluated": False, "reranker_evaluated": False, "policy_specific_tuning": False},
         "candidate_pool_design": "exhaustive per-case pools with cross-case distractors; every pool unit judged exactly once",
         "judgment_authority": "cases are authoritative; judgments JSONL derived from cases",
+        "single_writer_invariant": "build_p1d2_diagnostic_seed.py is a library (no writes); build_p1d2_diagnostic_expansion.py is the sole writer",
     }
     dump_json(manifest, OUTDIR / "p1d2_diagnostic_seed_manifest.json")
     print(f"Wrote {len(ALL_CORPUS)} sources, {len(ALL_CASES)} cases, {len(derived_judgments)} judgments.")

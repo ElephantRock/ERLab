@@ -12,20 +12,22 @@
   },
   "benchmark_role": "diagnostic",
   "candidate_pool_design": "exhaustive per-case pools with cross-case distractors; every pool unit judged exactly once",
+  "canonical_generator_path": "scripts/build_p1d2_diagnostic_expansion.py",
+  "canonical_generator_sha256": "b2952da3d1f93c57ad95bf416e7b7521e3b03142bbd79ee157dfb07cce04e979",
   "case_count": 30,
   "case_mode_counts": {
     "no_positive_expected": 4,
     "positive_present": 26
   },
+  "case_schema_version": "p1d2_case_schema_v1",
   "created": "2026-07-22",
+  "dataset_version": "p1d2_diagnostic_v1_provisional",
   "judgment_authority": "cases are authoritative; judgments JSONL derived from cases",
   "judgment_count": 81,
+  "judgment_schema_version": "p1d2_judgment_schema_v1",
   "manifest_version": "p1d2_diagnostic_seed_manifest_v3",
   "review_status_note": "All judgments authored_provisional, single-pass, non-scoreable, non-sealable. Requires external dual review before scoring.",
-  "schema_versions": {
-    "case": "p1d2_case_schema_v1",
-    "judgment": "p1d2_judgment_schema_v1"
-  },
+  "single_writer_invariant": "build_p1d2_diagnostic_seed.py is a library (no writes); build_p1d2_diagnostic_expansion.py is the sole writer",
   "source_document_count": 43,
   "status": "draft",
   "task_family_counts": {

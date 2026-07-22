@@ -531,5 +531,10 @@ def build():
     print(f"Families: {dict(sorted(families.items()))}")
 
 
+# NOT a writer. This module is a LIBRARY imported by build_p1d2_diagnostic_expansion.py.
+# The build() function and its __main__ guard were removed to enforce the single-writer
+# invariant: only build_p1d2_diagnostic_expansion.py may write the final diagnostic paths.
+# Running this file directly does nothing (by design).
 if __name__ == "__main__":
-    build()
+    print("This module is a library, not a writer. Run build_p1d2_diagnostic_expansion.py instead.")
+    print("Writers capable of producing final diagnostic paths = 1 (build_p1d2_diagnostic_expansion.py)")
