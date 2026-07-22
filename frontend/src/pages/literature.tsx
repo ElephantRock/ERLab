@@ -8,6 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Search, BookOpen, Inbox } from "lucide-react";
 import { ErrorCard } from "@/components/ui/error-card";
 import { EmptyState } from "@/components/ui/empty-state";
+import { toast } from "sonner";
 import type { Paper } from "@/api/literature";
 
 export default function LiteraturePage() {
@@ -36,10 +37,19 @@ export default function LiteraturePage() {
     enabled: !!submittedQuery,
   });
 
+  // F1.4.1: ingestMutation now has truthful pending, success, and failure behavior.
+  // - isPending tracks per-paper ingest state via mutation variables
+  // - onSuccess toasts and invalidates the literature list
+  // - onError toasts a visible failure message
+  // - retry is possible via mutate(paper) on the same mutation
   const ingestMutation = useMutation({
     mutationFn: (paper: Paper) => ingestPaper(paper),
-    onSuccess: () => {
+    onSuccess: (_data, paper) => {
+      toast.success(`Ingested: ${paper.title.slice(0, 50)}...`);
       queryClient.invalidateQueries({ queryKey: ["literature-search"] });
+    },
+    onError: (_error, paper) => {
+      toast.error(`Failed to ingest: ${paper.title.slice(0, 50)}...`);
     },
   });
 
@@ -50,6 +60,8 @@ export default function LiteraturePage() {
   }
 
   function handleIngest(paper: Paper) {
+    // F1.4.1: prevent duplicate submission — disable while pending
+    if (ingestMutation.isPending) return;
     ingestMutation.mutate(paper);
   }
 
@@ -97,7 +109,15 @@ export default function LiteraturePage() {
             {papers.length} paper{papers.length !== 1 ? "s" : ""} for &quot;{submittedQuery}&quot;
           </p>
           {papers.map((paper) => (
-            <PaperCard key={paper.id} paper={paper} onIngest={handleIngest} />
+            <PaperCard
+              key={paper.id}
+              paper={paper}
+              onIngest={handleIngest}
+              isIngesting={ingestMutation.isPending && ingestMutation.variables?.id === paper.id}
+              ingestError={ingestMutation.isError && ingestMutation.variables?.id === paper.id
+                ? "Ingest failed"
+                : undefined}
+            />
           ))}
         </div>
       ) : null}

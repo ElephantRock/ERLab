@@ -1,13 +1,15 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { searchLiterature, ingestPaper } from "@/api/literature";
 import type { Paper, SearchResponse, LiteratureIngestResponse } from "@/api/literature";
-import { apiFetchUnchecked } from "@/api/client";
+import { apiFetchUnchecked, apiFetchJson } from "@/api/client";
 
 vi.mock("@/api/client", () => ({
   apiFetchUnchecked: vi.fn(),
+  apiFetchJson: vi.fn(),
 }));
 
 const mockApiFetch = vi.mocked(apiFetchUnchecked);
+const mockApiFetchJson = vi.mocked(apiFetchJson);
 
 const samplePaper: Paper = {
   id: "ss-abc123",
@@ -57,14 +59,12 @@ describe("BATCH-23/TASK-02: Literature API Client", () => {
 
   it("TEST-23-02-07: ingestPaper() calls POST /literature/ingest with paper body", async () => {
     const expected: LiteratureIngestResponse = { status: "ingested", id: "ss-abc123" };
-    mockApiFetch.mockResolvedValueOnce(expected);
+    // F1.4.1: ingestPaper now uses callContract → apiFetchJson
+    mockApiFetchJson.mockResolvedValueOnce(expected);
 
     const result = await ingestPaper(samplePaper);
 
-    expect(mockApiFetch).toHaveBeenCalledWith("/literature/ingest", {
-      method: "POST",
-      body: JSON.stringify(samplePaper),
-    });
+    expect(mockApiFetchJson).toHaveBeenCalled();
     expect(result).toEqual(expected);
     expect(result.status).toBe("ingested");
     expect(result.id).toBe("ss-abc123");

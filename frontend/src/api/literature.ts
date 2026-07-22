@@ -1,4 +1,5 @@
 import { apiFetchUnchecked } from "./client";
+import { callContract, decodeObject, decodeString, type JsonContract } from "./contracts/common";
 
 // ── Types ──
 
@@ -49,10 +50,18 @@ export function searchLiterature(
   );
 }
 
+// F1.4.1: contract-validated ingest — no longer uses apiFetchUnchecked
+const ingestPaperContract: JsonContract<LiteratureIngestResponse> = {
+  id: "literature.ingestPaper",
+  method: "POST",
+  pathPattern: "/literature/ingest",
+  responseKind: "json",
+  decoder: decodeObject<LiteratureIngestResponse>({
+    required: { status: decodeString, id: decodeString },
+  }),
+};
+
 /** Ingest a paper into the knowledge base. */
 export function ingestPaper(paper: Paper): Promise<LiteratureIngestResponse> {
-  return apiFetchUnchecked<LiteratureIngestResponse>("/literature/ingest", {
-    method: "POST",
-    body: JSON.stringify(paper),
-  });
+  return callContract(ingestPaperContract, { body: paper });
 }

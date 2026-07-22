@@ -2,12 +2,14 @@ import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ExternalLink, BookOpen } from "lucide-react";
+import { ExternalLink, BookOpen, Loader2, AlertCircle } from "lucide-react";
 import type { Paper } from "@/api/literature";
 
 export interface PaperCardProps {
   paper: Paper;
   onIngest: (paper: Paper) => void;
+  isIngesting?: boolean;
+  ingestError?: string;
 }
 
 function sourceColor(source: string): string {
@@ -23,10 +25,11 @@ function sourceColor(source: string): string {
   }
 }
 
-export function PaperCard({ paper, onIngest }: PaperCardProps) {
+export function PaperCard({ paper, onIngest, isIngesting, ingestError }: PaperCardProps) {
   const [confirming, setConfirming] = useState(false);
 
   function handleIngestClick() {
+    if (isIngesting) return;
     if (!confirming) {
       setConfirming(true);
       return;
@@ -93,15 +96,31 @@ export function PaperCard({ paper, onIngest }: PaperCardProps) {
           )}
         </div>
 
-        <div className="mt-3 flex justify-end">
+        <div className="mt-3 flex justify-end items-center gap-2">
+          {ingestError && (
+            <span className="text-xs text-destructive flex items-center gap-1" data-testid="ingest-error">
+              <AlertCircle className="h-3 w-3" />
+              {ingestError}
+            </span>
+          )}
           <Button
             size="sm"
             variant={confirming ? "destructive" : "outline"}
             onClick={handleIngestClick}
+            disabled={isIngesting}
             data-testid="ingest-button"
           >
-            <BookOpen className="h-3 w-3 mr-1" />
-            {confirming ? "Confirm Ingest" : "Ingest"}
+            {isIngesting ? (
+              <>
+                <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                Ingesting...
+              </>
+            ) : (
+              <>
+                <BookOpen className="h-3 w-3 mr-1" />
+                {confirming ? "Confirm Ingest" : "Ingest"}
+              </>
+            )}
           </Button>
         </div>
       </CardContent>
