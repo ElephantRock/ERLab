@@ -1,7 +1,7 @@
 """Tests for BATCH-23/TASK-01: Literature search and ingest API endpoints."""
 
 import pytest
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 from fastapi.testclient import TestClient
 
 from backend.api.app import app
@@ -143,3 +143,80 @@ class TestIngestEndpoint:
         assert "error" in data
         assert data["error"]["code"] == "BAD_REQUEST"
         assert "title" in data["error"]["message"].lower()
+
+
+# ── F1.5c: GET /literature/ingested returns persisted paper IDs ──
+class TestIngestedEndpoint:
+    """F1.5c: GET /literature/ingested exposes the authoritative set of
+    persisted paper IDs from the vector store. The frontend literature UI
+    derives its 'Ingested' badge from this response (not from ephemeral
+    client state), so the badge survives reload/remount.
+    """
+
+    def _make_store(self, metadatas):
+        """Build a fake VectorStore whose _collection.get returns metadatas."""
+        mock_collection = MagicMock()
+        mock_collection.get.return_value = {"metadatas": metadatas}
+        mock_store = MagicMock()
+        mock_store._collection = mock_collection
+        return mock_store
+
+    def test_ingested_returns_ids_from_vector_store(self, client):
+        """GET /literature/ingested returns unique paper_ids from metadata."""
+        store = self._make_store([
+            {"paper_id": "ss-1", "source": "semantic_scholar"},
+            {"paper_id": "ss-1", "source": "semantic_scholar"},  # dup
+            {"paper_id": "arxiv-2", "source": "arxiv"},
+        ])
+
+        with patch(
+            "backend.pipeline.knowledge.vector_store.VectorStore",
+            return_value=store,
+        ), patch(
+            "backend.pipeline.knowledge.embedding_service.EmbeddingService",
+        ), patch(
+            "backend.providers.provider_factory.create_provider",
+        ):
+            response = client.get("/api/v1/literature/ingested")
+
+        assert response.status_code == 200
+        data = response.json()
+        assert "ids" in data
+        # Duplicates are collapsed
+        assert data["ids"] == ["ss-1", "arxiv-2"]
+
+    def test_ingested_returns_empty_when_store_unavailable(self, client):
+        """GET /literature/ingested returns {ids: []} on backend failure
+        rather than 500 — the UI gracefully treats this as 'no persisted
+        ingestion state known'."""
+        with patch(
+            "backend.pipeline.knowledge.embedding_service.EmbeddingService",
+            side_effect=RuntimeError("provider offline"),
+        ):
+            response = client.get("/api/v1/literature/ingested")
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["ids"] == []
+
+    def test_ingested_skips_entries_without_paper_id(self, client):
+        """GET /literature/ingested ignores metadata entries lacking paper_id
+        (e.g. locally uploaded documents that use a different schema)."""
+        store = self._make_store([
+            {"paper_id": "ss-1"},
+            {"filename": "notes.pdf"},  # local upload, no paper_id
+            {"paper_id": "arxiv-2"},
+        ])
+
+        with patch(
+            "backend.pipeline.knowledge.vector_store.VectorStore",
+            return_value=store,
+        ), patch(
+            "backend.pipeline.knowledge.embedding_service.EmbeddingService",
+        ), patch(
+            "backend.providers.provider_factory.create_provider",
+        ):
+            response = client.get("/api/v1/literature/ingested")
+
+        assert response.status_code == 200
+        assert response.json()["ids"] == ["ss-1", "arxiv-2"]

@@ -7,12 +7,39 @@ import { AuthProvider } from "./contexts/auth-context";
 import { Toaster } from "sonner";
 import { ErrorBoundary } from "./components/error-boundary";
 import { initSentry } from "./lib/sentry";
+import { buildMutationCacheForClient } from "./lib/mutation-cache";
 import App from "./App";
 import "./i18n/config";
 import "./globals.css";
 
 initSentry();
 
+// F1.5c: cache-owned mutation side-effects.
+//
+// useMutation's component-level onSuccess is bound to the component that
+// invoked the hook. When that component unmounts before the mutationFn
+// resolves (e.g. user navigates away mid-PATCH), the observer is removed
+// and onSuccess never fires — declared invalidations are silently lost,
+// and the cache drifts from backend truth.
+//
+// We move cache-integrity invalidations to a global MutationCache whose
+// onSuccess is bound to the Mutation instance (which lives in the cache,
+// not on a component). Each mutation that needs post-success invalidation
+// declares its targets via `meta.invalidateQueries` / `meta.invalidatePrefixes`.
+// The cache handler reads these and performs the invalidation regardless
+// of component mount state.
+//
+// Component-level onSuccess stays for UX feedback (toasts) — losing a
+// toast on unmount is acceptable; losing a cache invalidation is not.
+//
+// QueryClient and MutationCache form a cycle (the cache needs the client
+// to invalidate; the client needs the cache at construction). We break it
+// with a getter closure — the client is captured by reference and resolved
+// lazily when a mutation succeeds (by which time the assignment has run).
+// `let` is required because the assignment happens AFTER the new QueryClient
+// call (which references queryClientRef via the closure).
+// eslint-disable-next-line prefer-const
+let queryClientRef: QueryClient | undefined;
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -20,7 +47,16 @@ const queryClient = new QueryClient({
       retry: 1,
     },
   },
+  mutationCache: buildMutationCacheForClient(() => {
+    // Lazily resolve the client. By the time any mutation succeeds, the
+    // assignment below has run and queryClientRef is populated.
+    if (!queryClientRef) {
+      throw new Error("QueryClient accessed before initialization");
+    }
+    return queryClientRef;
+  }),
 });
+queryClientRef = queryClient;
 
 /** Toaster needs to be inside SettingsProvider to read the theme. */
 function ThemedToaster() {

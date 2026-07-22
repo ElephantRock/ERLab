@@ -59,6 +59,62 @@ async def search_literature(
     return {"papers": papers}
 
 
+@router.get(
+    "/ingested",
+    summary="List ingested paper IDs",
+    description=(
+        "Returns the set of paper IDs that have been ingested into the "
+        "knowledge base. Used by the literature UI to derive an "
+        "authoritative persisted-ingestion indicator from backend state, "
+        "rather than from ephemeral client state."
+    ),
+)
+async def list_ingested_papers():
+    """Return the set of paper IDs persisted in the knowledge base.
+
+    The vector store records each ingested paper chunk with metadata
+    ``{"source": "academic_paper", "paper_id": <id>}`` (see
+    ``_do_ingest`` in this module). We query the collection metadata
+    and return the unique paper IDs.
+
+    Returns:
+        {"ids": ["p1", "p2", ...]}
+
+    If the vector store is unavailable or the embedding provider is
+    offline, we return an empty list rather than failing — the UI
+    gracefully treats this as "no persisted ingestion state known".
+    """
+    try:
+        from backend.config import get_settings
+        from backend.pipeline.knowledge.embedding_service import EmbeddingService
+        from backend.pipeline.knowledge.vector_store import VectorStore
+        from backend.providers.provider_factory import create_provider
+
+        settings = get_settings()
+        provider = create_provider()
+        embedding = EmbeddingService(provider)
+        store = VectorStore(settings.chroma_persist_dir, embedding)
+
+        all_meta = store._collection.get(include=["metadatas"])
+        ids: list[str] = []
+        seen: set[str] = set()
+        for m in (all_meta.get("metadatas") or []):
+            if not m:
+                continue
+            # Two ingestion paths write to the vector store:
+            #   - add_papers (vector_store.py): metadata type absent, paper_id present
+            #   - _do_ingest (this file):       metadata type="academic_paper", paper_id present
+            # We accept either as evidence of ingestion.
+            paper_id = m.get("paper_id")
+            if paper_id and paper_id not in seen:
+                seen.add(paper_id)
+                ids.append(paper_id)
+        return {"ids": ids}
+    except Exception as e:
+        logger.info("ingested-papers lookup unavailable: %s", e)
+        return {"ids": []}
+
+
 async def _do_ingest(paper: Paper) -> dict:
     """Internal ingest logic, extracted for testability."""
     try:
