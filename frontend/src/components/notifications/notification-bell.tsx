@@ -31,6 +31,10 @@ export function NotificationBell() {
   const [unreadCount, setUnreadCount] = useState(0);
   const [, setTotal] = useState(0);
   const [fetchError, setFetchError] = useState(false);
+  // Mutation 22: pending state for "Mark all as read"
+  const [markingAll, setMarkingAll] = useState(false);
+  // Mutation 23: per-item pending state — id of the notification being marked
+  const [markingId, setMarkingId] = useState<number | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const fetchUnread = useCallback(async () => {
@@ -77,22 +81,32 @@ export function NotificationBell() {
   }, [open]);
 
   const handleMarkAllRead = async () => {
+    // Mutation 22: prevent duplicate submission while pending
+    if (markingAll) return;
+    setMarkingAll(true);
     try {
       await markAllRead();
       setUnreadCount(0);
       setItems((prev) => prev.map((n) => ({ ...n, read: true })));
     } catch {
       toast.error("Failed to mark notifications as read");
+    } finally {
+      setMarkingAll(false);
     }
   };
 
   const handleMarkRead = async (id: number) => {
+    // Mutation 23: prevent duplicate submission of the same item while pending
+    if (markingId === id) return;
+    setMarkingId(id);
     try {
       await markRead(id);
       setItems((prev) => prev.map((n) => (n.id === id ? { ...n, read: true } : n)));
       setUnreadCount((prev) => Math.max(0, prev - 1));
     } catch {
       toast.error("Failed to mark notification as read");
+    } finally {
+      setMarkingId(null);
     }
   };
 
@@ -129,11 +143,12 @@ export function NotificationBell() {
             <span className="text-sm font-medium">Notifications</span>
             {unreadCount > 0 && (
               <button
-                className="text-xs text-info hover:underline"
+                className="text-xs text-info hover:underline disabled:opacity-50 disabled:no-underline disabled:cursor-not-allowed"
                 onClick={handleMarkAllRead}
+                disabled={markingAll}
                 data-testid="mark-all-read"
               >
-                Mark all as read
+                {markingAll ? "Marking..." : "Mark all as read"}
               </button>
             )}
           </div>
@@ -153,9 +168,10 @@ export function NotificationBell() {
             {items.map((n) => (
               <button
                 key={n.id}
-                className={`w-full text-left px-3 py-2 hover:bg-accent/50 transition-colors ${
+                className={`w-full text-left px-3 py-2 hover:bg-accent/50 transition-colors disabled:cursor-not-allowed ${
                   !n.read ? "bg-accent/20" : ""
                 }`}
+                disabled={markingId === n.id}
                 onClick={() => {
                   if (!n.read) handleMarkRead(n.id);
                 }}

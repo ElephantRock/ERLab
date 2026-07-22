@@ -1,4 +1,6 @@
 import { useState, useEffect } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { useResource } from "@/lib/useResource";
 import {
   getStageModelConfig,
@@ -15,7 +17,10 @@ interface StageModelSelectorProps {
 
 export function StageModelSelector({ value, onChange }: StageModelSelectorProps) {
   const [saving, setSaving] = useState(false);
+  // Mutation 30: pending state for reset
+  const [isResetting, setIsResetting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const queryClient = useQueryClient();
 
   // Fetch model config through the canonical typed client (F1.1 H1).
   // Previously this was a raw fetch() that bypassed apiFetchUnchecked's auth-header
@@ -61,6 +66,10 @@ export function StageModelSelector({ value, onChange }: StageModelSelectorProps)
     setError(null);
     try {
       await updateStageModelConfig(value);
+      // Mutation 29: visible success feedback + cache invalidation so the
+      // useResource read below re-fetches the saved assignments.
+      toast.success("Configuration saved");
+      queryClient.invalidateQueries({ queryKey: ["settings", "models"] });
     } catch {
       setError("Save failed");
     } finally {
@@ -69,11 +78,21 @@ export function StageModelSelector({ value, onChange }: StageModelSelectorProps)
   }
 
   async function handleReset() {
+    // Mutation 30: prevent duplicate submission while pending
+    if (isResetting) return;
+    setIsResetting(true);
+    setError(null);
     try {
       await resetStageModelConfig();
+      // Pessimistic: clear local state only AFTER the reset succeeds so a
+      // failure leaves the user's unsaved assignments intact.
       onChange({});
+      toast.success("Configuration reset to defaults");
+      queryClient.invalidateQueries({ queryKey: ["settings", "models"] });
     } catch {
       setError("Reset failed");
+    } finally {
+      setIsResetting(false);
     }
   }
 
@@ -123,9 +142,10 @@ export function StageModelSelector({ value, onChange }: StageModelSelectorProps)
           <button
             type="button"
             onClick={handleReset}
-            className="text-xs text-muted-foreground hover:text-foreground px-2 py-1 rounded border border-input"
+            disabled={isResetting}
+            className="text-xs text-muted-foreground hover:text-foreground px-2 py-1 rounded border border-input disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Reset to Defaults
+            {isResetting ? "Resetting..." : "Reset to Defaults"}
           </button>
           <button
             type="button"

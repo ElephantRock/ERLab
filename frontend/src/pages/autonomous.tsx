@@ -26,6 +26,8 @@ export default function AutonomousPage() {
   const [domain, setDomain] = useState("AI/NLP");
   const [maxRuns, setMaxRuns] = useState(3);
   const [stopConfirmId, setStopConfirmId] = useState<string | null>(null);
+  // Mutation 26: pending state for the stop confirmation button
+  const [isStopping, setIsStopping] = useState(false);
 
   // Scheduler + evolution state
   const [schedulerStatus, setSchedulerStatus] = useState<SchedulerStatus | null>(null);
@@ -108,16 +110,25 @@ export default function AutonomousPage() {
   }
 
   async function handleStopConfirm(cycleId: string) {
-    setStopConfirmId(null);
+    // Mutation 26: prevent duplicate submission while pending
+    if (isStopping) return;
+    setIsStopping(true);
     try {
       await stopAutonomousCycle(cycleId);
+      // Close the dialog only AFTER the stop succeeds — on failure the
+      // dialog stays open with an error so the user can retry.
+      setStopConfirmId(null);
       await loadHistory();
     } catch {
       setError("Failed to stop cycle");
+    } finally {
+      setIsStopping(false);
     }
   }
 
   function handleStopCancel() {
+    // Don't allow cancel while the stop request is mid-flight
+    if (isStopping) return;
     setStopConfirmId(null);
   }
 
@@ -284,15 +295,21 @@ export default function AutonomousPage() {
                 variant="destructive"
                 size="sm"
                 onClick={() => handleStopConfirm(stopConfirmId)}
+                disabled={isStopping}
                 data-testid="stop-confirm-btn"
               >
-                <StopCircle className="h-4 w-4 mr-1" />
-                Confirm Stop
+                {isStopping ? (
+                  <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                ) : (
+                  <StopCircle className="h-4 w-4 mr-1" />
+                )}
+                {isStopping ? "Stopping..." : "Confirm Stop"}
               </Button>
               <Button
                 variant="outline"
                 size="sm"
                 onClick={handleStopCancel}
+                disabled={isStopping}
                 data-testid="stop-cancel-btn"
               >
                 Cancel

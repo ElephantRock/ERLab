@@ -58,6 +58,8 @@ export default function MemoryBrowserPage() {
 
   // Delete confirmation state (mutation UI, stays local)
   const [confirmDelete, setConfirmDelete] = useState<MemoryRecallResult | null>(null);
+  // Mutation 13: pending state for delete confirmation button
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // ── Stats (supplementary metadata, useQuery + honest fallback) ──
   // Previously .catch(console.warn) silently omitted the header on failure.
@@ -105,9 +107,14 @@ export default function MemoryBrowserPage() {
   }
 
   // ── Delete handler (mutation + optimistic cache update) ────────
+  // Mutation 13: track isDeleting to disable the confirm button while the
+  // delete is in flight (F1.4.1/F1.4.2 pattern). The setQueryData removal
+  // is post-success (after await), so it remains correct.
   async function handleDeleteConfirm() {
     if (!confirmDelete) return;
+    if (isDeleting) return;
     const target = confirmDelete;
+    setIsDeleting(true);
     try {
       await deleteMemory(target.content);
       // Optimistic removal from the recall cache — matches the original
@@ -119,10 +126,10 @@ export default function MemoryBrowserPage() {
       );
       // Refresh stats after deletion.
       queryClient.invalidateQueries({ queryKey: ["memory", "stats"] });
+      setConfirmDelete(null);
     } catch (err) {
       toast.error("Failed to delete memory item");
-    } finally {
-      setConfirmDelete(null);
+      setIsDeleting(false);
     }
   }
 
@@ -202,11 +209,16 @@ export default function MemoryBrowserPage() {
               {confirmDelete.content}
             </p>
             <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={handleDeleteCancel}>
+              <Button variant="outline" onClick={handleDeleteCancel} disabled={isDeleting}>
                 Cancel
               </Button>
-              <Button variant="destructive" onClick={handleDeleteConfirm} data-testid="confirm-delete-btn">
-                Delete
+              <Button
+                variant="destructive"
+                onClick={handleDeleteConfirm}
+                disabled={isDeleting}
+                data-testid="confirm-delete-btn"
+              >
+                {isDeleting ? "Deleting..." : "Delete"}
               </Button>
             </div>
           </div>

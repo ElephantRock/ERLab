@@ -29,6 +29,13 @@ export function UploadZone({ onUploadSuccess }: UploadZoneProps) {
 
   const handleFile = useCallback(
     async (file: File) => {
+      // Mutation 21: prevent re-entry — a previous upload is still in flight.
+      // The "uploading" state is already in the state machine; this guard
+      // stops a second drop (or input change) from interrupting it.
+      if (state === "uploading") {
+        toast.error("Upload in progress");
+        return;
+      }
       // Validate file extension
       if (!file.name.toLowerCase().endsWith(".pdf")) {
         setState("error");
@@ -53,7 +60,7 @@ export function UploadZone({ onUploadSuccess }: UploadZoneProps) {
         toast.error(message);
       }
     },
-    [onUploadSuccess],
+    [onUploadSuccess, state],
   );
 
   const handleDrop = useCallback(
