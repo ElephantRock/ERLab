@@ -75,6 +75,7 @@ function GapDetailContent({ gapId }: { gapId: number }) {
   // F1.4.2: gap status mutation with pending, duplicate prevention, and invalidation
   const statusMutation = useMutation({
     mutationFn: (status: GapStatus) => updateGapStatus(gapId, status),
+    retry: false,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["gap", gapId] });
     },

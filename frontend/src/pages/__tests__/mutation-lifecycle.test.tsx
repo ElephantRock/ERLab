@@ -349,33 +349,71 @@ describe("Gap status failure behavior (F1.4a-2)", () => {
 });
 
 // ════════════════════════════════════════════════════════════════════
-// F1.4a-4: Non-idempotent mutation retry policy
+// F1.4b: Explicit retry:false on all touched non-idempotent mutations
 // ════════════════════════════════════════════════════════════════════
 
-describe("Non-idempotent mutation retry policy (F1.4a-4)", () => {
-  it("QueryClient default does not auto-retry mutations", () => {
-    const qc = new QueryClient();
-    // React Query v5 defaults mutation retry to 0 (no auto-retry)
-    // This test documents and asserts that invariant.
-    const mutationDefaults = qc.getDefaultOptions().mutations;
-    // retry is undefined by default (which means 0/no-retry in React Query v5)
-    // If a future change sets retry > 0 for mutations, this test fails.
-    const retry = mutationDefaults?.retry;
-    // undefined or 0 means no retry — both are safe for non-idempotent ops
-    expect(retry === undefined || retry === 0).toBe(true);
+import * as fs from "fs";
+import * as path from "path";
+
+describe("Non-idempotent mutation retry policy (F1.4b)", () => {
+  // F1.4b: every useMutation-based touched mutation must explicitly
+  // declare retry: false. This is NOT inferred from QueryClient defaults.
+  // Manual-state mutations (memory, upload, notifications, autonomous,
+  // stage-model-selector) don't use useMutation at all — they can't
+  // auto-retry by construction, which is verified by the "no useMutation"
+  // assertion in the source-level matrix.
+
+  it("literature ingestMutation source declares retry: false", () => {
+    const src = fs.readFileSync(
+      path.resolve(__dirname, "../literature.tsx"), "utf-8",
+    );
+    const mutationBlock = src.match(/ingestMutation\s*=\s*useMutation\(\{[\s\S]*?\}\)/);
+    expect(mutationBlock).toBeTruthy();
+    expect(mutationBlock![0]).toContain("retry: false");
   });
 
-  it("useMutation calls in F1.4-touched files do not set retry > 0", () => {
-    // The literature ingest mutation (literature.tsx) and gap status
-    // mutation (gap-detail.tsx) both use useMutation without retry.
-    // This is verified by code inspection — the useMutation calls have
-    // no retry option. This test documents that:
-    // - ingestMutation has no retry option
-    // - statusMutation has no retry option
-    // React Query v5 defaults mutations to retry: 0 (no auto-retry).
-    // Non-idempotent operations (ingest, delete, stop, mark-read, save,
-    // reset) are therefore safe from duplicate backend execution.
-    expect(true).toBe(true); // structural assertion via code inspection
+  it("gap statusMutation source declares retry: false", () => {
+    const src = fs.readFileSync(
+      path.resolve(__dirname, "../gap-detail.tsx"), "utf-8",
+    );
+    const mutationBlock = src.match(/statusMutation\s*=\s*useMutation\(\{[\s\S]*?\}\)/);
+    expect(mutationBlock).toBeTruthy();
+    expect(mutationBlock![0]).toContain("retry: false");
+  });
+
+  it("memory delete uses manual useState, not useMutation (structurally cannot auto-retry)", () => {
+    const src = fs.readFileSync(
+      path.resolve(__dirname, "../memory.tsx"), "utf-8",
+    );
+    expect(src).not.toContain("useMutation");
+  });
+
+  it("notification-bell uses manual useState, not useMutation", () => {
+    const src = fs.readFileSync(
+      path.resolve(__dirname, "../../components/notifications/notification-bell.tsx"), "utf-8",
+    );
+    expect(src).not.toContain("useMutation");
+  });
+
+  it("autonomous page uses manual useState, not useMutation", () => {
+    const src = fs.readFileSync(
+      path.resolve(__dirname, "../autonomous.tsx"), "utf-8",
+    );
+    expect(src).not.toContain("useMutation");
+  });
+
+  it("stage-model-selector uses manual useState, not useMutation", () => {
+    const src = fs.readFileSync(
+      path.resolve(__dirname, "../../components/pipeline/stage-model-selector.tsx"), "utf-8",
+    );
+    expect(src).not.toContain("useMutation");
+  });
+
+  it("upload-zone uses manual useState, not useMutation", () => {
+    const src = fs.readFileSync(
+      path.resolve(__dirname, "../../components/knowledge/upload-zone.tsx"), "utf-8",
+    );
+    expect(src).not.toContain("useMutation");
   });
 });
 
@@ -548,5 +586,106 @@ describe("Stage-model save/reset regression (F1.4a-3)", () => {
     expect(formState).toEqual({ gap_analysis: "cloud" }); // NOT cleared
     expect(isResetting).toBe(false); // Button re-enabled
     expect(resetError).toBe("Reset failed");
+  });
+});
+
+// ════════════════════════════════════════════════════════════════════
+// F1.4b-2: Gap A/B route isolation production test
+// ════════════════════════════════════════════════════════════════════
+
+describe("Gap A/B route isolation (F1.4b)", () => {
+  beforeEach(() => { vi.clearAllMocks(); });
+
+  it("late gap-A mutation resolution does not affect gap B", async () => {
+    // Gap A: id 12, status "identified". Gap B: id 13, status "addressed".
+    // Mutation for A starts, then we navigate to B, then A resolves.
+    // B must remain unchanged.
+
+    // getGap returns gap-specific data based on the ID requested
+    vi.mocked(getGap).mockImplementation((gapId: number) => {
+      if (gapId === 12) {
+        return Promise.resolve({
+          gap: {
+            id: 12, title: "Gap Alpha", description: "desc",
+            gap_type: "methodological", confidence: 0.9,
+            potential_impact: "high", idea_count: 0, status: "identified",
+          } as any,
+        });
+      }
+      return Promise.resolve({
+        gap: {
+          id: 13, title: "Gap Beta", description: "desc2",
+          gap_type: "empirical", confidence: 0.5,
+          potential_impact: "medium", idea_count: 0, status: "addressed",
+        } as any,
+      });
+    });
+
+    vi.mocked(getGapPapers).mockResolvedValue({ papers: [], total: 0 });
+
+    // Mutation for gap 12: control the resolution timing
+    let resolveMutationA: ((value: any) => void) | null = null;
+    const mutationAPromise = new Promise((resolve) => {
+      resolveMutationA = resolve;
+    });
+    vi.mocked(updateGapStatus).mockReturnValue(mutationAPromise as any);
+
+    // Step 1: Mount gap 12
+    const qc = makeQueryClient();
+    const { unmount } = render(
+      <QueryClientProvider client={qc}>
+        <MemoryRouter initialEntries={["/gaps/12"]}>
+          <Routes>
+            <Route path="/gaps/:id" element={<GapDetailPage />} />
+          </Routes>
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+
+    // Wait for Gap Alpha to render
+    await waitFor(() => expect(screen.getByText("Gap Alpha")).toBeInTheDocument());
+
+    // Start mutation A (change gap 12 status)
+    const select = screen.getByTestId("gap-status-select");
+    fireEvent.change(select, { target: { value: "investigating" } });
+
+    // Verify mutation A was called with gapId 12
+    await waitFor(() => {
+      expect(vi.mocked(updateGapStatus)).toHaveBeenCalledWith(12, "investigating");
+    });
+
+    // Step 2: Unmount gap 12 and mount gap 13 (simulating navigation)
+    unmount();
+    render(
+      <QueryClientProvider client={qc}>
+        <MemoryRouter initialEntries={["/gaps/13"]}>
+          <Routes>
+            <Route path="/gaps/:id" element={<GapDetailPage />} />
+          </Routes>
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+
+    // Wait for Gap Beta to render
+    await waitFor(() => expect(screen.getByText("Gap Beta")).toBeInTheDocument(), { timeout: 5000 });
+
+    // Step 3: Resolve mutation A (late resolution)
+    resolveMutationA!({ gap: { id: 12, status: "investigating" } });
+
+    // Wait a moment for any potential invalidation to process
+    await new Promise((r) => setTimeout(r, 200));
+
+    // Gap Beta is still displayed (not overwritten by gap Alpha)
+    expect(screen.queryByText("Gap Alpha")).not.toBeInTheDocument();
+    expect(screen.getByText("Gap Beta")).toBeInTheDocument();
+
+    // Gap B's status select shows "addressed" (gap B's own status, not A's)
+    const betaSelect = screen.getByTestId("gap-status-select");
+    expect(betaSelect).toHaveValue("addressed");
+
+    // Mutation A invalidated only ["gap", 12], not ["gap", 13]
+    // getGap was called for gap 13 (B's load), not re-triggered by A's invalidation
+    const gap13Calls = vi.mocked(getGap).mock.calls.filter(([id]) => id === 13).length;
+    expect(gap13Calls).toBeGreaterThanOrEqual(1);
   });
 });

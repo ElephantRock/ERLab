@@ -44,6 +44,7 @@ export default function LiteraturePage() {
   // - retry is possible via mutate(paper) on the same mutation
   const ingestMutation = useMutation({
     mutationFn: (paper: Paper) => ingestPaper(paper),
+    retry: false,
     onSuccess: (_data, paper) => {
       toast.success(`Ingested: ${paper.title.slice(0, 50)}...`);
       queryClient.invalidateQueries({ queryKey: ["literature-search"] });
