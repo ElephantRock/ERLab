@@ -219,21 +219,20 @@ function installHandler(handler: (path: string, init?: RequestInit) => MockRespo
  * invalidation the production QueryClient (main.tsx) uses, so tests
  * exercise the real cache-integrity contract — component-level
  * invalidations are no longer relied on.
+ *
+ * The QueryClient↔MutationCache construction cycle is broken with a
+ * mutable holder object (no lint suppression needed).
  */
 function makeQC(): QueryClient {
-  // `let` is required: `ref` is captured by the closure and assigned after
-  // the QueryClient is constructed. eslint sees no reassignment in the
-  // local flow but the assignment is real (post-construction).
-  // eslint-disable-next-line prefer-const
-  let ref: QueryClient | undefined;
+  const ref: { current?: QueryClient } = {};
   const qc = new QueryClient({
     defaultOptions: { queries: { retry: false, gcTime: 0 } },
     mutationCache: buildMutationCacheForClient(() => {
-      if (!ref) throw new Error("QueryClient accessed before initialization");
-      return ref;
+      if (!ref.current) throw new Error("QueryClient accessed before initialization");
+      return ref.current;
     }),
   });
-  ref = qc;
+  ref.current = qc;
   return qc;
 }
 
@@ -390,22 +389,22 @@ describe("F1.5b Critical Product-Flow Integration (sealed)", () => {
     // Use a session-grade QueryClient (gcTime > 0) so cache entries persist
     // across navigation — matches the production default.
     // F1.5c: install the PRODUCTION MutationCache via buildMutationCacheForClient
-    // (getter pattern). This ensures cache-owned invalidations fire regardless
-    // of component mount state — the same behavior the production QueryClient
-    // in main.tsx provides. Without this, the test would silently pass with
-    // a no-op MutationCache and fail to exercise the F1.5c contract.
-    // eslint-disable-next-line prefer-const
-    let qcRef: QueryClient | undefined;
+    // (holder-object pattern). This ensures cache-owned invalidations fire
+    // regardless of component mount state — the same behavior the production
+    // QueryClient in main.tsx provides. Without this, the test would
+    // silently pass with a no-op MutationCache and fail to exercise the
+    // F1.5c contract.
+    const qcRef: { current?: QueryClient } = {};
     const qc = new QueryClient({
       defaultOptions: {
         queries: { retry: false, gcTime: 5 * 60 * 1000, staleTime: 0 },
       },
       mutationCache: buildMutationCacheForClient(() => {
-        if (!qcRef) throw new Error("QueryClient accessed before initialization");
-        return qcRef;
+        if (!qcRef.current) throw new Error("QueryClient accessed before initialization");
+        return qcRef.current;
       }),
     });
-    qcRef = qc;
+    qcRef.current = qc;
 
     // Capture the production navigate() from inside the router so we can
     // drive a SAME-router navigation (no unmount of the router itself,

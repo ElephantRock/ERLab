@@ -33,13 +33,10 @@ initSentry();
 // toast on unmount is acceptable; losing a cache invalidation is not.
 //
 // QueryClient and MutationCache form a cycle (the cache needs the client
-// to invalidate; the client needs the cache at construction). We break it
-// with a getter closure — the client is captured by reference and resolved
-// lazily when a mutation succeeds (by which time the assignment has run).
-// `let` is required because the assignment happens AFTER the new QueryClient
-// call (which references queryClientRef via the closure).
-// eslint-disable-next-line prefer-const
-let queryClientRef: QueryClient | undefined;
+// to invalidate; the client needs the cache at construction). We break
+// the cycle with a mutable holder object — a constant binding that lets
+// the cache resolve the client lazily without disabling any lint rule.
+const queryClientRef: { current?: QueryClient } = {};
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -49,14 +46,14 @@ const queryClient = new QueryClient({
   },
   mutationCache: buildMutationCacheForClient(() => {
     // Lazily resolve the client. By the time any mutation succeeds, the
-    // assignment below has run and queryClientRef is populated.
-    if (!queryClientRef) {
+    // assignment below has run and queryClientRef.current is populated.
+    if (!queryClientRef.current) {
       throw new Error("QueryClient accessed before initialization");
     }
-    return queryClientRef;
+    return queryClientRef.current;
   }),
 });
-queryClientRef = queryClient;
+queryClientRef.current = queryClient;
 
 /** Toaster needs to be inside SettingsProvider to read the theme. */
 function ThemedToaster() {
