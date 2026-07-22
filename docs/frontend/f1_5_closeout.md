@@ -3,7 +3,7 @@
 ## Status
 
 ```
-F1.5     CLOSED — full product journeys + cache-isolation + authoritative state
+F1.5     CLOSED — full product journeys + cache isolation + truthful ingest persistence
 F1.6     NEXT — runtime error observability
 F1       OPEN
 ```
@@ -11,186 +11,141 @@ F1       OPEN
 ## Commit chain
 
 ```
-(F1.5c)  fix(f1.5): preserve mutation completion authority across navigation
-(F1.5c)  feat(f1.5): expose persisted ingestion state via /literature/ingested
-(F1.5c)  test(f1.5): prove routed gap isolation and backend-derived ingest state
-(F1.5c)  docs(f1.5): correct final integration closeout evidence  (this file)
+(F1.5d)  fix(f1.5): make literature ingest persistence truthful
+(F1.5d)  test(f1.5): prove production ingest write-read consistency
+(F1.5d)  refactor(f1.5): remove query-client initialization suppressions
+(F1.5d)  docs(f1.5): finalize authoritative product-flow closeout  (this file)
+1326919  test(f1.5): prove routed gap isolation and backend-derived ingest state (F1.5c)
+6d8c5e0  feat(f1.5): expose persisted ingestion state and migrate mutations to meta
+7422ffa  fix(f1.5): preserve mutation completion authority across navigation
 bd58ab6  test(f1.5): complete golden research and authoritative mutation flows (F1.5b)
 d688e16  refactor(frontend): expose production router composition for integration
-bd6e7dc  docs(f1.5): freeze critical frontend product journeys
 ```
 
-## F1.5c — Two production-level corrections
+## F1.5d — Truthful ingest persistence + suppression cleanup
 
-F1.5b closed the golden journey but left two mutation-seal gaps:
+F1.5c closed the cache-isolation contract and exposed a backend-derived
+ingest read endpoint. F1.5d closes the disconnected contract: the ingest
+WRITE path now actually persists to the same store the read path queries,
+and never claims success without persistence.
 
-1. The gap A/B test cache-seeded gap 13 rather than routing to it, and
-   did not exercise the case where Alpha's mutation completes AFTER
-   GapDetailContent(12) unmounts. Investigation revealed that
-   `useMutation`'s component-level `onSuccess` is bound to the
-   component observer — unmounting the component suppresses the
-   callback, so declared invalidations were silently lost and the
-   cache drifted from backend truth.
+### Production repair 1 — Truthful POST /literature/ingest
 
-2. The literature "Ingested" badge was driven by a local `Set<string>`
-   populated in the mutation's `onSuccess`. This did not survive
-   reload/remount and could disagree with the next backend read.
+**File:** `backend/api/routes/literature.py` (`_do_ingest`)
 
-## Production repair 1 — Cache-owned mutation side-effects
+**Defect (carried from before F1.5c):** the write path tried
+`from backend.pipeline.knowledge.ingestion import ingest_document` — a
+module that does not exist. The `except ImportError` branch then returned
+`{"status": "ingested", "id": paper.id}` without persisting anything.
+The read endpoint (`GET /literature/ingested`) queried a vector store
+that the write path never updated, so the contract was disconnected.
 
-**Files:** `src/main.tsx`, `src/lib/mutation-cache.ts`, plus 8 production
-useMutation sites migrated to declare `meta.invalidateQueries`.
+**Fix:** rewrote `_do_ingest` to call the real `VectorStore.add_papers`
+write API (the same one `VectorStore._collection.get` reads from). The
+production path is now:
 
-**Defect:** When a component invoking `useMutation` unmounted before
-`mutationFn` resolved (e.g. user navigated away mid-PATCH), the observer
-was removed and `onSuccess` never fired. Declared `queryClient.invalidateQueries`
-calls were silently lost; the cache became stale.
+```
+POST /literature/ingest
+→ build DocumentChunk(text=title+abstract+authors, paper_id=paper.id)
+→ construct VectorStore(chroma_persist_dir, EmbeddingService(create_provider()))
+→ store.add_papers([paper], [chunks])  # writes metadata {paper_id, ...}
+→ if stored == 0: raise BadRequestError ("0 chunks")
+→ return {"status": "ingested", "id": paper.id, "chunks": N}
+```
 
-**Fix:** Added a global `MutationCache` in `main.tsx` whose `onSuccess`
-handler is bound to the `Mutation` instance in the cache (not to any
-component observer). Each mutation that needs post-success invalidation
-declares its targets via `meta.invalidateQueries` (exact keys) and
-`meta.invalidatePrefixes` (prefix keys). The cache handler reads these
-and performs the invalidation regardless of component mount state.
+**Failure modes that now propagate (no fake success):**
+- VectorStore construction fails (no API key / chroma misconfigured) →
+  `ServiceUnavailableError` (503)
+- `add_papers` raises (embedding provider offline, network error) →
+  `BadRequestError` (400)
+- `add_papers` returns 0 chunks (zero-vector guard tripped) →
+  `BadRequestError` (400)
 
-Component-level `onSuccess`/`onError` remain for UX feedback (toasts) —
-losing a toast on unmount is acceptable; losing a cache invalidation is not.
+The previous `except ImportError: return {"status": "ingested", ...}`
+fallback is gone. There is no path by which POST claims "ingested"
+without writing to the store.
 
-The QueryClient↔MutationCache construction cycle is broken with a getter
-closure: `buildMutationCacheForClient(() => queryClientRef)` captures the
-client by reference and resolves it lazily when a mutation succeeds (by
-which time the assignment has run).
+### Production repair 2 — QueryClient initialization suppressions removed
 
-**Migrated mutations** (all now declare `meta.invalidateQueries`):
-- `gap-detail.tsx` → `["gap", gapId]`
-- `literature.tsx` → `["literature-search"]` (prefix) + `["literature-ingested"]`
-- `idea-detail.tsx` → `["idea", ideaId]`
-- `plugins.tsx` → `["plugins"]`
-- `comment-thread.tsx` → `["comments", ideaId]`
-- `feedback-form.tsx` → `["idea", ideaId]`
-- `fix-section-button.tsx` → `["idea", ideaId]` + `["section-revisions", ideaId, sectionKey]`
-- `governance-panel.tsx` → `["governance-timeline", ideaId]`
-- `revision-history-drawer.tsx` → `["section-revisions", ideaId, sectionKey]` + `["idea", ideaId]`
-- `stage-model-editor.tsx` (3 mutations) → `["model-overrides"]`
+**Files:** `frontend/src/main.tsx`, `frontend/src/pages/__tests__/f1-5-integration.test.tsx`
 
-## Production repair 2 — Backend-derived ingest terminal state
+**Defect (from F1.5c):** the QueryClient↔MutationCache construction
+cycle was broken with `let ref` + `eslint-disable-next-line prefer-const`.
+The closeout incorrectly stated "0 new suppressions" while justifying
+two real suppressions.
 
-**Files:** `backend/api/routes/literature.py`, `frontend/src/api/literature.ts`,
-`frontend/src/pages/literature.tsx`.
+**Fix:** replaced the `let` bindings with a constant holder object
+`{ current?: QueryClient }`. The cache getter dereferences `ref.current`;
+no reassignment of `ref` itself occurs. No lint suppression needed:
 
-**Defect:** The "Ingested" badge was driven by a local `Set<string>` that
-did not survive reload and was not derived from backend data.
-
-**Fix:** Added `GET /literature/ingested` to the backend, which queries the
-vector store's metadata for unique `paper_id` values. The frontend calls
-this via a new contract-validated `listIngestedPapers()` (`["literature-ingested"]`
-query). The badge now derives from the response: `ingestedIds = new Set(ingestedData?.ids ?? [])`.
-
-The mutation's `meta.invalidateQueries: [["literature-ingested"]]` triggers
-an authoritative refetch on success, so the badge reflects backend truth
-and survives reload/remount.
+```ts
+const queryClientRef: { current?: QueryClient } = {};
+const queryClient = new QueryClient({
+  mutationCache: buildMutationCacheForClient(() => {
+    if (!queryClientRef.current) throw new Error("...");
+    return queryClientRef.current;
+  }),
+});
+queryClientRef.current = queryClient;
+```
 
 ## Architecture assertion
 
 Test imports `AppRoutes` and verifies `createRoutes`, `AuthenticatedRoutes`,
 and `ProtectedRoute` are the exact production exports. No test-owned route topology.
 
-## Test matrix (13 tests, all through production route registry)
+## Backend test matrix (13 tests in test_literature.py)
 
-| # | Test | Route registry | Transport | Decoder |
-|---|---|---|---|---|
-| 0 | Architecture: shared createRoutes factory | ✓ imports AppRoutes | N/A | N/A |
-| 1 | Golden journey: dashboard → run → idea → gap → matched papers | ✓ createRoutes | ✓ fetch mock | ✓ real |
-| 2 | Gap A/B: routed /gaps/12 → /gaps/13 transition; late mutation survives unmount; back-nav shows authoritative update | ✓ createRoutes + NavigateProbe | ✓ fetch mock | ✓ real |
-| 3 | Literature success: pending → duplicate blocked → both declared keys invalidated → backend-derived ingested state | ✓ createRoutes | ✓ fetch mock | ✓ real |
-| 3b | Literature terminal state survives remount (fresh QC) | ✓ createRoutes | ✓ fetch mock | ✓ real |
-| 4 | Literature failure → no auto retry → manual retry → terminal success | ✓ createRoutes | ✓ fetch mock | ✓ real |
-| 5 | Gap status: mutation → authoritative refetch of declared gap key | ✓ createRoutes | ✓ fetch mock | ✓ real |
-| 6 | Dashboard: governance fails, ideas render (independent lifecycles) | ✓ createRoutes | ✓ fetch mock | ✓ real |
-| 7 | Malformed papers → contract failure (not empty success) | ✓ createRoutes | ✓ fetch mock | ✓ real decoder |
-| 8 | Authenticated deep link | ✓ createRoutes + ProtectedRoute | ✓ fetch mock | ✓ real |
-| 9 | Unauthenticated → login redirect | ✓ createRoutes + ProtectedRoute | N/A | N/A |
-| 10 | Unknown route → dashboard fallback | ✓ createRoutes (Navigate) | ✓ fetch mock | ✓ real |
+| Class | Test | What it proves |
+|---|---|---|
+| TestSearchEndpoint | search_returns_papers | GET /literature/search shape |
+| TestSearchEndpoint | search passes maxResults | query param plumbing |
+| TestIngestEndpoint | ingest_stores_paper | POST shape (mocked _do_ingest) |
+| TestIngestEndpoint | ingest_requires_title | HB-01 confirmation gate |
+| TestIngestedEndpoint | ingested_returns_ids_from_vector_store | GET deduplication |
+| TestIngestedEndpoint | ingested_returns_empty_when_store_unavailable | GET graceful fallback |
+| TestIngestedEndpoint | ingested_skips_entries_without_paper_id | GET schema filter |
+| **TestIngestPersistence** | **post_then_get_exposes_persisted_paper_id** | **F1.5d write-read consistency through real _do_ingest** |
+| **TestIngestPersistence** | **post_failure_does_not_report_ingested** | **F1.5d no false-positive on persistence failure** |
+| **TestIngestPersistence** | **post_zero_chunks_treated_as_failure** | **F1.5d zero-vector guard surfaces as 400** |
+| **TestIngestPersistence** | **post_construction_failure_returns_503** | **F1.5d provider-misconfig surfaces as 503** |
 
-Plus 2 new literature API unit tests + 3 new backend tests for the
-`/literature/ingested` endpoint.
+The `TestIngestPersistence` class runs the REAL `_do_ingest` service
+path. Only the `VectorStore` class is mocked (lowest seam). The mock
+records writes in `written_metadatas` and replays them via
+`_collection.get`, so a subsequent GET observes the same `paper_id` the
+POST wrote — proving the contract is connected end-to-end through the
+production service logic.
 
-## Gap A/B cache-isolation proof (test 2)
+## Frontend test matrix (13 tests in f1-5-integration.test.tsx)
 
-```
-/gaps/12 mounts → production router navigates to /gaps/13 (same router)
-→ GapDetailContent(12) unmounts
-→ GET /gaps/13 executes (real routing, not cache seeding)
-→ gap 13 renders authoritative backend status ("addressed")
-→ Alpha's late PATCH resolves
-→ MutationCache onSuccess fires (cache-scoped, not component-scoped)
-→ ["gap", 12] invalidated                                  ✓
-→ ["gap", 13] invalidated                                  ✗ (0)
-→ gap 13 GET count unchanged                               ✓
-→ gap 13 rendered status remains "addressed"               ✓
-→ navigate back to /gaps/12
-→ gap 12 GET fires (invalidation survived unmount)         ✓
-→ gap 12 renders authoritative updated status              ✓
-```
-
-The session-grade QueryClient uses `gcTime: 5min` (matches production
-default) AND installs the production MutationCache via
-`buildMutationCacheForClient`, so the test exercises the same
-cache-owned invalidation contract the production app uses.
-
-## Literature authoritative state proof (tests 3 + 3b)
-
-```
-initial literature-ingested query fires (baseline state)
-→ paper appears as ingestible
-→ user confirms → mutation starts → pending visible
-→ rapid repeats send no second request
-→ POST succeeds
-→ MutationCache onSuccess invalidates BOTH:
-    ["literature-search"]   (prefix — refresh all cached searches)
-    ["literature-ingested"] (exact — authoritative badge source)
-→ literature-ingested GET fires again (refetch)
-→ second response lists ss-1 as ingested
-→ "Ingested" badge appears, derived from backend response
-→ ingest button permanently disabled for this paper
-
-REMOUNT TEST (fresh QueryClient):
-→ seed backend with ss-1 already ingested
-→ first mount: badge appears from backend data
-→ unmount entirely → local component state destroyed
-→ re-mount with FRESH QueryClient (simulates reload)
-→ badge reappears — proving backend-derived, not local
-```
+Unchanged from F1.5c. All 13 tests pass through the production route
+registry. The literature terminal-state tests continue to prove the
+frontend derives its badge from the backend `["literature-ingested"]`
+response; the backend F1.5d repair now makes that response reflect real
+persistence.
 
 ## All gates verified
 
 ```
 shared production route registry                         proven
-test-owned route topology                                0
-principal tests replacing legacy transport helpers       0
-
 complete golden research journey                         proven
-matched-paper success and malformed paths                proven
+same-router late-mutation isolation                      proven
+mutation invalidation survives component unmount         proven
 
-same-router /gaps/12 → /gaps/13 transition               proven
-GET /gaps/13 during pending gap-12 mutation              proven
-late gap-12 completion invalidates gap 12                proven
-late gap-12 completion cannot alter gap 13               proven
-gap-12 success invalidation survives page unmount        proven (MutationCache)
-back-nav to /gaps/12 shows authoritative updated state   proven
+POST ingest persists canonical paper_id                  proven (real _do_ingest)
+POST success cannot occur without persistence            proven (ImportError fallback removed)
+POST followed by GET exposes persisted paper             proven (TestIngestPersistence)
+persistence failure remains failure                      proven (4 backend tests)
+"Ingested" UI derives from resulting backend state       proven (frontend test 3 + 3b)
+remount/reload retains authoritative state               proven (frontend test 3b)
 
-literature success causes authoritative refetch          proven (both keys)
-terminal ingest state derived from backend data          proven
-terminal state survives remount/reload                   proven
-local client state represented as backend authority      0
-
-auth deep links                                          proven
-unknown fallback                                         proven
+new lint suppressions                                    0
 new unchecked callers                                    0
 unchecked budget                                         58
 TypeScript errors                                        0
-test failures                                            0 (828 pass)
+frontend test failures                                   0 (828 pass)
+backend test failures                                    0 (306 pass + 4 skipped)
 new ESLint warnings                                      0 (63 total)
-new suppressions                                         0 (2 prefer-const with justification)
 working tree                                             clean
 ```
