@@ -1,0 +1,36 @@
+{
+  "assignment_manifest": {
+    "hash": "c8e9d1b816bc4f3f744972ad94b891121df3d3d597d86db3a7bf5d917982c5b9",
+    "path": "docs/retrieval/p1d2_review_assignment_manifest.json"
+  },
+  "case_count": 30,
+  "content_included": {
+    "claim_dimensions": true,
+    "passage_text": true,
+    "query_or_claim": true,
+    "risk_definitions": true,
+    "rubric": true,
+    "source_provenance_hashes": true
+  },
+  "created": "2026-07-23",
+  "exclusions_verified": {
+    "neutral_ids_contain_no_role_information": true,
+    "no_answer_revealing_document_labels": true,
+    "no_author_grades_in_packages": true,
+    "no_author_rationales_in_packages": true,
+    "no_policy_outputs_in_packages": true
+  },
+  "manifest_version": "p1d2_review_package_manifest_v1",
+  "neutral_id_count": 67,
+  "packages": {
+    "A": {
+      "hash": "880e03780d3251043995acb193eb5e614be735c45511180fc6a238b66979cf32",
+      "path": "docs/retrieval/p1d2_reviewer_package_A.jsonl"
+    },
+    "B": {
+      "hash": "880e03780d3251043995acb193eb5e614be735c45511180fc6a238b66979cf32",
+      "path": "docs/retrieval/p1d2_reviewer_package_B.jsonl"
+    }
+  },
+  "status": "draft"
+}
