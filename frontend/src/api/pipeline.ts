@@ -1,4 +1,6 @@
 import { apiFetchUnchecked } from "./client";
+import { callContract } from "./contracts/common";
+import { listRunsContract } from "./contracts/dashboard";
 import type {
   PipelineRunRequest,
   PipelineRunSummary,
@@ -21,12 +23,8 @@ export function listRuns(params?: {
   offset?: number;
   session_id?: string;
 }): Promise<{ runs: PipelineRunSummary[]; total: number }> {
-  const search = new URLSearchParams();
-  if (params?.limit) search.set("limit", String(params.limit));
-  if (params?.offset) search.set("offset", String(params.offset));
-  if (params?.session_id) search.set("session_id", params.session_id);
-  const qs = search.toString();
-  return apiFetchUnchecked(`/pipeline/runs${qs ? `?${qs}` : ""}`);
+  // F1.3a: migrated from apiFetchUnchecked to callContract with runtime decoder
+  return callContract(listRunsContract, { query: params });
 }
 
 export function getRunDetail(id: number): Promise<PipelineRunDetail> {

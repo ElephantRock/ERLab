@@ -1,4 +1,7 @@
 import { apiFetchUnchecked } from "./client";
+import { callContract } from "./contracts/common";
+import { listIdeasContract } from "./contracts/dashboard";
+import { getSectionRevisionsContract } from "./contracts/f1-3a-reads";
 import type {
   IdeaListResponse,
   IdeaDetail,
@@ -16,16 +19,8 @@ export function listIdeas(params?: {
   limit?: number;
   offset?: number;
 }): Promise<IdeaListResponse> {
-  const search = new URLSearchParams();
-  if (params?.domain) search.set("domain", params.domain);
-  if (params?.min_score !== undefined) search.set("min_score", String(params.min_score));
-  if (params?.search) search.set("search", params.search);
-  if (params?.sort_by) search.set("sort_by", params.sort_by);
-  if (params?.sort_order) search.set("sort_order", params.sort_order);
-  if (params?.limit) search.set("limit", String(params.limit));
-  if (params?.offset) search.set("offset", String(params.offset));
-  const qs = search.toString();
-  return apiFetchUnchecked(`/ideas/${qs ? `?${qs}` : ""}`);
+  // F1.3a: migrated from apiFetchUnchecked to callContract with runtime decoder
+  return callContract(listIdeasContract, { query: params }) as Promise<IdeaListResponse>;
 }
 
 export function getIdea(id: number): Promise<{ idea: IdeaDetail }> {
@@ -81,5 +76,8 @@ export function getSectionRevisions(
   ideaId: number,
   sectionKey: string,
 ): Promise<RevisionHistoryResponse> {
-  return apiFetchUnchecked(`/ideas/${ideaId}/sections/${sectionKey}/revisions`);
+  // F1.3a: migrated from apiFetchUnchecked to callContract with runtime decoder
+  return callContract(getSectionRevisionsContract, {
+    params: { ideaId, sectionKey },
+  });
 }

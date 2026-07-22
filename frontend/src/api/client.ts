@@ -1,4 +1,6 @@
 import { API_PREFIX } from "@/lib/constants";
+import { callContract } from "./contracts/common";
+import { getDetailedStatusContract } from "./contracts/f1-3a-reads";
 
 export class ApiError extends Error {
   constructor(
@@ -219,7 +221,8 @@ export interface DetailedStatus {
 
 /** Fetch detailed status from the backend. */
 export async function getDetailedStatus(): Promise<DetailedStatus> {
-  return apiFetchUnchecked<DetailedStatus>("/status/detailed");
+  // F1.3a: migrated from apiFetchUnchecked to callContract with runtime decoder
+  return callContract(getDetailedStatusContract);
 }
 
 // ── SSE with durable replay ─────────────────────────────────────

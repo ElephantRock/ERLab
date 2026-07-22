@@ -44,7 +44,8 @@ export async function getMe(): Promise<AuthUser> {
 }
 
 export async function listUsers(): Promise<AuthUser[]> {
-  return apiFetchUnchecked<AuthUser[]>("/auth/users");
+  // F1.3a: migrated from apiFetchUnchecked to callContract with runtime decoder
+  return callContract(listUsersContract);
 }
 
 // F1.1b: forgotPassword is migrated through a JsonContract with a runtime
@@ -52,6 +53,7 @@ export async function listUsers(): Promise<AuthUser[]> {
 // is validated — a malformed success (missing `message`) is a contract
 // failure, not an unchecked cast.
 import { callContract, decodeObject, decodeString, type JsonContract } from "./contracts/common";
+import { listUsersContract } from "./contracts/f1-3a-reads";
 
 export interface ForgotPasswordResult {
   message: string;

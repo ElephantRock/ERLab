@@ -23,8 +23,13 @@ Object.defineProperty(window, "matchMedia", {
 });
 
 // ── Mocks ──────────────────────────────────────────────────────
+// F1.3a: gaps-explorer now calls getGapClusters() from @/api/gaps (contract-
+// backed via callContract → apiFetchJson) instead of an inline apiFetchUnchecked
+// call. Mock the gaps module to provide both listGaps (still used for the main
+// list) and getGapClusters (consumed by the clusters tab).
 vi.mock("@/api/gaps", () => ({
   listGaps: vi.fn(),
+  getGapClusters: vi.fn(),
 }));
 
 vi.mock("@/components/gaps/gap-card", () => ({
@@ -55,12 +60,7 @@ vi.mock("@/components/gaps/cluster-scatter", () => ({
   ),
 }));
 
-vi.mock("@/api/client", () => ({
-  apiFetchUnchecked: vi.fn(),
-}));
-
-import { listGaps } from "@/api/gaps";
-import { apiFetchUnchecked } from "@/api/client";
+import { listGaps, getGapClusters } from "@/api/gaps";
 
 function createQueryClient() {
   return new QueryClient({
@@ -108,7 +108,7 @@ beforeEach(() => {
 describe("Cluster click → filter behavior", () => {
   it("switches to gaps tab and shows filter badge when cluster clicked", async () => {
     vi.mocked(listGaps).mockResolvedValue(sampleGaps);
-    vi.mocked(apiFetchUnchecked).mockResolvedValue(mockClusters);
+    vi.mocked(getGapClusters).mockResolvedValue(mockClusters);
 
     renderGapsExplorer();
 
@@ -132,7 +132,7 @@ describe("Cluster click → filter behavior", () => {
 
   it("clears cluster filter when Clear button clicked", async () => {
     vi.mocked(listGaps).mockResolvedValue(sampleGaps);
-    vi.mocked(apiFetchUnchecked).mockResolvedValue(mockClusters);
+    vi.mocked(getGapClusters).mockResolvedValue(mockClusters);
 
     renderGapsExplorer();
 
@@ -153,7 +153,7 @@ describe("Cluster click → filter behavior", () => {
 
   it("toggles cluster filter off when same cluster clicked again", async () => {
     vi.mocked(listGaps).mockResolvedValue(sampleGaps);
-    vi.mocked(apiFetchUnchecked).mockResolvedValue(mockClusters);
+    vi.mocked(getGapClusters).mockResolvedValue(mockClusters);
 
     renderGapsExplorer();
 

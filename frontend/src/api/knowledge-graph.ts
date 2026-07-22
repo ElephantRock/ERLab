@@ -9,6 +9,12 @@
  */
 
 import { apiFetchUnchecked } from "./client";
+import { callContract } from "./contracts/common";
+import {
+  getEntitiesContract,
+  getGraphStatsContract,
+  getWorldModelContract,
+} from "./contracts/f1-3a-reads";
 
 // ── Types ─────────────────────────────────────────────────────────
 
@@ -66,7 +72,8 @@ export interface WorldModel {
 
 /** GET /knowledge-graph/stats → graph statistics */
 export function getGraphStats(): Promise<GraphStats> {
-  return apiFetchUnchecked<GraphStats>("/knowledge-graph/stats");
+  // F1.3a: migrated from apiFetchUnchecked to callContract with runtime decoder
+  return callContract(getGraphStatsContract);
 }
 
 /** GET /knowledge-graph/entities → entity list with optional filters (HB-02: max 100) */
@@ -75,12 +82,8 @@ export function getEntities(params?: {
   search?: string;
   limit?: number;
 }): Promise<GraphEntity[]> {
-  const query = new URLSearchParams();
-  if (params?.type) query.set("type", params.type);
-  if (params?.search) query.set("search", params.search);
-  if (params?.limit) query.set("limit", String(params.limit));
-  const qs = query.toString();
-  return apiFetchUnchecked<GraphEntity[]>(`/knowledge-graph/entities${qs ? `?${qs}` : ""}`);
+  // F1.3a: migrated from apiFetchUnchecked to callContract with runtime decoder
+  return callContract(getEntitiesContract, { query: params });
 }
 
 /** GET /knowledge-graph/entity/{id} → entity with relationships */
@@ -97,5 +100,6 @@ export function getSubgraph(id: string, depth = 2): Promise<Subgraph> {
 
 /** GET /knowledge-graph/world-model → high-level world model summary */
 export function getWorldModel(): Promise<WorldModel> {
-  return apiFetchUnchecked<WorldModel>("/knowledge-graph/world-model");
+  // F1.3a: migrated from apiFetchUnchecked to callContract with runtime decoder
+  return callContract(getWorldModelContract);
 }

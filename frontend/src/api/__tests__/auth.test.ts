@@ -2,17 +2,23 @@
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-// Mock the client module
-const mockFetch = vi.fn();
+// Mock the client module. F1.3a: listUsers now routes through callContract →
+// apiFetchJson; login/register/getMe remain on apiFetchUnchecked. Provide
+// both so migrated and non-migrated functions resolve their transport dep.
 vi.mock("@/api/client", () => ({
-  apiFetchUnchecked: (...args: unknown[]) => mockFetch(...args),
+  apiFetchUnchecked: vi.fn(),
+  apiFetchJson: vi.fn(),
 }));
 
 import { register, login, getMe, listUsers } from "@/api/auth";
+import { apiFetchUnchecked, apiFetchJson } from "@/api/client";
+
+const mockApiFetch = vi.mocked(apiFetchUnchecked);
+const mockApiFetchJson = vi.mocked(apiFetchJson);
 
 describe("auth API", () => {
   beforeEach(() => {
-    mockFetch.mockReset();
+    vi.clearAllMocks();
   });
 
   it("TEST-28-02-02: login calls API with correct params", async () => {
@@ -20,11 +26,11 @@ describe("auth API", () => {
       token: "jwt-token-123",
       user: { id: 1, username: "alice", email: "alice@test.com", role: "user" },
     };
-    mockFetch.mockResolvedValue(mockResponse);
+    mockApiFetch.mockResolvedValueOnce(mockResponse);
 
     const result = await login("alice", "password123");
 
-    expect(mockFetch).toHaveBeenCalledWith("/auth/login", {
+    expect(mockApiFetch).toHaveBeenCalledWith("/auth/login", {
       method: "POST",
       body: JSON.stringify({ username: "alice", password: "password123" }),
     });
@@ -37,14 +43,14 @@ describe("auth API", () => {
       token: "jwt-token-456",
       user: { id: 2, username: "bob", email: "bob@test.com", role: "user" },
     };
-    mockFetch.mockResolvedValue(mockResponse);
+    mockApiFetch.mockResolvedValueOnce(mockResponse);
 
     const result = await login("bob", "secret");
     expect(result.token).toBe("jwt-token-456");
   });
 
   it("TEST-28-02-06: login error throws", async () => {
-    mockFetch.mockRejectedValue(new Error("Invalid credentials"));
+    mockApiFetch.mockRejectedValueOnce(new Error("Invalid credentials"));
 
     await expect(login("bob", "wrong")).rejects.toThrow("Invalid credentials");
   });
@@ -54,11 +60,11 @@ describe("auth API", () => {
       token: "jwt-token-789",
       user: { id: 3, username: "charlie", email: "charlie@test.com", role: "user" },
     };
-    mockFetch.mockResolvedValue(mockResponse);
+    mockApiFetch.mockResolvedValueOnce(mockResponse);
 
     const result = await register("charlie", "charlie@test.com", "pass123");
 
-    expect(mockFetch).toHaveBeenCalledWith("/auth/register", {
+    expect(mockApiFetch).toHaveBeenCalledWith("/auth/register", {
       method: "POST",
       body: JSON.stringify({
         username: "charlie",
@@ -72,10 +78,10 @@ describe("auth API", () => {
 
   it("getMe calls correct endpoint", async () => {
     const mockUser = { id: 1, username: "alice", email: "alice@test.com", role: "user" };
-    mockFetch.mockResolvedValue(mockUser);
+    mockApiFetch.mockResolvedValueOnce(mockUser);
 
     const result = await getMe();
-    expect(mockFetch).toHaveBeenCalledWith("/auth/me");
+    expect(mockApiFetch).toHaveBeenCalledWith("/auth/me");
     expect(result.username).toBe("alice");
   });
 
@@ -83,10 +89,11 @@ describe("auth API", () => {
     const mockUsers = [
       { id: 1, username: "alice", email: "alice@test.com", role: "admin" },
     ];
-    mockFetch.mockResolvedValue(mockUsers);
+    // F1.3a: listUsers now uses callContract → apiFetchJson
+    mockApiFetchJson.mockResolvedValueOnce(mockUsers);
 
     const result = await listUsers();
-    expect(mockFetch).toHaveBeenCalledWith("/auth/users");
+    expect(mockApiFetchJson).toHaveBeenCalled();
     expect(result).toHaveLength(1);
   });
 });

@@ -14,6 +14,8 @@
  */
 
 import { apiFetchUnchecked } from "./client";
+import { callContract } from "./contracts/common";
+import { getGapClustersContract, type GapClustersResponse } from "./contracts/f1-3a-reads";
 import type { GapListResponse } from "./types";
 import {
   getGap as getGapViaContract,
@@ -59,6 +61,16 @@ export const getGap = getGapViaContract;
 export const submitGapFeedback = submitGapFeedbackViaContract;
 
 export const updateGapStatus = updateGapStatusViaContract;
+
+/**
+ * Fetch gap clusters for the clusters view. F1.3a: migrated from an inline
+ * apiFetchUnchecked call in gaps-explorer.tsx to a typed client function
+ * with a runtime decoder. Each cluster is preserved as a structured object
+ * (the page renders it opaquely via ClusterScatterPlot).
+ */
+export function getGapClusters(): Promise<GapClustersResponse> {
+  return callContract(getGapClustersContract);
+}
 
 // Re-export GapStatus as a value namespace for runtime narrowing helpers.
 export const GAP_STATUSES: readonly GapStatus[] = ["identified", "investigating", "addressed"] as const;

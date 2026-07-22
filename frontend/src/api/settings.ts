@@ -1,4 +1,9 @@
 import { apiFetchUnchecked } from "./client";
+import { callContract } from "./contracts/common";
+import {
+  getCertificationContract,
+  getOverridesContract,
+} from "./contracts/f1-3a-reads";
 
 // ── Catalog (GET /settings/catalog) ──────────────────────────────
 
@@ -104,7 +109,8 @@ export interface CertificationResponse {
 }
 
 export function getCertification(): Promise<CertificationResponse> {
-  return apiFetchUnchecked<CertificationResponse>("/settings/certification");
+  // F1.3a: migrated from apiFetchUnchecked to callContract with runtime decoder
+  return callContract(getCertificationContract);
 }
 
 // ── Model Overrides (GET/PUT/DELETE /settings/overrides) ───────
@@ -135,7 +141,8 @@ export interface OverrideValidateResponse {
 }
 
 export function getOverrides(): Promise<OverridesResponse> {
-  return apiFetchUnchecked<OverridesResponse>("/settings/overrides");
+  // F1.3a: migrated from apiFetchUnchecked to callContract with runtime decoder
+  return callContract(getOverridesContract);
 }
 
 export function updateOverrides(

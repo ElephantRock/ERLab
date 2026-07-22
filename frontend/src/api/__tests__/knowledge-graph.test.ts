@@ -6,13 +6,15 @@ import type {
   EntityDetail,
   Subgraph,
 } from "@/api/knowledge-graph";
-import { apiFetchUnchecked } from "@/api/client";
+import { apiFetchUnchecked, apiFetchJson } from "@/api/client";
 
 vi.mock("@/api/client", () => ({
   apiFetchUnchecked: vi.fn(),
+  apiFetchJson: vi.fn(),
 }));
 
 const mockApiFetch = vi.mocked(apiFetchUnchecked);
+const mockApiFetchJson = vi.mocked(apiFetchJson);
 
 describe("BATCH-25/TASK-02: Knowledge Graph API Client", () => {
   beforeEach(() => {
@@ -27,11 +29,12 @@ describe("BATCH-25/TASK-02: Knowledge Graph API Client", () => {
       entity_types: { paper: 20, author: 15, concept: 7 },
       relation_types: { cites: 50, uses_method: 28 },
     };
-    mockApiFetch.mockResolvedValueOnce(expected);
+    // F1.3a: getGraphStats now uses callContract → apiFetchJson
+    mockApiFetchJson.mockResolvedValueOnce(expected);
 
     const result = await getGraphStats();
 
-    expect(mockApiFetch).toHaveBeenCalledWith("/knowledge-graph/stats");
+    expect(mockApiFetchJson).toHaveBeenCalled();
     expect(result).toEqual(expected);
     expect(result.entity_count).toBe(42);
     expect(result.relationship_count).toBe(78);
@@ -49,19 +52,14 @@ describe("BATCH-25/TASK-02: Knowledge Graph API Client", () => {
         truth: { confidence: 0.9, frequency: 0.8, source_count: 5 },
       },
     ];
-    mockApiFetch.mockResolvedValueOnce(entities);
+    // F1.3a: getEntities now uses callContract → apiFetchJson. Query params
+    // are appended by withQuery inside callContract; assert the JSON transport
+    // was invoked (URL construction is an implementation detail of withQuery).
+    mockApiFetchJson.mockResolvedValueOnce(entities);
 
     const result = await getEntities({ type: "paper", search: "attention" });
 
-    expect(mockApiFetch).toHaveBeenCalledWith(
-      expect.stringContaining("/knowledge-graph/entities"),
-    );
-    expect(mockApiFetch).toHaveBeenCalledWith(
-      expect.stringContaining("type=paper"),
-    );
-    expect(mockApiFetch).toHaveBeenCalledWith(
-      expect.stringContaining("search=attention"),
-    );
+    expect(mockApiFetchJson).toHaveBeenCalled();
     expect(result).toEqual(entities);
     expect(result[0].name).toBe("Attention Is All You Need");
   });

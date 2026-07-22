@@ -1,4 +1,6 @@
 import { apiFetchUnchecked } from "./client";
+import { callContract } from "./contracts/common";
+import { getNotificationsContract } from "./contracts/f1-3a-reads";
 import type { NotificationListResponse } from "./types";
 
 export function getNotifications(params?: {
@@ -6,12 +8,8 @@ export function getNotifications(params?: {
   offset?: number;
   read?: boolean;
 }): Promise<NotificationListResponse> {
-  const search = new URLSearchParams();
-  if (params?.limit) search.set("limit", String(params.limit));
-  if (params?.offset) search.set("offset", String(params.offset));
-  if (params?.read !== undefined) search.set("read", String(params.read));
-  const qs = search.toString();
-  return apiFetchUnchecked(`/notifications/${qs ? `?${qs}` : ""}`);
+  // F1.3a: migrated from apiFetchUnchecked to callContract with runtime decoder
+  return callContract(getNotificationsContract, { query: params });
 }
 
 export function markRead(id: number): Promise<Record<string, unknown>> {

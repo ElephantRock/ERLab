@@ -1,4 +1,6 @@
 import { apiFetchUnchecked } from "./client";
+import { callContract } from "./contracts/common";
+import { listCommentsContract } from "./contracts/f1-3a-reads";
 
 // --- Types ---
 
@@ -49,7 +51,8 @@ export interface SharedIdeaResponse {
 // --- API Functions ---
 
 export function listComments(ideaId: number): Promise<CommentListResponse> {
-  return apiFetchUnchecked(`/ideas/${ideaId}/comments`);
+  // F1.3a: migrated from apiFetchUnchecked to callContract with runtime decoder
+  return callContract(listCommentsContract, { params: { ideaId } });
 }
 
 export function addComment(

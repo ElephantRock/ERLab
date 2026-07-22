@@ -1,4 +1,10 @@
 import { apiFetchUnchecked } from "./client";
+import { callContract } from "./contracts/common";
+import {
+  getAutonomousHistoryContract,
+  getEvolutionStatusContract,
+  getSchedulerStatusContract,
+} from "./contracts/f1-3a-reads";
 import type { AutonomousCycleResponse } from "./types";
 
 /** Autonomous cycle history entry. */
@@ -23,7 +29,8 @@ export function stopAutonomousCycle(cycleId: string): Promise<{ status: string; 
 
 /** Get autonomous cycle history. */
 export function getAutonomousHistory(): Promise<AutonomousHistoryResponse> {
-  return apiFetchUnchecked("/pipeline/autonomous/history");
+  // F1.3a: migrated from apiFetchUnchecked to callContract with runtime decoder
+  return callContract(getAutonomousHistoryContract);
 }
 
 // F1.1 H2: getConsciousnessState() and the ConsciousnessState /
@@ -48,7 +55,8 @@ export interface EvolutionStatus {
 
 /** Get evolution status from the backend. */
 export function getEvolutionStatus(): Promise<EvolutionStatus> {
-  return apiFetchUnchecked("/status/evolution");
+  // F1.3a: migrated from apiFetchUnchecked to callContract with runtime decoder
+  return callContract(getEvolutionStatusContract);
 }
 
 /** Scheduler status response. */
@@ -70,7 +78,8 @@ export function stopScheduler(): Promise<{ status: string }> {
 
 /** Get scheduler status. */
 export function getSchedulerStatus(): Promise<SchedulerStatus> {
-  return apiFetchUnchecked("/pipeline/scheduler/status");
+  // F1.3a: migrated from apiFetchUnchecked to callContract with runtime decoder
+  return callContract(getSchedulerStatusContract);
 }
 
 /** Re-export triggerAutonomous from pipeline.ts for convenience. */

@@ -1,6 +1,7 @@
 /** Ops Dashboard API client. */
 
-import { apiFetchUnchecked } from "./client";
+import { callContract } from "./contracts/common";
+import { getOpsDashboardContract } from "./contracts/dashboard";
 
 export interface OpsDashboard {
   window: { days: number; from: string; to: string };
@@ -49,13 +50,7 @@ export interface OpsDashboard {
   };
 }
 
-export function getOpsDashboard(
-  days?: number,
-  limit?: number,
-): Promise<OpsDashboard> {
-  const params = new URLSearchParams();
-  if (days) params.set("days", String(days));
-  if (limit) params.set("limit", String(limit));
-  const qs = params.toString();
-  return apiFetchUnchecked(`/ops/dashboard${qs ? `?${qs}` : ""}`);
+export function getOpsDashboard(days = 7, limit?: number): Promise<OpsDashboard> {
+  // F1.3a: migrated from apiFetchUnchecked to callContract
+  return callContract(getOpsDashboardContract, { query: { days, limit } });
 }

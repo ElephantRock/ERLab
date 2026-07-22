@@ -9,6 +9,8 @@
  */
 
 import { apiFetchUnchecked } from "./client";
+import { callContract } from "./contracts/common";
+import { getPendingContract } from "./contracts/dashboard";
 
 // ── Types ────────────────────────────────────────────────────────
 
@@ -37,7 +39,8 @@ export interface DenyResponse {
 
 /** Fetch all pending governance approvals. */
 export function getPending(): Promise<PendingResponse> {
-  return apiFetchUnchecked<PendingResponse>("/governance/pending");
+  // F1.3a: migrated from apiFetchUnchecked to callContract with runtime decoder
+  return callContract(getPendingContract) as Promise<PendingResponse>;
 }
 
 /** Approve a pending governance decision by its ID. */

@@ -1,4 +1,6 @@
 import { apiFetchUnchecked, apiFetchBlob } from "./client";
+import { callContract } from "./contracts/common";
+import { listPluginsContract } from "./contracts/f1-3a-reads";
 
 // --- Export ---
 
@@ -44,7 +46,8 @@ export interface PluginListResponse {
 }
 
 export function listPlugins(): Promise<PluginListResponse> {
-  return apiFetchUnchecked("/plugins/");
+  // F1.3a: migrated from apiFetchUnchecked to callContract with runtime decoder
+  return callContract(listPluginsContract);
 }
 
 export function installPlugin(req: {
