@@ -1,111 +1,96 @@
 # P1D.2b — Diagnostic Seed Review
 
-> **Status: DRAFT seed, vertical slice. NOT sealed. NOT scoreable. Provisional judgments only.**
+> **Status: DRAFT seed (v2, post-hardening + er_001 correction). NOT sealed. NOT scoreable. authored_provisional judgments only.**
 > Author: P1D.2b seed wave (2026-07-22). 9 cases of the intended 30-case diagnostic set.
-> Validator: `scripts/validate_p1d2_seed.py` — **278/278 checks pass.**
+> Validators: `scripts/validate_p1d2_schemas.py` (25) + `scripts/validate_p1d2_seed.py` (134) — both green.
 
-## Purpose
+## Revision history
 
-A 9-case vertical slice through the full diagnostic instrument, authored before committing to all 30. The risk at this stage is no longer schema validity (P1D.2a settled that with 25 assertions); it is whether the authored cases are **genuinely evaluable, adversarial, and correctly grounded at passage and evidence-lineage level**. This seed tests that.
+- **v1 (commit 72aa05f):** initial 9-case seed, offset-extracted passages, 278 checks.
+- **v1 hardening (commit 257443e):** candidate pools, exhaustive judgments, claim dimensions, derived judgments file. **Introduced a semantic defect in diag_er_001** (weakened the causal claim to associational to make the observational result "correct," removing the false-support trap).
+- **v2 (this revision):** **corrected diag_er_001** — restored the causal claim, added a causally-adequate positive RCT to the corpus, restructured the case into the three-role design (causal positive / observational false-support / design qualifier). Manual semantic review of all 9 cases completed. 134 checks pass.
 
-## Seed composition (matches the requested distribution)
+## The diag_er_001 correction (the substantive change)
 
-| Task family | Count | Cases |
-|---|---|---|
-| evidence_retrieval | 2 | diag_er_001, diag_er_002 |
-| contradiction_retrieval | 2 | diag_cr_001, diag_cr_002 |
-| multi_paper_synthesis | 2 | diag_mps_001, diag_mps_002 |
-| paper_discovery | 1 | diag_pd_001 |
-| method_retrieval | 1 | diag_mr_001 |
-| research_gap_analysis | 1 | diag_rga_001 |
-| **total** | **9** | |
-
-Disproportionate coverage of the three structurally under-measured families (6 of 9), while still exercising every task contract.
-
-## How the cases are grounded (the core integrity property)
-
-Every passage is **extracted by character offset from a real source document**, not hand-written inside a case record. The builder (`scripts/build_p1d2_diagnostic_seed.py`):
-
-1. Defines 20 source documents as real full text.
-2. Locates each passage by `full_text[start:end]` using a real substring search.
-3. Computes `passage_text_hash` over the **extracted** text (SHA-256), never asserts it.
-4. Computes `document_content_hash` over the whole document.
-5. Computes `passage_locator` as the literal `"chars START-END"` offset.
-
-The validator's check [5] recomputes each passage's hash from the source text using the recorded offset and confirms it matches — this is the structural guarantee that "every referenced passage actually exists." A plausible passage written only inside a case record would fail this recompute.
-
-## What each case tests (the adversarial design)
-
-| Case | Central trap | Hard-negative type |
-|---|---|---|
-| diag_er_001 | **False support** (metformin meta-analysis results vs its own discussion caveat — same paper, two passages) | supportive_language_without_support |
-| diag_er_002 | Same intervention, wrong outcome (empagliflozin CV vs glycemic) | same_intervention_wrong_outcome |
-| diag_cr_001 | Direct null + independent non-reproduction (two contradicting sources) | negated_or_qualified_result |
-| diag_cr_002 | **Genuine qualifier, not direct negation** (blinding limitation) | negated_or_qualified_result |
-| diag_mps_001 | **Same lineage vs independent lineage** (GCN+GraphSAGE Amsterdam vs GAT Stanford) | multiple_papers_one_lineage |
-| diag_mps_002 | Review vs primary, distinct lineages (scaling survey vs inverse-scaling) | multiple_papers_one_lineage, review_vs_primary |
-| diag_pd_001 | Low-overlap paraphrase (low-resource MT via transfer learning) | paraphrase_low_overlap |
-| diag_mr_001 | Method vs application (SimCLR definition vs medical-imaging application) | method_application_vs_definition |
-| diag_rga_001 | Agenda mismatch on outcome axis (RLHF helpfulness vs safety) | same_intervention_wrong_outcome |
-
-### Coverage of the required negative-type palette
-
-Across the nine cases: supportive_language_without_support ✓, same_intervention_wrong_outcome ✓ (×2), negated_or_qualified_result ✓ (×2, incl. a genuine qualifier), multiple_papers_one_lineage ✓ (×2), review_vs_primary ✓, paraphrase_low_overlap ✓, method_application_vs_definition ✓. Eight of the nine enumerated types are exercised; the two not exercised here (exact_identifier_or_acronym_collision, same_topic_wrong_population) are slated for the remaining 21.
-
-### Lineage is tested, not nominal
-
-diag_mps_001 explicitly distinguishes `elin_gnn_amsterdam` (GCN + GraphSAGE, same lab) from `elin_gnn_stanford` (GAT, independent). A diverse synthesis that collapses the two Amsterdam papers into one lineage slot fails the diversity requirement. The validator's check [8] confirms ≥2 distinct lineages per synthesis case and specifically that both Amsterdam and Stanford appear in diag_mps_001.
-
-## Authoring blindness (enforced)
+The hardening patch weakened the target claim from causal to associational so the observational result would "fully support" it. That removed the false-support trap instead of testing it — the exact failure mode the patch was supposed to prevent. v2 restores the trap correctly:
 
 ```
-candidate retrieval outputs visible to author       no
-embedding model evaluated                            no
-reranker evaluated                                   no
-policy-specific tuning                               no
+target claim                  metformin CAUSALLY reduces cancer incidence
+                              (causal_vs_associational: causal_claim)
+                              (study_design_requirement: randomized controlled trial)
+
+fully supporting positive     doc_metformin_rct_positive — positive RCT, grade 3
+  (NEW source doc added)        causally adequate, supports direction + force
+
+false-support hard negative   doc_metformin_meta (results) — observational, grade 1
+                                supportive wording ("reduced incidence") but
+                                fails causal_vs_associational + study_design_requirement
+
+qualifying evidence           doc_metformin_meta (discussion caveat) — grade 2
+                                warns of confounding; fails study_design_requirement
+
+cross-case distractor         doc_empagliflozin — grade 0
+                                different drug, different outcome
 ```
 
-All judgments carry `policy_outputs_visible_to_reviewers: false`. No retrieval policy was run against these cases. Judgments precede policy results by construction.
+The claim has a genuinely supporting passage (the RCT, grade 3) AND the central trap is intact (association mistaken for causation). The false-support problem is solved by adding causally-adequate evidence, not by weakening the claim.
 
-## Review-gate status (all pass)
+## Manual semantic review (all 9 cases)
+
+The validators prove structure (identity, hashes, coverage, schema). They cannot prove that a passage genuinely supports, contradicts, or qualifies a claim. The review below is the manual semantic check the reviewer requested.
+
+### Per-case findings
+
+| Case | Positive supports exact claim? | Hard negative genuinely difficult? | failed_dimension correct? | Qualifier not mislabeled? | Grade matches text? | Distractor plausible? |
+|---|---|---|---|---|---|---|
+| diag_er_001 | ✅ RCT supports causal claim | ✅ obs-as-causation is the canonical false-support | ✅ causal_vs_associational + study_design | ✅ caveat is qualifier (study_design), not irrelevant | ✅ g3/g1/g2/g0 | ✅ empagliflozin |
+| diag_er_002 | ✅ CV result for CV claim | ✅ glycemic result is same-drug wrong-outcome | ✅ outcome | n/a | ✅ g3/g1/g1 | ✅ PCSK9 |
+| diag_cr_001 | ✅ null RCT contradicts | ✅ meta-analysis positive must not drown null | ✅ causal+design | n/a | ✅ g3/g3/g1 | n/a |
+| diag_cr_002 | ✅ blinding caveat qualifies | ✅ genuine qualifier, not negation | n/a | ✅ qualifier is grade 3 (the sought unit) | ✅ g3/g2/g2 | ✅ review |
+| diag_mps_001 | ✅ GCN + GAT are distinct lineages | ✅ GraphSAGE same-lab redundancy | ✅ evidence_lineage | n/a | ✅ g3/g2/g3 | n/a |
+| diag_mps_002 | ✅ inverse-scaling is primary | ✅ survey is review-aggregate | ✅ lineage + granularity | n/a | ✅ g3/g2 | n/a |
+| diag_pd_001 | ✅ transfer-learning addresses low-resource | ⚠️ GAT distractor is topically distant (see note) | ✅ meaning_or_domain | n/a | ✅ g3/g0 | ⚠️ see note |
+| diag_mr_001 | ✅ SimCLR defines the loss | ✅ application-vs-method is genuinely confusable | ✅ evidence_granularity | n/a | ✅ g3/g2 | n/a |
+| diag_rga_001 | ⚠️ InstructGPT is helpfulness, query asks safety | ✅ safety-vs-helpfulness is real agenda mismatch | ✅ outcome | n/a | ✅ g2/g1 | ✅ scaling survey |
+
+### Two non-blocking observations
+
+1. **diag_pd_001 distractor is topically distant.** The GAT passage (graph neural networks) is the hard negative for a low-resource-MT query. It's schema-valid and resolves, but it's a *generic* off-topic negative rather than a *risk-shaped* one — the very thing the protocol says to avoid. For a paper-discovery case whose defining trap is `paraphrase_low_overlap`, the hard negative should ideally be a same-topic-but-different-subdomain paper, not an unrelated-domain paper. **Not blocking for the seed** (paper_discovery is a secondary family here with 1 case), but the remaining 3 paper-discovery cases should use risk-shaped negatives (e.g., a translation-memory paper for an NMT query), not generic off-topic ones. Flagged for the remaining 21.
+
+2. **diag_rga_001 has no fully-supporting grade-3 unit.** The query asks for RLHF-safety papers; InstructGPT is about helpfulness (grade 2, fails on `outcome`), and the scaling survey mentions safety but isn't RLHF (grade 1). This is actually *correct for a research-gap-analysis case* — the gap is that no paper fully addresses the safety question — but it means the case has no grade-3 positive, unlike the evidence-retrieval cases. This is by design (the case tests whether the system correctly returns agenda-adjacent work rather than fabricating a match), but worth noting that research-gap cases may legitimately lack a grade-3 unit. **Not a defect.**
+
+### failed_dimension audit (correctness check across all cases)
+
+Every `negative_failed_dimensions` entry was checked against the actual passage text and claim dimensions. All are correct except the two observations above (which are design choices, not mislabels). No pattern of systematic mislabeling found.
+
+## Patch-gate status (all green)
 
 ```
-schema violations                                    0   (278/278 checks)
-unresolved document or passage references            0
-passage tasks represented at paper level             0
-cases with generic rather than risk-shaped negatives 0
-lineage fields lacking a real distinction            0
-cases whose relevance depends on unstated context    0
-provisional judgments marked scoreable/sealable      0
-policy-output leakage                                0
-duplicate or near-duplicate seed cases               0
+scored candidate universe defined                  0 undefined
+scored units without judgments                      0
+orphan or duplicate judgments                      0
+inline/parallel judgment divergence                0 (byte-for-byte)
+builder outputs nondeterministic                    0 (all 4 stable across 2x build)
+false-support claim without fully supporting unit   0 (er_001 fixed)
+qualifying evidence mislabeled as generic negative  0
+synthetic authoring leakage untested                0 (bias audit: no verbatim copy, cross-case sharing present)
+exact-identifier collision only background          (deferred to remaining 21)
+wrong-population mismatch only background           (deferred to remaining 21)
 ```
-
-## What this seed is NOT
-
-- **Not sealed.** All 17 judgments are `review_status: provisional`, `eligible_for_scoring: false`, `eligible_for_seal: false`, `requires_external_dual_review: true`. Per the protocol, "provisional seal" is not a valid state.
-- **Not independent evidence.** Diagnostic cases are developmental; they may never be represented as independent product-validation evidence.
-- **Not real-project-sourced.** All 9 are `case_origin: synthetic_realistic`. The real-project holdout is a separate, binding P1E requirement.
 
 ## Determinism
 
-The builder is deterministic: re-running produces byte-identical sources/cases/judgments and a manifest whose recorded hashes match the regenerated files (validator check [12]).
+All four outputs byte-stable across two builds (sources, cases, judgments, manifest — identical SHA-256). Manifest records live hashes, schema versions, candidate-pool design, and judgment-authority model.
 
-## Honest limitations of this seed
+## What this seed is NOT
 
-1. **Synthetic corpus.** The 20 source documents are realistic but invented. They model real paper structure (abstract/methods/results/discussion) but are not real publications. This is accepted for the diagnostic role; it would not be acceptable for the real-project holdout.
-2. **Single-author provisional.** All judgments are single-pass by one author. They require external dual review before any scoring use — which the schema structurally prevents by forcing `eligible_for_scoring: false`.
-3. **Small n per family for the non-under-covered families.** paper_discovery, method_retrieval, and research_gap_analysis have 1 case each in the seed. The full 30-case set raises these to 4/3/3.
+- **Not sealed.** All judgments `authored_provisional`, non-scoreable, non-sealable, requires-external-dual-review. Not "provisional seal."
+- **Not independent evidence.** Diagnostic only; never activation evidence.
+- **Not real-project-sourced.** All `synthetic_realistic`.
 
 ## Recommendation
 
-The seed passes the review gate. The pattern (real-text corpus → offset-extracted passages → recomputed hashes → risk-shaped negatives → lineage distinctions → provisional judgments) is stable and reproducible. Recommend authoring the remaining 21 cases under this pattern, targeting the frozen 30-case distribution:
+The seed passes the bounded review gate. The corrected diag_er_001 preserves a genuine false-support trap with a fully-supporting positive. The two non-blocking observations (diag_pd_001 generic distractor; diag_rga_001 legitimately grade-3-less) are noted for the remaining 21 cases.
 
-```
-evidence_retrieval          8
-contradiction_retrieval     6
-multi_paper_synthesis       6
-paper_discovery             4
-method_retrieval            3
-research_gap_analysis       3
-```
+The pattern is now stable across both structure and semantics. Recommend proceeding with the remaining 21 cases (+6 er, +4 cr, +4 mps, +3 pd, +2 mr, +2 rga), including the two deferred primary traps (exact-identifier collision, wrong-population mismatch), using risk-shaped negatives throughout.
+

@@ -71,6 +71,10 @@ CORPUS = [
         "An independent cohort analysis does not confirm the prior observational association between metformin and reduced cancer incidence.",
         "Methods: We re-analyzed a UK primary-care cohort of 42311 patients. Results: After adjusting for time-varying confounders, metformin exposure was not associated with cancer incidence (adjusted HR 0.99, 95% CI 0.93-1.05). Discussion: The originally reported association likely reflects uncontrolled confounding rather than a causal chemopreventive effect.",
         lineage="elin_metformin_oncology", domain="biomedical"),
+    doc("doc_metformin_rct_positive", "Metformin Reduces Colorectal Neoplasia in a Randomized Prevention Trial",
+        "A randomized placebo-controlled trial demonstrates that metformin reduces colorectal adenoma recurrence in non-diabetic patients at high risk.",
+        "Methods: We randomized 2354 non-diabetic patients with prior colorectal adenoma to metformin or placebo, double-blinded. Results: Metformin reduced the recurrence of colorectal adenoma at 3-year colonoscopy (RR 0.67, 95% CI 0.54-0.83; p=0.0003). Discussion: This randomized, placebo-controlled evidence supports a causal chemopreventive effect of metformin on colorectal neoplasia, consistent with the observational signal but free of indication confounding.",
+        lineage="elin_metformin_rct", domain="biomedical"),
     doc("doc_empagliflozin", "Empagliflozin and Glycemic Outcomes (EMPA-REG)",
         "We report SGLT2 inhibitor effects on glycemia and cardiovascular outcomes in type 2 diabetes.",
         "Methods: Randomized 7020 patients to empagliflozin or placebo. Results: Empagliflozin reduced cardiovascular death (HR 0.62, 95% CI 0.49-0.77) and modestly reduced HbA1c. Discussion: SGLT2 inhibition confers cardiovascular benefit independent of glycemic improvement.",
@@ -169,10 +173,15 @@ def P(doc_id, needle, section="results"):
 # ── PASSAGE REGISTRY ──
 # keyed by short alias; each case references these
 PASS = {}
-# er1 — false support: discussion caveat is QUALIFYING, not generic negative; results passage fully supports association
-PASS["er1_results"] = P("doc_metformin_meta", "pooled analysis showed a reduced incidence of colorectal and hepatocellular carcinoma in metformin users")
-PASS["er1_discussion_caveat"] = P("doc_metformin_meta", "These observational findings are subject to confounding by indication", "discussion")
-PASS["er1_empagliflozin_distractor"] = P("doc_empagliflozin", "Empagliflozin reduced cardiovascular death")  # cross-case distractor
+# er1 — false support via association-as-causation. CAUSAL claim.
+#   positive: a real positive RCT (causally adequate) -> fully supports the causal claim
+#   false-support hard negative: observational association with supportive wording -> fails causal_vs_associational
+#   qualifier: the observational paper's own confounding caveat -> qualifying evidence, fails study_design_requirement
+#   distractor: empagliflozin (cross-case)
+PASS["er1_rct_positive"] = P("doc_metformin_rct_positive", "Metformin reduced the recurrence of colorectal adenoma at 3-year colonoscopy (RR 0.67, 95% CI 0.54-0.83; p=0.0003)")
+PASS["er1_obs_association"] = P("doc_metformin_meta", "pooled analysis showed a reduced incidence of colorectal and hepatocellular carcinoma in metformin users")
+PASS["er1_design_caveat"] = P("doc_metformin_meta", "These observational findings are subject to confounding by indication", "discussion")
+PASS["er1_empagliflozin_distractor"] = P("doc_empagliflozin", "Empagliflozin reduced cardiovascular death")
 # er2 — same intervention wrong outcome
 PASS["er2_cv"] = P("doc_empagliflozin", "Empagliflozin reduced cardiovascular death")
 PASS["er2_glycemic"] = P("doc_empagliflozin", "modestly reduced HbA1c")
@@ -281,30 +290,36 @@ def build_case(case_id, task_family, domain, query, retrieved_unit, surface, ris
 # ── CASES (exhaustive pools; every pool unit judged) ──
 
 CASES = [
-    # diag_er_001 — false support, FIXED semantics:
-    # results passage fully supports the ASSOCIATION; discussion caveat is QUALIFYING evidence (not generic neg);
-    # empagliflozin is a cross-case distractor. Claim is associational (not causal), so observational = positive.
+    # diag_er_001 — false support via ASSOCIATION PRESENTED AS CAUSATION. CAUSAL claim.
+    #   positive: a positive RCT (causally adequate) -> fully supports the causal claim (grade 3)
+    #   false-support hard negative: observational association with supportive wording -> fails causal_vs_associational
+    #   qualifier: the observational paper's confounding caveat -> qualifying evidence, fails study_design_requirement
+    #   distractor: empagliflozin (cross-case, different drug/outcome)
     build_case(
         "diag_er_001", "evidence_retrieval", "biomedical",
-        "Find passages showing metformin is associated with reduced cancer incidence.",
+        "Find passages showing metformin causally reduces cancer incidence.",
         "passage", "retrieval_ranking", ["false_support"], ["supportive_language_without_support"],
-        pool_passage_keys=["er1_results", "er1_discussion_caveat", "er1_empagliflozin_distractor"],
-        pos_keys=["er1_results"],
+        pool_passage_keys=["er1_rct_positive", "er1_obs_association", "er1_design_caveat", "er1_empagliflozin_distractor"],
+        pos_keys=["er1_rct_positive"],
         judgment_grades={
-            "doc_metformin_meta_" + str(locate("doc_metformin_meta","pooled analysis showed a reduced incidence of colorectal and hepatocellular carcinoma in metformin users")[0]) + "_" + str(locate("doc_metformin_meta","pooled analysis showed a reduced incidence of colorectal and hepatocellular carcinoma in metformin users")[1]): (3, {}),
+            PASS["er1_rct_positive"]["passage_id"]: (3, {}),
+            PASS["er1_obs_association"]["passage_id"]: (1, {"evidence": 1}),
+            PASS["er1_design_caveat"]["passage_id"]: (2, {"evidence": 2}),
+            PASS["er1_empagliflozin_distractor"]["passage_id"]: (0, {}),
         },
-        claim_dims={"population": "type 2 diabetes patients", "intervention_or_exposure": "metformin",
-                    "comparison": "other antidiabetics", "outcome": "cancer incidence",
-                    "direction_or_polarity": "reduces", "causal_vs_associational": "associational_claim",
-                    "study_design_requirement": "observational acceptable for associational claim",
-                    "qualifiers": "association only; not causal"},
+        claim_dims={"population": "non-diabetic/high-risk adults", "intervention_or_exposure": "metformin",
+                    "comparison": "placebo", "outcome": "cancer/neoplasia incidence",
+                    "direction_or_polarity": "reduces", "causal_vs_associational": "causal_claim",
+                    "study_design_requirement": "randomized controlled trial",
+                    "qualifiers": "causal chemopreventive effect claimed"},
         neg_failed_dims=[
-            {"unit_id": PASS["er1_discussion_caveat"]["passage_id"], "failed_dimensions": ["causal_vs_associational"], },
+            {"unit_id": PASS["er1_obs_association"]["passage_id"], "failed_dimensions": ["causal_vs_associational", "study_design_requirement"]},
+            {"unit_id": PASS["er1_design_caveat"]["passage_id"], "failed_dimensions": ["study_design_requirement"]},
             {"unit_id": PASS["er1_empagliflozin_distractor"]["passage_id"], "failed_dimensions": ["intervention_or_exposure", "outcome"]},
         ],
-        rationale="Results passage fully supports the associational claim. Discussion caveat is QUALIFYING (warns association is not causal), not a generic negative. Empagliflozin is a cross-case distractor (different drug, different outcome).",
-        origin_provenance="False-support via association-vs-causation within one paper + cross-case distractor.",
-        scenario_id="ssn_false_support_metformin_02", leakage_group="lg_metformin_oncology", document_family="df_metformin",
+        rationale="CAUSAL claim. The positive RCT (grade 3) fully supports it. The observational meta-analysis result (grade 1) uses supportive wording ('reduced incidence') but is associational only — this is the false-support trap: association presented as supporting a causal claim. The discussion caveat (grade 2) is qualifying evidence (warns of confounding), not a generic negative. Empagliflozin is a cross-case distractor.",
+        origin_provenance="False-support via association-as-causation: observational supportive wording mistaken for causal support. Positive RCT + observational false-support + design qualifier + cross-case distractor.",
+        scenario_id="ssn_false_support_causal_metformin_03", leakage_group="lg_metformin_oncology", document_family="df_metformin",
     ),
 
     # diag_er_002 — same intervention wrong outcome
