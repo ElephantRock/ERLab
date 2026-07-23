@@ -96,15 +96,30 @@ def preflight_provider():
     print(f"[preflight] endpoint={base} (api_root={api_root})")
     try:
         with httpx.Client(timeout=20) as c:
+            # TEI exposes /info instead of /v1/models. Try /v1/models first
+            # (LM Studio, OpenAI), then fall back to /info (TEI) for model
+            # identity verification. The embedding probe below confirms the
+            # model is actually loaded and responsive.
             r = c.get(f"{api_root}/models")
-            r.raise_for_status()
-            ids = [m.get("id") for m in r.json().get("data", [])]
-            if s.embedding_model not in ids:
-                raise RuntimeError(
-                    f"model {s.embedding_model!r} not in served models {ids}"
-                )
-            # Trivial embedding probe to confirm the model is LOADED (not just
-            # registered — LM Studio lists models that aren't loaded yet).
+            if r.status_code == 200:
+                ids = [m.get("id") for m in r.json().get("data", [])]
+                if s.embedding_model not in ids:
+                    raise RuntimeError(
+                        f"model {s.embedding_model!r} not in served models {ids}"
+                    )
+            else:
+                # TEI or other non-OpenAI-models endpoint — verify via /info
+                info_url = base.rstrip("/").removesuffix("/v1") + "/info"
+                ir = c.get(info_url)
+                if ir.status_code == 200:
+                    served = ir.json().get("served_model_name", "")
+                    if served and served != s.embedding_model:
+                        raise RuntimeError(
+                            f"served model name {served!r} != configured {s.embedding_model!r}"
+                        )
+                # If neither endpoint works, the embedding probe below is
+                # the authoritative check.
+            # Trivial embedding probe to confirm the model is LOADED.
             er = c.post(
                 f"{api_root}/embeddings",
                 json={"model": s.embedding_model, "input": "preflight"},
