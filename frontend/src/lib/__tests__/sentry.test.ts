@@ -42,4 +42,28 @@ describe("initSentry", () => {
     // Clean up
     delete import.meta.env.VITE_SENTRY_DSN;
   });
+
+  // F1.6.3 [V3-5]: Sentry browser automatic capture is DISABLED so the
+  // governed diagnostics endpoint remains the single transport.
+  it("F1.6.3: init passes defaultIntegrations:false", async () => {
+    import.meta.env.VITE_SENTRY_DSN = "https://example@sentry.io/123";
+    const { initSentry } = await import("@/lib/sentry");
+    const Sentry = await import("@sentry/react");
+    initSentry();
+    expect(Sentry.init).toHaveBeenCalledWith(
+      expect.objectContaining({ defaultIntegrations: false }),
+    );
+    delete import.meta.env.VITE_SENTRY_DSN;
+  });
+
+  it("F1.6.3: init passes integrations:[] (no automatic integrations)", async () => {
+    import.meta.env.VITE_SENTRY_DSN = "https://example@sentry.io/123";
+    const { initSentry } = await import("@/lib/sentry");
+    const Sentry = await import("@sentry/react");
+    initSentry();
+    const call = vi.mocked(Sentry.init).mock.calls.at(-1)?.[0] as Record<string, unknown>;
+    expect(Array.isArray(call.integrations)).toBe(true);
+    expect((call.integrations as unknown[]).length).toBe(0);
+    delete import.meta.env.VITE_SENTRY_DSN;
+  });
 });

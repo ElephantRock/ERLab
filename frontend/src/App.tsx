@@ -1,7 +1,7 @@
 import { Routes, Route } from "react-router-dom";
 import { useAuth } from "@/contexts/auth-context";
 import { AppShell } from "./components/layout/app-shell";
-import { ErrorBoundary } from "./components/error-boundary";
+import { RouteErrorBoundary } from "./components/route-error-boundary";
 import { useRTL } from "./hooks/useRTL";
 import LoginPage from "./pages/login";
 import { AuthenticatedRoutes, ProtectedRoute } from "./AppRoutes";
@@ -17,9 +17,9 @@ export default function App() {
         element={
           <ProtectedRoute user={user} loading={loading}>
             <AppShell>
-              <ErrorBoundary>
+              <RouteErrorBoundary>
                 <AuthenticatedRoutes />
-              </ErrorBoundary>
+              </RouteErrorBoundary>
             </AppShell>
           </ProtectedRoute>
         }

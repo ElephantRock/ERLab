@@ -8,30 +8,36 @@
  * components are lazy-loaded in production but eagerly imported in tests.
  */
 
-import { Suspense, lazy } from "react";
+import { Suspense } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import type { ReactNode } from "react";
+import { lazyRoute } from "@/lib/lazy-route";
 
-// Lazy-loaded pages (production)
-const DashboardPage = lazy(() => import("./pages/dashboard"));
-const PipelineNewPage = lazy(() => import("./pages/pipeline-new"));
-const RunDetailPage = lazy(() => import("./pages/run-detail"));
-const IdeasBrowserPage = lazy(() => import("./pages/ideas-browser"));
-const IdeaDetailPage = lazy(() => import("./pages/idea-detail"));
-const GapsExplorerPage = lazy(() => import("./pages/gaps-explorer"));
-const GapDetailPage = lazy(() => import("./pages/gap-detail"));
-const KnowledgeSearchPage = lazy(() => import("./pages/knowledge-search"));
-const SettingsPage = lazy(() => import("./pages/settings"));
-const LiteraturePage = lazy(() => import("./pages/literature"));
-const MemoryBrowserPage = lazy(() => import("./pages/memory"));
-const CostsPage = lazy(() => import("./pages/costs"));
-const GovernancePage = lazy(() => import("./pages/governance"));
-const TracesPage = lazy(() => import("./pages/traces"));
-const SessionsPage = lazy(() => import("./pages/sessions"));
-const KnowledgeGraphPage = lazy(() => import("./pages/knowledge-graph"));
-const AutonomousPage = lazy(() => import("./pages/autonomous"));
-const PluginsPage = lazy(() => import("./pages/plugins"));
-const OpsPage = lazy(() => import("./pages/ops"));
+// Lazy-loaded pages (production).
+// F1.6.3: wrapped in lazyRoute() so import failures become typed
+// LazyRouteError (classified category=lazy_route_error by the route
+// boundary) instead of opaque chunk-load errors. The LoadedRouteWrapper
+// inside lazyRoute clears the retry marker AFTER the route successfully
+// mounts (V3-3).
+const DashboardPage = lazyRoute(() => import("./pages/dashboard"));
+const PipelineNewPage = lazyRoute(() => import("./pages/pipeline-new"));
+const RunDetailPage = lazyRoute(() => import("./pages/run-detail"));
+const IdeasBrowserPage = lazyRoute(() => import("./pages/ideas-browser"));
+const IdeaDetailPage = lazyRoute(() => import("./pages/idea-detail"));
+const GapsExplorerPage = lazyRoute(() => import("./pages/gaps-explorer"));
+const GapDetailPage = lazyRoute(() => import("./pages/gap-detail"));
+const KnowledgeSearchPage = lazyRoute(() => import("./pages/knowledge-search"));
+const SettingsPage = lazyRoute(() => import("./pages/settings"));
+const LiteraturePage = lazyRoute(() => import("./pages/literature"));
+const MemoryBrowserPage = lazyRoute(() => import("./pages/memory"));
+const CostsPage = lazyRoute(() => import("./pages/costs"));
+const GovernancePage = lazyRoute(() => import("./pages/governance"));
+const TracesPage = lazyRoute(() => import("./pages/traces"));
+const SessionsPage = lazyRoute(() => import("./pages/sessions"));
+const KnowledgeGraphPage = lazyRoute(() => import("./pages/knowledge-graph"));
+const AutonomousPage = lazyRoute(() => import("./pages/autonomous"));
+const PluginsPage = lazyRoute(() => import("./pages/plugins"));
+const OpsPage = lazyRoute(() => import("./pages/ops"));
 
 function LoadingScreen() {
   return (

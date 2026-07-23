@@ -5,14 +5,23 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { SettingsProvider, useSettings } from "./contexts/settings-context";
 import { AuthProvider } from "./contexts/auth-context";
 import { Toaster } from "sonner";
-import { ErrorBoundary } from "./components/error-boundary";
+import { RootErrorBoundary } from "./components/error-boundary";
 import { initSentry } from "./lib/sentry";
 import { buildMutationCacheForClient } from "./lib/mutation-cache";
+import { installRuntimeObservers } from "./lib/runtime-observers";
 import App from "./App";
 import "./i18n/config";
 import "./globals.css";
 
 initSentry();
+
+// F1.6.2: install global runtime observers (window error +
+// unhandledrejection). Idempotent — Symbol-keyed registry on globalThis
+// ensures HMR replacement leaves exactly one pair.
+const uninstallRuntimeObservers = installRuntimeObservers();
+if (import.meta.hot) {
+  import.meta.hot.dispose(() => uninstallRuntimeObservers());
+}
 
 // F1.5c: cache-owned mutation side-effects.
 //
@@ -45,8 +54,6 @@ const queryClient = new QueryClient({
     },
   },
   mutationCache: buildMutationCacheForClient(() => {
-    // Lazily resolve the client. By the time any mutation succeeds, the
-    // assignment below has run and queryClientRef.current is populated.
     if (!queryClientRef.current) {
       throw new Error("QueryClient accessed before initialization");
     }
@@ -67,9 +74,12 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
       <SettingsProvider>
         <AuthProvider>
           <BrowserRouter>
-            <ErrorBoundary>
+            {/* F1.6.2: RootErrorBoundary wraps router/providers/AppShell
+                with a full-screen fallback (navigation cannot be safely
+                assumed when a provider/router itself is broken). */}
+            <RootErrorBoundary>
               <App />
-            </ErrorBoundary>
+            </RootErrorBoundary>
             <ThemedToaster />
           </BrowserRouter>
         </AuthProvider>
