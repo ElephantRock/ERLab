@@ -1,0 +1,61 @@
+{
+  "report_version": "p1d5_host_preflight_corrected_v1",
+  "status": "draft",
+  "created": "2026-07-23",
+  "supersedes": "p1d5_host_preflight_report.json (which incorrectly reported voyage-4-nano and jina-v5-small as stable)",
+  "host": "http://100.64.0.2:1234",
+  "summary": "After exhaustive testing with explicit model loading via lms CLI, the LM Studio host has exactly ONE operationally stable embedding model: text-embedding-qwen3-embedding-0.6b. All others crash, reload-loop, or are fake/mislabeled community uploads.",
+  "root_cause": "LM Studio GGUF inference instability affecting all non-qwen3-arch embedding models. Bert-arch (BGE-M3, MiniLM) and nomic-arch models crash or enter reload loops when processing text longer than ~50 words (~550 chars). The qwen3-arch embedding model is immune. Additionally, several 'models' listed in LM Studio are community GGUF uploads misclassified as LLMs (type=llm) that share qwen3 architecture and produce identical embeddings to Qwen regardless of which is requested.",
+  "results": {
+    "text-embedding-qwen3-embedding-0.6b": {
+      "arch": "qwen3", "type": "embeddings", "dimension": 1024,
+      "preflight": "PASS", "sustained_500": "100%, 0 crashes", "determinism": "exact",
+      "conclusion": "OPERATIONALLY VIABLE — the only stable embedding model on this host"
+    },
+    "bortunac/text-embedding-bge-m3-embeddings": {
+      "arch": "bert", "type": "embeddings", "dimension": 1024,
+      "preflight": "FAIL", "failure": "crash (exit 1844) / model reload loop",
+      "conclusion": "ELIMINATED — identical to P1C finding"
+    },
+    "forrint/text-embedding-bge-m3-embeddings": {
+      "arch": "bert", "type": "embeddings", "dimension": 1024,
+      "preflight": "FAIL", "failure": "crash (exit 1844)",
+      "conclusion": "ELIMINATED"
+    },
+    "text-embedding-all-minilm-l12-v2": {
+      "arch": "bert", "type": "embeddings", "dimension": 384,
+      "preflight": "FAIL", "failure": "model reload at ~50 words; crash at ~80 words",
+      "text_length_threshold": "~550 chars before reload/crash",
+      "conclusion": "ELIMINATED — cannot sustain benchmark-length text"
+    },
+    "text-embedding-nomic-embed-text-v2-moe": {
+      "arch": "nomic-bert-moe", "type": "embeddings", "dimension": 768,
+      "preflight": "FAIL", "failure": "model reload loop under sustained load",
+      "conclusion": "ELIMINATED"
+    },
+    "text-embedding-nomic-embed-text-v1.5": {
+      "arch": "nomic-bert", "type": "embeddings", "dimension": 768,
+      "preflight": "FAIL", "failure": "fails to load",
+      "conclusion": "ELIMINATED"
+    },
+    "voyage-4-nano": {
+      "arch": "qwen3", "type": "llm (NOT embeddings)",
+      "finding": "Fake model — community GGUF upload by jsonMartin, classified as LLM, shares qwen3 architecture. Produces byte-identical embeddings to Qwen 0.6B. NOT the real Voyage-4-nano embedding model.",
+      "preflight_pass_was_invalid": true,
+      "conclusion": "NOT A REAL MODEL — cannot serve as candidate C"
+    },
+    "jina-embeddings-v5-text-small-retrieval": {
+      "arch": "qwen3", "type": "llm (NOT embeddings)",
+      "finding": "Mislabeled — shares qwen3 architecture, produces identical embeddings to Qwen. Likely a re-upload, not the real Jina model.",
+      "preflight_pass_was_invalid": true,
+      "conclusion": "NOT INDEPENDENTLY SERVABLE"
+    }
+  },
+  "sprint_impact": {
+    "candidate_A": "Ready (no host dependency)",
+    "candidate_B": "Ready (Qwen 0.6B — only stable embedding model)",
+    "candidate_C": "DEAD — no materially different embedding model can run on this host",
+    "sprint_structure": "Two-way comparison: A (lexical) vs B (Qwen hybrid). A third candidate requires a different host or hosted API."
+  },
+  "governing_principle": "Preflight failure means operationally non-viable on this host. It does NOT mean the model is proven inferior. BGE-M3, MiniLM, Nomic, and the real Voyage/Jina models may all be strong — they cannot be evaluated on this LM Studio GGUF host."
+}
