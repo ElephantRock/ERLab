@@ -60,18 +60,52 @@ def check_model_loaded(base_url: str, model: str) -> dict:
     return {"loaded": is_loaded, "all_models": loaded, "target_model": model}
 
 
-def embed_one(base_url: str, model: str, text: str, timeout: float = 30) -> list[float]:
-    r = httpx.post(f"{base_url}/v1/embeddings", json={"model": model, "input": text}, timeout=timeout)
-    r.raise_for_status()
-    data = r.json()
-    return data["data"][0]["embedding"]
+def embed_one(base_url: str, model: str, text: str, timeout: float = 30, retries: int = 5) -> list[float]:
+    """Embed a single text with bounded retry for transient 400s (LM Studio model-load races).
+    The first request to a cold model may take 60-120s while LM Studio loads it."""
+    last_err = None
+    for attempt in range(retries):
+        actual_timeout = max(timeout, 120 if attempt == 0 else timeout)  # long timeout on first attempt
+        try:
+            r = httpx.post(f"{base_url}/v1/embeddings", json={"model": model, "input": text}, timeout=actual_timeout)
+            if r.status_code == 200:
+                return r.json()["data"][0]["embedding"]
+            elif r.status_code == 400 and attempt < retries - 1:
+                # Transient 400 (model still loading / reloading). Wait with exponential backoff.
+                wait = 5 * (2 ** attempt)  # 5, 10, 20, 40 seconds
+                last_err = f"400: {r.text[:150]}"
+                print(f"    [retry {attempt+1}/{retries}] model loading, waiting {wait}s...")
+                time.sleep(wait)
+            else:
+                r.raise_for_status()
+        except Exception as e:
+            last_err = str(e)[:200]
+            if attempt < retries - 1:
+                wait = 5 * (2 ** attempt)
+                print(f"    [retry {attempt+1}/{retries}] error, waiting {wait}s...")
+                time.sleep(wait)
+    raise RuntimeError(f"embed_one failed after {retries} retries: {last_err}")
 
 
-def embed_batch(base_url: str, model: str, texts: list[str], timeout: float = 60) -> list[list[float]]:
-    r = httpx.post(f"{base_url}/v1/embeddings", json={"model": model, "input": texts}, timeout=timeout)
-    r.raise_for_status()
-    data = r.json()
-    return [d["embedding"] for d in sorted(data["data"], key=lambda x: x["index"])]
+def embed_batch(base_url: str, model: str, texts: list[str], timeout: float = 60, retries: int = 3) -> list[list[float]]:
+    """Embed a batch with bounded retry for transient 400s."""
+    last_err = None
+    for attempt in range(retries):
+        try:
+            r = httpx.post(f"{base_url}/v1/embeddings", json={"model": model, "input": texts}, timeout=timeout)
+            if r.status_code == 200:
+                data = r.json()
+                return [d["embedding"] for d in sorted(data["data"], key=lambda x: x["index"])]
+            elif r.status_code == 400 and attempt < retries - 1:
+                last_err = f"400: {r.text[:150]}"
+                time.sleep(2 ** attempt)
+            else:
+                r.raise_for_status()
+        except Exception as e:
+            last_err = str(e)[:200]
+            if attempt < retries - 1:
+                time.sleep(2 ** attempt)
+    raise RuntimeError(f"embed_batch failed after {retries} retries: {last_err}")
 
 
 def run_preflight(base_url: str, model: str, dimension: int):

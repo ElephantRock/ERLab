@@ -1,0 +1,78 @@
+{
+  "report_version": "p1d5_host_preflight_v1",
+  "status": "draft",
+  "created": "2026-07-23",
+  "host": "http://100.64.0.2:1234",
+  "description": "Operational preflight results for all embedding models on the LM Studio host. Run using scripts/preflight_embedding_host.py (500-passage sustained load, batch sizes 1/8/32, 20-rep determinism, 0 crashes required).",
+  "results": {
+    "text-embedding-qwen3-embedding-0.6b": {
+      "dimension": 1024,
+      "preflight": "PASS",
+      "sustained_500_passages": "100% completion, 0 crashes",
+      "determinism": "exact (0.00e+00 max diff)",
+      "per_item_latency_ms": {"mean": 496.1, "p50": 513.3},
+      "sprint_role": "Candidate B (Qwen 0.6B hybrid)",
+      "p1c_status": "Stable (P1B control)",
+      "conclusion": "OPERATIONALLY VIABLE"
+    },
+    "voyage-4-nano": {
+      "dimension": 1024,
+      "preflight": "PASS",
+      "sustained_500_passages": "100% completion, 0 crashes",
+      "determinism": "exact (0.00e+00 max diff)",
+      "per_item_latency_ms": {"mean": 495.6, "p50": 512.0},
+      "sprint_role": "Potential candidate C replacement (was excluded in P1C; now loaded and stable)",
+      "p1c_status": "Was excluded in P1C (not loaded then)",
+      "conclusion": "OPERATIONALLY VIABLE — new finding"
+    },
+    "jina-embeddings-v5-text-small-retrieval": {
+      "dimension": 1024,
+      "preflight": "PASS",
+      "sustained_500_passages": "100% completion, 0 crashes",
+      "determinism": "exact (0.00e+00 max diff)",
+      "per_item_latency_ms": {"mean": 501.3, "p50": 524.8},
+      "sprint_role": "Potential candidate C replacement",
+      "p1c_status": "Crashed in P1C as jina-v5 (different variant); this small variant is stable",
+      "conclusion": "OPERATIONALLY VIABLE — new finding"
+    },
+    "bortunac/text-embedding-bge-m3-embeddings": {
+      "dimension": 1024,
+      "preflight": "FAIL",
+      "failure_mode": "400 'Model reloaded..' / 'The model has crashed' (exit code 1844...)",
+      "sustained_500_passages": "0% — cannot complete warmup",
+      "sprint_role": "Candidate C (BGE-M3 hybrid) — ELIMINATED",
+      "p1c_status": "Crashed in P1C (0/3 stable). Still crashes identically.",
+      "conclusion": "OPERATIONALLY NON-VIABLE on this host. Candidate C as specified (BGE-M3) is eliminated."
+    },
+    "forrint/text-embedding-bge-m3-embeddings": {
+      "dimension": 1024,
+      "preflight": "FAIL",
+      "failure_mode": "400 'The model has crashed without additional information' (exit code 1844...)",
+      "sprint_role": "BGE-M3 alternate GGUF — ELIMINATED",
+      "p1c_status": "Crashed in P1C (0/3 stable). Still crashes identically.",
+      "conclusion": "OPERATIONALLY NON-VIABLE"
+    },
+    "text-embedding-nomic-embed-text-v2-moe": {
+      "dimension": 768,
+      "preflight": "FAIL (warmup)",
+      "failure_mode": "400 'Model reloaded..' during warmup — intermittent; may stabilize with manual warmup but unreliable under automated sustained load",
+      "sprint_role": "Not a sprint candidate",
+      "p1c_status": "Crashed in P1C (0/3 stable)",
+      "conclusion": "OPERATIONALLY NON-VIABLE under sustained load"
+    },
+    "text-embedding-nomic-embed-text-v1.5": {
+      "dimension": 768,
+      "preflight": "FAIL",
+      "failure_mode": "400 'Failed to load model'",
+      "sprint_role": "Not a sprint candidate",
+      "conclusion": "OPERATIONALLY NON-VIABLE (model fails to load)"
+    }
+  },
+  "sprint_impact": {
+    "candidate_A_lexical": "No host dependency. Ready.",
+    "candidate_B_qwen_06b": "Preflight PASS. Ready for quality evaluation.",
+    "candidate_C_bge_m3": "ELIMINATED. BGE-M3 crashes identically to P1C. Both GGUF variants fail under sustained load.",
+    "replacement_candidates": "voyage-4-nano and jina-v5-small-retrieval both pass preflight (new findings — they were not stable in P1C but are now). Either could serve as a candidate C replacement IF the sprint plan is amended to substitute the model. This requires a governance decision: replacing BGE-M3 with a different model changes the controlled comparison."
+  },
+  "governing_principle": "Preflight failure means the candidate cannot be evaluated on this host. It does NOT mean the model has been proven inferior as a retrieval model. BGE-M3 may be viable on a different host/provider with a non-GGUF deployment. The conclusion is operational, not qualitative."
+}
