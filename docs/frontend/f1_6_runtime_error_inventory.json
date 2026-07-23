@@ -1,0 +1,118 @@
+{
+  "_wave": "F1.6.0",
+  "_kind": "runtime_error_inventory",
+  "_audit_at_commit": "f983a5c",
+  "_summary": {
+    "surfaces_inventoried": 8,
+    "protected": 0,
+    "blank_screen_risk": 2,
+    "console_only": 3,
+    "silent": 2,
+    "over_broad_fallback": 1,
+    "duplicate_reporting": 3,
+    "sensitive_payload_risk": 2,
+    "no_recovery_path": 2
+  },
+  "surfaces": [
+    {
+      "id": "1",
+      "surface": "React render errors",
+      "current_boundary": "ErrorBoundary class component (src/components/error-boundary.tsx) mounted in main.tsx (outer) and App.tsx (inner, inside AppShell)",
+      "user_visible_behavior": "'Something went wrong' centered card with raw error.message and a Reload button",
+      "diagnostic_behavior": "Sentry.captureException(error) wrapped in try/catch (swallows init failure); console.error logs error + info.componentStack; componentStack NEVER sent to Sentry",
+      "recovery_mechanism": "setState({hasError:false}) then window.location.reload() unconditionally — the state reset is redundant, page always hard-reloads",
+      "sensitive_data_exposure_risk": "HIGH — raw error.message rendered to user (including ApiContractError detail which can include endpoint identifiers and bounded decoder diagnostics)",
+      "duplicate_report_risk": "MODERATE — same render error may also fire window.error if React does not swallow it",
+      "disposition": "F1.6.2: replace with RootErrorBoundary (full-screen) + RouteErrorBoundary (AppShell-preserved). Synchronous reportRuntimeError. Allowlisted message only — no raw error.message."
+    },
+    {
+      "id": "2",
+      "surface": "Lazy-route import failures",
+      "current_boundary": "None. 19 lazy() calls in AppRoutes.tsx wrapped in single Suspense fallback (spinner-only). Failed dynamic import bubbles to inner ErrorBoundary → window.location.reload() → near-certain repeat failure → reload loop.",
+      "user_visible_behavior": "Transient spinner, then 'Something went wrong', then hard reload, then likely repeat",
+      "diagnostic_behavior": "Reaches ErrorBoundary.componentDidCatch → Sentry.captureException once (no module path or route context attached)",
+      "recovery_mechanism": "Reload button (window.location.reload) — likely to fail identically if deployment manifest is broken",
+      "sensitive_data_exposure_risk": "LOW — chunk-load errors do not carry research content",
+      "duplicate_report_risk": "LOW",
+      "disposition": "F1.6.3: wrap each lazy() in lazyRoute() that throws LazyRouteError; classify category=lazy_route_error; one guarded user-triggered reload via sessionStorage marker (keyed by build+route); marker cleared only by LoadedRouteWrapper useEffect after successful mount."
+    },
+    {
+      "id": "3",
+      "surface": "Event-handler exceptions",
+      "current_boundary": "NONE — React error boundaries do not catch errors in event handlers (onClick, onChange, etc.). These currently bubble to window.error if uncaught, otherwise are swallowed by the browser.",
+      "user_visible_behavior": "Silent — UI appears unresponsive to the click",
+      "diagnostic_behavior": "Reaches window.error (currently no listener)",
+      "recovery_mechanism": "None — user must reload manually",
+      "sensitive_data_exposure_risk": "MEDIUM — event-handler closures may capture research text in their stacks",
+      "duplicate_report_risk": "LOW",
+      "disposition": "F1.6.2: window.error observer installed via runtime-observers.ts; calls reportRuntimeError(category=global_error). Sanitizer strips stacks (allows component_stack only, sanitized)."
+    },
+    {
+      "id": "4",
+      "surface": "Unhandled promise rejections",
+      "current_boundary": "NONE — no unhandledrejection listener. Promise chains outside React (SSE, dynamic imports, async callbacks) currently log to console only.",
+      "user_visible_behavior": "Silent — console error invisible to user",
+      "diagnostic_behavior": "Reaches window.unhandledrejection (currently no listener)",
+      "recovery_mechanism": "None",
+      "sensitive_data_exposure_risk": "HIGH — rejection reasons may carry ApiError detail, response bodies, or research text",
+      "duplicate_report_risk": "MODERATE — if the rejection originated from a query, TanStack may also surface it locally",
+      "disposition": "F1.6.2: unhandledrejection observer installed via runtime-observers.ts; calls reportRuntimeError(category=unhandled_rejection). Sanitizer NEVER transmits raw rejection reason — only normalized error_name + allowlisted category message. AbortError filtered."
+    },
+    {
+      "id": "5",
+      "surface": "Global window errors",
+      "current_boundary": "NONE — no window.addEventListener('error', ...) in application code. Only SSE/keydown/mousedown listeners exist.",
+      "user_visible_behavior": "Silent or browser-default (red console error)",
+      "diagnostic_behavior": "Browser default — no application capture",
+      "recovery_mechanism": "None",
+      "sensitive_data_exposure_risk": "MEDIUM",
+      "duplicate_report_risk": "MODERATE — render errors may fire BOTH componentDidCatch AND window.error",
+      "disposition": "F1.6.2: window.error observer; deduplicates against boundary-caught errors via WeakMap<Error> identity AND category-independent fingerprint fallback."
+    },
+    {
+      "id": "6",
+      "surface": "Third-party component crashes (TreeVisualization, MarkdownRenderer, governance panels)",
+      "current_boundary": "Inner ErrorBoundary in App.tsx catches render errors from descendant third-party components",
+      "user_visible_behavior": "'Something went wrong' — full content area replaced (AppShell survives only because boundary sits inside it, but fallback is full-viewport anyway)",
+      "diagnostic_behavior": "Sentry.captureException via componentDidCatch",
+      "recovery_mechanism": "Hard reload only",
+      "sensitive_data_exposure_risk": "MEDIUM — third-party stacks may include props/context",
+      "duplicate_report_risk": "MODERATE — third-party render errors fire both boundary and window.error",
+      "disposition": "F1.6.2: RouteErrorBoundary catches inside AppShell (sidebar/header preserved); Retry clears boundary state without reload (works when error was transient); fallback shows event_id."
+    },
+    {
+      "id": "7",
+      "surface": "Authentication composition failures (AuthProvider, SettingsProvider, QueryClientProvider)",
+      "current_boundary": "NONE — ErrorBoundary in main.tsx sits BELOW the providers (inside QueryClientProvider > SettingsProvider > AuthProvider > BrowserRouter). A provider crash destroys the boundary's ability to render.",
+      "user_visible_behavior": "BLANK SCREEN — React unmounts the entire tree",
+      "diagnostic_behavior": "None — the boundary never renders",
+      "recovery_mechanism": "Manual reload required",
+      "sensitive_data_exposure_risk": "LOW",
+      "duplicate_report_risk": "LOW",
+      "disposition": "F1.6.2: RootErrorBoundary wraps providers (full-screen fallback); accepts optional fallback render prop. Cannot preserve navigation when router itself is broken."
+    },
+    {
+      "id": "8",
+      "surface": "Error-reporting transport failures (Sentry captureException, future diagnostics endpoint)",
+      "current_boundary": "ErrorBoundary wraps Sentry.captureException in try/catch that silently swallows failures ('Sentry not initialized — ignore')",
+      "user_visible_behavior": "Invisible — user sees 'Something went wrong' fallback regardless of whether the report was delivered",
+      "diagnostic_behavior": "Silent — no fallback log, no event_id surfaced",
+      "recovery_mechanism": "None — user cannot reference a diagnostic ID because none is generated",
+      "sensitive_data_exposure_risk": "LOW (if sanitizer is correct)",
+      "duplicate_report_risk": "MODERATE — if both Sentry and the new diagnostics endpoint were active, double delivery would occur",
+      "disposition": "F1.6.1: sendRuntimeErrorReport (contract-backed, may reject) + reportRuntimeError (synchronous, never throws, returns event_id). F1.6.3: Sentry automatic capture DISABLED (defaultIntegrations:false, integrations:[]); backend diagnostics endpoint is the single governed transport."
+    }
+  ],
+  "classifications": {
+    "protected": [],
+    "blank_screen_risk": ["1", "7"],
+    "console_only": ["3", "4", "5"],
+    "silent": ["4", "8"],
+    "over_broad_fallback": ["1"],
+    "duplicate_reporting": ["1", "5", "6"],
+    "sensitive_payload_risk": ["1", "4"],
+    "no_recovery_path": ["3", "7"]
+  },
+  "dispositions_complete": true,
+  "open_questions": []
+}
