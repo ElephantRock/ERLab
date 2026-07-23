@@ -1,0 +1,39 @@
+{
+  "candidate_id": "A_legacy_lexical",
+  "policy_id": "legacy_lexical_top20_v1",
+  "description": "Production-authoritative lexical baseline. Keyword-overlap ranking (TrimmerStage heuristic). No embedding model.",
+  "frozen_at": "2026-07-23 (pre-reviewed-judgment; sprint Day 0)",
+  "model_identity": {
+    "model_name": null,
+    "model_revision": null,
+    "embedding_dimension": null,
+    "provider": null,
+    "endpoint": null
+  },
+  "lexical_parameters": {
+    "scoring": "raw_overlap_ratio_v1",
+    "tokenization": "lowercase word tokens (\\w+)",
+    "text_fields": "title + ' ' + abstract"
+  },
+  "hybrid_fusion": {
+    "fusion_policy": "none",
+    "rrf_k": null,
+    "lexical_weight": null,
+    "semantic_weight": null
+  },
+  "retrieval_parameters": {
+    "top_k": 20,
+    "final_limit": 20,
+    "reranker": "none",
+    "query_rewriting": "none",
+    "chunking": "unchanged (title+abstract granularity)"
+  },
+  "batch_and_retry": {
+    "batch_size": null,
+    "timeout_seconds": null,
+    "max_retries": null,
+    "retry_backoff": null
+  },
+  "normalization": "none",
+  "configuration_frozen_before_reviewed_judgments": true
+}

@@ -1,0 +1,41 @@
+{
+  "candidate_id": "C_bge_m3_hybrid",
+  "policy_id": "hybrid_rrf_v1",
+  "description": "BGE-M3 dense vectors fused with lexical via RRF. Tests whether a different compact representation improves semantic retrieval. Host stability must be verified before this candidate can run.",
+  "frozen_at": "2026-07-23 (pre-reviewed-judgment; sprint Day 0)",
+  "model_identity": {
+    "model_name": "bge-m3",
+    "model_revision": "GGUF (LM Studio hosted; exact revision TBD at preflight)",
+    "embedding_dimension": 1024,
+    "provider": "lmstudio",
+    "endpoint": "http://100.64.0.2:1234/v1"
+  },
+  "p1c_stability_warning": "P1C found BGE-M3 (both GGUF variants on this host) segfaulted under sustained real-text load (0/3 stable). Candidate C is conditionally frozen: it may run only if the host-preflight sustained-load test (500 passages, batch sizes 1/8/32, 0 crashes, 0 fallbacks) passes. If preflight fails, candidate C is eliminated and the sprint reduces to A vs B.",
+  "lexical_parameters": {
+    "scoring": "raw_overlap_ratio_v1",
+    "tokenization": "lowercase word tokens (\\w+)",
+    "text_fields": "title + ' ' + abstract"
+  },
+  "hybrid_fusion": {
+    "fusion_policy": "rrf",
+    "rrf_k": 60,
+    "lexical_weight": null,
+    "semantic_weight": null
+  },
+  "retrieval_parameters": {
+    "top_k": 20,
+    "final_limit": 20,
+    "reranker": "none",
+    "query_rewriting": "none",
+    "chunking": "unchanged (title+abstract granularity)"
+  },
+  "batch_and_retry": {
+    "batch_size": 1,
+    "timeout_seconds": 30,
+    "max_retries": 8,
+    "retry_backoff": "exponential, max ~4 min per text"
+  },
+  "normalization": "none",
+  "configuration_frozen_before_reviewed_judgments": true,
+  "shared_fusion_with_B": "B and C share the same fusion policy (RRF k=60). The ONLY controlled difference between B and C is the embedding model (Qwen 0.6B vs BGE-M3). This isolates the representation hypothesis."
+}

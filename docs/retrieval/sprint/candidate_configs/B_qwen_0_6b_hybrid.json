@@ -1,0 +1,40 @@
+{
+  "candidate_id": "B_qwen_0_6b_hybrid",
+  "policy_id": "hybrid_rrf_v1",
+  "description": "Qwen3-Embedding-0.6B dense vectors fused with lexical via RRF. The existing P1B frozen hybrid policy.",
+  "frozen_at": "2026-07-23 (pre-reviewed-judgment; sprint Day 0)",
+  "model_identity": {
+    "model_name": "text-embedding-qwen3-embedding-0.6b",
+    "model_revision": "GGUF (LM Studio hosted)",
+    "embedding_dimension": 1024,
+    "provider": "lmstudio",
+    "endpoint": "http://100.64.0.2:1234/v1"
+  },
+  "lexical_parameters": {
+    "scoring": "raw_overlap_ratio_v1",
+    "tokenization": "lowercase word tokens (\\w+)",
+    "text_fields": "title + ' ' + abstract"
+  },
+  "hybrid_fusion": {
+    "fusion_policy": "rrf",
+    "rrf_k": 60,
+    "lexical_weight": null,
+    "semantic_weight": null
+  },
+  "retrieval_parameters": {
+    "top_k": 20,
+    "final_limit": 20,
+    "reranker": "none",
+    "query_rewriting": "none",
+    "chunking": "unchanged (title+abstract granularity)"
+  },
+  "batch_and_retry": {
+    "batch_size": 1,
+    "timeout_seconds": 30,
+    "max_retries": 8,
+    "retry_backoff": "exponential, max ~4 min per text (P1C bounded-retry policy)"
+  },
+  "normalization": "none",
+  "configuration_frozen_before_reviewed_judgments": true,
+  "p1b_precedent": "This is the existing P1B hybrid_rrf_v1 policy. Its frozen hyperparameters (rrf_k=60, final_limit=20) are inherited unchanged. P1B Gate 2 verdict: FAIL (delta nDCG@10 = +0.0066 vs lexical; threshold = +0.030)."
+}
