@@ -1,6 +1,14 @@
-import { apiFetchUnchecked } from "./client";
 import { callContract } from "./contracts/common";
 import { listRunsContract } from "./contracts/dashboard";
+import {
+  cancelRunContract,
+  getEstimateContract,
+  getRunDetailContract,
+  getRunIdeasContract,
+  resumeRunContract,
+  triggerAutonomousContract,
+  triggerRunContract,
+} from "./contracts/pipeline";
 import type {
   PipelineRunRequest,
   PipelineRunSummary,
@@ -12,10 +20,9 @@ import type {
 } from "./types";
 
 export function triggerRun(req: PipelineRunRequest): Promise<TriggerRunResponse> {
-  return apiFetchUnchecked("/pipeline/run", {
-    method: "POST",
-    body: JSON.stringify(req),
-  });
+  // F1.7a: migrated from apiFetchUnchecked to callContract with runtime decoder.
+  // The 202 response includes a preflight sub-object (can_proceed + warnings).
+  return callContract(triggerRunContract, { body: req });
 }
 
 export function listRuns(params?: {
@@ -28,21 +35,23 @@ export function listRuns(params?: {
 }
 
 export function getRunDetail(id: number): Promise<PipelineRunDetail> {
-  return apiFetchUnchecked(`/pipeline/runs/detail/${id}`);
+  // F1.7a: migrated from apiFetchUnchecked to callContract with runtime decoder.
+  return callContract(getRunDetailContract, { params: { id } });
 }
 
 export function cancelRun(runId: string): Promise<{ status: string; run_id: string }> {
-  return apiFetchUnchecked(`/pipeline/runs/${runId}`, { method: "DELETE" });
+  // F1.7a: migrated from apiFetchUnchecked to callContract with runtime decoder.
+  return callContract(cancelRunContract, { params: { runId } });
 }
 
 export function getRunIdeas(runId: string): Promise<{ ideas: IdeaSummary[]; total: number }> {
-  return apiFetchUnchecked(`/pipeline/runs/${runId}/ideas`);
+  // F1.7a: migrated from apiFetchUnchecked to callContract with runtime decoder.
+  return callContract(getRunIdeasContract, { params: { runId } });
 }
 
 export function resumeRun(runId: string): Promise<{ status: string; run_id: string; ideas_count: number; gaps_count: number; proposals_count: number }> {
-  return apiFetchUnchecked(`/pipeline/resume/${runId}`, {
-    method: "POST",
-  });
+  // F1.7a: migrated from apiFetchUnchecked to callContract with runtime decoder.
+  return callContract(resumeRunContract, { params: { runId } });
 }
 
 export interface EstimateBreakdown {
@@ -68,12 +77,11 @@ export interface EstimateResponse {
 }
 
 export function getEstimate(strategy: string): Promise<EstimateResponse> {
-  return apiFetchUnchecked(`/pipeline/estimate?strategy=${encodeURIComponent(strategy)}`);
+  // F1.7a: migrated from apiFetchUnchecked to callContract with runtime decoder.
+  return callContract(getEstimateContract, { query: { strategy } });
 }
 
 export function triggerAutonomous(req: AutonomousCycleRequest): Promise<AutonomousCycleResponse> {
-  return apiFetchUnchecked("/pipeline/autonomous", {
-    method: "POST",
-    body: JSON.stringify(req),
-  });
+  // F1.7a: migrated from apiFetchUnchecked to callContract with runtime decoder.
+  return callContract(triggerAutonomousContract, { body: req });
 }

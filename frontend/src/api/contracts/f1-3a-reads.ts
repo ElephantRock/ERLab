@@ -30,6 +30,7 @@
  */
 
 import {
+  ApiContractError,
   decodeArray,
   decodeBoolean,
   decodeEnum,
@@ -38,6 +39,7 @@ import {
   decodeString,
   decodeStringRecord,
   type JsonContract,
+  type ResponseDecoder,
 } from "./common";
 import type { DetailedStatus } from "@/api/client";
 import type {
@@ -61,6 +63,7 @@ import type {
   CertificationResponse,
   OverridesResponse,
 } from "@/api/settings";
+import type { SystemStatus } from "@/api/types";
 
 // ── Settings: DetailedStatus ─────────────────────────────────────────
 // All three fields are material (drive Settings UI) — strict required.
@@ -427,6 +430,83 @@ export const getOverridesContract: JsonContract<OverridesResponse> = {
     required: {
       overrides: decodeStringRecord,
       total: decodeNumber,
+    },
+  }),
+};
+
+// ── Status: platform status (GET /) ──────────────────────────────────
+// SystemStatus identity fields: app_name, version. config is a record of
+// mixed boolean/string values (per backend status.py: provider flags +
+// default_provider string). defaults is a record of numbers. Both records
+// are validated value-by-value so a malformed payload is rejected rather
+// than silently cast.
+
+const statusConfigDecoder: ResponseDecoder<Record<string, boolean | string>> = {
+  decode(value, ctx) {
+    if (typeof value !== "object" || value === null || Array.isArray(value)) {
+      throw new ApiContractError(
+        "api_response_contract_mismatch",
+        ctx.endpointId,
+        `expected object (config record), got ${value === null ? "null" : Array.isArray(value) ? "array" : typeof value}`,
+        200,
+      );
+    }
+    const obj = value as Record<string, unknown>;
+    const out: Record<string, boolean | string> = {};
+    for (const [k, v] of Object.entries(obj)) {
+      if (typeof v === "boolean" || typeof v === "string") {
+        out[k] = v;
+      } else {
+        throw new ApiContractError(
+          "api_response_contract_mismatch",
+          ctx.endpointId,
+          `config value for key ${JSON.stringify(k)} expected boolean|string, got ${typeof v}`,
+          200,
+        );
+      }
+    }
+    return out;
+  },
+};
+
+const statusDefaultsDecoder: ResponseDecoder<Record<string, number>> = {
+  decode(value, ctx) {
+    if (typeof value !== "object" || value === null || Array.isArray(value)) {
+      throw new ApiContractError(
+        "api_response_contract_mismatch",
+        ctx.endpointId,
+        `expected object (defaults record), got ${value === null ? "null" : Array.isArray(value) ? "array" : typeof value}`,
+        200,
+      );
+    }
+    const obj = value as Record<string, unknown>;
+    const out: Record<string, number> = {};
+    for (const [k, v] of Object.entries(obj)) {
+      if (typeof v !== "number" || Number.isNaN(v)) {
+        throw new ApiContractError(
+          "api_response_contract_mismatch",
+          ctx.endpointId,
+          `defaults value for key ${JSON.stringify(k)} expected number, got ${typeof v}`,
+          200,
+        );
+      }
+      out[k] = v;
+    }
+    return out;
+  },
+};
+
+export const getStatusContract: JsonContract<SystemStatus> = {
+  id: "status.getStatus",
+  method: "GET",
+  pathPattern: "/status",
+  responseKind: "json",
+  decoder: decodeObject<SystemStatus>({
+    required: {
+      app_name: decodeString,
+      version: decodeString,
+      config: statusConfigDecoder,
+      defaults: statusDefaultsDecoder,
     },
   }),
 };

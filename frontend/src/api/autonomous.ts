@@ -1,10 +1,14 @@
-import { apiFetchUnchecked } from "./client";
 import { callContract } from "./contracts/common";
 import {
   getAutonomousHistoryContract,
   getEvolutionStatusContract,
   getSchedulerStatusContract,
 } from "./contracts/f1-3a-reads";
+import {
+  startSchedulerContract,
+  stopAutonomousCycleContract,
+  stopSchedulerContract,
+} from "./contracts/autonomous";
 import type { AutonomousCycleResponse } from "./types";
 
 /** Autonomous cycle history entry. */
@@ -22,9 +26,8 @@ export interface AutonomousHistoryResponse {
 
 /** Stop a running autonomous cycle. HB-01: Requires explicit cycle_id. */
 export function stopAutonomousCycle(cycleId: string): Promise<{ status: string; cycle_id: string }> {
-  return apiFetchUnchecked(`/pipeline/autonomous/stop?cycle_id=${encodeURIComponent(cycleId)}`, {
-    method: "POST",
-  });
+  // F1.7a: migrated from apiFetchUnchecked to callContract with runtime decoder.
+  return callContract(stopAutonomousCycleContract, { query: { cycle_id: cycleId } });
 }
 
 /** Get autonomous cycle history. */
@@ -68,12 +71,14 @@ export interface SchedulerStatus {
 
 /** Start the autonomous pipeline scheduler. */
 export function startScheduler(): Promise<{ status: string; interval_seconds?: number }> {
-  return apiFetchUnchecked("/pipeline/scheduler/start", { method: "POST" });
+  // F1.7a: migrated from apiFetchUnchecked to callContract with runtime decoder.
+  return callContract(startSchedulerContract);
 }
 
 /** Stop the autonomous pipeline scheduler. */
 export function stopScheduler(): Promise<{ status: string }> {
-  return apiFetchUnchecked("/pipeline/scheduler/stop", { method: "POST" });
+  // F1.7a: migrated from apiFetchUnchecked to callContract with runtime decoder.
+  return callContract(stopSchedulerContract);
 }
 
 /** Get scheduler status. */

@@ -10,7 +10,14 @@
  *   GET /costs/run/{id}    → {run_id, summary, by_provider, by_stage}
  */
 
-import { apiFetchUnchecked } from "./client";
+import { callContract } from "./contracts/common";
+import {
+  getCostByModelContract,
+  getCostByProviderContract,
+  getCostByStageContract,
+  getCostSummaryContract,
+  getRunCostBreakdownContract,
+} from "./contracts/costs";
 
 // ── Types ────────────────────────────────────────────────────────
 
@@ -46,21 +53,26 @@ export interface RunCostBreakdown {
 // ── API Functions ────────────────────────────────────────────────
 
 export function getCostSummary(): Promise<CostSummary> {
-  return apiFetchUnchecked<CostSummary>("/costs/summary");
+  // F1.7a: migrated from apiFetchUnchecked to callContract with runtime decoder.
+  return callContract(getCostSummaryContract);
 }
 
 export function getCostByProvider(): Promise<ProviderBreakdown> {
-  return apiFetchUnchecked<ProviderBreakdown>("/costs/by-provider");
+  // F1.7a: migrated from apiFetchUnchecked to callContract with runtime decoder.
+  return callContract(getCostByProviderContract);
 }
 
 export function getCostByStage(): Promise<StageBreakdown> {
-  return apiFetchUnchecked<StageBreakdown>("/costs/by-stage");
+  // F1.7a: migrated from apiFetchUnchecked to callContract with runtime decoder.
+  return callContract(getCostByStageContract);
 }
 
 export function getCostByModel(): Promise<ModelBreakdown> {
-  return apiFetchUnchecked<ModelBreakdown>("/costs/by-model");
+  // F1.7a: migrated from apiFetchUnchecked to callContract with runtime decoder.
+  return callContract(getCostByModelContract);
 }
 
 export function getRunCostBreakdown(runId: string): Promise<RunCostBreakdown> {
-  return apiFetchUnchecked<RunCostBreakdown>(`/costs/run/${runId}`);
+  // F1.7a: migrated from apiFetchUnchecked to callContract with runtime decoder.
+  return callContract(getRunCostBreakdownContract, { params: { runId } });
 }

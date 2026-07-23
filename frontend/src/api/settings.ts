@@ -1,9 +1,17 @@
-import { apiFetchUnchecked } from "./client";
 import { callContract } from "./contracts/common";
 import {
   getCertificationContract,
   getOverridesContract,
 } from "./contracts/f1-3a-reads";
+import {
+  getCatalogContract,
+  getAssignmentsContract,
+  getStagesContract,
+  updateOverridesContract,
+  validateOverridesContract,
+  removeOverrideContract,
+  clearOverridesContract,
+} from "./contracts/models";
 
 // ── Catalog (GET /settings/catalog) ──────────────────────────────
 
@@ -68,11 +76,13 @@ export interface AssignmentsResponse {
 // ── API Functions ────────────────────────────────────────────────
 
 export function getCatalog(): Promise<CatalogResponse> {
-  return apiFetchUnchecked<CatalogResponse>("/settings/catalog");
+  // F1.7a: migrated from apiFetchUnchecked to callContract with runtime decoder
+  return callContract(getCatalogContract);
 }
 
 export function getAssignments(): Promise<AssignmentsResponse> {
-  return apiFetchUnchecked<AssignmentsResponse>("/settings/assignments");
+  // F1.7a: migrated from apiFetchUnchecked to callContract with runtime decoder
+  return callContract(getAssignmentsContract);
 }
 
 // ── Stage Metadata (GET /settings/stages) ──────────────────────
@@ -90,7 +100,8 @@ export interface StagesResponse {
 }
 
 export function getStages(): Promise<StagesResponse> {
-  return apiFetchUnchecked<StagesResponse>("/settings/stages");
+  // F1.7a: migrated from apiFetchUnchecked to callContract with runtime decoder
+  return callContract(getStagesContract);
 }
 
 // ── Certification (GET /settings/certification) ─────────────────
@@ -149,26 +160,26 @@ export function updateOverrides(
   body: Record<string, string>,
   dryRun?: boolean,
 ): Promise<OverrideUpdateResponse> {
-  const qs = dryRun ? "?dry_run=true" : "";
-  return apiFetchUnchecked<OverrideUpdateResponse>(`/settings/overrides${qs}`, {
-    method: "PUT",
-    body: JSON.stringify(body),
+  // F1.7a: migrated from apiFetchUnchecked to callContract with runtime decoder
+  return callContract(updateOverridesContract, {
+    body,
+    query: dryRun ? { dry_run: true } : undefined,
   });
 }
 
 export function validateOverrides(
   body: Record<string, string>,
 ): Promise<OverrideValidateResponse> {
-  return apiFetchUnchecked<OverrideValidateResponse>("/settings/overrides/validate", {
-    method: "POST",
-    body: JSON.stringify(body),
-  });
+  // F1.7a: migrated from apiFetchUnchecked to callContract with runtime decoder
+  return callContract(validateOverridesContract, { body });
 }
 
 export function removeOverride(stage: string): Promise<{ message: string; overrides: Record<string, string> }> {
-  return apiFetchUnchecked(`/settings/overrides/${stage}`, { method: "DELETE" });
+  // F1.7a: migrated from apiFetchUnchecked to callContract with runtime decoder
+  return callContract(removeOverrideContract, { params: { stage } });
 }
 
 export function clearAllOverrides(): Promise<{ message: string; overrides: Record<string, string> }> {
-  return apiFetchUnchecked("/settings/overrides", { method: "DELETE" });
+  // F1.7a: migrated from apiFetchUnchecked to callContract with runtime decoder
+  return callContract(clearOverridesContract);
 }

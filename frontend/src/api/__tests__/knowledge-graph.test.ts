@@ -6,14 +6,13 @@ import type {
   EntityDetail,
   Subgraph,
 } from "@/api/knowledge-graph";
-import { apiFetchUnchecked, apiFetchJson } from "@/api/client";
+import { apiFetchJson } from "@/api/client";
 
 vi.mock("@/api/client", () => ({
   apiFetchUnchecked: vi.fn(),
   apiFetchJson: vi.fn(),
 }));
 
-const mockApiFetch = vi.mocked(apiFetchUnchecked);
 const mockApiFetchJson = vi.mocked(apiFetchJson);
 
 describe("BATCH-25/TASK-02: Knowledge Graph API Client", () => {
@@ -86,12 +85,16 @@ describe("BATCH-25/TASK-02: Knowledge Graph API Client", () => {
         },
       ],
     };
-    mockApiFetch.mockResolvedValueOnce(detail);
+    // F1.7a: getEntity now uses callContract → apiFetchJson. The id is
+    // encodeURIComponent'd by the client before being substituted into the
+    // path pattern.
+    mockApiFetchJson.mockResolvedValueOnce(detail);
 
     const result = await getEntity("concept:transformer");
 
-    expect(mockApiFetch).toHaveBeenCalledWith(
+    expect(mockApiFetchJson).toHaveBeenCalledWith(
       "/knowledge-graph/entity/concept%3Atransformer",
+      expect.objectContaining({ method: "GET" }),
     );
     expect(result).toEqual(detail);
     expect(result.entity.name).toBe("Transformer");
@@ -130,12 +133,15 @@ describe("BATCH-25/TASK-02: Knowledge Graph API Client", () => {
         },
       ],
     };
-    mockApiFetch.mockResolvedValueOnce(subgraph);
+    // F1.7a: getSubgraph now uses callContract → apiFetchJson. The id is
+    // encodeURIComponent'd; depth is appended as a query param by withQuery.
+    mockApiFetchJson.mockResolvedValueOnce(subgraph);
 
     const result = await getSubgraph("concept:1", 3);
 
-    expect(mockApiFetch).toHaveBeenCalledWith(
+    expect(mockApiFetchJson).toHaveBeenCalledWith(
       "/knowledge-graph/subgraph/concept%3A1?depth=3",
+      expect.objectContaining({ method: "GET" }),
     );
     expect(result).toEqual(subgraph);
     expect(result.entities).toHaveLength(2);

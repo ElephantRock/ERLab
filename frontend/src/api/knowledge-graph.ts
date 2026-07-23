@@ -8,13 +8,13 @@
  *   GET /knowledge-graph/subgraph/{id}?depth=2
  */
 
-import { apiFetchUnchecked } from "./client";
 import { callContract } from "./contracts/common";
 import {
   getEntitiesContract,
   getGraphStatsContract,
   getWorldModelContract,
 } from "./contracts/f1-3a-reads";
+import { getEntityContract, getSubgraphContract } from "./contracts/knowledge-graph";
 
 // ── Types ─────────────────────────────────────────────────────────
 
@@ -88,14 +88,18 @@ export function getEntities(params?: {
 
 /** GET /knowledge-graph/entity/{id} → entity with relationships */
 export function getEntity(id: string): Promise<EntityDetail> {
-  return apiFetchUnchecked<EntityDetail>(`/knowledge-graph/entity/${encodeURIComponent(id)}`);
+  // Encode the id here: callContract's buildPath substitutes {id} verbatim
+  // (it does not URI-encode), so we preserve the pre-migration
+  // encodeURIComponent behavior for IDs that may contain reserved chars.
+  return callContract(getEntityContract, { params: { id: encodeURIComponent(id) } });
 }
 
 /** GET /knowledge-graph/subgraph/{id}?depth=N → connected subgraph */
 export function getSubgraph(id: string, depth = 2): Promise<Subgraph> {
-  return apiFetchUnchecked<Subgraph>(
-    `/knowledge-graph/subgraph/${encodeURIComponent(id)}?depth=${depth}`,
-  );
+  return callContract(getSubgraphContract, {
+    params: { id: encodeURIComponent(id) },
+    query: { depth },
+  });
 }
 
 /** GET /knowledge-graph/world-model → high-level world model summary */

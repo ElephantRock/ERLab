@@ -16,7 +16,7 @@
  * a complete gap.
  */
 
-import type { ResearchGap } from "@/api/types";
+import type { GapListResponse, ResearchGap } from "@/api/types";
 import {
   decodeArray,
   decodeEnum,
@@ -121,6 +121,25 @@ export const getGapContract: JsonContract<{ gap: ResearchGap }> = {
   pathPattern: "/gaps/{id}",
   responseKind: "json",
   decoder: getGapResponseDecoder,
+};
+
+// F1.7a — listGaps (GET /gaps with optional query params).
+// Each gap is decoded via the same researchGapDecoder used by getGap, so the
+// list path gets the same field-level validation as the detail path. The
+// list endpoint omits some optional fields (related_ideas,
+// matched_papers_preview, pipeline_run_id) — those are declared optional on
+// ResearchGap and skipped by decodeObject when absent.
+export const listGapsContract: JsonContract<GapListResponse> = {
+  id: "gaps.listGaps",
+  method: "GET",
+  pathPattern: "/gaps",
+  responseKind: "json",
+  decoder: decodeObject<GapListResponse>({
+    required: {
+      gaps: decodeArray(researchGapDecoder),
+      total: decodeNumber,
+    },
+  }),
 };
 
 export const submitGapFeedbackContract: JsonContract<{ gap: GapFeedbackMutationResult }> = {

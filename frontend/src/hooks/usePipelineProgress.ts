@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { apiFetchUnchecked, sseFetch } from "@/api/client";
+import { sseFetch } from "@/api/client";
+import { getRunDetail, listRuns } from "@/api/pipeline";
 import { PIPELINE_STAGES } from "@/lib/constants";
-import type { PipelineRunDetail, PipelineRunSummary } from "@/api/types";
+import type { PipelineRunDetail } from "@/api/types";
 
 export interface StageProgress {
   key: string;
@@ -131,11 +132,24 @@ export function usePipelineProgress(runId: string | null) {
     if (!runId || cancelledRef.current) return false;
     try {
       let data: PipelineRunDetail | null = null;
+      // F1.7a: polling now routes through the typed contract clients
+      // (getRunDetail / listRuns) so the response payload is decoded at
+      // runtime — a malformed run object surfaces as a contract failure
+      // rather than undefined-field reads in the stage map below.
       try {
-        data = await apiFetchUnchecked<PipelineRunDetail>(`/pipeline/runs/detail/${runId}`);
+        // getRunDetail takes the DB int id; runId may be numeric or a
+        // run_id_str. Numeric path resolves directly; non-numeric falls
+        // through to the listRuns search below.
+        const numericId = Number(runId);
+        if (Number.isInteger(numericId)) {
+          data = await getRunDetail(numericId);
+        }
       } catch {
+        // fall through to listRuns search
+      }
+      if (!data) {
         try {
-          const list = await apiFetchUnchecked<{ runs: PipelineRunSummary[]; total: number }>(`/pipeline/runs?limit=5`);
+          const list = await listRuns({ limit: 5 });
           data = (list.runs.find((r) => String(r.id) === runId) as PipelineRunDetail | undefined) ?? null;
         } catch {
           // Both failed

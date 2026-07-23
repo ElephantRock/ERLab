@@ -1,5 +1,11 @@
-import { apiFetchUnchecked } from "./client";
-import { callContract, decodeObject, decodeString, decodeArray, type JsonContract } from "./contracts/common";
+import {
+  callContract,
+  decodeArray,
+  decodeNumber,
+  decodeObject,
+  decodeString,
+  type JsonContract,
+} from "./contracts/common";
 
 // ── Types ──
 
@@ -45,14 +51,56 @@ export interface LiteratureIngestResponse {
 
 // ── API Calls ──
 
+// F1.7a: contract-validated literature search. The paper-card component
+// reads paper.id/title/abstract/authors[].name/source/year/citation_count/
+// doi/url (see field-usage survey); these are the material fields. Nullable
+// fields (abstract, year, venue, citation_count, url, doi, arxiv_id) are
+// validated when present and preserved as null otherwise. authors[].name is
+// the only author field consumed by the card, but id/affiliations are
+// declared on the type and validated when present.
+const authorDecoder = decodeObject<Author>({
+  required: { name: decodeString },
+  optional: { id: decodeString },
+});
+
+const paperDecoder = decodeObject<Paper>({
+  required: {
+    id: decodeString,
+    source: decodeString,
+    title: decodeString,
+    authors: decodeArray(authorDecoder),
+    keywords: decodeArray(decodeString),
+  },
+  optional: {
+    abstract: decodeString,
+    year: decodeNumber,
+    venue: decodeString,
+    citation_count: decodeNumber,
+    url: decodeString,
+    doi: decodeString,
+    arxiv_id: decodeString,
+  },
+});
+
+const searchLiteratureContract: JsonContract<SearchResponse> = {
+  id: "literature.searchLiterature",
+  method: "GET",
+  pathPattern: "/literature/search",
+  responseKind: "json",
+  decoder: decodeObject<SearchResponse>({
+    required: { papers: decodeArray(paperDecoder) },
+  }),
+};
+
 /** Search academic literature across multiple sources. */
 export function searchLiterature(
   query: string,
   maxResults: number = 10,
 ): Promise<SearchResponse> {
-  return apiFetchUnchecked<SearchResponse>(
-    `/literature/search?q=${encodeURIComponent(query)}&max_results=${maxResults}`,
-  );
+  // F1.7a: migrated from apiFetchUnchecked to callContract with runtime decoder.
+  return callContract(searchLiteratureContract, {
+    query: { q: query, max_results: maxResults },
+  });
 }
 
 // F1.4.1: contract-validated ingest — no longer uses apiFetchUnchecked

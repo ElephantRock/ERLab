@@ -13,13 +13,14 @@ import type {
   ModelBreakdown,
   RunCostBreakdown,
 } from "@/api/costs";
-import { apiFetchUnchecked } from "@/api/client";
+import { apiFetchJson } from "@/api/client";
 
+// F1.7a: all five cost functions now route through callContract → apiFetchJson.
 vi.mock("@/api/client", () => ({
-  apiFetchUnchecked: vi.fn(),
+  apiFetchJson: vi.fn(),
 }));
 
-const mockApiFetch = vi.mocked(apiFetchUnchecked);
+const mockApiFetchJson = vi.mocked(apiFetchJson);
 
 describe("BATCH-18/TASK-01: Cost API Client", () => {
   beforeEach(() => {
@@ -33,11 +34,14 @@ describe("BATCH-18/TASK-01: Cost API Client", () => {
       total_tokens: 150000,
       event_count: 42,
     };
-    mockApiFetch.mockResolvedValueOnce(expected);
+    mockApiFetchJson.mockResolvedValueOnce(expected);
 
     const result = await getCostSummary();
 
-    expect(mockApiFetch).toHaveBeenCalledWith("/costs/summary");
+    expect(mockApiFetchJson).toHaveBeenCalledWith(
+      "/costs/summary",
+      expect.objectContaining({ method: "GET" }),
+    );
     expect(result).toEqual(expected);
     expect(result.total_cost_usd).toBe(1.23);
     expect(result.total_tokens).toBe(150000);
@@ -50,11 +54,14 @@ describe("BATCH-18/TASK-01: Cost API Client", () => {
       openai: { cost_usd: 0.5, input_tokens: 1000, output_tokens: 500, calls: 10 },
       anthropic: { cost_usd: 0.3, input_tokens: 800, output_tokens: 200, calls: 5 },
     };
-    mockApiFetch.mockResolvedValueOnce(expected);
+    mockApiFetchJson.mockResolvedValueOnce(expected);
 
     const result = await getCostByProvider();
 
-    expect(mockApiFetch).toHaveBeenCalledWith("/costs/by-provider");
+    expect(mockApiFetchJson).toHaveBeenCalledWith(
+      "/costs/by-provider",
+      expect.objectContaining({ method: "GET" }),
+    );
     expect(result).toEqual(expected);
     expect(Object.keys(result)).toHaveLength(2);
     expect(result.openai.cost_usd).toBe(0.5);
@@ -66,11 +73,14 @@ describe("BATCH-18/TASK-01: Cost API Client", () => {
       generation: { cost_usd: 0.3, input_tokens: 500, output_tokens: 200, calls: 5 },
       novelty_checking: { cost_usd: 0.2, input_tokens: 300, output_tokens: 100, calls: 3 },
     };
-    mockApiFetch.mockResolvedValueOnce(expected);
+    mockApiFetchJson.mockResolvedValueOnce(expected);
 
     const result = await getCostByStage();
 
-    expect(mockApiFetch).toHaveBeenCalledWith("/costs/by-stage");
+    expect(mockApiFetchJson).toHaveBeenCalledWith(
+      "/costs/by-stage",
+      expect.objectContaining({ method: "GET" }),
+    );
     expect(result).toEqual(expected);
     expect(Object.keys(result)).toHaveLength(2);
     expect(result.generation.calls).toBe(5);
@@ -82,11 +92,14 @@ describe("BATCH-18/TASK-01: Cost API Client", () => {
       "openai/gpt-4": { cost_usd: 0.8, input_tokens: 1500, output_tokens: 300, calls: 8 },
       "anthropic/claude-3": { cost_usd: 0.4, input_tokens: 600, output_tokens: 150, calls: 4 },
     };
-    mockApiFetch.mockResolvedValueOnce(expected);
+    mockApiFetchJson.mockResolvedValueOnce(expected);
 
     const result = await getCostByModel();
 
-    expect(mockApiFetch).toHaveBeenCalledWith("/costs/by-model");
+    expect(mockApiFetchJson).toHaveBeenCalledWith(
+      "/costs/by-model",
+      expect.objectContaining({ method: "GET" }),
+    );
     expect(result).toEqual(expected);
     expect(Object.keys(result)).toHaveLength(2);
     expect(result["openai/gpt-4"].cost_usd).toBe(0.8);
@@ -100,11 +113,14 @@ describe("BATCH-18/TASK-01: Cost API Client", () => {
       by_provider: { openai: { cost_usd: 0.5, input_tokens: 1000, output_tokens: 500, calls: 10 } },
       by_stage: { generation: { cost_usd: 0.3, input_tokens: 500, output_tokens: 200, calls: 5 } },
     };
-    mockApiFetch.mockResolvedValueOnce(expected);
+    mockApiFetchJson.mockResolvedValueOnce(expected);
 
     const result = await getRunCostBreakdown("run_20260422_143908");
 
-    expect(mockApiFetch).toHaveBeenCalledWith("/costs/run/run_20260422_143908");
+    expect(mockApiFetchJson).toHaveBeenCalledWith(
+      "/costs/run/run_20260422_143908",
+      expect.objectContaining({ method: "GET" }),
+    );
     expect(result).toEqual(expected);
     expect(result.run_id).toBe("run_20260422_143908");
     expect(result.summary.total_cost_usd).toBe(0.5);

@@ -9,9 +9,20 @@
  *
  * NOTE: There is NO /memories list endpoint. All browsing uses /recall
  * with a broad query (e.g., "*"). Memory types include: semantic, episodic, procedural.
+ *
+ * F1.7a: all three callers migrated from apiFetchUnchecked to callContract
+ * with runtime decoders.
  */
 
-import { apiFetchUnchecked } from "./client";
+import {
+  callContract,
+  decodeArray,
+  decodeNumber,
+  decodeNumberRecord,
+  decodeObject,
+  decodeString,
+  type JsonContract,
+} from "./contracts/common";
 
 // ── Types ────────────────────────────────────────────────────────
 
@@ -39,28 +50,77 @@ export interface MemoryDeleteResponse {
   entry_id: string;
 }
 
+// ── Contracts (F1.7a) ────────────────────────────────────────────
+
+// Material fields: total_memories (count display) + by_type (per-type counts
+// for the stats breakdown). by_type is Record<string, number> — every value
+// is a count.
+const getMemoryStatsContract: JsonContract<MemoryStats> = {
+  id: "memory.getMemoryStats",
+  method: "GET",
+  pathPattern: "/memory/stats",
+  responseKind: "json",
+  decoder: decodeObject<MemoryStats>({
+    required: {
+      total_memories: decodeNumber,
+      by_type: decodeNumberRecord,
+    },
+  }),
+};
+
+// Material fields per result: content (display), type (badge), confidence
+// (display), created_at (timestamp). The query echo is required.
+const memoryRecallResultDecoder = decodeObject<MemoryRecallResult>({
+  required: {
+    content: decodeString,
+    type: decodeString,
+    confidence: decodeNumber,
+    created_at: decodeString,
+  },
+});
+
+const recallMemoriesContract: JsonContract<MemoryRecallResponse> = {
+  id: "memory.recallMemories",
+  method: "GET",
+  pathPattern: "/memory/recall",
+  responseKind: "json",
+  decoder: decodeObject<MemoryRecallResponse>({
+    required: {
+      query: decodeString,
+      results: decodeArray(memoryRecallResultDecoder),
+    },
+  }),
+};
+
+// DELETE returns { status: "deleted", entry_id: <echoed id> }.
+const deleteMemoryContract: JsonContract<MemoryDeleteResponse> = {
+  id: "memory.deleteMemory",
+  method: "DELETE",
+  pathPattern: "/memory/{id}",
+  responseKind: "json",
+  decoder: decodeObject<MemoryDeleteResponse>({
+    required: {
+      status: decodeString,
+      entry_id: decodeString,
+    },
+  }),
+};
+
 // ── API Functions ────────────────────────────────────────────────
 
 export function getMemoryStats(): Promise<MemoryStats> {
-  return apiFetchUnchecked<MemoryStats>("/memory/stats");
+  return callContract(getMemoryStatsContract);
 }
 
 export function recallMemories(
   query: string,
   params?: { memory_type?: string; top_k?: number },
 ): Promise<MemoryRecallResponse> {
-  const searchParams = new URLSearchParams({ query });
-  if (params?.memory_type) {
-    searchParams.set("memory_type", params.memory_type);
-  }
-  if (params?.top_k !== undefined) {
-    searchParams.set("top_k", String(params.top_k));
-  }
-  return apiFetchUnchecked<MemoryRecallResponse>(`/memory/recall?${searchParams.toString()}`);
+  return callContract(recallMemoriesContract, {
+    query: { query, memory_type: params?.memory_type, top_k: params?.top_k },
+  });
 }
 
 export function deleteMemory(id: string): Promise<MemoryDeleteResponse> {
-  return apiFetchUnchecked<MemoryDeleteResponse>(`/memory/${id}`, {
-    method: "DELETE",
-  });
+  return callContract(deleteMemoryContract, { params: { id } });
 }

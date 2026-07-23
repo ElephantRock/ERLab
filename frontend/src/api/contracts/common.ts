@@ -24,7 +24,7 @@
  * Decoders are small and explicit per the F1.1 directive.
  */
 
-import { apiFetchJson, apiFetchVoid } from "@/api/client";
+import { apiFetchFormData, apiFetchJson, apiFetchVoid } from "@/api/client";
 
 // ── Contract failure ─────────────────────────────────────────────────
 
@@ -101,8 +101,22 @@ export interface VoidContract extends ContractBase {
   readonly responseKind: "void";
 }
 
+/**
+ * Contract for a multipart FormData endpoint (file uploads). The transport
+ * is apiFetchFormData (no Content-Type header — the browser sets the
+ * boundary); the response body is JSON decoded to T. Mirrors JsonContract
+ * but carries FormData as the request body rather than a JSON string.
+ */
+export interface FormDataContract<T> extends ContractBase {
+  readonly responseKind: "formdata";
+  readonly decoder: ResponseDecoder<T>;
+}
+
 /** Discriminated union of all endpoint contracts. */
-export type EndpointContract<TResponse = never> = JsonContract<TResponse> | VoidContract;
+export type EndpointContract<TResponse = never> =
+  | JsonContract<TResponse>
+  | VoidContract
+  | FormDataContract<TResponse>;
 
 // ── Primitive decoders ───────────────────────────────────────────────
 
@@ -287,6 +301,38 @@ export const decodeStringRecord: ResponseDecoder<Record<string, string>> = {
   },
 };
 
+/**
+ * Decoder for `Record<string, number>` — an object whose values must all be
+ * numbers (not NaN). Empty object `{}` is valid. Used for count-by-key maps
+ * such as memory stats by_type and model defaults.
+ */
+export const decodeNumberRecord: ResponseDecoder<Record<string, number>> = {
+  decode(value, ctx) {
+    if (typeof value !== "object" || value === null || Array.isArray(value)) {
+      throw new ApiContractError(
+        "api_response_contract_mismatch",
+        ctx.endpointId,
+        `expected object (number record), got ${value === null ? "null" : Array.isArray(value) ? "array" : typeof value}`,
+        200,
+      );
+    }
+    const obj = value as Record<string, unknown>;
+    const out: Record<string, number> = {};
+    for (const [k, v] of Object.entries(obj)) {
+      if (typeof v !== "number" || Number.isNaN(v)) {
+        throw new ApiContractError(
+          "api_response_contract_mismatch",
+          ctx.endpointId,
+          `number record value for key ${JSON.stringify(k)} expected number, got ${typeof v}`,
+          200,
+        );
+      }
+      out[k] = v;
+    }
+    return out;
+  },
+};
+
 // ── Path helper ──────────────────────────────────────────────────────
 
 /**
@@ -374,12 +420,46 @@ export async function callContract<T>(
   return contract.decoder.decode(raw, { endpointId: contract.id });
 }
 
+/**
+ * Execute a FormData endpoint contract: call apiFetchFormData (multipart
+ * upload, browser-supplied Content-Type boundary), then decode the JSON
+ * response via the declared decoder.
+ *
+ * Mirrors callContract for JSON, but the request body is a FormData object
+ * rather than a JSON string. The transport returns `unknown` (the raw JSON);
+ * the decoder validates it to T.
+ *
+ * - Transport errors (non-2xx, network failure) propagate as `ApiError`.
+ * - 2xx + decoder failure raises `ApiContractError`.
+ */
+export async function callFormDataContract<T>(
+  contract: FormDataContract<T>,
+  formData: FormData,
+  options: FormDataContractCallOptions = {},
+): Promise<T> {
+  const path = withQuery(
+    options.params ? buildPath(contract.pathPattern, options.params) : contract.pathPattern,
+    options.query ?? {},
+  );
+  // apiFetchFormData ignores any method/headers we'd pass; it always POSTs
+  // with auth headers only (the browser sets the multipart Content-Type).
+  // Transport returns the parsed JSON body as unknown; the decoder validates.
+  const raw: unknown = await apiFetchFormData<unknown>(path, formData);
+  return contract.decoder.decode(raw, { endpointId: contract.id });
+}
+
 export interface ContractCallOptions {
   params?: Record<string, string | number>;
   query?: Record<string, unknown>;
   body?: unknown;
   signal?: AbortSignal;
   extraHeaders?: Record<string, string>;
+}
+
+export interface FormDataContractCallOptions {
+  params?: Record<string, string | number>;
+  query?: Record<string, unknown>;
+  signal?: AbortSignal;
 }
 
 /**

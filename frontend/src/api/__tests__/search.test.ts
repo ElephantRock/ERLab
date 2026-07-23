@@ -1,12 +1,14 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { globalSearch } from "@/api/search";
-import { apiFetchUnchecked } from "@/api/client";
+import { apiFetchJson } from "@/api/client";
 
+// F1.7a: globalSearch now routes through callContract → apiFetchJson.
 vi.mock("@/api/client", () => ({
+  apiFetchJson: vi.fn(),
   apiFetchUnchecked: vi.fn(),
 }));
 
-const mockApiFetch = vi.mocked(apiFetchUnchecked);
+const mockApiFetchJson = vi.mocked(apiFetchJson);
 
 describe("BATCH-48/TASK-02: Search API Client", () => {
   beforeEach(() => {
@@ -19,11 +21,14 @@ describe("BATCH-48/TASK-02: Search API Client", () => {
       results: { ideas: { total: 0, items: [] } },
       total: 0,
     };
-    mockApiFetch.mockResolvedValueOnce(expected);
+    mockApiFetchJson.mockResolvedValueOnce(expected);
 
     const result = await globalSearch("test");
 
-    expect(mockApiFetch).toHaveBeenCalledWith("/search/?q=test");
+    expect(mockApiFetchJson).toHaveBeenCalledWith(
+      "/search/?q=test",
+      expect.objectContaining({ method: "GET" }),
+    );
     expect(result.query).toBe("test");
     expect(result.total).toBe(0);
   });
@@ -36,26 +41,35 @@ describe("BATCH-48/TASK-02: Search API Client", () => {
       },
       total: 1,
     };
-    mockApiFetch.mockResolvedValueOnce(expected);
+    mockApiFetchJson.mockResolvedValueOnce(expected);
 
     await globalSearch("neural", ["ideas", "gaps"]);
 
-    expect(mockApiFetch).toHaveBeenCalledWith("/search/?q=neural&types=ideas%2Cgaps");
+    expect(mockApiFetchJson).toHaveBeenCalledWith(
+      "/search/?q=neural&types=ideas%2Cgaps",
+      expect.objectContaining({ method: "GET" }),
+    );
   });
 
   it("omits types parameter when empty array is passed", async () => {
-    mockApiFetch.mockResolvedValueOnce({ query: "x", results: {}, total: 0 });
+    mockApiFetchJson.mockResolvedValueOnce({ query: "x", results: {}, total: 0 });
 
     await globalSearch("x", []);
 
-    expect(mockApiFetch).toHaveBeenCalledWith("/search/?q=x");
+    expect(mockApiFetchJson).toHaveBeenCalledWith(
+      "/search/?q=x",
+      expect.objectContaining({ method: "GET" }),
+    );
   });
 
   it("omits types parameter when not provided", async () => {
-    mockApiFetch.mockResolvedValueOnce({ query: "y", results: {}, total: 0 });
+    mockApiFetchJson.mockResolvedValueOnce({ query: "y", results: {}, total: 0 });
 
     await globalSearch("y");
 
-    expect(mockApiFetch).toHaveBeenCalledWith("/search/?q=y");
+    expect(mockApiFetchJson).toHaveBeenCalledWith(
+      "/search/?q=y",
+      expect.objectContaining({ method: "GET" }),
+    );
   });
 });

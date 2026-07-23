@@ -6,13 +6,15 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { getTraceSummary, getTrace, getTraceMetrics } from "@/api/traces";
 import type { TraceSummary, TraceDetail, TraceMetrics } from "@/api/traces";
-import { apiFetchUnchecked } from "@/api/client";
+import { apiFetchJson } from "@/api/client";
 
+// F1.7a: all three trace functions now route through callContract → apiFetchJson.
 vi.mock("@/api/client", () => ({
+  apiFetchJson: vi.fn(),
   apiFetchUnchecked: vi.fn(),
 }));
 
-const mockApiFetch = vi.mocked(apiFetchUnchecked);
+const mockApiFetchJson = vi.mocked(apiFetchJson);
 
 describe("BATCH-21/TASK-01: Traces API Client", () => {
   beforeEach(() => {
@@ -26,11 +28,14 @@ describe("BATCH-21/TASK-01: Traces API Client", () => {
       active_traces: 3,
       error_rate: 0.05,
     };
-    mockApiFetch.mockResolvedValueOnce(expected);
+    mockApiFetchJson.mockResolvedValueOnce(expected);
 
     const result = await getTraceSummary();
 
-    expect(mockApiFetch).toHaveBeenCalledWith("/traces/summary");
+    expect(mockApiFetchJson).toHaveBeenCalledWith(
+      "/traces/summary",
+      expect.objectContaining({ method: "GET" }),
+    );
     expect(result).toEqual(expected);
     expect(result.total_traces).toBe(42);
     expect(result.active_traces).toBe(3);
@@ -46,11 +51,14 @@ describe("BATCH-21/TASK-01: Traces API Client", () => {
         { name: "evaluation", duration_ms: 800 },
       ],
     };
-    mockApiFetch.mockResolvedValueOnce(expected);
+    mockApiFetchJson.mockResolvedValueOnce(expected);
 
     const result = await getTrace("abc-123");
 
-    expect(mockApiFetch).toHaveBeenCalledWith("/traces/trace/abc-123");
+    expect(mockApiFetchJson).toHaveBeenCalledWith(
+      "/traces/trace/abc-123",
+      expect.objectContaining({ method: "GET" }),
+    );
     expect(result).toEqual(expected);
     expect(result.trace_id).toBe("abc-123");
     expect(result.spans).toHaveLength(2);
@@ -65,11 +73,14 @@ describe("BATCH-21/TASK-01: Traces API Client", () => {
       p99_ms: 3500,
       error_rate: 0.02,
     };
-    mockApiFetch.mockResolvedValueOnce(expected);
+    mockApiFetchJson.mockResolvedValueOnce(expected);
 
     const result = await getTraceMetrics();
 
-    expect(mockApiFetch).toHaveBeenCalledWith("/traces/metrics");
+    expect(mockApiFetchJson).toHaveBeenCalledWith(
+      "/traces/metrics",
+      expect.objectContaining({ method: "GET" }),
+    );
     expect(result).toEqual(expected);
     expect(result.p50_ms).toBe(120);
     expect(result.p99_ms).toBe(3500);

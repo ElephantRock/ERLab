@@ -8,7 +8,7 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { getAutonomousHistory, stopAutonomousCycle } from "@/api/autonomous";
-import { apiFetchUnchecked, apiFetchJson } from "@/api/client";
+import { apiFetchJson } from "@/api/client";
 import { CycleProgress } from "@/components/autonomous/cycle-progress";
 // F1.1 H2: ConsciousnessStateBadge import removed — the component was
 // deleted (it rendered a badge backed by a non-existent backend endpoint).
@@ -20,11 +20,9 @@ import type { AutonomousCycleHistoryEntry } from "@/api/autonomous";
 // stopAutonomousCycle remains on apiFetchUnchecked. Provide both.
 
 vi.mock("@/api/client", () => ({
-  apiFetchUnchecked: vi.fn(),
   apiFetchJson: vi.fn(),
 }));
 
-const mockApiFetch = vi.mocked(apiFetchUnchecked);
 const mockApiFetchJson = vi.mocked(apiFetchJson);
 
 // ── TEST-26-02-01: API client calls correct endpoints ───────────
@@ -55,14 +53,14 @@ describe("BATCH-26/TASK-02: Autonomous API Client", () => {
     expect(result.cycles[0].cycle_id).toBe("auto_20260502_143000");
     expect(result.cycles[0].status).toBe("completed");
 
-    // Test stopAutonomousCycle (still on apiFetchUnchecked)
-    mockApiFetch.mockResolvedValueOnce({ status: "stopped", cycle_id: "auto_test" });
+    // Test stopAutonomousCycle (F1.7a: migrated → callContract → apiFetchJson)
+    mockApiFetchJson.mockResolvedValueOnce({ status: "stopped", cycle_id: "auto_test" });
 
     await stopAutonomousCycle("auto_test");
 
-    expect(mockApiFetch).toHaveBeenCalledWith(
-      "/pipeline/autonomous/stop?cycle_id=auto_test",
-      { method: "POST" },
+    expect(mockApiFetchJson).toHaveBeenCalledWith(
+      expect.stringContaining("/pipeline/autonomous/stop"),
+      expect.objectContaining({ method: "POST" }),
     );
   });
 });

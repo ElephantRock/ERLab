@@ -1,14 +1,13 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { searchLiterature, ingestPaper, listIngestedPapers } from "@/api/literature";
 import type { Paper, SearchResponse, LiteratureIngestResponse } from "@/api/literature";
-import { apiFetchUnchecked, apiFetchJson } from "@/api/client";
+import { apiFetchJson } from "@/api/client";
 
 vi.mock("@/api/client", () => ({
   apiFetchUnchecked: vi.fn(),
   apiFetchJson: vi.fn(),
 }));
 
-const mockApiFetch = vi.mocked(apiFetchUnchecked);
 const mockApiFetchJson = vi.mocked(apiFetchJson);
 
 const samplePaper: Paper = {
@@ -34,12 +33,16 @@ describe("BATCH-23/TASK-02: Literature API Client", () => {
   // ── TEST-23-02-07: API client calls correct endpoints ──
   it("TEST-23-02-07: searchLiterature() calls correct endpoint with query params", async () => {
     const expected: SearchResponse = { papers: [samplePaper] };
-    mockApiFetch.mockResolvedValueOnce(expected);
+    // F1.7a: searchLiterature now uses callContract → apiFetchJson. Query
+    // params are encoded by URLSearchParams inside withQuery, which emits
+    // spaces as '+' (application/x-www-form-urlencoded) rather than '%20'.
+    mockApiFetchJson.mockResolvedValueOnce(expected);
 
     const result = await searchLiterature("transformer attention");
 
-    expect(mockApiFetch).toHaveBeenCalledWith(
-      "/literature/search?q=transformer%20attention&max_results=10",
+    expect(mockApiFetchJson).toHaveBeenCalledWith(
+      "/literature/search?q=transformer+attention&max_results=10",
+      expect.objectContaining({ method: "GET" }),
     );
     expect(result).toEqual(expected);
     expect(result.papers).toHaveLength(1);
@@ -48,12 +51,13 @@ describe("BATCH-23/TASK-02: Literature API Client", () => {
 
   it("TEST-23-02-07: searchLiterature() passes custom maxResults", async () => {
     const expected: SearchResponse = { papers: [] };
-    mockApiFetch.mockResolvedValueOnce(expected);
+    mockApiFetchJson.mockResolvedValueOnce(expected);
 
     await searchLiterature("test", 25);
 
-    expect(mockApiFetch).toHaveBeenCalledWith(
+    expect(mockApiFetchJson).toHaveBeenCalledWith(
       "/literature/search?q=test&max_results=25",
+      expect.objectContaining({ method: "GET" }),
     );
   });
 

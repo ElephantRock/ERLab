@@ -1,13 +1,15 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { getMemoryStats, recallMemories, deleteMemory } from "@/api/memory";
 import type { MemoryStats, MemoryRecallResponse, MemoryDeleteResponse } from "@/api/memory";
-import { apiFetchUnchecked } from "@/api/client";
+import { apiFetchJson } from "@/api/client";
 
+// F1.7a: all three memory functions now route through callContract → apiFetchJson.
 vi.mock("@/api/client", () => ({
+  apiFetchJson: vi.fn(),
   apiFetchUnchecked: vi.fn(),
 }));
 
-const mockApiFetch = vi.mocked(apiFetchUnchecked);
+const mockApiFetchJson = vi.mocked(apiFetchJson);
 
 describe("BATCH-19/TASK-01: Memory API Client", () => {
   beforeEach(() => {
@@ -20,11 +22,14 @@ describe("BATCH-19/TASK-01: Memory API Client", () => {
       total_memories: 42,
       by_type: { semantic: 20, episodic: 15, procedural: 7 },
     };
-    mockApiFetch.mockResolvedValueOnce(expected);
+    mockApiFetchJson.mockResolvedValueOnce(expected);
 
     const result = await getMemoryStats();
 
-    expect(mockApiFetch).toHaveBeenCalledWith("/memory/stats");
+    expect(mockApiFetchJson).toHaveBeenCalledWith(
+      "/memory/stats",
+      expect.objectContaining({ method: "GET" }),
+    );
     expect(result).toEqual(expected);
     expect(result.total_memories).toBe(42);
     expect(result.by_type.semantic).toBe(20);
@@ -43,12 +48,13 @@ describe("BATCH-19/TASK-01: Memory API Client", () => {
         },
       ],
     };
-    mockApiFetch.mockResolvedValueOnce(expected);
+    mockApiFetchJson.mockResolvedValueOnce(expected);
 
     const result = await recallMemories("transformer");
 
-    expect(mockApiFetch).toHaveBeenCalledWith(
+    expect(mockApiFetchJson).toHaveBeenCalledWith(
       expect.stringContaining("/memory/recall?query=transformer"),
+      expect.objectContaining({ method: "GET" }),
     );
     expect(result).toEqual(expected);
     expect(result.results).toHaveLength(1);
@@ -61,13 +67,14 @@ describe("BATCH-19/TASK-01: Memory API Client", () => {
       status: "deleted",
       entry_id: "mem_abc123",
     };
-    mockApiFetch.mockResolvedValueOnce(expected);
+    mockApiFetchJson.mockResolvedValueOnce(expected);
 
     const result = await deleteMemory("mem_abc123");
 
-    expect(mockApiFetch).toHaveBeenCalledWith("/memory/mem_abc123", {
-      method: "DELETE",
-    });
+    expect(mockApiFetchJson).toHaveBeenCalledWith(
+      "/memory/mem_abc123",
+      expect.objectContaining({ method: "DELETE" }),
+    );
     expect(result).toEqual(expected);
     expect(result.status).toBe("deleted");
     expect(result.entry_id).toBe("mem_abc123");

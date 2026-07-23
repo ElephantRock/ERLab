@@ -1,5 +1,9 @@
-import { apiFetchUnchecked } from "./client";
 import { callContract } from "./contracts/common";
+import {
+  addCommentContract,
+  createShareLinkContract,
+  getSharedIdeaContract,
+} from "./contracts/collaboration";
 import { listCommentsContract } from "./contracts/f1-3a-reads";
 
 // --- Types ---
@@ -59,16 +63,16 @@ export function addComment(
   ideaId: number,
   req: CommentCreateRequest,
 ): Promise<CommentItem> {
-  return apiFetchUnchecked(`/ideas/${ideaId}/comments`, {
-    method: "POST",
-    body: JSON.stringify(req),
-  });
+  // F1.7a: migrated from apiFetchUnchecked to callContract with runtime decoder.
+  return callContract(addCommentContract, { params: { ideaId }, body: req });
 }
 
 export function createShareLink(ideaId: number): Promise<ShareLinkResponse> {
-  return apiFetchUnchecked(`/ideas/${ideaId}/share`, { method: "POST" });
+  // F1.7a: migrated from apiFetchUnchecked to callContract with runtime decoder.
+  return callContract(createShareLinkContract, { params: { ideaId } });
 }
 
 export function getSharedIdea(token: string): Promise<SharedIdeaResponse> {
-  return apiFetchUnchecked(`/shared/${token}`);
+  // F1.7a: migrated from apiFetchUnchecked to callContract with runtime decoder.
+  return callContract(getSharedIdeaContract, { params: { token } });
 }

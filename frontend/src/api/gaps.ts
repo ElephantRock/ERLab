@@ -8,13 +8,13 @@
  * ResearchGap — see contracts/gaps.ts for why (the backend returns only
  * {id, user_rating, user_notes} / {id, status}).
  *
- * listGaps remains on the pre-contract apiFetchUnchecked path for now (it's a
- * lower-risk read; migration tracks under the F1.1 scope-controlled
- * ratchet). It will move to the contract layer when its decoder is added.
+ * listGaps is migrated to the contract layer under F1.7a — its decoder
+ * reuses researchGapDecoder so the list path gets the same field-level
+ * validation as the detail path.
  */
 
-import { apiFetchUnchecked } from "./client";
 import { callContract } from "./contracts/common";
+import { listGapsContract } from "./contracts/gaps";
 import { getGapClustersContract, type GapClustersResponse } from "./contracts/f1-3a-reads";
 import type { GapListResponse } from "./types";
 import {
@@ -42,18 +42,21 @@ export function listGaps(params?: {
   sort_by?: string;
   sort_order?: string;
 }): Promise<GapListResponse> {
-  const search = new URLSearchParams();
-  if (params?.run_id) search.set("run_id", String(params.run_id));
-  if (params?.limit) search.set("limit", String(params.limit));
-  if (params?.offset) search.set("offset", String(params.offset));
-  if (params?.search) search.set("search", params.search);
-  if (params?.gap_type) search.set("gap_type", params.gap_type);
+  // callContract's withQuery drops undefined/null/empty values. run_id and
+  // min_confidence are only sent when truthy/positive to preserve the
+  // pre-migration query behavior (a zero run_id/min_confidence would
+  // otherwise broaden the filter).
+  const query: Record<string, unknown> = {};
+  if (params?.run_id) query.run_id = params.run_id;
+  if (params?.limit) query.limit = params.limit;
+  if (params?.offset) query.offset = params.offset;
+  if (params?.search) query.search = params.search;
+  if (params?.gap_type) query.gap_type = params.gap_type;
   if (params?.min_confidence !== undefined && params.min_confidence > 0)
-    search.set("min_confidence", String(params.min_confidence));
-  if (params?.sort_by) search.set("sort_by", params.sort_by);
-  if (params?.sort_order) search.set("sort_order", params.sort_order);
-  const qs = search.toString();
-  return apiFetchUnchecked(`/gaps/${qs ? `?${qs}` : ""}`);
+    query.min_confidence = params.min_confidence;
+  if (params?.sort_by) query.sort_by = params.sort_by;
+  if (params?.sort_order) query.sort_order = params.sort_order;
+  return callContract(listGapsContract, { query });
 }
 
 export const getGap = getGapViaContract;

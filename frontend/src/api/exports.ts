@@ -1,5 +1,6 @@
-import { apiFetchUnchecked, apiFetchBlob } from "./client";
+import { apiFetchBlob } from "./client";
 import { callContract } from "./contracts/common";
+import { installPluginContract } from "./contracts/exports";
 import { listPluginsContract } from "./contracts/f1-3a-reads";
 
 // --- Export ---
@@ -55,8 +56,6 @@ export function installPlugin(req: {
   version?: string;
   description?: string;
 }): Promise<Plugin> {
-  return apiFetchUnchecked("/plugins/install", {
-    method: "POST",
-    body: JSON.stringify(req),
-  });
+  // F1.7a: migrated from apiFetchUnchecked to callContract with runtime decoder.
+  return callContract(installPluginContract, { body: req });
 }

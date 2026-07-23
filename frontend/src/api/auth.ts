@@ -1,6 +1,8 @@
 /** Auth API client (BATCH-28). */
 
-import { apiFetchUnchecked } from "./client";
+import { callContract, decodeObject, decodeString, type JsonContract } from "./contracts/common";
+import { getMeContract, loginContract, registerContract } from "./contracts/auth";
+import { listUsersContract } from "./contracts/f1-3a-reads";
 
 // ── Types ──────────────────────────────────────────────────────────
 
@@ -23,24 +25,21 @@ export async function register(
   email: string,
   password: string,
 ): Promise<AuthResponse> {
-  return apiFetchUnchecked<AuthResponse>("/auth/register", {
-    method: "POST",
-    body: JSON.stringify({ username, email, password }),
-  });
+  // F1.7a: migrated from apiFetchUnchecked to callContract with runtime decoder.
+  return callContract(registerContract, { body: { username, email, password } });
 }
 
 export async function login(
   username: string,
   password: string,
 ): Promise<AuthResponse> {
-  return apiFetchUnchecked<AuthResponse>("/auth/login", {
-    method: "POST",
-    body: JSON.stringify({ username, password }),
-  });
+  // F1.7a: migrated from apiFetchUnchecked to callContract with runtime decoder.
+  return callContract(loginContract, { body: { username, password } });
 }
 
 export async function getMe(): Promise<AuthUser> {
-  return apiFetchUnchecked<AuthUser>("/auth/me");
+  // F1.7a: migrated from apiFetchUnchecked to callContract with runtime decoder.
+  return callContract(getMeContract);
 }
 
 export async function listUsers(): Promise<AuthUser[]> {
@@ -52,9 +51,6 @@ export async function listUsers(): Promise<AuthUser[]> {
 // decoder. The endpoint is public (no auth header needed) but the response
 // is validated — a malformed success (missing `message`) is a contract
 // failure, not an unchecked cast.
-import { callContract, decodeObject, decodeString, type JsonContract } from "./contracts/common";
-import { listUsersContract } from "./contracts/f1-3a-reads";
-
 export interface ForgotPasswordResult {
   message: string;
   reset_token?: string;

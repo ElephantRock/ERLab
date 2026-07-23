@@ -8,7 +8,12 @@
  *   GET /traces/metrics     → {p50_ms, p99_ms, error_rate}
  */
 
-import { apiFetchUnchecked } from "./client";
+import { callContract } from "./contracts/common";
+import {
+  getTraceContract,
+  getTraceMetricsContract,
+  getTraceSummaryContract,
+} from "./contracts/traces";
 
 // ── Types ────────────────────────────────────────────────────────
 
@@ -38,13 +43,16 @@ export interface TraceMetrics {
 // ── API Functions ────────────────────────────────────────────────
 
 export function getTraceSummary(): Promise<TraceSummary> {
-  return apiFetchUnchecked<TraceSummary>("/traces/summary");
+  // F1.7a: migrated from apiFetchUnchecked to callContract with runtime decoder
+  return callContract(getTraceSummaryContract);
 }
 
 export function getTrace(traceId: string): Promise<TraceDetail> {
-  return apiFetchUnchecked<TraceDetail>(`/traces/trace/${traceId}`);
+  // F1.7a: migrated from apiFetchUnchecked to callContract with runtime decoder
+  return callContract(getTraceContract, { params: { traceId } });
 }
 
 export function getTraceMetrics(): Promise<TraceMetrics> {
-  return apiFetchUnchecked<TraceMetrics>("/traces/metrics");
+  // F1.7a: migrated from apiFetchUnchecked to callContract with runtime decoder
+  return callContract(getTraceMetricsContract);
 }

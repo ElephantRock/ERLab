@@ -106,6 +106,7 @@ const mockRunDetail = {
   ...mockRuns.runs[0], config: {},
   stages_completed: ["literature_search", "ingestion", "gap_analysis", "idea_generation"],
   tree_data: null,
+  ideas: [],
 };
 const mockRunIdeas = { ideas: mockIdeas.ideas, total: 1 };
 // SourceGap type requires { id, title, gap_type, confidence, resolved: true }
@@ -113,6 +114,8 @@ const mockSourceGap = { id: 12, title: "Gap in transformer scaling", gap_type: "
 const mockIdeaDetail = {
   idea: {
     ...mockIdeas.ideas[0], description: "A novel approach",
+    problem_statement: "A problem", proposed_method: "A method",
+    expected_contributions: "Contributions",
     source_gaps: [mockSourceGap],
     proposal_sections: {}, proposal_references: null, supporting_papers: null,
     quality_checks: [], ensemble_review: null, novelty_report: null,

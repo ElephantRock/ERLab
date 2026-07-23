@@ -2,18 +2,16 @@
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-// Mock the client module. F1.3a: listUsers now routes through callContract →
-// apiFetchJson; login/register/getMe remain on apiFetchUnchecked. Provide
-// both so migrated and non-migrated functions resolve their transport dep.
+// Mock the client module. F1.7a: register/login/getMe now route through
+// callContract → apiFetchJson (joining listUsers from F1.3a). Provide
+// apiFetchJson so migrated functions resolve their transport dep.
 vi.mock("@/api/client", () => ({
-  apiFetchUnchecked: vi.fn(),
   apiFetchJson: vi.fn(),
 }));
 
 import { register, login, getMe, listUsers } from "@/api/auth";
-import { apiFetchUnchecked, apiFetchJson } from "@/api/client";
+import { apiFetchJson } from "@/api/client";
 
-const mockApiFetch = vi.mocked(apiFetchUnchecked);
 const mockApiFetchJson = vi.mocked(apiFetchJson);
 
 describe("auth API", () => {
@@ -26,14 +24,18 @@ describe("auth API", () => {
       token: "jwt-token-123",
       user: { id: 1, username: "alice", email: "alice@test.com", role: "user" },
     };
-    mockApiFetch.mockResolvedValueOnce(mockResponse);
+    // F1.7a: login now uses callContract → apiFetchJson
+    mockApiFetchJson.mockResolvedValueOnce(mockResponse);
 
     const result = await login("alice", "password123");
 
-    expect(mockApiFetch).toHaveBeenCalledWith("/auth/login", {
-      method: "POST",
-      body: JSON.stringify({ username: "alice", password: "password123" }),
-    });
+    expect(mockApiFetchJson).toHaveBeenCalledWith(
+      "/auth/login",
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({ username: "alice", password: "password123" }),
+      }),
+    );
     expect(result.token).toBe("jwt-token-123");
     expect(result.user.username).toBe("alice");
   });
@@ -43,14 +45,14 @@ describe("auth API", () => {
       token: "jwt-token-456",
       user: { id: 2, username: "bob", email: "bob@test.com", role: "user" },
     };
-    mockApiFetch.mockResolvedValueOnce(mockResponse);
+    mockApiFetchJson.mockResolvedValueOnce(mockResponse);
 
     const result = await login("bob", "secret");
     expect(result.token).toBe("jwt-token-456");
   });
 
   it("TEST-28-02-06: login error throws", async () => {
-    mockApiFetch.mockRejectedValueOnce(new Error("Invalid credentials"));
+    mockApiFetchJson.mockRejectedValueOnce(new Error("Invalid credentials"));
 
     await expect(login("bob", "wrong")).rejects.toThrow("Invalid credentials");
   });
@@ -60,28 +62,36 @@ describe("auth API", () => {
       token: "jwt-token-789",
       user: { id: 3, username: "charlie", email: "charlie@test.com", role: "user" },
     };
-    mockApiFetch.mockResolvedValueOnce(mockResponse);
+    // F1.7a: register now uses callContract → apiFetchJson
+    mockApiFetchJson.mockResolvedValueOnce(mockResponse);
 
     const result = await register("charlie", "charlie@test.com", "pass123");
 
-    expect(mockApiFetch).toHaveBeenCalledWith("/auth/register", {
-      method: "POST",
-      body: JSON.stringify({
-        username: "charlie",
-        email: "charlie@test.com",
-        password: "pass123",
+    expect(mockApiFetchJson).toHaveBeenCalledWith(
+      "/auth/register",
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({
+          username: "charlie",
+          email: "charlie@test.com",
+          password: "pass123",
+        }),
       }),
-    });
+    );
     expect(result.user.username).toBe("charlie");
     expect(result.user.role).toBe("user");
   });
 
   it("getMe calls correct endpoint", async () => {
     const mockUser = { id: 1, username: "alice", email: "alice@test.com", role: "user" };
-    mockApiFetch.mockResolvedValueOnce(mockUser);
+    // F1.7a: getMe now uses callContract → apiFetchJson
+    mockApiFetchJson.mockResolvedValueOnce(mockUser);
 
     const result = await getMe();
-    expect(mockApiFetch).toHaveBeenCalledWith("/auth/me");
+    expect(mockApiFetchJson).toHaveBeenCalledWith(
+      "/auth/me",
+      expect.objectContaining({ method: "GET" }),
+    );
     expect(result.username).toBe("alice");
   });
 

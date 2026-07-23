@@ -8,9 +8,15 @@
  *   POST /governance/{id}/deny        → {status, decision_id, amendment}
  */
 
-import { apiFetchUnchecked } from "./client";
 import { callContract } from "./contracts/common";
 import { getPendingContract } from "./contracts/dashboard";
+import {
+  approveDecisionContract,
+  createGovernanceDecisionContract,
+  denyDecisionContract,
+  getGovernanceTimelineContract,
+  listGovernanceDecisionsContract,
+} from "./contracts/governance";
 
 // ── Types ────────────────────────────────────────────────────────
 
@@ -45,16 +51,14 @@ export function getPending(): Promise<PendingResponse> {
 
 /** Approve a pending governance decision by its ID. */
 export function approveDecision(id: string): Promise<ApproveResponse> {
-  return apiFetchUnchecked<ApproveResponse>(`/governance/${id}/approve`, {
-    method: "POST",
-  });
+  return callContract(approveDecisionContract, { params: { id } });
 }
 
 /** Deny a pending governance decision with an optional amendment. */
 export function denyDecision(id: string, amendment?: string): Promise<DenyResponse> {
-  return apiFetchUnchecked<DenyResponse>(`/governance/${id}/deny`, {
-    method: "POST",
-    body: JSON.stringify({ amendment: amendment ?? null }),
+  return callContract(denyDecisionContract, {
+    params: { id },
+    body: { amendment: amendment ?? null },
   });
 }
 
@@ -94,20 +98,24 @@ export function createGovernanceDecision(
   decision: GovernanceDecisionType,
   note?: string,
 ): Promise<GovernanceDecisionEntry> {
-  return apiFetchUnchecked(`/ideas/${ideaId}/governance/decision`, {
-    method: "POST",
-    body: JSON.stringify({ decision, note: note ?? null }),
+  return callContract(createGovernanceDecisionContract, {
+    params: { ideaId },
+    body: { decision, note: note ?? null },
   });
 }
 
 export function listGovernanceDecisions(
   ideaId: number,
 ): Promise<GovernanceDecisionListResponse> {
-  return apiFetchUnchecked(`/ideas/${ideaId}/governance/decisions`);
+  return callContract(listGovernanceDecisionsContract, {
+    params: { ideaId },
+  });
 }
 
 export function getGovernanceTimeline(
   ideaId: number,
 ): Promise<TimelineResponse> {
-  return apiFetchUnchecked(`/ideas/${ideaId}/governance/timeline`);
+  return callContract(getGovernanceTimelineContract, {
+    params: { ideaId },
+  });
 }

@@ -1,7 +1,13 @@
-import { apiFetchUnchecked } from "./client";
 import { callContract } from "./contracts/common";
 import { listIdeasContract } from "./contracts/dashboard";
 import { getSectionRevisionsContract } from "./contracts/f1-3a-reads";
+import {
+  getIdeaContract,
+  refineIdeaContract,
+  refineSectionContract,
+  restoreSectionContract,
+  submitFeedbackContract,
+} from "./contracts/ideas";
 import type {
   IdeaListResponse,
   IdeaDetail,
@@ -24,23 +30,20 @@ export function listIdeas(params?: {
 }
 
 export function getIdea(id: number): Promise<{ idea: IdeaDetail }> {
-  return apiFetchUnchecked(`/ideas/${id}`);
+  return callContract(getIdeaContract, { params: { id } });
 }
 
 export function submitFeedback(
   id: number,
   req: IdeaFeedbackRequest,
 ): Promise<{ id: number; user_rating: number; user_notes: string | null }> {
-  return apiFetchUnchecked(`/ideas/${id}/feedback`, {
-    method: "POST",
-    body: JSON.stringify(req),
-  });
+  return callContract(submitFeedbackContract, { params: { id }, body: req });
 }
 
 export function refineIdea(
   id: number,
 ): Promise<{ id: number; novelty_score: number; feasibility_score: number; proposal_title: string }> {
-  return apiFetchUnchecked(`/ideas/${id}/refine`, { method: "POST" });
+  return callContract(refineIdeaContract, { params: { id } });
 }
 
 // --- Section refinement (Release 2) ---
@@ -51,12 +54,12 @@ export function refineSection(
   expectedCurrentHash: string,
   triggerDetail?: Record<string, unknown>,
 ): Promise<SectionRefinementResponse> {
-  return apiFetchUnchecked(`/ideas/${ideaId}/sections/${sectionKey}/refine`, {
-    method: "POST",
-    body: JSON.stringify({
+  return callContract(refineSectionContract, {
+    params: { ideaId, sectionKey },
+    body: {
       expected_current_hash: expectedCurrentHash,
       trigger_detail: triggerDetail,
-    }),
+    },
   });
 }
 
@@ -66,9 +69,9 @@ export function restoreSection(
   revisionId: number,
   expectedCurrentHash: string,
 ): Promise<SectionRefinementResponse> {
-  return apiFetchUnchecked(`/ideas/${ideaId}/sections/${sectionKey}/restore/${revisionId}`, {
-    method: "POST",
-    body: JSON.stringify({ expected_current_hash: expectedCurrentHash }),
+  return callContract(restoreSectionContract, {
+    params: { ideaId, sectionKey, revisionId },
+    body: { expected_current_hash: expectedCurrentHash },
   });
 }
 

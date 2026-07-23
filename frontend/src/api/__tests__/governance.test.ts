@@ -11,9 +11,8 @@ vi.mock("@/api/client", () => ({
   apiFetchJson: vi.fn(),
 }));
 
-import { apiFetchJson, apiFetchUnchecked } from "@/api/client";
+import { apiFetchJson } from "@/api/client";
 
-const mockApiFetch = vi.mocked(apiFetchUnchecked);
 const mockApiFetchJson = vi.mocked(apiFetchJson);
 
 describe("BATCH-20/TASK-01: Governance API Client", () => {
@@ -47,13 +46,14 @@ describe("BATCH-20/TASK-01: Governance API Client", () => {
       status: "approved",
       decision_id: "gap_001",
     };
-    mockApiFetch.mockResolvedValueOnce(expected);
+    // F1.7a: approveDecision now uses callContract → apiFetchJson
+    mockApiFetchJson.mockResolvedValueOnce(expected);
 
     const result = await approveDecision("gap_001");
 
-    expect(mockApiFetch).toHaveBeenCalledWith(
+    expect(mockApiFetchJson).toHaveBeenCalledWith(
       "/governance/gap_001/approve",
-      { method: "POST" },
+      expect.objectContaining({ method: "POST" }),
     );
     expect(result).toEqual(expected);
   });
@@ -65,16 +65,17 @@ describe("BATCH-20/TASK-01: Governance API Client", () => {
       decision_id: "gap_002",
       amendment: "Revise methodology section",
     };
-    mockApiFetch.mockResolvedValueOnce(expected);
+    // F1.7a: denyDecision now uses callContract → apiFetchJson
+    mockApiFetchJson.mockResolvedValueOnce(expected);
 
     const result = await denyDecision("gap_002", "Revise methodology section");
 
-    expect(mockApiFetch).toHaveBeenCalledWith(
+    expect(mockApiFetchJson).toHaveBeenCalledWith(
       "/governance/gap_002/deny",
-      {
+      expect.objectContaining({
         method: "POST",
         body: JSON.stringify({ amendment: "Revise methodology section" }),
-      },
+      }),
     );
     expect(result).toEqual(expected);
   });

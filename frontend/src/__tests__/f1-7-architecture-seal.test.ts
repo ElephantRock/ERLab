@@ -236,9 +236,9 @@ describe("F1.7 seal — raw fetch boundary", () => {
 // ════════════════════════════════════════════════════════════════════
 
 describe("F1.7 seal — unchecked caller budget", () => {
-  it("unchecked caller count matches budget (58)", () => {
-    // Mirror the budget script's counting: skip __tests__ dirs, skip the
-    // function definition in client.ts, skip comment lines.
+  it("unchecked caller count matches budget (0 — all material callers migrated to contracts)", () => {
+    // F1.7a: all 58 material apiFetchUnchecked callers migrated to
+    // callContract with runtime decoders. The budget is now 0.
     let count = 0;
     for (const rel of walkSrc(false)) {
       // Skip test files (the budget script skips __tests__ dirs).
@@ -251,12 +251,12 @@ describe("F1.7 seal — unchecked caller budget", () => {
         if (/apiFetchUnchecked[<(]/.test(line)) count++;
       }
     }
-    expect(count).toBe(58);
+    expect(count).toBe(0);
   });
 
-  it("material unchecked callers are explicitly approved (budget frozen at 58)", () => {
+  it("material unchecked callers are 0 (budget frozen at 0 after F1.7a migration)", () => {
     const budget = JSON.parse(readFrontend("api-unchecked-budget.json"));
-    expect(budget.total_callers).toBe(58);
+    expect(budget.total_callers).toBe(0);
   });
 });
 
@@ -270,11 +270,14 @@ describe("F1.7 seal — FormData boundary", () => {
     expect(src).toMatch(/export async function apiFetchFormData/);
   });
 
-  it("apiFetchFormData callers are inventoried (1 production caller: knowledge.ts)", () => {
+  it("apiFetchFormData is called only through the contract layer (callFormDataContract in common.ts)", () => {
+    // F1.7a: the sole production caller of apiFetchFormData is now
+    // callFormDataContract in common.ts. No API module calls it directly.
     let count = 0;
     for (const rel of walkSrc(false)) {
       if (rel.includes(".test.") || rel.includes("__tests__/")) continue;
-      if (rel === "api/client.ts") continue; // definition file
+      // Allow: client.ts (definition) and common.ts (contract transport)
+      if (rel === "api/client.ts" || rel === "api/contracts/common.ts") continue;
       const content = read(rel);
       for (const line of content.split(/\r?\n/)) {
         const stripped = line.trimStart();
@@ -282,7 +285,7 @@ describe("F1.7 seal — FormData boundary", () => {
         if (/apiFetchFormData[<(]/.test(line)) count++;
       }
     }
-    expect(count).toBe(1);
+    expect(count).toBe(0);
   });
 });
 
@@ -326,8 +329,9 @@ describe("F1.7 seal — suppressions", () => {
 
   it("zero `as unknown as` in production source (excluding pre-F1.7 approved exceptions)", () => {
     // Pre-existing approved exceptions (documented in F1.7 inventory):
-    // - common.ts:206 — decoder generic return cast (structurally required)
-    const APPROVED = ["api/contracts/common.ts"];
+    // - common.ts — decoder generic return cast (structurally required by decodeObject)
+    // - costs.ts — same decoder generic return cast pattern (BreakdownRecord decoder)
+    const APPROVED = ["api/contracts/common.ts", "api/contracts/costs.ts"];
     const offenders: string[] = [];
     for (const rel of walkSrc(true)) {
       if (APPROVED.includes(rel)) continue;
