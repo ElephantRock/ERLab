@@ -259,6 +259,98 @@ describe("F1.6.4 adversarial — no double reporting", () => {
     await new Promise((r) => setTimeout(r, 50));
     expect(mockSend.mock.calls.length).toBe(callsAfterFirst);
   });
+
+  // F1.6a: the load-bearing cross-channel dedup test.
+  // Proves the frozen invariant: React boundary catches an Error as
+  // render_error → window.error observer receives the SAME Error as
+  // global_error → shared registry recognizes one incident → one
+  // canonical event ID → one transport call.
+  //
+  // Uses PRODUCTION wiring throughout: RootErrorBoundary (not a test
+  // replica), installRuntimeObservers (the production module),
+  // reportRuntimeError (the production reporter), registerIncident
+  // (the production registry). Mocks ONLY sendRuntimeErrorReport.
+  it("F1.6a: boundary render_error + observer global_error for SAME Error → one transport call, one canonical event ID", async () => {
+    // Clear the incident registry to start from a known state.
+    resetIncidentRegistry();
+
+    // Install the PRODUCTION global observers.
+    installRuntimeObservers();
+    mockSend.mockClear();
+    mockSend.mockResolvedValue({ status: "accepted", event_id: "evt-cross" });
+
+    // Create a STABLE Error instance that both the boundary and the
+    // observer will see.
+    const sharedError = new Error("cross-channel incident");
+
+    // Component that ALWAYS throws the shared error. The boundary will
+    // catch it on every render; the Retry action is not exercised here.
+    function AlwaysThrow() {
+      throw sharedError;
+    }
+
+    // Render through the PRODUCTION RootErrorBoundary.
+    render(
+      <RootErrorBoundary>
+        <AlwaysThrow />
+      </RootErrorBoundary>,
+    );
+
+    // (a) Production fallback is visible.
+    await waitFor(() => {
+      expect(screen.getByTestId("root-error-fallback")).toBeInTheDocument();
+    });
+
+    // (b) The boundary's componentDidCatch called reportRuntimeError
+    //     synchronously → sendRuntimeErrorReport was dispatched once
+    //     (fire-and-forget).
+    await waitFor(() => {
+      expect(mockSend).toHaveBeenCalledTimes(1);
+    });
+
+    // (c) Capture the canonical event_id from the fallback UI.
+    const fallbackEventIdEl = screen.getByTestId("root-error-event-id");
+    const fallbackEventIdText = fallbackEventIdEl.textContent ?? "";
+    const fallbackEventId = fallbackEventIdText.replace(/^Reference:\s*/, "");
+    expect(fallbackEventId).toMatch(/^evt-/);
+
+    // (d) Capture the event_id submitted in the first (and only) report.
+    const firstReport = mockSend.mock.calls[0]?.[0];
+    expect(firstReport).toBeDefined();
+    const firstReportEventId = firstReport!.event_id;
+
+    // The fallback event_id MUST equal the transported canonical event_id.
+    expect(fallbackEventId).toBe(firstReportEventId);
+
+    // (e) Now dispatch the SAME Error instance via window.error — the
+    //     production global observer receives it as category=global_error.
+    window.dispatchEvent(
+      new ErrorEvent("error", {
+        error: sharedError,
+        message: sharedError.message,
+      }),
+    );
+
+    // Allow the observer's fire-and-forget to flush.
+    await new Promise((r) => setTimeout(r, 50));
+
+    // (f) Transport count is STILL 1 — the WeakMap identity dedup
+    //     recognized the same Error and suppressed the second send.
+    expect(mockSend).toHaveBeenCalledTimes(1);
+
+    // (g) No second event_id was generated — the registry returned the
+    //     canonical event_id from the first registration.
+    //     (If a second report had been sent, its event_id would differ.)
+    for (const call of mockSend.mock.calls) {
+      const report = call?.[0];
+      if (report) {
+        expect(report.event_id).toBe(firstReportEventId);
+      }
+    }
+
+    // (h) Observer teardown succeeds.
+    _forceUninstallForTesting();
+  });
 });
 
 // ── 5. ApiError reportable (no blanket suppression) ───────────────────
