@@ -1,0 +1,1656 @@
+{
+  "semantic_only": {
+    "p1b_macro": {
+      "ndcg_at_5": 0.9321,
+      "ndcg_at_10": 0.9321,
+      "mrr_at_10": 0.9886,
+      "precision_at_5": 0.7591,
+      "recall_at_20": 1.0
+    },
+    "tei_macro": {
+      "ndcg_at_5": 0.948,
+      "ndcg_at_10": 0.948,
+      "mrr_at_10": 1.0,
+      "precision_at_5": 0.7591,
+      "recall_at_20": 1.0
+    },
+    "n_identical_ranking": 25,
+    "n_different_ranking": 19,
+    "bootstrap_ci": {
+      "mean_delta": 0.015882488368304148,
+      "ci_lo": -0.0013263047664954937,
+      "ci_hi": 0.0343465599327378,
+      "significant": false,
+      "n_bootstrap": 10000
+    },
+    "per_query": [
+      {
+        "case_id": "bio_disc_ei_001",
+        "p1b_ndcg5": 0.7440703268680953,
+        "tei_ndcg5": 0.9607618369839247,
+        "delta": 0.21669151011582943,
+        "p1b_ranking": [
+          1,
+          3,
+          2,
+          3
+        ],
+        "tei_ranking": [
+          3,
+          2,
+          3,
+          1
+        ]
+      },
+      {
+        "case_id": "bio_disc_lt_001",
+        "p1b_ndcg5": 0.8579514172105233,
+        "tei_ndcg5": 0.8579514172105233,
+        "delta": 0.0,
+        "p1b_ranking": [
+          2,
+          3,
+          2,
+          0
+        ],
+        "tei_ranking": [
+          2,
+          3,
+          2,
+          0
+        ]
+      },
+      {
+        "case_id": "bio_disc_ma_001",
+        "p1b_ndcg5": 1.0,
+        "tei_ndcg5": 1.0,
+        "delta": 0.0,
+        "p1b_ranking": [
+          3,
+          2,
+          2,
+          2
+        ],
+        "tei_ranking": [
+          3,
+          2,
+          2,
+          2
+        ]
+      },
+      {
+        "case_id": "bio_disc_mv_001",
+        "p1b_ndcg5": 0.8636036727577974,
+        "tei_ndcg5": 0.8636036727577974,
+        "delta": 0.0,
+        "p1b_ranking": [
+          2,
+          3,
+          2,
+          1
+        ],
+        "tei_ranking": [
+          2,
+          3,
+          2,
+          1
+        ]
+      },
+      {
+        "case_id": "bio_disc_nd_001",
+        "p1b_ndcg5": 0.9947185635479169,
+        "tei_ndcg5": 1.0,
+        "delta": 0.005281436452083121,
+        "p1b_ranking": [
+          3,
+          3,
+          3,
+          1,
+          2
+        ],
+        "tei_ranking": [
+          3,
+          3,
+          3,
+          2,
+          1
+        ]
+      },
+      {
+        "case_id": "bio_disc_nf_001",
+        "p1b_ndcg5": 0.850155667654792,
+        "tei_ndcg5": 0.850155667654792,
+        "delta": 0.0,
+        "p1b_ranking": [
+          2,
+          3,
+          3,
+          1
+        ],
+        "tei_ranking": [
+          2,
+          3,
+          3,
+          1
+        ]
+      },
+      {
+        "case_id": "bio_disc_sr_001",
+        "p1b_ndcg5": 0.8451593915771352,
+        "tei_ndcg5": 0.8451593915771352,
+        "delta": 0.0,
+        "p1b_ranking": [
+          2,
+          3,
+          3,
+          0
+        ],
+        "tei_ranking": [
+          2,
+          3,
+          3,
+          0
+        ]
+      },
+      {
+        "case_id": "bio_ret_ac_001",
+        "p1b_ndcg5": 1.0,
+        "tei_ndcg5": 1.0,
+        "delta": 0.0,
+        "p1b_ranking": [
+          3,
+          2,
+          2,
+          0
+        ],
+        "tei_ranking": [
+          3,
+          2,
+          2,
+          0
+        ]
+      },
+      {
+        "case_id": "bio_ret_ei_001",
+        "p1b_ndcg5": 0.8288377414201497,
+        "tei_ndcg5": 1.0,
+        "delta": 0.17116225857985035,
+        "p1b_ranking": [
+          2,
+          2,
+          3,
+          2
+        ],
+        "tei_ranking": [
+          3,
+          2,
+          2,
+          2
+        ]
+      },
+      {
+        "case_id": "bio_ret_lt_001",
+        "p1b_ndcg5": 0.8075900978365448,
+        "tei_ndcg5": 0.8451593915771352,
+        "delta": 0.03756929374059037,
+        "p1b_ranking": [
+          2,
+          3,
+          0,
+          3
+        ],
+        "tei_ranking": [
+          2,
+          3,
+          3,
+          0
+        ]
+      },
+      {
+        "case_id": "bio_ret_nd_001",
+        "p1b_ndcg5": 1.0,
+        "tei_ndcg5": 1.0,
+        "delta": 0.0,
+        "p1b_ranking": [
+          3,
+          3,
+          3,
+          1,
+          1
+        ],
+        "tei_ranking": [
+          3,
+          3,
+          3,
+          1,
+          1
+        ]
+      },
+      {
+        "case_id": "bio_ret_rv_001",
+        "p1b_ndcg5": 0.9592296244131938,
+        "tei_ndcg5": 0.9592296244131938,
+        "delta": 0.0,
+        "p1b_ranking": [
+          3,
+          1,
+          1,
+          2
+        ],
+        "tei_ranking": [
+          3,
+          1,
+          1,
+          2
+        ]
+      },
+      {
+        "case_id": "bio_ret_sp_001",
+        "p1b_ndcg5": 1.0,
+        "tei_ndcg5": 1.0,
+        "delta": 0.0,
+        "p1b_ranking": [
+          3,
+          3,
+          3,
+          2
+        ],
+        "tei_ranking": [
+          3,
+          3,
+          3,
+          2
+        ]
+      },
+      {
+        "case_id": "bio_ret_sr_001",
+        "p1b_ndcg5": 0.6914596415193961,
+        "tei_ndcg5": 0.8075900978365448,
+        "delta": 0.11613045631714869,
+        "p1b_ranking": [
+          0,
+          3,
+          2,
+          3
+        ],
+        "tei_ranking": [
+          2,
+          3,
+          0,
+          3
+        ]
+      },
+      {
+        "case_id": "ml_disc_ac_001",
+        "p1b_ndcg5": 1.0,
+        "tei_ndcg5": 1.0,
+        "delta": 0.0,
+        "p1b_ranking": [
+          3,
+          2,
+          2,
+          1
+        ],
+        "tei_ranking": [
+          3,
+          2,
+          2,
+          1
+        ]
+      },
+      {
+        "case_id": "ml_disc_ei_001",
+        "p1b_ndcg5": 1.0,
+        "tei_ndcg5": 1.0,
+        "delta": 0.0,
+        "p1b_ranking": [
+          3,
+          2,
+          2,
+          2
+        ],
+        "tei_ranking": [
+          3,
+          2,
+          2,
+          2
+        ]
+      },
+      {
+        "case_id": "ml_disc_lt_001",
+        "p1b_ndcg5": 1.0,
+        "tei_ndcg5": 0.9340764506431116,
+        "delta": -0.06592354935688838,
+        "p1b_ranking": [
+          3,
+          3,
+          1,
+          0
+        ],
+        "tei_ranking": [
+          3,
+          1,
+          3,
+          0
+        ]
+      },
+      {
+        "case_id": "ml_disc_ma_001",
+        "p1b_ndcg5": 1.0,
+        "tei_ndcg5": 1.0,
+        "delta": 0.0,
+        "p1b_ranking": [
+          3,
+          3,
+          3,
+          2
+        ],
+        "tei_ranking": [
+          3,
+          3,
+          3,
+          2
+        ]
+      },
+      {
+        "case_id": "ml_disc_nt_001",
+        "p1b_ndcg5": 0.929598662369832,
+        "tei_ndcg5": 0.9607618369839247,
+        "delta": 0.03116317461409268,
+        "p1b_ranking": [
+          3,
+          2,
+          1,
+          3
+        ],
+        "tei_ranking": [
+          3,
+          2,
+          3,
+          1
+        ]
+      },
+      {
+        "case_id": "ml_disc_rv_001",
+        "p1b_ndcg5": 0.723342551541823,
+        "tei_ndcg5": 0.723342551541823,
+        "delta": 0.0,
+        "p1b_ranking": [
+          1,
+          3,
+          1,
+          3
+        ],
+        "tei_ranking": [
+          1,
+          3,
+          1,
+          3
+        ]
+      },
+      {
+        "case_id": "ml_disc_sp_001",
+        "p1b_ndcg5": 0.9629964747243054,
+        "tei_ndcg5": 1.0,
+        "delta": 0.037003525275694615,
+        "p1b_ranking": [
+          3,
+          1,
+          2,
+          2
+        ],
+        "tei_ranking": [
+          3,
+          2,
+          2,
+          1
+        ]
+      },
+      {
+        "case_id": "ml_disc_sr_001",
+        "p1b_ndcg5": 1.0,
+        "tei_ndcg5": 1.0,
+        "delta": 0.0,
+        "p1b_ranking": [
+          3,
+          3,
+          1,
+          0
+        ],
+        "tei_ranking": [
+          3,
+          3,
+          1,
+          0
+        ]
+      },
+      {
+        "case_id": "ml_ret_ac_001",
+        "p1b_ndcg5": 1.0,
+        "tei_ndcg5": 1.0,
+        "delta": 0.0,
+        "p1b_ranking": [
+          3,
+          2,
+          2,
+          0
+        ],
+        "tei_ranking": [
+          3,
+          2,
+          2,
+          0
+        ]
+      },
+      {
+        "case_id": "ml_ret_ma_001",
+        "p1b_ndcg5": 0.929598662369832,
+        "tei_ndcg5": 0.9099795808617943,
+        "delta": -0.019619081508037706,
+        "p1b_ranking": [
+          3,
+          2,
+          1,
+          3
+        ],
+        "tei_ranking": [
+          3,
+          1,
+          2,
+          3
+        ]
+      },
+      {
+        "case_id": "ml_ret_mv_001",
+        "p1b_ndcg5": 1.0,
+        "tei_ndcg5": 0.850155667654792,
+        "delta": -0.149844332345208,
+        "p1b_ranking": [
+          3,
+          3,
+          2,
+          1
+        ],
+        "tei_ranking": [
+          2,
+          3,
+          3,
+          1
+        ]
+      },
+      {
+        "case_id": "ml_ret_nd_001",
+        "p1b_ndcg5": 0.9117549143907997,
+        "tei_ndcg5": 1.0,
+        "delta": 0.0882450856092003,
+        "p1b_ranking": [
+          3,
+          1,
+          3,
+          2,
+          3
+        ],
+        "tei_ranking": [
+          3,
+          3,
+          3,
+          2,
+          1
+        ]
+      },
+      {
+        "case_id": "ml_ret_nf_001",
+        "p1b_ndcg5": 1.0,
+        "tei_ndcg5": 1.0,
+        "delta": 0.0,
+        "p1b_ranking": [
+          3,
+          3,
+          3,
+          3
+        ],
+        "tei_ranking": [
+          3,
+          3,
+          3,
+          3
+        ]
+      },
+      {
+        "case_id": "ml_ret_nt_001",
+        "p1b_ndcg5": 0.8736582060933373,
+        "tei_ndcg5": 1.0,
+        "delta": 0.12634179390666267,
+        "p1b_ranking": [
+          2,
+          3,
+          2,
+          2
+        ],
+        "tei_ranking": [
+          3,
+          2,
+          2,
+          2
+        ]
+      },
+      {
+        "case_id": "ml_ret_sp_001",
+        "p1b_ndcg5": 0.8595003587096537,
+        "tei_ndcg5": 0.8595003587096537,
+        "delta": 0.0,
+        "p1b_ranking": [
+          2,
+          3,
+          3,
+          3
+        ],
+        "tei_ranking": [
+          2,
+          3,
+          3,
+          3
+        ]
+      },
+      {
+        "case_id": "nlp_disc_ac_001",
+        "p1b_ndcg5": 1.0,
+        "tei_ndcg5": 1.0,
+        "delta": 0.0,
+        "p1b_ranking": [
+          3,
+          3,
+          3,
+          0
+        ],
+        "tei_ranking": [
+          3,
+          3,
+          3,
+          0
+        ]
+      },
+      {
+        "case_id": "nlp_disc_mv_001",
+        "p1b_ndcg5": 0.8636036727577974,
+        "tei_ndcg5": 0.9871901582936081,
+        "delta": 0.12358648553581075,
+        "p1b_ranking": [
+          2,
+          3,
+          2,
+          1
+        ],
+        "tei_ranking": [
+          3,
+          2,
+          1,
+          2
+        ]
+      },
+      {
+        "case_id": "nlp_disc_nd_001",
+        "p1b_ndcg5": 0.9840352219951628,
+        "tei_ndcg5": 0.9840352219951628,
+        "delta": 0.0,
+        "p1b_ranking": [
+          3,
+          3,
+          2,
+          3,
+          2
+        ],
+        "tei_ranking": [
+          3,
+          3,
+          2,
+          3,
+          2
+        ]
+      },
+      {
+        "case_id": "nlp_disc_nf_001",
+        "p1b_ndcg5": 1.0,
+        "tei_ndcg5": 1.0,
+        "delta": 0.0,
+        "p1b_ranking": [
+          3,
+          3,
+          3,
+          3
+        ],
+        "tei_ranking": [
+          3,
+          3,
+          3,
+          3
+        ]
+      },
+      {
+        "case_id": "nlp_disc_nt_001",
+        "p1b_ndcg5": 0.9631405415421672,
+        "tei_ndcg5": 1.0,
+        "delta": 0.03685945845783278,
+        "p1b_ranking": [
+          3,
+          2,
+          3,
+          2
+        ],
+        "tei_ranking": [
+          3,
+          3,
+          2,
+          2
+        ]
+      },
+      {
+        "case_id": "nlp_disc_rv_001",
+        "p1b_ndcg5": 1.0,
+        "tei_ndcg5": 1.0,
+        "delta": 0.0,
+        "p1b_ranking": [
+          3,
+          3,
+          1,
+          1
+        ],
+        "tei_ranking": [
+          3,
+          3,
+          1,
+          1
+        ]
+      },
+      {
+        "case_id": "nlp_disc_sp_001",
+        "p1b_ndcg5": 0.9594535145926796,
+        "tei_ndcg5": 0.9129425246483648,
+        "delta": -0.046510989944314796,
+        "p1b_ranking": [
+          3,
+          2,
+          3,
+          0
+        ],
+        "tei_ranking": [
+          3,
+          0,
+          3,
+          2
+        ]
+      },
+      {
+        "case_id": "nlp_ret_ei_001",
+        "p1b_ndcg5": 0.8075588805057204,
+        "tei_ndcg5": 0.8579514172105233,
+        "delta": 0.050392536704802815,
+        "p1b_ranking": [
+          2,
+          2,
+          3,
+          0
+        ],
+        "tei_ranking": [
+          2,
+          3,
+          2,
+          0
+        ]
+      },
+      {
+        "case_id": "nlp_ret_lt_001",
+        "p1b_ndcg5": 1.0,
+        "tei_ndcg5": 1.0,
+        "delta": 0.0,
+        "p1b_ranking": [
+          3,
+          3,
+          3,
+          0
+        ],
+        "tei_ranking": [
+          3,
+          3,
+          3,
+          0
+        ]
+      },
+      {
+        "case_id": "nlp_ret_ma_001",
+        "p1b_ndcg5": 1.0,
+        "tei_ndcg5": 1.0,
+        "delta": 0.0,
+        "p1b_ranking": [
+          3,
+          3,
+          3,
+          3
+        ],
+        "tei_ranking": [
+          3,
+          3,
+          3,
+          3
+        ]
+      },
+      {
+        "case_id": "nlp_ret_mv_001",
+        "p1b_ndcg5": 0.8592395637645646,
+        "tei_ndcg5": 0.8592395637645646,
+        "delta": 0.0,
+        "p1b_ranking": [
+          2,
+          3,
+          3,
+          2
+        ],
+        "tei_ranking": [
+          2,
+          3,
+          3,
+          2
+        ]
+      },
+      {
+        "case_id": "nlp_ret_nf_001",
+        "p1b_ndcg5": 1.0,
+        "tei_ndcg5": 0.9607618369839247,
+        "delta": -0.0392381630160753,
+        "p1b_ranking": [
+          3,
+          3,
+          2,
+          1
+        ],
+        "tei_ranking": [
+          3,
+          2,
+          3,
+          1
+        ]
+      },
+      {
+        "case_id": "nlp_ret_nt_001",
+        "p1b_ndcg5": 0.9828921171931015,
+        "tei_ndcg5": 1.0,
+        "delta": 0.017107882806898456,
+        "p1b_ranking": [
+          3,
+          3,
+          2,
+          3
+        ],
+        "tei_ranking": [
+          3,
+          3,
+          3,
+          2
+        ]
+      },
+      {
+        "case_id": "nlp_ret_rv_001",
+        "p1b_ndcg5": 1.0,
+        "tei_ndcg5": 1.0,
+        "delta": 0.0,
+        "p1b_ranking": [
+          3,
+          1,
+          1,
+          1
+        ],
+        "tei_ranking": [
+          3,
+          1,
+          1,
+          1
+        ]
+      },
+      {
+        "case_id": "nlp_ret_sr_001",
+        "p1b_ndcg5": 0.9594535145926796,
+        "tei_ndcg5": 0.9218842208520892,
+        "delta": -0.03756929374059037,
+        "p1b_ranking": [
+          3,
+          2,
+          3,
+          0
+        ],
+        "tei_ranking": [
+          3,
+          2,
+          0,
+          3
+        ]
+      }
+    ]
+  },
+  "hybrid_rrf": {
+    "p1b_macro": {
+      "ndcg_at_5": 0.9561,
+      "ndcg_at_10": 0.9561,
+      "mrr_at_10": 1.0,
+      "precision_at_5": 0.7591,
+      "recall_at_20": 1.0
+    },
+    "tei_macro": {
+      "ndcg_at_5": 0.9517,
+      "ndcg_at_10": 0.9517,
+      "mrr_at_10": 1.0,
+      "precision_at_5": 0.7591,
+      "recall_at_20": 1.0
+    },
+    "n_identical_ranking": 30,
+    "n_different_ranking": 14,
+    "bootstrap_ci": {
+      "mean_delta": -0.004379689049490066,
+      "ci_lo": -0.014668221946453586,
+      "ci_hi": 0.00434069920479692,
+      "significant": false,
+      "n_bootstrap": 10000
+    },
+    "per_query": [
+      {
+        "case_id": "bio_disc_ei_001",
+        "p1b_ndcg5": 0.9099795808617943,
+        "tei_ndcg5": 0.9607618369839247,
+        "delta": 0.05078225612213039,
+        "p1b_ranking": [
+          3,
+          1,
+          2,
+          3
+        ],
+        "tei_ranking": [
+          3,
+          2,
+          3,
+          1
+        ]
+      },
+      {
+        "case_id": "bio_disc_lt_001",
+        "p1b_ndcg5": 0.8579514172105233,
+        "tei_ndcg5": 0.8579514172105233,
+        "delta": 0.0,
+        "p1b_ranking": [
+          2,
+          3,
+          2,
+          0
+        ],
+        "tei_ranking": [
+          2,
+          3,
+          2,
+          0
+        ]
+      },
+      {
+        "case_id": "bio_disc_ma_001",
+        "p1b_ndcg5": 1.0,
+        "tei_ndcg5": 1.0,
+        "delta": 0.0,
+        "p1b_ranking": [
+          3,
+          2,
+          2,
+          2
+        ],
+        "tei_ranking": [
+          3,
+          2,
+          2,
+          2
+        ]
+      },
+      {
+        "case_id": "bio_disc_mv_001",
+        "p1b_ndcg5": 1.0,
+        "tei_ndcg5": 1.0,
+        "delta": 0.0,
+        "p1b_ranking": [
+          3,
+          2,
+          2,
+          1
+        ],
+        "tei_ranking": [
+          3,
+          2,
+          2,
+          1
+        ]
+      },
+      {
+        "case_id": "bio_disc_nd_001",
+        "p1b_ndcg5": 1.0,
+        "tei_ndcg5": 1.0,
+        "delta": 0.0,
+        "p1b_ranking": [
+          3,
+          3,
+          3,
+          2,
+          1
+        ],
+        "tei_ranking": [
+          3,
+          3,
+          3,
+          2,
+          1
+        ]
+      },
+      {
+        "case_id": "bio_disc_nf_001",
+        "p1b_ndcg5": 0.850155667654792,
+        "tei_ndcg5": 0.850155667654792,
+        "delta": 0.0,
+        "p1b_ranking": [
+          2,
+          3,
+          3,
+          1
+        ],
+        "tei_ranking": [
+          2,
+          3,
+          3,
+          1
+        ]
+      },
+      {
+        "case_id": "bio_disc_sr_001",
+        "p1b_ndcg5": 0.8451593915771352,
+        "tei_ndcg5": 0.8451593915771352,
+        "delta": 0.0,
+        "p1b_ranking": [
+          2,
+          3,
+          3,
+          0
+        ],
+        "tei_ranking": [
+          2,
+          3,
+          3,
+          0
+        ]
+      },
+      {
+        "case_id": "bio_ret_ac_001",
+        "p1b_ndcg5": 1.0,
+        "tei_ndcg5": 0.8579514172105233,
+        "delta": -0.14204858278947674,
+        "p1b_ranking": [
+          3,
+          2,
+          2,
+          0
+        ],
+        "tei_ranking": [
+          2,
+          3,
+          2,
+          0
+        ]
+      },
+      {
+        "case_id": "bio_ret_ei_001",
+        "p1b_ndcg5": 0.8288377414201497,
+        "tei_ndcg5": 0.8736582060933373,
+        "delta": 0.04482046467318768,
+        "p1b_ranking": [
+          2,
+          2,
+          3,
+          2
+        ],
+        "tei_ranking": [
+          2,
+          3,
+          2,
+          2
+        ]
+      },
+      {
+        "case_id": "bio_ret_lt_001",
+        "p1b_ndcg5": 0.8075900978365448,
+        "tei_ndcg5": 0.8075900978365448,
+        "delta": 0.0,
+        "p1b_ranking": [
+          2,
+          3,
+          0,
+          3
+        ],
+        "tei_ranking": [
+          2,
+          3,
+          0,
+          3
+        ]
+      },
+      {
+        "case_id": "bio_ret_nd_001",
+        "p1b_ndcg5": 1.0,
+        "tei_ndcg5": 1.0,
+        "delta": 0.0,
+        "p1b_ranking": [
+          3,
+          3,
+          3,
+          1,
+          1
+        ],
+        "tei_ranking": [
+          3,
+          3,
+          3,
+          1,
+          1
+        ]
+      },
+      {
+        "case_id": "bio_ret_rv_001",
+        "p1b_ndcg5": 0.9592296244131938,
+        "tei_ndcg5": 0.9592296244131938,
+        "delta": 0.0,
+        "p1b_ranking": [
+          3,
+          1,
+          1,
+          2
+        ],
+        "tei_ranking": [
+          3,
+          1,
+          1,
+          2
+        ]
+      },
+      {
+        "case_id": "bio_ret_sp_001",
+        "p1b_ndcg5": 1.0,
+        "tei_ndcg5": 1.0,
+        "delta": 0.0,
+        "p1b_ranking": [
+          3,
+          3,
+          3,
+          2
+        ],
+        "tei_ranking": [
+          3,
+          3,
+          3,
+          2
+        ]
+      },
+      {
+        "case_id": "bio_ret_sr_001",
+        "p1b_ndcg5": 0.8914743567965988,
+        "tei_ndcg5": 0.9218842208520892,
+        "delta": 0.0304098640554904,
+        "p1b_ranking": [
+          3,
+          0,
+          2,
+          3
+        ],
+        "tei_ranking": [
+          3,
+          2,
+          0,
+          3
+        ]
+      },
+      {
+        "case_id": "ml_disc_ac_001",
+        "p1b_ndcg5": 1.0,
+        "tei_ndcg5": 1.0,
+        "delta": 0.0,
+        "p1b_ranking": [
+          3,
+          2,
+          2,
+          1
+        ],
+        "tei_ranking": [
+          3,
+          2,
+          2,
+          1
+        ]
+      },
+      {
+        "case_id": "ml_disc_ei_001",
+        "p1b_ndcg5": 1.0,
+        "tei_ndcg5": 1.0,
+        "delta": 0.0,
+        "p1b_ranking": [
+          3,
+          2,
+          2,
+          2
+        ],
+        "tei_ranking": [
+          3,
+          2,
+          2,
+          2
+        ]
+      },
+      {
+        "case_id": "ml_disc_lt_001",
+        "p1b_ndcg5": 1.0,
+        "tei_ndcg5": 1.0,
+        "delta": 0.0,
+        "p1b_ranking": [
+          3,
+          3,
+          1,
+          0
+        ],
+        "tei_ranking": [
+          3,
+          3,
+          1,
+          0
+        ]
+      },
+      {
+        "case_id": "ml_disc_ma_001",
+        "p1b_ndcg5": 1.0,
+        "tei_ndcg5": 1.0,
+        "delta": 0.0,
+        "p1b_ranking": [
+          3,
+          3,
+          3,
+          2
+        ],
+        "tei_ranking": [
+          3,
+          3,
+          3,
+          2
+        ]
+      },
+      {
+        "case_id": "ml_disc_nt_001",
+        "p1b_ndcg5": 0.8189924930406992,
+        "tei_ndcg5": 0.8189924930406992,
+        "delta": 0.0,
+        "p1b_ranking": [
+          2,
+          3,
+          1,
+          3
+        ],
+        "tei_ranking": [
+          2,
+          3,
+          1,
+          3
+        ]
+      },
+      {
+        "case_id": "ml_disc_rv_001",
+        "p1b_ndcg5": 0.9363759000898353,
+        "tei_ndcg5": 0.9363759000898353,
+        "delta": 0.0,
+        "p1b_ranking": [
+          3,
+          1,
+          3,
+          1
+        ],
+        "tei_ranking": [
+          3,
+          1,
+          3,
+          1
+        ]
+      },
+      {
+        "case_id": "ml_disc_sp_001",
+        "p1b_ndcg5": 0.9871901582936081,
+        "tei_ndcg5": 1.0,
+        "delta": 0.012809841706391878,
+        "p1b_ranking": [
+          3,
+          2,
+          1,
+          2
+        ],
+        "tei_ranking": [
+          3,
+          2,
+          2,
+          1
+        ]
+      },
+      {
+        "case_id": "ml_disc_sr_001",
+        "p1b_ndcg5": 1.0,
+        "tei_ndcg5": 1.0,
+        "delta": 0.0,
+        "p1b_ranking": [
+          3,
+          3,
+          1,
+          0
+        ],
+        "tei_ranking": [
+          3,
+          3,
+          1,
+          0
+        ]
+      },
+      {
+        "case_id": "ml_ret_ac_001",
+        "p1b_ndcg5": 1.0,
+        "tei_ndcg5": 1.0,
+        "delta": 0.0,
+        "p1b_ranking": [
+          3,
+          2,
+          2,
+          0
+        ],
+        "tei_ranking": [
+          3,
+          2,
+          2,
+          0
+        ]
+      },
+      {
+        "case_id": "ml_ret_ma_001",
+        "p1b_ndcg5": 0.9607618369839247,
+        "tei_ndcg5": 0.929598662369832,
+        "delta": -0.03116317461409268,
+        "p1b_ranking": [
+          3,
+          2,
+          3,
+          1
+        ],
+        "tei_ranking": [
+          3,
+          2,
+          1,
+          3
+        ]
+      },
+      {
+        "case_id": "ml_ret_mv_001",
+        "p1b_ndcg5": 1.0,
+        "tei_ndcg5": 0.9607618369839247,
+        "delta": -0.0392381630160753,
+        "p1b_ranking": [
+          3,
+          3,
+          2,
+          1
+        ],
+        "tei_ranking": [
+          3,
+          2,
+          3,
+          1
+        ]
+      },
+      {
+        "case_id": "ml_ret_nd_001",
+        "p1b_ndcg5": 0.9223177872949657,
+        "tei_ndcg5": 0.9696549384929988,
+        "delta": 0.047337151198033056,
+        "p1b_ranking": [
+          3,
+          1,
+          3,
+          3,
+          2
+        ],
+        "tei_ranking": [
+          3,
+          3,
+          1,
+          3,
+          2
+        ]
+      },
+      {
+        "case_id": "ml_ret_nf_001",
+        "p1b_ndcg5": 1.0,
+        "tei_ndcg5": 1.0,
+        "delta": 0.0,
+        "p1b_ranking": [
+          3,
+          3,
+          3,
+          3
+        ],
+        "tei_ranking": [
+          3,
+          3,
+          3,
+          3
+        ]
+      },
+      {
+        "case_id": "ml_ret_nt_001",
+        "p1b_ndcg5": 1.0,
+        "tei_ndcg5": 1.0,
+        "delta": 0.0,
+        "p1b_ranking": [
+          3,
+          2,
+          2,
+          2
+        ],
+        "tei_ranking": [
+          3,
+          2,
+          2,
+          2
+        ]
+      },
+      {
+        "case_id": "ml_ret_sp_001",
+        "p1b_ndcg5": 0.8595003587096537,
+        "tei_ndcg5": 0.8595003587096537,
+        "delta": 0.0,
+        "p1b_ranking": [
+          2,
+          3,
+          3,
+          3
+        ],
+        "tei_ranking": [
+          2,
+          3,
+          3,
+          3
+        ]
+      },
+      {
+        "case_id": "nlp_disc_ac_001",
+        "p1b_ndcg5": 1.0,
+        "tei_ndcg5": 1.0,
+        "delta": 0.0,
+        "p1b_ranking": [
+          3,
+          3,
+          3,
+          0
+        ],
+        "tei_ranking": [
+          3,
+          3,
+          3,
+          0
+        ]
+      },
+      {
+        "case_id": "nlp_disc_mv_001",
+        "p1b_ndcg5": 0.9871901582936081,
+        "tei_ndcg5": 0.9629964747243054,
+        "delta": -0.024193683569302737,
+        "p1b_ranking": [
+          3,
+          2,
+          1,
+          2
+        ],
+        "tei_ranking": [
+          3,
+          1,
+          2,
+          2
+        ]
+      },
+      {
+        "case_id": "nlp_disc_nd_001",
+        "p1b_ndcg5": 1.0,
+        "tei_ndcg5": 1.0,
+        "delta": 0.0,
+        "p1b_ranking": [
+          3,
+          3,
+          3,
+          2,
+          2
+        ],
+        "tei_ranking": [
+          3,
+          3,
+          3,
+          2,
+          2
+        ]
+      },
+      {
+        "case_id": "nlp_disc_nf_001",
+        "p1b_ndcg5": 1.0,
+        "tei_ndcg5": 1.0,
+        "delta": 0.0,
+        "p1b_ranking": [
+          3,
+          3,
+          3,
+          3
+        ],
+        "tei_ranking": [
+          3,
+          3,
+          3,
+          3
+        ]
+      },
+      {
+        "case_id": "nlp_disc_nt_001",
+        "p1b_ndcg5": 0.9631405415421672,
+        "tei_ndcg5": 1.0,
+        "delta": 0.03685945845783278,
+        "p1b_ranking": [
+          3,
+          2,
+          3,
+          2
+        ],
+        "tei_ranking": [
+          3,
+          3,
+          2,
+          2
+        ]
+      },
+      {
+        "case_id": "nlp_disc_rv_001",
+        "p1b_ndcg5": 1.0,
+        "tei_ndcg5": 1.0,
+        "delta": 0.0,
+        "p1b_ranking": [
+          3,
+          3,
+          1,
+          1
+        ],
+        "tei_ranking": [
+          3,
+          3,
+          1,
+          1
+        ]
+      },
+      {
+        "case_id": "nlp_disc_sp_001",
+        "p1b_ndcg5": 0.9594535145926796,
+        "tei_ndcg5": 0.8914743567965988,
+        "delta": -0.06797915779608077,
+        "p1b_ranking": [
+          3,
+          2,
+          3,
+          0
+        ],
+        "tei_ranking": [
+          3,
+          0,
+          2,
+          3
+        ]
+      },
+      {
+        "case_id": "nlp_ret_ei_001",
+        "p1b_ndcg5": 1.0,
+        "tei_ndcg5": 1.0,
+        "delta": 0.0,
+        "p1b_ranking": [
+          3,
+          2,
+          2,
+          0
+        ],
+        "tei_ranking": [
+          3,
+          2,
+          2,
+          0
+        ]
+      },
+      {
+        "case_id": "nlp_ret_lt_001",
+        "p1b_ndcg5": 1.0,
+        "tei_ndcg5": 1.0,
+        "delta": 0.0,
+        "p1b_ranking": [
+          3,
+          3,
+          3,
+          0
+        ],
+        "tei_ranking": [
+          3,
+          3,
+          3,
+          0
+        ]
+      },
+      {
+        "case_id": "nlp_ret_ma_001",
+        "p1b_ndcg5": 1.0,
+        "tei_ndcg5": 1.0,
+        "delta": 0.0,
+        "p1b_ranking": [
+          3,
+          3,
+          3,
+          3
+        ],
+        "tei_ranking": [
+          3,
+          3,
+          3,
+          3
+        ]
+      },
+      {
+        "case_id": "nlp_ret_mv_001",
+        "p1b_ndcg5": 0.8592395637645646,
+        "tei_ndcg5": 0.8592395637645646,
+        "delta": 0.0,
+        "p1b_ranking": [
+          2,
+          3,
+          3,
+          2
+        ],
+        "tei_ranking": [
+          2,
+          3,
+          3,
+          2
+        ]
+      },
+      {
+        "case_id": "nlp_ret_nf_001",
+        "p1b_ndcg5": 0.9896122751286358,
+        "tei_ndcg5": 1.0,
+        "delta": 0.01038772487136419,
+        "p1b_ranking": [
+          3,
+          3,
+          1,
+          2
+        ],
+        "tei_ranking": [
+          3,
+          3,
+          2,
+          1
+        ]
+      },
+      {
+        "case_id": "nlp_ret_nt_001",
+        "p1b_ndcg5": 0.9505808121311283,
+        "tei_ndcg5": 0.8595003587096537,
+        "delta": -0.09108045342147464,
+        "p1b_ranking": [
+          3,
+          2,
+          3,
+          3
+        ],
+        "tei_ranking": [
+          2,
+          3,
+          3,
+          3
+        ]
+      },
+      {
+        "case_id": "nlp_ret_rv_001",
+        "p1b_ndcg5": 1.0,
+        "tei_ndcg5": 1.0,
+        "delta": 0.0,
+        "p1b_ranking": [
+          3,
+          1,
+          1,
+          1
+        ],
+        "tei_ranking": [
+          3,
+          1,
+          1,
+          1
+        ]
+      },
+      {
+        "case_id": "nlp_ret_sr_001",
+        "p1b_ndcg5": 0.9218842208520892,
+        "tei_ndcg5": 0.8914743567965988,
+        "delta": -0.0304098640554904,
+        "p1b_ranking": [
+          3,
+          2,
+          0,
+          3
+        ],
+        "tei_ranking": [
+          3,
+          0,
+          2,
+          3
+        ]
+      }
+    ]
+  }
+}
