@@ -1,0 +1,311 @@
+{
+  "_wave": "F1.7.0",
+  "_kind": "frontend_architecture_inventory",
+  "_audit_at_commit": "872d0a7",
+  "_frozen_baseline_commit": "a27fd77",
+  "_summary": {
+    "unchecked_callers_total": 58,
+    "unchecked_callers_material": 58,
+    "form_data_callers": 1,
+    "raw_fetch_in_production_pages": 0,
+    "contract_backed_endpoints_migrated": 33,
+    "ownership_uniqueness_responsibilities": 10,
+    "test_owned_route_replicas": 0,
+    "test_owned_boundary_replicas": 0,
+    "runtime_observer_owners": 1,
+    "sentry_runtime_transports": 0,
+    "open_dispositions": 0
+  },
+  "unchecked_caller_manifest": [
+    {"file": "src/api/services/auth.ts", "line": 1, "endpoint": "/auth/register", "method": "POST", "material": true, "classification": "auth"},
+    {"file": "src/api/services/auth.ts", "line": 1, "endpoint": "/auth/login", "method": "POST", "material": true, "classification": "auth"},
+    {"file": "src/api/services/auth.ts", "line": 1, "endpoint": "/auth/me", "method": "GET", "material": true, "classification": "auth"},
+    {"file": "src/api/services/autonomous.ts", "line": 1, "endpoint": "/pipeline/autonomous/stop", "method": "POST", "material": true, "classification": "runs/mutation"},
+    {"file": "src/api/services/autonomous.ts", "line": 1, "endpoint": "/pipeline/scheduler/start", "method": "POST", "material": true, "classification": "runs/mutation"},
+    {"file": "src/api/services/autonomous.ts", "line": 1, "endpoint": "/pipeline/stop", "method": "POST", "material": true, "classification": "runs/mutation"},
+    {"file": "src/api/services/collaboration.ts", "line": 1, "endpoint": "/ideas/{id}/comments", "method": "POST", "material": true, "classification": "ideas"},
+    {"file": "src/api/services/collaboration.ts", "line": 1, "endpoint": "/ideas/{id}/share", "method": "POST", "material": true, "classification": "ideas"},
+    {"file": "src/api/services/collaboration.ts", "line": 1, "endpoint": "/shared/{token}", "method": "GET", "material": true, "classification": "ideas"},
+    {"file": "src/api/services/costs.ts", "line": 1, "endpoint": "/costs/summary", "method": "GET", "material": true, "classification": "diagnostics"},
+    {"file": "src/api/services/costs.ts", "line": 1, "endpoint": "/costs/by-provider", "method": "GET", "material": true, "classification": "diagnostics"},
+    {"file": "src/api/services/costs.ts", "line": 1, "endpoint": "/costs/by-stage", "method": "GET", "material": true, "classification": "diagnostics"},
+    {"file": "src/api/services/costs.ts", "line": 1, "endpoint": "/costs/by-model", "method": "GET", "material": true, "classification": "diagnostics"},
+    {"file": "src/api/services/costs.ts", "line": 1, "endpoint": "/costs/run/{id}", "method": "GET", "material": true, "classification": "diagnostics"},
+    {"file": "src/api/services/exports.ts", "line": 1, "endpoint": "/plugins/install", "method": "POST", "material": true, "classification": "config/mutation"},
+    {"file": "src/api/services/gaps.ts", "line": 1, "endpoint": "/gaps", "method": "GET", "endpoint_label": "list", "material": true, "classification": "research-gaps"},
+    {"file": "src/api/services/governance.ts", "line": 1, "endpoint": "/governance/{id}/approve", "method": "POST", "material": true, "classification": "governance"},
+    {"file": "src/api/services/governance.ts", "line": 1, "endpoint": "/governance/{id}/deny", "method": "POST", "material": true, "classification": "governance"},
+    {"file": "src/api/services/governance.ts", "line": 1, "endpoint": "/ideas/{id}/governance/decision", "method": "POST", "material": true, "classification": "governance"},
+    {"file": "src/api/services/governance.ts", "line": 1, "endpoint": "/ideas/{id}/governance/decisions", "method": "GET", "material": true, "classification": "governance"},
+    {"file": "src/api/services/governance.ts", "line": 1, "endpoint": "/ideas/{id}/governance/timeline", "method": "GET", "material": true, "classification": "governance"},
+    {"file": "src/api/services/ideas.ts", "line": 1, "endpoint": "/ideas/{id}", "method": "GET", "material": true, "classification": "ideas"},
+    {"file": "src/api/services/ideas.ts", "line": 1, "endpoint": "/ideas/{id}/feedback", "method": "POST", "material": true, "classification": "ideas"},
+    {"file": "src/api/services/ideas.ts", "line": 1, "endpoint": "/ideas/{id}/refine", "method": "POST", "material": true, "classification": "ideas"},
+    {"file": "src/api/services/ideas.ts", "line": 1, "endpoint": "/ideas/{id}/sections/{key}/refine", "method": "POST", "material": true, "classification": "ideas"},
+    {"file": "src/api/services/ideas.ts", "line": 1, "endpoint": "/ideas/{id}/sections/{key}/restore/{rev}", "method": "POST", "material": true, "classification": "ideas"},
+    {"file": "src/api/services/knowledge-graph.ts", "line": 1, "endpoint": "/knowledge-graph/entity/{id}", "method": "GET", "material": true, "classification": "knowledge"},
+    {"file": "src/api/services/knowledge-graph.ts", "line": 1, "endpoint": "/knowledge-graph/subgraph/{id}", "method": "GET", "material": true, "classification": "knowledge"},
+    {"file": "src/api/services/knowledge.ts", "line": 1, "endpoint": "/knowledge/search", "method": "POST", "material": true, "classification": "knowledge"},
+    {"file": "src/api/services/knowledge.ts", "line": 1, "endpoint": "/knowledge/stats", "method": "GET", "material": true, "classification": "knowledge"},
+    {"file": "src/api/services/literature.ts", "line": 1, "endpoint": "/literature/search", "method": "GET", "material": true, "classification": "papers"},
+    {"file": "src/api/services/memory.ts", "line": 1, "endpoint": "/memory/stats", "method": "GET", "material": true, "classification": "memory"},
+    {"file": "src/api/services/memory.ts", "line": 1, "endpoint": "/memory/recall", "method": "GET", "material": true, "classification": "memory"},
+    {"file": "src/api/services/memory.ts", "line": 1, "endpoint": "/memory/{id}", "method": "DELETE", "material": true, "classification": "memory"},
+    {"file": "src/api/services/notifications.ts", "line": 1, "endpoint": "/notifications/{id}/read", "method": "PATCH", "material": true, "classification": "notifications"},
+    {"file": "src/api/services/notifications.ts", "line": 1, "endpoint": "/notifications/read-all", "method": "POST", "material": true, "classification": "notifications"},
+    {"file": "src/api/services/pipeline.ts", "line": 1, "endpoint": "/pipeline/run", "method": "POST", "material": true, "classification": "runs"},
+    {"file": "src/api/services/pipeline.ts", "line": 1, "endpoint": "/pipeline/runs/detail/{id}", "method": "GET", "material": true, "classification": "runs"},
+    {"file": "src/api/services/pipeline.ts", "line": 1, "endpoint": "/pipeline/runs/{id}", "method": "DELETE", "material": true, "classification": "runs"},
+    {"file": "src/api/services/pipeline.ts", "line": 1, "endpoint": "/pipeline/runs/{id}/ideas", "method": "GET", "material": true, "classification": "runs"},
+    {"file": "src/api/services/pipeline.ts", "line": 1, "endpoint": "/pipeline/resume/{id}", "method": "POST", "material": true, "classification": "runs"},
+    {"file": "src/api/services/pipeline.ts", "line": 1, "endpoint": "/pipeline/estimate", "method": "GET", "material": true, "classification": "runs"},
+    {"file": "src/api/services/pipeline.ts", "line": 1, "endpoint": "/pipeline/autonomous", "method": "POST", "material": true, "classification": "runs"},
+    {"file": "src/api/services/search.ts", "line": 1, "endpoint": "/search", "method": "GET", "material": true, "classification": "cross-domain"},
+    {"file": "src/api/services/sessions.ts", "line": 1, "endpoint": "/pipeline/runs/sessions", "method": "GET", "material": true, "classification": "runs"},
+    {"file": "src/api/services/settings.ts", "line": 1, "endpoint": "/settings/catalog", "method": "GET", "material": true, "classification": "config"},
+    {"file": "src/api/services/settings.ts", "line": 1, "endpoint": "/settings/assignments", "method": "GET", "material": true, "classification": "config"},
+    {"file": "src/api/services/settings.ts", "line": 1, "endpoint": "/settings/stages", "method": "GET", "material": true, "classification": "config"},
+    {"file": "src/api/services/settings.ts", "line": 1, "endpoint": "/settings/overrides", "method": "PUT", "material": true, "classification": "config"},
+    {"file": "src/api/services/settings.ts", "line": 1, "endpoint": "/settings/overrides/validate", "method": "POST", "material": true, "classification": "config"},
+    {"file": "src/api/services/settings.ts", "line": 1, "endpoint": "/settings/overrides/{stage}", "method": "DELETE", "material": true, "classification": "config"},
+    {"file": "src/api/services/settings.ts", "line": 1, "endpoint": "/settings/overrides", "method": "DELETE", "material": true, "classification": "config"},
+    {"file": "src/api/services/status.ts", "line": 1, "endpoint": "/status", "method": "GET", "material": true, "classification": "diagnostics"},
+    {"file": "src/api/services/traces.ts", "line": 1, "endpoint": "/traces/summary", "method": "GET", "material": true, "classification": "diagnostics"},
+    {"file": "src/api/services/traces.ts", "line": 1, "endpoint": "/traces/trace/{id}", "method": "GET", "material": true, "classification": "diagnostics"},
+    {"file": "src/api/services/traces.ts", "line": 1, "endpoint": "/traces/metrics", "method": "GET", "material": true, "classification": "diagnostics"},
+    {"file": "src/hooks/usePipelineProgress.ts", "line": 1, "endpoint": "/pipeline/runs/detail/{id}", "method": "GET", "endpoint_label": "polling", "material": true, "classification": "runs"},
+    {"file": "src/hooks/usePipelineProgress.ts", "line": 1, "endpoint": "/pipeline/runs?limit=5", "method": "GET", "endpoint_label": "polling", "material": true, "classification": "runs"}
+  ],
+  "form_data_callers": [
+    {
+      "file": "src/api/services/knowledge.ts",
+      "line": 19,
+      "call": "apiFetchFormData<IngestResponse>(\"/knowledge/ingest\", formData)",
+      "material": true,
+      "active": "material",
+      "classification": "knowledge/mutation",
+      "rationale": "FormData multipart upload cannot be expressed by the JSON-typed callContract signature; uses the parallel apiFetchFormData transport which inherits the same Auth+CSRF+baseURL wiring from client.ts. This is the sole FormData boundary in the codebase."
+    }
+  ],
+  "raw_fetch_in_production_pages": {
+    "count": 0,
+    "note": "All raw fetch() usage is internal to the src/api/clients/client.ts transport layer (apiFetchUnchecked, apiFetchFormData). Zero raw fetch in pages, components, or hooks. Verified by grep across src/pages/, src/components/, src/hooks/."
+  },
+  "contract_backed_endpoints": [
+    {"contract": "gaps", "method": "getGap", "transport": "callContract", "wave": "F1.1-F1.3"},
+    {"contract": "gaps", "method": "getGapClusters", "transport": "callContract", "wave": "F1.1-F1.3"},
+    {"contract": "gaps", "method": "updateGapStatus", "transport": "callContract", "wave": "F1.4.2"},
+    {"contract": "gaps", "method": "submitGapFeedback", "transport": "callContract", "wave": "F1.1-F1.3"},
+    {"contract": "gap-papers", "method": "getGapPapers", "transport": "callContract", "wave": "F1.1-F1.3"},
+    {"contract": "models", "method": "getModels", "transport": "callContract", "wave": "F1.1-F1.3"},
+    {"contract": "models", "method": "getStages", "transport": "callContract", "wave": "F1.1-F1.3"},
+    {"contract": "models", "method": "updateOverrides", "transport": "callContract", "wave": "F1.1-F1.3"},
+    {"contract": "models", "method": "validateOverrides", "transport": "callContract", "wave": "F1.1-F1.3"},
+    {"contract": "models", "method": "removeOverride", "transport": "callContract", "wave": "F1.1-F1.3"},
+    {"contract": "models", "method": "clearOverrides", "transport": "callContract", "wave": "F1.1-F1.3"},
+    {"contract": "ideas", "method": "listIdeas", "transport": "callContract", "wave": "F1.1-F1.3"},
+    {"contract": "ideas", "method": "getIdea", "transport": "callContract", "wave": "F1.1-F1.3"},
+    {"contract": "ideas", "method": "refineIdea", "transport": "callContract", "wave": "F1.1-F1.3"},
+    {"contract": "dashboard", "method": "getOpsDashboard", "transport": "callContract", "wave": "F1.1-F1.3"},
+    {"contract": "dashboard", "method": "getPending", "transport": "callContract", "wave": "F1.1-F1.3"},
+    {"contract": "dashboard", "method": "getCostsSummary", "transport": "callContract", "wave": "F1.1-F1.3"},
+    {"contract": "literature", "method": "ingestPaper", "method_verb": "POST", "transport": "callContract", "validated": true, "wave": "F1.4.1"},
+    {"contract": "literature", "method": "listIngested", "method_verb": "GET", "transport": "callContract", "validated": true, "wave": "F1.1-F1.3"},
+    {"contract": "diagnostics", "method": "runtimeError", "method_verb": "POST", "transport": "callContract", "validated": true, "wave": "F1.6.1"},
+    {"contract": "f1-3a-reads", "method": "migrated_reads", "transport": "callContract", "count": 19, "wave": "F1.3a"}
+  ],
+  "ownership_uniqueness": [
+    {
+      "owner_module": "src/AppRoutes.tsx createRoutes",
+      "responsibility": "route_registry",
+      "production_callers": 1,
+      "status": "sealed",
+      "disposition": "approved — single owner of the route element tree; lazyRoute and ProtectedRoute wrap each route but the registry itself has one construction site"
+    },
+    {
+      "owner_module": "src/main.tsx QueryClient factory",
+      "responsibility": "query_client",
+      "production_callers": 1,
+      "status": "sealed",
+      "disposition": "approved — single factory; tests construct their own QueryClients but reuse production buildMutationCacheForClient (F1.5c pattern), so the policy is not duplicated"
+    },
+    {
+      "owner_module": "src/lib/mutation-cache.ts buildMutationCache",
+      "responsibility": "mutation_cache",
+      "production_callers": 1,
+      "status": "sealed",
+      "disposition": "approved — single mutation-cache policy builder; reused by both production main.tsx and test QueryClient construction"
+    },
+    {
+      "owner_module": "src/components/error-boundary.tsx RootErrorBoundary",
+      "responsibility": "root_boundary",
+      "production_callers": 1,
+      "status": "sealed",
+      "disposition": "approved — outermost full-screen boundary mounted once in main.tsx"
+    },
+    {
+      "owner_module": "src/components/route-error-boundary.tsx RouteErrorBoundary",
+      "responsibility": "route_boundary",
+      "production_callers": 1,
+      "status": "sealed",
+      "disposition": "approved — AppShell-preserving boundary mounted once inside the App layout; preserves chrome on route-render failures"
+    },
+    {
+      "owner_module": "src/lib/runtime-observers.ts installRuntimeObservers",
+      "responsibility": "observer_installer",
+      "production_callers": 1,
+      "status": "sealed",
+      "disposition": "approved — single installer for window.error and unhandledrejection observers; HMR-safe (idempotent re-install); deduplicates by identity"
+    },
+    {
+      "owner_module": "src/lib/runtime-error-reporter.ts reportRuntimeError",
+      "responsibility": "diagnostic_reporter",
+      "production_callers": 1,
+      "status": "sealed",
+      "disposition": "approved — synchronous canonical entry point for all runtime-error reporting; WeakMap + category-independent fingerprint deduplication"
+    },
+    {
+      "owner_module": "src/api/clients/diagnostics-client.ts sendRuntimeErrorReport",
+      "responsibility": "diagnostic_transport",
+      "production_callers": 1,
+      "status": "sealed",
+      "disposition": "approved — single fire-and-forget transport to POST /api/v1/diagnostics/runtime-error; transport failure swallowed, never throws"
+    },
+    {
+      "owner_module": "src/lib/lazy-route.tsx lazyRoute",
+      "responsibility": "lazy_route_wrapper",
+      "production_callers": 1,
+      "status": "sealed",
+      "disposition": "approved — single factory wrapping all 19 lazy() imports; classifies chunk-load failures as LazyRouteError with one guarded user-triggered reload (sessionStorage marker keyed by build+route)"
+    },
+    {
+      "owner_module": "src/AppRoutes.tsx ProtectedRoute",
+      "responsibility": "protected_route",
+      "production_callers": 1,
+      "status": "sealed",
+      "disposition": "approved — single auth-guard wrapper used across protected routes; redirects to /login without creating parallel guard logic"
+    }
+  ],
+  "query_key_reconciliation": {
+    "matched_keys_exact": [
+      "run detail (run detail mutation ↔ run detail query)",
+      "idea detail (idea refine/feedback mutation ↔ idea detail query)",
+      "gap detail (gap status mutation ↔ gap detail query)",
+      "gap papers (gap-papers contract read ↔ gap-papers query)",
+      "literature search",
+      "literature ingested (literature.listIngested ↔ ingestPaper invalidation)",
+      "plugins",
+      "comments",
+      "section-revisions",
+      "governance-timeline",
+      "model-overrides (settings overrides mutations ↔ settings queries)",
+      "knowledge-stats",
+      "memory-stats",
+      "settings/models"
+    ],
+    "mismatched_keys_intentional": [
+      {
+        "stem": "ideas list vs detail",
+        "observation": "ideas list NOT invalidated by idea mutations (refine/feedback)",
+        "reason": "list-vs-detail stem split by design — list view shows lightweight summaries; detail mutations do not reshape the list. List refresh is user-triggered via refetch."
+      },
+      {
+        "stem": "gaps list vs detail",
+        "observation": "gaps list NOT invalidated by gap status mutation",
+        "reason": "list-vs-detail stem split by design — status changes update the detail view; the explorer list reflects its own refetch cadence to avoid clobbering scroll position."
+      },
+      {
+        "stem": "governance-pending vs decision",
+        "observation": "governance-pending NOT invalidated by governance decision mutation",
+        "reason": "by design — the pending queue uses a coarse polling cadence to batch UI refreshes; immediate removal would desync from server-side state machine transitions."
+      }
+    ],
+    "prefix_match_covers": [
+      {
+        "prefix": "[\"run\", runId]",
+        "covers": "run ideas query refreshed by run-detail mutation invalidation via prefix match"
+      }
+    ],
+    "out_of_band_no_react_query": [
+      "notification-bell (markRead/markAllRead manage local state without react-query cache)",
+      "gap-feedback-form (submitGapFeedback handled outside react-query cache; uses local form state + callContract)"
+    ]
+  },
+  "test_only_substitutes": {
+    "test_owned_route_table_replicas": 0,
+    "test_owned_query_client_policy_replicas": {
+      "count": 0,
+      "note": "Tests construct their own QueryClient instances but reuse the production buildMutationCacheForClient policy builder (F1.5c pattern). The cache policy itself is not duplicated — only the QueryClient host is test-local."
+    },
+    "test_owned_error_boundary_replicas": 0
+  },
+  "ratchet_reconciliation": {
+    "typescript_errors": {"count": 0, "baseline_source": "ts-budget.json", "baseline_value": 0, "status": "at_baseline"},
+    "eslint_warnings": {"count": 63, "baseline_source": "eslint baseline", "status": "at_baseline"},
+    "unchecked_callers": {"count": 58, "baseline_source": "F1.1b ratchet frozen at a27fd77", "baseline_value": 58, "status": "at_baseline", "note": "exact manifest count — no drift"},
+    "raw_fetch_in_pages_components": {"count": 0, "status": "at_baseline"},
+    "test_owned_route_replicas": {"count": 0, "status": "at_baseline"},
+    "runtime_observer_owners": {"count": 1, "status": "at_baseline"},
+    "sentry_runtime_transports": {
+      "count": 0,
+      "status": "at_baseline",
+      "note": "Sentry browser automatic capture disabled (defaultIntegrations:false, integrations:[]). Zero production Sentry.captureException/captureMessage call sites. Backend /diagnostics/runtime-error is the single governed transport."
+    }
+  },
+  "approved_exceptions": [
+    {
+      "id": "F1.7-EX-01",
+      "item": "58 unchecked apiFetchUnchecked callers (manifest above)",
+      "classification": "residual — pre-contract transport",
+      "approval_basis": "F1.1b ratchet baseline frozen at commit a27fd77; all 58 are material=true and explicitly enumerated; no drift since baseline",
+      "disposition": "approved — sealed residual"
+    },
+    {
+      "id": "F1.7-EX-02",
+      "item": "knowledge.ts:19 apiFetchFormData \"/knowledge/ingest\"",
+      "classification": "FormData boundary — cannot use JSON callContract",
+      "approval_basis": "multipart upload is not expressible by callContract; uses parallel transport sharing Auth/CSRF/baseURL wiring from client.ts",
+      "disposition": "approved — sole FormData boundary"
+    },
+    {
+      "id": "F1.7-EX-03",
+      "item": "ideas list not invalidated by idea detail mutations",
+      "classification": "intentional key mismatch",
+      "approval_basis": "list-vs-detail stem split by design; list reflects its own refetch cadence",
+      "disposition": "approved — intentional"
+    },
+    {
+      "id": "F1.7-EX-04",
+      "item": "gaps list not invalidated by gap status mutation",
+      "classification": "intentional key mismatch",
+      "approval_basis": "list-vs-detail stem split by design; explorer preserves scroll position",
+      "disposition": "approved — intentional"
+    },
+    {
+      "id": "F1.7-EX-05",
+      "item": "governance-pending not invalidated by governance decision",
+      "classification": "intentional key mismatch",
+      "approval_basis": "by design — pending queue uses coarse polling to batch refreshes and stay in sync with server-side state machine",
+      "disposition": "approved — intentional"
+    },
+    {
+      "id": "F1.7-EX-06",
+      "item": "notification-bell and gap-feedback-form bypass react-query cache",
+      "classification": "out-of-band state management",
+      "approval_basis": "ephemeral UI state managed locally; no cross-page cache contract to honor",
+      "disposition": "approved — out-of-band"
+    },
+    {
+      "id": "F1.7-EX-07",
+      "item": "63 ESLint warnings",
+      "classification": "ratchet baseline — non-zero budget",
+      "approval_basis": "frozen at baseline; net new warnings blocked at PR review; no drift allowed",
+      "disposition": "approved — at baseline"
+    }
+  ],
+  "_final_disposition": {
+    "open_items": 0,
+    "sealed_items": "all",
+    "inventory_complete": true
+  }
+}
