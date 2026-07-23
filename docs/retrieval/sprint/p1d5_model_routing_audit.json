@@ -1,0 +1,37 @@
+{
+  "report_version": "p1d5_model_routing_audit_v1",
+  "status": "draft",
+  "created": "2026-07-23",
+  "description": "CRITICAL FINDING: LM Studio silently routes multiple model IDs to the same loaded model. The preflight passes for voyage-4-nano and jina-v5-small were testing Qwen 0.6B, not their own models.",
+  "finding": "When text-embedding-qwen3-embedding-0.6b is loaded, requests for voyage-4-nano and jina-embeddings-v5-text-small-retrieval are silently served by Qwen 0.6B. The response's model field confirms this: all three return model='text-embedding-qwen3-embedding-0.6b'. The embeddings are byte-identical (max_abs_diff = 0.00e+00).",
+  "evidence": {
+    "test": "Identical input text ('The quick brown fox jumps over the lazy dog.') embedded via 4 model IDs",
+    "results": {
+      "text-embedding-qwen3-embedding-0.6b": {"dim": 1024, "resp_model": "text-embedding-qwen3-embedding-0.6b"},
+      "voyage-4-nano": {"dim": 1024, "resp_model": "text-embedding-qwen3-embedding-0.6b"},
+      "jina-embeddings-v5-text-small-retrieval": {"dim": 1024, "resp_model": "text-embedding-qwen3-embedding-0.6b"},
+      "text-embedding-all-minilm-l12-v2": {"dim": 384, "resp_model": "text-embedding-all-minilm-l12-v2"}
+    },
+    "cross_model_similarity": {
+      "qwen_vs_voyage": "max_abs_diff=0.00e+00 (IDENTICAL)",
+      "qwen_vs_jina": "max_abs_diff=0.00e+00 (IDENTICAL)",
+      "voyage_vs_jina": "max_abs_diff=0.00e+00 (IDENTICAL)",
+      "qwen_vs_minilm": "DIFFERENT (384d vs 1024d forces different model load)"
+    }
+  },
+  "impact_on_preflight": {
+    "voyage_4_nano_preflight": "INVALID — was testing Qwen 0.6B, not voyage-4-nano",
+    "jina_v5_small_preflight": "INVALID — was testing Qwen 0.6B, not jina-v5-small",
+    "qwen_0_6b_preflight": "VALID — confirmed stable, deterministic, correct model identity",
+    "bge_m3_preflight": "VALID — correctly identified as crashing"
+  },
+  "impact_on_sprint": {
+    "candidate_C_status": "DEAD. BGE-M3 crashes. Voyage-4-nano and Jina-v5-small cannot be independently evaluated on this host because LM Studio routes them to Qwen. There is no operationally viable materially-different embedding model on this host.",
+    "options": [
+      "A. Run a two-way sprint: lexical (A) vs Qwen hybrid (B). This is the only scientifically valid comparison available on this host.",
+      "B. Obtain a different host/provider that correctly serves voyage-4-nano or another materially different model.",
+      "C. Accept that the architecture decision cannot be made with a three-way comparison on this host."
+    ]
+  },
+  "root_cause": "LM Studio's model loading mechanism appears to serve whichever 1024d model is currently in memory, regardless of the requested model ID. This is likely a GGUF/model-name resolution issue where LM Studio falls back to the loaded model when the requested model fails to load (or loads identically). This is a host-environment defect, not a model-quality defect."
+}
