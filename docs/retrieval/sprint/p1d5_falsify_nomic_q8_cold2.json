@@ -1,0 +1,224 @@
+{
+  "phase": "cold",
+  "requested_model": "cpu-embed",
+  "loaded_at_start": [
+    "cpu-embed"
+  ],
+  "warmup": {
+    "completed": 0,
+    "crashed_during_warmup": false
+  },
+  "sustained": {
+    "total_embedded": 0,
+    "target": 500,
+    "completion_pct": 0.0,
+    "crashes": 1,
+    "non_finite": 0,
+    "batch_sizes_tested": [
+      1,
+      8,
+      32
+    ],
+    "per_item_latency_ms": {
+      "mean": null,
+      "p50": null
+    },
+    "first_failure": {
+      "batch_idx": 0,
+      "batch_size": 1,
+      "ok": false,
+      "status": 400,
+      "latency_ms": 259.6296000010625,
+      "body": "{\"error\":\"No models loaded. Please load a model in the developer page or use the 'lms load' command.\"}"
+    },
+    "shortest_failing_input": {
+      "chars": 80,
+      "words": 12,
+      "est_tokens": 20,
+      "text": "This is synthetic passage number 0 for embedding preflight testing. It contains "
+    }
+  },
+  "routing": {
+    "resp_models_seen": [
+      "cpu-embed"
+    ],
+    "routing_detected": false,
+    "all_resp_model_match": true,
+    "resp_model_tally": {}
+  },
+  "failures": [
+    {
+      "stage": "warmup",
+      "idx": 0,
+      "ok": false,
+      "status": 400,
+      "latency_ms": 267.23870000023453,
+      "body": "{\"error\":\"No models loaded. Please load a model in the developer page or use the 'lms load' command.\"}"
+    },
+    {
+      "stage": "warmup",
+      "idx": 1,
+      "ok": false,
+      "status": 400,
+      "latency_ms": 266.03630000136036,
+      "body": "{\"error\":\"No models loaded. Please load a model in the developer page or use the 'lms load' command.\"}"
+    },
+    {
+      "stage": "warmup",
+      "idx": 2,
+      "ok": false,
+      "status": 400,
+      "latency_ms": 248.92340000042168,
+      "body": "{\"error\":\"No models loaded. Please load a model in the developer page or use the 'lms load' command.\"}"
+    },
+    {
+      "stage": "warmup",
+      "idx": 3,
+      "ok": false,
+      "status": 400,
+      "latency_ms": 234.58000000027823,
+      "body": "{\"error\":\"No models loaded. Please load a model in the developer page or use the 'lms load' command.\"}"
+    },
+    {
+      "stage": "warmup",
+      "idx": 4,
+      "ok": false,
+      "status": 400,
+      "latency_ms": 251.37460000041756,
+      "body": "{\"error\":\"No models loaded. Please load a model in the developer page or use the 'lms load' command.\"}"
+    },
+    {
+      "stage": "warmup",
+      "idx": 5,
+      "ok": false,
+      "status": 400,
+      "latency_ms": 265.12890000049083,
+      "body": "{\"error\":\"No models loaded. Please load a model in the developer page or use the 'lms load' command.\"}"
+    },
+    {
+      "stage": "warmup",
+      "idx": 6,
+      "ok": false,
+      "status": 400,
+      "latency_ms": 224.17270000005374,
+      "body": "{\"error\":\"No models loaded. Please load a model in the developer page or use the 'lms load' command.\"}"
+    },
+    {
+      "stage": "warmup",
+      "idx": 7,
+      "ok": false,
+      "status": 400,
+      "latency_ms": 242.47660000037285,
+      "body": "{\"error\":\"No models loaded. Please load a model in the developer page or use the 'lms load' command.\"}"
+    },
+    {
+      "stage": "warmup",
+      "idx": 8,
+      "ok": false,
+      "status": 400,
+      "latency_ms": 225.33219999968424,
+      "body": "{\"error\":\"No models loaded. Please load a model in the developer page or use the 'lms load' command.\"}"
+    },
+    {
+      "stage": "warmup",
+      "idx": 9,
+      "ok": false,
+      "status": 400,
+      "latency_ms": 244.9047000009159,
+      "body": "{\"error\":\"No models loaded. Please load a model in the developer page or use the 'lms load' command.\"}"
+    },
+    {
+      "stage": "warmup",
+      "idx": 10,
+      "ok": false,
+      "status": 400,
+      "latency_ms": 247.10070000037376,
+      "body": "{\"error\":\"No models loaded. Please load a model in the developer page or use the 'lms load' command.\"}"
+    },
+    {
+      "stage": "warmup",
+      "idx": 11,
+      "ok": false,
+      "status": 400,
+      "latency_ms": 261.88100000035774,
+      "body": "{\"error\":\"No models loaded. Please load a model in the developer page or use the 'lms load' command.\"}"
+    },
+    {
+      "stage": "warmup",
+      "idx": 12,
+      "ok": false,
+      "status": 400,
+      "latency_ms": 256.18410000060976,
+      "body": "{\"error\":\"No models loaded. Please load a model in the developer page or use the 'lms load' command.\"}"
+    },
+    {
+      "stage": "warmup",
+      "idx": 13,
+      "ok": false,
+      "status": 400,
+      "latency_ms": 281.1001000009128,
+      "body": "{\"error\":\"No models loaded. Please load a model in the developer page or use the 'lms load' command.\"}"
+    },
+    {
+      "stage": "warmup",
+      "idx": 14,
+      "ok": false,
+      "status": 400,
+      "latency_ms": 224.64230000150565,
+      "body": "{\"error\":\"No models loaded. Please load a model in the developer page or use the 'lms load' command.\"}"
+    },
+    {
+      "stage": "warmup",
+      "idx": 15,
+      "ok": false,
+      "status": 400,
+      "latency_ms": 282.346800000596,
+      "body": "{\"error\":\"No models loaded. Please load a model in the developer page or use the 'lms load' command.\"}"
+    },
+    {
+      "stage": "warmup",
+      "idx": 16,
+      "ok": false,
+      "status": 400,
+      "latency_ms": 244.82589999934135,
+      "body": "{\"error\":\"No models loaded. Please load a model in the developer page or use the 'lms load' command.\"}"
+    },
+    {
+      "stage": "warmup",
+      "idx": 17,
+      "ok": false,
+      "status": 400,
+      "latency_ms": 248.4989000004134,
+      "body": "{\"error\":\"No models loaded. Please load a model in the developer page or use the 'lms load' command.\"}"
+    },
+    {
+      "stage": "warmup",
+      "idx": 18,
+      "ok": false,
+      "status": 400,
+      "latency_ms": 248.77500000002328,
+      "body": "{\"error\":\"No models loaded. Please load a model in the developer page or use the 'lms load' command.\"}"
+    },
+    {
+      "stage": "warmup",
+      "idx": 19,
+      "ok": false,
+      "status": 400,
+      "latency_ms": 254.24410000050557,
+      "body": "{\"error\":\"No models loaded. Please load a model in the developer page or use the 'lms load' command.\"}"
+    }
+  ],
+  "length_probe": {
+    "**first_fail_chars": 256,
+    "last_ok_chars": 128,
+    "failure": {
+      "ok": false,
+      "status": 400,
+      "latency_ms": 6352.286600000298,
+      "body": "{\"error\":\"The model has crashed without additional information. (Exit code: 18446744072635812000).\"}"
+    },
+    "model_loaded_after": 0
+  },
+  "_model_unloaded_after_crash": true,
+  "verdict": "FAIL_CRASH"
+}

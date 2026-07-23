@@ -1,0 +1,38 @@
+{
+  "phase": "cold",
+  "requested_model": "cpu-embed",
+  "loaded_at_start": [
+    "cpu-embed"
+  ],
+  "warmup": {
+    "completed": 1,
+    "crashed_during_warmup": true,
+    "first_crash": {
+      "ok": false,
+      "status": 400,
+      "latency_ms": 5812.643200000821,
+      "body": "{\"error\":\"The model has crashed without additional information. (Exit code: 18446744072635812000).\"}"
+    }
+  },
+  "sustained": {
+    "skipped": "crashed during warmup"
+  },
+  "routing": {
+    "resp_models_seen": [
+      "cpu-embed"
+    ],
+    "routing_detected": false,
+    "all_resp_model_match": true
+  },
+  "failures": [
+    {
+      "stage": "warmup",
+      "idx": 1,
+      "ok": false,
+      "status": 400,
+      "latency_ms": 5812.643200000821,
+      "body": "{\"error\":\"The model has crashed without additional information. (Exit code: 18446744072635812000).\"}"
+    }
+  ],
+  "verdict": "FAIL_CRASHED_IN_WARMUP"
+}

@@ -1,0 +1,45 @@
+{
+  "phase": "cold",
+  "requested_model": "qwen-embed",
+  "loaded_at_start": [
+    "qwen-embed"
+  ],
+  "warmup": {
+    "completed": 20,
+    "crashed_during_warmup": false
+  },
+  "sustained": {
+    "total_embedded": 1500,
+    "target": 500,
+    "completion_pct": 300.0,
+    "crashes": 0,
+    "non_finite": 0,
+    "batch_sizes_tested": [
+      1,
+      8,
+      32
+    ],
+    "per_item_latency_ms": {
+      "mean": 498.3,
+      "p50": 529.3
+    },
+    "first_failure": null,
+    "shortest_failing_input": null
+  },
+  "routing": {
+    "resp_models_seen": [
+      "qwen-embed"
+    ],
+    "routing_detected": false,
+    "all_resp_model_match": true,
+    "resp_model_tally": {
+      "qwen-embed": 579
+    }
+  },
+  "failures": [],
+  "length_probe": {
+    "last_ok_chars": 4096,
+    "resp_model": "qwen-embed"
+  },
+  "verdict": "PASS"
+}

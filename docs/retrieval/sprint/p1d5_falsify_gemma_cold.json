@@ -1,0 +1,34 @@
+{
+  "phase": "cold",
+  "requested_model": "gemma-embed",
+  "loaded_at_start": [
+    "gemma-embed"
+  ],
+  "length_probe": {
+    "first_fail_chars": 256,
+    "last_ok_chars": 128,
+    "failure": {
+      "ok": false,
+      "status": 400,
+      "latency_ms": 6989.560000001802,
+      "body": "{\"error\":\"Model reloaded..\"}"
+    },
+    "model_loaded_after": 0
+  },
+  "warmup": {
+    "completed": 0,
+    "crashed_during_warmup": true,
+    "note": "Crashed in length probe before warmup"
+  },
+  "sustained": {
+    "skipped": "crashed in length probe"
+  },
+  "routing": {
+    "resp_models_seen": [
+      "gemma-embed"
+    ],
+    "routing_detected": false
+  },
+  "failures": [],
+  "verdict": "FAIL_CRASHED_IN_WARMUP"
+}

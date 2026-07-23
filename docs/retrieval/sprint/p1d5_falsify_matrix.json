@@ -1,0 +1,70 @@
+{
+  "report_version": "p1d5_falsify_matrix_v1",
+  "status": "raw_matrix",
+  "created": "2026-07-23",
+  "purpose": "Root-cause falsification test under isolated single-model loads. NOT candidate evaluation. Reconciles contradictory claims: (f5c4553) 'Voyage/Jina passed 500/500' vs (947d349) 'only Qwen stable; Voyage/Jina silently routed'.",
+  "protocol": {
+    "workload": "500 passages, batch sizes 1/8/32, 20-request warmup, length probe 32-4096 chars",
+    "isolation_method": "lms ps verified exactly one model loaded before each cell (NOT /v1/models, which returns the 17-entry catalog regardless of load state)",
+    "cold_definition": "fresh lms load immediately before run, no prior requests in this load state",
+    "warm_definition": "re-run without reload, model already exercised",
+    "no_retry_policy": "harness does NOT retry through crashes or 400s (a failure is recorded, not masked)",
+    "routing_check": "resp_model field recorded on every 2xx response"
+  },
+  "matrix": {
+    "qwen_0_6b": {
+      "cold": {"file": "p1d5_falsify_qwen_cold.json",  "verdict": "PASS", "embedded": "1500/1500 (500 x 3 batch sizes)", "crashes": 0, "non_finite": 0, "resp_model": "qwen-embed", "routing": false},
+      "warm": {"file": "p1d5_falsify_qwen_warm.json",  "verdict": "PASS", "embedded": "1500/1500", "crashes": 0, "non_finite": 0, "resp_model": "qwen-embed", "routing": false},
+      "stable": true
+    },
+    "nomic_q8_8192": {
+      "cold1": {"file": "p1d5_falsify_nomic_q8_cold.json",  "verdict": "FAIL_CRASHED_IN_WARMUP", "crash_at": "warmup request 2 (~80 chars)", "exit_code": "18446744072635812000"},
+      "cold2": {"file": "p1d5_falsify_nomic_q8_cold2.json", "verdict": "FAIL_CRASH", "length_probe": "last_ok=128 chars, first_fail=256 chars", "exit_code": "18446744072635812000"},
+      "warm":  {"note": "undefined — model crashes before warmup completes; no warm state is reachable"},
+      "stable": false,
+      "context_at_load": 8192,
+      "finding": "8192 context did NOT fix the crash. Crash threshold is between 128 and 256 chars — far below any context limit. Confirms context-overflow hypothesis is FALSE."
+    },
+    "voyage_4_nano": {
+      "cold": {"file": "p1d5_falsify_voyage_cold.json", "verdict": "FAIL_UNSERVABLE", "embedded": "0/500", "lms_ps_status": "IDLE, loaded (371 MB)", "api_error": "400 'No models loaded' for both identifier and catalog name", "exit_code": "none (no crash)"},
+      "warm": {"note": "moot — model cannot serve embeddings in isolation"},
+      "stable": false,
+      "finding": "LM Studio classifies voyage-4-nano as type=llm, not embeddings. The /v1/embeddings endpoint refuses to serve it even when loaded. Not a stability failure — a category/routing failure."
+    },
+    "jina_v5_small": {
+      "cold": {"file": "p1d5_falsify_jina_cold.json", "verdict": "FAIL_UNSERVABLE", "embedded": "0/500", "lms_ps_status": "IDLE, loaded (639 MB)", "api_error": "400 'No models loaded' for both identifier and catalog name", "exit_code": "none (no crash)"},
+      "warm": {"note": "moot — model cannot serve embeddings in isolation"},
+      "stable": false,
+      "finding": "Identical to Voyage-4-nano: LLM-classified, unservable via embeddings endpoint in isolation."
+    }
+  },
+  "routing_reconfirmation": {
+    "condition": "Qwen + Voyage + Jina all co-loaded (lms ps confirms 3 IDLE)",
+    "result": "Requesting voyage-coload / voyage-4-nano / jina-coload / jina-v5-small all return resp_model='qwen-embed', dim=1024, max_abs_diff=0.00e+00 vs direct Qwen embedding",
+    "conclusion": "Silent routing CONFIRMED. The original 500/500 passes for Voyage and Jina (f5c4553) were Qwen 0.6B serving those requests. The retraction in 947d349 is correct."
+  },
+  "raw_matrix_summary_table": {
+    "columns": ["model", "cold", "warm", "stable?", "failure_mode"],
+    "rows": [
+      ["Qwen 0.6B",         "PASS",        "PASS",        "yes", "none"],
+      ["Nomic Q8 / 8192",   "FAIL (crash)","undefined",   "no",  "GGUF crash 128-256 chars, exit 1844...; auto-unloads"],
+      ["Voyage-4-nano",     "FAIL (unservable)", "moot",  "no",  "LLM-classified; embeddings endpoint returns 'no models loaded'"],
+      ["Jina-v5-small",     "FAIL (unservable)", "moot",  "no",  "LLM-classified; embeddings endpoint returns 'no models loaded'"]
+    ]
+  },
+  "hypothesis_resolution": {
+    "H1_prior_conclusion": "CONFIRMED (falsifier refuted)",
+    "context_overflow_hypothesis": "REJECTED — crash at 128-256 chars with 8192 loaded",
+    "8192_reload_fix": "NOT a fix",
+    "voyage_jina_500_pass_claim": "INVALID — artifact of silent Qwen routing",
+    "routing_claim": "CONFIRMED — resp_model=qwen-embed, byte-identical embeddings",
+    "sprint_boundary_unchanged": "A (lexical) vs B (Qwen 0.6B hybrid). No candidate C on this host. Nomic is not a candidate; its pass/fail does not affect the sprint."
+  },
+  "what_was_NOT_done": [
+    "Jina warm run — moot, model is unservable in isolation, no warm state to test",
+    "Voyage warm run — same reason",
+    "Nomic warm run — model crashes before reaching a warm state",
+    "No diagnostic/benchmark corpus queries were run (sprint boundary respected)"
+  ],
+  "caveat_on_isolation_check": "The pre-existing scripts/preflight_embedding_host.py and the original routing audit both used /v1/models to verify 'model loaded'. That endpoint returns the full 17-entry downloaded catalog regardless of actual load state, so any 'model loaded' check based on it is unreliable. This falsification used lms ps instead. Prior preflight pass/fail conclusions that depended on /v1/models load checks should be treated as unverified pending re-run."
+}
