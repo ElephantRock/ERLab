@@ -1,0 +1,46 @@
+{
+  "_program": "F1 — Frontend Architecture",
+  "_status": "CLOSED",
+  "_closed_at": "2026-07-23",
+  "_audit_at_commit": "872d0a7",
+  "waves": {
+    "F0": { "status": "CLOSED", "summary": "TypeScript restoration (101→0 errors, no suppressions)" },
+    "F1.0": { "status": "CLOSED", "summary": "Architecture audit baseline" },
+    "F1.1": { "status": "CLOSED", "summary": "Canonical API boundary (contract layer, transport split, unchecked budget 78→58)" },
+    "F1.2": { "status": "CLOSED", "summary": "Route and identity integrity (strict route-ID parser, shared route registry)" },
+    "F1.3": { "status": "CLOSED", "summary": "Truthful query lifecycle (useResource, scoped retry, independent resources)" },
+    "F1.4": { "status": "CLOSED", "summary": "Mutation integrity (retry:false, pending states, cache-owned invalidation)" },
+    "F1.5": { "status": "CLOSED", "summary": "Critical product-flow integration (golden journey, gap A/B, ingest persistence)" },
+    "F1.6": { "status": "CLOSED", "summary": "Runtime error observability (governed endpoint, two-tier boundary, observers)" },
+    "F1.7": { "status": "CLOSED", "summary": "Final architecture reconciliation (inventory, ownership seal, ratchet match)" }
+  },
+  "final_gates": {
+    "frontend_tests": { "passed": 984, "failed": 0, "files": 122 },
+    "backend_tests": { "passed": 320, "skipped": 4, "failed": 0 },
+    "typescript_errors": 0,
+    "eslint_warnings": 63,
+    "unchecked_caller_budget": 58,
+    "raw_fetch_in_pages": 0,
+    "test_owned_route_replicas": 0,
+    "runtime_observer_owners": 1,
+    "sentry_runtime_transports": 0,
+    "architecture_seal_tests": 29,
+    "new_suppressions": 0,
+    "five_run_instability": 0,
+    "working_tree": "clean"
+  },
+  "ownership": {
+    "route_registry": "AppRoutes.tsx",
+    "query_client": "main.tsx",
+    "mutation_cache": "lib/mutation-cache.ts",
+    "root_boundary": "components/error-boundary.tsx",
+    "route_boundary": "components/route-error-boundary.tsx",
+    "observer_installer": "lib/runtime-observers.ts",
+    "diagnostic_reporter": "lib/runtime-error-reporter.ts",
+    "diagnostic_transport": "api/clients/diagnostics-client.ts",
+    "lazy_route_wrapper": "lib/lazy-route.tsx",
+    "protected_route": "AppRoutes.tsx"
+  },
+  "approved_exceptions": 7,
+  "open_items": 0
+}
