@@ -10,8 +10,9 @@ from fastapi.responses import JSONResponse
 
 from backend.api.auth import get_current_user, verify_api_key
 from backend.api.errors import APIError
-from backend.api.routes import auth as auth_routes, collaboration, costs, evaluation, experiments, exports, gaps, governance, ideas, knowledge, knowledge_graph, literature, memory, model_config, notifications, ops, pipeline, plugins, recombination, search, status, traces
+from backend.api.routes import auth as auth_routes, collaboration, costs, diagnostics, evaluation, experiments, exports, gaps, governance, ideas, knowledge, knowledge_graph, literature, memory, model_config, notifications, ops, pipeline, plugins, recombination, search, status, traces
 from backend.api import ws as ws_module
+from backend.api.middleware.diagnostics_body_limit import DiagnosticsBodyLimitMiddleware
 
 app = FastAPI(
     title="Elephant Rock Research API",
@@ -35,6 +36,14 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# F1.6.1 [V3-4]: ASGI body-limit middleware runs BEFORE FastAPI's body
+# parser. Only intercepts POST /api/v1/diagnostics/runtime-error. Returns
+# 413 once cumulative received bytes exceed 8 KiB, including chunked
+# requests. The cap must run pre-parser because a normal route signature
+# causes the framework to read and parse the body before the handler
+# executes.
+app.add_middleware(DiagnosticsBodyLimitMiddleware)
 
 
 @app.middleware("http")
@@ -145,6 +154,14 @@ app.include_router(
     auth_routes.router, prefix="/api/v1/auth", tags=["auth"]
 )
 
+# F1.6.1: Diagnostics routes — anonymous for the runtime-error endpoint.
+# Registered WITHOUT _auth so the runtime-error POST bypasses API-key
+# auth (clients often crash precisely when auth is broken). The JWT
+# middleware bypass below adds the precise method+path exception.
+app.include_router(
+    diagnostics.router, prefix="/api/v1/diagnostics", tags=["diagnostics"]
+)
+
 _auth = [Depends(verify_api_key)]
 
 app.include_router(
@@ -240,7 +257,20 @@ async def jwt_auth_middleware(request: Request, call_next):
     # Skip auth for public routes
     if not settings.auth_enabled:
         return await call_next(request)
-    if path.startswith("/api/v1/auth/") or path == "/health" or path.startswith("/docs") or path.startswith("/openapi"):
+    if (
+        path.startswith("/api/v1/auth/")
+        or path == "/health"
+        or path.startswith("/docs")
+        or path.startswith("/openapi")
+        # F1.6.1 [V3-5]: precise method+path match for the anonymous
+        # runtime-error endpoint. NOT the prefix — other methods on the
+        # same path (or future authenticated siblings under
+        # /api/v1/diagnostics/) must NOT inherit the bypass.
+        or (
+            request.method == "POST"
+            and path == "/api/v1/diagnostics/runtime-error"
+        )
+    ):
         return await call_next(request)
 
     # Validate Bearer token
