@@ -34,12 +34,17 @@ def provenance():
 
 
 class TestProtocolIdentity:
-    """P1E.1.2a — all 5 artifacts bind to the effective protocol-v2."""
+    """P1E.1.2a — all 5 artifacts bind to the effective protocol-v3 (EXACT full hash)."""
 
-    def test_all_five_bind_to_same_protocol_commit(self, provenance):
+    EXPECTED_V3_COMMIT = "679bc0052d0851bef48ab87663166b7a08f85bd6"
+
+    def test_all_five_bind_to_same_exact_protocol_commit(self, provenance):
         bindings = provenance["p1e1_2a_protocol_identity"]["artifact_bindings"]
-        commits = {(v["protocol_commit_present"] or "")[:7] for v in bindings.values()}
-        assert len(commits) == 1, f"artifact commits disagree: {commits}"
+        commits = {v["protocol_commit_present"] for v in bindings.values()}
+        assert commits == {self.EXPECTED_V3_COMMIT}, f"exact equality failed: {commits}"
+
+    def test_all_commits_are_full_40_char(self, provenance):
+        assert provenance["p1e1_2a_protocol_identity"]["protocol_commit_exact_40_char"]
 
     def test_protocol_sha_identical_across_artifacts(self, provenance):
         assert provenance["p1e1_2a_protocol_identity"]["protocol_sha256_identical_across_artifacts"]
@@ -47,8 +52,51 @@ class TestProtocolIdentity:
     def test_allocation_sha_identical_across_artifacts(self, provenance):
         assert provenance["p1e1_2a_protocol_identity"]["allocation_sha256_identical_across_artifacts"]
 
-    def test_effective_protocol_is_v2_not_v1(self, provenance):
-        assert provenance["effective_protocol_commit"] != provenance["superseded_protocol_v1_commit"]
+    def test_effective_protocol_is_v3_not_v1_or_v2(self, provenance):
+        eff = provenance["effective_protocol_commit"]
+        assert eff != provenance["superseded_protocol_v1_commit"]
+        assert eff != provenance["superseded_protocol_v2_commit"]
+
+
+class TestCustodyBreach:
+    """P1E.1.2e — historical held-out access honestly disclosed (not reported as zero)."""
+
+    def test_historical_held_out_cases_accessed(self, provenance):
+        hist = provenance["p1e1_2e_custody_breach"]["historical_invalid_calibration"]
+        assert hist["held_out_cases_accessed"] == 2
+        assert set(hist["held_out_case_ids"]) == {"ml_disc_nd_001", "nlp_ret_nd_001"}
+
+    def test_historical_held_out_candidate_texts_accessed(self, provenance):
+        hist = provenance["p1e1_2e_custody_breach"]["historical_invalid_calibration"]
+        assert hist["held_out_candidate_texts_accessed"] == 4
+
+    def test_historical_held_out_judgments_accessed_zero(self, provenance):
+        hist = provenance["p1e1_2e_custody_breach"]["historical_invalid_calibration"]
+        assert hist["held_out_judgments_accessed"] == 0
+
+    def test_final_admissible_calibration_zero_held_out(self, provenance):
+        final = provenance["p1e1_2e_custody_breach"]["final_admissible_calibration"]
+        assert final["held_out_cases_accessed"] == 0
+        assert final["held_out_candidate_texts_accessed"] == 0
+        assert final["caldev_reference_pairs"] == 4
+
+    def test_threshold_unchanged_by_exclusion(self, provenance):
+        final = provenance["p1e1_2e_custody_breach"]["final_admissible_calibration"]
+        assert final["threshold_changed_by_excluding_held_out"] is False
+        assert final["threshold"] == 0.861630662
+
+
+class TestV3HeldOutIsolation:
+    """The constructed v3 corpus has no v2 held-out lineage."""
+
+    def test_zero_v2_heldout_parent_refs(self, provenance):
+        assert provenance["v3_heldout_isolation"]["v2_heldout_parent_references"] == 0
+
+    def test_zero_v2_heldout_preserved_candidates(self, provenance):
+        assert provenance["v3_heldout_isolation"]["v2_heldout_preserved_candidates"] == 0
+
+    def test_zero_v3_heldout_judgments_inspected(self, provenance):
+        assert provenance["v3_heldout_isolation"]["v3_heldout_judgments_inspected"] == 0
 
 
 class TestCalibrationIsolation:

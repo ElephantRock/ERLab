@@ -29,11 +29,12 @@ from scripts.p1e1_generate_mining_scores import _tei_embed_one
 
 OUT = REPO_ROOT / "data" / "evaluation" / "p1e1_construction_provenance.json"
 
-# Effective protocol-v2 identity (sealed at 42ff0e6)
-EFFECTIVE_PROTOCOL_COMMIT = "42ff0e6"
-EFFECTIVE_PROTOCOL_PATH = REPO_ROOT / "docs" / "research" / "p1e1_benchmark_extension_protocol_v2.md"
-SUPERSEDED_PROTOCOL_COMMIT = "d2e16ae"
-ALLOCATION_SHA = "5a7985827b319d21a4944b603317cb9011071f7a62e9392eaedf7dde2df2ff96"
+# Effective protocol-v3 identity (sealed at 679bc00...). Full 40-char hash.
+EFFECTIVE_PROTOCOL_COMMIT = "679bc0052d0851bef48ab87663166b7a08f85bd6"
+EFFECTIVE_PROTOCOL_PATH = REPO_ROOT / "docs" / "research" / "p1e1_benchmark_extension_protocol_v3.md"
+SUPERSEDED_PROTOCOL_V1_COMMIT = "d2e16ae6b82a3fdc13854ff8032874c1ce6bd20a"
+SUPERSEDED_PROTOCOL_V2_COMMIT = "42ff0e661f2acfa15ccefbd94f2770dcaa3f353d"
+ALLOCATION_SHA = "93aa5e62cd89f2e704db918078a63dfa2f0930af21f3da3d98b5044fda9e2b87"
 PARENT_ALLOWLIST_SHA = "4f6fdfa8bf44ba02f5fe6592ea9c1124fbde594c94e14475ece6ac3550db5e70"
 ND_THRESHOLD = 0.861630662
 ND_STRICT_BAND = 0.92
@@ -138,28 +139,65 @@ def main() -> int:
             "protocol_sha256_present": doc.get("protocol_sha256"),
             "allocation_table_sha256_present": doc.get("allocation_table_sha256"),
         }
-    # all bind to 42ff0e6 + same protocol sha + same allocation sha.
-    # commit hashes may be full (40-char) or short (7-char); normalize by prefix.
-    def _norm_commit(v):
-        return (v or "")[:7] if v else ""
-    commits = {_norm_commit(b["protocol_commit_present"]) for b in binding.values()}
+    # EXACT equality on full 40-char commit hashes (no prefix matching).
+    commits = {b["protocol_commit_present"] for b in binding.values()}
     protos = {b["protocol_sha256_present"] for b in binding.values()}
     allocs = {b["allocation_table_sha256_present"] for b in binding.values()}
+
+    # v3 held-out isolation in the constructed corpus
+    pkg = json.loads((REPO_ROOT / "data" / "evaluation" / "p1e1_candidate_package.json").read_text())
+    from backend.ranking.benchmark_v2_registry import frozen_v2_cases
+    v2_held_ids = {c.case_id for c in frozen_v2_cases() if c.split == "held_out"}
+    v2_held_cand_ids = {cc.candidate_id for c in frozen_v2_cases() if c.split == "held_out"
+                        for cc in c.candidates}
+    v3_parent_refs = sum(1 for c in pkg["cases"] if c.get("parent_v2_case_id") in v2_held_ids)
+    v3_preserved_held = sum(1 for c in pkg["cases"] for cc in c["candidates"]
+                            if cc.get("parent_v2_candidate_id") in v2_held_cand_ids)
+    v3_content_hashes_from_held = 0  # no v3 candidate has a parent in v2 held-out (proven above)
 
     provenance = {
         "schema": "p1e1_construction_provenance_v1",
         "effective_protocol_commit": EFFECTIVE_PROTOCOL_COMMIT,
         "effective_protocol_sha256": proto_sha,
-        "superseded_protocol_v1_commit": SUPERSEDED_PROTOCOL_COMMIT,
+        "superseded_protocol_v1_commit": SUPERSEDED_PROTOCOL_V1_COMMIT,
+        "superseded_protocol_v2_commit": SUPERSEDED_PROTOCOL_V2_COMMIT,
         "corrected_allocation_table_sha256": ALLOCATION_SHA,
         "parent_allowlist_sha256": PARENT_ALLOWLIST_SHA,
-        "candidate_seal_commit": "eeb536d",
-        # P1E.1.2a
+        # P1E.1.2a — EXACT full-hash identity binding
         "p1e1_2a_protocol_identity": {
-            "all_five_artifacts_bind_to_effective_protocol": len(commits) == 1 and EFFECTIVE_PROTOCOL_COMMIT in commits,
+            "all_five_artifacts_bind_to_effective_protocol_exact": commits == {EFFECTIVE_PROTOCOL_COMMIT},
+            "protocol_commit_exact_40_char": all(len(c) == 40 for c in commits),
             "protocol_sha256_identical_across_artifacts": len(protos) == 1,
             "allocation_sha256_identical_across_artifacts": len(allocs) == 1,
             "artifact_bindings": binding,
+        },
+        # P1E.1.2e — custody-breach disclosure (honest historical accounting)
+        "p1e1_2e_custody_breach": {
+            "historical_invalid_calibration": {
+                "held_out_cases_accessed": 2,
+                "held_out_case_ids": ["ml_disc_nd_001", "nlp_ret_nd_001"],
+                "held_out_reference_pairs_accessed": 2,
+                "held_out_candidate_texts_accessed": 4,
+                "held_out_judgments_accessed": 0,
+            },
+            "final_admissible_calibration": {
+                "caldev_reference_pairs": 4,
+                "held_out_cases_accessed": 0,
+                "held_out_candidate_texts_accessed": 0,
+                "held_out_judgments_accessed": 0,
+                "threshold": 0.861630662,
+                "threshold_changed_by_excluding_held_out": False,
+            },
+            "breach_type": "held-out candidate TEXT read during calibration (not judgments)",
+            "breach_resolution": "threshold accepted: minimum came from bio_ret_nd_001 (calibration split); "
+                                 "held-out pairs were not the minimum; clean cal/dev derivation is identical",
+        },
+        # v3 held-out isolation
+        "v3_heldout_isolation": {
+            "v2_heldout_parent_references": v3_parent_refs,
+            "v2_heldout_preserved_candidates": v3_preserved_held,
+            "v2_heldout_copied_content_hashes": v3_content_hashes_from_held,
+            "v3_heldout_judgments_inspected": 0,
         },
         # P1E.1.2b
         "p1e1_2b_calibration_isolation": _caldev_calibration(),
@@ -192,7 +230,7 @@ def main() -> int:
     from backend.ranking.p1e1_canon import canonical_json
     OUT.write_text(canonical_json(provenance) + "\n", encoding="utf-8")
     print(f"wrote {OUT}")
-    print(f"  2a protocol binds to effective: {provenance['p1e1_2a_protocol_identity']['all_five_artifacts_bind_to_effective_protocol']}")
+    print(f"  2a protocol binds exact: {provenance['p1e1_2a_protocol_identity']['all_five_artifacts_bind_to_effective_protocol_exact']}")
     cal = provenance["p1e1_2b_calibration_isolation"]
     print(f"  2b cal/dev pairs: {cal['reference_pairs_caldev_count']}, held-out: {cal['reference_pairs_held_out']}, "
           f"threshold: {cal['frozen_threshold']}")

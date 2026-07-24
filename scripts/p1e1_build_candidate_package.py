@@ -40,15 +40,15 @@ from backend.ranking.benchmark_v3_registry import (
 )
 from backend.ranking.p1e1_canon import canonical_json, canonical_json_hash, content_hash, sha256_file
 
-# Immutable inputs (protocol v2 — calibration correction; see
-# docs/research/p1e1_benchmark_extension_protocol_v2.md). The v1 protocol
-# (d2e16ae) is preserved in history; v2 supersedes only the near-dup threshold.
-PROTOCOL_PATH_V2 = REPO_ROOT / "docs" / "research" / "p1e1_benchmark_extension_protocol_v2.md"
-PROTOCOL_COMMIT = ""  # filled at runtime (this commit's hash is not known until sealed)
-PROTOCOL_SHA = ""     # filled at runtime from PROTOCOL_PATH_V2
+# Immutable inputs (protocol v3 — custody-breach disclosure + identity canonicalization).
+# v1 (d2e16ae) and v2 (42ff0e6) are preserved in history; v3 is the effective ratchet.
+# Full 40-char commit hash (no prefix matching).
+PROTOCOL_PATH_V3 = REPO_ROOT / "docs" / "research" / "p1e1_benchmark_extension_protocol_v3.md"
+PROTOCOL_COMMIT = "679bc0052d0851bef48ab87663166b7a08f85bd6"
+PROTOCOL_SHA = ""  # filled at runtime from PROTOCOL_PATH_V3
 ALLOCATION_SHA = "93aa5e62cd89f2e704db918078a63dfa2f0930af21f3da3d98b5044fda9e2b87"
 PARENT_ALLOWLIST_SHA = "4f6fdfa8bf44ba02f5fe6592ea9c1124fbde594c94e14475ece6ac3550db5e70"
-# Calibrated near-duplicate cosine threshold (exact v2 reference minimum)
+# Calibrated near-duplicate cosine threshold (exact v2/v3 cal/dev reference minimum)
 ND_THRESHOLD = 0.861630662
 ND_HIGH_SIM_BAND = 0.92  # report-only strict band
 
@@ -62,8 +62,9 @@ def _common_identity() -> dict:
     return {
         "protocol_commit": PROTOCOL_COMMIT,
         "protocol_sha256": PROTOCOL_SHA,
-        "protocol_version": "p1e1_protocol_v2",
+        "protocol_version": "p1e1_protocol_v3",
         "protocol_v1_commit_preserved": "d2e16ae6b82a3fdc13854ff8032874c1ce6bd20a",
+        "protocol_v2_commit_preserved": "42ff0e661f2acfa15ccefbd94f2770dcaa3f353d",
         "allocation_table_sha256": ALLOCATION_SHA,
         "parent_allowlist_sha256": PARENT_ALLOWLIST_SHA,
         "candidate_benchmark_version": V3_CANDIDATE_BENCHMARK_VERSION,
@@ -163,17 +164,10 @@ def _lineage_checks(cases, v2_cases_by_id, parent_ids):
 
 
 def main() -> int:
-    # immutable inputs re-verification (protocol v2 — calibration correction)
-    import subprocess
-    global PROTOCOL_SHA, PROTOCOL_COMMIT
-    PROTOCOL_SHA = sha256_file(PROTOCOL_PATH_V2)
-    # protocol commit = the git commit that sealed PROTOCOL_PATH_V2 (resolved at runtime)
-    try:
-        PROTOCOL_COMMIT = subprocess.check_output(
-            ["git", "log", "-1", "--format=%H", "--", str(PROTOCOL_PATH_V2)],
-            cwd=str(REPO_ROOT), text=True).strip()
-    except Exception:
-        PROTOCOL_COMMIT = "unresolved"
+    # immutable inputs re-verification (protocol v3 — custody disclosure + identity)
+    global PROTOCOL_SHA
+    PROTOCOL_SHA = sha256_file(PROTOCOL_PATH_V3)
+    # PROTOCOL_COMMIT is the frozen full 40-char v3 hash (no runtime resolution)
     audit = json.loads((REPO_ROOT / "data" / "evaluation" / "p1e_discrimination_audit.json").read_text(encoding="utf-8"))
     parent_ids = sorted(audit["audited_case_ids"])
     allow_sha = canonical_json_hash(parent_ids)

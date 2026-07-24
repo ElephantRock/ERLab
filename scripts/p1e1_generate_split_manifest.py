@@ -48,9 +48,9 @@ def main() -> int:
 
     manifest = {
         "schema": "p1e1_split_manifest_v1",
-        "protocol_commit": "42ff0e6",
-        "protocol_sha256": sha256_file(REPO_ROOT / "docs" / "research" / "p1e1_benchmark_extension_protocol_v2.md"),
-        "protocol_version": "p1e1_protocol_v2",
+        "protocol_commit": "679bc0052d0851bef48ab87663166b7a08f85bd6",
+        "protocol_sha256": sha256_file(REPO_ROOT / "docs" / "research" / "p1e1_benchmark_extension_protocol_v3.md"),
+        "protocol_version": "p1e1_protocol_v3",
         "allocation_table_sha256": "93aa5e62cd89f2e704db918078a63dfa2f0930af21f3da3d98b5044fda9e2b87",
         "parent_allowlist_sha256": "4f6fdfa8bf44ba02f5fe6592ea9c1124fbde594c94e14475ece6ac3550db5e70",
         "benchmark_candidate_version": V3_CANDIDATE_BENCHMARK_VERSION,
