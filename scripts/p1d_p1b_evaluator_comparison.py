@@ -31,7 +31,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT))
 
 from backend.ranking.benchmark_v2_registry import frozen_v2_cases
-from backend.ranking.embedding_snapshot import EmbeddingSnapshot, SnapshotItem, load_snapshot
+from backend.ranking.embedding_snapshot import EmbeddingSnapshot, load_snapshot
 from backend.ranking.p1b3_evaluation import (
     SnapshotSemanticScorer,
     _build_request,
@@ -45,56 +45,15 @@ from backend.ranking.p1b3_evaluation import (
 )
 from backend.ranking.policies import rank_hybrid_rrf as _policies_hybrid_rrf
 
+# Shared TEI adapter (single repo-wide definition; see
+# scripts/p1_embedding_snapshot_adapter.py). P1D uses the unfiltered default
+# to preserve its original exact-parity behavior.
+from p1_embedding_snapshot_adapter import tei_snapshot_to_embedding_snapshot
+
 P1B_SNAPSHOT_DIR = REPO_ROOT / "docs" / "p1b_snapshot"
 P1B_BASELINE = REPO_ROOT / "docs" / "p1b_gate2" / "gate2_metrics_package.json"
 TEI_SNAPSHOT_PATH = P1B_SNAPSHOT_DIR / "snapshot_tei_gte_large_en_v15.json"
 OUTPUT_PATH = P1B_SNAPSHOT_DIR / "p1d_exact_evaluator_comparison.json"
-
-
-def tei_snapshot_to_embedding_snapshot(path: Path) -> EmbeddingSnapshot:
-    """Convert TEI JSON snapshot → EmbeddingSnapshot (the P1B evaluator's input type)."""
-    with open(path) as f:
-        raw = json.load(f)
-
-    items: list[SnapshotItem] = []
-    for qid, data in raw["queries"].items():
-        items.append(SnapshotItem(
-            item_id=qid,
-            item_role="query",
-            canonical_text="",  # not used by scorer
-            text_hash=data["text_hash"],
-            vector=tuple(data["vector"]),
-            vector_fingerprint="",
-        ))
-    for cid, data in raw["candidates"].items():
-        items.append(SnapshotItem(
-            item_id=cid,
-            item_role="candidate",
-            canonical_text="",
-            text_hash=data["text_hash"],
-            vector=tuple(data["vector"]),
-            vector_fingerprint="",
-        ))
-
-    return EmbeddingSnapshot(
-        snapshot_schema_version="embedding_snapshot_v1",
-        benchmark_version=raw.get("benchmark_fingerprint", "v2"),
-        benchmark_fingerprint="",
-        capability_binding_id="tei_direct",
-        capability_check_id="tei_direct",
-        generation_runtime_fingerprint="",
-        provider_kind="tei",
-        provider_model=raw["embedding_profile"]["model"],
-        provider_revision=raw["embedding_profile"].get("tei_sha"),
-        endpoint_identity="http://127.0.0.1:9090",
-        deployment_id=None,
-        embedding_contract_version="",
-        dimension=raw["embedding_profile"]["dimension"],
-        normalization_policy="l2",
-        items=tuple(items),
-        created_at="",
-        snapshot_fingerprint="",
-    )
 
 
 def run_all_policies(scorer: SnapshotSemanticScorer, cases):
