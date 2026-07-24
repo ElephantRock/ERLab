@@ -1,0 +1,285 @@
+{
+  "schema": "p1e_diagnosis_doc_v1",
+  "manifest_sha256": "230fcfa75e80a879119fa0d33365a5760c0b6755c40f508d6882f4d2f5229253",
+  "protocol_sha256": "a1825d7add7ecdc9bf41ea5ce3c203181b76334345fbce6ffbf9228befd3aabf",
+  "diagnosis_rule_version": "p1e_diagnosis_v1",
+  "primary_statistical_seed": 20260721,
+  "benchmark_fingerprint": "0ffbfdb164053ad19c869cbba44678c0aa76aa140557320383a82efcebcb96e4",
+  "audited_cases": 44,
+  "excluded_held_out": 22,
+  "p1b_parity_pass": true,
+  "held_out_isolation": {
+    "held_out_case_objects_materialized": 0,
+    "held_out_query_vectors_decoded": 0,
+    "held_out_only_candidate_vectors_decoded": 0,
+    "held_out_ids_passed_to_evaluator": 0,
+    "held_out_records_emitted": 0
+  },
+  "section1_structure_aggregate": {
+    "cases_with_no_grade3": 0,
+    "cases_with_multiple_grade3": 30,
+    "cases_all_relevant": 31,
+    "cases_all_zero": 0,
+    "cases_fewer_than_2_nonrelevant": 44,
+    "cases_unique_best": 14,
+    "cases_ambiguous_top": 30,
+    "total_grade0": 13,
+    "total_grade1": 25,
+    "total_grade2plus": 142,
+    "total_grade3": 90,
+    "cases_with_text_duplication": 0,
+    "n_cases": 44
+  },
+  "section2_ceiling": {
+    "headroom_histogram_ndcg5": {
+      "headroom_eq_0": 29,
+      "headroom_le_0.01": 29,
+      "headroom_le_0.02": 30,
+      "headroom_gt_0.05": 8
+    },
+    "n_cases": 44
+  },
+  "section2_resolution": {
+    "method": "adjacent differently-graded swap of ideal ordering; per-case change / n",
+    "min_nonzero_macro_movement": {
+      "ndcg_at_5": 0.00012003,
+      "ndcg_at_10": 0.00012003,
+      "mrr_at_10": null,
+      "precision_at_5": null,
+      "recall_at_20": null
+    },
+    "min_nonzero_macro_movement_top1_optimal": null,
+    "top1_optimal_effective_denominator": 44,
+    "all_zero_cases_excluded": 0,
+    "n_cases": 44
+  },
+  "section3_five_run_macro": {
+    "lexical": {
+      "ndcg_at_5": 0.9495,
+      "ndcg_at_10": 0.9495,
+      "mrr_at_10": 1.0,
+      "precision_at_5": 0.7591,
+      "recall_at_20": 1.0
+    },
+    "p1b_semantic": {
+      "ndcg_at_5": 0.9321,
+      "ndcg_at_10": 0.9321,
+      "mrr_at_10": 0.9886,
+      "precision_at_5": 0.7591,
+      "recall_at_20": 1.0
+    },
+    "tei_semantic": {
+      "ndcg_at_5": 0.948,
+      "ndcg_at_10": 0.948,
+      "mrr_at_10": 1.0,
+      "precision_at_5": 0.7591,
+      "recall_at_20": 1.0
+    },
+    "p1b_hybrid_rrf": {
+      "ndcg_at_5": 0.9561,
+      "ndcg_at_10": 0.9561,
+      "mrr_at_10": 1.0,
+      "precision_at_5": 0.7591,
+      "recall_at_20": 1.0
+    },
+    "tei_hybrid_rrf": {
+      "ndcg_at_5": 0.9517,
+      "ndcg_at_10": 0.9517,
+      "mrr_at_10": 1.0,
+      "precision_at_5": 0.7591,
+      "recall_at_20": 1.0
+    }
+  },
+  "section3_pairwise_summary": {
+    "lexical_vs_p1b_semantic": {
+      "mean_ndcg5_delta": -0.0174086,
+      "effective_nontied_queries": 20,
+      "mean_kendall_tau": 0.587879,
+      "bootstrap_ci": {
+        "mean_delta": -0.0174086,
+        "lower": -0.04100958,
+        "upper": 0.00483685,
+        "p_positive": 0.064,
+        "excludes_zero": false,
+        "n": 44,
+        "method": "percentile",
+        "seed": 20260721
+      },
+      "permutation_p": 0.14736,
+      "continuous_mde_ndcg5": 0.03270697,
+      "outcome_label": "underpowered"
+    },
+    "lexical_vs_tei_semantic": {
+      "mean_ndcg5_delta": -0.00152611,
+      "effective_nontied_queries": 21,
+      "mean_kendall_tau": 0.542424,
+      "bootstrap_ci": {
+        "mean_delta": -0.00152611,
+        "lower": -0.02253015,
+        "upper": 0.0194809,
+        "p_positive": 0.4446,
+        "excludes_zero": false,
+        "n": 44,
+        "method": "percentile",
+        "seed": 20260721
+      },
+      "permutation_p": 0.89241,
+      "continuous_mde_ndcg5": 0.0309186,
+      "outcome_label": "underpowered"
+    },
+    "p1b_semantic_vs_tei_semantic": {
+      "mean_ndcg5_delta": 0.01588249,
+      "effective_nontied_queries": 19,
+      "mean_kendall_tau": 0.590909,
+      "bootstrap_ci": {
+        "mean_delta": 0.01588249,
+        "lower": -0.00126608,
+        "upper": 0.03462532,
+        "p_positive": 0.9645,
+        "excludes_zero": false,
+        "n": 44,
+        "method": "percentile",
+        "seed": 20260721
+      },
+      "permutation_p": 0.08911,
+      "continuous_mde_ndcg5": 0.02559628,
+      "outcome_label": "no_detected_difference"
+    },
+    "p1b_hybrid_rrf_vs_tei_hybrid_rrf": {
+      "mean_ndcg5_delta": -0.00437969,
+      "effective_nontied_queries": 14,
+      "mean_kendall_tau": 0.801515,
+      "bootstrap_ci": {
+        "mean_delta": -0.00437969,
+        "lower": -0.0146255,
+        "upper": 0.00446979,
+        "p_positive": 0.1812,
+        "excludes_zero": false,
+        "n": 44,
+        "method": "percentile",
+        "seed": 20260721
+      },
+      "permutation_p": 0.4003,
+      "continuous_mde_ndcg5": 0.01376225,
+      "outcome_label": "no_detected_difference"
+    }
+  },
+  "section4_hard_negatives": {
+    "total_primary_grade0": 5,
+    "cases_with_near_miss": 5
+  },
+  "section5_error_classes": {
+    "lexical_aliasing": {
+      "posture": "classified",
+      "count": 4,
+      "distinct_cases": 4
+    },
+    "generic_research_language_overlap": {
+      "posture": "hypothesis",
+      "count": 10,
+      "distinct_cases": null
+    },
+    "entity_mismatch": {
+      "posture": "not_inferable",
+      "count": null,
+      "distinct_cases": null
+    },
+    "method_vs_domain_confusion": {
+      "posture": "classified",
+      "count": 0,
+      "distinct_cases": null
+    },
+    "task_vs_evidence_mismatch": {
+      "posture": "not_inferable",
+      "count": null,
+      "distinct_cases": null
+    },
+    "long_document_dilution": {
+      "posture": "hypothesis",
+      "count": 0,
+      "distinct_cases": null
+    },
+    "near_duplicate_candidates": {
+      "posture": "classified",
+      "count": 4,
+      "distinct_cases": 4
+    },
+    "missing_query_context": {
+      "posture": "not_inferable",
+      "count": null,
+      "distinct_cases": null
+    }
+  },
+  "section7_diagnosis": {
+    "diagnosis_rule_version": "p1e_diagnosis_v1",
+    "criteria": {
+      "S_R1_headroom_le_0.01": {
+        "value_frac": 0.6591,
+        "threshold": 0.6,
+        "pass": true
+      },
+      "S_R2_top1_optimal_all_runs": {
+        "per_run_frac": {
+          "lexical": 0.7727,
+          "p1b_semantic": 0.6818,
+          "tei_semantic": 0.75,
+          "p1b_hybrid_rrf": 0.8182,
+          "tei_hybrid_rrf": 0.7727
+        },
+        "threshold": 0.6,
+        "denominator": 44,
+        "pass": true
+      },
+      "S_R3_few_hard_negatives": {
+        "value_frac": 1.0,
+        "threshold": 0.6,
+        "pass": true
+      },
+      "S_R4_no_detected_difference_all_pairwise": {
+        "labels": {
+          "lexical_vs_p1b_semantic": "underpowered",
+          "lexical_vs_tei_semantic": "underpowered",
+          "p1b_semantic_vs_tei_semantic": "no_detected_difference",
+          "p1b_hybrid_rrf_vs_tei_hybrid_rrf": "no_detected_difference"
+        },
+        "pass": false
+      },
+      "S_R5_largest_delta_power": {
+        "comparison": "lexical_vs_p1b_semantic",
+        "effective_nontied": 20,
+        "threshold_nontied": 22,
+        "pair_mde": 0.03270697,
+        "pair_abs_mean_delta": 0.0174086,
+        "pass": true
+      },
+      "A1_headroom_gt_0.05": {
+        "value_frac": 0.1818,
+        "threshold": 0.4,
+        "pass": false
+      },
+      "A2_many_hard_negatives": {
+        "value_frac": 0.0,
+        "threshold": 0.4,
+        "pass": false
+      },
+      "A3_recurring_error_classes": {
+        "qualifying_classes": [
+          "lexical_aliasing",
+          "near_duplicate_candidates"
+        ],
+        "count": 2,
+        "threshold": 2,
+        "pass": true
+      },
+      "A4_detected_effect": {
+        "qualifying_comparisons": [],
+        "pass": false
+      }
+    },
+    "S_complete": false,
+    "A_complete": false,
+    "no_architecture_criterion_materially_met": false,
+    "outcome": "M",
+    "precedence": "S-complete&A-incomplete->S; A-complete&S-incomplete->A; both->M; neither->M"
+  }
+}
