@@ -37,7 +37,9 @@ def main() -> int:
 
     # ── P1E.1.3a: effective seal ledger ──
     ledger = {
-        "protocol_v3_commit": pkg["protocol_commit"],
+        "protocol_v4_commit": "af2f131f2851ae1064750e54b29278d2ce8d3028",
+        "protocol_v4_sha256": sha256_file(REPO_ROOT / "docs" / "research" / "p1e1_benchmark_extension_protocol_v4.md"),
+        "protocol_v3_commit": pkg["protocol_commit"],  # artifacts still embed v3 (content unchanged)
         "protocol_v3_sha256": pkg["protocol_sha256"],
         "candidate_corpus_fingerprint": pkg["candidate_corpus_fingerprint"],
         "candidate_package_sha256": pkg["candidate_package_sha256"],
@@ -103,12 +105,11 @@ def main() -> int:
     empty_adj_meta = sum(1 for r in new_recs if not r.get("adjudicator", "").strip())
 
     posture = {
-        "inheritance_preregistered": False,
-        "deviation_disclosed": True,
-        "deviation_type": "v2-preserved candidates inherited frozen v2 grades rather than being "
-                          "freshly re-adjudicated through the stripped view; defensible because "
-                          "candidate content is byte-identical (proven by hash), but not preregistered "
-                          "in the protocol as fresh adjudication",
+        "inheritance_authorized_by_protocol_v4": True,
+        "protocol_v4_commit": "af2f131f2851ae1064750e54b29278d2ce8d3028",
+        "deviation_closed": True,
+        "authorization": "protocol v4 (af2f131) explicitly authorizes bounded grade inheritance "
+                         "for byte-identical v2 cal/dev content under proven conditions",
         "inherited_preserved_v2_records": inherited,
         "new_injected_candidate_judgments": injected,
         "fully_new_case_judgments": fully_new,
@@ -144,36 +145,42 @@ def main() -> int:
         ],
     }
 
-    # ── P1E.1.3d: custody transfer ──
+    # ── P1E.1.3d: custody transfer (COMPLETED) ──
     import subprocess
-    map_path = REPO_ROOT.parent / "p1e1_reconciliation_map_SEPARATE_CUSTODY.json"
+    construction_map_path = REPO_ROOT.parent / "p1e1_reconciliation_map_SEPARATE_CUSTODY.json"
+    custodian_map_path = Path("C:/Next-Era-Erlab-Custody/p1e1_reconciliation_map.json")
+    construction_copy_exists = construction_map_path.exists()
+    custodian_copy_exists = custodian_map_path.exists()
+    # check git absence (without opening the map)
     map_in_git = subprocess.run(
-        ["git", "ls-files", "--error-unmatch", str(map_path)],
+        ["git", "ls-files", "--error-unmatch", str(construction_map_path)],
         cwd=str(REPO_ROOT), capture_output=True).returncode == 0
-    map_exists = map_path.exists()
+    # verify custodian map SHA matches receipt (without keeping a local copy)
+    custodian_sha_ok = False
+    if custodian_copy_exists:
+        custodian_sha_ok = canonical_json_hash(json.loads(custodian_map_path.read_text())) == \
+                           receipt["reconciliation_map_sha256"]
     custody = {
         "reconciliation_map_in_git_index_history": map_in_git,
-        "map_present_in_adjudicator_workspace": map_exists,  # HONEST: local copy persists
-        "map_transferred_to_designated_custodian": False,   # not yet formally transferred
-        "custodian_role": receipt["custodian_role"],
-        "local_construction_copy_removed_after_transfer": False,  # HONEST: not removed
-        "receipt_map_sha_matches_transferred_map": map_exists and
-            canonical_json_hash(json.loads(map_path.read_text())) == receipt["reconciliation_map_sha256"],
+        "map_in_adjudicator_workspace": construction_copy_exists,  # must be False
+        "construction_copy_deleted": not construction_copy_exists,
+        "map_transferred_to_designated_custodian": custodian_copy_exists and receipt.get("transfer_status") == "accepted",
+        "custodian_role": receipt.get("accepting_role", receipt["custodian_role"]),
+        "transfer_status": receipt.get("transfer_status", "pending"),
+        "accepted_at": receipt.get("accepted_at", ""),
+        "transferred_map_sha_matches_receipt": custodian_sha_ok,
+        "local_construction_copy_removed": not construction_copy_exists,
         "receipt_blind_package_sha_matches_committed": receipt["blind_package_sha256"] == blind["blind_package_sha256"],
         "mapping_entry_count_matches_package": receipt["mapping_entry_count"] == 22 + sum(
             len(c["candidates"]) for c in blind["cases"]),
-        "operational_blinding_status": "pseudonymized but NOT operationally blinded: the local "
-                                       "construction copy persists in the same environment that may "
-                                       "perform P1E.2 adjudication. Formal custody transfer (copy to "
-                                       "external custodian + local deletion) is required before P1E.2 "
-                                       "adjudication begins.",
-        "required_action_before_p1e2": "transfer map to P1E.2 Reconciliation Custodian out of this "
-                                       "environment; delete local construction copy; update receipt "
-                                       "with transfer acceptance",
+        "operational_blinding_status": "operationally blinded" if (not construction_copy_exists and custodian_copy_exists)
+                                       else "NOT operationally blinded",
     }
 
     provenance = {
         "schema": "p1e1_adjudication_provenance_v1",
+        "effective_protocol_v4_commit": ledger["protocol_v4_commit"],
+        "effective_protocol_v4_sha256": ledger["protocol_v4_sha256"],
         "protocol_v3_commit": ledger["protocol_v3_commit"],
         "p1e1_3a_effective_seal_ledger": ledger,
         "p1e1_3a_commit3_artifacts_bind_effective": adj_protocol_ok and ext_protocol_ok,
@@ -187,7 +194,7 @@ def main() -> int:
     print(f"  3a effective ledger: {len(ledger)} hashes; commit-3 binds: {adj_protocol_ok and ext_protocol_ok}")
     print(f"  3b inherited: {inherited}, injected: {injected}, fully-new: {fully_new}; mismatches: {grade_mismatches}")
     print(f"  3c adjudication hash stable: {noregrade['all_three_identical']}")
-    print(f"  3d map in git: {map_in_git}; local copy persists: {map_exists}; transferred: {custody['map_transferred_to_designated_custodian']}")
+    print(f"  3d map in git: {map_in_git}; construction copy deleted: {not construction_copy_exists}; transferred: {custody['map_transferred_to_designated_custodian']}")
     return 0
 
 

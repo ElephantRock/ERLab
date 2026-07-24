@@ -38,10 +38,11 @@ class TestEffectiveSealLedger:
 class TestInheritedJudgmentPosture:
     """P1E.1.3b — inherited-v2 posture disclosed (deviation, not fresh adjudication)."""
 
-    def test_inheritance_deviation_disclosed(self, ap):
+    def test_inheritance_authorized_by_v4(self, ap):
         p = ap["p1e1_3b_inherited_judgment_posture"]
-        assert p["inheritance_preregistered"] is False
-        assert p["deviation_disclosed"] is True
+        assert p["inheritance_authorized_by_protocol_v4"] is True
+        assert p["deviation_closed"] is True
+        assert len(p["protocol_v4_commit"]) == 40
 
     def test_inherited_count_180(self, ap):
         p = ap["p1e1_3b_inherited_judgment_posture"]
@@ -93,17 +94,16 @@ class TestCustodyTransfer:
         c = ap["p1e1_3d_custody_transfer"]
         assert c["reconciliation_map_in_git_index_history"] is False
 
-    def test_map_transfer_status_honest(self, ap):
+    def test_map_transfer_completed(self, ap):
         c = ap["p1e1_3d_custody_transfer"]
-        # The map has NOT been formally transferred — this must be honestly False
-        assert c["map_transferred_to_designated_custodian"] is False
-        assert "NOT operationally blinded" in c["operational_blinding_status"]
+        assert c["map_transferred_to_designated_custodian"] is True
+        assert c["transfer_status"] == "accepted"
+        assert c["construction_copy_deleted"] is True
+        assert c["map_in_adjudicator_workspace"] is False
+        assert "operationally blinded" in c["operational_blinding_status"]
+        assert "NOT" not in c["operational_blinding_status"]
 
     def test_receipt_binds_package_and_map(self, ap):
         c = ap["p1e1_3d_custody_transfer"]
         assert c["receipt_blind_package_sha_matches_committed"]
         assert c["mapping_entry_count_matches_package"]
-
-    def test_p1e2_action_required(self, ap):
-        c = ap["p1e1_3d_custody_transfer"]
-        assert "required_action_before_p1e2" in c
