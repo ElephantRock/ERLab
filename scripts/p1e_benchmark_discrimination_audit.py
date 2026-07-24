@@ -315,23 +315,39 @@ def ceiling_and_headroom(cases, runs: dict) -> dict:
 
 
 def empirical_resolution(cases) -> dict:
-    """Min nonzero macro movement from adjacent differently-graded swaps (/44).
+    """Min nonzero macro movement from adjacent differently-graded swaps (/n).
 
     Computed per metric via the ORIGINAL metric fns. top1_optimal denominator
     excludes all-zero cases; effective denominator reported.
+
+    top1_optimal uses the FROZEN definition: 1 iff grade(top-ranked) ==
+    max(case grades); NOT grade(top-ranked) > 0 (which is top1_positive).
+    For a position-0 adjacent swap of DIFFERENTLY-graded candidates in the
+    ideal descending ordering, ideal[0] is the unique maximum so base=1,
+    and swapped[0] = ideal[1] < ideal[0] so pert=0: the movement is always
+    1 for every eligible (non-all-zero, uniquely-best-top) case.
     """
     n = len(cases)
     metrics_keys = ["ndcg_at_5", "ndcg_at_10", "mrr_at_10", "precision_at_5", "recall_at_20"]
     min_nonzero = {m: None for m in metrics_keys}
     min_nonzero_top1 = None
     top1_denom = 0
+    # eligibility counters (reviewer-required proof)
+    unique_best_nontied_top_cases = 0      # non-all-zero cases with ideal[0] != ideal[1]
+    eligible_top_position_swaps = 0        # position-0 differently-grade swaps that move top1_optimal
+    top1_case_movements: list[float] = []  # case-level movements; divided by final denom
 
     for case in cases:
         all_grades = [_grade_for(case, c.candidate_id) for c in case.candidates]
         ideal = sorted(all_grades, reverse=True)
-        is_all_zero = max(all_grades) == 0
+        max_grade = ideal[0] if ideal else 0
+        is_all_zero = max_grade == 0
         if not is_all_zero:
             top1_denom += 1
+        # uniquely-best top? (ideal[0] != ideal[1] => top candidate is unique max)
+        uniquely_best_top = (not is_all_zero and len(ideal) >= 2 and ideal[0] != ideal[1])
+        if uniquely_best_top:
+            unique_best_nontied_top_cases += 1
         # enumerate adjacent swaps of DIFFERENTLY-graded candidates in the ideal ordering
         for i in range(len(ideal) - 1):
             if ideal[i] == ideal[i + 1]:
@@ -346,16 +362,24 @@ def empirical_resolution(cases) -> dict:
                     macro_d = d / n
                     if min_nonzero[m] is None or macro_d < min_nonzero[m]:
                         min_nonzero[m] = macro_d
-            # top1_optimal: only the first position matters; a swap at i=0 between
-            # differently-graded candidates can flip top1_optimal from 1->0 or 0->1
-            if i == 0 and not is_all_zero:
-                base_t1 = 1 if ideal[0] > 0 else 0
-                pert_t1 = 1 if swapped[0] > 0 else 0
+            # top1_optimal (FROZEN def: grade(top) == max). Only the first
+            # position matters. For a position-0 differently-graded swap,
+            # ideal[0] is the unique max (since ideal[0] != ideal[1]) -> base=1;
+            # swapped[0]=ideal[1] < ideal[0] -> pert=0. Movement is always 1.
+            # We collect the case-level movement and divide by the FINAL
+            # top1_denom after the loop (matching the continuous-metric /n
+            # convention, so a swap's macro weight doesn't depend on case order).
+            if i == 0 and uniquely_best_top:
+                base_t1 = 1 if ideal[0] == max_grade else 0      # always 1 here
+                pert_t1 = 1 if swapped[0] == max_grade else 0     # 0: swapped[0]=ideal[1]<max
                 dt1 = abs(pert_t1 - base_t1)
                 if dt1 > 0:
-                    macro_dt1 = dt1 / top1_denom if top1_denom else 0
-                    if min_nonzero_top1 is None or (macro_dt1 and macro_dt1 < min_nonzero_top1):
-                        min_nonzero_top1 = macro_dt1
+                    eligible_top_position_swaps += 1
+                    top1_case_movements.append(dt1)
+
+    # macro movement uses the FINAL denominator (consistent across all cases)
+    if top1_case_movements and top1_denom:
+        min_nonzero_top1 = min(top1_case_movements) / top1_denom
 
     return {
         "method": "adjacent differently-graded swap of ideal ordering; per-case change / n",
@@ -363,6 +387,9 @@ def empirical_resolution(cases) -> dict:
         "min_nonzero_macro_movement_top1_optimal": round(min_nonzero_top1, 8) if min_nonzero_top1 is not None else None,
         "top1_optimal_effective_denominator": top1_denom,
         "all_zero_cases_excluded": n - top1_denom,
+        "unique_best_nontied_top_cases": unique_best_nontied_top_cases,
+        "eligible_top_position_swaps": eligible_top_position_swaps,
+        "top1_optimal_definition": "1 iff grade(top-ranked) == max(case grades); NOT grade(top) > 0",
         "n_cases": n,
     }
 

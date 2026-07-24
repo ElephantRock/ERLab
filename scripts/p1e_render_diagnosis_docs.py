@@ -120,7 +120,8 @@ def render() -> tuple[str, dict]:
     for m, v in res["min_nonzero_macro_movement"].items():
         L.append(f"  {m:16s} {v}")
     L.append(f"  top1_optimal     {res['min_nonzero_macro_movement_top1_optimal']}  "
-             "(undefined: no single adjacent swap flips top1_optimal)")
+             f"(= 1/{res['top1_optimal_effective_denominator']}; {res['eligible_top_position_swaps']} "
+             f"eligible position-0 swaps across {res['unique_best_nontied_top_cases']} uniquely-best cases)")
     L.append(f"  top1_optimal effective denominator   {res['top1_optimal_effective_denominator']} "
              f"(all-zero excluded: {res['all_zero_cases_excluded']})")
     L.append("```\n")

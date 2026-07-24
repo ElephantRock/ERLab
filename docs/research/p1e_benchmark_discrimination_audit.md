@@ -78,7 +78,7 @@ Empirical metric resolution (min nonzero macro movement from one adjacent differ
   mrr_at_10        None
   precision_at_5   None
   recall_at_20     None
-  top1_optimal     None  (undefined: no single adjacent swap flips top1_optimal)
+  top1_optimal     0.02272727  (= 1/44; 14 eligible position-0 swaps across 14 uniquely-best cases)
   top1_optimal effective denominator   44 (all-zero excluded: 0)
 ```
 

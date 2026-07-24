@@ -48,9 +48,12 @@
       "precision_at_5": null,
       "recall_at_20": null
     },
-    "min_nonzero_macro_movement_top1_optimal": null,
+    "min_nonzero_macro_movement_top1_optimal": 0.02272727,
     "top1_optimal_effective_denominator": 44,
     "all_zero_cases_excluded": 0,
+    "unique_best_nontied_top_cases": 14,
+    "eligible_top_position_swaps": 14,
+    "top1_optimal_definition": "1 iff grade(top-ranked) == max(case grades); NOT grade(top) > 0",
     "n_cases": 44
   },
   "section3_five_run_macro": {

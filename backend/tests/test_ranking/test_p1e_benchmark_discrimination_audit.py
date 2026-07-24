@@ -230,6 +230,61 @@ class TestOriginalEvaluatorUsage:
 # ── §semantic correctness of statistics + diagnosis ─────────────────
 
 
+class TestTop1OptimalResolution:
+    """P1E.0a: top1_optimal must use the FROZEN definition (grade==max), NOT
+    top1_positive (grade>0). Required fixtures from the review verdict."""
+
+    def test_top1_optimal_and_top1_positive_are_distinct(self):
+        from p1e_benchmark_discrimination_audit import top1_optimal, top1_positive
+        # [1,3,0]: top grade is 1, max is 3
+        assert top1_optimal([1, 3, 0], [3, 1, 0]) == 0   # 1 != max(3)
+        assert top1_positive([1, 3, 0]) == 1              # 1 > 0  (DIFFERENT)
+        # so the two implementations are provably distinct
+
+    def test_fixture_3_1_0_swap_flips_top1_optimal_not_positive(self):
+        from p1e_benchmark_discrimination_audit import top1_optimal, top1_positive
+        # ideal [3,1,0] -> swap top two -> [1,3,0]
+        assert top1_optimal([3, 1, 0], [3, 1, 0]) == 1
+        assert top1_optimal([1, 3, 0], [3, 1, 0]) == 0   # changes 1 -> 0
+        # top1_positive stays 1 (grade 1 > 0)
+        assert top1_positive([3, 1, 0]) == 1
+        assert top1_positive([1, 3, 0]) == 1              # remains 1
+
+    def test_fixture_3_3_1_equal_grade_top_swap_excluded(self):
+        from p1e_benchmark_discrimination_audit import top1_optimal
+        # [3,3,1]: equal-grade top swap does not change top1_optimal
+        assert top1_optimal([3, 3, 1], [3, 3, 1]) == 1
+        assert top1_optimal([3, 3, 1], [3, 3, 1]) == 1   # unchanged
+
+    def test_fixture_2_1_0_swap_flips_top1_optimal(self):
+        from p1e_benchmark_discrimination_audit import top1_optimal
+        assert top1_optimal([2, 1, 0], [2, 1, 0]) == 1
+        assert top1_optimal([1, 2, 0], [2, 1, 0]) == 0   # changes 1 -> 0
+
+    def test_fixture_all_zero_excluded_from_denominator(self):
+        from p1e_benchmark_discrimination_audit import top1_optimal
+        # [0,0]: all-zero -> top1_optimal 0, excluded from denominator
+        assert top1_optimal([0, 0], [0, 0]) == 0
+
+    @skip_if_no_snapshots
+    def test_artifact_top1_resolution_reports_nonzero_movement_and_eligibility(self):
+        """The regenerated artifact must report a nonzero top1_optimal macro
+        movement and the eligibility counters that prove it."""
+        audit = json.loads(AUDIT_JSON.read_text(encoding="utf-8"))
+        res = audit["section2_resolution"]
+        # top1_optimal resolution must NOT be None (there are uniquely-best cases)
+        assert res["min_nonzero_macro_movement_top1_optimal"] is not None, \
+            "top1_optimal resolution is None but uniquely-best cases exist"
+        assert res["min_nonzero_macro_movement_top1_optimal"] > 0
+        # eligibility proof
+        assert res["unique_best_nontied_top_cases"] > 0
+        assert res["eligible_top_position_swaps"] > 0
+        # all-zero excluded from denominator
+        assert res["all_zero_cases_excluded"] == 44 - res["top1_optimal_effective_denominator"]
+        # frozen definition recorded
+        assert "max(case grades)" in res["top1_optimal_definition"]
+
+
 class TestStatistics:
     def test_bootstrap_identical_gives_zero_delta_including_zero(self):
         from p1e_stats import paired_bootstrap_ci
