@@ -61,9 +61,12 @@ describe("ProposalReviewPanel", () => {
       proposalSections: { ensemble_review: mockReview },
     });
 
-    expect(screen.getByText("Methodology")).toBeInTheDocument();
-    expect(screen.getByText("Novelty")).toBeInTheDocument();
-    expect(screen.getByText("Clarity")).toBeInTheDocument();
+    // Phase 2 2D: RadarChart now visualizes these perspective labels too, so
+    // each label appears in both the radar and the perspective row. Assert
+    // presence via getAllByText (≥1) to keep the test's intent.
+    expect(screen.getAllByText("Methodology").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Novelty").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Clarity").length).toBeGreaterThan(0);
   });
 
   it("shows consensus strengths", () => {
@@ -129,7 +132,7 @@ describe("ProposalReviewPanel", () => {
     });
 
     // Only Novelty should show
-    expect(screen.getByText("Novelty")).toBeInTheDocument();
+    expect(screen.getAllByText("Novelty").length).toBeGreaterThan(0);
     expect(screen.queryByText("Methodology")).not.toBeInTheDocument();
     expect(screen.queryByText("Clarity")).not.toBeInTheDocument();
   });
@@ -257,8 +260,8 @@ describe("ProposalReviewPanel", () => {
       proposalSections: { ensemble_review: partialPerspective },
     });
 
-    // Methodology label should still show
-    expect(screen.getByText("Methodology")).toBeInTheDocument();
+    // Methodology label should still show (radar + perspective row render it)
+    expect(screen.getAllByText("Methodology").length).toBeGreaterThan(0);
   });
 
   // --- Risk flags tests ---

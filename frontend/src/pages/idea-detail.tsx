@@ -37,6 +37,10 @@ import { GovernancePanel } from "@/components/ideas/governance-panel";
 import { FixSectionButton } from "@/components/ideas/fix-section-button";
 import { RevisionHistoryDrawer } from "@/components/ideas/revision-history-drawer";
 import { PaperWorkspace } from "@/components/ideas/paper-workspace";
+import { TrustSourcesWorkspace } from "@/components/ideas/trust-sources-workspace";
+import { RemediationBanner } from "@/components/ideas/remediation-banner";
+import { ProposalReviewPanel } from "@/components/ideas/proposal-review-panel";
+import { QualityCheckPanel } from "@/components/ideas/quality-check-panel";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -87,7 +91,7 @@ function IdeaDetailContent({ ideaId }: { ideaId: number }) {
   const [copiedSection, setCopiedSection] = useState<string | null>(null);
   const [revisionSection, setRevisionSection] = useState<string | null>(null);
   const [highlightedSection, setHighlightedSection] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<"proposal" | "paper" | "novelty" | "feasibility" | "metrics">("proposal");
+  const [activeTab, setActiveTab] = useState<"proposal" | "paper" | "trust" | "novelty" | "feasibility" | "metrics">("proposal");
 
   function handleJumpToSection(sectionKey: string) {
     const el = document.getElementById(`section-${sectionKey}`);
@@ -242,6 +246,11 @@ function IdeaDetailContent({ ideaId }: { ideaId: number }) {
                     <FileText className="h-3.5 w-3.5" />
                     Full Paper
                   </TabButton>
+                  {/* Phase 2 2C: Trust & Sources tab — review depth on the paper. */}
+                  <TabButton active={activeTab === "trust"} onClick={() => setActiveTab("trust")}>
+                    <Shield className="h-3.5 w-3.5" />
+                    Trust & Sources
+                  </TabButton>
                   {hasNovelty && (
                     <TabButton active={activeTab === "novelty"} onClick={() => setActiveTab("novelty")}>
                       Novelty Report
@@ -262,6 +271,20 @@ function IdeaDetailContent({ ideaId }: { ideaId: number }) {
                 {/* ── Proposal Sections (main reading area) ── */}
                 {activeTab === "proposal" && (
                   <div className="space-y-6">
+                    {/* Phase 2 2D: RemediationBanner (was dormant) — surfaces
+                        unresolved-citation and quality-remediation issues. */}
+                    <RemediationBanner
+                      remediationHints={idea.remediation_hints ?? null}
+                      citationAudit={idea.citation_audit ?? null}
+                      onJumpToSection={handleJumpToSection}
+                    />
+                    {/* Phase 2 2D: QualityCheckPanel (was dormant) — consolidated
+                        quality-check checklist. The per-section inline chips
+                        below remain for in-context detail; this is the summary. */}
+                    <QualityCheckPanel
+                      qualityChecks={idea.quality_checks ?? null}
+                      remediationHints={idea.remediation_hints ?? null}
+                    />
                     {/* Summary cards */}
                     <div className="grid gap-3 sm:grid-cols-3">
                       <SummaryCard label="Problem" icon={AlertTriangle}>
@@ -427,6 +450,10 @@ function IdeaDetailContent({ ideaId }: { ideaId: number }) {
                         </CardContent>
                       </Card>
                     )}
+                    {/* Phase 2 2D: ProposalReviewPanel (was dormant) — surfaces
+                        the ensemble review (methodology/novelty/clarity) that
+                        the section filters above deliberately exclude. */}
+                    <ProposalReviewPanel proposalSections={idea.proposal_sections} />
                   </div>
                 )}
 
@@ -444,6 +471,11 @@ function IdeaDetailContent({ ideaId }: { ideaId: number }) {
                         : null
                     }
                   />
+                )}
+
+                {/* ── Trust & Sources (Phase 2 2C) ── */}
+                {activeTab === "trust" && (
+                  <TrustSourcesWorkspace ideaId={ideaId} />
                 )}
 
                 {/* ── Novelty Report ── */}

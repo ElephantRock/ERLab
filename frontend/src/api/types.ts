@@ -204,6 +204,73 @@ export interface PaperEvaluation {
   error?: string;
 }
 
+// ── Phase 2: Trust & Sources review ───────────────────────────────
+
+/** Phase 2 2B: a cited source with resolution, review, and section data. */
+export interface ReviewSource {
+  source_ref_hash: string;
+  citation_marker: string | null;
+  ref_number: number | null;
+  raw: string;
+  title: string | null;
+  authors: string | null;
+  year: string | null;
+  venue: string | null;
+  url: string | null;
+  doi: string | null;
+  resolution_status: "resolved" | "unresolved";
+  /** null when unavailable — never fabricated (truth rule). */
+  match_method: string | null;
+  /** null when unavailable — never fabricated (truth rule). */
+  confidence: number | null;
+  sections_used: string[];
+  human_decision: SourceReviewDecision | null;
+}
+
+export interface SourceReviewDecision {
+  decision: "accepted" | "flagged" | "exclude_on_next_revision";
+  note: string | null;
+  reviewer: string;
+  reviewed_at: string | null;
+}
+
+export interface ReviewAutomatedChecks {
+  paper_evaluation: PaperEvaluation | { status: string; scope: "paper" };
+  proposal_evaluation:
+    | { scope: "proposal"; dimensions?: Record<string, unknown> }
+    | { scope: "proposal"; status: string }
+    | null;
+  citation_audit: CitationAuditEntry[];
+  quality_checks: QualityCheckResult[];
+}
+
+export interface HumanReviewSummary {
+  status: "not_started" | "in_progress" | "completed" | "completed_with_flags";
+  reviewable_sources: number;
+  reviewed_sources: number;
+  accepted: number;
+  flagged_or_excluded: number;
+  decisions_total: number;
+}
+
+/** Phase 2 2B: the normalized review contract. */
+export interface ReviewPayload {
+  idea_id: number;
+  automated_checks: ReviewAutomatedChecks;
+  sources: ReviewSource[];
+  human_review: HumanReviewSummary;
+  regeneration_available: boolean;
+}
+
+/** Phase 2 2E: request to record a source-review decision. */
+export interface SourceReviewDecisionRequest {
+  source_ref_hash: string;
+  source_ref_number?: number | null;
+  decision: "accepted" | "flagged" | "exclude_on_next_revision";
+  note?: string;
+  reviewer?: string;
+}
+
 export interface SourceGap {
   id: number;
   title: string;

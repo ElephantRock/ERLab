@@ -5,6 +5,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { CheckCircle2, AlertTriangle, Lightbulb, Shield, Eye, Sparkles, FileQuestion } from "lucide-react";
 import type { EnsembleReview, PerspectiveReview } from "@/api/types";
 import { decodeEnsembleReview } from "@/api/contracts/ideas";
+import { RadarChart } from "@/components/ideas/radar-chart";
 import { cn } from "@/lib/utils";
 
 function scoreColor(score: number): string {
@@ -144,6 +145,25 @@ export function ProposalReviewPanel({
         {review.summary && (
           <div className="p-3 rounded-lg bg-muted/50 border" data-testid="review-summary">
             <p className="text-sm italic text-muted-foreground">"{review.summary}"</p>
+          </div>
+        )}
+
+        {/* Phase 2 2D: RadarChart (was dormant) — visualizes the existing
+            perspective scores. ADAPT: maps EnsembleReview perspective scores
+            into the {label, value} shape the chart expects. Only rendered when
+            all three perspectives are present (a radar with zero-filled axes
+            would misrepresent partial data). This is a visualization of the
+            same data shown as text below, not a duplicate summary. */}
+        {review.methodology && review.novelty && review.clarity && (
+          <div className="flex justify-center">
+            <RadarChart
+              data={[
+                { label: "Methodology", value: review.methodology.score },
+                { label: "Novelty", value: review.novelty.score },
+                { label: "Clarity", value: review.clarity.score },
+              ]}
+              size={180}
+            />
           </div>
         )}
 

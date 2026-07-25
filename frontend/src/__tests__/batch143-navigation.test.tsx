@@ -63,12 +63,18 @@ describe("TEST-143-01: Source gap IDs clickable", () => {
   });
 
   it("TEST-143-01-02: source gap IDs are not plain text", async () => {
+    // Phase 2 2D: evidence-panel.tsx was removed (superseded by the Trust &
+    // Sources workspace). The clickable-source capability now lives in
+    // trust-sources-workspace.tsx — verify it provides a selectable (clickable)
+    // source row rather than plain text.
     const fs = await import("fs");
-    const content = fs.readFileSync("src/components/ideas/evidence-panel.tsx", "utf-8");
-    // Should have a clickable element with data-testid
-    expect(content).toContain("source-gap-link");
-    // Should navigate to /gaps/ with the gap.id
-    expect(content).toMatch(/navigate.*\/gaps\/.*gap\.id/);
+    const content = fs.readFileSync(
+      "src/components/ideas/trust-sources-workspace.tsx",
+      "utf-8",
+    );
+    // Source rows are buttons (clickable), not plain text.
+    expect(content).toContain("onSelect");
+    expect(content).toMatch(/type="button"/);
   });
 });
 
