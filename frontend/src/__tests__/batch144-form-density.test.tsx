@@ -44,13 +44,16 @@ describe("TEST-144: Form density reduction", () => {
     expect(searchIdx).toBeGreaterThan(advancedContentIdx);
   });
 
-  it("TEST-144-06: exactly 2 fields before advanced toggle", () => {
-    // Count data-testid inputs before advanced-toggle that are NOT advanced-related
+  it("TEST-144-06: exactly 3 primary fields before advanced toggle", () => {
+    // Count data-testid inputs before advanced-toggle that are NOT advanced-related.
+    // Phase 1 1B raised this from 2 to 3: research-question is now the primary
+    // input, with domain (optional context) and strategy. The form-density
+    // invariant is preserved at the new intended count.
     const advancedToggleIdx = content.indexOf('data-testid="advanced-toggle"');
     const beforeAdvanced = content.substring(0, advancedToggleIdx);
     const fieldTestIds = beforeAdvanced.match(/data-testid="[^"]*-input"|data-testid="[^"]*-select"/g);
-    // Should have domain-input and strategy-select = 2
-    expect(fieldTestIds).toHaveLength(2);
+    expect(fieldTestIds).toHaveLength(3);
+    expect(fieldTestIds).toContain('data-testid="research-question-input"');
     expect(fieldTestIds).toContain('data-testid="domain-input"');
     expect(fieldTestIds).toContain('data-testid="strategy-select"');
   });

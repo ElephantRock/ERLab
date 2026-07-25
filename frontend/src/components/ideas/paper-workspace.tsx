@@ -245,11 +245,11 @@ export function PaperWorkspace({ ideaId, paper, unresolvedCitationCount }: Paper
           {unresolvedCitationCount == null ? (
             <p>Citation audit not available for this paper.</p>
           ) : unresolvedCitationCount === 0 ? (
-            <span className="flex items-center gap-2 text-emerald-600">
+            <span className="flex items-center gap-2 text-success">
               <CheckCircle2 className="h-4 w-4" /> All references resolved.
             </span>
           ) : (
-            <span className="flex items-center gap-2 text-amber-600">
+            <span className="flex items-center gap-2 text-warning">
               <AlertCircle className="h-4 w-4" /> {unresolvedCitationCount} unresolved reference
               {unresolvedCitationCount === 1 ? "" : "s"} — see the Proposal tab for details.
             </span>

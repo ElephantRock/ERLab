@@ -48,7 +48,14 @@ def _serialize_paper_state(proposal, idea) -> dict:
     Truth rule: an empty/placeholder paper is never reported as ready.
     """
     if proposal is None:
-        return {"status": "pending" if _idea_run_includes_paper_stage(idea) else "not_requested"}
+        # No proposal row yet. Shape-consistent with the ready/failed return so
+        # the frontend always sees the same keys.
+        return _paper_state_dict(
+            status="pending" if _idea_run_includes_paper_stage(idea) else "not_requested",
+            paper_md=None,
+            meta={},
+            idea=idea,
+        )
 
     paper_md = getattr(proposal, "paper_md", None)
     meta_raw = getattr(proposal, "paper_meta_json", None)
@@ -72,6 +79,12 @@ def _serialize_paper_state(proposal, idea) -> dict:
         # requested.
         status = "pending" if _idea_run_includes_paper_stage(idea) else "not_requested"
 
+    return _paper_state_dict(status=status, paper_md=paper_md, meta=meta, idea=idea)
+
+
+def _paper_state_dict(*, status, paper_md, meta, idea) -> dict:
+    """Phase 1 1C: build the shape-consistent paper state object used by both
+    the no-proposal and has-proposal branches of _serialize_paper_state."""
     return {
         "status": status,
         "paper_md": paper_md if status == "ready" else None,
