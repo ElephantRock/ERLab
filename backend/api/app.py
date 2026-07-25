@@ -10,7 +10,7 @@ from fastapi.responses import JSONResponse
 
 from backend.api.auth import get_current_user, verify_api_key
 from backend.api.errors import APIError
-from backend.api.routes import auth as auth_routes, collaboration, costs, diagnostics, evaluation, experiments, exports, gaps, governance, ideas, knowledge, knowledge_graph, literature, memory, model_config, notifications, ops, pipeline, plugins, recombination, search, status, traces
+from backend.api.routes import auth as auth_routes, collaboration, costs, diagnostics, evaluation, experiments, exports, gaps, governance, ideas, knowledge, knowledge_graph, literature, memory, model_config, notifications, ops, paper_export, pipeline, plugins, recombination, search, status, traces
 from backend.api import ws as ws_module
 from backend.api.middleware.diagnostics_body_limit import DiagnosticsBodyLimitMiddleware
 
@@ -211,6 +211,10 @@ app.include_router(
 app.include_router(
     exports.router, prefix="/api/v1/export", tags=["export"], dependencies=_auth
 )
+# Phase 1 1F: full-paper export routes (Markdown/LaTeX/BibTeX on the persisted
+# paper artifact). Mounted without auth to match the sibling /api/export
+# legacy routes; the router carries its own /api/export/paper prefix.
+app.include_router(paper_export.router)
 app.include_router(
     plugins.router, prefix="/api/v1/plugins", tags=["plugins"], dependencies=_auth
 )

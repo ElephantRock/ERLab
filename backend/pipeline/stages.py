@@ -1957,13 +1957,16 @@ class PaperSynthesisStage(PipelineStage):
                         "synthesis_strategy": "section_wise",
                     }
                     metadata["synthesis_strategy"] = "section_wise"
-                    self._set_metadata(proposal, metadata)
                     logger.info(
                         "Paper synthesis (section-wise) completed for proposal %d: "
                         "%d words, %d/%d sections",
                         idx, result.word_count,
                         result.sections_generated, result.sections_total,
                     )
+                    # Phase 1 1D: paper-level evaluation (thin adapter; see
+                    # monolithic branch for rationale).
+                    await self._evaluate_paper(ctx, proposal, metadata, idx)
+                    self._set_metadata(proposal, metadata)
                 else:
                     # Monolithic synthesis — original path
                     synthesizer = self._synthesizer or PaperSynthesizer(provider)
@@ -1988,6 +1991,13 @@ class PaperSynthesisStage(PipelineStage):
                         logger.warning(
                             "Paper synthesis failed for proposal %d (HB-02)", idx,
                         )
+                    # Phase 1 1D: paper-level evaluation via a thin adapter —
+                    # reuse ProposalEvaluator on the synthesized paper text.
+                    # Runs only when a non-empty paper exists; failure is
+                    # non-fatal and recorded as paper_evaluation.status="failed"
+                    # so a failed evaluator can never block viewing/exporting
+                    # a successfully generated paper (WP-1D truth rule).
+                    await self._evaluate_paper(ctx, proposal, metadata, idx)
                     self._set_metadata(proposal, metadata)
 
             except Exception as e:
@@ -2023,6 +2033,54 @@ class PaperSynthesisStage(PipelineStage):
             proposal.metadata = json.dumps(metadata)
         else:
             proposal.metadata = metadata
+
+    async def _evaluate_paper(self, ctx, proposal, metadata, idx) -> None:
+        """Phase 1 1D: evaluate the synthesized paper via a thin adapter.
+
+        Reuses the existing ProposalEvaluator on the paper markdown — no new
+        dimensions, no new framework, no new thresholds. The evaluated object
+        is the FINAL PAPER (scope explicitly distinct from the proposal
+        evaluation that ran earlier in EvaluationStage).
+
+        Truth rule (WP-1D): a failed evaluator must NOT prevent viewing or
+        exporting a successfully generated paper. Failures are recorded as
+        paper_evaluation.status="failed" and never re-raised. Also skipped
+        (status="unavailable") when no non-empty paper exists, so empty
+        artifacts cannot receive a fabricated evaluation.
+        """
+        full_paper = metadata.get("full_paper")
+        paper_md = (
+            full_paper.get("paper_markdown", "")
+            if isinstance(full_paper, dict)
+            else ""
+        )
+        if not paper_md or not paper_md.strip():
+            metadata["paper_evaluation"] = {"status": "unavailable", "scope": "paper"}
+            return
+        try:
+            from backend.pipeline.evaluation.proposal_evaluator import ProposalEvaluator
+
+            evaluator = ProposalEvaluator(self._provider)
+            evaluation = await evaluator.evaluate(paper_md)
+            metadata["paper_evaluation"] = {
+                "status": "ready",
+                "scope": "paper",
+                "dimensions": evaluation.to_dict(),
+                "evaluated_object": "final_paper",
+            }
+            logger.info(
+                "Paper evaluation (scope=paper) completed for proposal %d", idx,
+            )
+        except Exception as e:
+            logger.warning(
+                "Paper evaluation failed for proposal %d (non-fatal, WP-1D): %s",
+                idx, e,
+            )
+            metadata["paper_evaluation"] = {
+                "status": "failed",
+                "scope": "paper",
+                "error": str(e),
+            }
 
 
 class ProposalDeepeningStage(PipelineStage):

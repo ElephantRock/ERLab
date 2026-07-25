@@ -163,6 +163,66 @@ def content_hash(title: str) -> str:
     return hashlib.sha256(normalize_title(title).encode("utf-8")).hexdigest()
 
 
+def _extract_paper_artifact(proposal) -> tuple[str | None, dict | None]:
+    """Phase 1 1C: extract the synthesized full paper + metadata from a
+    ResearchProposal as written by PaperSynthesisStage.
+
+    PaperSynthesisStage stores the result under proposal.metadata["full_paper"]
+    as a dict (monolithic path) or sets it to None on failure (failure paths).
+    This helper normalizes both shapes into (paper_md, paper_meta).
+
+    Truth rule (WP-1C): an empty/placeholder paper is recorded with
+    status="failed", never "ready", so the API can never surface an empty
+    artifact as a successful paper.
+
+    Returns (None, None) when no paper stage ran (e.g. fast_scan strategy) so
+    the column stays NULL rather than being written as a failed paper.
+    """
+    raw_meta = getattr(proposal, "metadata", None)
+    if raw_meta is None:
+        return None, None
+    if isinstance(raw_meta, str):
+        try:
+            meta_dict = json.loads(raw_meta)
+        except Exception:
+            return None, None
+    elif isinstance(raw_meta, dict):
+        meta_dict = raw_meta
+    else:
+        return None, None
+
+    full_paper = meta_dict.get("full_paper")
+    # A missing/absent full_paper key means the paper stage did not run for
+    # this proposal (e.g. fast_scan). Leave the column NULL.
+    if full_paper is None and "full_paper" not in meta_dict:
+        return None, None
+    # Paper stage ran but explicitly failed -> record as failed (no markdown).
+    if not full_paper or not isinstance(full_paper, dict):
+        return None, {"status": "failed", "generated_at": None}
+
+    paper_md = full_paper.get("paper_markdown") or ""
+    # Truth rule: empty/whitespace paper is failed, not ready.
+    if not paper_md.strip():
+        return None, {"status": "failed", "generated_at": None}
+
+    meta = {
+        "status": "ready",
+        "word_count": full_paper.get("word_count"),
+        "venue": full_paper.get("venue"),
+        "model_used": full_paper.get("model_used"),
+        "source_count": full_paper.get("source_count"),
+        "synthesis_strategy": full_paper.get("synthesis_strategy"),
+        "sections_generated": full_paper.get("sections_generated"),
+        "sections_total": full_paper.get("sections_total"),
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        # Phase 1 1D: paper-level evaluation (scope=paper), written by
+        # PaperSynthesisStage._evaluate_paper. Stored under paper_meta_json
+        # so the API can expose it alongside the paper state.
+        "paper_evaluation": meta_dict.get("paper_evaluation"),
+    }
+    return paper_md, meta
+
+
 class PipelinePersistence:
     """Handles all database writes for pipeline runs."""
 
@@ -784,6 +844,9 @@ class PipelinePersistence:
         if resolved_ids:
             session.commit()
 
+    # Phase 1 1C: persist the full-paper artifact written by PaperSynthesisStage
+    # into proposal.metadata["full_paper"]. Previously this metadata was dropped
+    # by persist_proposals, so the paper was generated but never persisted.
     def persist_proposals(self, result, db_run_id: int | None) -> None:
         if not db_run_id or not result.proposals:
             return
@@ -827,12 +890,24 @@ class PipelinePersistence:
                                     Proposal.idea_id == db_idea_row.id
                                 ).limit(1)
                             ).scalar_one_or_none()
+                            # Phase 1 1C: persist the full-paper artifact.
+                            # PaperSynthesisStage writes proposal.metadata
+                            # ["full_paper"]; previously dropped here. Extract
+                            # markdown + synthesis metadata and store on the
+                            # Proposal row. An empty/placeholder paper is
+                            # recorded with status "failed" so it can never
+                            # appear as ready (truth rule, WP-1C).
+                            paper_md, paper_meta = _extract_paper_artifact(proposal)
                             if existing:
                                 existing.content_md = proposal.to_markdown()
                                 existing.references_json = json.dumps(refs)
                                 existing.sections_json = json.dumps(sections_to_store)
                                 if hasattr(proposal, 'content_latex') and proposal.content_latex:
                                     existing.content_latex = proposal.content_latex
+                                existing.paper_md = paper_md
+                                existing.paper_meta_json = (
+                                    json.dumps(paper_meta) if paper_meta else None
+                                )
                                 session.commit()
                             else:
                                 crud.create_proposal(
@@ -841,6 +916,10 @@ class PipelinePersistence:
                                     content_md=proposal.to_markdown(),
                                     references_json=json.dumps(refs),
                                     sections_json=json.dumps(sections_to_store),
+                                    paper_md=paper_md,
+                                    paper_meta_json=(
+                                        json.dumps(paper_meta) if paper_meta else None
+                                    ),
                                 )
         except Exception as e:
             logger.warning("Failed to persist proposals: %s", e)

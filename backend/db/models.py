@@ -137,6 +137,15 @@ class Proposal(Base):
     content_latex: Mapped[str | None] = mapped_column(Text, nullable=True)
     references_json: Mapped[str] = mapped_column(Text, default="[]")
     sections_json: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # Phase 1 1C: persisted full-paper artifact. The PaperSynthesisStage
+    # previously wrote the paper only to in-memory proposal.metadata and it was
+    # lost on process exit. These columns give the paper a DB home on the
+    # existing Proposal row (one paper per proposal). paper_meta_json carries
+    # the synthesis metadata (status, word_count, venue, model, source_count,
+    # synthesis_strategy, generated_at) so the API can expose state without
+    # parsing the markdown.
+    paper_md: Mapped[str | None] = mapped_column(Text, nullable=True)
+    paper_meta_json: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     idea: Mapped["Idea"] = relationship(back_populates="proposal")
     created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))

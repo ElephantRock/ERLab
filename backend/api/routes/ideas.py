@@ -33,6 +33,91 @@ def _parse_source_gap_ids(raw: str | None) -> list[str] | None:
         return [raw]
 
 
+def _serialize_paper_state(proposal, idea) -> dict:
+    """Phase 1 1C: serialize the persisted full-paper artifact + state.
+
+    State machine: not_requested | pending | ready | failed.
+      - not_requested: no proposal row yet, OR the run's strategy does not
+        include paper synthesis (fast_scan / literature_review).
+      - ready: paper_md persisted and non-empty.
+      - failed: paper stage ran but produced an empty/explicitly-failed artifact
+        (paper_meta_json.status == "failed").
+      - pending: proposal exists, strategy includes paper synthesis, but no
+        paper artifact persisted yet (run still in progress or stage not reached).
+
+    Truth rule: an empty/placeholder paper is never reported as ready.
+    """
+    if proposal is None:
+        return {"status": "pending" if _idea_run_includes_paper_stage(idea) else "not_requested"}
+
+    paper_md = getattr(proposal, "paper_md", None)
+    meta_raw = getattr(proposal, "paper_meta_json", None)
+    meta: dict = {}
+    if meta_raw:
+        try:
+            meta = json.loads(meta_raw) or {}
+        except (json.JSONDecodeError, TypeError):
+            meta = {}
+
+    if paper_md and paper_md.strip():
+        status = "ready"
+    elif meta.get("status") == "failed":
+        status = "failed"
+    elif meta_raw is not None or paper_md is not None:
+        # Stage ran but left an empty/null artifact — treat as failed, not ready.
+        status = "failed"
+    else:
+        # No paper columns written. If the strategy includes paper synthesis
+        # the run hasn't reached/completed the stage; otherwise it was never
+        # requested.
+        status = "pending" if _idea_run_includes_paper_stage(idea) else "not_requested"
+
+    return {
+        "status": status,
+        "paper_md": paper_md if status == "ready" else None,
+        "title": getattr(idea, "title", None),
+        "word_count": meta.get("word_count"),
+        "venue": meta.get("venue"),
+        "model_used": meta.get("model_used"),
+        "source_count": meta.get("source_count"),
+        "synthesis_strategy": meta.get("synthesis_strategy"),
+        "generated_at": meta.get("generated_at"),
+        "source_run_id": getattr(idea, "pipeline_run_id", None),
+        # Phase 1 1D: paper-level evaluation (scope=paper), exposed with an
+        # explicit scope label so it is never confused with proposal evaluation.
+        # The idea-detail response already carries the PROPOSAL evaluation
+        # separately; these must not be collapsed into a single score.
+        "paper_evaluation": meta.get("paper_evaluation"),
+    }
+
+
+def _idea_run_includes_paper_stage(idea) -> bool:
+    """Phase 1 1C: best-effort check whether the idea's run strategy includes
+    the paper_synthesis stage. Used only to distinguish not_requested from
+    pending; never used to claim a paper is ready. Returns True (conservative)
+    when the strategy cannot be determined, so unknown runs surface as pending
+    rather than not_requested.
+    """
+    try:
+        from backend.db.database import get_session as _get_session
+        from backend.db.models import PipelineRun as _PipelineRun
+
+        run_id = getattr(idea, "pipeline_run_id", None)
+        if not run_id:
+            return True  # conservative: treat as paper-capable
+        with _get_session() as session:
+            run = session.get(_PipelineRun, run_id)
+            if run is None:
+                return True
+            config = json.loads(run.config_json) if run.config_json else {}
+            strategy = config.get("strategy", "deep_research")
+        # paper_synthesis is enabled for deep_research and academic_proposal;
+        # disabled for fast_scan and literature_review (see presets.py).
+        return strategy in {"deep_research", "academic_proposal"}
+    except Exception:
+        return True  # conservative on any error
+
+
 def _load_quarantine_rows(proposal_id: int) -> list:
     """Load QuarantinedCitation rows for a proposal.
 
@@ -406,6 +491,10 @@ async def get_idea(idea_id: int):
                 "remediation_hints": compute_remediation_hints(rendered_sections, quality_checks),
                 "citation_audit": audit_citations(rendered_sections, proposal_references),
                 "experiment_results": experiment_results if experiment_results else None,
+                # Phase 1 1C: exposed full-paper artifact + explicit state.
+                # State machine: not_requested | pending | ready | failed.
+                # An empty/placeholder paper is never reported as ready.
+                "paper": _serialize_paper_state(proposal, idea),
                 "created_at": str(idea.created_at),
             },
         }
