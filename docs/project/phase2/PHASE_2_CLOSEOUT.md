@@ -2,6 +2,12 @@
 
 > **Phase 2 closeout.** Records only the fields specified in the Work Package.
 > **No P1E artifact changed. No retrieval architecture changed.**
+>
+> **Scope note (per acceptance):** ready papers expose the Trust & Sources
+> workflow, with unavailable review data stated explicitly. This is not a claim
+> that every generated paper is fully auditable — when source metadata,
+> confidence, or section mapping is unavailable, the interface says so rather
+> than fabricating it.
 
 | Field | Value |
 |---|---|
@@ -93,11 +99,20 @@ Derived ONLY from persisted `[N]` markers in `paper_md` — split by markdown he
 
 ## Full backend selector
 
-**Initial run: 137 failed, 4620 passed, 47 skipped, 29 deselected** (256 s).
+**Final executed result (post-correction run at HEAD `e0c72e1`): 136 failed, 4620 passed, 47 skipped, 33 deselected, 453 warnings (228.6 s).**
 
-The initial run produced **137 failures** — 1 more than the Phase 1 baseline (136). An exact failed-node-ID diff against the Phase 1 baseline identified the single new failure: `test_batch170_citation_graph.py::TestCitationGraph::test_06_evaluation_card_component`, which read the removed `evaluation-card.tsx` from disk. **This was a Phase-2-attributable failure** (consequence of the 2D removal). Fixed by updating the test to verify the successor component (`paper-workspace.tsx` renders evaluation). After the fix, the failure count returns to the **136 baseline** (same count and subsystem distribution as Phase 1; exact node-ID diff shows only baseline failures remain).
+This is the *measured* final state, not an inference. The sequence:
 
-**Subsystem distribution of the 136 baseline failures** (unchanged from Phase 1): test_pipeline 73, test_api 23, test_providers 14, test_operations 14, test_literature 12. These remain the tracked test-isolation debt from Phase 0.
+1. **Initial Phase 2 run: 137 failed** — 1 more than the Phase 1 baseline (136). An exact failed-node-ID diff identified the single new failure: `test_batch170_citation_graph.py::TestCitationGraph::test_06_evaluation_card_component`, which read the removed `evaluation-card.tsx`. **Phase-2-attributable** (consequence of the 2D removal). Fixed by pointing the test at the successor (`paper-workspace.tsx`).
+2. **Final post-correction run: 136 failed, 4620 passed, 47 skipped.**
+
+**Exact failed-node-ID diff (Phase 1 baseline ↔ Phase 2 final):**
+- New failures (in Phase 2, not Phase 1): **0**
+- Removed failures (in Phase 1, not Phase 2): **0**
+- Unchanged failures (in both): **136**
+- Phase-2-attributable failures: **0**
+
+The Phase 2 final failed-node-ID set is **identical** to the Phase 1 baseline — and this time the claim is supported by an actual set diff (not just a count/subsystem comparison). The 136 remain the tracked test-isolation debt from Phase 0 (classification unchanged: runtime defect not established; isolation defect strongly indicated; full-suite health failing; not Phase-attributable; must remain tracked).
 
 ## Frontend tests/build/budgets
 
