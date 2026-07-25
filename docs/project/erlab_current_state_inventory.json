@@ -1,0 +1,461 @@
+{
+  "generated_at": "2026-07-25T03:30:00+03:00",
+  "repository_head": "cea3ea16378ef7bbf7848cc31febf93af2478841",
+  "repository_head_parent": "a6c35e670f67a0331cc71074caf229e52b02b9c2",
+  "branch": "feat/quarantine-and-frontend-redesign",
+  "main_branch": "master",
+  "working_tree_clean": true,
+  "repository_root": "C:/Next-Era/Elephant-Rock-Research-Lab",
+  "first_commit": "a7a9379dd42276e2ee5bbb570b4f3e7cbc9669e8",
+  "window_reviewed": {
+    "start": "2026-07-15T00:00:00+03:00",
+    "end": "2026-07-25T04:00:00+03:00",
+    "commits_in_window": 228,
+    "commits_with_production_code": 121,
+    "commits_with_only_test_or_script_code": 54,
+    "commits_with_no_code_docs_data_only": 53,
+    "commit_prefix_breakdown": {
+      "feat": 75,
+      "docs": 63,
+      "test": 34,
+      "fix": 29,
+      "refactor": 17,
+      "data": 6,
+      "eval": 3,
+      "chore": 1
+    }
+  },
+  "major_commits": {
+    "phase_0_wipe": {
+      "hash": "e2c0171",
+      "date": "2026-06-16",
+      "subject": "Phase 0: Clean migration baseline",
+      "effect": "deleted ~273 prior session files including 3 full research papers",
+      "status": "COMPLETE"
+    },
+    "f0_ts_recovery": {
+      "fingerpribt": "6004001c75134717c321d23346189417cb69c65f",
+      "fix": "01f4bb23904b8f106909a7b9b940c6c3aa46f318",
+      "ratchet_seal": "3bcb620e9daa6765a43e7daef2d976acbc7e7f15",
+      "outcome": "101 TS errors -> 0; ratchet frozen at 0; 5-run seal",
+      "status": "COMPLETE"
+    },
+    "f1_program": {
+      "start": "dfcac7daecd19132c6ddcbe57b96c7ed5075a8ff",
+      "end": "f7de50229de715b050adf1b35337405c93e16d61",
+      "waves": ["F1.1", "F1.2", "F1.3", "F1.4", "F1.5", "F1.6", "F1.7"],
+      "outcome": "58 -> 0 unchecked API callers; 984 frontend tests x5; 29 architecture seal tests",
+      "status": "COMPLETE"
+    },
+    "p1b_closeout": {
+      "commit": "540de0ce23036af0aec9ca20c348d1462d20d649",
+      "outcome": "genuine_negative_result",
+      "best_delta_ndcg10": 0.0065,
+      "status": "CLOSED Gate 2"
+    },
+    "p1c_closeout": {
+      "commit": "910bf2a8029ea5fea036a404ce45a6c900b54e04",
+      "outcome": "host_availability_failure",
+      "status": "CLOSED Branch D"
+    },
+    "p1d_closeout": {
+      "commit": "78a6f192f6c35f9d8d189269537e07d2a87fb7ca",
+      "outcome": "B",
+      "tei_semantic_ndcg5_delta": 0.0159,
+      "tei_hybrid_ndcg5_delta": -0.0044,
+      "significant": false,
+      "status": "CLOSED Outcome B"
+    },
+    "p1e0_chain": {
+      "commit_1_freeze_protocol": "2032579b5c5e1e2e0edc8b89c6ff295f623e5bca",
+      "fix_split_mapping": "2f9031d40473a62e6a184eca30c9594bdc7c9932",
+      "commit_2_measure": "25d56df296ff9c135c1fcff16194eb69121bea69",
+      "commit_3_seal": "d3420d69f6131dbff136fccbd82d3711f8fd1a31",
+      "fix_top1_optimal": "c1fa5541a5efa9a57a2c6bc10ab3d0832ac29fa3",
+      "commit_4_diagnosis": "063d060ce00006a6218c83a0e1116c1b240943bd",
+      "outcome": "M",
+      "audited_cases": 44,
+      "total_v2_cases": 66,
+      "status": "CLOSED diagnosis"
+    },
+    "p1e1_chain": {
+      "v1_freeze": "d2e16ae6b82a3fdc13854ff8032874c1ce6bd20a",
+      "v2_threshold_grounding": "42ff0e661f2acfa15ccefbd94f2770dcaa3f353d",
+      "v3_construct_corpus": "00c6ffdc87e2e5057d205af6ee7de1db5e94cfad",
+      "v3_custody_breach_disclosure": "679bc0052d0851bef48ab87663166b7a08f85bd6",
+      "fix_canonicalize_identity": "36bbbc9d9275c342c0f7cb6cd486b9d9162aadf1",
+      "commit_3_caldev_heldout": "2a32254a66bacec492493d9655b61a81525fb3ad",
+      "seal_provenance_custody": "3e6d09e73972d24a070e7e98079126be5fb06d73",
+      "v4_inheritance_authorization_EFFECTIVE": "af2f131f2851ae1064750e54b29278d2ce8d3028",
+      "close_inheritance_custody_transfer": "a6c35e670f67a0331cc71074caf229e52b02b9c2",
+      "close_diagnosis_HEAD": "cea3ea16378ef7bbf7848cc31febf93af2478841",
+      "effective_protocol_version": "v4",
+      "status": "CLOSED corpus + cal/dev; policy_evaluation not_started"
+    }
+  },
+  "major_phases": [
+    {"phase": "phase_0_wipe", "status": "COMPLETE", "classification": ["GOVERNANCE", "INTERNAL_INFRA"]},
+    {"phase": "P0.3_vector_access_audit", "status": "COMPLETE", "classification": ["INTERNAL_INFRA", "GOVERNANCE"]},
+    {"phase": "P0.4_embedding_access_audit", "status": "COMPLETE", "classification": ["INTERNAL_INFRA", "GOVERNANCE"]},
+    {"phase": "P0.5_configuration_census", "status": "COMPLETE", "classification": ["GOVERNANCE", "INTERNAL_INFRA"]},
+    {"phase": "P1_ranking_surface_audit", "status": "COMPLETE_INFRA", "classification": ["RESEARCH_QUALITY", "INTERNAL_INFRA"], "note": "P1 overall OPEN; production activation NOT STARTED"},
+    {"phase": "P1B_baseline_ranking_experiment", "status": "CLOSED", "outcome": "genuine_negative_result", "classification": ["RESEARCH_QUALITY"]},
+    {"phase": "P1C_stronger_embeddings_lmstudio", "status": "CLOSED", "outcome": "host_availability_failure", "classification": ["RESEARCH_QUALITY"]},
+    {"phase": "P1D_tei_embedding_experiment", "status": "CLOSED", "outcome": "B", "classification": ["RESEARCH_QUALITY"]},
+    {"phase": "P1E.0_benchmark_discrimination_audit", "status": "CLOSED", "outcome": "M", "classification": ["RESEARCH_QUALITY"]},
+    {"phase": "P1E.1_benchmark_extension", "status": "CLOSED_CORPUS_CALDEV", "classification": ["RESEARCH_QUALITY", "GOVERNANCE"], "note": "policy_evaluation not_started"},
+    {"phase": "F0_frontend_ts_recovery", "status": "COMPLETE_OPERATIONAL", "classification": ["INTERNAL_INFRA"]},
+    {"phase": "F1.1_canonical_api_boundary", "status": "COMPLETE", "classification": ["INTERNAL_INFRA"]},
+    {"phase": "F1.2_route_identity_integrity", "status": "COMPLETE", "classification": ["INTERNAL_INFRA"]},
+    {"phase": "F1.3_query_lifecycle", "status": "COMPLETE", "classification": ["INTERNAL_INFRA"]},
+    {"phase": "F1.4_mutation_integrity", "status": "COMPLETE", "classification": ["INTERNAL_INFRA"]},
+    {"phase": "F1.5_critical_product_flow", "status": "COMPLETE", "classification": ["PRODUCT", "INTERNAL_INFRA"]},
+    {"phase": "F1.6_runtime_error_observability", "status": "COMPLETE", "classification": ["PRODUCT", "INTERNAL_INFRA"]},
+    {"phase": "F1.7_architecture_reconciliation", "status": "COMPLETE", "classification": ["INTERNAL_INFRA", "GOVERNANCE"]},
+    {"phase": "P1D.2_reviewer_diagnostic", "status": "BLOCKED", "classification": ["RESEARCH_QUALITY", "GOVERNANCE"]}
+  ],
+  "protocol_lineage": {
+    "p1e1_protocol_versions": ["v1", "v2", "v3", "v4"],
+    "effective_protocol": "v4",
+    "effective_protocol_commit": "af2f131f2851ae1064750e54b29278d2ce8d3028",
+    "v1_freeze_commit": "d2e16ae6b82a3fdc13854ff8032874c1ce6bd20a",
+    "v2_threshold_grounding_commit": "42ff0e661f2acfa15ccefbd94f2770dcaa3f353d",
+    "v3_custody_breach_disclosure_commit": "679bc0052d0851bef48ab87663166b7a08f85bd6",
+    "v4_inheritance_authorization_commit": "af2f131f2851ae1064750e54b29278d2ce8d3028",
+    "custody_breach_disclosed": {
+      "held_out_cases_accessed": 2,
+      "held_out_reference_pairs_accessed": 2,
+      "held_out_candidate_texts_accessed": 4,
+      "judgments_accessed": 0,
+      "cases_named": ["ml_disc_nd_001", "nlp_ret_nd_001"]
+    },
+    "custody_transfer_status": "accepted",
+    "custody_transfer_timestamp": "2026-07-24T23:09:05Z",
+    "reconciliation_map_location": "C:/Next-Era-Erlab-Custody/p1e1_reconciliation_map.json",
+    "reconciliation_map_in_repo": false,
+    "reconciliation_map_committed": false,
+    "independent_custody_limitation": "flagged_as_p1e2_prerequisite"
+  },
+  "capabilities": {
+    "total_assessed": 27,
+    "status_counts": {
+      "WORKING": 10,
+      "PARTIAL": 4,
+      "PRESENT_BUT_UNVERIFIED": 0,
+      "NOT_EXPOSED": 7,
+      "MISSING": 6,
+      "UNKNOWN": 0
+    },
+    "items": [
+      {"capability": "create_research_project", "status": "MISSING", "backend_path": "n/a (only PipelineRun rows)", "ui_route": "/pipeline/new (creates run, not project)"},
+      {"capability": "accept_research_question", "status": "PARTIAL", "backend_path": "PipelineOrchestrator.run(domain, search_queries)", "ui_route": "/pipeline/new run-config-form.tsx", "gap": "no NL question field"},
+      {"capability": "accept_domain", "status": "WORKING", "backend_path": "PipelineOrchestrator.run(domain)", "ui_route": "/pipeline/new"},
+      {"capability": "accept_seed_papers", "status": "NOT_EXPOSED", "backend_path": "CitationExplorer(seed_papers) internal only", "ui_route": "none"},
+      {"capability": "discover_literature", "status": "WORKING", "backend_path": "backend/pipeline/literature/search_service.py", "ui_route": "/literature"},
+      {"capability": "rank_literature", "status": "NOT_EXPOSED", "backend_path": "backend/pipeline/literature/relevance_filter.py + knowledge/{retriever,reranker}.py", "ui_route": "none (ideas/gaps sortable; literature not)", "gap": "configured reranker never wired"},
+      {"capability": "review_sources", "status": "MISSING", "backend_path": "none", "ui_route": "none"},
+      {"capability": "extract_evidence", "status": "NOT_EXPOSED", "backend_path": "backend/pipeline/claims/extractor.py (orphaned)", "ui_route": "evidence-panel.tsx dead code"},
+      {"capability": "build_evidence_tables", "status": "MISSING", "backend_path": "none", "ui_route": "none"},
+      {"capability": "build_evidence_packets", "status": "MISSING", "backend_path": "none", "ui_route": "none"},
+      {"capability": "create_claims", "status": "NOT_EXPOSED", "backend_path": "backend/pipeline/claims/ (orphaned)", "ui_route": "none (no /claims route)"},
+      {"capability": "create_arguments", "status": "MISSING", "backend_path": "none", "ui_route": "none"},
+      {"capability": "synthesize_multiple_papers", "status": "WORKING", "backend_path": "backend/pipeline/synthesis/", "ui_route": "/ideas/:id (implicit)"},
+      {"capability": "generate_proposal", "status": "WORKING", "backend_path": "backend/pipeline/synthesis/ + verification/proposal_deepener.py", "ui_route": "/ideas/:id"},
+      {"capability": "generate_full_paper", "status": "NOT_EXPOSED", "backend_path": "backend/pipeline/synthesis/paper_synthesizer.py", "ui_route": "none (proposals only)", "gap": "backend exists, not exposed"},
+      {"capability": "generate_citations", "status": "PARTIAL", "backend_path": "backend/pipeline/provenance/reference_resolver.py", "ui_route": "/ideas/:id EvidenceSummary (counts only)", "gap": "remediation-banner.tsx dead code"},
+      {"capability": "generate_bibtex", "status": "WORKING", "backend_path": "backend/pipeline/export/bibtex_exporter.py", "ui_route": "/runs/:id (run-level only)"},
+      {"capability": "evaluate_evidence_quality", "status": "PARTIAL", "backend_path": "backend/pipeline/evaluation/faithfulness_scorer.py", "ui_route": "/ideas/:id mechanical_metrics + quality_checks"},
+      {"capability": "evaluate_argument_coherence", "status": "MISSING", "backend_path": "none", "ui_route": "none"},
+      {"capability": "evaluate_literature_quality", "status": "NOT_EXPOSED", "backend_path": "backend/pipeline/knowledge/retrieval_quality.py (narrow)", "ui_route": "none"},
+      {"capability": "evaluate_paper_proposal", "status": "WORKING", "backend_path": "backend/pipeline/evaluation/proposal_evaluator.py", "ui_route": "/ideas/:id ScoreReport/NoveltyReportView/FeasibilityReportView", "gap": "proposal-review-panel.tsx dead code"},
+      {"capability": "external_validation", "status": "NOT_EXPOSED", "backend_path": "backend/pipeline/verification/ (internal only)", "ui_route": "none"},
+      {"capability": "export_outputs", "status": "WORKING", "backend_path": "backend/pipeline/export/ + api/routes/{export,exports}.py", "ui_route": "/runs/:id + /ideas/:id ExportDialog", "gap": "idea-level PDF/Markdown only"},
+      {"capability": "resume_failed_runs", "status": "WORKING", "backend_path": "PipelineOrchestrator.resume() _orchestrator.py:1107", "ui_route": "/runs/:id Resume button"},
+      {"capability": "inspect_progress", "status": "WORKING", "backend_path": "stage_executor.py + RunEvent + SSE", "ui_route": "/runs/:id"},
+      {"capability": "use_frontend_end_to_end", "status": "PARTIAL", "backend_path": "n/a", "ui_route": "pipeline-new -> run-detail -> idea-detail -> ExportDialog", "gap": "no full paper; no NL question"},
+      {"capability": "govern_approve_deny_audit", "status": "WORKING", "backend_path": "backend/api/routes/governance.py + ideas/governance.py", "ui_route": "/governance + /ideas/:id GovernancePanel"}
+    ],
+    "dead_code_ui_components": [
+      "frontend/src/components/ideas/evidence-panel.tsx",
+      "frontend/src/components/ideas/proposal-review-panel.tsx",
+      "frontend/src/components/ideas/remediation-banner.tsx",
+      "frontend/src/components/ideas/quality-check-panel.tsx",
+      "frontend/src/components/ideas/radar-chart.tsx",
+      "frontend/src/components/ideas/evaluation-card.tsx"
+    ]
+  },
+  "research_outputs": {
+    "current_full_proposals_count": 10,
+    "current_stub_proposals_count": 8,
+    "current_full_proposal_runs": [
+      "run_ca7ff01c7293 (2026-06-16, 2 proposals)",
+      "run_4c29fd9f5a74 (2026-06-17, 2 proposals)",
+      "run_64432ab91250 (2026-06-17, 2 proposals)",
+      "run_4e60a37521f1 (2026-06-17, 2 proposals)",
+      "run_20260618_123654 (2026-06-18, 2 proposals, quality 0.60)"
+    ],
+    "stub_runs": [
+      "run_20260715_000236",
+      "run_20260715_012549",
+      "run_20260715_012858",
+      "run_20260715_020419"
+    ],
+    "historical_deleted_papers": [
+      {"path": "sessions/260501-ivory-wolf/data/GoT_NSR_Research_Paper.md (+.tex)", "title": "Graph-of-Thought Meets Neuro-Symbolic Reasoning...", "type": "full paper (pipeline-generated)", "recoverable_via": "git show e2c0171~1:<path>"},
+      {"path": "sessions/260501-ivory-wolf/data/ai_empirical_validity_paper.md", "title": "The Empirical Validity Crisis in AI...", "type": "full paper (hand-written)", "recoverable_via": "git show e2c0171~1:<path>"},
+      {"path": "sessions/260501-ivory-wolf/data/self_improvement_research_paper.md", "title": "From Self-Play to Self-Critique...", "type": "survey/position paper (hand-written)", "recoverable_via": "git show e2c0171~1:<path>"}
+    ],
+    "historical_deleted_proposal_collections": ["TopoReason", "Neuro-SymbolicBench", "CausalTrajectory", "X-VoxelRoute", "Guardian Angels"],
+    "stale_benchmarks_latest_json": {
+      "path": "benchmarks/latest.json",
+      "mtime": "2026-05-13",
+      "issue": "references 65 deleted pre-wipe runs; db_ids no longer exist",
+      "status": "superseded"
+    }
+  },
+  "current_artifacts": {
+    "evaluation_artifacts": [
+      "data/evaluation/p1e_frozen_split_manifest.json",
+      "data/evaluation/p1e_case_diagnostics.json",
+      "data/evaluation/p1e_discrimination_audit.json",
+      "data/evaluation/p1e_policy_pairwise_comparison.json",
+      "docs/research/p1e_benchmark_discrimination_audit.json (P1E.0 diagnosis JSON mirror; lives in docs/research not data/evaluation)",
+      "data/evaluation/p1e1_split_manifest.json",
+      "data/evaluation/p1e1_candidate_package.json",
+      "data/evaluation/p1e1_candidate_provenance.json",
+      "data/evaluation/p1e1_candidate_mining_scores.json",
+      "data/evaluation/p1e1_caldev_adjudication.json",
+      "data/evaluation/p1e1_blind_heldout_package.json",
+      "data/evaluation/p1e1_adjudication_provenance.json",
+      "data/evaluation/p1e1_construction_provenance.json",
+      "data/evaluation/p1e1_prejudgment_diagnostics.json",
+      "data/evaluation/p1e1_reconciliation_map_custody_receipt.json",
+      "data/evaluation/p1e1_benchmark_extension.json",
+      "data/evaluation/p1e1_benchmark_extension_diagnosis.json"
+    ],
+    "research_docs": [
+      "docs/research/p1e_benchmark_discrimination_audit_protocol.md",
+      "docs/research/p1e_benchmark_discrimination_audit.md",
+      "docs/research/p1e_benchmark_discrimination_audit.json",
+      "docs/research/p1e1_benchmark_extension.md",
+      "docs/research/p1e1_benchmark_extension_protocol.md (v1)",
+      "docs/research/p1e1_benchmark_extension_protocol_v2.md",
+      "docs/research/p1e1_benchmark_extension_protocol_v3.md",
+      "docs/research/p1e1_benchmark_extension_protocol_v4.md (EFFECTIVE)"
+    ],
+    "retrieval_docs": [
+      "docs/retrieval/p1d_closeout.md",
+      "docs/retrieval/p1d_tei_deployment_config.md",
+      "docs/retrieval/p1d_retrieval_need_spec.md",
+      "docs/retrieval/p1d_retrieval_need_spec.json",
+      "docs/retrieval/p1d_operational_envelope.json",
+      "docs/retrieval/p1d_failure_distribution.json",
+      "docs/retrieval/p1d_historical_failure_analysis.jsonl",
+      "docs/retrieval/p1d2_annotation_protocol.md",
+      "docs/retrieval/p1d2_review_protocol.md",
+      "docs/retrieval/p1d2_case_schema.json",
+      "docs/retrieval/p1d2_judgment_schema.json",
+      "docs/retrieval/p1d2_diagnostic_seed_cases.jsonl",
+      "docs/retrieval/p1d2_diagnostic_seed_judgments.jsonl",
+      "docs/retrieval/p1d2_reviewer_package_A.jsonl",
+      "docs/retrieval/p1d2_reviewer_package_B.jsonl"
+    ],
+    "ranking_snapshots": [
+      "docs/p1b_snapshot/snapshot.json (10.8MB frozen control)",
+      "docs/p1b_gate1/ (blind adjudication gate 1)",
+      "docs/p1b_gate2/ (blind adjudication gate 2)"
+    ],
+    "frontend_validation_reports": [
+      "docs/f0_frontend_recovery/F0_BASELINE.md",
+      "docs/f0_frontend_recovery/F0_CLOSEOUT.md",
+      "docs/f0_frontend_recovery/baseline_tsc_errors.txt",
+      "docs/frontend/f1_runtime_contract_audit.md",
+      "docs/frontend/f1_runtime_contract_audit.json",
+      "docs/frontend/f1_7_architecture_inventory.md",
+      "docs/frontend/f1_7_architecture_inventory.json",
+      "docs/frontend/f1_closeout.md",
+      "docs/frontend/f1_closeout.json",
+      "docs/frontend-ts-baseline.md"
+    ],
+    "phase_closeouts": [
+      "docs/p0_3_4_production_vector_migration_closeout.md",
+      "docs/p0_3_5_legacy_reindex_closeout.md",
+      "docs/p0_4_closeout.json",
+      "docs/p0_4_closeout.md",
+      "docs/p0_4_a1_closeout.json",
+      "docs/p0_4_a1_closeout.md",
+      "docs/p0_4_a2_closeout.json",
+      "docs/p0_4_a2_closeout.md",
+      "docs/p0_4_b0_closeout.json",
+      "docs/p0_4_b0_closeout.md",
+      "docs/p0_5_closeout.json",
+      "docs/p0_5_closeout.md",
+      "docs/p1_closeout.json",
+      "docs/p1_closeout.md",
+      "docs/p1b_closeout.json",
+      "docs/p1b_closeout.md",
+      "docs/p1c_closeout.json",
+      "docs/p1c_closeout.md"
+    ],
+    "audit_seal_tests": [
+      "backend/tests/architecture/test_p0_4_a1_seal.py",
+      "backend/tests/architecture/test_p0_4_a2_seal.py",
+      "backend/tests/architecture/test_p0_4_a3_seal.py",
+      "backend/tests/architecture/test_p0_4_b0_seal.py",
+      "backend/tests/architecture/test_p0_5_seal.py"
+    ]
+  },
+  "current_tests": {
+    "python_test_files": 463,
+    "python_test_functions": 1180,
+    "python_collected_node_ids": 4822,
+    "frontend_test_files": 122,
+    "frontend_it_test_calls_approx": 1031,
+    "python_skip_directives": 30,
+    "frontend_skips": 0,
+    "xfail": 0,
+    "architecture_seal_tests": 5,
+    "architecture_seal_test_functions": 41,
+    "verified_current_regressions": [
+      {
+        "test": "backend/tests/architecture/test_p0_5_seal.py::test_no_direct_os_environ_in_production",
+        "cause": "backend/ranking/generate_embedding_snapshot.py:62 reads os.environ.get(\"P1C_SNAPSHOT_TAG\", ...)",
+        "severity": "governance seal violation",
+        "status": "FAILING"
+      }
+    ],
+    "verified_current_green": [
+      "backend/tests/test_ranking/test_p1e1_benchmark_extension.py (116 passed, 3 skipped closeout-mode)",
+      "backend/tests/test_db/test_initial_migration.py (3 passed)",
+      "backend/tests/architecture/ (40 passed, 1 failed - the regression above)"
+    ],
+    "stale_lastfailed_cache": {
+      "path": ".pytest_cache/v/cache/lastfailed",
+      "mtime": "2026-07-25 03:08",
+      "lists_failures": 88,
+      "verification": "STALE - DB migration tests it lists now pass when re-run; treat as not current"
+    },
+    "reported_historical_green_claims": [
+      "P0.4 B0: 4188 passed, 50 skipped (closeout.json)",
+      "P0.5: 4490 passed/25 skipped x5 runs",
+      "P1B: 121 ranking tests pass",
+      "F1.7: 984 frontend tests x5, 320 backend + 4 skipped"
+    ],
+    "ci_selector": "pytest -p no:asyncio -m \"not slow and not integration\"",
+    "coverage_fail_under": 72,
+    "coverage_file_stale": "data/coverage mtime 2026-06-16 (stale ~5 weeks)"
+  },
+  "p1e0_final_state": {
+    "objective": "diagnose saturation (S) vs architectural signal (A) vs both (M) vs neither",
+    "audited_cases": 44,
+    "total_v2_cases": 66,
+    "split": {"calibration": 22, "development": 22, "held_out": 22},
+    "policies_compared": ["legacy_lexical", "p1b_semantic", "tei_semantic", "p1b_hybrid_rrf", "tei_hybrid_rrf"],
+    "outcome": "M",
+    "saturation_findings": {"R1_pass": true, "R2_pass": true, "R3_pass": true, "R4_FAILS": true, "R5_pass": true, "R4_reason": "lexical_vs_semantic underpowered not no_detected_difference"},
+    "power_findings": {"any_significant": false, "mde_range": [0.01376, 0.03271]},
+    "error_classes_classified": ["lexical_aliasing (4 cases)", "near_duplicate_candidates (4 cases)"],
+    "why_outcome_M": "neither S_complete nor A_complete under frozen precedence",
+    "final_commit_chain": ["2032579", "2f9031d", "25d56df", "d3420d6", "c1fa554", "063d060"]
+  },
+  "p1e1_final_state": {
+    "effective_protocol": "v4",
+    "effective_protocol_commit": "af2f131f2851ae1064750e54b29278d2ce8d3028",
+    "total_cases": 88,
+    "split": {"calibration": 33, "development": 33, "held_out": 22},
+    "candidate_records": 576,
+    "caldev_grade_records": 444,
+    "inherited_v2_caldev_records": 180,
+    "fresh_judgments_total": 264,
+    "fresh_injected_candidate_judgments": 132,
+    "fresh_fully_new_judgments": 132,
+    "grade_distribution_caldev": {"0": 147, "1": 67, "2": 118, "3": 112},
+    "cases_with_2plus_hard_neg": "65/66",
+    "misleading_near_duplicate_cases": 36,
+    "lexical_confuser_cases": 66,
+    "conservative_projected_mde": 0.02938,
+    "projected_mde_sd": 0.08518,
+    "projected_mde_n": 66,
+    "measured_in_p1e1": false,
+    "near_duplicate_threshold": 0.861630662,
+    "final_adjudicated_v3_fingerprint": "pending_p1e2",
+    "candidate_corpus_fingerprint_sealed": "4da4e53d",
+    "policy_evaluation_status": "not_started",
+    "production_retrieval_decision": "not_made",
+    "p1e3_policy_evaluation": "not_performed",
+    "custody_transfer_status": "accepted",
+    "final_commit_chain": ["d2e16ae", "42ff0e6", "00c6ffd", "679bc00", "36bbbc9", "2a32254", "3e6d09e", "af2f131", "a6c35e6", "cea3ea1"]
+  },
+  "claimed_values_crosscheck": {
+    "all_claims_verified": true,
+    "disagrees": 0,
+    "not_found": 0,
+    "checks": [
+      {"claim": "88 total cases", "verdict": "VERIFIED"},
+      {"claim": "33 calibration", "verdict": "VERIFIED"},
+      {"claim": "33 development", "verdict": "VERIFIED"},
+      {"claim": "22 held-out", "verdict": "VERIFIED"},
+      {"claim": "576 candidates", "verdict": "VERIFIED"},
+      {"claim": "444 cal/dev grade records", "verdict": "VERIFIED"},
+      {"claim": "180 inherited judgments", "verdict": "VERIFIED"},
+      {"claim": "264 fresh judgments", "verdict": "VERIFIED"},
+      {"claim": "147 grade-0 records", "verdict": "VERIFIED"},
+      {"claim": "65/66 cases with at least two primary hard negatives", "verdict": "VERIFIED"},
+      {"claim": "36 misleading near-duplicate cases", "verdict": "VERIFIED"},
+      {"claim": "66 lexical-confuser cases", "verdict": "VERIFIED"},
+      {"claim": "conservative projected MDE 0.02938", "verdict": "VERIFIED (design projection, not measured)"},
+      {"claim": "final adjudicated v3 fingerprint pending P1E.2", "verdict": "VERIFIED"}
+    ]
+  },
+  "open_items": [
+    {"item": "P1_ranking_quality_objective", "status": "OPEN", "blocks_product": false, "blocks_rnd": true},
+    {"item": "Interface_completion", "status": "OPEN", "blocks_product": true, "blocks_rnd": false},
+    {"item": "End_to_end_paper_workflow", "status": "OPEN", "blocks_product": true, "blocks_rnd": false},
+    {"item": "Retrieval_architecture_decision", "status": "OPEN", "blocks_product": false, "blocks_rnd": true},
+    {"item": "Product_release_readiness", "status": "OPEN", "blocks_product": true, "blocks_rnd": false},
+    {"item": "P0.5_architecture_seal_regression", "status": "OPEN", "blocks_product": false, "blocks_rnd": false},
+    {"item": "Stale_benchmarks_latest_json", "status": "OPEN", "blocks_product": false, "blocks_rnd": false},
+    {"item": "Current_full_suite_test_baseline", "status": "OPEN", "blocks_product": false, "blocks_rnd": false},
+    {"item": "Dead_code_ui_components", "status": "OPEN", "blocks_product": true, "blocks_rnd": false}
+  ],
+  "blocked_items": [
+    {"item": "P1E.2_held_out_adjudication", "blocker": "custody prerequisites - independent custody not established", "blocks_product": false, "blocks_rnd": true},
+    {"item": "P1E.3_frozen_policy_comparison", "blocker": "depends on P1E.2", "blocks_product": false, "blocks_rnd": true},
+    {"item": "P2", "blocker": "P1 unresolved", "blocks_product": false, "blocks_rnd": true},
+    {"item": "Held_out_adjudication", "blocker": "= P1E.2 custody prerequisites", "blocks_product": false, "blocks_rnd": true},
+    {"item": "P1D.2_dual_independent_review", "blocker": "81 provisional single-pass judgments by one author; protocol unsealed", "blocks_product": false, "blocks_rnd": true},
+    {"item": "Independent_custody_infrastructure", "blocker": "P1E.2 requires custodian outside governed environment", "blocks_product": false, "blocks_rnd": true}
+  ],
+  "deferred_items": [
+    {"item": "Comparison_with_old_papers", "reason": "3 historical full papers deleted in Phase 0; recoverable via git but no current comparison artifact"}
+  ],
+  "recent_commit_timeline": [
+    {"hash": "cea3ea16378ef7bbf7848cc31febf93af2478841", "timestamp": "2026-07-25T03:09:49+03:00", "subject": "docs(p1e1): close benchmark extension diagnosis", "type": "governance", "changed_product_behavior": false, "changed_benchmark_content": false, "metadata_only": true},
+    {"hash": "a6c35e670f67a0331cc71074caf229e52b02b9c2", "timestamp": "2026-07-25T02:13:00+03:00", "subject": "docs(p1e1): close inheritance deviation and complete custody transfer", "type": "governance", "changed_product_behavior": false, "changed_benchmark_content": false, "metadata_only": true},
+    {"hash": "af2f131f2851ae1064750e54b29278d2ce8d3028", "timestamp": "2026-07-25T02:07:56+03:00", "subject": "docs(p1e1): authorize preserved-v2 judgment inheritance (protocol v4)", "type": "governance_patch_effective", "changed_product_behavior": false, "changed_benchmark_content": false, "metadata_only": true},
+    {"hash": "3e6d09e73972d24a070e7e98079126be5fb06d73", "timestamp": "2026-07-25T01:35:16+03:00", "subject": "docs(p1e1): seal adjudication provenance and custody status", "type": "governance", "changed_product_behavior": false, "changed_benchmark_content": false, "metadata_only": true},
+    {"hash": "2a32254a66bacec492493d9655b61a81525fb3ad", "timestamp": "2026-07-25T01:26:01+03:00", "subject": "feat(p1e1): cal/dev adjudication, blind held-out, extension identity", "type": "planned_work_commit_3", "changed_product_behavior": false, "changed_benchmark_content": true, "metadata_only": false},
+    {"hash": "36bbbc9d9275c342c0f7cb6cd486b9d9162aadf1", "timestamp": "2026-07-25T01:09:37+03:00", "subject": "fix(p1e1): canonicalize candidate artifact protocol identity + disclose breach", "type": "correction_governance", "changed_product_behavior": false, "changed_benchmark_content": false, "metadata_only": true},
+    {"hash": "679bc0052d0851bef48ab87663166b7a08f85bd6", "timestamp": "2026-07-25T01:03:14+03:00", "subject": "docs(p1e1): disclose calibration custody breach (protocol v3)", "type": "governance_patch_commit_2", "changed_product_behavior": false, "changed_benchmark_content": false, "metadata_only": true},
+    {"hash": "00c6ffdc87e2e5057d205af6ee7de1db5e94cfad", "timestamp": "2026-07-25T00:41:08+03:00", "subject": "feat(p1e1): construct and seal grade-free v3 candidate corpus + provenance", "type": "planned_work_artifact", "changed_product_behavior": false, "changed_benchmark_content": true, "metadata_only": false},
+    {"hash": "42ff0e661f2acfa15ccefbd94f2770dcaa3f353d", "timestamp": "2026-07-24T23:57:19+03:00", "subject": "fix(p1e1): ground near-duplicate threshold in v2 references", "type": "correction_threshold", "changed_product_behavior": false, "changed_benchmark_content": true, "metadata_only": false},
+    {"hash": "d2e16ae6b82a3fdc13854ff8032874c1ce6bd20a", "timestamp": "2026-07-24T23:26:52+03:00", "subject": "docs(p1e1): freeze benchmark extension protocol", "type": "governance_protocol_v1", "changed_product_behavior": false, "changed_benchmark_content": false, "metadata_only": true},
+    {"hash": "c1fa5541a5efa9a57a2c6bc10ab3d0832ac29fa3", "timestamp": "2026-07-24T06:40:09+03:00", "subject": "fix(p1e): correct top1-optimal empirical resolution", "type": "correction_p1e0", "changed_product_behavior": false, "changed_benchmark_content": false, "metadata_only": false}
+  ],
+  "evidence_gaps": [
+    "Current full backend pytest suite green/failing baseline (lastfailed cache is stale; only architecture + ranking suites spot-checked)",
+    "Repair status of P0.5 architecture-seal regression (generate_embedding_snapshot.py:62 os.environ read)",
+    "P1E.2 custody independence feasibility (current custodian resides within governed environment)",
+    "P1E.3 measured paired-policy MDE (the actual sensitivity of the extended benchmark; only projected 0.02938 exists)",
+    "End-to-end UI production of an evaluated full paper (paper-synthesis stage exists in pipeline but not UI-exposed; not validated end-to-end through UI)",
+    "Wire-or-remove decision for 6 dead-code UI components"
+  ],
+  "validation_notes": {
+    "reporting_standard": "VERIFIED / REPORTED / INFERRED / UNKNOWN",
+    "status_enum": "COMPLETE / OPERATIONAL / OPEN / BLOCKED / DEFERRED / SUPERSEDED / UNKNOWN",
+    "capability_status_enum": "WORKING / PARTIAL / PRESENT_BUT_UNVERIFIED / NOT_EXPOSED / MISSING / UNKNOWN",
+    "upstream_product_artifacts_modified": 0,
+    "new_roadmap_proposed": false,
+    "closed_phases_reopened": false
+  }
+}
