@@ -1856,6 +1856,12 @@ class PaperSynthesisStage(PipelineStage):
 
     # Minimum viable output tokens — below this, monolithic synthesis is pointless
     MIN_OUTPUT_TOKENS = 2000
+    # Phase 3 B-08: per-proposal synthesis timeout so the stage completes
+    # within the overall stage timeout. Section-wise synthesis makes 7+
+    # sequential LLM calls per proposal; with glm-4.6 this can exceed 1800s.
+    # Bounding each proposal prevents one slow synthesis from blocking the
+    # entire stage (same pattern as adversarial_review B-05).
+    PER_PROPOSAL_TIMEOUT = 600
 
     def __init__(self, provider=None, synthesizer=None, context_window: int = 8192):
         self._provider = provider
@@ -1926,91 +1932,27 @@ class PaperSynthesisStage(PipelineStage):
 
         for idx, proposal in ctx.result.proposals.items():
             try:
-                proposal_text = (
-                    proposal.to_markdown()
-                    if hasattr(proposal, "to_markdown")
-                    else str(proposal)
+                # Phase 3 B-08: bound each proposal's synthesis time so the
+                # stage completes within the overall stage timeout. A timed-out
+                # proposal is marked as failed (full_paper=None) and the stage
+                # continues to the next proposal — papers already generated
+                # successfully are preserved. Same pattern as adversarial_review
+                # B-05.
+                await asyncio.wait_for(
+                    self._synthesize_paper_for_proposal(
+                        idx, proposal, ctx, provider, source_papers, context_window
+                    ),
+                    timeout=self.PER_PROPOSAL_TIMEOUT,
                 )
-
-                # Estimate token budget for this proposal
-                estimated_input = len(proposal_text) // 3 + sum(len(s) // 3 for s in source_papers)
-                safety_margin = int(context_window * 0.85)
-                available_output = safety_margin - estimated_input
-
-                # Strategy selection: section-wise if monolithic won't fit
-                if available_output < self.MIN_OUTPUT_TOKENS:
-                    logger.info(
-                        "Paper synthesis: switching to section-wise "
-                        "(estimated input=%d, available output=%d < minimum %d)",
-                        estimated_input, available_output, self.MIN_OUTPUT_TOKENS,
-                    )
-                    section_synth = SectionWiseSynthesizer(
-                        provider=provider,
-                        context_window=context_window,
-                    )
-                    result = await section_synth.synthesize(
-                        proposal_text=proposal_text,
-                        source_papers=source_papers,
-                        domain=ctx.domain,
-                        proposal_id=idx,
-                    )
-                    # Convert to dict for storage (compatible shape)
-                    metadata = self._get_metadata(proposal)
-                    metadata["full_paper"] = {
-                        "proposal_id": result.proposal_id,
-                        "paper_markdown": result.paper_markdown,
-                        "word_count": result.word_count,
-                        "venue": result.venue,
-                        "model_used": result.model_used,
-                        "source_count": result.source_count,
-                        "sections_generated": result.sections_generated,
-                        "sections_total": result.sections_total,
-                        "synthesis_strategy": "section_wise",
-                    }
-                    metadata["synthesis_strategy"] = "section_wise"
-                    logger.info(
-                        "Paper synthesis (section-wise) completed for proposal %d: "
-                        "%d words, %d/%d sections",
-                        idx, result.word_count,
-                        result.sections_generated, result.sections_total,
-                    )
-                    # Phase 1 1D: paper-level evaluation (thin adapter; see
-                    # monolithic branch for rationale).
-                    await self._evaluate_paper(ctx, proposal, metadata, idx)
-                    self._set_metadata(proposal, metadata)
-                else:
-                    # Monolithic synthesis — original path
-                    synthesizer = self._synthesizer or PaperSynthesizer(provider)
-                    result = await synthesizer.synthesize(
-                        proposal_text=proposal_text,
-                        source_papers=source_papers,
-                        domain=ctx.domain,
-                        proposal_id=idx,
-                    )
-                    metadata = self._get_metadata(proposal)
-                    if result is not None:
-                        result_dict = result.to_dict()
-                        result_dict["synthesis_strategy"] = "monolithic"
-                        metadata["full_paper"] = result_dict
-                        metadata["synthesis_strategy"] = "monolithic"
-                        logger.info(
-                            "Paper synthesis (monolithic) completed for proposal %d: %d words",
-                            idx, result.word_count,
-                        )
-                    else:
-                        metadata["full_paper"] = None
-                        logger.warning(
-                            "Paper synthesis failed for proposal %d (HB-02)", idx,
-                        )
-                    # Phase 1 1D: paper-level evaluation via a thin adapter —
-                    # reuse ProposalEvaluator on the synthesized paper text.
-                    # Runs only when a non-empty paper exists; failure is
-                    # non-fatal and recorded as paper_evaluation.status="failed"
-                    # so a failed evaluator can never block viewing/exporting
-                    # a successfully generated paper (WP-1D truth rule).
-                    await self._evaluate_paper(ctx, proposal, metadata, idx)
-                    self._set_metadata(proposal, metadata)
-
+            except asyncio.TimeoutError:
+                logger.warning(
+                    "Paper synthesis timed out after %ds for proposal %d "
+                    "(non-fatal, B-08) — marking paper as failed",
+                    self.PER_PROPOSAL_TIMEOUT, idx,
+                )
+                metadata = self._get_metadata(proposal)
+                metadata["full_paper"] = None
+                self._set_metadata(proposal, metadata)
             except Exception as e:
                 logger.warning(
                     "Paper synthesis failed for proposal %d (non-fatal, HB-02): %s",
@@ -2021,6 +1963,94 @@ class PaperSynthesisStage(PipelineStage):
                 self._set_metadata(proposal, metadata)
 
         return True
+
+    async def _synthesize_paper_for_proposal(
+        self, idx, proposal, ctx, provider, source_papers, context_window
+    ) -> None:
+        """Synthesize a paper for a single proposal. May raise TimeoutError
+        when caught by the caller's asyncio.wait_for wrapper."""
+        proposal_text = (
+            proposal.to_markdown()
+            if hasattr(proposal, "to_markdown")
+            else str(proposal)
+        )
+        estimated_input = len(proposal_text) // 3 + sum(len(s) // 3 for s in source_papers)
+        safety_margin = int(context_window * 0.85)
+        available_output = safety_margin - estimated_input
+
+        # Strategy selection: section-wise if monolithic won't fit
+        if available_output < self.MIN_OUTPUT_TOKENS:
+            logger.info(
+                "Paper synthesis: switching to section-wise "
+                "(estimated input=%d, available output=%d < minimum %d)",
+                estimated_input, available_output, self.MIN_OUTPUT_TOKENS,
+            )
+            section_synth = SectionWiseSynthesizer(
+                provider=provider,
+                context_window=context_window,
+            )
+            result = await section_synth.synthesize(
+                proposal_text=proposal_text,
+                source_papers=source_papers,
+                domain=ctx.domain,
+                proposal_id=idx,
+            )
+            # Convert to dict for storage (compatible shape)
+            metadata = self._get_metadata(proposal)
+            metadata["full_paper"] = {
+                "proposal_id": result.proposal_id,
+                "paper_markdown": result.paper_markdown,
+                "word_count": result.word_count,
+                "venue": result.venue,
+                "model_used": result.model_used,
+                "source_count": result.source_count,
+                "sections_generated": result.sections_generated,
+                "sections_total": result.sections_total,
+                "synthesis_strategy": "section_wise",
+            }
+            metadata["synthesis_strategy"] = "section_wise"
+            logger.info(
+                "Paper synthesis (section-wise) completed for proposal %d: "
+                "%d words, %d/%d sections",
+                idx, result.word_count,
+                result.sections_generated, result.sections_total,
+            )
+            # Phase 1 1D: paper-level evaluation (thin adapter; see
+            # monolithic branch for rationale).
+            await self._evaluate_paper(ctx, proposal, metadata, idx)
+            self._set_metadata(proposal, metadata)
+        else:
+            # Monolithic synthesis — original path
+            synthesizer = self._synthesizer or PaperSynthesizer(provider)
+            result = await synthesizer.synthesize(
+                proposal_text=proposal_text,
+                source_papers=source_papers,
+                domain=ctx.domain,
+                proposal_id=idx,
+            )
+            metadata = self._get_metadata(proposal)
+            if result is not None:
+                result_dict = result.to_dict()
+                result_dict["synthesis_strategy"] = "monolithic"
+                metadata["full_paper"] = result_dict
+                metadata["synthesis_strategy"] = "monolithic"
+                logger.info(
+                    "Paper synthesis (monolithic) completed for proposal %d: %d words",
+                    idx, result.word_count,
+                )
+            else:
+                metadata["full_paper"] = None
+                logger.warning(
+                    "Paper synthesis failed for proposal %d (HB-02)", idx,
+                )
+            # Phase 1 1D: paper-level evaluation via a thin adapter —
+            # reuse ProposalEvaluator on the synthesized paper text.
+            # Runs only when a non-empty paper exists; failure is
+            # non-fatal and recorded as paper_evaluation.status="failed"
+            # so a failed evaluator can never block viewing/exporting
+            # a successfully generated paper (WP-1D truth rule).
+            await self._evaluate_paper(ctx, proposal, metadata, idx)
+            self._set_metadata(proposal, metadata)
 
     @staticmethod
     def _get_metadata(proposal) -> dict:
