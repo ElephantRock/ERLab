@@ -10,7 +10,7 @@
 |---|---|---:|---:|------|
 | Architecture seals (`backend/tests/architecture`) | **PASS** | 0 | 0 | None — P0.5 seal regression repaired (0B Step 1) |
 | Ranking suite (`backend/tests/test_ranking`) | **PASS** | 0 | 3 | None — 3 skips are closeout-mode gated (P1E.0/P1E.1) |
-| Backend CI selector (`-p no:asyncio -m "not slow and not integration"`) | **4580 passed, 136 failed, 47 skipped** (241 s) | 136 | 47 | Record for roadmap — see §"Backend full-suite failures" below. NOT expanded in Phase 0 (none caused by the seal repair; sampled failures pass in isolation → suite-ordering pollution) |
+| Backend CI selector (`-p no:asyncio -m "not slow and not integration"`) | **4580 passed, 136 failed, 47 skipped** (241 s) | 136 | 47 | Record as tracked debt — see §"Backend full-suite failures" below. NOT expanded in Phase 0. Full-suite health is **failing**; test-isolation defect strongly indicated (3 sampled files pass in isolation) but runtime-defect question not established. None caused by the seal repair. Blocks Phase 1: no |
 | Frontend typecheck (`tsc -b`) | **PASS** | 0 | — | None |
 | Frontend tests (`vitest run`) | **PASS** — 122 files, 984 passed | 0 | 0 | None |
 | Frontend build (`vite build`) | **PASS** — built in 8.62 s | 0 | — | None |
@@ -70,7 +70,7 @@ Breakdown by top-level subsystem:
 
 Largest clusters within `test_pipeline`: `test_model_certification` (25), `test_enforcement_integration` (12), `test_structured_synthesis` (10), `test_staged_enforcement` (8), `test_phase2_enforcement` (7), `test_gateway` (7).
 
-### Failure characterization: suite-ordering pollution, not real defects *[VERIFIED]*
+### Failure characterization: full-suite health is failing; isolation defect strongly indicated *[VERIFIED — classification corrected on acceptance]*
 
 **Three sampled failing files all pass 100% in isolation:**
 
@@ -80,13 +80,23 @@ Largest clusters within `test_pipeline`: `test_model_certification` (25), `test_
 | `test_api/test_governance_decisions.py` | 12 failed | **20 passed** (whole file) |
 | `test_literature/test_crossref_source.py` | 12 failed | **12 passed** (whole file) |
 
-**Conclusion (INFERRED):** the 136 failures are test-suite-ordering pollution / shared-state interaction — most likely global state leaking across the full run order (candidates: the `@functools.lru_cache` on `get_settings`, monkeypatched environment variables not fully torn down, or DB fixtures). They are **not** real code defects and **not** caused by the Phase 0 seal repair.
+**Stable classification:**
 
-**Disposal per Phase 0 contract:** recorded for the roadmap; **NOT expanded into a repair program in Phase 0**. The task explicitly states: *"A failing full suite does not automatically expand Phase 0. Only fix failures caused by the architecture-seal repair or failures that prevent establishing a usable baseline."* The baseline IS usable: focused suites (architecture + ranking) are green, the frontend is fully green, and the full-suite failures are characterizable as ordering pollution rather than code defects.
+```text
+Backend runtime defect       not established
+Test-suite isolation defect  strongly indicated
+Full-suite health            failing
+Blocks Phase 1               no
+Must remain tracked          yes
+```
+
+**What the evidence proves and does not prove.** Three sampled files passing 100% in isolation is **strong evidence for the test-isolation-defect hypothesis** (global state leaking across run order — candidates: the `@functools.lru_cache` on `get_settings`, monkeypatched environment variables not fully torn down, or DB fixtures). It is **not proof that all 136 are non-defects**; the remaining 133 failures were not individually isolated, so some could still be genuine runtime defects masked by the pollution. The honest position is: a full CI-selector run that fails is **itself an engineering defect regardless of root cause**, and the runtime-defect question is *not yet established*. Zero of the 136 are caused by the Phase 0 seal repair (no failing test matches `snapshot|p1c|p0_5|config|architecture`).
+
+**Disposal per Phase 0 contract:** recorded as tracked debt; **NOT expanded into a repair program in Phase 0**. The task explicitly states: *"A failing full suite does not automatically expand Phase 0. Only fix failures caused by the architecture-seal repair or failures that prevent establishing a usable baseline."* The baseline is usable for Phase 1 (focused suites green, frontend fully green), but full-suite health is failing and remains tracked.
 
 ### Roadmap item produced
 
-> **Phase 4 (Product hardening) candidate:** investigate and fix the test-suite-ordering pollution causing 136 full-suite-only failures. Likely interventions: (a) audit `get_settings.cache_clear()` discipline across tests that monkeypatch env vars, (b) enforce DB-fixture isolation, (c) consider `pytest-randomly` or ordered-fixture cleanup. This is not blocking Phase 1.
+> **Phase 4 (Product hardening) candidate:** establish root cause of the 136 full-suite failures. Two hypotheses to separate — (a) test-isolation defect (audit `get_settings.cache_clear()` discipline across tests that monkeypatch env vars; enforce DB-fixture isolation; consider `pytest-randomly` or ordered-fixture cleanup), (b) genuine runtime defects masked by the pollution. Must remain tracked until a clean full-suite run is achieved. Not blocking Phase 1.
 
 ---
 
@@ -110,7 +120,7 @@ Largest clusters within `test_pipeline`: `test_model_certification` (25), `test_
 
 > * The P0.5 architecture seal passes. — **MET** (41/41)
 > * The current backend and frontend state is recorded from fresh execution. — **MET**
-> * Every remaining failure is identified without turning it into an unplanned repair program. — **MET** (136 failures characterized as suite-ordering pollution; recorded for roadmap; not expanded)
+> * Every remaining failure is identified without turning it into an unplanned repair program. — **MET** (136 failures recorded as tracked debt; test-isolation defect strongly indicated by 3 isolated-file passes, runtime-defect question not established, full-suite health failing; recorded for roadmap; not expanded into a repair program)
 
 ---
 

@@ -41,8 +41,9 @@ The paper was present in the tree at every commit from its creation through the 
 | Associated run artifacts | Front-matter + Appendix A document: strategy=`deep_research`, LLM=`z.ai glm-5.1`, embedding=`Ollama nomic-embed-text (768-dim)`, sources=`arXiv/OpenAlex/Semantic Scholar/PubMed/CrossRef`, ~160–200 papers analyzed across 3 studies, 17 gaps, 6 proposals. **No machine-readable run directory survives** (the associated `data/runs/` entries were also deleted in Phase 0 wipe) |
 | Evaluation artifacts | **None recoverable** — `quality_report.json` for this run was deleted in Phase 0; the paper itself is the only surviving artifact |
 | Obvious corruption/truncation | **None.** Structure is complete, no mid-section breaks, references resolve, abstract is well-formed |
-| Citation markers vs current system | Uses `[N]` numbered references; current pipeline emits `[SOURCE-N]` markers — **a citation-format divergence to account for in Phase 3 comparison** |
-| Suitable as Phase 3 comparison baseline | **Yes** — it is an authentic, complete, pipeline-generated full paper on a known topic (GoT × NSR), with documented provenance. Phase 3 assignment #1 ("recover and reproduce the historical pipeline-generated paper topic") can compare a fresh run on the same topic against this artifact |
+| Citation markers vs current system | Uses `[N]` numbered references; current pipeline emits `[SOURCE-N]` markers — **a citation-format divergence to account for in any comparison** |
+| Role: workflow fixture | **Yes** — suitable for comparing workflow completion, paper length/structure, section coverage, export formats, and user effort. It is an authentic, complete, pipeline-generated full paper on a known topic (GoT × NSR), with documented provenance. |
+| Role: quality gold standard | **No — explicitly not.** This paper must NOT be treated as ground truth for citation or scientific quality. Three caveats: (1) **no associated evaluation artifact survived** (`quality_report.json` was deleted in Phase 0); (2) **no machine-readable run provenance survived** (the associated `data/runs/` entry was also deleted); (3) **its 10 references have not been independently validated.** Citation and scientific-quality validation belongs in the later product-comparison phase, not in Phase 0. |
 
 ## Distinction from the two hand-written papers *[VERIFIED]*
 
@@ -56,11 +57,11 @@ Per the current-state report and confirmed in this recovery: the other two delet
 
 **The two hand-written papers are NOT presented as pipeline-generation proof.** Only `GoT_NSR_Research_Paper` qualifies as an authentic pipeline-generated historical output. They are recorded here as historical research outputs but are excluded from the regression-baseline role.
 
-## Exit condition *[VERIFIED]*
+## Exit condition *[VERIFIED — classification corrected on acceptance]*
 
-> At least one authentic pipeline-generated historical paper is recovered, provenance-bound, and classified for future regression comparison.
+> At least one authentic pipeline-generated historical paper is recovered, provenance-bound, and classified for future comparison.
 
-**Met.** `GoT_NSR_Research_Paper.md` (+ `.tex`) recovered byte-identical from `e2c0171^`, provenance fully documented, assessed as a complete 4,347-word paper with 10 references, and classified suitable as the Phase 3 comparison baseline.
+**Met, with a scoped role.** `GoT_NSR_Research_Paper.md` (+ `.tex`) recovered byte-identical from `e2c0171^`, provenance fully documented, assessed as a complete 4,347-word paper with 10 references. **Classified as a historical workflow fixture** (compare completion / length / structure / section coverage / export formats / user effort), **not as a quality gold standard** — no evaluation artifact survived, no machine-readable run provenance survived, and its 10 references have not been independently validated. Citation and scientific-quality validation belongs in the later product-comparison phase.
 
 ---
 

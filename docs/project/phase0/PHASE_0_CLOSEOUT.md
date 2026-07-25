@@ -3,6 +3,12 @@
 > **Phase 0 closeout.** Contains only the fields specified in Work Package 0E.
 > **No product feature added. No P1E artifact changed.**
 
+> **Accepted corrections (record-accuracy follow-up).** On acceptance, two refinements superseded the original Phase 0 wording and were folded back into this record and into `ERLAB_TEST_BASELINE.md` / `ERLAB_HISTORICAL_OUTPUT_BASELINE.md`:
+> 1. **The 136 failures remain real test failures.** Independent-file passing is evidence *for* the test-isolation-defect hypothesis, not proof that all 136 are non-defects. A full CI-selector run that fails is itself an engineering defect. Classification: `Backend runtime defect = not established; Test-suite isolation defect = strongly indicated; Full-suite health = failing; Blocks Phase 1 = no; Must remain tracked = yes`.
+> 2. **The recovered paper is a workflow fixture, not a quality gold standard.** No evaluation artifact or machine-readable run provenance survived, and its 10 references have not been independently validated. Citation/scientific-quality validation belongs in the later product-comparison phase.
+>
+> These are documentation-only corrections; no Phase 0 work was reopened, no seal changed, no artifact re-recovered.
+
 | Field | Value |
 |---|---|
 | **Baseline commit** | `d5990bc4e603767dc1282a7044122ed5e9be8ea5` |
@@ -22,7 +28,8 @@
 ## Recovered historical output *[VERIFIED — see `ERLAB_HISTORICAL_OUTPUT_BASELINE.md`]*
 
 - `docs/project/phase0/historical_baseline/GoT_NSR_Research_Paper.{md,tex}` — recovered **byte-identical** from `e2c0171^` (original blob hashes `c59b75a`/`e59f1b3` match `git hash-object` of recovered files).
-- Authentic pipeline-generated full paper: 4,347 words, 8 sections, 10 numbered references, documented pipeline config in Appendix A. Suitable as Phase 3 comparison baseline.
+- Authentic pipeline-generated full paper: 4,347 words, 8 sections, 10 numbered references, documented pipeline config in Appendix A.
+- **Role: historical workflow fixture** (compare completion / length / structure / section coverage / export formats / user effort). **Not a quality gold standard** — no evaluation artifact survived, no machine-readable run provenance survived, and its 10 references have not been independently validated. Citation and scientific-quality validation belongs in the later product-comparison phase.
 - The two hand-written deleted papers are NOT presented as pipeline proof.
 
 ## Architecture-seal result *[VERIFIED — see `ERLAB_TEST_BASELINE.md` §Step 1]*
@@ -38,7 +45,7 @@
 | Ranking suite | **253 passed, 3 skipped** (closeout-mode gated) |
 | Full CI selector (`-p no:asyncio -m "not slow and not integration"`) | **4580 passed, 136 failed, 47 skipped, 29 deselected** (241 s) |
 
-**136 full-suite failures characterized as test-suite-ordering pollution, not real defects:** three sampled failing files (`test_gateway.py`, `test_governance_decisions.py`, `test_crossref_source.py`) all pass 100% in isolation. **Zero failures caused by the seal repair** (no failing test matches `snapshot|p1c|p0_5|config|architecture`). Recorded for roadmap; not expanded in Phase 0.
+**136 full-suite failures — classification:** test-isolation defect strongly indicated (three sampled failing files `test_gateway.py`, `test_governance_decisions.py`, `test_crossref_source.py` all pass 100% in isolation), but **runtime-defect question not established** and **full-suite health is failing**. Stable classification: `Backend runtime defect = not established; Test-suite isolation defect = strongly indicated; Full-suite health = failing; Blocks Phase 1 = no; Must remain tracked = yes`. **Zero failures caused by the seal repair** (no failing test matches `snapshot|p1c|p0_5|config|architecture`). Recorded as tracked debt; not expanded into a repair program in Phase 0.
 
 ## Frontend test baseline *[VERIFIED — fresh execution]*
 
@@ -55,18 +62,29 @@
 - **`benchmarks/latest.json` does not exist** — not on disk, not in HEAD, not in any branch, not in the pre-Phase-0 platform repo, and consumed by no code. The current-state report's "stale pointer" entry was a phantom and is corrected here.
 - **No action taken** (nothing to supersede/remove). Authoritative retrieval lineage recorded: P1B snapshot → P1E.0 audit → P1E.1 sealed extension → (P1E.2/P1E.3 not yet completed).
 
-## Remaining verified failures
+## Remaining verified failures / tracked debt
 
-1. **136 backend full-suite failures** (suite-ordering pollution; pass in isolation). Roadmap candidate for Phase 4.
+1. **136 backend full-suite failures — full-suite health failing.** Test-isolation defect strongly indicated (3 sampled files pass in isolation); runtime-defect question **not** established (the other 133 were not individually isolated, so some could be genuine defects masked by the pollution). **Must remain tracked** until a clean full-suite run is achieved. Not blocking Phase 1; candidate for early Phase 4 investigation.
 2. **3 ranking skips** (intentional closeout-mode gating of P1E.0/P1E.1 tests). Not failures.
 3. **63 frontend lint warnings** (within frozen budget of 72; not errors). Pre-existing debt.
 4. **`.coverage` file stale** (2026-06-16); `fail_under=72` not re-verified this session. Low priority.
+
+## Frozen Phase 0 conclusion *[accepted]*
+
+```text
+Build Phase 1 on the current architecture.
+Do not recover or migrate historical modules.
+Do not rebuild paper synthesis or BibTeX export.
+Expose the existing backend capabilities through the product interface.
+Track the 136 full-suite failures as test-isolation debt.
+Use the recovered paper as a historical workflow fixture, not as a quality oracle.
+```
 
 ## Decisions required for Phase 1
 
 > **Build Phase 1 entirely on the current architecture.** The lineage reconciliation (0A) found nothing to selectively recover: the nine "missing" capabilities were never implemented as discrete modules in this repo or its pre-Phase-0 parent. The real paper-generation backend (`PaperSynthesizer`) and BibTeX exporter (`BibTeXExporter`) already exist on the current branch — Phase 1's task is to **expose** them in the UI, not to recover them. No migration of historical modules is needed before Phase 1 begins.
 
-**Secondary decision for Phase 1 planning (not blocking):** whether to address the 136 full-suite ordering-pollution failures early (improves signal for Phase 1–4 test runs) or defer to Phase 4 hardening. Recommended: defer, since focused suites are green and the failures are characterizable, not blocking.
+**Secondary decision for Phase 1 planning (not blocking):** whether to address the 136 full-suite failures early (improves signal for Phase 1–4 test runs; must separate isolation-defect from genuine-defect hypotheses) or defer to Phase 4. Recommended: defer Phase 1 start is not blocked either way, but the debt must remain tracked until a clean full-suite run is achieved.
 
 ---
 
