@@ -1,11 +1,14 @@
 """OpenAI provider implementation."""
 
 import json
+import logging
 from collections.abc import AsyncIterator
 
 import openai
 
 from backend.providers.base import LLMProvider, LLMResponse
+
+logger = logging.getLogger(__name__)
 
 
 class OpenAIProvider(LLMProvider):

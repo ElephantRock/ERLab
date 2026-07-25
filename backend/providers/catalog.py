@@ -578,7 +578,17 @@ class ModelCatalog:
         elif server_type == "vllm":
             return await probe_vllm(endpoint.url, endpoint.api_key)
         elif server_type == "openai":
-            return await probe_openai_compatible(endpoint.url, endpoint.api_key)
+            models = await probe_openai_compatible(endpoint.url, endpoint.api_key)
+            # Phase 3 B-01 fix: cloud proxies (e.g. z.ai) may not support
+            # /v1/models discovery. If discovery returned nothing but a
+            # model_override is set, register the configured model directly.
+            if not models and endpoint.model_override:
+                logger.info(
+                    "OpenAI discovery empty at %s — registering model_override '%s' as cloud model",
+                    endpoint.url, endpoint.model_override,
+                )
+                return [make_cloud_model(endpoint)]
+            return models
         elif server_type in ("anthropic", "gemini"):
             # Cloud APIs — create synthetic ModelInfo from config
             return [make_cloud_model(endpoint)]

@@ -441,26 +441,40 @@ async def list_stale_runs(
 @router.get(
     "/runs/detail/{run_id}",
     summary="Get run details",
-    description="Get full details for a pipeline run by its database ID, including config, stages, and ideas.",
+    description="Get full details for a pipeline run by its database ID or string run ID, including config, stages, and ideas.",
 )
-async def get_run(run_id: int):
-    """Get full run details by DB id.
+async def get_run(run_id: str):
+    """Get full run details by DB id or string run id.
 
     Args:
-        run_id: The database primary key of the run.
+        run_id: Database ID (int as string) or string run ID (e.g. run_20260611_153000).
 
     Returns:
         Full run object with config, stages_completed, and ideas list.
-
-    Example response:
-        {"id": 1, "status": "completed", "domain": "AI/NLP", "current_stage": "done", "config": {}, "stages_completed": ["generation", "novelty"], "ideas": [{"id": 1, "title": "...", "novelty_score": 0.8, "feasibility_score": 7.0, "overall_score": 0.75}], "created_at": "...", "completed_at": "...", "error_message": null}
     """
     from datetime import timedelta
     from backend.db.crud import get_pipeline_run
     from backend.db.database import get_session
+    from backend.db.models import PipelineRun as _PipelineRunModel
+
+    # Phase 3 B-02 fix: resolve string run_id (e.g. run_7c6993c34e9c) to DB id,
+    # matching the pattern in get_run_ideas. Previously this endpoint only
+    # accepted int, so the string run_id returned by POST /run caused 422.
+    db_id = None
+    try:
+        db_id = int(run_id)
+    except (ValueError, TypeError):
+        with get_session() as session:
+            run = session.query(_PipelineRunModel).filter(
+                _PipelineRunModel.run_id_str == run_id
+            ).first()
+            if run:
+                db_id = run.id
+    if db_id is None:
+        raise NotFoundError("Run not found")
 
     with get_session() as session:
-        run = get_pipeline_run(session, run_id)
+        run = get_pipeline_run(session, db_id)
         if not run:
             raise NotFoundError("Run not found")
 

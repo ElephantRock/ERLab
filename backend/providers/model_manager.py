@@ -368,15 +368,21 @@ class ModelManager:
                 )
             )
 
-        # OpenAI
+        # OpenAI (or OpenAI-compatible, e.g. z.ai proxy — use the configured
+        # base_url rather than a hardcoded api.openai.com default). When the
+        # endpoint doesn't support /v1/models discovery (common with proxies),
+        # model_override registers the configured model directly.
         openai_key = settings.openai_api_key
         if openai_key and openai_key != "YOUR_API_KEY_HERE":
+            openai_url = getattr(settings, "openai_base_url", "") or "https://api.openai.com/v1"
+            openai_model = getattr(settings, "openai_model", "") or None
             endpoints.append(
                 EndpointConfig(
-                    url="https://api.openai.com/v1",
+                    url=openai_url,
                     api_key=openai_key,
                     server_type="openai",
                     provider_type="openai",
+                    model_override=openai_model,
                     display_name="OpenAI",
                 )
             )
