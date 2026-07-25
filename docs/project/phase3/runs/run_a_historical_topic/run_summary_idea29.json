@@ -1,0 +1,43 @@
+{
+  "idea_id": 29,
+  "title": "LogicBench: A Benchmark for Neuro-Symbolic Consistency in Generative Tasks",
+  "paper_chars": 13771,
+  "paper_words": 2675,
+  "paper_eval": {
+    "status": "ready",
+    "scope": "paper",
+    "dimensions": {
+      "novelty": {
+        "score": 0.0,
+        "justification": ""
+      },
+      "feasibility": {
+        "score": 0.0,
+        "justification": ""
+      },
+      "completeness": {
+        "score": 0.0,
+        "justification": ""
+      },
+      "rigor": {
+        "score": 0.0,
+        "justification": ""
+      },
+      "clarity": {
+        "score": 0.0,
+        "justification": ""
+      },
+      "baseline_adequacy": {
+        "score": 0.0,
+        "justification": ""
+      },
+      "compute_realism": {
+        "score": 0.0,
+        "justification": ""
+      },
+      "overall": 0.0
+    },
+    "evaluated_object": "final_paper"
+  },
+  "has_proposal_eval": true
+}

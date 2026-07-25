@@ -1,0 +1,43 @@
+{
+  "idea_id": 30,
+  "title": "Symbolic Counterfactual Auditing for Faithful Neuro-Symbolic Explanations",
+  "paper_chars": 15692,
+  "paper_words": 2649,
+  "paper_eval": {
+    "status": "ready",
+    "scope": "paper",
+    "dimensions": {
+      "novelty": {
+        "score": 0.0,
+        "justification": ""
+      },
+      "feasibility": {
+        "score": 0.0,
+        "justification": ""
+      },
+      "completeness": {
+        "score": 0.0,
+        "justification": ""
+      },
+      "rigor": {
+        "score": 0.0,
+        "justification": ""
+      },
+      "clarity": {
+        "score": 0.0,
+        "justification": ""
+      },
+      "baseline_adequacy": {
+        "score": 0.0,
+        "justification": ""
+      },
+      "compute_realism": {
+        "score": 0.0,
+        "justification": ""
+      },
+      "overall": 0.0
+    },
+    "evaluated_object": "final_paper"
+  },
+  "has_proposal_eval": true
+}
