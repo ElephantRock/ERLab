@@ -246,29 +246,46 @@ class TestControlSnapshotNeverOverwritten:
                            binding=binding, items=items)
 
     def test_control_snapshot_path_is_separate_from_candidate_paths(self):
-        """The P1C_SNAPSHOT_TAG mechanism writes candidate snapshots under
+        """The EROCK_P1C_SNAPSHOT_TAG mechanism writes candidate snapshots under
         docs/p1c_snapshots/<tag>/, NEVER under docs/p1b_snapshot/ (the control).
 
-        This is enforced structurally: when P1C_SNAPSHOT_TAG is set, SNAPSHOT_DIR
-        points at p1c_snapshots/<tag>; when unset, it points at p1b_snapshot.
-        Generation of a candidate therefore cannot overwrite the control.
+        This is enforced structurally: when EROCK_P1C_SNAPSHOT_TAG is set,
+        SNAPSHOT_DIR points at p1c_snapshots/<tag>; when unset, it points at
+        p1b_snapshot. Generation of a candidate therefore cannot overwrite the
+        control.
+
+        P0.5 config-effectiveness seal: the tag is read via Settings (the
+        EROCK_-prefixed env var), not via a direct os.environ read in production
+        code. This test is also the focused config-effect proof for the
+        p1c_snapshot_tag Settings field.
         """
         import importlib
         import os
         import backend.ranking.generate_embedding_snapshot as mod
+        from backend.config import get_settings
+
+        _ENV = "EROCK_P1C_SNAPSHOT_TAG"
+
+        def _reload_with_cache_clear():
+            # get_settings() is lru_cached, so clear it so Settings() re-reads
+            # the environment on the next import-time get_settings() call.
+            get_settings.cache_clear()
+            importlib.reload(mod)
+
         # default (no tag) -> control path
-        os.environ.pop("P1C_SNAPSHOT_TAG", None)
-        importlib.reload(mod)
+        os.environ.pop(_ENV, None)
+        _reload_with_cache_clear()
         assert mod.SNAPSHOT_DIR.name == "p1b_snapshot"
         # with a candidate tag -> candidate path, distinct from control
-        os.environ["P1C_SNAPSHOT_TAG"] = "all_minilm_l12_v2"
+        os.environ[_ENV] = "all_minilm_l12_v2"
         try:
-            importlib.reload(mod)
+            _reload_with_cache_clear()
             assert mod.SNAPSHOT_DIR.name == "all_minilm_l12_v2"
             assert mod.SNAPSHOT_DIR.parent.name == "p1c_snapshots"
         finally:
-            os.environ.pop("P1C_SNAPSHOT_TAG", None)
-            importlib.reload(mod)
+            os.environ.pop(_ENV, None)
+            _reload_with_cache_clear()
+
 
 
 class TestRetryPolicyIsExperimentHarnessOnly:

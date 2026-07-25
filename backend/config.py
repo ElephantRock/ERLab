@@ -452,6 +452,14 @@ class Settings(BaseSettings):
     experiment_default_timeout: float = 30.0
     experiment_max_code_size: int = 10000
 
+    # Ranking snapshot generation (P1C / P0.5 config-effectiveness seal).
+    # When set, embedding-snapshot generation writes to
+    # docs/p1c_snapshots/<p1c_snapshot_tag>/ instead of the frozen P1B control
+    # snapshot at docs/p1b_snapshot/, so candidate models do not overwrite the
+    # frozen P1B control. Read via Settings rather than os.environ directly so
+    # the P0.5 architecture seal (no direct os.environ in production) holds.
+    p1c_snapshot_tag: str = ""
+
     # ── Research Loop Improvements (Phase 1-7) ────────────────────
 
     # Phase 1: Decision Gate Loop

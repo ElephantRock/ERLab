@@ -58,8 +58,12 @@ from backend.ranking.embedding_snapshot import (
 # P1C: snapshot dir is configurable so multiple candidate models can each
 # produce their own snapshot under docs/p1c_snapshots/<model_tag>/ without
 # overwriting the frozen P1B control snapshot at docs/p1b_snapshot/.
-import os as _os
-_P1C_TAG = _os.environ.get("P1C_SNAPSHOT_TAG", "").strip()
+# Read via Settings (P0.5 config-effectiveness seal: production code must
+# not read the process environment directly). Set EROCK_P1C_SNAPSHOT_TAG
+# to activate a candidate dir.
+from backend.config import get_settings
+
+_P1C_TAG = get_settings().p1c_snapshot_tag.strip()
 if _P1C_TAG:
     SNAPSHOT_DIR = _REPO_ROOT / "docs" / "p1c_snapshots" / _P1C_TAG
 else:
