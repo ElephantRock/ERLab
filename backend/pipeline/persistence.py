@@ -223,6 +223,35 @@ def _extract_paper_artifact(proposal) -> tuple[str | None, dict | None]:
     return paper_md, meta
 
 
+def _extract_proposal_evaluation(proposal) -> str | None:
+    """Phase 2 2B: extract the proposal-scope evaluation from a ResearchProposal.
+
+    EvaluationStage writes metadata["evaluation"] = evaluation.to_dict() (the
+    7-dim ProposalEvaluation). Previously persist_proposals dropped it, so the
+    proposal evaluation was lost on every run. Returns a JSON string (or None
+    when no evaluation ran) for storage in Proposal.proposal_evaluation_json.
+
+    Scope is explicitly proposal (distinct from paper_evaluation, which is
+    stored under paper_meta_json).
+    """
+    raw_meta = getattr(proposal, "metadata", None)
+    if raw_meta is None:
+        return None
+    if isinstance(raw_meta, str):
+        try:
+            meta_dict = json.loads(raw_meta)
+        except Exception:
+            return None
+    elif isinstance(raw_meta, dict):
+        meta_dict = raw_meta
+    else:
+        return None
+    evaluation = meta_dict.get("evaluation")
+    if not evaluation or not isinstance(evaluation, dict):
+        return None
+    return json.dumps(evaluation)
+
+
 class PipelinePersistence:
     """Handles all database writes for pipeline runs."""
 
@@ -898,6 +927,10 @@ class PipelinePersistence:
                             # recorded with status "failed" so it can never
                             # appear as ready (truth rule, WP-1C).
                             paper_md, paper_meta = _extract_paper_artifact(proposal)
+                            # Phase 2 2B: persist the proposal-scope evaluation
+                            # that EvaluationStage writes to metadata["evaluation"]
+                            # and that was previously dropped (2A bug).
+                            proposal_eval = _extract_proposal_evaluation(proposal)
                             if existing:
                                 existing.content_md = proposal.to_markdown()
                                 existing.references_json = json.dumps(refs)
@@ -908,6 +941,7 @@ class PipelinePersistence:
                                 existing.paper_meta_json = (
                                     json.dumps(paper_meta) if paper_meta else None
                                 )
+                                existing.proposal_evaluation_json = proposal_eval
                                 session.commit()
                             else:
                                 crud.create_proposal(
@@ -920,6 +954,7 @@ class PipelinePersistence:
                                     paper_meta_json=(
                                         json.dumps(paper_meta) if paper_meta else None
                                     ),
+                                    proposal_evaluation_json=proposal_eval,
                                 )
         except Exception as e:
             logger.warning("Failed to persist proposals: %s", e)

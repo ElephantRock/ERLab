@@ -496,6 +496,13 @@ async def get_idea(idea_id: int):
                 "mechanical_metrics": mechanical_metrics,
                 "proposal_md": proposal.content_md if proposal else None,
                 "proposal_latex": proposal.content_latex if proposal else None,
+                # Phase 2 2B: expose the persisted proposal-scope evaluation so
+                # proposal and paper evaluations are both visible and distinct.
+                "proposal_evaluation": (
+                    {"scope": "proposal", "dimensions": json.loads(proposal.proposal_evaluation_json)}
+                    if getattr(proposal, "proposal_evaluation_json", None)
+                    else None
+                ),
                 "proposal_sections": rendered_sections,
                 "proposal_references": proposal_references,
                 "supporting_papers": supporting_papers,

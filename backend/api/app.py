@@ -10,7 +10,7 @@ from fastapi.responses import JSONResponse
 
 from backend.api.auth import get_current_user, verify_api_key
 from backend.api.errors import APIError
-from backend.api.routes import auth as auth_routes, collaboration, costs, diagnostics, evaluation, experiments, exports, gaps, governance, ideas, knowledge, knowledge_graph, literature, memory, model_config, notifications, ops, paper_export, pipeline, plugins, recombination, search, status, traces
+from backend.api.routes import auth as auth_routes, collaboration, costs, diagnostics, evaluation, experiments, exports, gaps, governance, ideas, knowledge, knowledge_graph, literature, memory, model_config, notifications, ops, paper_export, pipeline, plugins, recombination, review, search, status, traces
 from backend.api import ws as ws_module
 from backend.api.middleware.diagnostics_body_limit import DiagnosticsBodyLimitMiddleware
 
@@ -168,6 +168,9 @@ app.include_router(
     pipeline.router, prefix="/api/v1/pipeline", tags=["pipeline"], dependencies=_auth
 )
 app.include_router(ideas.router, prefix="/api/v1/ideas", tags=["ideas"], dependencies=_auth)
+# Phase 2 2B/2E/2F: Trust & Sources review routes (normalized review payload,
+# source-review decisions, completion state). Mounted under /ideas for ownership.
+app.include_router(review.router, prefix="/api/v1/ideas", tags=["review"], dependencies=_auth)
 app.include_router(gaps.router, prefix="/api/v1/gaps", tags=["gaps"], dependencies=_auth)
 app.include_router(search.router, prefix="/api/v1/search", tags=["search"], dependencies=_auth)
 app.include_router(

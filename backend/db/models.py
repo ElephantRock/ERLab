@@ -146,6 +146,11 @@ class Proposal(Base):
     # parsing the markdown.
     paper_md: Mapped[str | None] = mapped_column(Text, nullable=True)
     paper_meta_json: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # Phase 2 2B: persisted proposal-scope evaluation. EvaluationStage computes
+    # metadata["evaluation"] (7-dim ProposalEvaluation); persist_proposals
+    # previously dropped it. This column keeps proposal and paper evaluations
+    # both visible and distinct (truth rule: they must not be collapsed).
+    proposal_evaluation_json: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     idea: Mapped["Idea"] = relationship(back_populates="proposal")
     created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
@@ -494,6 +499,50 @@ class GovernanceDecision(Base):
     decision: Mapped[str] = mapped_column(String(20), nullable=False)
     reviewer: Mapped[str] = mapped_column(String(128), nullable=False, default="anonymous")
     note: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=lambda: datetime.now(timezone.utc),
+    )
+
+
+class SourceReview(Base):
+    """Phase 2 2E: append-only human source-review decision.
+
+    Records a reviewer's decision on a single cited source within a paper's
+    reference list. Distinct from GovernanceDecision (idea-scoped approve/deny)
+    because source review needs a per-source identity and a different enum.
+
+    Stable source identity: `source_ref_hash` is a SHA-256 of the normalized
+    raw reference string (the only stable handle available — 2A established
+    that references carry no enforced DOI/arXiv/title ID). This keeps the
+    decision tied to the actual cited text rather than a positional index,
+    so it survives reference-list reordering within the same paper revision.
+
+    Decision enum (2E): accepted | flagged | exclude_on_next_revision.
+    Immutability rule (2E): a decision does NOT mutate the existing paper —
+    `exclude_on_next_revision` is a recorded instruction, not proof the
+    current paper no longer uses the source.
+
+    Append-only: every new decision for the same (idea, source_ref_hash)
+    creates a new row; the latest by created_at is the current decision.
+    """
+
+    __tablename__ = "source_reviews"
+    __table_args__ = (
+        Index("ix_source_reviews_idea_id", "idea_id"),
+        Index("ix_source_reviews_source_ref_hash", "source_ref_hash"),
+        Index("ix_source_reviews_idea_hash", "idea_id", "source_ref_hash"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    idea_id: Mapped[int] = mapped_column(Integer, ForeignKey("ideas.id"), nullable=False)
+    # SHA-256 of the normalized raw reference string (see _source_ref_hash).
+    source_ref_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    # Positional reference number at decision time (display aid only; not the
+    # stable identity — see source_ref_hash). May be null for unresolved refs.
+    source_ref_number: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    decision: Mapped[str] = mapped_column(String(40), nullable=False)
+    note: Mapped[str | None] = mapped_column(Text, nullable=True)
+    reviewer: Mapped[str] = mapped_column(String(128), nullable=False, default="anonymous")
     created_at: Mapped[datetime] = mapped_column(
         DateTime, default=lambda: datetime.now(timezone.utc),
     )
