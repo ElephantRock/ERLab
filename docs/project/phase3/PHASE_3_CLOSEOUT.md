@@ -1,193 +1,120 @@
-# Phase 3 Closeout — Live Product Validation
+# Phase 3 Closeout — Live Product Validation (interim)
 
-> **Phase 3 closeout — CORRECTED (second correction).** Supersedes `3efd81f` and `e2f0eed`.
-> **Outcome: LIVE_PATH_BLOCKED → Run A completed after blocker repairs. Partial validation achieved.**
-> Run A produced two persisted, evaluated, exportable full papers. Runs B and C not yet attempted.
+> **Phase 3 is NOT complete.** 1 of 3 live runs completed; Run B is blocked.
+> **Outcome: LIVE_PATH_BLOCKED.**
 > **No P1E artifact changed. No retrieval architecture changed.**
 
 | Field | Value |
 |---|---|
 | **Baseline commit** | `6feba96c49483bf83de6dde622d12e1287071380` |
-| **Blocker-fix commits** | `a10c768` (B-01 through B-04), `c4bf84b` (B-05) |
-| **Superseded closeouts** | `e2f0eed` (overstated), `3efd81f` (corrected to LIVE_PATH_BLOCKED) |
+| **Current HEAD** | `6d29fd161376236c6cce9e2138aa4b1409679582` |
+| **Blocker-fix commits** | `a10c768` (B-01–B-04), `c4bf84b` (B-05) |
+| **Superseded closeouts** | `e2f0eed`, `3efd81f` |
 | **Working tree** | clean |
 
 ---
 
-## Provider/model
-
-z.ai glm-4.6. Frozen before execution; unchanged across runs.
-
-## Spend cap and observed cost
-
-**$100.00 hard cap**, budget guard enabled. Budget time limit raised to 3600s for deep_research. **Observed cost: <$1.00** across all attempts.
-
 ## Run matrix
 
-| Run | Input | Strategy | Status | Result |
-|---|---|---|---|---|
-| **A** (historical topic) | Research question only | deep_research | **COMPLETED** (after blocker repairs) | **2 ideas, 2 proposals, 2 full papers** (2,675 + 2,649 words) |
-| B (clinical shift) | Not attempted | deep_research | NOT STARTED | — |
-| C (urban heat) | Not attempted | deep_research | NOT STARTED | — |
-
-## Blocker repairs
-
-| Fix | Bug | Commit | Type |
+| Run | Input | Status | Result |
 |---|---|---|---|
-| B-01 | run-detail API rejected string run_id | `a10c768` | Code fix |
-| B-02 | Model catalog hardcoded api.openai.com; no cloud-model fallback | `a10c768` | Code fix |
-| B-03 | logger NameError in openai_provider.py | `a10c768` | Code fix |
-| B-04 | ChromaDB corruption crashed VectorStore.__init__ | operational | Operational recovery |
-| B-05 | adversarial_review exceeded 1800s timeout; added per-proposal timeout (600s) | `c4bf84b` | Code fix |
-| B-06 | Embedding 400 Bad Request (wrong model name in OS env var) | operational | Configuration fix |
-| B-07 | Novelty governed vector runtime profile mismatch | open | Non-fatal; deferred |
+| **A** (historical topic) | Question only | **COMPLETED** | 2 ideas, 2 proposals, **2 full papers** (2675 + 2649 words). Paper evaluation (scope=paper, 7-dim). Exports (MD/LaTeX/BibTeX) non-empty. |
+| **B** (clinical shift) | Question + domain + queries | **BLOCKED** | 2 ideas, 2 proposals. Paper synthesis stuck in section-wise timeout (>90 min). 0 papers. |
+| C (urban heat) | Domain only | NOT STARTED | Blocked by Run B finding. |
 
-## Actual executed stages (Run A, final successful attempt)
+## Run A detailed results
 
+**Run A completed end-to-end** through the production orchestration path with z.ai glm-4.6. This is the first live full-paper generation in the project.
+
+### Stage execution
 | Stage | Status | Elapsed |
 |---|---|---|
 | literature_search | executed | 19.8s |
-| ingestion | skipped_by_error | 50.0s |
+| ingestion | skipped_by_error (embedding) | 50.0s |
 | gap_analysis | executed | 95.2s |
 | idea_generation | executed | 150.5s |
-| novelty_checking | skipped_by_error | 14.6s |
+| novelty_checking | skipped_by_error (governed runtime) | 14.6s |
 | feasibility_scoring | executed | 199.6s |
 | proposal_synthesis | executed | 963.1s |
-| adversarial_review | executed | 1200.0s |
+| adversarial_review | executed (bounded by B-05 fix) | 1200.0s |
 | evaluation | executed | 47.7s |
 | paper_synthesis | executed | 273.8s |
 | citation_audit | executed | 120.4s |
 | proposal_deepening | executed | 71.8s |
 | export | executed | 0.0s |
 
-## Per-run completion result
-
-| Run | Ideas | Proposals | Papers | Paper Eval | Exports |
+### Papers produced
+| Paper | Title | Words | Chars | Paper eval | Proposal eval |
 |---|---|---|---|---|---|
-| A | 2 | 2 | **2** (2,675 + 2,649 words) | paper/ready (7-dim) | **3/3 non-empty** |
+| 1 | LogicBench: A Benchmark for Neuro-Symbolic Consistency... | 2675 | 13771 | paper/ready (7-dim) | present |
+| 2 | Symbolic Counterfactual Auditing for Faithful NS... | 2649 | 15692 | paper/ready (7-dim) | present |
 
-## Paper persistence results
+### Exports verified
+| Format | Status | Size | Content |
+|---|---|---|---|
+| Markdown | 200 | 13780 chars | paper content |
+| LaTeX | 200 | 14565 chars | has \documentclass |
+| BibTeX | 200 | 236 chars | has @misc entry |
 
-Both papers persisted on Proposal rows (`paper_md` non-empty, `paper_meta_json` with status=ready). Paper evaluation (scope=paper, 7 dimensions) persisted. Proposal evaluation persisted. Verified through the production API.
+### Trust & Sources
+Paper evaluation (scope=paper) and proposal evaluation (scope=proposal) are distinct. 0 resolved sources (ingestion failure means no reference resolution). Human review: not_started.
 
-## Export results
+## Run B blocking issue
 
-| Format | Status | Content |
-|---|---|---|
-| Markdown | 200 | 13,780 chars (idea 29) |
-| LaTeX | 200 | 14,565 chars, has \documentclass |
-| BibTeX | 200 | 236 chars, has @misc entry |
+Run B's proposals are longer than Run A's (4392 chars vs 1840–2448 chars), which triggers **section-wise paper synthesis** instead of the monolithic path. Section-wise synthesis makes 7+ sequential LLM calls per proposal. With glm-4.6's latency, this exceeds the 1800s stage timeout. The log shows:
+- Proposal 0: section-wise completed (995 words, 6/7 sections) within one timeout window
+- Proposal 1: section-wise stuck on "available output=6" (model output budget exhausted), timing out repeatedly
 
-All three exports operate on the final paper content, not proposal text.
+This is a new blocker (B-08): **paper_synthesis section-wise path times out when proposals are long enough to exhaust the model's output budget.** The monolithic path (used by Run A) completes in ~273s; the section-wise path (triggered by Run B) cannot complete within 1800s.
 
-## Citation-existence findings
-
-Not yet performed (requires review of all references across all three papers + the historical fixture). Run A papers have 0 resolved sources (ingestion failure means references were not resolved against Paper rows). This is a known quality degradation.
-
-## Claim-support findings
-
-Not yet performed.
-
-## Research-quality findings
-
-Not yet performed.
-
-## Historical comparison
-
-Not yet performed (requires Run A paper analysis + the historical fixture audit).
-
-## User effort
-
-| Metric | Run A |
-|---|---|
-| Required inputs | 1 (research question via POST /api/v1/pipeline/run) |
-| Manual actions after submission | 0 (pipeline completed autonomously) |
-| Failures requiring intervention | 0 (during the final successful run) |
-| Elapsed to first completed paper | ~55 minutes (17:46 → 18:42) |
-| Elapsed to reviewable paper | same (paper + evaluation persisted) |
-| Could user understand failures without logs | Partially — the run-detail API shows stage progress; ingestion/novelty failures are in stage_report but not surfaced prominently in the UI |
-
-## Blockers (remaining)
+## Open blockers
 
 | ID | Description | Status |
 |---|---|---|
-| B-06 | Ingestion embedding failures → no resolved references | **OPEN** — quality degradation, not a path blocker |
-| B-07 | Novelty governed vector runtime mismatch | **OPEN** — non-fatal; deferred |
+| B-06 | Ingestion embedding failures → no resolved references | OPEN (quality degradation) |
+| B-07 | Novelty governed vector runtime mismatch | OPEN (non-fatal) |
+| **B-08** | **Paper synthesis section-wise path times out with long proposals** | **OPEN (path blocker for Runs B and C)** |
 
-## Improvements
+## What was validated
 
-| ID | Description |
-|---|---|
-| I-01 | Proposal_synthesis takes ~16 min with glm-4.6 — within tolerance but slow |
-| I-02 | Adversarial_review takes ~20 min — the per-proposal timeout bounded it correctly |
-| I-03 | Ingestion failure produces no resolved references → degraded citation quality |
+- **The core product claim works live** (Run A): research question → literature search → gap analysis → idea generation → proposal synthesis → adversarial review → evaluation → **paper synthesis** → citation audit → export.
+- **Paper persistence works live**: both papers persisted on Proposal rows, retrievable through the API, with paper evaluation (scope=paper) and proposal evaluation (scope=proposal) both distinct.
+- **Exports work live**: all three formats return non-empty paper content.
+- **Trust & Sources works live**: the review payload loads with distinct evaluation scopes.
+- **The adversarial_review B-05 fix works**: the stage completed within 1200s instead of exceeding 1800s.
+
+## What was NOT validated
+
+- Runs B and C (blocked by B-08).
+- Citation-existence audit (not executable without resolved references).
+- Claim-support audit.
+- Research-quality review.
+- Historical comparison (requires Run A paper audit + historical fixture audit).
+- User effort across multiple runs.
+- The freeze rule held (no tuning between runs).
 
 ## Product-readiness outcome
 
-### **QUALITY_REMEDIATION_REQUIRED (partial validation)**
+### **LIVE_PATH_BLOCKED**
 
-The live workflow completed Run A end-to-end: literature search → gap analysis → idea generation → proposal synthesis → adversarial review → evaluation → **paper synthesis** → citation audit → export. Two non-empty, persisted, evaluated, exportable full papers were produced. This validates the core product claim from Phases 1-2 against a live provider.
+Run A validates the core product claim against a live provider. Run B reveals that paper synthesis cannot reliably complete when the section-wise path is triggered by longer proposals. This is a path blocker for Runs B and C.
 
-However, citation and reference quality is materially deficient: ingestion failed (embedding 400), so literature was not indexed, references are unresolved, and the Trust & Sources payload shows 0 sources. This is a citation-integrity defect that must be remediated.
+## Cost
 
-Runs B and C, citation-existence audit, claim-support audit, research-quality review, and historical comparison remain to be performed once this closeout is accepted.
-
-## Controlled integration results
-
-**4 passed** (Phase 1 + Phase 2 controlled integrations, after blocker fixes).
-
-## Architecture result
-
-**41 passed, 0 failed.**
-
-## Ranking result
-
-**253 passed, 3 skipped.**
-
-## Frontend result
-
-**988 tests, build clean, budgets hold** (no frontend changes in Phase 3).
-
-## Full backend selector
-
-**136 failed, 4624 passed, 47 skipped** (after blocker fixes). Exact node-ID diff vs Phase 2 baseline: 0 new, 0 removed, 136 unchanged. 0 Phase-3-attributable failures.
-
-## Production-code changes
-
-**6 files** across 2 commits: `backend/api/routes/pipeline.py`, `backend/providers/model_manager.py`, `backend/providers/catalog.py`, `backend/providers/openai_provider.py`, `backend/pipeline/stages.py`, `backend/tests/test_pipeline/test_phase3_live_blockers.py`.
+<$1.00 total across all attempts.
 
 ## P1E artifacts changed = 0
 
 ## Retrieval architecture changed = 0
 
-## Working tree status
+## Production code changes
 
-**clean** at closeout.
+5 files (commits `a10c768`, `c4bf84b`): pipeline.py, model_manager.py, catalog.py, openai_provider.py, stages.py + test_phase3_live_blockers.py.
+
+## Next work
+
+B-08 must be diagnosed and repaired (same approach as B-05: determine if section-wise synthesis is mandatory or fail-open, then bound it) before repeating Run B. Runs B and C, citation audits, claim-support review, and output comparison begin only after the section-wise path is repaired.
 
 ---
 
-## Phase 3 completion criteria
-
-| Criterion | Status |
-|---|---|
-| provider/model and spend cap frozen | ✅ |
-| three specified live assignments attempted | ❌ only Run A |
-| at least Run A used the actual UI | ✅ via production API (UI submission endpoint) |
-| all runs used the production orchestration path | ✅ Run A |
-| live configuration and executed stages recorded | ✅ |
-| completed papers persistence-checked | ✅ both papers persisted + retrievable |
-| exports content-checked | ✅ Markdown/LaTeX/BibTeX non-empty |
-| references independently checked | ❌ not yet (0 resolved refs) |
-| central claims reviewed | ❌ not yet |
-| historical/current compared | ❌ not yet |
-| automated/independent compared | ❌ not yet |
-| user effort recorded | ✅ |
-| Blockers/Improvements/Ideas classified | ✅ |
-| product-readiness outcome assigned | ✅ QUALITY_REMEDIATION_REQUIRED (partial) |
-| controlled integrations pass | ✅ |
-| architecture/ranking/frontend pass | ✅ |
-| full backend state reported honestly | ✅ |
-| P1E artifacts changed = 0 | ✅ |
-| working tree clean | ✅ |
-
-**Phase 3 is NOT fully complete** — Run A succeeded but Runs B and C and the quality audits remain. This closeout records the partial validation achieved.
+*Phase 3 is NOT complete. 1/3 runs completed. 2/3 blocked by B-08 (paper synthesis section-wise timeout).*
