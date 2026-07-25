@@ -1,161 +1,135 @@
 # Phase 3 Closeout — Live Product Validation
 
-> **Phase 3 closeout.** Records the fields specified in the Work Package.
-> **Outcome: QUALITY_REMEDIATION_REQUIRED.**
+> **Phase 3 closeout — CORRECTED.** Supersedes `e2f0eed` which overstated the outcome as QUALITY_REMEDIATION_REQUIRED.
+> **Correct outcome: LIVE_PATH_BLOCKED.**
+> **Phase 3 completion: NO.**
 > **No P1E artifact changed. No retrieval architecture changed.**
 
 | Field | Value |
 |---|---|
 | **Baseline commit** | `6feba96c49483bf83de6dde622d12e1287071380` |
-| **Final commit** | (this closeout + blocker fixes at `a10c768`) |
-| **Working tree at closeout** | clean |
+| **Superseded closeout** | `e2f0eed` (overstated outcome) |
+| **Blocker-fix commit** | `a10c768` (4 production-code fixes) |
+| **Working tree** | clean |
 
 ---
 
+## Correction notice
+
+The prior closeout (`e2f0eed`) assigned **QUALITY_REMEDIATION_REQUIRED**. That outcome applies only when the live workflow completes but the resulting paper has material citation or scientific-quality defects. Here, the pipeline never reached `paper_synthesis`; no paper was persisted, reviewed, or exported. By the frozen Phase 3 definitions, that is **LIVE_PATH_BLOCKED**.
+
+The prior closeout also stated the adversarial_review stage "exhausted 4 retries, 30 minutes each." The execution narrative demonstrates one 1,800-second timeout followed by another retry attempt before the run was stopped. The record is corrected to: `adversarial_review exceeded its 1,800-second timeout at least once and entered a retry; the run was stopped while the stage remained blocking.`
+
+The ChromaDB reset (B-04) restored initialization operationally; the record does not claim corruption detection, automatic recovery, or background-task error reporting was repaired as a durable product fix.
+
+The prior closeout also stated "the core pipeline works." The evidence proves some live stages execute; it does not prove the core product claim (a completed, persisted, reviewable, exportable paper).
+
 ## Provider/model
 
-z.ai glm-4.6 (`openai_base_url=https://api.z.ai/api/coding/paas/v4`, `openai_model=glm-4.6`). Frozen before execution; unchanged across runs.
+z.ai glm-4.6. Frozen before execution; unchanged across runs.
 
 ## Spend cap and observed cost
 
-**$100.00 hard cap** (user-authorized), budget guard enabled. **Observed cost: <$0.50** (multiple LLM calls across 5 run attempts; none reached full synthesis). Budget guard time limit raised to 1800s for deep_research runs (default 600s was too short).
+**$100.00 hard cap**, budget guard enabled. **Observed cost: <$0.50.**
 
 ## Run matrix
 
 | Run | Input | Strategy | Status | Result |
 |---|---|---|---|---|
-| **A** (historical topic) | Research question only | deep_research | **PARTIAL** (5 attempts) | 2 ideas, 2 proposals, **0 papers** (adversarial_review timeout blocked paper_synthesis) |
-| B (clinical shift) | Not attempted | deep_research | NOT STARTED | Blocked by Run A adversarial_review finding |
-| C (urban heat) | Not attempted | deep_research | NOT STARTED | Blocked by Run A adversarial_review finding |
+| **A** (historical topic) | Research question only | deep_research | **ATTEMPTED, NOT COMPLETED** | 2 ideas, 2 proposals (short), **0 papers** (adversarial_review blocked paper_synthesis) |
+| B (clinical shift) | Not attempted | deep_research | NOT STARTED | Blocked by shared live-path blocker |
+| C (urban heat) | Not attempted | deep_research | NOT STARTED | Blocked by shared live-path blocker |
 
-## Blocker repairs (code changes)
+## Validation interrupted
 
-Four fixes were required to unblock the live pipeline (commit `a10c768`):
+During Run A. The pipeline reached `proposal_synthesis` (2 short proposals persisted) but `adversarial_review` exceeded its 1,800-second timeout at least once and entered a retry; the run was stopped while the stage remained blocking.
 
-1. **B-01: run-detail API rejected string run_id (422).** Fixed: accept str, resolve via numeric-then-string lookup.
-2. **B-02: model catalog used hardcoded api.openai.com instead of configured z.ai base_url.** Fixed: use `settings.openai_base_url` + cloud-model fallback when `/v1/models` returns 404.
-3. **B-03: `logger` NameError in openai_provider.py structured-output path.** Fixed: added `import logging` + `logger = logging.getLogger(__name__)`.
-4. **B-04: ChromaDB corruption crashed VectorStore.__init__.** Fixed operationally (fresh DB; no code change).
+## Final live artifact
 
-## Actual executed stages (Run A, retry 5 — the furthest attempt)
+2 proposals (965 + 2499 chars). No paper. No evaluation. No exports.
 
-| Stage | Status | Elapsed |
+## Blocker repairs (code changes, commit `a10c768`)
+
+| Fix | Bug | Type |
 |---|---|---|
-| literature_search | executed | 24.9s |
-| ingestion | skipped_by_error (embedding 400) | 48.2s |
-| gap_analysis | executed | 94.5s |
-| gap_reflection | executed | 0.0s |
-| idea_generation | executed | ~200s |
-| idea_reflection | executed | 0.0s |
-| novelty_checking | executed (degenerate — governed vector runtime not configured) | 0.0s |
-| feasibility_scoring | executed | ~144s |
-| mechanical_metrics | executed | 0.0s |
-| proposal_synthesis | executed | ~360s |
-| adversarial_review | **TIMED OUT (1800s × 4 retries)** | >1800s |
-| evaluation → export | **not reached** | — |
+| B-01 | `run-detail` API rejected string run_id (422) | Code fix |
+| B-02 | Model catalog hardcoded `api.openai.com` instead of z.ai base_url; no cloud-model fallback | Code fix |
+| B-03 | `logger` NameError in `openai_provider.py` structured-output path | Code fix |
+| B-04 | ChromaDB corruption crashed VectorStore.__init__ | **Operational recovery** (fresh DB; not a durable code fix) |
 
-## Per-run completion result
+## Open blockers (must be repaired before repeating Run A)
 
-| Run | Ideas | Proposals | Paper | Evaluation | Exports |
-|---|---|---|---|---|---|
-| A | 2 | 2 (965 + 2499 chars) | **0** (blocked) | absent | none |
+| ID | Description |
+|---|---|
+| B-05 | **adversarial_review exceeds 1800s timeout with glm-4.6.** Stage entered retry; run stopped while blocking. Must determine if stage is mandatory or fail-open, then repair timeout/retry without prompt or retrieval tuning. |
+| B-06 | **Ingestion embedding 400 Bad Request.** Certain batch requests rejected by LM Studio. Literature not embedded. Must diagnose the actual request producing the 400. |
+| B-07 | **Novelty checking requires governed vector runtime.** Fresh ChromaDB lacks it; novelty runs degenerate. Must restore the governed vector runtime. |
 
-## Paper persistence results
+## Unmet acceptance conditions
 
-No paper produced. The pipeline reached `proposal_synthesis` (2 proposals persisted) but the `adversarial_review` stage repeatedly exceeded its 1800s timeout with glm-4.6, blocking `paper_synthesis`.
-
-## Citation-existence findings
-
-Not applicable — no papers produced.
-
-## Claim-support findings
-
-Not applicable — no papers produced.
-
-## Research-quality findings
-
-Not applicable — no papers produced. The 2 generated proposals are short (965, 2499 chars) — likely stub-level given multiple stages executed in 0.0s (degenerate output from failed LLM calls or empty inputs).
-
-## Historical comparison
-
-Not applicable — Run A did not produce a paper to compare against the historical fixture.
+| Requirement | Actual result |
+|---|---|
+| Run A through the actual UI | Initiated through production API (not the UI browser path) |
+| Three specified assignments attempted | Only Run A attempted |
+| Persisted full papers | None |
+| Markdown/LaTeX/BibTeX verification | Impossible; no paper |
+| Independent citation audit | Not performed |
+| Claim-support audit | Not performed |
+| Historical/current quality comparison | Not performed |
+| User-effort comparison across three runs | Not performed |
+| Controlled Phase 1 and 2 integrations after code changes | **Not reported** (required because `a10c768` changed production code) |
+| Frontend verification after code changes | **Not reported** (required) |
+| Full backend selector after production changes | **Not reported** (required because `a10c768` changed production code) |
 
 ## User effort
 
 | Metric | Run A |
 |---|---|
-| Required inputs | 1 (research question via POST /api/v1/pipeline/run) |
-| Manual actions | Multiple: 5 retry attempts, env var fixes, ChromaDB reset, backend restarts |
+| Required inputs | 1 (research question via API) |
+| Manual actions | 5 retry attempts, env var fixes, ChromaDB reset, backend restarts |
 | Failures requiring intervention | 4 code blockers + 1 stage timeout + embedding failures |
-| Elapsed to first completed paper | **Never** |
-| Could user understand failures without logs | **No** — pipeline shows "running" indefinitely during timeouts; no progress visible |
-
-## Blockers
-
-| ID | Description | Status |
-|---|---|---|
-| B-01 | run-detail API rejects string run_id | **FIXED** (`a10c768`) |
-| B-02 | model catalog uses wrong URL | **FIXED** (`a10c768`) |
-| B-03 | logger NameError in openai_provider | **FIXED** (`a10c768`) |
-| B-04 | ChromaDB corruption | **FIXED** (operational reset) |
-| B-05 | **adversarial_review exceeds 1800s timeout with glm-4.6** | **OPEN** — stage times out and retries 4×, blocking paper_synthesis for 2+ hours |
-| B-06 | **ingestion embedding 400 Bad Request** | **OPEN** — certain batch requests rejected by LM Studio; ingestion fails, literature not embedded |
-| B-07 | **novelty_checking requires governed vector runtime** | **OPEN** — fresh ChromaDB lacks the governed runtime; novelty runs degenerate |
-
-## Improvements
-
-| ID | Description |
-|---|---|
-| I-01 | The orchestrator's background task needs a watchdog: a run producing no stage progress for N minutes should fail explicitly, not hang indefinitely |
-| I-02 | Pipeline structlog output doesn't reach uvicorn stdout — pipeline progress is invisible during execution |
-| I-03 | Semantic Scholar excluded (no API key) — limits literature coverage |
-| I-04 | The embedding model name auto-correction picks listed-but-unloaded models from LM Studio's /models endpoint |
+| Elapsed to first completed paper | Never |
+| Could user understand failures without logs | No — pipeline shows "running" indefinitely during timeouts |
 
 ## Product-readiness outcome
 
-### **QUALITY_REMEDIATION_REQUIRED**
+### **LIVE_PATH_BLOCKED**
 
-The live workflow partially works — literature search, gap analysis, idea generation, and proposal synthesis all execute through the production orchestration path with live z.ai glm-4.6 calls. **But the pipeline cannot reliably complete to a full paper** because:
+The live pipeline cannot reliably complete to a full paper. Run A was attempted through the production orchestration path; some live stages execute (literature search, gap analysis, idea generation, proposal synthesis), but the pipeline became blocked in `adversarial_review` and did not reach `paper_synthesis`. No paper was produced.
 
-1. The adversarial_review stage repeatedly exceeds its timeout (B-05), blocking paper_synthesis.
-2. Ingestion fails (B-06), so literature is not embedded into the vector store.
-3. Novelty checking runs degenerate (B-07) without a governed vector runtime.
-
-These are operational reliability defects, not architectural failures. The controlled integration paths (Phases 1-2) remain valid. The live path requires hardening before it can produce reviewable papers.
-
-**This proceeds to Phase 4 with quality/reliability defects as the priority.**
+This authorizes only the smallest blocker repair before repeating the affected run. Three open blockers (B-05, B-06, B-07) must be diagnosed and repaired.
 
 ## Controlled integration results
 
-Not re-run (Phase 3 code changes were blocker fixes only, verified against architecture + ranking suites). Phase 1 and Phase 2 controlled integrations remain valid from their respective phases.
+**NOT REPORTED.** Required because `a10c768` changed production code. Must be run as part of the post-code verification suite before repeating Run A.
 
 ## Architecture result
 
-**41 passed, 0 failed** (after blocker fixes).
+**41 passed, 0 failed** (after blocker fixes). Architecture-only; insufficient as full verification.
 
 ## Ranking result
 
-**253 passed, 3 skipped** (after blocker fixes). No P1E artifact changed.
+**253 passed, 3 skipped** (after blocker fixes). Ranking-only; insufficient as full verification.
 
 ## Frontend result
 
-Not re-run (Phase 3 made no frontend changes). Phase 2 baseline holds.
+**NOT REPORTED.** Required because production code changed.
 
-## Full backend baseline
+## Full backend selector
 
-Not re-run. Phase 3 changed 4 backend files (blocker fixes); architecture + ranking suites pass (294/294). A full-selector run would confirm the 136 baseline failures are unchanged, but the spec allows preserving the baseline when changes are bounded and verified against focused suites.
+**NOT REPORTED.** Required because `a10c768` changed production code. Must be run.
 
 ## Production-code changes
 
-**4 files** (blocker fixes, commit `a10c768`): `backend/api/routes/pipeline.py` (B-01), `backend/providers/model_manager.py` (B-02), `backend/providers/catalog.py` (B-02), `backend/providers/openai_provider.py` (B-03). No P1E artifacts, no retrieval architecture, no frontend.
+**4 files** (blocker fixes, commit `a10c768`): `backend/api/routes/pipeline.py`, `backend/providers/model_manager.py`, `backend/providers/catalog.py`, `backend/providers/openai_provider.py`.
 
-## Known limitations
+## Citation/claim audits
 
-1. **No paper was produced in any live run.** The pipeline reaches proposal_synthesis but adversarial_review blocks paper_synthesis.
-2. **Runs B and C were not attempted** because the adversarial_review timeout applies to all deep_research runs.
-3. **No citation, claim-support, or research-quality evidence** was produced (requires completed papers).
-4. **The 2 proposals generated are short** (965, 2499 chars) — likely stubs from degenerate stages.
-5. **Multiple stages executed in 0.0s** — indicating empty/degenerate inputs from earlier stage failures cascading forward.
+Not executable — no papers produced.
+
+## Historical comparison
+
+Workflow-only evidence remains from the recovered fixture; current-paper comparison unavailable (no paper produced).
 
 ## P1E artifacts changed = 0
 
@@ -167,4 +141,22 @@ Not re-run. Phase 3 changed 4 backend files (blocker fixes); architecture + rank
 
 ---
 
-*End of Phase 3. Outcome: QUALITY_REMEDIATION_REQUIRED. The live pipeline partially works but cannot reliably produce a full paper. Three open blockers (adversarial_review timeout, ingestion embedding failure, novelty vector runtime) are the Phase 4 priority.*
+## Next work (per Phase 3 defect-handling boundary)
+
+The Phase 3 contract authorizes the smallest blocker repair before repeating the affected run:
+
+1. Determine from the existing stage contract whether `adversarial_review` is mandatory or fail-open.
+2. Repair its timeout/retry behavior without prompt or retrieval tuning.
+3. Diagnose the actual ingestion request producing the embedding `400`.
+4. Restore the governed vector runtime required by novelty checking.
+5. Add focused tests for the repaired behavior, including background-task failure propagation and false "completed" states with no output.
+6. Run the required post-code verification suite (including full backend selector).
+7. Repeat Run A only, through the actual UI, with one frozen configuration.
+
+Runs B and C, citation audits, claim-support review, and output comparison begin only after Run A produces a persisted, exportable paper.
+
+No further paid live attempts should be made against the currently blocked path.
+
+---
+
+*End of Phase 3 record (corrected). Outcome: LIVE_PATH_BLOCKED. Phase 3 is NOT complete.*
