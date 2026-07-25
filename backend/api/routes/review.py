@@ -36,7 +36,9 @@ from pydantic import BaseModel, Field
 from sqlalchemy import select
 
 from backend.api.errors import APIError, NotFoundError
-from backend.db.database import get_session
+# NOTE: get_session is imported lazily inside functions so tests can monkeypatch
+# backend.db.database.get_session (the import-at-top pattern binds the original
+# and bypasses the patch). Matches the paper_export.py convention.
 from backend.db.models import Idea, Proposal, SourceReview
 
 router = APIRouter()
@@ -68,6 +70,7 @@ def _source_ref_hash(raw: str) -> str:
 
 
 def _load_proposal_and_idea(idea_id: int):
+    from backend.db.database import get_session
     with get_session() as session:
         idea = session.get(Idea, idea_id)
         if idea is None:
@@ -80,6 +83,7 @@ def _load_proposal_and_idea(idea_id: int):
 
 def _latest_source_reviews(idea_id: int) -> dict[str, SourceReview]:
     """Return the latest decision per source_ref_hash (append-only model)."""
+    from backend.db.database import get_session
     with get_session() as session:
         rows = session.execute(
             select(SourceReview).where(SourceReview.idea_id == idea_id)
@@ -142,12 +146,36 @@ async def get_review(idea_id: int):
     # duplicate the producers — truth rule: use the repository's actual data).
     from backend.api.quality_checks import audit_citations, compute_quality_checks
     from backend.api.traceability import extract_proposal_references
+    from backend.db.database import get_session
     from backend.pipeline.provenance.reference_resolver import resolve_references
 
     sections_json = json.loads(proposal.sections_json) if proposal.sections_json else {}
-    refs_raw = extract_proposal_references(proposal.references_json)
-    resolved_refs = resolve_references(refs_raw)
-    citation_audit = audit_citations(sections_json, resolved_refs)
+    refs_raw = extract_proposal_references(proposal)
+    # resolve_references needs a DB session to match against Paper rows.
+    with get_session() as session:
+        # Re-attach the proposal/idea to this session so attribute access works.
+        session.merge(proposal)
+        resolved_refs = resolve_references(refs_raw, session)
+    # Serialize ResolvedReference dataclasses to dicts (audit_citations expects
+    # dicts; mirrors the ideas.py route's conversion). Keep both the dict list
+    # (for audit_citations) and the dataclass list (for the source builder).
+    proposal_references_dicts = [
+        {
+            "raw": r.raw,
+            "number": r.number,
+            "authors": r.authors,
+            "year": r.year,
+            "title": r.title,
+            "venue": r.venue,
+            "doi": r.doi,
+            "resolved": r.resolved,
+            "paper": r.paper if isinstance(r.paper, dict) else {},
+            "match_method": r.match_method,
+            "match_confidence": r.match_confidence,
+        }
+        for r in resolved_refs
+    ]
+    citation_audit = audit_citations(sections_json, proposal_references_dicts)
     quality_checks = compute_quality_checks(sections_json)
 
     # Paper evaluation (Phase 1 1D, scope=paper) and proposal evaluation
@@ -179,7 +207,8 @@ async def get_review(idea_id: int):
     for i, ref in enumerate(resolved_refs, 1):
         raw = getattr(ref, "raw", "") or ""
         h = _source_ref_hash(raw)
-        paper_dict = getattr(ref, "paper", None) or {}
+        _paper = getattr(ref, "paper", None)
+        paper_dict = _paper if isinstance(_paper, dict) else {}
         decision_row = human_decisions.get(h)
         sources.append({
             "source_ref_hash": h,
@@ -193,8 +222,15 @@ async def get_review(idea_id: int):
             "url": paper_dict.get("url"),
             "doi": getattr(ref, "doi", None) or paper_dict.get("doi"),
             "resolution_status": "resolved" if getattr(ref, "resolved", False) else "unresolved",
-            "match_method": getattr(ref, "match_method", None),  # null when unavailable (truth rule)
-            "confidence": getattr(ref, "match_confidence", None),  # null when unavailable
+            # Truth rule: missing confidence must remain unavailable, not
+            # invented. An unresolved ref has no real match, so its confidence
+            # is null even though the dataclass defaults to 0.0.
+            "match_method": getattr(ref, "match_method", None) if getattr(ref, "resolved", False) else None,
+            "confidence": (
+                getattr(ref, "match_confidence", None)
+                if getattr(ref, "resolved", False) and getattr(ref, "match_confidence", None)
+                else None
+            ),
             "sections_used": _derive_sections_using_source(
                 getattr(proposal, "paper_md", None), getattr(ref, "number", None)
             ),
@@ -249,6 +285,7 @@ async def record_source_decision(idea_id: int, req: SourceReviewDecisionRequest)
     if req.decision not in VALID_DECISIONS:
         raise APIError(400, f"decision must be one of {sorted(VALID_DECISIONS)}")
     # Confirm the idea exists (404 otherwise).
+    from backend.db.database import get_session
     with get_session() as session:
         idea = session.get(Idea, idea_id)
         if idea is None:
@@ -281,6 +318,7 @@ async def record_source_decision(idea_id: int, req: SourceReviewDecisionRequest)
 async def list_source_decisions(idea_id: int):
     """List all source-review decisions (append-only history; latest per
     source is the current decision)."""
+    from backend.db.database import get_session
     with get_session() as session:
         rows = session.execute(
             select(SourceReview).where(SourceReview.idea_id == idea_id)

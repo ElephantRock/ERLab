@@ -29,9 +29,13 @@ class TestCitationGraph:
         assert response.status_code in (200, 404)
 
     def test_06_evaluation_card_component(self):
+        # Phase 2 2D: evaluation-card.tsx was removed (no truthful producer per
+        # the 2A audit). Paper evaluation is now rendered by the paper-workspace
+        # component (PaperEvaluation section). Verify the successor renders
+        # evaluation content.
         from pathlib import Path
-        content = Path("frontend/src/components/ideas/evaluation-card.tsx").read_text(encoding="utf-8")
-        assert "score" in content.lower() or "evaluation" in content.lower()
+        content = Path("frontend/src/components/ideas/paper-workspace.tsx").read_text(encoding="utf-8")
+        assert "evaluation" in content.lower() or "score" in content.lower()
 
     def test_07_radar_chart_component(self):
         from pathlib import Path
