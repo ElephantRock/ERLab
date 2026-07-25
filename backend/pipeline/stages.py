@@ -1594,6 +1594,11 @@ class AdversarialReviewStage(PipelineStage):
 
     MAX_REVISION_ROUNDS = 2
     PASS_THRESHOLD = 7.0
+    # Phase 3 B-05: per-proposal timeout so the stage completes within the
+    # overall stage timeout. 2 proposals × 600s = 1200s max, leaving margin
+    # inside the 1800s default. Without this, a single proposal's multi-round
+    # revision loop can run indefinitely inside the stage timeout.
+    PER_PROPOSAL_TIMEOUT = 600
 
     def __init__(
         self,
@@ -1667,7 +1672,13 @@ class AdversarialReviewStage(PipelineStage):
 
         for idx, proposal in list(ctx.result.proposals.items()):
             try:
-                await self._review_proposal(idx, proposal, ctx)
+                # Phase 3 B-05: bound each proposal's review time so the stage
+                # completes within the overall stage timeout. The stage is
+                # fail-open per-proposal; a timeout is caught and marked skipped.
+                await asyncio.wait_for(
+                    self._review_proposal(idx, proposal, ctx),
+                    timeout=self.PER_PROPOSAL_TIMEOUT,
+                )
             except Exception as e:
                 logger.warning(
                     "Adversarial review failed for proposal %d (non-fatal, HB-03): %s",
