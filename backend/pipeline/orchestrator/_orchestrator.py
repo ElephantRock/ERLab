@@ -701,6 +701,7 @@ class PipelineOrchestrator:
     async def run(
         self,
         domain: str = "AI/NLP",
+        research_question: str | None = None,
         search_queries: list[str] | None = None,
         max_gaps: int = 5,
         generation_rounds: int | None = None,
@@ -953,6 +954,7 @@ class PipelineOrchestrator:
         ctx = StageContext(
             result=result,
             domain=domain,
+            research_question=research_question,
             run_id=run_id,
             db_run_id=db_run_id,
             params=params,

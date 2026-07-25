@@ -2,6 +2,10 @@
 
 export interface PipelineRunRequest {
   domain?: string;
+  // Phase 1 1B: optional natural-language research question — the primary
+  // research intent when supplied. Threaded through to literature search and
+  // synthesis on the backend.
+  research_question?: string | null;
   max_gaps?: number;
   generation_rounds?: number | null;
   ideas_per_round?: number | null;

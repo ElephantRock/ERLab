@@ -5,6 +5,10 @@ from pydantic import BaseModel, Field
 
 class PipelineRunRequest(BaseModel):
     domain: str = Field(default="AI/NLP", max_length=200)
+    # Phase 1 1B: optional natural-language research question. When present it
+    # is the primary research intent; domain remains as optional context and
+    # search_queries remain as explicit user-supplied retrieval queries.
+    research_question: str | None = Field(default=None, max_length=2000)
     max_gaps: int = Field(default=5, ge=1, le=20)
     generation_rounds: int | None = Field(default=None, ge=1, le=10)
     ideas_per_round: int | None = Field(default=None, ge=1, le=20)

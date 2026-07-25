@@ -85,6 +85,10 @@ async def trigger_run(request: PipelineRunRequest):
             "max_gaps": request.max_gaps,
             "generation_rounds": request.generation_rounds,
             "ideas_per_round": request.ideas_per_round,
+            # Phase 1 1B: persist research_question into config_json so it is
+            # queryable in run lists/detail and survives resume. Materially
+            # influences the run (literature search + synthesis); not display-only.
+            "research_question": request.research_question,
             "quality": {
                 "proposal_depth": quality["proposal_depth"],
                 "novelty_depth": quality["novelty_depth"],
@@ -149,6 +153,7 @@ async def trigger_run(request: PipelineRunRequest):
         try:
             await orchestrator.run(
                 domain=request.domain,
+                research_question=request.research_question,
                 max_gaps=request.max_gaps,
                 generation_rounds=request.generation_rounds,
                 ideas_per_round=request.ideas_per_round,
@@ -471,6 +476,9 @@ async def get_run(run_id: int):
             "id": run.id,
             "status": run.status,
             "domain": run.domain,
+            # Phase 1 1B: surface research_question at top level for the UI;
+            # the raw value also remains in config_json for completeness.
+            "research_question": (json.loads(run.config_json) if run.config_json else {}).get("research_question"),
             "current_stage": run.current_stage,
             "config": json.loads(run.config_json) if run.config_json else {},
             "stages_completed": json.loads(run.stages_completed) if run.stages_completed else [],

@@ -87,6 +87,7 @@ class RunArtifactExporter:
         self._write_json(run_dir / "brief.json", {
             "run_id": run_id,
             "domain": domain or getattr(ctx, "domain", ""),
+            "research_question": getattr(ctx, "research_question", None),
             "search_queries": getattr(ctx, "search_queries", []),
             "params": _serialize(params),
             "strategy": strategy or params.get("strategy", "deep_research"),

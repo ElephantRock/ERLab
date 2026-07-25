@@ -77,6 +77,12 @@ describe("BATCH-141 / TASK-01: Strategy Default Change", () => {
     const user = userEvent.setup();
     renderForm({ onSubmit });
 
+    // Phase 1 1B: supply a research question so the submission is valid under
+    // the new contract (question or domain required). The test's invariant is
+    // the strategy default, not the empty-submission behavior.
+    const rq = screen.getByTestId("research-question-input");
+    await user.type(rq, "Test research question");
+
     const submitBtn = screen.getByRole("button", { name: /start pipeline/i });
     await user.click(submitBtn);
 

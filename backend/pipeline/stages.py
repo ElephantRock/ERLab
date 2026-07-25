@@ -35,6 +35,10 @@ class StageContext:
     db_run_id: int | None = None
     params: dict = field(default_factory=dict)
     domain: str = "AI/NLP"
+    # Phase 1 1B: primary natural-language research intent, if supplied.
+    # When present, literature search and synthesis anchor on it. Optional so
+    # legacy domain-only requests keep working unchanged.
+    research_question: str | None = None
     run_id: str = ""
     search_queries: list[str] | None = None
     max_gaps: int = 5
@@ -142,10 +146,24 @@ class LiteratureSearchStage(PipelineStage):
         except Exception as e:
             logger.debug("Local document retrieval skipped: %s", e)
 
-        queries = ctx.search_queries or [
-            f"{ctx.domain} recent advances",
-            f"{ctx.domain} open problems",
-        ]
+        queries = ctx.search_queries
+        if not queries:
+            # Phase 1 1B: when no explicit search_queries, derive from the
+            # research question when present (primary intent), else fall back
+            # to the legacy domain-only templates so domain-only runs are
+            # unchanged.
+            if ctx.research_question:
+                rq = ctx.research_question.strip()
+                queries = [
+                    rq,
+                    f"{rq} recent advances",
+                    f"{rq} open problems",
+                ]
+            else:
+                queries = [
+                    f"{ctx.domain} recent advances",
+                    f"{ctx.domain} open problems",
+                ]
 
         # LLM query expansion: generate additional search queries
         query_gen_log = {
@@ -164,9 +182,17 @@ class LiteratureSearchStage(PipelineStage):
 
                 query_gen_log["query_generation_attempted"] = True
                 gen = LLMQueryGenerator(self._gateway)
+                # Phase 1 1B: anchor LLM query expansion on the research
+                # question when present, so the expanded queries target the
+                # actual research intent rather than the bare domain.
+                expansion_topic = (
+                    ctx.research_question.strip()
+                    if ctx.research_question and ctx.research_question.strip()
+                    else str(ctx.domain)
+                )
                 expanded = await gen.generate_queries(
                     domain=str(ctx.domain),
-                    topic=str(ctx.domain),
+                    topic=expansion_topic,
                     n_queries=3,
                     run_id=ctx.run_id or "",
                 )
@@ -1149,6 +1175,16 @@ class ProposalSynthesisStage(PipelineStage):
             feasibility = ctx.result.feasibility_reports.get(i)
             directives = ctx.result.downstream_directives.get(i)
             framing = directives.synthesis_framing_directive if directives else ""
+            # Phase 1 1B: anchor synthesis on the research question via the
+            # existing framing_directive hook so the question materially
+            # steers synthesis (not stored as display-only metadata). Legacy
+            # domain-only runs keep framing unchanged (empty when no directive).
+            if ctx.research_question and ctx.research_question.strip():
+                rq_line = (
+                    f"Research question (primary intent — address directly): "
+                    f"{ctx.research_question.strip()}"
+                )
+                framing = f"{rq_line}\n{framing}".rstrip() if framing else rq_line
             try:
                 proposal = await asyncio.wait_for(
                     self._synthesizer.synthesize(

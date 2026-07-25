@@ -10,6 +10,7 @@ import { cn } from "@/lib/utils";
 
 const VALIDATION = {
   domain: { maxLength: 200, default: "AI/NLP" },
+  research_question: { maxLength: 2000 },
   max_gaps: { min: 1, max: 20, default: 5 },
   generation_rounds: { min: 1, max: 10, default: 2 },
   ideas_per_round: { min: 1, max: 20, default: 5 },
@@ -63,6 +64,7 @@ interface RunConfigFormProps {
 
 export function RunConfigForm({ onSubmit, isLoading, initialDomain = "", onStrategyChange }: RunConfigFormProps) {
   const { sessionId, setSessionId } = useSession();
+  const [researchQuestion, setResearchQuestion] = useState("");
   const [domain, setDomain] = useState(initialDomain);
   const [maxGaps, setMaxGaps] = useState<number>(VALIDATION.max_gaps.default);
   const [ideasPerRound, setIdeasPerRound] = useState<number>(VALIDATION.ideas_per_round.default);
@@ -86,14 +88,19 @@ export function RunConfigForm({ onSubmit, isLoading, initialDomain = "", onStrat
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!domain.trim()) {
-      const confirmed = window.confirm(
-        "No research domain specified. The pipeline will use 'AI/NLP' as default. Continue?"
+    // Phase 1 1B: require at least one of research question or domain. Both
+    // empty is rejected; entered values are preserved (state is not cleared).
+    const rqTrimmed = researchQuestion.trim();
+    const domainTrimmed = domain.trim();
+    if (!rqTrimmed && !domainTrimmed) {
+      window.confirm(
+        "Enter a research question (or a research domain) before starting a run."
       );
-      if (!confirmed) return;
+      return;
     }
     const config: PipelineRunRequest = {
-      domain: domain || undefined,
+      domain: domainTrimmed || undefined,
+      research_question: rqTrimmed || undefined,
       max_gaps: maxGaps,
       generation_rounds: generationRounds,
       ideas_per_round: ideasPerRound,
@@ -121,10 +128,29 @@ export function RunConfigForm({ onSubmit, isLoading, initialDomain = "", onStrat
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-5">
 
-          {/* ── Domain Hero ── */}
+          {/* ── Research Question (Phase 1 1B: primary input) ── */}
           <div className="space-y-2">
             <label className="text-ui-micro font-semibold uppercase tracking-wider text-muted-foreground">
-              Research Domain
+              Research Question
+            </label>
+            <textarea
+              placeholder="e.g. How can graph-based reasoning and neuro-symbolic methods be combined to improve the verifiability of language-model reasoning?"
+              value={researchQuestion}
+              onChange={(e) => setResearchQuestion(e.target.value)}
+              maxLength={VALIDATION.research_question.maxLength}
+              data-testid="research-question-input"
+              className="flex min-h-[96px] w-full rounded-md border border-input bg-background px-3 py-2 text-base ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              autoFocus
+            />
+            <p className="text-xs text-muted-foreground">
+              The primary research intent. When provided, literature search and proposal synthesis anchor on it.
+            </p>
+          </div>
+
+          {/* ── Domain (optional context) ── */}
+          <div className="space-y-2">
+            <label className="text-ui-micro font-semibold uppercase tracking-wider text-muted-foreground">
+              Research Domain <span className="text-muted-foreground/70 normal-case">(optional)</span>
             </label>
             <Input
               placeholder="machine learning, nlp, computer vision..."
@@ -133,10 +159,9 @@ export function RunConfigForm({ onSubmit, isLoading, initialDomain = "", onStrat
               maxLength={VALIDATION.domain.maxLength}
               data-testid="domain-input"
               className="text-base h-12"
-              autoFocus
             />
             <p className="text-xs text-muted-foreground">
-              The domain guides literature search, gap analysis, and idea generation.
+              Domain context for gap analysis and idea generation. A research question above is sufficient on its own.
             </p>
           </div>
 
