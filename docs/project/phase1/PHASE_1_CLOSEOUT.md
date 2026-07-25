@@ -3,6 +3,12 @@
 > **Phase 1 closeout.** Records only the fields specified in the Work Package.
 > **No P1E artifact changed. No retrieval architecture changed.**
 
+> **Follow-up corrections (record-accuracy follow-up, folded in before close).**
+> The original closeout (commit `322ea7d`) over-claimed in three places; this revision corrects all three. No product code was reworked — the follow-up added one integration test and corrected record wording only.
+> 1. **The frozen end-to-end scenario was not executed** in the original closeout (it claimed the focused tests covered the invariants). The frozen spec required the integrated run. **Corrected:** `backend/tests/integration/test_phase1_end_to_end.py` now executes the full path (question → persistence → API retrieval → paper-evaluation scope → three exports) as a controlled integration with deterministic fixtures; 2 tests pass.
+> 2. **"Byte-for-byte identical failures" was unsupported.** No exact failed-node-ID set diff was performed; Phase 0 recorded only subsystem counts. **Corrected** to: *"the full selector produced the same failure count and subsystem distribution; touched Phase 1 tests passed."*
+> 3. **BibTeX record contradiction** between Phase 0 (claimed a `BibTeXExporter` class) and Phase 1 (said no such class exists). **Resolved** by direct inspection: `backend/pipeline/export/bibtex_exporter.py` has no class — only three module-level functions. Phase 1 is correct; Phase 0 / current-state-report wording is corrected below.
+
 | Field | Value |
 |---|---|
 | **Baseline commit** | `e3e07bb8e8c4e1161792bac3af4bbf6682bc8d69` (Phase 0 final) |
@@ -36,7 +42,7 @@ The 1A trace materially changed what "expose existing" meant. *[VERIFIED]*
 3. **Associated with run, idea, or both?** One paper per Proposal/Idea (`Proposal.idea_id` unique). Relationship: PipelineRun → Ideas → Proposals.
 4. **Does the API return the paper?** NO — no field existed in any schema or route.
 5. **Does any evaluator consume the paper?** NO. The only LLM evaluator consumed PROPOSAL markdown and ran BEFORE `paper_synthesis` in stage order.
-6. **Which export formats accept the paper?** Only LaTeX's venue path read it (and only from in-memory proposals, unreachable from DB-loaded ones). Markdown ignored it; `BibTeXExporter` did not exist (the `paper_to_bibtex` function takes source literature).
+6. **Which export formats accept the paper?** Only LaTeX's venue path read it (and only from in-memory proposals, unreachable from DB-loaded ones). Markdown ignored it. **There is no `BibTeXExporter` class** — `backend/pipeline/export/bibtex_exporter.py` defines three *module-level functions* (`paper_to_bibtex`, `papers_to_bibtex`, `proposal_to_bibtex`); `paper_to_bibtex` takes a source-literature `Paper`, not the synthesized paper artifact. (Earlier Phase 0 and current-state records referred to a `BibTeXExporter` class at this path; that was imprecise — the file exists, the class does not. See "BibTeX record correction" below.)
 
 **Consequence:** "expose existing" required (a) a real persistence home, (b) a thin paper-level evaluation adapter, (c) paper-aware export endpoints. This is integration/exposure work, not new synthesis — the `PaperSynthesizer` itself was reused unchanged.
 
@@ -60,7 +66,20 @@ Thin adapter `PaperSynthesisStage._evaluate_paper()` reuses `ProposalEvaluator` 
 
 ## End-to-end result
 
-Deterministically verified via the 1G focused tests (the acceptance scenario's invariants): research question accepted and threaded → paper synthesized and persisted non-empty → paper state serialized correctly → paper evaluation scope=paper → Markdown/LaTeX/BibTeX exports return paper content → missing paper returns explicit 404. The historical GoT × NSR paper remains a workflow fixture (not a quality oracle, per Phase 0 correction).
+**The frozen end-to-end acceptance scenario was executed as a controlled integration test** (`backend/tests/integration/test_phase1_end_to_end.py`, 2 tests, both passing). It drives the REAL persistence layer, REAL API serializer (`_serialize_paper_state`), and REAL paper-export routes (`/api/v1/export/paper/{markdown,latex,bibtex}`) against a REAL in-memory sqlite DB. The only stubbed step is the LLM synthesis itself — the synthesized paper artifact is attached in the exact shape `PaperSynthesisStage` produces (`proposal.metadata["full_paper"]` + `paper_evaluation`), so the test proves the full integration seam from synthesis output through to export without depending on network model availability.
+
+The integration proves, in one run:
+1. ✅ the research question reaches the persisted run context (`PipelineRun.config_json`);
+2. ✅ a non-empty paper is persisted on the `Proposal` row (`paper_md` non-empty, `paper_meta_json.status == "ready"`);
+3. ✅ the paper is retrievable through the product API serializer with `status == "ready"`;
+4. ✅ `paper_evaluation.scope == "paper"` and `evaluated_object == "final_paper"` (distinct from proposal evaluation);
+5. ✅ citation status is returned through the serializer path;
+6. ✅ Markdown, LaTeX, and BibTeX exports are all non-empty and contain paper content (not proposal text);
+7. ✅ (negative truth rule) an empty paper artifact persists as `failed` and is never retrievable as `ready`.
+
+Run: `pytest backend/tests/integration/test_phase1_end_to_end.py -m integration` → **2 passed**.
+
+The historical GoT × NSR paper remains a workflow fixture (not a quality oracle, per Phase 0 correction).
 
 ## Backend focused tests (1G)
 
@@ -83,8 +102,8 @@ Deterministically verified via the 1G focused tests (the acceptance scenario's i
 
 **136 failed, 4603 passed, 47 skipped, 29 deselected** (253 s).
 
-- **136 failed — IDENTICAL to Phase 0 baseline** (same count, same subsystem distribution: test_pipeline 73, test_api 23, test_providers 14, test_operations 14, test_literature 12).
-- **0 failures attributable to Phase 1** — no Phase 1 test or touched subsystem (`phase1`, `paper_export`, `paper_persistence`, `research_question`, `ideas.py`) appears in the failure set.
+- **The full selector produced the same failure count (136) and the same subsystem distribution as the Phase 0 baseline** (test_pipeline 73, test_api 23, test_providers 14, test_operations 14, test_literature 12). **An exact failed-node-ID set comparison was NOT performed** — Phase 0 recorded only subsystem counts, not node IDs — so the stronger claim "byte-for-byte identical failures" is not supported and is withdrawn.
+- **All touched Phase 1 tests passed** — no Phase 1 test or touched subsystem (`phase1`, `paper_export`, `paper_persistence`, `research_question`, `ideas.py`) appears in the failure set.
 - **+23 passed vs Phase 0** (4580 → 4603), matching the new focused tests.
 - The 136 remain the tracked test-isolation debt from Phase 0 (classification unchanged: runtime defect not established; isolation defect strongly indicated; full-suite health failing; blocks Phase 1: no; must remain tracked: yes).
 
@@ -102,11 +121,22 @@ One Phase-1-intended test update: `batch144-form-density` raised the pre-advance
 
 ## Known limitations
 
-1. **136 backend full-suite failures** — unchanged from Phase 0 baseline; tracked test-isolation debt; not Phase-1-attributable.
+1. **136 backend full-suite failures** — same count and subsystem distribution as the Phase 0 baseline (exact node-ID diff not performed); tracked test-isolation debt; not Phase-1-attributable.
 2. **Paper LaTeX export** wraps the paper markdown in a minimal article shell (intentional — full markdown→LaTeX conversion is out of Phase 1 scope; the export is honest about what it contains).
 3. **Paper-level evaluation reuses the proposal evaluator's dimensions** — the spec explicitly forbade new dimensions/frameworks; the 7 existing dimensions (novelty, feasibility, completeness, rigor, clarity, baseline_adequacy, compute_realism) are applied to paper text, scoped as `paper`.
-4. **End-to-end run was not executed live** — the acceptance scenario's invariants are verified deterministically via focused tests with controlled fixtures, per the spec ("Use deterministic test providers or existing controlled fixtures"). A live E2E run belongs in Phase 3 (product comparison).
+4. **The E2E integration stubs the LLM synthesis step** — the synthesized paper artifact is attached in the exact in-memory shape `PaperSynthesisStage` produces, so the test proves the full integration seam (persistence → API → export) without network model availability. A *live* E2E run (real LLM synthesis through the whole 16-stage pipeline) belongs in Phase 3 (product comparison); it is not required by the frozen Phase 1 criteria, which specified "deterministic test providers or existing controlled fixtures."
 5. **`paper_evaluation` runs inside `PaperSynthesisStage`** rather than as a separate stage — the smallest change that preserves correct ordering (after synthesis); a separate `PaperEvaluationStage` is a Phase 2+ refinement, not a Phase 1 requirement.
+
+## BibTeX record correction (Phase 0 ↔ Phase 1)
+
+Direct inspection of `backend/pipeline/export/bibtex_exporter.py` resolves the contradiction:
+
+- **The file exists.** It defines three **module-level functions**: `paper_to_bibtex(paper: Paper)`, `papers_to_bibtex(papers)`, `proposal_to_bibtex(title, domain, year)`.
+- **There is no `BibTeXExporter` class.** `paper_to_bibtex` takes a source-literature `Paper` (from `backend.pipeline.literature.models`), not the synthesized paper artifact.
+
+Therefore:
+- The **Phase 1 record is correct** that no `BibTeXExporter` class exists.
+- The **Phase 0 record** (`docs/project/phase0/ERLAB_REPOSITORY_LINEAGE.md`: "`BibTeXExporter` at `backend/pipeline/export/bibtex_exporter.py`") and the **current-state report** (`docs/project/ERLAB_CAPABILITY_MATRIX.md` row #17: "`BibTeXExporter` (`paper_to_bibtex`, `papers_to_bibtex`, `proposal_to_bibtex`)") are **imprecise** — they treat a module as a class. Both should be read as "the `bibtex_exporter` module" rather than "the `BibTeXExporter` class." This is documentation accuracy only; no implementation change.
 
 ## P1E artifacts changed = 0
 
