@@ -212,9 +212,12 @@ app.include_router(
     exports.router, prefix="/api/v1/export", tags=["export"], dependencies=_auth
 )
 # Phase 1 1F: full-paper export routes (Markdown/LaTeX/BibTeX on the persisted
-# paper artifact). Mounted without auth to match the sibling /api/export
-# legacy routes; the router carries its own /api/export/paper prefix.
-app.include_router(paper_export.router)
+# paper artifact). Mounted under /api/v1/export/paper to match the rest of the
+# API and the frontend apiFetchBlob prefix. Auth-gated to match the sibling
+# exports router.
+app.include_router(
+    paper_export.router, prefix="/api/v1/export", tags=["export"], dependencies=_auth
+)
 app.include_router(
     plugins.router, prefix="/api/v1/plugins", tags=["plugins"], dependencies=_auth
 )

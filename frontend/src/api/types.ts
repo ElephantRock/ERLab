@@ -171,6 +171,37 @@ export interface IdeaDetail extends IdeaSummary {
   citation_audit: CitationAuditEntry[] | null;
   mechanical_metrics: Record<string, number> | null;
   experiment_results: ExperimentResult[] | null;
+  // Phase 1 1C/1D/1F: exposed full-paper artifact + paper-level evaluation.
+  paper: PaperArtifact | null;
+}
+
+/**
+ * Phase 1 1C: the persisted full-paper artifact and its state.
+ * State machine: not_requested | pending | ready | failed.
+ * An empty/placeholder paper is never reported as ready.
+ */
+export interface PaperArtifact {
+  status: "not_requested" | "pending" | "ready" | "failed";
+  paper_md: string | null;
+  title: string | null;
+  word_count: number | null;
+  venue: string | null;
+  model_used: string | null;
+  source_count: number | null;
+  synthesis_strategy: string | null;
+  generated_at: string | null;
+  source_run_id: number | null;
+  /** Phase 1 1D: paper-level evaluation (scope=paper), distinct from proposal evaluation. */
+  paper_evaluation: PaperEvaluation | null;
+}
+
+/** Phase 1 1D: paper-scoped evaluation. scope is always "paper". */
+export interface PaperEvaluation {
+  status: "ready" | "failed" | "unavailable";
+  scope: "paper";
+  evaluated_object?: string;
+  dimensions?: Record<string, unknown>;
+  error?: string;
 }
 
 export interface SourceGap {

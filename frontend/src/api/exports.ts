@@ -31,6 +31,29 @@ export function bulkExport(req: BulkExportRequest): Promise<Blob> {
   });
 }
 
+// Phase 1 1F: full-paper export. Operates on the persisted final paper only.
+
+/** Download the final paper for an idea as Markdown. */
+export function exportPaperMarkdown(ideaId: number): Promise<Blob> {
+  return apiFetchBlob(`/export/paper/markdown/${ideaId}`, {
+    headers: { Accept: "text/markdown" },
+  });
+}
+
+/** Download the final paper for an idea as LaTeX. */
+export function exportPaperLatex(ideaId: number): Promise<Blob> {
+  return apiFetchBlob(`/export/paper/latex/${ideaId}`, {
+    headers: { Accept: "text/x-latex" },
+  });
+}
+
+/** Download the final paper's references for an idea as BibTeX. */
+export function exportPaperBibtex(ideaId: number): Promise<Blob> {
+  return apiFetchBlob(`/export/paper/bibtex/${ideaId}`, {
+    headers: { Accept: "application/x-bibtex" },
+  });
+}
+
 // --- Plugins ---
 
 export interface Plugin {

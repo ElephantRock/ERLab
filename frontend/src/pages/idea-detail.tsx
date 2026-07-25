@@ -36,6 +36,7 @@ import { MarkdownRenderer } from "@/components/markdown/markdown-renderer";
 import { GovernancePanel } from "@/components/ideas/governance-panel";
 import { FixSectionButton } from "@/components/ideas/fix-section-button";
 import { RevisionHistoryDrawer } from "@/components/ideas/revision-history-drawer";
+import { PaperWorkspace } from "@/components/ideas/paper-workspace";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -44,7 +45,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import {
   ArrowLeft, ArrowRight, AlertCircle, RefreshCw, Loader2, CheckCircle2, AlertTriangle,
   Copy, Check, History, Shield,
-  FlaskConical, BookOpen, ClipboardCheck,
+  FlaskConical, BookOpen, ClipboardCheck, FileText,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useState, type ReactNode } from "react";
@@ -86,7 +87,7 @@ function IdeaDetailContent({ ideaId }: { ideaId: number }) {
   const [copiedSection, setCopiedSection] = useState<string | null>(null);
   const [revisionSection, setRevisionSection] = useState<string | null>(null);
   const [highlightedSection, setHighlightedSection] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<"proposal" | "novelty" | "feasibility" | "metrics">("proposal");
+  const [activeTab, setActiveTab] = useState<"proposal" | "paper" | "novelty" | "feasibility" | "metrics">("proposal");
 
   function handleJumpToSection(sectionKey: string) {
     const el = document.getElementById(`section-${sectionKey}`);
@@ -235,6 +236,11 @@ function IdeaDetailContent({ ideaId }: { ideaId: number }) {
                   <TabButton active={activeTab === "proposal"} onClick={() => setActiveTab("proposal")}>
                     <ClipboardCheck className="h-3.5 w-3.5" />
                     Proposal
+                  </TabButton>
+                  {/* Phase 1 1E: Paper tab — keep proposal and paper visibly distinct. */}
+                  <TabButton active={activeTab === "paper"} onClick={() => setActiveTab("paper")}>
+                    <FileText className="h-3.5 w-3.5" />
+                    Full Paper
                   </TabButton>
                   {hasNovelty && (
                     <TabButton active={activeTab === "novelty"} onClick={() => setActiveTab("novelty")}>
@@ -422,6 +428,22 @@ function IdeaDetailContent({ ideaId }: { ideaId: number }) {
                       </Card>
                     )}
                   </div>
+                )}
+
+                {/* ── Full Paper (Phase 1 1E/1F) — distinct from the proposal ── */}
+                {activeTab === "paper" && (
+                  <PaperWorkspace
+                    ideaId={ideaId}
+                    paper={idea.paper ?? null}
+                    unresolvedCitationCount={
+                      Array.isArray(idea.citation_audit)
+                        ? idea.citation_audit.reduce(
+                            (sum, c) => sum + (c.unresolved_reference_count ?? 0),
+                            0,
+                          )
+                        : null
+                    }
+                  />
                 )}
 
                 {/* ── Novelty Report ── */}

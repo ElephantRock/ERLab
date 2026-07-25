@@ -4,7 +4,7 @@ Exports the persisted full-paper artifact (Phase 1 1C) for a single idea as
 Markdown, LaTeX, or BibTeX. Operates on the FINAL PAPER, never on proposal
 text. Reuses existing exporters where they accept paper-shaped input.
 
-Routes (mounted under /api/export/paper):
+Routes (mounted under /api/v1/export/paper):
   GET  /markdown/{idea_id}
   GET  /latex/{idea_id}
   GET  /bibtex/{idea_id}
@@ -25,7 +25,11 @@ import re
 from fastapi import APIRouter
 from starlette.responses import PlainTextResponse
 
-router = APIRouter(prefix="/api/export/paper", tags=["export"])
+# Prefix is relative; the app mounts this router under /api/v1/export so the
+# final paths are /api/v1/export/paper/{markdown,latex,bibtex}/{idea_id},
+# consistent with the rest of the API and reachable by the frontend
+# apiFetchBlob helper (which prepends /api/v1).
+router = APIRouter(prefix="/paper", tags=["export"])
 
 
 def _load_paper(idea_id: int):
