@@ -1969,6 +1969,9 @@ class PaperSynthesisStage(PipelineStage):
     ) -> None:
         """Synthesize a paper for a single proposal. May raise TimeoutError
         when caught by the caller's asyncio.wait_for wrapper."""
+        from backend.pipeline.synthesis.paper_synthesizer import PaperSynthesizer
+        from backend.pipeline.synthesis.section_wise_synthesizer import SectionWiseSynthesizer
+
         proposal_text = (
             proposal.to_markdown()
             if hasattr(proposal, "to_markdown")
