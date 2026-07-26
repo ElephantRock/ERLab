@@ -1,0 +1,142 @@
+{
+  "audit_date": "2026-07-26",
+  "papers": {
+    "29": {
+      "run": "A-API",
+      "title": "LogicBench: A Benchmark for Neuro-Symbolic Consistency",
+      "scope": {
+        "frozen": "graph reasoning + neuro-symbolic to improve LM verifiability",
+        "actual_topic": "benchmark for NS consistency via synthetic counter-factuals",
+        "relationship": "partially_on_scope"
+      },
+      "dimensions": {
+        "1": "PARTIAL",
+        "2": "PASS",
+        "3": "PARTIAL",
+        "4": "PARTIAL",
+        "5": "PARTIAL",
+        "6": "PARTIAL",
+        "7": "UNAVAILABLE",
+        "8": "PASS",
+        "9": "FAIL",
+        "10": "FAIL"
+      },
+      "d9_reason": "Claims 'demonstrate that linguistic fluency is a poor proxy for logical validity' \u2014 nothing demonstrated, only hypotheses"
+    },
+    "30": {
+      "run": "A-API",
+      "title": "Symbolic Counterfactual Auditing for Faithful NS Explanations",
+      "scope": {
+        "frozen": "same",
+        "actual_topic": "causal-graph auditing of NS pipelines",
+        "relationship": "on_scope"
+      },
+      "dimensions": {
+        "1": "PARTIAL",
+        "2": "PASS",
+        "3": "PARTIAL",
+        "4": "PARTIAL",
+        "5": "PARTIAL",
+        "6": "PARTIAL",
+        "7": "UNAVAILABLE",
+        "8": "PASS",
+        "9": "FAIL",
+        "10": "FAIL"
+      },
+      "d9_reason": "Claims 'we demonstrate that it is possible to train systems where symbolic explanations are intrinsic reflections' \u2014 no training results"
+    },
+    "39": {
+      "run": "A-UI",
+      "title": "Q-Sym: Quantization-Aware Training for Differentiable NS Layers",
+      "scope": {
+        "frozen": "same",
+        "actual_topic": "model compression/quantization of NS systems",
+        "relationship": "off_scope"
+      },
+      "dimensions": {
+        "1": "PARTIAL",
+        "2": "PASS",
+        "3": "PARTIAL",
+        "4": "PARTIAL",
+        "5": "PARTIAL",
+        "6": "PARTIAL",
+        "7": "UNAVAILABLE",
+        "8": "PASS",
+        "9": "FAIL",
+        "10": "FAIL"
+      },
+      "d9_reason": "'Expected results demonstrate' is self-contradictory \u2014 projected outcomes cannot demonstrate anything",
+      "scope_drift_note": "Off-scope: the frozen question asks about combining graph reasoning + NS methods to improve verifiability. Q-Sym assumes such a system exists and compresses it for deployment efficiency."
+    },
+    "35": {
+      "run": "B-API",
+      "title": "Multi-View Contrastive Domain Adaptation for Cross-Site Clinical",
+      "scope": {
+        "frozen": "detect/mitigate dataset shift in clinical prediction models",
+        "actual_topic": "dual-encoder contrastive domain adaptation",
+        "relationship": "on_scope"
+      },
+      "dimensions": {
+        "1": "PARTIAL",
+        "2": "PASS",
+        "3": "PARTIAL",
+        "4": "PARTIAL",
+        "5": "PARTIAL",
+        "6": "PARTIAL",
+        "7": "UNAVAILABLE",
+        "8": "PASS",
+        "9": "PARTIAL",
+        "10": "FAIL"
+      }
+    },
+    "36": {
+      "run": "B-API",
+      "title": "Topology-Preserving Synthetic Data for Non-Stationary Clinical",
+      "scope": {
+        "frozen": "same",
+        "actual_topic": "TDA-regularized GAN for shift-robust clinical data",
+        "relationship": "on_scope"
+      },
+      "dimensions": {
+        "1": "PARTIAL",
+        "2": "PASS",
+        "3": "PARTIAL",
+        "4": "PARTIAL",
+        "5": "PARTIAL",
+        "6": "PARTIAL",
+        "7": "UNAVAILABLE",
+        "8": "PASS",
+        "9": "PARTIAL",
+        "10": "FAIL"
+      }
+    },
+    "37": {
+      "run": "C-API",
+      "title": "Automated Knowledge Graph Construction for Lifecycle Assessment",
+      "scope": {
+        "frozen": "urban heat mitigation and climate-resilient city design",
+        "actual_topic": "NLP KG construction for UHI mitigation LCA",
+        "relationship": "on_scope"
+      },
+      "dimensions": {
+        "1": "PARTIAL",
+        "2": "PASS",
+        "3": "PARTIAL",
+        "4": "PARTIAL",
+        "5": "PARTIAL",
+        "6": "PARTIAL",
+        "7": "UNAVAILABLE",
+        "8": "PASS",
+        "9": "PARTIAL",
+        "10": "FAIL"
+      },
+      "scope_note": "Directly addresses urban heat mitigation; earlier title concern was unfounded"
+    }
+  },
+  "cross_cutting": {
+    "all_papers_are_design_plus_projection": "No paper contains empirical results; all have 'Expected Results' sections",
+    "strongest_dimensions": "D2 scope consistency (PASS all), D8 limitations (PASS all)",
+    "weakest_dimensions": "D9 conclusions (3 FAIL, 3 PARTIAL), D10 references (6 FAIL), D7 contradiction (6 UNAVAILABLE)",
+    "scope_drift": "Idea 39 (Q-Sym) is off_scope \u2014 drifted from verifiability to quantization/compression"
+  }
+}
