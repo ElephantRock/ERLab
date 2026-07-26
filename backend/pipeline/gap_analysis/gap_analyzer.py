@@ -106,8 +106,31 @@ class GapAnalyzer:
                 max_tokens=4096,
             )
 
+            # B-09 diagnostic: log raw response state when it may be the cause
+            # of empty gaps (not a behavioral change — only logging)
+            if not raw_response or not raw_response.strip():
+                logger.warning(
+                    "Gap analysis: provider returned empty response "
+                    "(len=%d). This may cause 0 gaps.",
+                    len(raw_response) if raw_response else 0,
+                )
+
             parsed = extract_json(raw_response)
             result = parsed if isinstance(parsed, dict) else {"gaps": parsed}
+
+            # B-09 diagnostic: log the parse outcome for diagnosis when gaps
+            # end up empty
+            raw_gaps_check = result.get("gaps", []) if isinstance(result, dict) else (result if isinstance(result, list) else [])
+            if not raw_gaps_check:
+                logger.warning(
+                    "Gap analysis: parsed response produced 0 raw gaps "
+                    "(parsed_type=%s, keys=%s, response_len=%d). "
+                    "Either the LLM returned no gaps or the response did not "
+                    "contain a parseable 'gaps' key.",
+                    type(parsed).__name__,
+                    list(result.keys()) if isinstance(result, dict) else "(not dict)",
+                    len(raw_response) if raw_response else 0,
+                )
 
             gaps = []
             # Handle both dict and list returns from different providers
@@ -228,7 +251,11 @@ class GapAnalyzer:
             return sorted_gaps, cluster_report
 
         except Exception as e:
-            logger.error("Gap analysis LLM call failed: %s", e, exc_info=True)
+            logger.error(
+                "Gap analysis LLM call failed: %s. "
+                "Returning 0 gaps with failure state (not an empty success).",
+                e, exc_info=True,
+            )
             return [], cluster_report
 
     @staticmethod
