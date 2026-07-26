@@ -1,0 +1,46 @@
+{
+  "audit_date": "2026-07-26",
+  "scope": {
+    "live_papers_audited": 6,
+    "historical_references_audited": 10,
+    "total_references_audited": 10
+  },
+  "live_papers_finding": {
+    "summary": "All 6 live papers contain [SOURCE-N] inline citation markers (up to [SOURCE-83]) but have NO bibliography, NO reference list, and NO resolvable citation entries. The BibTeX export contains only a self-citation (@misc for the paper itself). The proposal references_json is empty (0 entries) for all 6 papers. The citation-existence audit cannot be performed on unrecorded references.",
+    "papers": [
+      {"idea_id": 29, "source_markers": 10, "bibliography_entries": 0, "bibtex_reference_entries": 0, "proposal_references": 0},
+      {"idea_id": 30, "source_markers": 14, "bibliography_entries": 0, "bibtex_reference_entries": 0, "proposal_references": 0},
+      {"idea_id": 39, "source_markers": 56, "bibliography_entries": 0, "bibtex_reference_entries": 0, "proposal_references": 0},
+      {"idea_id": 35, "source_markers": 22, "bibliography_entries": 0, "bibtex_reference_entries": 0, "proposal_references": 0},
+      {"idea_id": 36, "source_markers": 23, "bibliography_entries": 0, "bibtex_reference_entries": 0, "proposal_references": 0},
+      {"idea_id": 37, "source_markers": 83, "bibliography_entries": 0, "bibtex_reference_entries": 0, "proposal_references": 0}
+    ],
+    "product_vs_independent_comparison": {
+      "product_resolved_and_verified": 0,
+      "product_resolved_not_found": 0,
+      "product_unresolved_verified": 0,
+      "product_unresolved_not_found": 0,
+      "product_has_no_source_record": "ALL — no reference entries exist in any live paper"
+    }
+  },
+  "historical_references": [
+    {"ref_number": 1, "raw": "Besta, M., Blach, N., Müller, A., Gerstenberger, R., Podstawski, M., & Hoefler, T. (2024). Graph of Thoughts: Solving Elaborate Problems with Large Language Models. Proceedings of AAAI 2024.", "status": "verified", "evidence_source": "AAAI OJS / arXiv:2308.09687 / DOI 10.1609/aaai.v38i16.29720", "metadata_differences": "none", "notes": "Clean match."},
+    {"ref_number": 2, "raw": "Wei, J., Wang, X., Schuurmans, D., Bosma, M., Ichter, B., Xia, F., Chi, E., Le, Q., & Zhou, D. (2022). Chain-of-Thought Prompting Elicits Reasoning in Large Language Models. NeurIPS 2022.", "status": "verified", "evidence_source": "arXiv:2201.11903 / OpenReview _VjQlMeSB_J", "metadata_differences": "none", "notes": "Clean match."},
+    {"ref_number": 3, "raw": "Yao, S., Yu, D., Zhao, J., Shafran, I., Griffiths, T., Cao, Y., & Narasimhan, K. (2023). Tree of Thoughts: Deliberate Problem Solving with Large Language Models. NeurIPS 2023.", "status": "verified", "evidence_source": "arXiv:2305.10601 / NeurIPS 2023 proceedings", "metadata_differences": "none", "notes": "Clean match."},
+    {"ref_number": 4, "raw": "Garcez, A. S., Lamb, L. C. (2019). Neurosymbolic AI: The 3rd Wave. arXiv preprint arXiv:2012.05876.", "status": "verified_with_metadata_difference", "evidence_source": "arXiv:2012.05876", "metadata_differences": "year: cited 2019, actual 2020 (arXiv v1 Dec 2020)", "notes": "Real paper, wrong year."},
+    {"ref_number": 5, "raw": "Lamb, L. C., Garcez, A. S., Gabbay, D. M., & Broda, K. (2020). Neural-Symbolic Cognitive Reasoning. Springer.", "status": "verified_with_metadata_difference", "evidence_source": "Springer DOI 10.1007/978-3-540-73246-4", "metadata_differences": "year: cited 2020, actual 2009; authors: Broda is NOT an author (Garcez/Lamb/Gabbay only)", "notes": "Real book, wrong year and author list."},
+    {"ref_number": 6, "raw": "Ren, X., et al. (2025). Neuro-Symbolic Reasoning over Knowledge Graphs for Medical Diagnosis. Nature Machine Intelligence.", "status": "not_found", "evidence_source": "OpenAlex / web search: no match", "metadata_differences": "N/A", "notes": "Appears fabricated. No matching paper in Nature Machine Intelligence or any source."},
+    {"ref_number": 7, "raw": "Mitsui, A., et al. (2025). CLAUSE: Contextual Learning and Adaptive Reasoning with Structured Extraction. ACL 2025.", "status": "not_found", "evidence_source": "No match in any source", "metadata_differences": "N/A", "notes": "Appears fabricated. Zero matches for title, author, or ACL 2025."},
+    {"ref_number": 8, "raw": "Lyu, Q., et al. (2025). Proof of Thought: Neuro-Symbolic Program Synthesis for Reliable Reasoning. ICLR 2025.", "status": "verified_with_metadata_difference", "evidence_source": "arXiv:2409.17270 / OpenAlex", "metadata_differences": "author: cited 'Lyu, Q.' actual first author is Debargha Ganguly; subtitle differs ('Reliable' vs 'Robust and Interpretable')", "notes": "Real paper at ICLR 2025, wrong author and subtitle."},
+    {"ref_number": 9, "raw": "He, Z., et al. (2025). Knowledge Module Learning for Procedural Video Understanding. CVPR 2025.", "status": "verified_with_metadata_difference", "evidence_source": "arXiv:2503.14957", "metadata_differences": "title: cited 'Knowledge Module Learning' actual 'Neuro Symbolic Knowledge Reasoning for Procedural Video QA'; author: cited 'He' actual 'Fernando'; venue: cited CVPR actual NAACL/C3NLP workshop", "notes": "Real paper, wrong title, author, and venue."},
+    {"ref_number": 10, "raw": "Prakash, N., et al. (2025). Circuit-Based Verification of Chain-of-Thought Reasoning. NeurIPS 2025.", "status": "not_found", "evidence_source": "No exact match; closest is arXiv:2510.09312 (Oct 2025, different authors, different title)", "metadata_differences": "N/A", "notes": "Appears fabricated. Not verified on title similarity."}
+  ],
+  "historical_summary": {
+    "verified": 3,
+    "verified_with_metadata_difference": 4,
+    "not_found": 3,
+    "malformed": 0,
+    "duplicate": 0,
+    "unavailable": 0
+  }
+}
