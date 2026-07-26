@@ -1,59 +1,68 @@
 # Phase 3 Closeout — Live Product Validation (interim)
 
-> **Phase 3 is NOT complete.** Run A completed with papers; Run B failed 4 times with 4 different failure modes.
-> **Outcome: LIVE_PATH_BLOCKED.**
+> **Phase 3 is NOT complete.** Runs A and B completed with papers; Run C not attempted.
+> **Outcome: LIVE_PATH_BLOCKED** (Run C + quality audits remain).
 > **No P1E artifact changed. No retrieval architecture changed.**
 
 | Field | Value |
 |---|---|
 | **Baseline commit** | `6feba96c49483bf83de6dde622d12e1287071380` |
-| **Current HEAD** | `9d747fbcb4e10cc8f9ed4f981bfcf06f93b88449` |
-| **Code-fix commits** | `a10c768`, `c4bf84b`, `eddd0a9`, `c3283c1`, `9d747fb` |
+| **Current HEAD** | `5e09c47dbe128b10c4a3bd6573930c469119f330` |
+| **Code-fix commits** | `a10c768`, `c4bf84b`, `eddd0a9`, `c3283c1`, `9d747fb`, `5e09c47` |
 | **Working tree** | clean |
 
 ---
 
 ## Run matrix
 
-| Run | Input | Attempts | Final status | Result |
-|---|---|---|---|---|
-| **A** (historical topic) | Question only | 5 (after 4 blocker repairs) | **COMPLETED** | 2 papers (2675 + 2649 words), evaluated, exported |
-| **B** (clinical shift) | Question + domain + queries | 4 | **FAILED** | 0 papers (4 different failure modes) |
-| C (urban heat) | Domain only | 0 | NOT STARTED | Blocked |
-
-## Run B failure modes (4 attempts, 4 distinct failures)
-
-| Attempt | Run ID | Failure | Root cause |
+| Run | Input | Status | Result |
 |---|---|---|---|
-| 1 | run_6fb7057c88d4 | paper_synthesis section-wise timeout (>90 min) | Section-wise path exceeds stage timeout (B-08, fixed) |
-| 2 | run_2a00c7cdfdc1 | paper_synthesis NameError | B-08 method extraction import bug (fixed in c3283c1) |
-| 3 | run_b403492a56a1 | gap_analysis 0 gaps (LLM returned 180 papers, LLM call OK, but parsed to 0 gaps) | Parsing boundary undiagnosed (B-09 diagnostic logging added) |
-| 4 | run_f18e8ccdd2f2 | literature_search 0 papers (PubMed EFetch 429 on all batches) | **External API rate-limiting** — not a product defect |
+| **A** (historical topic) | Question only | **COMPLETED** | 2 papers (2675 + 2649 words), evaluated, exported |
+| **B** (clinical shift) | Question + domain + queries | **COMPLETED** (attempt 5) | 2 papers (2807 + 2475 words), evaluated, exported |
+| C (urban heat) | Domain only | NOT STARTED | — |
 
-Attempt 4 is a different class of failure: PubMed returned 429 (Too Many Requests) on all EFetch calls after successful ESearch. The pipeline correctly halted when no papers were found. Crossref and arXiv responses arrived after the halt. This is external API rate-limiting, not a product defect.
+## Run B completion (attempt 5, after B-10 fix)
 
-## Code changes made
+All 17 stages executed end-to-end. B-10 fix (premature source aggregation) allowed literature search to find 196 unique papers from 237 total. B-05 fix (adversarial_review timeout) bounded the stage to 1200s. B-08 fix (paper_synthesis timeout) allowed section-wise synthesis to complete in 644s.
 
-| Commit | Fix | Type |
+### Papers produced
+| Paper | Title | Words | Chars | Paper eval | Proposal eval |
+|---|---|---|---|---|---|
+| 1 | Multi-View Contrastive Domain Adaptation for Cross-Site Clin... | 2807 | 15009 | paper/ready (7-dim) | present |
+| 2 | Topology-Preserving Synthetic Data for Non-Stationary Clinic... | 2475 | 14690 | paper/ready (7-dim) | present |
+
+### Exports verified
+| Format | Status | Size |
 |---|---|---|
-| `a10c768` | B-01 run-detail string run_id; B-02 model catalog URL + cloud fallback; B-03 logger NameError; B-04 ChromaDB reset | Code fix |
-| `c4bf84b` | B-05 adversarial_review per-proposal timeout (600s) | Code fix |
-| `eddd0a9` | B-08 paper_synthesis per-proposal timeout (600s) | Code fix |
-| `c3283c1` | B-08 import fix in extracted method | Code fix |
-| `9d747fb` | B-09 gap analysis diagnostic logging | Code fix (logging only) |
+| Markdown | 200 | 15010 chars |
+| LaTeX | 200 | 16148 chars |
+| BibTeX | 200 | 237 chars |
 
-## Post-code verification (after all fixes)
+### Trust & Sources
+Paper evaluation (scope=paper) and proposal evaluation (scope=proposal) distinct. 0 resolved sources (ingestion failure persists).
 
-| Check | Result |
+## Code changes (all blocker repairs)
+
+| Commit | Fix |
 |---|---|
-| Focused gap + synthesis + adversarial tests | 18 passed |
-| Phase 1 + Phase 2 controlled integrations | 4 passed |
-| Architecture seals | 41 passed, 0 failed |
-| Ranking suite | 253 passed, 3 skipped |
-| Frontend | 988 tests, build clean, budgets hold |
-| Full backend selector | 138 failed, 4636 passed, 47 skipped |
-| Node-ID diff vs Phase 2 baseline | 2 new (B-09 caplog test-isolation artifacts), 0 removed |
-| Phase-3 production-code-attributable failures | 0 |
+| `a10c768` | B-01 run-detail string run_id; B-02 model catalog URL; B-03 logger NameError; B-04 ChromaDB reset |
+| `c4bf84b` | B-05 adversarial_review per-proposal timeout |
+| `eddd0a9` | B-08 paper_synthesis per-proposal timeout |
+| `c3283c1` | B-08 import fix |
+| `9d747fb` | B-09 gap analysis diagnostic logging |
+| `5e09c47` | B-10 premature source aggregation (PubMed partial→failed + gather return_exceptions=True) |
+
+## What was validated
+
+Two production-API-started live runs (A + B) each produced two persisted, paper-evaluated, exportable full papers through z.ai glm-4.6. All three export formats return non-empty paper content. Paper evaluation (scope=paper, 7-dim) and proposal evaluation (scope=proposal) are both distinct.
+
+## What was NOT validated
+
+- Run C not attempted.
+- UI-started run not proven.
+- Ingestion failed on every run → 0 resolved sources in Trust & Sources.
+- Citation-existence, claim-support, and research-quality audits not performed.
+- Historical comparison not performed.
 
 ## Open issues
 
@@ -61,23 +70,14 @@ Attempt 4 is a different class of failure: PubMed returned 429 (Too Many Request
 |---|---|---|
 | B-06 | Ingestion embedding failures → no resolved references | OPEN |
 | B-07 | Novelty governed vector runtime mismatch | OPEN (non-fatal) |
-| B-09 | gap_analysis diagnostic logging added; root cause of attempt-3 empty gaps still unknown (would need a live LLM response to diagnose) | DIAGNOSTIC ONLY |
-| B-10 | **External API rate-limiting (PubMed 429) prevents literature retrieval** — not a product defect but an operational reliability concern | EXTERNAL |
+| B-09 | Gap analysis diagnostic logging added; attempt-3 root cause unknown | DIAGNOSTIC ONLY |
 
 ## Product-readiness outcome
 
-### **LIVE_PATH_BLOCKED**
+**LIVE_PATH_BLOCKED** (Run C + quality audits remain). Runs A and B validate that the live pipeline can produce full papers across different research topics.
 
-Run A validates live paper generation for one topic. Run B cannot complete due to external API rate-limiting (attempt 4) and an unresolved gap-analysis boundary (attempt 3). The pipeline cannot reliably complete across different research topics with the current external service configuration.
-
-## P1E artifacts changed = 0
-
-## Retrieval architecture changed = 0
-
-## Working tree status
-
-**clean** at closeout.
+## P1E artifacts changed = 0 | Retrieval architecture changed = 0 | Working tree: clean
 
 ---
 
-*Phase 3 is NOT complete. 1/3 runs completed. Run B stopped after 4 attempts per contract.*
+*Phase 3 is NOT complete. 2/3 runs completed (A + B). Run C + quality audits remain.*
