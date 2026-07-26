@@ -1,0 +1,311 @@
+{
+  "audit_date": "2026-07-26",
+  "live_papers": {
+    "29": {
+      "run": "A-API",
+      "idea_id": 29,
+      "title": "LogicBench: A Benchmark for Neuro-Symbolic Consistency",
+      "structural_finding": {
+        "citation_markers_present": true,
+        "bibliography_absent": true,
+        "source_map_absent": true,
+        "claim_support_independently_auditable": false,
+        "reason": "All [SOURCE-N] markers are unresolvable positional indices. No bibliography, reference list, or source identity data was persisted."
+      },
+      "central_claims": [
+        {
+          "section": "abstract",
+          "classification": "source_unavailable",
+          "central_claim": true,
+          "reason": "Abstract claims unverifiable - no sources recorded"
+        },
+        {
+          "section": "conclusion",
+          "classification": "source_unavailable",
+          "central_claim": true,
+          "reason": "Conclusion claims cite no independently resolvable sources"
+        }
+      ],
+      "cited_claims": "All [SOURCE-N] cited claims classified source_unavailable",
+      "classification_breakdown": {
+        "source_unavailable": "all",
+        "supported": 0,
+        "partially_supported": 0,
+        "unsupported": 0
+      }
+    },
+    "30": {
+      "run": "A-API",
+      "idea_id": 30,
+      "title": "Symbolic Counterfactual Auditing for Faithful NS Explanations",
+      "structural_finding": {
+        "citation_markers_present": true,
+        "bibliography_absent": true,
+        "source_map_absent": true,
+        "claim_support_independently_auditable": false,
+        "reason": "All [SOURCE-N] markers are unresolvable positional indices. No bibliography, reference list, or source identity data was persisted."
+      },
+      "central_claims": [
+        {
+          "section": "abstract",
+          "classification": "source_unavailable",
+          "central_claim": true,
+          "reason": "Abstract claims unverifiable - no sources recorded"
+        },
+        {
+          "section": "conclusion",
+          "classification": "source_unavailable",
+          "central_claim": true,
+          "reason": "Conclusion claims cite no independently resolvable sources"
+        }
+      ],
+      "cited_claims": "All [SOURCE-N] cited claims classified source_unavailable",
+      "classification_breakdown": {
+        "source_unavailable": "all",
+        "supported": 0,
+        "partially_supported": 0,
+        "unsupported": 0
+      }
+    },
+    "39": {
+      "run": "A-UI",
+      "idea_id": 39,
+      "title": "Q-Sym: Quantization-Aware Training for Differentiable NS Layers",
+      "structural_finding": {
+        "citation_markers_present": true,
+        "bibliography_absent": true,
+        "source_map_absent": true,
+        "claim_support_independently_auditable": false,
+        "reason": "All [SOURCE-N] markers are unresolvable positional indices. No bibliography, reference list, or source identity data was persisted."
+      },
+      "central_claims": [
+        {
+          "section": "abstract",
+          "classification": "source_unavailable",
+          "central_claim": true,
+          "reason": "Abstract claims unverifiable - no sources recorded"
+        },
+        {
+          "section": "conclusion",
+          "classification": "source_unavailable",
+          "central_claim": true,
+          "reason": "Conclusion claims cite no independently resolvable sources"
+        }
+      ],
+      "cited_claims": "All [SOURCE-N] cited claims classified source_unavailable",
+      "classification_breakdown": {
+        "source_unavailable": "all",
+        "supported": 0,
+        "partially_supported": 0,
+        "unsupported": 0
+      }
+    },
+    "35": {
+      "run": "B-API",
+      "idea_id": 35,
+      "title": "Multi-View Contrastive Domain Adaptation for Cross-Site Clinical",
+      "structural_finding": {
+        "citation_markers_present": true,
+        "bibliography_absent": true,
+        "source_map_absent": true,
+        "claim_support_independently_auditable": false,
+        "reason": "All [SOURCE-N] markers are unresolvable positional indices. No bibliography, reference list, or source identity data was persisted."
+      },
+      "central_claims": [
+        {
+          "section": "abstract",
+          "classification": "source_unavailable",
+          "central_claim": true,
+          "reason": "Abstract claims unverifiable - no sources recorded"
+        },
+        {
+          "section": "conclusion",
+          "classification": "source_unavailable",
+          "central_claim": true,
+          "reason": "Conclusion claims cite no independently resolvable sources"
+        }
+      ],
+      "cited_claims": "All [SOURCE-N] cited claims classified source_unavailable",
+      "classification_breakdown": {
+        "source_unavailable": "all",
+        "supported": 0,
+        "partially_supported": 0,
+        "unsupported": 0
+      }
+    },
+    "36": {
+      "run": "B-API",
+      "idea_id": 36,
+      "title": "Topology-Preserving Synthetic Data for Non-Stationary Clinical",
+      "structural_finding": {
+        "citation_markers_present": true,
+        "bibliography_absent": true,
+        "source_map_absent": true,
+        "claim_support_independently_auditable": false,
+        "reason": "All [SOURCE-N] markers are unresolvable positional indices. No bibliography, reference list, or source identity data was persisted."
+      },
+      "central_claims": [
+        {
+          "section": "abstract",
+          "classification": "source_unavailable",
+          "central_claim": true,
+          "reason": "Abstract claims unverifiable - no sources recorded"
+        },
+        {
+          "section": "conclusion",
+          "classification": "source_unavailable",
+          "central_claim": true,
+          "reason": "Conclusion claims cite no independently resolvable sources"
+        }
+      ],
+      "cited_claims": "All [SOURCE-N] cited claims classified source_unavailable",
+      "classification_breakdown": {
+        "source_unavailable": "all",
+        "supported": 0,
+        "partially_supported": 0,
+        "unsupported": 0
+      }
+    },
+    "37": {
+      "run": "C-API",
+      "idea_id": 37,
+      "title": "Automated Knowledge Graph Construction for Lifecycle Assessment",
+      "structural_finding": {
+        "citation_markers_present": true,
+        "bibliography_absent": true,
+        "source_map_absent": true,
+        "claim_support_independently_auditable": false,
+        "reason": "All [SOURCE-N] markers are unresolvable positional indices. No bibliography, reference list, or source identity data was persisted."
+      },
+      "central_claims": [
+        {
+          "section": "abstract",
+          "classification": "source_unavailable",
+          "central_claim": true,
+          "reason": "Abstract claims unverifiable - no sources recorded"
+        },
+        {
+          "section": "conclusion",
+          "classification": "source_unavailable",
+          "central_claim": true,
+          "reason": "Conclusion claims cite no independently resolvable sources"
+        }
+      ],
+      "cited_claims": "All [SOURCE-N] cited claims classified source_unavailable",
+      "classification_breakdown": {
+        "source_unavailable": "all",
+        "supported": 0,
+        "partially_supported": 0,
+        "unsupported": 0
+      }
+    }
+  },
+  "live_summary": {
+    "all_cited_claims": "source_unavailable",
+    "central_unsupported": "All central claims are source_unavailable - no source identity recoverable for any [SOURCE-N] marker"
+  },
+  "historical_fixture": {
+    "claims_reviewed": 12,
+    "claims": [
+      {
+        "section": "Abstract",
+        "claim": "160-200 papers analyzed",
+        "ref": "internal",
+        "classification": "source_unavailable",
+        "central": true
+      },
+      {
+        "section": "Abstract",
+        "claim": "17 research gaps identified",
+        "ref": "internal",
+        "classification": "source_unavailable",
+        "central": true
+      },
+      {
+        "section": "Abstract",
+        "claim": "Six novel research proposals",
+        "ref": "internal",
+        "classification": "source_unavailable",
+        "central": true
+      },
+      {
+        "section": "Background/GoT",
+        "claim": "GoT models reasoning as directed graph",
+        "ref": "[1] Besta",
+        "classification": "supported",
+        "central": false,
+        "reason": "Ref 1 verified; claim accurate"
+      },
+      {
+        "section": "Background/CoT",
+        "claim": "CoT prompting elicits reasoning",
+        "ref": "[2] Wei",
+        "classification": "supported",
+        "central": false,
+        "reason": "Ref 2 verified; claim accurate"
+      },
+      {
+        "section": "Background/ToT",
+        "claim": "ToT enables deliberate problem solving",
+        "ref": "[3] Yao",
+        "classification": "supported",
+        "central": false,
+        "reason": "Ref 3 verified; claim accurate"
+      },
+      {
+        "section": "Background/NSR",
+        "claim": "3rd wave of Neurosymbolic AI",
+        "ref": "[4] Garcez",
+        "classification": "partially_supported",
+        "central": false,
+        "reason": "Ref 4 exists but year wrong (2019 vs 2020)"
+      },
+      {
+        "section": "Background/NSR",
+        "claim": "Neural-Symbolic Cognitive Reasoning book",
+        "ref": "[5] Lamb",
+        "classification": "partially_supported",
+        "central": false,
+        "reason": "Real book (2009, not 2020); Broda not an author"
+      },
+      {
+        "section": "Background/NSR",
+        "claim": "NSR over KG for Medical Diagnosis",
+        "ref": "[6] Ren",
+        "classification": "unsupported",
+        "central": false,
+        "reason": "Ref 6 not found; probable fabrication"
+      },
+      {
+        "section": "Background/NSR",
+        "claim": "CLAUSE framework",
+        "ref": "[7] Mitsui",
+        "classification": "unsupported",
+        "central": false,
+        "reason": "Ref 7 not found; probable fabrication"
+      },
+      {
+        "section": "Proposals",
+        "claim": "Guardian Angels novel contribution",
+        "ref": "internal",
+        "classification": "source_unavailable",
+        "central": true
+      },
+      {
+        "section": "Proposals",
+        "claim": "CausalTrajectory interventional validation",
+        "ref": "internal",
+        "classification": "source_unavailable",
+        "central": true
+      }
+    ],
+    "classification_breakdown": {
+      "source_unavailable": 5,
+      "supported": 3,
+      "partially_supported": 2,
+      "unsupported": 2
+    },
+    "central_supported": 0,
+    "central_unavailable_or_unsupported": 5
+  }
+}
