@@ -205,7 +205,7 @@ class SearchService:
                     _run_one(name, adapter)
                     for name, adapter in active.items()
                 ),
-                return_exceptions=False,
+                return_exceptions=True,  # B-10: don't cancel other sources on failure
             )
 
             # P0.2.5: Attach execution identity to each source-unique result.
@@ -218,6 +218,14 @@ class SearchService:
             linkage_expectations: list = []
 
             for outcome in outcomes:
+                # B-10: with return_exceptions=True, outcomes may contain
+                # exceptions from recorder.run_execution. Skip those — the
+                # recorder has already persisted the failure to the DB.
+                if isinstance(outcome, Exception):
+                    logger.warning(
+                        "Source execution raised during gather: %s", outcome,
+                    )
+                    continue
                 executions.append(outcome)
                 all_results.extend(outcome.results)
 

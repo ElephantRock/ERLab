@@ -195,9 +195,14 @@ class PubMedSource(AcademicSearchSource):
                 f"EFetch HTTPStatusError {code} after ESearch returned "
                 f"{raw_count} PMID(s)"
             )
+            # B-10: EFetch yielded 0 results — this is 'failed', not 'partial'.
+            # The 'partial' status requires non-empty results (contracts.py:325).
+            # Returning 'partial' with empty results triggers validate_outcome
+            # to raise, which propagates through gather(return_exceptions=False)
+            # and cancels other in-flight source tasks (arXiv, OpenAlex).
             return SourceSearchOutcome(
                 results=source_unique,
-                status="partial",
+                status="failed",
                 attempt_count=attempts_made,
                 error_detail=error_detail,
                 failure_category=cat,
@@ -220,7 +225,7 @@ class PubMedSource(AcademicSearchSource):
             )
             return SourceSearchOutcome(
                 results=source_unique,
-                status="partial",
+                status="failed",
                 attempt_count=attempts_made,
                 error_detail=error_detail,
                 failure_category="transport",
