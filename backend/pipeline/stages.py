@@ -1947,7 +1947,8 @@ class PaperSynthesisStage(PipelineStage):
                 # B-05.
                 await asyncio.wait_for(
                     self._synthesize_paper_for_proposal(
-                        idx, proposal, ctx, provider, source_papers, context_window
+                        idx, proposal, ctx, provider, source_papers, source_ids,
+                        context_window
                     ),
                     timeout=self.PER_PROPOSAL_TIMEOUT,
                 )
@@ -1972,10 +1973,15 @@ class PaperSynthesisStage(PipelineStage):
         return True
 
     async def _synthesize_paper_for_proposal(
-        self, idx, proposal, ctx, provider, source_papers, context_window
+        self, idx, proposal, ctx, provider, source_papers, source_ids,
+        context_window,
     ) -> None:
         """Synthesize a paper for a single proposal. May raise TimeoutError
-        when caught by the caller's asyncio.wait_for wrapper."""
+        when caught by the caller's asyncio.wait_for wrapper.
+
+        Phase 4 / WP-4C: ``source_ids`` is the ordered literature Paper.id
+        list used to construct [SOURCE-N]; it is captured here so the
+        marker→source map can be frozen and persisted on the result."""
         from backend.pipeline.synthesis.paper_synthesizer import PaperSynthesizer
         from backend.pipeline.synthesis.section_wise_synthesizer import SectionWiseSynthesizer
 
@@ -2124,8 +2130,11 @@ class PaperSynthesisStage(PipelineStage):
                 "source_id": source_id,
                 "mapping_status": "mapped",
             })
-        # 2. Scan the generated paper for emitted markers.
-        emitted = {int(n) for n in cls._SOURCE_MARKER_RE.findall(paper_markdown or "")}
+        # 2. Scan the generated paper for emitted markers. Coerce to str so the
+        # regex is robust against non-string inputs (e.g. test mocks); a real
+        # paper_markdown is always a string.
+        paper_text = paper_markdown if isinstance(paper_markdown, str) else ""
+        emitted = {int(n) for n in cls._SOURCE_MARKER_RE.findall(paper_text)}
         known = set(range(1, len(source_ids) + 1))
         for idx in sorted(emitted - known):
             source_map.append({
