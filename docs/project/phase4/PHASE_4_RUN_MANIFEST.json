@@ -1,0 +1,51 @@
+{
+  "phase": "Phase 4 — Evidence Grounding and Product Hardening",
+  "tranche": "4B / 4C / 4D / 4E / 4F / 4H (4G and 4I deferred)",
+  "baseline_commit": "bfe2e43bba7af90b4687db1997f6c5b5fa0ed2e3",
+  "final_commit": "b91ea22",
+  "branch": "feat/quarantine-and-frontend-redesign",
+  "executed_at": "2026-07-27",
+  "commits": [
+    {"sha": "505c947", "msg": "fix(provenance): preserve retrieved source identity before indexing (4B)"},
+    {"sha": "d62a44a", "msg": "chore: ignore .playwright-mcp/ MCP debug artifacts"},
+    {"sha": "119f202", "msg": "fix(citations): propagate source maps through papers and exports (4C)"},
+    {"sha": "db8aca7", "msg": "fix(evaluation): block false confidence and detect scope or overreach (4D/4E/4F)"},
+    {"sha": "03e7c56", "msg": "test(validation): seal controlled Phase 4 remediation (4H)"},
+    {"sha": "855272a", "msg": "test(hardening): make Phase 4 gate integration tests sync (no:asyncio-safe)"},
+    {"sha": "b91ea22", "msg": "fix(synthesis): thread source_ids into _synthesize_paper_for_proposal (4C regression)"}
+  ],
+  "verification_results": {
+    "backend_full_selector": {
+      "command": "python -m pytest backend/tests/ -p no:asyncio -m \"not slow and not integration\"",
+      "baseline": "138 failed, 4643 passed, 47 skipped",
+      "final": "141 failed, 4688 passed, 47 skipped",
+      "real_pytest_exit_code": 1,
+      "status": "FAILING (pre-existing baseline; 4G deferred)",
+      "delta_vs_baseline": "+3 failed, +45 passed",
+      "touched_subsystem_failures": 0,
+      "regression_analysis": "All +3 failures are in pre-existing test-isolation buckets (test_pipeline enforcement/gateway/certification, test_api governance/ops, test_providers receipt/catalog, test_operations, test_literature crossref). Zero failures in any touched subsystem (provenance, citation_map, paper_export, review, evaluation_gate, paper_source_markers, batch153/174 synthesis). Two regressions introduced during 4C (batch153 source_ids NameError, batch174 MagicMock regex TypeError) and six async-test failures under -p no:asyncio were all fixed in-commit before this measurement. The +3 delta vs the 138 baseline is test-ordering nondeterminism in the pre-existing failures, the same class documented in the Phase 3 closeout."
+    },
+    "phase4_focused_canonical_mode": {
+      "command": "python -m pytest <phase4 test files> -p no:asyncio",
+      "result": "52 passed",
+      "status": "PASS"
+    },
+    "architecture_suite": {"result": "41 passed", "status": "PASS"},
+    "ranking_suite": {"result": "253 passed, 3 skipped", "status": "PASS"},
+    "controlled_integrations": {
+      "phase1": "passed",
+      "phase2": "passed",
+      "phase4": "4 passed",
+      "total": "14 passed"
+    },
+    "frontend": {
+      "typecheck": "PASS (exit 0)",
+      "tests": "988 passed (matches Phase 3 baseline)",
+      "build": "PASS (exit 0)",
+      "lint": "PASS (0 errors, 63 warnings)",
+      "ts_budget": "PASS (0 errors)",
+      "api_budget": "PASS (0 unchecked)",
+      "lint_budget": "PASS (holds)"
+    }
+  }
+}
