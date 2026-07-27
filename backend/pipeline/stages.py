@@ -2136,6 +2136,59 @@ class PaperSynthesisStage(PipelineStage):
             })
         return source_map
 
+    @staticmethod
+    def provenance_precondition(
+        paper_markdown: str, source_map: list[dict]
+    ) -> "ProvenanceGateResult":
+        """Phase 4 / WP-4D — the provenance precondition for paper evaluation.
+
+        The paper-evaluation state and the paper-artifact state must remain
+        separate: a paper can be generated successfully (artifact ready) yet
+        fail provenance validation (evaluation unavailable/failed). This gate
+        runs BEFORE the evaluator can report an unqualified positive state.
+
+        Returns a ProvenanceGateResult:
+          * passed=True when the paper has no citation markers, OR all emitted
+            markers have at least one mapped source (partial-unmapped is allowed
+            but recorded).
+          * passed=False when the paper cites [SOURCE-N] markers but has no
+            persisted map, or every marker is unmapped (no recoverable identity).
+        """
+        from backend.pipeline.evaluation.provenance_gate import ProvenanceGateResult
+
+        emitted = PaperSynthesisStage._SOURCE_MARKER_RE.findall(paper_markdown or "")
+        if not emitted:
+            # No citation markers → no provenance requirement.
+            return ProvenanceGateResult(passed=True, reason="no citation markers", unmapped_count=0)
+        if not source_map:
+            return ProvenanceGateResult(
+                passed=False,
+                reason=(
+                    f"{len(set(emitted))} citation markers present but no source map "
+                    "was persisted — provenance unavailable"
+                ),
+                unmapped_count=len(set(emitted)),
+            )
+        mapped = [e for e in source_map if e.get("mapping_status") == "mapped"]
+        unmapped = [e for e in source_map if e.get("mapping_status") == "unmapped"]
+        if not mapped:
+            return ProvenanceGateResult(
+                passed=False,
+                reason=(
+                    f"{len(unmapped)} citation markers all unmapped — no recoverable "
+                    "source identity"
+                ),
+                unmapped_count=len(unmapped),
+            )
+        return ProvenanceGateResult(
+            passed=True,
+            reason=(
+                f"{len(mapped)} mapped source(s)"
+                + (f"; {len(unmapped)} unmapped marker(s)" if unmapped else "")
+            ),
+            unmapped_count=len(unmapped),
+        )
+
     async def _evaluate_paper(self, ctx, proposal, metadata, idx) -> None:
         """Phase 1 1D: evaluate the synthesized paper via a thin adapter.
 
@@ -2149,6 +2202,11 @@ class PaperSynthesisStage(PipelineStage):
         paper_evaluation.status="failed" and never re-raised. Also skipped
         (status="unavailable") when no non-empty paper exists, so empty
         artifacts cannot receive a fabricated evaluation.
+
+        Phase 4 / WP-4D/4E/4F: three precondition gates run BEFORE the
+        evaluator can report an unqualified positive state. A failed gate
+        records status="blocked" with a concrete reason — the paper artifact
+        remains accessible (paper.status is separate from paper_evaluation).
         """
         full_paper = metadata.get("full_paper")
         paper_md = (
@@ -2159,20 +2217,78 @@ class PaperSynthesisStage(PipelineStage):
         if not paper_md or not paper_md.strip():
             metadata["paper_evaluation"] = {"status": "unavailable", "scope": "paper"}
             return
+
+        # Phase 4 / WP-4D: provenance precondition. A paper citing [SOURCE-N]
+        # markers with no recoverable source identity cannot be quality-ready.
+        source_map = (
+            full_paper.get("source_map") if isinstance(full_paper, dict) else None
+        ) or []
+        prov_gate = self.provenance_precondition(paper_md, source_map)
+        gates: list[dict] = [{
+            "gate": "provenance",
+            "passed": prov_gate.passed,
+            "reason": prov_gate.reason,
+        }]
+
+        # Phase 4 / WP-4E: scope alignment. Compare the frozen research intent
+        # against the paper's title + abstract (heuristically extracted).
+        scope_result = self._classify_scope(ctx, proposal, paper_md)
+        gates.append({
+            "gate": "scope_alignment",
+            "classification": scope_result.classification,
+            "reason": scope_result.reason,
+        })
+
+        # Phase 4 / WP-4F: conclusion support. Detect overreach in the
+        # abstract/conclusion vs. reported empirical results.
+        conclusion_result = self._classify_conclusion(ctx, proposal, paper_md)
+        gates.append({
+            "gate": "conclusion_support",
+            "classification": conclusion_result.classification,
+            "reason": conclusion_result.reason,
+        })
+
+        # Gate aggregation: any blocking gate downgrades the evaluation.
+        blocking_reasons: list[str] = []
+        if not prov_gate.passed:
+            blocking_reasons.append(f"provenance: {prov_gate.reason}")
+        if scope_result.classification == "off_scope":
+            blocking_reasons.append(f"scope: {scope_result.reason}")
+        if conclusion_result.classification == "overstated":
+            blocking_reasons.append(f"conclusion: {conclusion_result.reason}")
+
         try:
             from backend.pipeline.evaluation.proposal_evaluator import ProposalEvaluator
 
             evaluator = ProposalEvaluator(self._provider)
             evaluation = await evaluator.evaluate(paper_md)
-            metadata["paper_evaluation"] = {
-                "status": "ready",
-                "scope": "paper",
-                "dimensions": evaluation.to_dict(),
-                "evaluated_object": "final_paper",
-            }
-            logger.info(
-                "Paper evaluation (scope=paper) completed for proposal %d", idx,
-            )
+
+            if blocking_reasons:
+                # Phase 4: a blocking gate prevents an unqualified positive
+                # state. The dimension scores remain visible as subordinate
+                # diagnostics but cannot override the gate.
+                metadata["paper_evaluation"] = {
+                    "status": "blocked",
+                    "scope": "paper",
+                    "dimensions": evaluation.to_dict(),
+                    "evaluated_object": "final_paper",
+                    "blocking_reasons": blocking_reasons,
+                    "gates": gates,
+                }
+                logger.info(
+                    "Paper evaluation BLOCKED for proposal %d: %s", idx, blocking_reasons,
+                )
+            else:
+                metadata["paper_evaluation"] = {
+                    "status": "ready",
+                    "scope": "paper",
+                    "dimensions": evaluation.to_dict(),
+                    "evaluated_object": "final_paper",
+                    "gates": gates,
+                }
+                logger.info(
+                    "Paper evaluation (scope=paper) completed for proposal %d", idx,
+                )
         except Exception as e:
             logger.warning(
                 "Paper evaluation failed for proposal %d (non-fatal, WP-1D): %s",
@@ -2182,7 +2298,136 @@ class PaperSynthesisStage(PipelineStage):
                 "status": "failed",
                 "scope": "paper",
                 "error": str(e),
+                "gates": gates,
             }
+
+    @staticmethod
+    def _classify_scope(ctx, proposal, paper_md: str):
+        """Phase 4 / WP-4E — extract research intent + paper abstract and classify."""
+        from backend.pipeline.evaluation.scope_checker import classify_scope_alignment
+
+        # Research intent: prefer an explicit research question, then domain.
+        intent_parts = []
+        question = getattr(ctx, "research_question", None) or getattr(ctx, "question", None)
+        if question:
+            intent_parts.append(str(question))
+        domain = getattr(ctx, "domain", None)
+        if domain:
+            intent_parts.append(str(domain))
+        research_intent = " ".join(intent_parts).strip()
+
+        # Heuristically extract title (first # heading) and abstract (first
+        # paragraph block after the title). These are best-effort extractions
+        # from the markdown; the checker degrades gracefully on missing text.
+        title = ""
+        abstract = ""
+        if paper_md:
+            lines = paper_md.splitlines()
+            for ln in lines:
+                s = ln.strip()
+                if s.startswith("# "):
+                    title = s.lstrip("# ").strip()
+                    break
+            # Abstract: text between an 'Abstract' heading and the next heading,
+            # else the first non-empty, non-heading paragraph after the title.
+            abs_lines: list[str] = []
+            in_abstract = False
+            seen_title = False
+            for ln in lines:
+                s = ln.strip()
+                if s.startswith("# "):
+                    seen_title = True
+                    continue
+                low = s.lower()
+                if s.startswith("#") and "abstract" in low:
+                    in_abstract = True
+                    continue
+                if s.startswith("#"):
+                    if in_abstract:
+                        break
+                    continue
+                if in_abstract and s:
+                    abs_lines.append(s)
+            if abs_lines:
+                abstract = " ".join(abs_lines)
+            elif not abstract:
+                # Fallback: first non-empty paragraph after the title.
+                buf: list[str] = []
+                started = False
+                for ln in lines:
+                    s = ln.strip()
+                    if not started:
+                        if s.startswith("# "):
+                            started = True
+                        continue
+                    if s.startswith("#"):
+                        break
+                    if s:
+                        buf.append(s)
+                abstract = " ".join(buf)
+
+        return classify_scope_alignment(
+            research_intent=research_intent,
+            paper_title=title,
+            paper_abstract=abstract,
+        )
+
+    @staticmethod
+    def _classify_conclusion(ctx, proposal, paper_md: str):
+        """Phase 4 / WP-4F — extract abstract + conclusion and classify."""
+        from backend.pipeline.evaluation.conclusion_checker import classify_conclusion_support
+
+        abstract = ""
+        conclusion = ""
+        if paper_md:
+            lines = paper_md.splitlines()
+            # Abstract block.
+            abs_lines: list[str] = []
+            in_section = False
+            for ln in lines:
+                s = ln.strip()
+                low = s.lower()
+                if s.startswith("#"):
+                    if "abstract" in low:
+                        in_section = True
+                        continue
+                    if in_section:
+                        in_section = False
+                    continue
+                if in_section and s:
+                    abs_lines.append(s)
+            abstract = " ".join(abs_lines)
+            # Conclusion block.
+            conc_lines: list[str] = []
+            in_section = False
+            for ln in lines:
+                s = ln.strip()
+                low = s.lower()
+                if s.startswith("#"):
+                    if "conclusion" in low or "discussion" in low:
+                        in_section = True
+                        continue
+                    if in_section:
+                        in_section = False
+                    continue
+                if in_section and s:
+                    conc_lines.append(s)
+            conclusion = " ".join(conc_lines)
+
+        # has_empirical_results: inferred from a results/experiments section.
+        has_results = False
+        if paper_md:
+            lower = paper_md.lower()
+            has_results = any(
+                h in lower for h in ("## results", "# results", "## evaluation",
+                                     "# evaluation", "## experiments", "# experiments")
+            )
+
+        return classify_conclusion_support(
+            abstract=abstract,
+            conclusion=conclusion,
+            has_empirical_results=has_results if has_results else None,
+        )
 
 
 class ProposalDeepeningStage(PipelineStage):
