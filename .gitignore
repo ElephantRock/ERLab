@@ -77,3 +77,6 @@ docs/p1b_snapshot/snapshot.json
 
 # TypeScript incremental build cache
 frontend/tsconfig.tsbuildinfo
+
+# Playwright MCP debug artifacts (browser automation tool output)
+.playwright-mcp/
