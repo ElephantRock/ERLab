@@ -15,18 +15,20 @@
     {"sha": "b91ea22", "msg": "fix(synthesis): thread source_ids into _synthesize_paper_for_proposal (4C regression)"}
   ],
   "verification_results": {
-    "backend_full_selector": {
+    "backend_full_selector_old_command_INVALID": {
       "command": "python -m pytest backend/tests/ -p no:asyncio -m \"not slow and not integration\"",
-      "baseline": "138 failed, 4643 passed, 47 skipped",
-      "final": "141 failed, 4688 passed, 47 skipped",
-      "real_pytest_exit_code": 1,
-      "status": "FAILING (pre-existing baseline; 4G deferred)",
-      "delta_vs_baseline": "+3 failed, +45 passed",
-      "touched_subsystem_failures": 0,
-      "regression_analysis": "All +3 failures are in pre-existing test-isolation buckets (test_pipeline enforcement/gateway/certification, test_api governance/ops, test_providers receipt/catalog, test_operations, test_literature crossref). Zero failures in any touched subsystem (provenance, citation_map, paper_export, review, evaluation_gate, paper_source_markers, batch153/174 synthesis). Two regressions introduced during 4C (batch153 source_ids NameError, batch174 MagicMock regex TypeError) and six async-test failures under -p no:asyncio were all fixed in-commit before this measurement. The +3 delta vs the 138 baseline is test-ordering nondeterminism in the pre-existing failures, the same class documented in the Phase 3 closeout."
+      "status": "INVALID — retired in 4G. Disables the asyncio plugin required by ~138 legitimate async tests. Decisive experiment: this command produced 141 failures; the corrected command (below) produced 0. The 138 async-flag 'failures' it reported were never real defects. Was originally a workaround for GOTCHA-001 (trio-mode failures, BATCH-75 era); trio risk now verified gone (trio not installed, 0 @pytest.mark.trio markers, 0 trio failures in default mode).",
+      "recorded_for_history_only": "141 failed, 4688 passed, 47 skipped (after 4B-4H, before 4G)"
     },
-    "phase4_focused_canonical_mode": {
-      "command": "python -m pytest <phase4 test files> -p no:asyncio",
+    "backend_full_selector_corrected_4G": {
+      "command": "python -m pytest backend/tests/ -m \"not slow and not integration\"",
+      "result": "4830 passed, 47 skipped, 37 deselected, 327 warnings",
+      "real_pytest_exit_code": 0,
+      "failed": 0,
+      "status": "PASS — 4G exit condition met (zero failures)"
+    },
+    "phase4_focused": {
+      "command": "python -m pytest <phase4 test files>",
       "result": "52 passed",
       "status": "PASS"
     },

@@ -1,7 +1,9 @@
-# Phase 4 / WP-4B–4H Closeout — Evidence Grounding and Product Hardening (bounded tranche)
+# Phase 4 / WP-4B–4H + 4G Closeout — Evidence Grounding and Product Hardening
 
-> **Tranche:** 4B, 4C, 4D, 4E, 4F, 4H complete. 4G (backend test-isolation) and
-> 4I (paid live validation) deferred per user direction.
+> **Tranche:** 4B, 4C, 4D, 4E, 4F, 4H, 4G complete. 4I (paid live validation)
+> deferred — requires frozen provider/model/spend authorization.
+> **No P1E artifact changed. No retrieval-ranking architecture changed.**
+> **Canonical backend selector: zero failures** (corrected command, 4G).
 > **No P1E artifact changed. No retrieval-ranking architecture changed.**
 
 | Field | Value |
@@ -150,26 +152,54 @@ no frontend files changed in this tranche).
 
 ## Full backend selector result
 
+**4G closed the selector to zero failures.** The history:
+
 ```
-138 failed, 4643 passed, 47 skipped   (baseline at tranche start)
-141 failed, 4688 passed, 47 skipped   (final, after 4B–4H)
-Status: FAILING
-Real pytest exit code: 1
+OLD command (INVALID — retired in 4G):
+  pytest -p no:asyncio -m "not slow and not integration"
+  138 failed, 4643 passed, 47 skipped   (baseline at 4B–4H tranche start)
+  141 failed, 4688 passed, 47 skipped   (after 4B–4H, before 4G)
+  Real pytest exit code: 1
+  Status (then): FAILING
+
+CORRECTED command (4G):
+  pytest -m "not slow and not integration"
+  4830 passed, 47 skipped, 37 deselected, 327 warnings
+  Real pytest exit code: 0
+  Status: PASS — zero failures
 ```
 
-The +3-failed / +45-passed delta is **not a regression in any touched
-subsystem** (zero failures in provenance, citation_map, paper_export, review,
-evaluation_gate, paper_source_markers, batch153/174 synthesis). The +45 passed
-are the new Phase 4 tests. The +3 failed is test-isolation nondeterminism in
-the pre-existing failure buckets (test_pipeline enforcement/gateway/certification,
-test_api governance/ops, test_providers receipt/catalog, test_operations,
-test_literature crossref) — the same clusters documented in the Phase 3
-closeout, which WP-4G is scoped to fix.
+### Correction of the 4B–4H tranche report
 
-Three regressions introduced during 4C (batch153 `source_ids` NameError,
-batch174 MagicMock regex TypeError, 6 async tests under `-p no:asyncio`) were
-caught by this gate, root-caused, and fixed in-commit (`b91ea22`, `855272a`)
-before the tranche was reported complete.
+The 4B–4H closeout attributed the +3 delta (138 → 141) to "test-isolation
+nondeterminism in pre-existing failure buckets." **That attribution was wrong.**
+The 4G set comparison (baseline-138 vs checkpoint-141) proved the 3 new failures
+were a real 4C signature-contract regression in `test_phase3_paper_synthesis_timeout.py`
+(fixed in `d5c112a`). Same-cluster membership and isolation-passing are evidence
+for the nondeterminism hypothesis, not proof — the set comparison was required to
+falsify it.
+
+### What the 138 "baseline" failures actually were
+
+The 4G decisive experiment proved the 138 were **not** test-isolation pollution,
+not global-state leaks, not production defects. They were the `-p no:asyncio`
+flag disabling the asyncio plugin required by ~138 legitimate async tests
+(canonical = 141 failed; default mode = 3 failed). The flag was a workaround for
+GOTCHA-001 (trio-mode failures, BATCH-75 era); trio risk now verified gone. The
+corrected command retired the flag. See `PHASE_4_TEST_ISOLATION_REPORT.md`.
+
+### Regressions caught and fixed across 4B–4G
+
+Four regressions introduced during 4C/4H were caught by these gates,
+root-caused, and fixed in-commit before completion:
+- batch153 `source_ids` NameError (`b91ea22`)
+- batch174 MagicMock regex TypeError (`b91ea22`)
+- 6 async integration tests failed under `-p no:asyncio` (`855272a`)
+- 3 timeout-test signature mocks broken by the `source_ids` arg (`d5c112a`)
+
+Plus the 2 genuine pre-existing defects fixed in 4G:
+- stale frontend-route assertion (`1a41c17`)
+- alembic `fileConfig` disabling pre-existing loggers (`1a41c17`)
 
 ## Production-code changes
 
@@ -191,12 +221,29 @@ before the tranche was reported complete.
 - `backend/api/routes/exports.py` — per-run BibTeX rewired.
 - `backend/api/routes/review.py` — `citation_markers` from the map.
 
+4G additions (test isolation):
+- `alembic/env.py` — `fileConfig(..., disable_existing_loggers=False)` (real
+  global-state defect repair).
+- `alembic.ini` — `disable_existing_loggers = False` documents the intent.
+- `Makefile`, `.github/workflows/{ci,nightly}.yml` — corrected canonical command
+  (retired the invalid `-p no:asyncio` flag).
+- `backend/tests/test_pipeline/test_batch173_verification.py` — subprocess
+  invocation corrected.
+- `backend/tests/test_pipeline/test_batch171_alpha.py` — stale frontend-route
+  assertion updated to the current AppRoutes.tsx contract.
+- `backend/tests/test_pipeline/test_phase4_logging_isolation.py` — **new**:
+  focused regression for the alembic-logger-disabling defect.
+- `docs/project/ERLAB_CURRENT_STATE_REPORT.md`, `erlab_current_state_inventory.json`
+  — current-state docs updated.
+
 Paper-synthesis prompts, retrieval, and ranking are **unchanged**.
 
 ## Known limitations
 
-1. **Full backend selector still FAILING** (~141 failures) — WP-4G (test
-   isolation) deferred. None in touched subsystems.
+1. **Full backend selector: PASS (zero failures)** after 4G corrected the
+   canonical command and repaired the alembic logger-disabling defect. The
+   prior "138 baseline failures" were the invalid `-p no:asyncio` flag, not
+   real defects. See `PHASE_4_TEST_ISOLATION_REPORT.md`.
 2. **Live validation not run** — WP-4I deferred; requires provider/model/spend
    authorization. The controlled 4H proves the path offline.
 3. **Independent citation/claim-support audits not run** — these audit live
@@ -220,4 +267,4 @@ Paper-synthesis prompts, retrieval, and ranking are **unchanged**.
 
 ---
 
-*End of Phase 4 tranche (4B–4H). 4G and 4I deferred.*
+*End of Phase 4 tranche (4B–4H + 4G). 4I (paid live validation) deferred — requires frozen provider/model/spend authorization.*
