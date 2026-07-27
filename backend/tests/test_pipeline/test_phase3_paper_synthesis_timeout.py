@@ -55,7 +55,7 @@ async def test_one_succeeds_while_another_hangs():
 
     original_method = stage._synthesize_paper_for_proposal
 
-    async def _track_and_maybe_hang(idx, proposal, ctx, provider, source_papers, context_window):
+    async def _track_and_maybe_hang(idx, proposal, ctx, provider, source_papers, source_ids, context_window):
         call_log.append(idx)
         if idx == 0:
             # Simulate success: set metadata
@@ -104,7 +104,7 @@ async def test_successful_paper_remains_available():
     good = _make_proposal("Good", "Content")
     hung = _make_proposal("Hung", "Content")
 
-    async def _synthesize(idx, proposal, ctx, provider, source_papers, context_window):
+    async def _synthesize(idx, proposal, ctx, provider, source_papers, source_ids, context_window):
         if idx == 0:
             metadata = stage._get_metadata(proposal)
             metadata["full_paper"] = {"paper_markdown": "# Success\n\nReal paper.", "word_count": 3}
@@ -151,7 +151,7 @@ async def test_previously_completed_work_not_repeated():
 
     call_count = {0: 0, 1: 0}
 
-    async def _track(idx, proposal, ctx, provider, source_papers, context_window):
+    async def _track(idx, proposal, ctx, provider, source_papers, source_ids, context_window):
         call_count[idx] = call_count.get(idx, 0) + 1
         metadata = stage._get_metadata(proposal)
         metadata["full_paper"] = {"paper_markdown": "# OK", "word_count": 1}
