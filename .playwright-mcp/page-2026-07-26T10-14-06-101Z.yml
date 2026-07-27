@@ -1,0 +1,185 @@
+- generic [ref=e2]:
+  - generic [ref=e5]:
+    - link "Skip to content" [ref=e6] [cursor=pointer]:
+      - /url: "#main-content"
+    - complementary [ref=e7]:
+      - generic [ref=e8]:
+        - generic [ref=e9]: Elephant Rock
+        - button "Collapse sidebar" [ref=e11] [cursor=pointer]
+      - navigation [ref=e15]:
+        - generic [ref=e16]:
+          - heading "Direct" [level=3] [ref=e17]
+          - link "Dashboard" [ref=e18] [cursor=pointer]:
+            - /url: /
+          - link "New Run" [ref=e22] [cursor=pointer]:
+            - /url: /pipeline/new
+          - link "Autonomous" [ref=e25] [cursor=pointer]:
+            - /url: /autonomous
+        - generic [ref=e29]:
+          - heading "Triage" [level=3] [ref=e30]
+          - link "Results" [ref=e31] [cursor=pointer]:
+            - /url: /ideas
+          - link "Gaps" [ref=e35] [cursor=pointer]:
+            - /url: /gaps
+          - link "Literature" [ref=e40] [cursor=pointer]:
+            - /url: /literature
+        - generic [ref=e43]:
+          - heading "Read" [level=3] [ref=e44]
+          - link "Knowledge Search" [ref=e45] [cursor=pointer]:
+            - /url: /knowledge
+        - generic [ref=e49]:
+          - heading "Refine" [level=3] [ref=e50]
+          - link "Sessions" [ref=e51] [cursor=pointer]:
+            - /url: /sessions
+        - generic [ref=e56]:
+          - heading "Govern" [level=3] [ref=e57]
+          - link "Review" [ref=e58] [cursor=pointer]:
+            - /url: /governance
+        - separator "Secondary navigation" [ref=e62]
+        - generic [ref=e63]:
+          - heading "Secondary" [level=3] [ref=e64]
+          - link "Operations" [ref=e65] [cursor=pointer]:
+            - /url: /ops
+          - link "Costs" [ref=e69] [cursor=pointer]:
+            - /url: /costs
+          - link "Traces" [ref=e72] [cursor=pointer]:
+            - /url: /traces
+          - link "Memory" [ref=e75] [cursor=pointer]:
+            - /url: /memory
+          - link "Knowledge Graph" [ref=e86] [cursor=pointer]:
+            - /url: /knowledge-graph
+          - link "Plugins" [ref=e92] [cursor=pointer]:
+            - /url: /plugins
+          - link "Settings" [ref=e95] [cursor=pointer]:
+            - /url: /settings
+    - main [ref=e99]:
+      - generic [ref=e100]:
+        - button "Search... ⌘K" [ref=e101] [cursor=pointer]:
+          - generic [ref=e105]: Search...
+          - generic: ⌘K
+        - generic [ref=e106]:
+          - button "Switch to dark mode" [ref=e107] [cursor=pointer]
+          - button "9+" [ref=e111] [cursor=pointer]
+      - generic [ref=e117]:
+        - generic [ref=e118]:
+          - heading "New Run" [level=1] [ref=e119]
+          - paragraph [ref=e120]: Configure and launch a research pipeline.
+        - generic [ref=e121]:
+          - generic [ref=e123]:
+            - tablist [ref=e124]:
+              - tab "Single Run" [selected] [ref=e125] [cursor=pointer]
+              - tab "Autonomous Cycle" [ref=e126] [cursor=pointer]
+            - tabpanel "Single Run" [ref=e127]:
+              - generic [ref=e128]:
+                - heading "Research Configuration" [level=2] [ref=e130]
+                - generic [ref=e132]:
+                  - generic [ref=e133]:
+                    - text: Research Question
+                    - textbox "e.g. How can graph-based reasoning and neuro-symbolic methods be combined to improve the verifiability of language-model reasoning?" [ref=e134]: How can graph-based reasoning and neuro-symbolic methods be combined to improve the verifiability of language-model reasoning?
+                    - paragraph [ref=e135]: The primary research intent. When provided, literature search and proposal synthesis anchor on it.
+                  - generic [ref=e136]:
+                    - generic [ref=e137]: Research Domain (optional)
+                    - textbox "machine learning, nlp, computer vision..." [ref=e138]
+                    - paragraph [ref=e139]: Domain context for gap analysis and idea generation. A research question above is sufficient on its own.
+                  - generic [ref=e140]:
+                    - text: Research Strategy
+                    - generic [ref=e141]:
+                      - button "Quick Scan ~2-5 min Fast scan skips tree search and metrics for rapid results." [ref=e142] [cursor=pointer]:
+                        - generic [ref=e143]:
+                          - generic [ref=e146]: Quick Scan
+                          - generic [ref=e147]: ~2-5 min
+                        - paragraph [ref=e148]: Fast scan skips tree search and metrics for rapid results.
+                      - button "Deep Research ~25 min Full pipeline with tree search, novelty checking, and proposal synthesis." [active] [ref=e149] [cursor=pointer]:
+                        - generic [ref=e150]:
+                          - generic [ref=e155]: Deep Research
+                          - generic [ref=e156]: ~25 min
+                        - paragraph [ref=e157]: Full pipeline with tree search, novelty checking, and proposal synthesis.
+                      - button "Academic Proposal ~45 min Stricter thresholds and longer timeouts for academic-grade proposals." [ref=e158] [cursor=pointer]:
+                        - generic [ref=e159]:
+                          - generic [ref=e163]: Academic Proposal
+                          - generic [ref=e164]: ~45 min
+                        - paragraph [ref=e165]: Stricter thresholds and longer timeouts for academic-grade proposals.
+                      - button "Literature Review ~10 min Literature search and gap analysis only, no proposal generation." [ref=e166] [cursor=pointer]:
+                        - generic [ref=e167]:
+                          - generic [ref=e170]: Literature Review
+                          - generic [ref=e171]: ~10 min
+                        - paragraph [ref=e172]: Literature search and gap analysis only, no proposal generation.
+                  - generic [ref=e173]:
+                    - text: Research Intent
+                    - generic [ref=e174]:
+                      - text: Proposal Depth
+                      - generic [ref=e175]:
+                        - button "concise" [ref=e176] [cursor=pointer]
+                        - button "standard" [ref=e177] [cursor=pointer]
+                        - button "detailed" [ref=e178] [cursor=pointer]
+                    - generic [ref=e179]:
+                      - text: Novelty Check
+                      - generic [ref=e180]:
+                        - button "light" [ref=e181] [cursor=pointer]
+                        - button "standard" [ref=e182] [cursor=pointer]
+                        - button "thorough" [ref=e183] [cursor=pointer]
+                    - generic [ref=e184]:
+                      - text: Idea Diversity
+                      - generic [ref=e185]:
+                        - button "focused" [ref=e186] [cursor=pointer]
+                        - button "balanced" [ref=e187] [cursor=pointer]
+                        - button "exploratory" [ref=e188] [cursor=pointer]
+                  - button "Advanced Options" [ref=e190] [cursor=pointer]
+                  - button "Start Pipeline" [ref=e193] [cursor=pointer]
+          - generic [ref=e195]:
+            - generic [ref=e197]:
+              - generic [ref=e198]:
+                - generic [ref=e199]: Pipeline Flow
+                - generic [ref=e301]: 26.5 min
+              - generic [ref=e204]:
+                - generic [ref=e210]:
+                  - paragraph [ref=e211]: Literature
+                  - paragraph [ref=e212]: Search & ingest
+                - generic [ref=e219]:
+                  - paragraph [ref=e220]: Gaps
+                  - paragraph [ref=e221]: Identify opportunities
+                - generic [ref=e226]:
+                  - paragraph [ref=e227]: Ideas
+                  - paragraph [ref=e228]: Generate & score
+                - generic [ref=e235]:
+                  - paragraph [ref=e236]: Proposal
+                  - paragraph [ref=e237]: Synthesize & check
+                - generic [ref=e242]:
+                  - paragraph [ref=e243]: Review
+                  - paragraph [ref=e244]: Quality & governance
+                - generic [ref=e250]:
+                  - paragraph [ref=e251]: Export
+                  - paragraph [ref=e252]: Markdown / LaTeX
+              - generic [ref=e305]:
+                - generic [ref=e306]: ESTIMATED COST
+                - generic [ref=e307]:
+                  - generic [ref=e308]: $0.0607
+                  - generic [ref=e309]: Local
+            - generic [ref=e259]:
+              - generic [ref=e260]: System Status
+              - generic [ref=e262]:
+                - generic [ref=e263]:
+                  - generic [ref=e264]: Provider
+                  - generic [ref=e265]: openai
+                - generic [ref=e266]:
+                  - generic [ref=e267]: Governance
+                  - generic [ref=e268]: Enabled
+                - generic [ref=e269]:
+                  - generic [ref=e270]: Memory
+                  - generic [ref=e271]: Enabled
+            - generic [ref=e273]:
+              - generic [ref=e274]: Expected Outputs
+              - generic [ref=e275]:
+                - generic [ref=e276]:
+                  - generic [ref=e280]: Research papers
+                  - generic [ref=e281]: 50-100
+                - generic [ref=e282]:
+                  - generic [ref=e287]: Research gaps
+                  - generic [ref=e288]: 3-5
+                - generic [ref=e289]:
+                  - generic [ref=e292]: Generated ideas
+                  - generic [ref=e293]: 2-10
+                - generic [ref=e294]:
+                  - generic [ref=e299]: Full proposals
+                  - generic [ref=e300]: Per idea
+  - region "Notifications alt+T"

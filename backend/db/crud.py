@@ -6,7 +6,7 @@ from collections.abc import Sequence
 from sqlalchemy import select, func, case, desc, asc
 from sqlalchemy.orm import Session
 
-from backend.db.models import Idea, Paper, PipelineRun, Proposal, ResearchGapDB
+from backend.db.models import Idea, Paper, PaperSourceMarker, PipelineRun, Proposal, ResearchGapDB
 
 # --- Papers ---
 
@@ -203,6 +203,55 @@ def create_proposal(session: Session, idea_id: int, content_md: str, **kwargs) -
 
 def get_proposal_by_idea(session: Session, idea_id: int) -> Proposal | None:
     return session.execute(select(Proposal).where(Proposal.idea_id == idea_id)).scalar_one_or_none()
+
+
+# --- Paper Source Markers (Phase 4 / WP-4B) ---
+
+
+def add_source_marker(session: Session, **kwargs) -> PaperSourceMarker:
+    """Add one marker row WITHOUT committing (governed-boundary primitive)."""
+    marker = PaperSourceMarker(**kwargs)
+    session.add(marker)
+    session.flush()
+    return marker
+
+
+def replace_source_markers(
+    session: Session, proposal_id: int, markers: list[dict]
+) -> list[PaperSourceMarker]:
+    """Atomically replace the marker map for a proposal.
+
+    Used by paper-synthesis persistence: the synthesis-time marker→source list is
+    frozen, then this writes the canonical map in one transaction. Any prior rows
+    for the proposal are deleted first (re-synthesis case).
+    """
+    session.execute(
+        PaperSourceMarker.__table__.delete().where(
+            PaperSourceMarker.proposal_id == proposal_id
+        )
+    )
+    rows: list[PaperSourceMarker] = []
+    for spec in markers:
+        rows.append(add_source_marker(session, proposal_id=proposal_id, **spec))
+    session.flush()
+    return rows
+
+
+def get_source_markers_for_proposal(
+    session: Session, proposal_id: int
+) -> Sequence[PaperSourceMarker]:
+    """Return the marker map for a proposal, ordered by marker_index.
+
+    Each row's ``source_paper`` relationship is loaded so callers (exports, Trust
+    & Sources, evaluator gate) can read bibliographic identity without a second
+    query.
+    """
+    stmt = (
+        select(PaperSourceMarker)
+        .where(PaperSourceMarker.proposal_id == proposal_id)
+        .order_by(PaperSourceMarker.marker_index.asc())
+    )
+    return session.execute(stmt).scalars().all()
 
 
 # --- Pipeline Runs ---

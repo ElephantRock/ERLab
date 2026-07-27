@@ -156,6 +156,43 @@ class Proposal(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
 
 
+class PaperSourceMarker(Base):
+    """Phase 4 / WP-4B — durable marker-to-source map for generated papers.
+
+    The smallest run-scoped source manifest: for each generated paper (one per
+    proposal), one row per cited source carrying the literal ``[SOURCE-N]``
+    marker used in ``proposals.paper_md`` and a link back to the persistent
+    ``papers`` row. Restores the provenance that ``PaperSynthesisStage`` builds
+    in memory and previously discarded (see
+    docs/project/phase4/PHASE_4_SOURCE_PROVENANCE_TRACE.md).
+
+    Truth rules (Phase 4 WP-4C):
+      * A marker without a mapped source is explicitly ``unmapped`` — never
+        silently dropped.
+      * A mapped source with incomplete metadata remains mapped; completeness
+        lives on the ``Paper`` row, not here.
+      * Duplicate references retain one canonical source identity and all
+        marker aliases — two markers may point at the same ``source_paper_id``.
+    """
+
+    __tablename__ = "paper_source_markers"
+    __table_args__ = (
+        UniqueConstraint("proposal_id", "marker_index", name="uq_proposal_marker_index"),
+        Index("ix_paper_source_markers_proposal_id", "proposal_id"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    proposal_id: Mapped[int] = mapped_column(Integer, ForeignKey("proposals.id"), nullable=False)
+    marker_index: Mapped[int] = mapped_column(Integer, nullable=False)
+    marker: Mapped[str] = mapped_column(String(32), nullable=False)  # e.g. "SOURCE-1"
+    source_paper_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("papers.id"), nullable=True)
+    mapping_status: Mapped[str] = mapped_column(String(16), nullable=False, default="mapped")  # mapped | unmapped
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
+
+    proposal: Mapped["Proposal"] = relationship()
+    source_paper: Mapped["Paper | None"] = relationship()
+
+
 class PipelineRun(Base):
     __tablename__ = "pipeline_runs"
     __table_args__ = (
