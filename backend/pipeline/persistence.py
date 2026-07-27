@@ -219,6 +219,11 @@ def _extract_paper_artifact(proposal) -> tuple[str | None, dict | None]:
         # PaperSynthesisStage._evaluate_paper. Stored under paper_meta_json
         # so the API can expose it alongside the paper state.
         "paper_evaluation": meta_dict.get("paper_evaluation"),
+        # Phase 4 / WP-4C: the frozen marker→source map. Each entry is
+        # {marker_index, marker, source_id, mapping_status}. source_id is the
+        # literature Paper.id; persist_proposals resolves it to papers.id and
+        # writes one paper_source_markers row per entry.
+        "source_map": full_paper.get("source_map") or [],
     }
     return paper_md, meta
 
@@ -942,9 +947,10 @@ class PipelinePersistence:
                                     json.dumps(paper_meta) if paper_meta else None
                                 )
                                 existing.proposal_evaluation_json = proposal_eval
-                                session.commit()
+                                session.flush()
+                                proposal_row_id = existing.id
                             else:
-                                crud.create_proposal(
+                                new_proposal = crud.create_proposal(
                                     session,
                                     idea_id=db_idea_row.id,
                                     content_md=proposal.to_markdown(),
@@ -956,9 +962,57 @@ class PipelinePersistence:
                                     ),
                                     proposal_evaluation_json=proposal_eval,
                                 )
+                                proposal_row_id = new_proposal.id
+                            # Phase 4 / WP-4C: persist the frozen marker→source
+                            # map. Resolve each source_id (literature Paper.id)
+                            # to its papers.id row, or leave unmapped. Only write
+                            # when a real paper was synthesized (paper_meta with
+                            # source_map) so failed papers get no markers.
+                            if paper_meta and paper_meta.get("source_map"):
+                                self._persist_source_markers(
+                                    session, proposal_row_id, paper_meta["source_map"]
+                                )
+                            session.commit()
         except Exception as e:
             logger.warning("Failed to persist proposals: %s", e)
             self.warnings.append(f"persist_proposals: {e}")
+
+    @staticmethod
+    def _persist_source_markers(
+        session, proposal_id: int, source_map: list[dict]
+    ) -> None:
+        """Phase 4 / WP-4C — write the marker→source map for one paper.
+
+        Resolves each entry's ``source_id`` (the literature ``Paper.id``) to its
+        ``papers.id`` row. A mapped entry whose source_id cannot be resolved is
+        downgraded to ``unmapped`` rather than dropped or guessed. Unmapped
+        entries are written with ``source_paper_id=None``.
+        """
+        from backend.db import crud
+
+        resolved: list[dict] = []
+        for entry in source_map:
+            marker_index = entry.get("marker_index")
+            marker = entry.get("marker") or f"SOURCE-{marker_index}"
+            source_id = entry.get("source_id")
+            mapping_status = entry.get("mapping_status", "mapped")
+            db_paper_id = None
+            if source_id is not None and mapping_status == "mapped":
+                db_paper = crud.get_paper_by_source_id(session, source_id)
+                if db_paper is None:
+                    # The source was in ctx.all_papers but never persisted
+                    # (e.g. persist_search_results was skipped on a legacy run).
+                    # Downgrade to unmapped rather than guessing or dropping.
+                    mapping_status = "unmapped"
+                else:
+                    db_paper_id = db_paper.id
+            resolved.append({
+                "marker_index": marker_index,
+                "marker": marker,
+                "source_paper_id": db_paper_id,
+                "mapping_status": mapping_status,
+            })
+        crud.replace_source_markers(session, proposal_id, resolved)
 
     def persist_cluster_report(self, cluster_report, db_run_id: int | None) -> None:
         """Write cluster_report_json to PipelineRun (BATCH-38)."""

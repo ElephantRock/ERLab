@@ -268,10 +268,71 @@ async def get_review(idea_id: int):
         "idea_id": idea_id,
         "automated_checks": automated_checks,
         "sources": sources,
+        # Phase 4 / WP-4C: the authoritative marker→source map from the
+        # persisted citation map (paper_source_markers). This is the SAME
+        # source list exports consume; the legacy `sources` field above is
+        # retained for backward compatibility with human-review decisions
+        # keyed on source_ref_hash. `citation_markers` is the source of truth
+        # for which [SOURCE-N] markers exist and what they resolve to.
+        "citation_markers": _load_citation_markers(proposal),
         "human_review": human_review,
         # Explicit note: no aggregate trust score (truth rule).
         "regeneration_available": False,  # WP-2E boundary: no exclusion-aware regen yet
     }
+
+
+def _load_citation_markers(proposal) -> list[dict]:
+    """Phase 4 / WP-4C — load the marker→source map for the review payload.
+
+    Each entry exposes the marker, mapping_status, and (for mapped markers)
+    the resolved bibliographic identity from the linked Paper row. Unmapped
+    markers carry null identity fields — never guessed.
+    """
+    import json as _json
+
+    proposal_id = getattr(proposal, "id", None)
+    if proposal_id is None:
+        return []
+    from backend.db.database import get_session
+    from backend.pipeline.provenance.citation_map import (
+        load_citation_map,
+        _author_list,
+    )
+
+    with get_session() as session:
+        entries = load_citation_map(session, proposal_id)
+    out: list[dict] = []
+    for e in entries:
+        p = e.source_paper
+        if p is not None:
+            out.append({
+                "marker_index": e.marker_index,
+                "marker": e.marker,
+                "mapping_status": e.mapping_status,
+                "source_paper_id": e.source_paper_id,
+                "title": getattr(p, "title", None),
+                "authors": _author_list(p) or None,
+                "year": getattr(p, "year", None),
+                "venue": getattr(p, "venue", None),
+                "doi": getattr(p, "doi", None),
+                "arxiv_id": getattr(p, "arxiv_id", None),
+                "url": getattr(p, "url", None),
+            })
+        else:
+            out.append({
+                "marker_index": e.marker_index,
+                "marker": e.marker,
+                "mapping_status": e.mapping_status,
+                "source_paper_id": None,
+                "title": None,
+                "authors": None,
+                "year": None,
+                "venue": None,
+                "doi": None,
+                "arxiv_id": None,
+                "url": None,
+            })
+    return out
 
 
 @router.post("/{idea_id}/review/sources/decisions", summary="Record a human source-review decision")

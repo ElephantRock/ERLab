@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import logging
 import re
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
 from backend.providers.base import LLMProvider
@@ -28,6 +28,13 @@ class PaperSynthesisResult:
     venue: str
     model_used: str
     source_count: int
+    # Phase 4 / WP-4C: the frozen marker→source map. Each entry is
+    # {marker_index, marker, source_id} where source_id is the literature
+    # Paper.id used to construct [SOURCE-N]. Out-of-range markers emitted by
+    # the model carry source_id=None and mapping_status="unmapped". The map is
+    # built by PaperSynthesisStage.build_source_map and persisted by
+    # persist_proposals into paper_source_markers.
+    source_map: list[dict] = field(default_factory=list)
 
     def to_dict(self) -> dict:
         return asdict(self)

@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import re
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
@@ -1911,7 +1912,13 @@ class PaperSynthesisStage(PipelineStage):
 
         # Format source papers for citation
         source_papers = []
+        # Phase 4 / WP-4C: capture the ordered source_id list so the marker
+        # map can be frozen and persisted. The idx ↔ source_id ↔ [SOURCE-idx]
+        # assignment previously lived only in this stack frame and was lost on
+        # return (see PHASE_4_SOURCE_PROVENANCE_TRACE.md boundary 8).
+        source_ids: list[str] = []
         for idx, p in enumerate(ctx.all_papers[:30], 1):
+            source_ids.append(getattr(p, 'id', None))
             authors = getattr(p, 'authors', None)
             if authors:
                 author_str = ", ".join(
@@ -1998,6 +2005,9 @@ class PaperSynthesisStage(PipelineStage):
                 domain=ctx.domain,
                 proposal_id=idx,
             )
+            # Phase 4 / WP-4C: freeze the marker→source map from the ordered
+            # source list and the actually-emitted markers in the paper.
+            result.source_map = self.build_source_map(source_ids, result.paper_markdown)
             # Convert to dict for storage (compatible shape)
             metadata = self._get_metadata(proposal)
             metadata["full_paper"] = {
@@ -2010,6 +2020,7 @@ class PaperSynthesisStage(PipelineStage):
                 "sections_generated": result.sections_generated,
                 "sections_total": result.sections_total,
                 "synthesis_strategy": "section_wise",
+                "source_map": result.source_map,
             }
             metadata["synthesis_strategy"] = "section_wise"
             logger.info(
@@ -2033,6 +2044,8 @@ class PaperSynthesisStage(PipelineStage):
             )
             metadata = self._get_metadata(proposal)
             if result is not None:
+                # Phase 4 / WP-4C: freeze the marker→source map.
+                result.source_map = self.build_source_map(source_ids, result.paper_markdown)
                 result_dict = result.to_dict()
                 result_dict["synthesis_strategy"] = "monolithic"
                 metadata["full_paper"] = result_dict
@@ -2077,6 +2090,51 @@ class PaperSynthesisStage(PipelineStage):
             proposal.metadata = json.dumps(metadata)
         else:
             proposal.metadata = metadata
+
+    # Phase 4 / WP-4C: freeze the synthesis-time marker→source map.
+    _SOURCE_MARKER_RE = re.compile(r"\[SOURCE-(\d+)\]")
+
+    @classmethod
+    def build_source_map(
+        cls, source_ids: list[str], paper_markdown: str
+    ) -> list[dict]:
+        """Freeze the ordered source list and scan the paper for emitted markers.
+
+        Returns one entry per known source PLUS one entry per out-of-range
+        marker the model emitted. Each entry is::
+
+            {marker_index, marker, source_id, mapping_status}
+
+        where ``mapping_status`` is ``mapped`` for in-range sources (whether or
+        not the model actually cited them — the slot exists) and ``unmapped``
+        for markers the model invented beyond the source list. ``source_id`` is
+        the literature ``Paper.id`` used to build ``[SOURCE-N]``; it is ``None``
+        for unmapped markers — identity is NEVER reconstructed by guessing.
+
+        This map is the durable citation map persisted to
+        ``paper_source_markers``; exports, Trust & Sources, and the evaluation
+        gate all consume it.
+        """
+        source_map: list[dict] = []
+        # 1. Every in-range source gets a mapped slot, even if uncited.
+        for idx, source_id in enumerate(source_ids, start=1):
+            source_map.append({
+                "marker_index": idx,
+                "marker": f"SOURCE-{idx}",
+                "source_id": source_id,
+                "mapping_status": "mapped",
+            })
+        # 2. Scan the generated paper for emitted markers.
+        emitted = {int(n) for n in cls._SOURCE_MARKER_RE.findall(paper_markdown or "")}
+        known = set(range(1, len(source_ids) + 1))
+        for idx in sorted(emitted - known):
+            source_map.append({
+                "marker_index": idx,
+                "marker": f"SOURCE-{idx}",
+                "source_id": None,
+                "mapping_status": "unmapped",
+            })
+        return source_map
 
     async def _evaluate_paper(self, ctx, proposal, metadata, idx) -> None:
         """Phase 1 1D: evaluate the synthesized paper via a thin adapter.

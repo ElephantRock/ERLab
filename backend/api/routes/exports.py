@@ -521,40 +521,69 @@ async def export_run_markdown(run_id: int):
     response_class=PlainTextResponse,
 )
 async def export_run_bibtex(run_id: int):
-    """Export a pipeline run's source papers as BibTeX."""
+    """Export a pipeline run's cited source papers as BibTeX.
+
+    Phase 4 / WP-4C: emits BibTeX for the external sources cited by the run's
+    generated papers, read from the persisted marker→source map
+    (``paper_source_markers``). Replaces the Phase 3 behavior that fabricated a
+    self-citation per idea and never consulted the ``papers`` table. A single
+    ``@misc`` entry for the run itself is still emitted so the run can be cited.
+    """
+    from sqlalchemy import select, text
+
     from backend.db.database import get_session
     from backend.db.crud import get_ideas_for_run
-    from backend.pipeline.export.bibtex_exporter import paper_to_bibtex
-    from backend.pipeline.literature.models import Paper
-    from sqlalchemy import text
+    from backend.db.models import Idea, Proposal
+    from backend.pipeline.provenance.citation_map import (
+        load_citation_map,
+        render_bibliography_bibtex,
+    )
 
     try:
         with get_session() as session:
-            # Get papers linked to the run's ideas via source_papers JSON
             ideas = get_ideas_for_run(session, run_id)
             if not ideas:
                 return PlainTextResponse("% No ideas found for this run.", status_code=404)
 
-            # Get all source papers for this run from the pipeline run's config
             run_row = session.execute(
-                text("SELECT config_json FROM pipeline_runs WHERE id = :rid"),
+                text("SELECT id, domain FROM pipeline_runs WHERE id = :rid"),
                 {"rid": run_id},
             ).fetchone()
-
             if not run_row:
                 return PlainTextResponse("% Run not found.", status_code=404)
 
-            # Fallback: generate BibTeX from idea references
-            entries = []
-            for i, idea in enumerate(ideas, 1):
-                paper = Paper(
-                    id=f"idea:{idea.id}",
-                    title=getattr(idea, "title", f"Idea {i}"),
-                    source="elephant_rock",
-                    authors=[],
-                    year=2026,
+            entries: list[str] = []
+            # One @misc self-entry for the run itself (citable as a unit).
+            entries.append(
+                "@misc{erlab_run_" + str(run_id) + ",\n"
+                + f"  title = {{Elephant Rock Research Lab — Run {run_id}}},\n"
+                + "  author = {{Elephant Rock Research Platform}},\n"
+                + "  note = {Pipeline run generating research proposals and papers},\n"
+                + "}\n"
+            )
+            # External cited sources, from each proposal's marker→source map.
+            # Deduplicate by source_paper_id so a source cited across multiple
+            # papers appears once (canonical identity, all marker aliases).
+            seen_paper_ids: set[int] = set()
+            for idea in ideas:
+                proposal = session.execute(
+                    select(Proposal).where(Proposal.idea_id == idea.id).limit(1)
+                ).scalar_one_or_none()
+                if proposal is None:
+                    continue
+                cm_entries = load_citation_map(session, proposal.id)
+                # Only emit each cited paper once across the whole run.
+                deduped = []
+                for e in cm_entries:
+                    if e.mapping_status != "mapped" or e.source_paper_id is None:
+                        continue
+                    if e.source_paper_id in seen_paper_ids:
+                        continue
+                    seen_paper_ids.add(e.source_paper_id)
+                    deduped.append(e)
+                entries.extend(
+                    render_bibliography_bibtex(deduped, key_prefix=f"erlab_run_{run_id}")
                 )
-                entries.append(paper_to_bibtex(paper))
 
             return PlainTextResponse("\n".join(entries), media_type="application/x-bibtex")
     except Exception as e:
