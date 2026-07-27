@@ -37,7 +37,7 @@ jobs:
 
       - name: Run e2e tests
         run: >
-          pytest -p no:asyncio
+          pytest
           -m "slow"
           --cov=backend
           --cov-report=term-missing

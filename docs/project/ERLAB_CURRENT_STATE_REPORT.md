@@ -73,7 +73,7 @@
 - **122 frontend test files** under `frontend/src/` → ~1031 `it(`/`test(` calls
 - 30 Python skip directives (all environment-gated); 0 frontend skips; 0 `xfail`
 - Major subdirs: `test_pipeline` (247 files), `test_api` (45), `test_ranking` (13), `architecture` (5 invariant seals)
-- pytest config (`pyproject.toml`): `testpaths=["backend/tests"]`, markers `slow/integration/live/requires_lmstudio/flaky`, coverage `fail_under=72`, CI runs `pytest -p no:asyncio -m "not slow and not integration"`
+- pytest config (`pyproject.toml`): `testpaths=["backend/tests"]`, markers `slow/integration/live/requires_lmstudio/flaky`, coverage `fail_under=72`, CI runs `pytest -m "not slow and not integration"` (Phase 4/4G: the prior `-p no:asyncio` flag was removed — it disabled the asyncio plugin required by ~138 legitimate async tests, with no remaining upside after the GOTCHA-001 trio-mode tests were converted; see docs/project/phase4/PHASE_4_TEST_ISOLATION_REPORT.md)
 - See Part 8 for current green/failing state.
 
 ### Generated-artifact locations *[VERIFIED]*
@@ -397,7 +397,7 @@ The proposal-review workspace at `/ideas/:id` survived, but several richer compo
 - 30 Python skip directives total: 6 `@pytest.mark.skipif`, 1 `@pytest.mark.skip`, 23 runtime `pytest.skip()`.
 - All environment-gated (Docker, ChromaDB, LM Studio, opentelemetry, ports, closeout mode).
 - 0 frontend skips. 0 `xfail`.
-- CI selector: `pytest -p no:asyncio -m "not slow and not integration"`.
+- CI selector: `pytest -m "not slow and not integration"`.
 
 ### REPORTED green claims (historical, not current)
 

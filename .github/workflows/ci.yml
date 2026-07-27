@@ -31,7 +31,7 @@ jobs:
 
       - name: Run tests with coverage
         run: >
-          pytest -p no:asyncio
+          pytest
           -m "not slow and not integration"
           --cov=backend
           --cov-report=term-missing

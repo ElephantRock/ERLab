@@ -35,8 +35,14 @@ from backend.config import get_settings  # noqa: E402
 config = context.config
 
 # Interpret the config file for Python logging.
+# Phase 4 / 4G: pass disable_existing_loggers=False so alembic's fileConfig()
+# does not disable every pre-existing logger in the process (e.g.
+# backend.pipeline.gap_analysis.gap_analyzer). When migration tests run in the
+# same pytest session as caplog-based tests, the default True broke caplog
+# capture for any logger created before the migration ran. The matching
+# 'disable_existing_loggers = False' key in alembic.ini documents the intent.
 if config.config_file_name is not None:
-    fileConfig(config.config_file_name)
+    fileConfig(config.config_file_name, disable_existing_loggers=False)
 
 # Target metadata for autogenerate.
 target_metadata = Base.metadata

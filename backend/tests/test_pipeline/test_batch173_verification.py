@@ -26,7 +26,7 @@ def test_all_batch173_tests_pass():
     r = _run([sys.executable, "-m", "pytest",
               "backend/tests/test_pipeline/test_batch173_stage_report.py",
               "backend/tests/test_pipeline/test_batch173_api_expose.py",
-              "-q", "-p", "no:asyncio"])
+              "-q"])
     assert r.returncode == 0, f"Batch173 tests failed:\n{r.stdout}\n{r.stderr}"
     # Count passed
     lines = r.stdout.strip().split("\n")

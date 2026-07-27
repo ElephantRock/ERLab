@@ -1,10 +1,10 @@
 .PHONY: test test-all lint format format-check check bench clean db-migrate
 
 test:
-	python -m pytest -p no:asyncio -m "not slow" --cov=backend --cov-report=term-missing
+	python -m pytest -m "not slow" --cov=backend --cov-report=term-missing
 
 test-all:
-	python -m pytest -p no:asyncio --cov=backend --cov-report=term-missing
+	python -m pytest --cov=backend --cov-report=term-missing
 
 lint:
 	ruff check backend/
@@ -18,7 +18,7 @@ format-check:
 check: lint format-check test
 
 bench:
-	python -m pytest -p no:asyncio -m slow backend/tests/test_benchmarks/ --benchmark-only
+	python -m pytest -m slow backend/tests/test_benchmarks/ --benchmark-only
 
 db-migrate:
 	python -c "from alembic.config import Config; from alembic import command; cfg = Config('alembic.ini'); command.upgrade(cfg, 'head')"

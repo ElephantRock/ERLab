@@ -46,10 +46,22 @@ class TestInternalAlphaReadiness:
 
     def test_06_frontend_routes_complete(self):
         from pathlib import Path
-        app_content = Path("frontend/src/App.tsx").read_text(encoding="utf-8")
-        critical_routes = ["dashboard", "pipeline", "ideas", "gaps", "settings"]
-        for route in critical_routes:
-            assert route in app_content.lower(), f"Missing frontend route: {route}"
+        # Phase 4 / 4G: the frontend redesign moved the route table from
+        # App.tsx to AppRoutes.tsx. The literal 'dashboard' route-name check
+        # was also stale (the redesign renders Dashboard at path "/" via
+        # pages.Dashboard). Check the current route-contract file and the
+        # actual route paths it declares.
+        routes_content = Path("frontend/src/AppRoutes.tsx").read_text(encoding="utf-8")
+        # Current route paths declared in AppRoutes.tsx. Each must appear.
+        critical_route_paths = [
+            'path="/"',            # Dashboard (home)
+            'path="/pipeline/new"',
+            'path="/ideas"',
+            'path="/gaps"',
+            'path="/settings"',
+        ]
+        for route_path in critical_route_paths:
+            assert route_path in routes_content, f"Missing frontend route path: {route_path}"
 
     def test_07_env_example_complete(self):
         from pathlib import Path

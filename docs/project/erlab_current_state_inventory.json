@@ -341,7 +341,7 @@
       "P1B: 121 ranking tests pass",
       "F1.7: 984 frontend tests x5, 320 backend + 4 skipped"
     ],
-    "ci_selector": "pytest -p no:asyncio -m \"not slow and not integration\"",
+    "ci_selector": "pytest -m \"not slow and not integration\"",
     "coverage_fail_under": 72,
     "coverage_file_stale": "data/coverage mtime 2026-06-16 (stale ~5 weeks)"
   },
