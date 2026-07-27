@@ -5,8 +5,14 @@ that the false-confidence cases observed in all six Phase 3 papers are no longer
 possible: a paper with missing provenance / scope drift / conclusion overreach
 is recorded as ``status="blocked"``, never ``status="ready"``. Artifact
 generation remains accessible (the gate does not raise).
+
+The tests are SYNCHRONOUS (using asyncio.run) so they pass under BOTH the
+default asyncio plugin and the canonical selector's ``-p no:asyncio`` flag
+(the WP-4G canonical-run mode). The Phase 3 async tests fail under
+``-p no:asyncio``; these tests deliberately avoid that failure mode.
 """
 
+import asyncio
 from types import SimpleNamespace
 
 import pytest
@@ -30,6 +36,11 @@ def _proposal(paper_md, source_map=None):
     return SimpleNamespace(metadata=md)
 
 
+def _evaluate(stage, ctx, proposal):
+    """Run the async _evaluate_paper gate synchronously."""
+    return asyncio.run(stage._evaluate_paper(ctx, proposal, proposal.metadata, 1))
+
+
 @pytest.fixture
 def stage(fake_provider):
     s = PaperSynthesisStage()
@@ -40,22 +51,20 @@ def stage(fake_provider):
 class TestFalseConfidenceBlocked:
     """The Phase 3 false-confidence cases are now blocked."""
 
-    @pytest.mark.asyncio
-    async def test_markers_without_map_is_blocked_not_ready(self, stage):
+    def test_markers_without_map_is_blocked_not_ready(self, stage):
         """A paper citing [SOURCE-N] with no map → blocked, not ready."""
         ctx = _ctx()
         proposal = _proposal(
             "# Title\n\nAbstract about reasoning.\n\nBody [SOURCE-1].",
             source_map=[],  # no persisted map
         )
-        await stage._evaluate_paper(ctx, proposal, proposal.metadata, 1)
+        _evaluate(stage, ctx, proposal)
         eval_state = proposal.metadata["paper_evaluation"]
         assert eval_state["status"] == "blocked"
         assert eval_state["scope"] == "paper"
         assert any("provenance" in r for r in eval_state["blocking_reasons"])
 
-    @pytest.mark.asyncio
-    async def test_all_unmapped_markers_is_blocked(self, stage):
+    def test_all_unmapped_markers_is_blocked(self, stage):
         ctx = _ctx()
         proposal = _proposal(
             "[SOURCE-1] [SOURCE-2]",
@@ -64,11 +73,10 @@ class TestFalseConfidenceBlocked:
                 {"marker_index": 2, "marker": "SOURCE-2", "mapping_status": "unmapped"},
             ],
         )
-        await stage._evaluate_paper(ctx, proposal, proposal.metadata, 1)
+        _evaluate(stage, ctx, proposal)
         assert proposal.metadata["paper_evaluation"]["status"] == "blocked"
 
-    @pytest.mark.asyncio
-    async def test_off_scope_paper_is_blocked(self, stage):
+    def test_off_scope_paper_is_blocked(self, stage):
         """The Q-Sym drift pattern: neuro-symbolic verifiability → quantization."""
         ctx = _ctx(research_question="neuro-symbolic verifiability for safety-critical systems")
         paper_md = (
@@ -81,13 +89,12 @@ class TestFalseConfidenceBlocked:
         proposal = _proposal(paper_md, source_map=[
             {"marker_index": 1, "marker": "SOURCE-1", "mapping_status": "mapped"},
         ])
-        await stage._evaluate_paper(ctx, proposal, proposal.metadata, 1)
+        _evaluate(stage, ctx, proposal)
         eval_state = proposal.metadata["paper_evaluation"]
         assert eval_state["status"] == "blocked"
         assert any("scope" in r for r in eval_state["blocking_reasons"])
 
-    @pytest.mark.asyncio
-    async def test_overstated_conclusion_is_blocked(self, stage):
+    def test_overstated_conclusion_is_blocked(self, stage):
         """A design+projection paper claiming demonstration without results."""
         ctx = _ctx(research_question="verifiable reasoning systems")
         paper_md = (
@@ -102,13 +109,12 @@ class TestFalseConfidenceBlocked:
         proposal = _proposal(paper_md, source_map=[
             {"marker_index": 1, "marker": "SOURCE-1", "mapping_status": "mapped"},
         ])
-        await stage._evaluate_paper(ctx, proposal, proposal.metadata, 1)
+        _evaluate(stage, ctx, proposal)
         eval_state = proposal.metadata["paper_evaluation"]
         assert eval_state["status"] == "blocked"
         assert any("conclusion" in r for r in eval_state["blocking_reasons"])
 
-    @pytest.mark.asyncio
-    async def test_grounded_on_scope_paper_is_ready(self, stage):
+    def test_grounded_on_scope_paper_is_ready(self, stage):
         """A paper with mapped provenance, on scope, and no overreach is ready."""
         ctx = _ctx(research_question="graph reasoning for LLMs")
         paper_md = (
@@ -126,14 +132,13 @@ class TestFalseConfidenceBlocked:
         proposal = _proposal(paper_md, source_map=[
             {"marker_index": 1, "marker": "SOURCE-1", "mapping_status": "mapped"},
         ])
-        await stage._evaluate_paper(ctx, proposal, proposal.metadata, 1)
+        _evaluate(stage, ctx, proposal)
         eval_state = proposal.metadata["paper_evaluation"]
         assert eval_state["status"] == "ready"
         # Gates still recorded as diagnostics.
         assert "gates" in eval_state
 
-    @pytest.mark.asyncio
-    async def test_artifact_generation_accessible_when_eval_blocked(self, stage):
+    def test_artifact_generation_accessible_when_eval_blocked(self, stage):
         """WP-4D: paper generation remains accessible when evaluation fails.
 
         The full_paper artifact is untouched by the gate; only paper_evaluation
@@ -143,7 +148,7 @@ class TestFalseConfidenceBlocked:
         paper_md = "# Title\n\n[SOURCE-1]."
         proposal = _proposal(paper_md, source_map=[])
         original_paper = proposal.metadata["full_paper"]["paper_markdown"]
-        await stage._evaluate_paper(ctx, proposal, proposal.metadata, 1)
+        _evaluate(stage, ctx, proposal)
         # The artifact is unchanged.
         assert proposal.metadata["full_paper"]["paper_markdown"] == original_paper
         # But the evaluation is blocked.
