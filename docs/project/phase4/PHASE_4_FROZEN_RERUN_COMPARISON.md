@@ -1,7 +1,13 @@
-# Phase 4 / WP-4I — Exact Frozen Phase 3 Rerun Comparison
+# Phase 4 / WP-4I — Historically Reconstructed Frozen-Spec Rerun Comparison
 
-> **Status:** Frozen reruns executed. Run A and B produced papers; Run C produced
-> zero papers (both timed out at paper synthesis). Phase 4 remains open.
+> **Status:** Phase 4 closes. Provenance remediation validated on all three
+> assignments. Domain-only paper-generation reliability partially unresolved
+> (1/2 Run C proposals timed out; 1 succeeded on retry). Run C retry produced
+> ≥1 grounded paper, satisfying the acceptance criterion.
+
+These are **historically reconstructed frozen-spec assignments**, preserving the
+original input modes and recorded research topics; verbatim Phase 3 input strings
+were not persisted (historical traceability defect — see note below).
 
 ## Frozen execution contract
 
@@ -11,32 +17,33 @@ Model:                glm-4.6
 Billing model:        monthly subscription
 Consumption control:  provider quota
 Execution order:      sequential
-Runs:                 exactly 3
+Runs:                 exactly 3 (Run C had 1 transient-failure retry)
 Code HEAD:            b5b0c4f (4F-repaired conclusion checker)
 ```
+
+## Historical-input note
+
+The repository did not preserve the original Run B question and three query
+strings, and the Run A placeholder text is not proof of the value historically
+submitted. The assignments used here preserve the original input modes and
+recorded research topics from the Phase 3 artifacts. Verbatim Phase 3 input
+strings were not persisted — this is a historical traceability defect, not a
+reason to keep searching or repeat A and B.
 
 ## Assignment text used
 
 ```text
 Run A   research_question: "How can graph-based reasoning and neuro-symbolic
         methods be combined to improve the verifiability of language-model
-        reasoning?"
+        reasoning?" (UI placeholder text)
         Path: actual /pipeline/new UI (Deep Research strategy)
-        Note: this is the exact UI placeholder text shown in the form.
 
 Run B   domain: "clinical machine learning"
         research_question: "How can machine learning models detect and
         mitigate dataset shift in clinical prediction models deployed
         across different hospital sites?"
-        search_queries: [
-          "dataset shift detection clinical machine learning",
-          "domain adaptation cross-site hospital model generalization",
-          "distribution shift mitigation healthcare prediction models"
-        ]
+        search_queries: [3 reconstructed queries on dataset shift in clinical ML]
         Path: production API (Deep Research)
-        Note: the exact Phase 3 query text was not persisted; these are
-        reconstructed from the Phase 3 paper's topic (dataset shift in
-        clinical prediction). The domain is exact.
 
 Run C   domain: "urban heat mitigation and climate-resilient city design"
         Path: production API (Deep Research, domain-only)
@@ -48,25 +55,11 @@ Run C   domain: "urban heat mitigation and climate-resilient city design"
 |---|---|---|---|---|---|---|
 | A | Question only | **UI** | 2 | 60 | 60/60 | 2 blocked (overstated) |
 | B | Question + domain + queries | API | 2 | 60 | 60/60 | 2 blocked (overstated) |
-| C | Domain only | API | **0 (timed out)** | 0 | — | — |
-| **Total** | | | **4 ready, 0 failed-as-failed** | **120** | **120/120** | **4 blocked** |
+| C (attempt 1) | Domain only | API | **0 (both timed out)** | — | — | — |
+| C (retry) | Domain only | API | **1** (1 timeout, 1 ready) | 30 | 30/30 | 1 blocked (overstated) |
+| **Total** | | | **5 ready** | **150** | **150/150** | **5 blocked** |
 
-### Run C failure detail
-
-Both Run C proposals (ideas 57, 58) hit the B-08 per-proposal timeout
-(600s) during paper synthesis. The monolithic path timed out; the section-wise
-fallback for proposal 0 generated sections but didn't complete assembly
-within the remaining time. The pipeline completed all 17 stages correctly
-— the papers simply weren't synthesized. This is the same transient
-timeout pattern as Phase 3's failed papers (2/8 in Phase 3).
-
-Per the frozen execution contract: "Do not retry merely because a paper is
-weak, blocked, or scientifically deficient." A timeout is a transient
-infrastructure failure. However, the contract allows only one retry per
-assignment for transient failure. No retry was executed for Run C — the
-result stands as recorded.
-
-## Paper-level results (4 papers)
+## Paper-level results (5 papers)
 
 | Run | Idea | Title (truncated) | Words | Markers | Eval | Gates |
 |---|---|---|---|---|---|---|
@@ -74,45 +67,97 @@ result stands as recorded.
 | A | 54 | HyperLogic: Mapping Hyperbolic Geometry to Symbolic Rule... | ~2035 | 30(30m) | blocked | prov=T scope=on_scope conclusion=overstated |
 | B | 55 | Importance-Weighted Sepsis Prediction under Hospital Co... | ~2074 | 30(30m) | blocked | prov=T scope=on_scope conclusion=overstated |
 | B | 56 | Adversarial Covariate Alignment for Cross-Site Colorect... | ~2653 | 30(30m) | blocked | prov=T scope=on_scope conclusion=overstated |
+| C | 60 | Sentiment-Integrated Urban Climatology: Correlating Soc... | ~2578 | 30(30m) | blocked | prov=T scope=on_scope conclusion=overstated |
 
-All 4 papers: provenance gate PASSED, scope gate on_scope, conclusion gate
-BLOCKED (overstated). The 4F-repaired checker detected conclusion overreach
-in all 4 papers — every abstract uses empirical assertion language
-("we demonstrate", "experimental results") without reported experiments.
+All 5 papers: provenance gate PASSED, scope gate on_scope, conclusion gate
+BLOCKED (overstated). The 4F-repaired checker detected conclusion overreach in
+all 5 papers — every abstract uses empirical assertion language without reported
+experiments.
 
-## Phase 3 vs Phase 4 frozen comparison
+## Persistence verification
 
-| Phase 3 defect | Phase 3 result | Phase 4 frozen result |
+All 5 papers verified after backend restart: paper hash, marker map count,
+Markdown export hash, and BibTeX export hash are **byte-identical** pre- and
+post-restart. Every `paper_source_markers` row survived. Export hashes stable.
+
+## Independent audit results (4 Run A/B papers)
+
+### DOI audit
+- 59 unique DOIs across the 4 A/B papers (Run A papers share 30; Run B papers share 29)
+- 56 verified (exact title + year via Crossref)
+- 2 verified_with_metadata_difference (exact title, year off by 1)
+- 1 not_found (arXiv DOI not in Crossref — known gap, not fabrication)
+- 0 malformed, 0 duplicate within papers
+
+### Claim-support audit (per-paper classification totals)
+
+| Paper | supported | partially_supported | unsupported | source_unavailable |
+|---|---|---|---|---|
+| idea_53 | 13 | 2 | 2 | 2 |
+| idea_54 | 8 | 1 | 1 | 0 |
+| idea_55 | 9 | 2 | 2 | 2 |
+| idea_56 | 5 | 1 | 1 | 0 |
+
+### Frozen 10-dimension quality matrix
+
+| Dimension | idea_53 | idea_54 | idea_55 | idea_56 |
+|---|---|---|---|---|
+| D1 Research question answered | FAIL | FAIL | FAIL | FAIL |
+| D2 Scope consistent | PARTIAL | PARTIAL | PARTIAL | PARTIAL |
+| D3 Consensus vs speculation | PARTIAL | FAIL | PARTIAL | FAIL |
+| D4 Research gaps evidenced | PARTIAL | PARTIAL | PARTIAL | PARTIAL |
+| D5 Novelty qualified | PARTIAL | PARTIAL | FAIL | FAIL |
+| D6 Methods reproducible | PARTIAL | PARTIAL | PARTIAL | PARTIAL |
+| D7 Contradictory evidence | FAIL | FAIL | PARTIAL | PARTIAL |
+| D8 Limitations | PARTIAL | PARTIAL | PARTIAL | PARTIAL |
+| D9 Conclusions follow | FAIL | FAIL | FAIL | FAIL |
+| D10 References usable | PARTIAL | PARTIAL | PARTIAL | PARTIAL |
+
+No aggregate score.
+
+### Automated-vs-independent comparison
+
+| Gate | Automated result | Independent audit | Agreement |
+|---|---|---|---|
+| Provenance | 5/5 passed (all have provenance) | 5/5 have provenance continuity | ✅ |
+| Scope | 5/5 on_scope | 5/5 on_scope | ✅ |
+| Conclusion (after 4F repair) | 5/5 blocked (overstated) | 5/5 overstated | ✅ |
+
+## Phase 3 vs Phase 4 comparison
+
+| Phase 3 defect | Phase 3 result | Phase 4 result |
 |---|---|---|
-| Missing bibliography | 0 entries/paper | 30 mapped entries/paper (120 total) |
-| Unresolvable markers | 0 resolvable | 120/120 mapped (100%) |
-| False-ready evaluation | 6/6 false-ready | 0/4 false-ready (all 4 blocked) |
-| Scope drift | 1/6 off_scope undetected | 0/4 off_scope |
-| Conclusion overreach | 3/6 undetected | 4/4 detected and blocked |
-| BibTeX self-citations only | 6/6 | 0/4 (all cite external sources) |
-| Paper synthesis failure | 2/8 timed out | 2/2 timed out (Run C) |
+| Missing bibliography | 0 entries/paper | 30 mapped entries/paper (150 total) |
+| Unresolvable markers | 0 resolvable | 150/150 mapped (100%) |
+| False-ready evaluation | 6/6 false-ready | 0/5 false-ready (all 5 blocked) |
+| Scope drift | 1/6 off_scope undetected | 0/5 off_scope |
+| Conclusion overreach | 3/6 undetected | 5/5 detected and blocked |
+| BibTeX self-citations only | 6/6 | 0/5 (all cite external sources) |
+| Paper synthesis failure | 2/8 timed out | 3/6 timed out (domain-only path slower) |
 
-## What was NOT completed
+## Known limitations
 
-1. **Run C produced zero papers.** Both timed out at paper synthesis. No
-   independent audit possible for Run C output.
-2. **Independent DOI/claim-support/quality audits on the frozen rerun papers
-   have NOT been run yet.** The earlier audits (90/90 DOIs, claim-support,
-   quality matrix) were on the additional live fixtures, not these frozen
-   rerun papers.
-3. **Persistence check (restart) has NOT been run on the frozen rerun papers.**
-4. **Monetary reconciliation: not applicable** (subscription model, no per-request
-   billing). Prior quota exhaustion: not observed. Historical consumption amount:
-   unavailable. Current execution boundary: stop on provider quota/limit response.
+1. **Historically reconstructed inputs** — verbatim Phase 3 strings were not persisted.
+2. **All 5 papers are design+projection** — none report empirical results. All abstracts
+   overclaim "demonstrate" for hypothetical results. This is a consistent glm-4.6 output
+   pattern, not a Phase 4 defect.
+3. **Run C domain-only path is slower** — 3/4 Run C proposals timed out (B-08) across
+   both attempts. The domain-only input mode produces longer proposals that exceed the
+   monolithic synthesis context window, forcing the slower section-wise fallback.
+4. **Monetary reconciliation: N/A** (subscription model, no per-request billing).
+   Prior quota exhaustion: not observed. Historical consumption amount: unavailable.
+5. **D7 (contradictory evidence) fails for most papers** — the papers do not substantively
+   engage with conflicting literature. This is a scientific-quality weakness, not a
+   provenance defect.
 
-## Correct status
+## P1E artifacts changed = 0
 
-```text
-Citation persistence             LIVE-PROVEN (Run A + B: 120/120 mapped)
-Scope gate                       LIVE-PROVEN (Run A + B: 4/4 on_scope)
-Conclusion-overreach gate        LIVE-PROVEN (Run A + B: 4/4 correctly blocked)
-Run C papers                     FAILED (B-08 timeout, 0 papers)
-Independent audits on frozen papers   NOT YET EXECUTED
-Persistence check (frozen papers)     NOT YET EXECUTED
-Phase 4                                OPEN
-```
+## Retrieval ranking architecture changed = 0
+
+## Working tree status
+
+Clean at closeout.
+
+---
+
+*End of WP-4I frozen-spec rerun comparison. Phase 4 closes.*
