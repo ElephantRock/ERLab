@@ -118,6 +118,20 @@ class GapAnalyzer:
             parsed = extract_json(raw_response)
             result = parsed if isinstance(parsed, dict) else {"gaps": parsed}
 
+            # Phase 4 / 4I live-path repair: glm-4.6 sometimes returns a single
+            # bare gap object (a dict with gap-shaped keys like 'title',
+            # 'gap_type') instead of the requested JSON array, or a dict without
+            # the 'gaps' wrapper key. Without this normalization the gap is
+            # silently discarded by result.get("gaps", []) below, producing 0
+            # gaps from a valid response (the B-09 pattern). Wrap bare gap
+            # objects so they are not lost. This is a parser robustness fix; the
+            # prompt is unchanged.
+            if isinstance(result, dict) and "gaps" not in result:
+                gap_keys = {"title", "description", "gap_type", "potential_impact",
+                            "confidence", "paper_references", "references"}
+                if gap_keys & set(result.keys()):
+                    result = {"gaps": [result]}
+
             # B-09 diagnostic: log the parse outcome for diagnosis when gaps
             # end up empty
             raw_gaps_check = result.get("gaps", []) if isinstance(result, dict) else (result if isinstance(result, list) else [])

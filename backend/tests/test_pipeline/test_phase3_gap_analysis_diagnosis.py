@@ -81,6 +81,29 @@ async def test_valid_gaps_survive_parsing():
 
 
 @pytest.mark.anyio
+async def test_bare_gap_object_without_wrapper_is_recovered():
+    """Phase 4 / 4I: glm-4.6 returns a bare gap dict (no 'gaps' key).
+
+    The prompt asks for a JSON array, but the model sometimes returns a single
+    gap object as a dict. Without the parser normalization (gap_analyzer.py
+    ~line 119), this produced 0 gaps — the B-09 live blocker. The fix wraps a
+    bare gap-shaped dict so it is not silently discarded.
+    """
+    bare_gap = json.dumps({
+        "title": "Bare Gap From Model",
+        "description": "A gap returned as a bare object without a gaps wrapper.",
+        "gap_type": "methodological",
+        "confidence": 0.7,
+        "related_clusters": [0],
+        "potential_impact": "Medium",
+    })
+    analyzer = GapAnalyzer(provider=FakeProvider(bare_gap))
+    gaps, _ = await analyzer.analyze([_make_paper()], domain="AI/NLP", max_gaps=5)
+    assert len(gaps) == 1, "bare gap object must be recovered, not discarded"
+    assert gaps[0].title == "Bare Gap From Model"
+
+
+@pytest.mark.anyio
 async def test_malformed_output_produces_diagnostic(caplog):
     """Case 2: Malformed output produces an explicit warning, not silent empty."""
     import logging
