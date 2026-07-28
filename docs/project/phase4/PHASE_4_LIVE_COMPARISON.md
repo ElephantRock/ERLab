@@ -1,9 +1,16 @@
-# Phase 4 / WP-4I — Live Remediation Validation & Phase 3 Comparison
+# Phase 4 / WP-4I — Live Remediation Validation (additional live runs)
 
-> **Status:** 4I complete. All three frozen assignments produced citation-mapped,
-> bibliography-bearing, exportable papers through the production orchestration path.
-> Run A used the actual `/pipeline/new` UI. Provider: z.ai glm-4.6.
-> **Persistence verified after application restart.**
+> **Status:** Phase 4 provenance path live-demonstrated. Final acceptance remains
+> pending exact frozen reruns, comprehensive independent audits, final code
+> verification, and spend reconciliation.
+>
+> These six papers are **additional Phase 4 live fixtures**, NOT the required
+> frozen Phase 3-versus-Phase 4 comparison reruns. The original Phase 3
+> assignments (graph-based reasoning/neuro-symbolic; dataset-shift in clinical
+> ML; urban heat/climate-resilient cities) were not used — equivalent topics
+> were substituted because the original input text was not recoverable from
+> the Phase 3 artifacts. The frozen comparison requires rerunning the exact
+> original assignments under new explicit spend authorization.
 
 ## Authorization (frozen before execution)
 
@@ -73,9 +80,11 @@ post-restart. Every `paper_source_markers` row survived. Export hashes stable.
 | 9 | Review of deep learning: concepts, CNN architectures... | 10.1186/s40537-021-00444-8 | (not individually re-checked) |
 | 10 | Deep learning in histopathology | 10.1038/s41591-021-01343-4 | ✅ verified |
 
-5/10 DOIs independently verified via Crossref API (100% match). All 10 carry
-real titles, authors, years, and venues from the Crossref/PubMed/OpenAlex
-retrieval. **0 hallucinated references** in the sample.
+25/90 unique DOIs independently verified via Crossref API (100% match, 0 not-found,
+0 metadata mismatches). The remaining 65 unique DOIs have not been individually
+re-checked. All 90 carry real titles from Crossref/PubMed/OpenAlex retrieval
+(provenance continuity), but existence has been independently verified for only
+the 25 sampled DOIs, not all 90.
 
 ## Claim-support audit (≥12 relationships)
 
@@ -145,4 +154,82 @@ Clean at closeout.
 
 ---
 
-*End of WP-4I. Phase 4 complete: 4A–4I all executed.*
+---
+
+## Post-code verification (at HEAD b0b88a4, includes gap-analysis fix 95ac345)
+
+After the 4I production-code change (commit `95ac345`, gap-analysis bare-gap-object
+recovery), the full verification suite was re-run:
+
+```
+Canonical backend selector:  4831 passed, 0 failed, 47 skipped, exit 0
+Architecture:                41 passed, 0 failed
+Ranking:                     253 passed, 3 skipped
+Controlled integrations:     14 passed (P1 + P2 + P4)
+Frontend typecheck:          PASS (exit 0)
+Frontend tests:              988 passed
+Frontend build:              PASS (exit 0)
+Frontend lint:               0 errors
+Frontend budgets:            all hold (TS, API, lint)
+```
+
+The gap-analysis production fix did not regress any suite. The +1 vs the 4G
+baseline (4830→4831) is the new `test_bare_gap_object_without_wrapper_is_recovered`
+regression test from commit `95ac345`.
+
+## Comprehensive citation audit (all 180 markers across 6 papers)
+
+```
+Total markers:               180
+Mapped:                      180/180 (100%)
+Unmapped:                    0
+Missing DOI:                 0
+Missing title:               0
+Missing authors:             10  (metadata gaps from original providers)
+Missing year:                30  (metadata gaps from original providers)
+Duplicate DOIs within paper: 0
+Unique DOIs across all papers: 90  (each appears in 2 papers — same source corpus
+                                    per run's two ideas; canonical identity retained)
+DOI existence independently verified (Crossref API):
+  25/90 unique DOIs sampled (stratified), 100% match, 0 not-found, 0 mismatch.
+  Remaining 65 DOIs: provenance continuity established (mapped to Paper rows with
+  real metadata from Crossref/PubMed/OpenAlex), but existence not independently
+  re-verified via Crossref.
+```
+
+## Claim-support audit (sample: Run C idea 47)
+
+```
+Sentences containing [SOURCE-N] citations:  9
+Required minimum:                           12 (or all where fewer exist)
+Auditable claim-source relationships:       9 (the ceiling for this paper)
+```
+
+All 9 claim-source relationships point to mapped sources with real DOIs. The
+paper has 30 mapped markers but only 9 sentences contain distinct claim-source
+attributions — many markers appear in context/lists rather than supporting
+specific claims. This is a legitimate finding about the paper's citation
+density, not a Phase 4 defect.
+
+## Correct status
+
+```
+4A–4H                                    COMPLETE
+4G                                       COMPLETE
+4I live provenance path                  SUBSTANTIALLY VALIDATED
+4I frozen comparison (exact Phase 3)     NOT EXECUTED
+Independent citation audit               PARTIAL — 25/90 DOIs verified, all 180 mapped
+Independent claim audit                  PARTIAL — 9 relationships in 1/6 papers
+Post-code verification at b0b88a4        COMPLETE — 0 failures
+Spend-cap compliance                     UNVERIFIED — cost API unavailable
+Phase 4                                  OPEN
+```
+
+The six papers are recorded as **additional Phase 4 live fixtures**, not as
+satisfaction of the frozen Phase 3-versus-Phase 4 comparison criterion.
+
+---
+
+*End of WP-4I follow-up. Phase 4 provenance path live-demonstrated; final
+acceptance pending exact frozen reruns, comprehensive audits, and spend
+reconciliation.*
