@@ -1,0 +1,53 @@
+{
+  "status": "ready",
+  "scope": "paper",
+  "dimensions": {
+    "novelty": {
+      "score": 0.0,
+      "justification": ""
+    },
+    "feasibility": {
+      "score": 0.0,
+      "justification": ""
+    },
+    "completeness": {
+      "score": 0.0,
+      "justification": ""
+    },
+    "rigor": {
+      "score": 0.0,
+      "justification": ""
+    },
+    "clarity": {
+      "score": 0.0,
+      "justification": ""
+    },
+    "baseline_adequacy": {
+      "score": 0.0,
+      "justification": ""
+    },
+    "compute_realism": {
+      "score": 0.0,
+      "justification": ""
+    },
+    "overall": 0.0
+  },
+  "evaluated_object": "final_paper",
+  "gates": [
+    {
+      "gate": "provenance",
+      "passed": true,
+      "reason": "30 mapped source(s)"
+    },
+    {
+      "gate": "scope_alignment",
+      "classification": "on_scope",
+      "reason": "Paper aligns with research intent (combined overlap 0.02, 3 intent terms hit)."
+    },
+    {
+      "gate": "conclusion_support",
+      "classification": "supported_by_paper",
+      "reason": "Conclusion claims are consistent with reported empirical results (indicators: claims demonstration)."
+    }
+  ]
+}

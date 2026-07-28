@@ -1,0 +1,49 @@
+{
+  "run_id": "run_964950b9fceb",
+  "ideas": [
+    {
+      "idea_id": 47,
+      "title": "Physiologically-Informed Autoencoders for Clinical Trial Anomaly Detection",
+      "paper_words": 2258,
+      "markers_total": 30,
+      "markers_mapped": 30,
+      "eval_status": "ready",
+      "gates": [
+        [
+          "provenance",
+          true
+        ],
+        [
+          "scope_alignment",
+          "on_scope"
+        ],
+        [
+          "conclusion_support",
+          "supported_by_paper"
+        ]
+      ]
+    },
+    {
+      "idea_id": 48,
+      "title": "Equitable Multimodal Biomarkers for Neurodegenerative Disease Diagnosis",
+      "paper_words": 2534,
+      "markers_total": 30,
+      "markers_mapped": 30,
+      "eval_status": "ready",
+      "gates": [
+        [
+          "provenance",
+          true
+        ],
+        [
+          "scope_alignment",
+          "on_scope"
+        ],
+        [
+          "conclusion_support",
+          "supported_by_paper"
+        ]
+      ]
+    }
+  ]
+}
