@@ -1,0 +1,111 @@
+{
+  "audit_type": "independent_claim_support",
+  "auditor": "subagent_read-only_review",
+  "papers_audited": 6,
+  "date": "2026-07-28",
+  "summary": {
+    "total_claim_source_relationships": "varies by paper (5-21)",
+    "papers_meeting_12_threshold": 3,
+    "papers_failing_12_threshold": 3,
+    "papers_with_empirical_results": 0,
+    "papers_with_abstract_overclaim": 5,
+    "papers_gate_flagged_as_overstated": 1,
+    "papers_audit_finds_overstated": 5,
+    "gate_missed": 4
+  },
+  "per_paper": {
+    "idea_47": {
+      "title": "Physiologically-Informed Autoencoders for Clinical Trial Anomaly Detection",
+      "claim_source_relationships": 10,
+      "meets_threshold": false,
+      "supported": 6,
+      "partially_supported": 4,
+      "unsupported": 0,
+      "empirical_results": false,
+      "abstract_overclaim": "We demonstrate that incorporating domain knowledge... significantly improves detection",
+      "gate_classification": "supported_by_paper",
+      "audit_classification": "overstated",
+      "gate_correct": false
+    },
+    "idea_48": {
+      "title": "Equitable Multimodal Biomarkers for Neurodegenerative Disease Diagnosis",
+      "claim_source_relationships": 5,
+      "meets_threshold": false,
+      "supported": 2,
+      "partially_supported": 3,
+      "unsupported": 0,
+      "empirical_results": false,
+      "abstract_overclaim": "Experimental validation on retrospective cohorts demonstrates... superior diagnostic accuracy",
+      "gate_classification": "supported_by_paper",
+      "audit_classification": "overstated",
+      "gate_correct": false,
+      "note": "Worst paper: fewest sources + most flagrant false empirical claim"
+    },
+    "idea_49": {
+      "title": "Adaptive Hybrid Split-Federated Learning for Heterogeneous Medical Imaging",
+      "claim_source_relationships": 21,
+      "meets_threshold": true,
+      "supported": 13,
+      "partially_supported": 6,
+      "unsupported": 1,
+      "empirical_results": false,
+      "abstract_overclaim": "Experimental results on benchmark medical imaging datasets indicate...",
+      "gate_classification": "supported_by_paper",
+      "audit_classification": "overstated",
+      "gate_correct": false,
+      "source_mismatch": "S24 (power-grid FL paper) cited for medical data silos",
+      "self_disclosed_gap": "Split Learning mechanics derived from internal reasoning (no source available)"
+    },
+    "idea_50": {
+      "title": "Latency-Optimized Blockchain Consensus for Federated Clinical Workflows",
+      "claim_source_relationships": 14,
+      "meets_threshold": true,
+      "supported": 9,
+      "partially_supported": 4,
+      "unsupported": 0,
+      "empirical_results": false,
+      "abstract_overclaim": "none (properly hedged with 'Expected results indicate')",
+      "gate_classification": "supported_by_paper",
+      "audit_classification": "supported_by_paper",
+      "gate_correct": true,
+      "note": "Best-behaved paper: abstract and conclusion properly hedged"
+    },
+    "idea_51": {
+      "title": "Causal Intervention Benchmark for Neuro-Symbolic Component Interaction",
+      "claim_source_relationships": 13,
+      "meets_threshold": true,
+      "supported": 11,
+      "partially_supported": 1,
+      "unsupported": 0,
+      "empirical_results": false,
+      "abstract_overclaim": "Extensive validation... demonstrates that CIB can effectively distinguish...",
+      "gate_classification": "supported_by_paper",
+      "audit_classification": "borderline (conclusion hedged, abstract overclaims)",
+      "gate_correct": "partially (conclusion OK, abstract overclaims)"
+    },
+    "idea_52": {
+      "title": "Formal Verification Wrapper for Neuro-Symbolic Agents in Safety-Critical Control",
+      "claim_source_relationships": 6,
+      "meets_threshold": false,
+      "supported": 5,
+      "partially_supported": 1,
+      "unsupported": 0,
+      "empirical_results": false,
+      "abstract_overclaim": "We demonstrate that this architecture significantly reduces safety violations",
+      "gate_classification": "blocked (conclusion_support=overstated)",
+      "audit_classification": "overstated",
+      "gate_correct": true,
+      "note": "The only paper the gate correctly flagged"
+    }
+  },
+  "cross_cutting_findings": {
+    "zero_empirical_results": "All 6 papers are design+projection. None report experiments, benchmarks, or measured numbers.",
+    "gate_underperformance": "The 4F conclusion-overreach heuristic caught 1/5 overstatement cases. The 4 missed cases share the same pattern: abstract uses 'demonstrates'/'experimental results indicate' for hypothetical results. The heuristic scans the conclusion section, but the overclaims are often in the abstract.",
+    "provenance_vs_support": "180/180 manifest markers are mapped (provenance continuity holds), but 3 papers use fewer than half their mapped sources in actual prose (idea_47: 8/30, idea_52: 6/30, idea_48: 5/30). A persisted mapping proves the marker resolves, not that the paper substantively drew on the source.",
+    "source_mismatches": [
+      "idea_49 S24: power-grid FL paper cited for medical data silos (unsupported)",
+      "idea_48 S17: computational psychiatry cited for Alzheimer's biomarkers (borderline unsupported)",
+      "idea_50 S4: Personalized FL cited for blockchain DPoS stake-grinding (topical mismatch)"
+    ]
+  }
+}
