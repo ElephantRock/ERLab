@@ -1,0 +1,26 @@
+{
+  "run_id": "run_1d99c96f17c7",
+  "domain": "urban heat mitigation and climate-resilient city design",
+  "config": {
+    "generation_rounds": 1,
+    "ideas_per_round": 2,
+    "max_gaps": 5,
+    "quality_settings": {
+      "proposal_depth": "standard",
+      "effective_min_words": {
+        "abstract": 150,
+        "introduction": 400,
+        "related_work": 300,
+        "proposed_method": 600,
+        "expected_contributions": 150,
+        "evaluation_plan": 300,
+        "timeline": 100,
+        "risk_mitigation": 150
+      },
+      "novelty_depth": "standard",
+      "effective_novelty_top_k": 20,
+      "idea_diversity": "balanced",
+      "effective_ideator_temperature": 0.7
+    }
+  }
+}

@@ -1,0 +1,56 @@
+{
+  "status": "blocked",
+  "scope": "paper",
+  "dimensions": {
+    "novelty": {
+      "score": 0.0,
+      "justification": ""
+    },
+    "feasibility": {
+      "score": 0.0,
+      "justification": ""
+    },
+    "completeness": {
+      "score": 0.0,
+      "justification": ""
+    },
+    "rigor": {
+      "score": 0.0,
+      "justification": ""
+    },
+    "clarity": {
+      "score": 0.0,
+      "justification": ""
+    },
+    "baseline_adequacy": {
+      "score": 0.0,
+      "justification": ""
+    },
+    "compute_realism": {
+      "score": 0.0,
+      "justification": ""
+    },
+    "overall": 0.0
+  },
+  "evaluated_object": "final_paper",
+  "blocking_reasons": [
+    "conclusion: Abstract/conclusion uses empirical/causal claim language (claims causal effect; claims demonstration; claims outperformance; claims significant improvement/outperformance; self-claim: 'we demonstrate') but the paper reports no empirical results."
+  ],
+  "gates": [
+    {
+      "gate": "provenance",
+      "passed": true,
+      "reason": "30 mapped source(s)"
+    },
+    {
+      "gate": "scope_alignment",
+      "classification": "on_scope",
+      "reason": "Paper aligns with research intent (combined overlap 0.05, 6 intent terms hit)."
+    },
+    {
+      "gate": "conclusion_support",
+      "classification": "overstated",
+      "reason": "Abstract/conclusion uses empirical/causal claim language (claims causal effect; claims demonstration; claims outperformance; claims significant improvement/outperformance; self-claim: 'we demonstrate') but the paper reports no empirical results."
+    }
+  ]
+}

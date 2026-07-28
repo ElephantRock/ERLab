@@ -1,0 +1,182 @@
+[
+  {
+    "marker_index": 1,
+    "marker": "SOURCE-1",
+    "source_paper_id": 1269,
+    "mapping_status": "mapped"
+  },
+  {
+    "marker_index": 2,
+    "marker": "SOURCE-2",
+    "source_paper_id": 220,
+    "mapping_status": "mapped"
+  },
+  {
+    "marker_index": 3,
+    "marker": "SOURCE-3",
+    "source_paper_id": 146,
+    "mapping_status": "mapped"
+  },
+  {
+    "marker_index": 4,
+    "marker": "SOURCE-4",
+    "source_paper_id": 805,
+    "mapping_status": "mapped"
+  },
+  {
+    "marker_index": 5,
+    "marker": "SOURCE-5",
+    "source_paper_id": 2858,
+    "mapping_status": "mapped"
+  },
+  {
+    "marker_index": 6,
+    "marker": "SOURCE-6",
+    "source_paper_id": 1762,
+    "mapping_status": "mapped"
+  },
+  {
+    "marker_index": 7,
+    "marker": "SOURCE-7",
+    "source_paper_id": 1769,
+    "mapping_status": "mapped"
+  },
+  {
+    "marker_index": 8,
+    "marker": "SOURCE-8",
+    "source_paper_id": 1925,
+    "mapping_status": "mapped"
+  },
+  {
+    "marker_index": 9,
+    "marker": "SOURCE-9",
+    "source_paper_id": 774,
+    "mapping_status": "mapped"
+  },
+  {
+    "marker_index": 10,
+    "marker": "SOURCE-10",
+    "source_paper_id": 2859,
+    "mapping_status": "mapped"
+  },
+  {
+    "marker_index": 11,
+    "marker": "SOURCE-11",
+    "source_paper_id": 2860,
+    "mapping_status": "mapped"
+  },
+  {
+    "marker_index": 12,
+    "marker": "SOURCE-12",
+    "source_paper_id": 1069,
+    "mapping_status": "mapped"
+  },
+  {
+    "marker_index": 13,
+    "marker": "SOURCE-13",
+    "source_paper_id": 1799,
+    "mapping_status": "mapped"
+  },
+  {
+    "marker_index": 14,
+    "marker": "SOURCE-14",
+    "source_paper_id": 942,
+    "mapping_status": "mapped"
+  },
+  {
+    "marker_index": 15,
+    "marker": "SOURCE-15",
+    "source_paper_id": 2861,
+    "mapping_status": "mapped"
+  },
+  {
+    "marker_index": 16,
+    "marker": "SOURCE-16",
+    "source_paper_id": 2862,
+    "mapping_status": "mapped"
+  },
+  {
+    "marker_index": 17,
+    "marker": "SOURCE-17",
+    "source_paper_id": 2863,
+    "mapping_status": "mapped"
+  },
+  {
+    "marker_index": 18,
+    "marker": "SOURCE-18",
+    "source_paper_id": 1891,
+    "mapping_status": "mapped"
+  },
+  {
+    "marker_index": 19,
+    "marker": "SOURCE-19",
+    "source_paper_id": 2864,
+    "mapping_status": "mapped"
+  },
+  {
+    "marker_index": 20,
+    "marker": "SOURCE-20",
+    "source_paper_id": 2865,
+    "mapping_status": "mapped"
+  },
+  {
+    "marker_index": 21,
+    "marker": "SOURCE-21",
+    "source_paper_id": 1875,
+    "mapping_status": "mapped"
+  },
+  {
+    "marker_index": 22,
+    "marker": "SOURCE-22",
+    "source_paper_id": 1931,
+    "mapping_status": "mapped"
+  },
+  {
+    "marker_index": 23,
+    "marker": "SOURCE-23",
+    "source_paper_id": 1932,
+    "mapping_status": "mapped"
+  },
+  {
+    "marker_index": 24,
+    "marker": "SOURCE-24",
+    "source_paper_id": 1933,
+    "mapping_status": "mapped"
+  },
+  {
+    "marker_index": 25,
+    "marker": "SOURCE-25",
+    "source_paper_id": 1935,
+    "mapping_status": "mapped"
+  },
+  {
+    "marker_index": 26,
+    "marker": "SOURCE-26",
+    "source_paper_id": 1878,
+    "mapping_status": "mapped"
+  },
+  {
+    "marker_index": 27,
+    "marker": "SOURCE-27",
+    "source_paper_id": 1940,
+    "mapping_status": "mapped"
+  },
+  {
+    "marker_index": 28,
+    "marker": "SOURCE-28",
+    "source_paper_id": 2049,
+    "mapping_status": "mapped"
+  },
+  {
+    "marker_index": 29,
+    "marker": "SOURCE-29",
+    "source_paper_id": 1881,
+    "mapping_status": "mapped"
+  },
+  {
+    "marker_index": 30,
+    "marker": "SOURCE-30",
+    "source_paper_id": 1882,
+    "mapping_status": "mapped"
+  }
+]
