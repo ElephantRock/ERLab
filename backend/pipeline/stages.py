@@ -2423,14 +2423,26 @@ class PaperSynthesisStage(PipelineStage):
                     conc_lines.append(s)
             conclusion = " ".join(conc_lines)
 
-        # has_empirical_results: inferred from a results/experiments section.
+        # has_empirical_results: inferred from the presence of ACTUAL results
+        # sections (not evaluation-PLAN or expected-results sections). Design+
+        # projection papers have "## Evaluation" describing their plan, and
+        # "Expected Results" sections — neither constitutes empirical results.
         has_results = False
         if paper_md:
             lower = paper_md.lower()
-            has_results = any(
-                h in lower for h in ("## results", "# results", "## evaluation",
-                                     "# evaluation", "## experiments", "# experiments")
+            # Only count results if there's a results section AND it's NOT
+            # an "expected results" or "evaluation plan" section.
+            has_results_heading = any(
+                h in lower for h in ("## results", "# results")
             )
+            has_expected_results = "expected results" in lower
+            has_experiments_heading = any(
+                h in lower for h in ("## experiments", "# experiments",
+                                     "## experimental setup", "# experimental setup")
+            )
+            # Actual results: results heading without "expected" qualifier,
+            # OR experiments heading (which implies experiments were run).
+            has_results = (has_results_heading and not has_expected_results) or has_experiments_heading
 
         return classify_conclusion_support(
             abstract=abstract,

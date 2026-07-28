@@ -1,111 +1,101 @@
 {
-  "audit_type": "ten_dimension_research_quality_matrix",
+  "audit_type": "ten_dimension_research_quality_matrix_frozen_rubric",
   "papers_audited": 6,
   "date": "2026-07-28",
-  "dimensions": {
-    "D1_novelty": "Does the paper articulate a novel contribution beyond cited literature?",
-    "D2_scope_consistency": "Does the paper address the stated research question/domain throughout?",
-    "D3_methodology_rigor": "Is the methodology described with sufficient technical detail?",
-    "D4_literature_grounding": "Are claims grounded in cited sources (not fabricated)?",
-    "D5_feasibility": "Is the proposed approach technically feasible?",
-    "D6_reproducibility": "Could the work be reproduced from the description?",
-    "D7_contradiction_check": "Are there internal contradictions in claims vs evidence?",
-    "D8_limitations": "Does the paper acknowledge its limitations honestly?",
-    "D9_conclusion_support": "Do the conclusions follow from the presented evidence?",
-    "D10_references_quality": "Are the cited references real, relevant, and correctly attributed?"
+  "rubric": {
+    "D1": "Research question answered",
+    "D2": "Scope consistent",
+    "D3": "Consensus versus speculation distinguished",
+    "D4": "Research gaps evidenced",
+    "D5": "Novelty appropriately qualified",
+    "D6": "Methods or pipeline reproducible",
+    "D7": "Contradictory evidence acknowledged",
+    "D8": "Limitations material and specific",
+    "D9": "Conclusions follow from cited evidence",
+    "D10": "References and citations usable"
   },
   "matrix": {
-    "idea_47": {
-      "title": "Physiologically-Informed Autoencoders for Clinical Trial Anomaly Detection",
-      "D1_novelty": "PARTIAL — PIAE concept is incremental (autoencoders + physics constraints is explored)",
-      "D2_scope": "PASS — clinical ML domain throughout",
-      "D3_methodology": "PARTIAL — architecture described but no implementation detail",
-      "D4_grounding": "PARTIAL — 10 sources used, mostly well-aligned; 4 partially supported",
-      "D5_feasibility": "PARTIAL — conceptually feasible but no validation",
-      "D6_reproducibility": "FAIL — no code, datasets, hyperparameters, or experimental setup",
-      "D7_contradiction": "UNAVAILABLE — no empirical claims to contradict",
-      "D8_limitations": "PASS — acknowledges hypothetical nature in Expected Results",
-      "D9_conclusion": "FAIL — abstract claims 'demonstrate' but no experiments exist",
-      "D10_references": "PASS — 30 mapped sources, all verified real; 10/30 used in prose"
+    "idea_47_PhysioAutoencoders": {
+      "D1_question_answered": "PARTIAL — proposes a PIAE architecture but does not validate it; the research question (clinical trial anomaly detection via physics-informed autoencoders) is addressed at design level only",
+      "D2_scope": "PASS — clinical ML / anomaly detection throughout",
+      "D3_consensus_vs_speculation": "FAIL — abstract says 'we demonstrate' for results that are hypotheses; does not distinguish established consensus from the paper's own unvalidated speculation",
+      "D4_gaps_evidenced": "PARTIAL — identifies the clinical-data-noise gap but does not evidence it with quantitative gap analysis",
+      "D5_novelty": "PARTIAL — PIAE is incremental over existing physics-informed ML; novelty claimed without comparison to closest prior work",
+      "D6_reproducible": "FAIL — no implementation detail, code, datasets, hyperparameters, or experimental protocol",
+      "D7_contradiction": "PARTIAL — acknowledges that standard autoencoders struggle with clinical data (a counterpoint to the proposed approach) but does not address literature that questions physics-informed constraints",
+      "D8_limitations": "PARTIAL — mentions hypothetical nature in Expected Results but does not specify methodological limits (e.g., what physics constraints are hard to encode)",
+      "D9_conclusions_follow": "FAIL — abstract claims demonstration of improvement; no experiments or measurements to support this",
+      "D10_references": "PASS — 30 mapped sources, all DOIs verified real; 10/30 used in prose with good topical alignment"
     },
-    "idea_48": {
-      "title": "Equitable Multimodal Biomarkers for Neurodegenerative Disease Diagnosis",
-      "D1_novelty": "PARTIAL — multimodal fusion for neurodegenerative disease is well-explored",
+    "idea_48_EquitableBiomarkers": {
+      "D1_question_answered": "PARTIAL — proposes a multimodal fusion framework for neurodegenerative disease but does not validate it",
       "D2_scope": "PASS — clinical ML / neurodegenerative disease throughout",
-      "D3_methodology": "PARTIAL — framework described at high level",
-      "D4_grounding": "PARTIAL — only 5 sources used; 3 partially supported",
-      "D5_feasibility": "PARTIAL — conceptually feasible",
-      "D6_reproducibility": "FAIL — no implementation detail",
-      "D7_contradiction": "UNAVAILABLE — no empirical claims to contradict",
-      "D8_limitations": "PARTIAL — mentions equity considerations but not methodological limits",
-      "D9_conclusion": "FAIL — abstract claims 'Experimental validation demonstrates' with zero experiments",
-      "D10_references": "PARTIAL — 30 mapped but only 5 used; S17 mismatch (computational psychiatry for Alzheimer's)",
-      "scope": "on_scope"
+      "D3_consensus_vs_speculation": "FAIL — abstract says 'Experimental validation demonstrates' for results that are purely hypothetical; most flagrant consensus/speculation confusion in the set",
+      "D4_gaps_evidenced": "PARTIAL — identifies equity gaps in diagnostic AI but does not evidence them quantitatively",
+      "D5_novelty": "PARTIAL — multimodal fusion for neurodegenerative disease is well-explored; equity-focused framing adds incremental novelty",
+      "D6_reproducible": "FAIL — no implementation detail",
+      "D7_contradiction": "FAIL — does not acknowledge literature questioning multimodal fusion efficacy or equity-intervention effectiveness; no counterevidence considered",
+      "D8_limitations": "PARTIAL — mentions equity considerations but not methodological limits of the fusion approach",
+      "D9_conclusions_follow": "FAIL — abstract claims 'Experimental validation demonstrates superior diagnostic accuracy' with zero experiments",
+      "D10_references": "PARTIAL — 30 mapped but only 5 used in prose; S17 (computational psychiatry) mismatched for Alzheimer's extension"
     },
-    "idea_49": {
-      "title": "Adaptive Hybrid Split-Federated Learning for Heterogeneous Medical Imaging",
-      "D1_novelty": "PARTIAL — hybrid split+FL is novel combination but unvalidated",
+    "idea_49_HybridSplitFL": {
+      "D1_question_answered": "PARTIAL — proposes AHSFL for heterogeneous medical imaging but does not validate it",
       "D2_scope": "PASS — federated clinical ML throughout",
-      "D3_methodology": "PARTIAL — architecture described; split-learning details self-admittedly unsourced",
-      "D4_grounding": "PARTIAL — 21 relationships, 1 unsupported (S24 grid paper for medical silos)",
-      "D5_feasibility": "PARTIAL — feasible in principle",
-      "D6_reproducibility": "FAIL — no experiments, no code",
-      "D7_contradiction": "UNAVAILABLE",
-      "D8_limitations": "PARTIAL — self-discloses Split Learning source gap",
-      "D9_conclusion": "FAIL — abstract claims 'Experimental results indicate' with no experiments",
-      "D10_references": "PASS — 30 mapped, 21 used in prose, 1 source mismatch"
+      "D3_consensus_vs_speculation": "FAIL — abstract says 'Experimental results indicate' for results that are hypotheses ('we expect 20-30% faster convergence')",
+      "D4_gaps_evidenced": "PARTIAL — identifies communication-overhead and heterogeneity gaps with some literature support; self-discloses a source gap for Split Learning",
+      "D5_novelty": "PARTIAL — hybrid split+FL is a novel combination; novelty appropriately positioned against prior work",
+      "D6_reproducible": "FAIL — no experiments, no code, no protocol",
+      "D7_contradiction": "PARTIAL — acknowledges FL communication overhead (a challenge for the approach) but does not address literature questioning split learning's communication savings",
+      "D8_limitations": "PARTIAL — self-discloses Split Learning source gap; mentions heterogeneity challenge but not architectural limits",
+      "D9_conclusions_follow": "FAIL — abstract fabricates 'Experimental results'; conclusion says 'demonstrated' for unrun experiments",
+      "D10_references": "PASS — 30 mapped, 21 used in prose; 1 source mismatch (S24 power-grid paper for medical silos)"
     },
-    "idea_50": {
-      "title": "Latency-Optimized Blockchain Consensus for Federated Clinical Workflows",
-      "D1_novelty": "PARTIAL — blockchain+FL+clinical is a novel intersection",
+    "idea_50_BlockchainConsensus": {
+      "D1_question_answered": "PARTIAL — proposes a blockchain consensus protocol for federated clinical workflows but does not validate it",
       "D2_scope": "PASS — federated clinical workflows throughout",
-      "D3_methodology": "PARTIAL — consensus protocol described at design level",
-      "D4_grounding": "PARTIAL — 14 relationships, mostly well-aligned; S4 stake-grinding mismatch",
-      "D5_feasibility": "PARTIAL — blockchain overhead may limit real-time clinical use",
-      "D6_reproducibility": "FAIL — no implementation",
-      "D7_contradiction": "UNAVAILABLE",
-      "D8_limitations": "PASS — properly hedges all claims as 'expected'",
-      "D9_conclusion": "PASS — conclusion uses 'expect to demonstrate' and 'potentially'; no false empirical claims",
-      "D10_references": "PASS — 30 mapped, 14 used, mostly relevant",
-      "scope": "on_scope",
-      "note": "Best-behaved paper of the set"
+      "D3_consensus_vs_speculation": "PASS — abstract and conclusion properly hedge all claims as 'Expected results indicate' and 'expect to demonstrate'; does not confuse speculation with established results",
+      "D4_gaps_evidenced": "PARTIAL — identifies blockchain-latency gap with literature support; does not quantify it",
+      "D5_novelty": "PARTIAL — blockchain+FL+clinical is a novel intersection; novelty qualified against Swarm Learning baseline",
+      "D6_reproducible": "FAIL — no implementation detail, code, or protocol specification",
+      "D7_contradiction": "PARTIAL — acknowledges blockchain overhead as a tradeoff against decentralization; does not address literature questioning blockchain's suitability for real-time clinical workflows",
+      "D8_limitations": "PASS — properly hedges all claims; acknowledges hypothetical nature throughout",
+      "D9_conclusions_follow": "PASS — conclusion uses 'expect to demonstrate' and 'potentially'; no false empirical claims; conclusions follow from the design rationale",
+      "D10_references": "PASS — 30 mapped, 14 used in prose, mostly well-aligned; S4 stake-grinding mismatch is minor",
+      "note": "Best-behaved paper of the set; only paper where the automated gate's 'supported_by_paper' is defensible"
     },
-    "idea_51": {
-      "title": "Causal Intervention Benchmark for Neuro-Symbolic Component Interaction",
-      "D1_novelty": "PARTIAL — CIB benchmark concept is novel but unvalidated",
+    "idea_51_CausalBenchmark": {
+      "D1_question_answered": "PARTIAL — proposes the CIB benchmark design but does not deploy or validate it",
       "D2_scope": "PASS — neuro-symbolic reasoning throughout",
-      "D3_methodology": "PARTIAL — benchmark design described",
-      "D4_grounding": "PASS — 13 relationships, 11 supported, strong topical alignment",
-      "D5_feasibility": "PARTIAL — benchmark is constructible in principle",
-      "D6_reproducibility": "FAIL — no implementation or data",
-      "D7_contradiction": "UNAVAILABLE",
-      "D8_limitations": "PASS — Expected Results section hedges appropriately",
-      "D9_conclusion": "PARTIAL — conclusion hedges ('expected', 'promises') but abstract overclaims ('demonstrates')",
-      "D10_references": "PASS — 30 mapped, 13 used, well-matched"
+      "D3_consensus_vs_speculation": "PARTIAL — conclusion properly hedges ('expected', 'promises') but abstract says 'demonstrates' for hypothetical results; mixed treatment",
+      "D4_gaps_evidenced": "PASS — identifies the gap between apparent and genuine symbolic reasoning with strong literature support (11/13 sources well-matched)",
+      "D5_novelty": "PARTIAL — CIB is a novel benchmark concept; positioned against existing evaluation approaches",
+      "D6_reproducible": "FAIL — no implementation, no data, no benchmark protocol detail sufficient to reproduce",
+      "D7_contradiction": "PARTIAL — acknowledges that some symbolic modules may be post-hoc rationalizations (a challenge to the approach) but does not address literature questioning causal-intervention methodology",
+      "D8_limitations": "PASS — Expected Results section explicitly hedges; acknowledges that validation is future work",
+      "D9_conclusions_follow": "PARTIAL — conclusion is properly hedged but abstract overclaims 'demonstrates'; the two sections are internally inconsistent",
+      "D10_references": "PASS — 30 mapped, 13 used, strong topical alignment; 1 unmapped named citation (Zheng et al.)"
     },
-    "idea_52": {
-      "title": "Formal Verification Wrapper for Neuro-Symbolic Agents in Safety-Critical Control",
-      "D1_novelty": "PARTIAL — FVW concept is novel but unvalidated",
+    "idea_52_FormalVerification": {
+      "D1_question_answered": "PARTIAL — proposes the FVW architecture but does not validate it",
       "D2_scope": "PASS — neuro-symbolic safety throughout",
-      "D3_methodology": "PARTIAL — formal verification wrapper described",
-      "D4_grounding": "PARTIAL — only 6 relationships; all supported but sparse",
-      "D5_feasibility": "PARTIAL — conceptually feasible",
-      "D6_reproducibility": "FAIL — no implementation",
-      "D7_contradiction": "UNAVAILABLE",
-      "D8_limitations": "PARTIAL — mentions safety-autonomy tradeoff",
-      "D9_conclusion": "FAIL — abstract and conclusion both claim 'demonstrate' / 'enhances safety in simulation' with no experiments. GATE CORRECTLY FLAGGED THIS.",
-      "D10_references": "PARTIAL — 30 mapped but only 6 used in prose"
+      "D3_consensus_vs_speculation": "FAIL — abstract says 'we demonstrate' and conclusion says 'enhances safety in simulation' for results that are purely hypothetical",
+      "D4_gaps_evidenced": "PARTIAL — identifies the verifiability gap for safety-critical neuro-symbolic agents but with sparse sourcing (6 relationships)",
+      "D5_novelty": "PARTIAL — FVW concept is novel; positioned against plug-and-play and pure-neural baselines",
+      "D6_reproducible": "FAIL — no implementation detail",
+      "D7_contradiction": "PARTIAL — acknowledges safety-autonomy tradeoff but does not address literature questioning formal-verification scalability for LLM-scale systems",
+      "D8_limitations": "PARTIAL — mentions safety-autonomy tradeoff but not architectural limits",
+      "D9_conclusions_follow": "FAIL — both abstract and conclusion claim demonstration/simulation results that do not exist. AUTOMATED GATE CORRECTLY FLAGGED THIS.",
+      "D10_references": "PARTIAL — 30 mapped but only 6 used in prose; sparse citation density"
     }
   },
   "cross_cutting": {
-    "strongest_dimension": "D2_scope_consistency — all 6 papers stay on their stated topic (0 scope drift)",
-    "weakest_dimension": "D6_reproducibility — all 6 FAIL (no implementation detail, code, or experimental setup)",
-    "second_weakest": "D9_conclusion_support — 4 FAIL, 1 PARTIAL, 1 PASS. 5 of 6 overclaim in the abstract.",
-    "empirical_results": "None of the 6 papers report any experiments, benchmarks, or measured results. All are design+projection papers with 'Expected Results' sections.",
-    "gate_vs_audit_comparison": {
-      "provenance_gate": "5/6 passed (idea_52 blocked). Audit agrees all 6 have provenance continuity.",
-      "scope_gate": "6/6 on_scope. Audit agrees — 0 scope drift.",
-      "conclusion_gate": "1/6 blocked (idea_52). Audit finds 5/6 overstated. Gate missed 4 cases — the overclaims are in abstracts, which the gate does not scan."
-    }
+    "strongest_dimension": "D2 scope consistent — all 6 PASS (0 scope drift)",
+    "weakest_dimension": "D6 reproducible — all 6 FAIL (no implementation detail); D9 conclusions follow — 4 FAIL, 1 PARTIAL, 1 PASS",
+    "D3_consensus_vs_speculation": "5 FAIL, 1 PASS — the papers consistently confuse hypothetical results with established findings, except idea_50 which properly hedges",
+    "D7_contradiction": "0 PASS — no paper substantively addresses conflicting literature or counterevidence. This is NOT unavailable: it concerns whether conflicting literature was considered, and none was.",
+    "empirical_results": "None of the 6 papers report any experiments, benchmarks, or measured results. All are design+projection.",
+    "best_paper": "idea_50 (Blockchain Consensus) — only paper with D3 PASS and D9 PASS; properly hedges all claims",
+    "worst_paper": "idea_48 (Equitable Biomarkers) — fewest sources used (5), most flagrant false empirical claim, D7 FAIL"
   }
 }
