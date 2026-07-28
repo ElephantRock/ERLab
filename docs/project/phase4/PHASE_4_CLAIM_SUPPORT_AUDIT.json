@@ -25,7 +25,8 @@
       "abstract_overclaim": "We demonstrate that incorporating domain knowledge... significantly improves detection",
       "gate_classification": "supported_by_paper",
       "audit_classification": "overstated",
-      "gate_correct": false
+      "gate_correct": false,
+      "source_unavailable": 0
     },
     "idea_48": {
       "title": "Equitable Multimodal Biomarkers for Neurodegenerative Disease Diagnosis",
@@ -39,7 +40,8 @@
       "gate_classification": "supported_by_paper",
       "audit_classification": "overstated",
       "gate_correct": false,
-      "note": "Worst paper: fewest sources + most flagrant false empirical claim"
+      "note": "Worst paper: fewest sources + most flagrant false empirical claim",
+      "source_unavailable": 0
     },
     "idea_49": {
       "title": "Adaptive Hybrid Split-Federated Learning for Heterogeneous Medical Imaging",
@@ -54,7 +56,8 @@
       "audit_classification": "overstated",
       "gate_correct": false,
       "source_mismatch": "S24 (power-grid FL paper) cited for medical data silos",
-      "self_disclosed_gap": "Split Learning mechanics derived from internal reasoning (no source available)"
+      "self_disclosed_gap": "Split Learning mechanics derived from internal reasoning (no source available)",
+      "source_unavailable": 0
     },
     "idea_50": {
       "title": "Latency-Optimized Blockchain Consensus for Federated Clinical Workflows",
@@ -68,7 +71,8 @@
       "gate_classification": "supported_by_paper",
       "audit_classification": "supported_by_paper",
       "gate_correct": true,
-      "note": "Best-behaved paper: abstract and conclusion properly hedged"
+      "note": "Best-behaved paper: abstract and conclusion properly hedged",
+      "source_unavailable": 0
     },
     "idea_51": {
       "title": "Causal Intervention Benchmark for Neuro-Symbolic Component Interaction",
@@ -81,7 +85,8 @@
       "abstract_overclaim": "Extensive validation... demonstrates that CIB can effectively distinguish...",
       "gate_classification": "supported_by_paper",
       "audit_classification": "borderline (conclusion hedged, abstract overclaims)",
-      "gate_correct": "partially (conclusion OK, abstract overclaims)"
+      "gate_correct": "partially (conclusion OK, abstract overclaims)",
+      "source_unavailable": 0
     },
     "idea_52": {
       "title": "Formal Verification Wrapper for Neuro-Symbolic Agents in Safety-Critical Control",
@@ -95,7 +100,8 @@
       "gate_classification": "blocked (conclusion_support=overstated)",
       "audit_classification": "overstated",
       "gate_correct": true,
-      "note": "The only paper the gate correctly flagged"
+      "note": "The only paper the gate correctly flagged",
+      "source_unavailable": 0
     }
   },
   "cross_cutting_findings": {
