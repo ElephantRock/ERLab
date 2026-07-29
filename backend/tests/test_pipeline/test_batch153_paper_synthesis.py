@@ -146,6 +146,8 @@ class FakePipelineResult:
         self.cluster_report = None
         self.critique_history = []
         self.refinement_history = []
+        self.experiments = {}
+        self.result_markers = {}
 
 
 # ════════════════════════════════════════════════════════════
