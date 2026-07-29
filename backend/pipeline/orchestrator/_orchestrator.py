@@ -35,6 +35,7 @@ from backend.pipeline.stages import (
     AdversarialReviewStage,
     CitationAuditStage,
     EvaluationStage,
+    ExperimentExecutionStage,
     ExportStage,
     FeasibilityScoringStage,
     GapAnalysisStage,
@@ -83,6 +84,7 @@ class PipelineOrchestrator:
         "proposal_synthesis",
         "adversarial_review",
         "evaluation",
+        "experiment_execution",  # Phase 5: opt-in, no-op unless experiment_spec_id in params
         "paper_synthesis",
         "citation_audit",
         "proposal_deepening",
@@ -690,6 +692,7 @@ class PipelineOrchestrator:
             self._build_synthesis_stage(ref_validator),
             adversarial_stage,
             EvaluationStage(provider=tp, evaluator=ProposalEvaluator(provider=tp)),
+            ExperimentExecutionStage(),
             PaperSynthesisStage(provider=self._provider),
             CitationAuditStage(provider=thinking_provider),
             ProposalDeepeningStage(deepener=ProposalDeepener(provider=self._provider)),

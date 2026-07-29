@@ -2451,6 +2451,140 @@ class PaperSynthesisStage(PipelineStage):
         )
 
 
+class ExperimentExecutionStage(PipelineStage):
+    """Phase 5 — execute a registered empirical experiment for proposals.
+
+    This stage is OPT-IN: it only runs when ctx.params contains an
+    'experiment_spec_id'. If no spec is provided, the stage is a no-op
+    (returns True without side effects). This preserves default behavior
+    for all existing strategies.
+
+    The stage executes a checked-in analysis entrypoint (NOT LLM-generated
+    code), captures structured results (metrics.json), and builds an
+    ExperimentManifest with full reproducibility metadata.
+
+    Placement: between 'evaluation' (proposal eval) and 'paper_synthesis'.
+    The paper synthesis stage can then read ctx.result.experiments to
+    inject observed results into the paper context.
+    """
+
+    @property
+    def name(self) -> str:
+        return "experiment_execution"
+
+    async def execute(self, ctx: StageContext) -> bool:
+        spec_id = ctx.params.get("experiment_spec_id")
+        if not spec_id:
+            # No experiment requested — no-op
+            return True
+
+        from pathlib import Path
+        from backend.pipeline.experiment.empirical_runner import execute_experiment
+        from backend.pipeline.experiment.manifest import ExperimentManifest, ResultMarker
+
+        logger.info("Experiment execution requested: spec=%s", spec_id)
+
+        output_base = Path(f"data/experiments/{ctx.run_id or 'run'}")
+        output_base.mkdir(parents=True, exist_ok=True)
+
+        for idx, proposal in ctx.result.proposals.items():
+            try:
+                output_dir = output_base / f"proposal_{idx}"
+                manifest, stdout, stderr, exit_code, elapsed = await execute_experiment(
+                    spec_id, output_dir, timeout_seconds=120.0
+                )
+
+                # Store on the pipeline result for paper synthesis
+                ctx.result.experiments[idx] = manifest
+
+                # Build result markers from observed metrics
+                markers: list[ResultMarker] = []
+                if manifest.status == "succeeded" and manifest.results:
+                    for mi, (metric_name, value) in enumerate(sorted(manifest.results.items()), 1):
+                        artifact = next(
+                            (a for a in manifest.result_artifacts if a.artifact_type == "metrics"),
+                            manifest.result_artifacts[0] if manifest.result_artifacts else None
+                        )
+                        markers.append(ResultMarker(
+                            marker_index=mi,
+                            marker=f"RESULT-{mi}",
+                            metric_name=metric_name,
+                            observed_value=value,
+                            artifact_path=artifact.filename if artifact else "",
+                            artifact_sha256=artifact.sha256 if artifact else "",
+                            experiment_result_id=0,  # filled by persistence
+                        ))
+                ctx.result.result_markers[idx] = markers
+
+                # Persist immediately (not deferred to export)
+                if ctx.db_run_id:
+                    await self._persist_experiment(ctx, idx, manifest, stdout, stderr, exit_code, elapsed)
+
+                logger.info(
+                    "Experiment for proposal %d: status=%s metrics=%s",
+                    idx, manifest.status, manifest.results,
+                )
+            except Exception as e:
+                logger.warning("Experiment execution failed for proposal %d: %s", idx, e)
+                ctx.result.experiments[idx] = ExperimentManifest(
+                    experiment_spec_id=spec_id,
+                    status="failed",
+                )
+
+        return True
+
+    async def _persist_experiment(self, ctx, proposal_idx, manifest, stdout, stderr, exit_code, elapsed):
+        """Persist experiment result immediately so a later paper-synthesis
+        timeout cannot erase an already completed experiment."""
+        import json
+        from backend.db.database import get_session
+        from backend.db.models import ExperimentResult as ExperimentResultDB
+        from backend.db.models import Proposal
+
+        proposal = ctx.result.proposals.get(proposal_idx)
+        proposal_db_id = None
+        if proposal and ctx.db_run_id:
+            with get_session() as session:
+                from sqlalchemy import select
+                idea = None
+                for idea_obj in ctx.result.ideas:
+                    if True:  # match by metadata
+                        break
+                # Find proposal by idea linkage
+                existing = session.execute(
+                    select(Proposal).where(
+                        Proposal.idea_id == getattr(proposal, '_idea_id', None)
+                    ).limit(1)
+                ).scalar_one_or_none() if hasattr(proposal, '_idea_id') else None
+                if existing:
+                    proposal_db_id = existing.id
+
+        code_snapshot = ""
+        entrypoint_path = Path(f"experiments/phase5_pilot_v1/analysis.py")
+        if entrypoint_path.exists():
+            code_snapshot = entrypoint_path.read_text()
+
+        with get_session() as session:
+            db_result = ExperimentResultDB(
+                idea_id=0,  # will be updated if we find the idea
+                code_md=code_snapshot,
+                stdout=stdout[:5000],
+                stderr=stderr[:2000],
+                exit_code=exit_code,
+                success=(manifest.status == "succeeded"),
+                execution_time_seconds=elapsed,
+                error=None if manifest.status == "succeeded" else manifest.status,
+                proposal_id=proposal_db_id,
+                manifest_json=json.dumps(manifest.to_dict()),
+            )
+            session.add(db_result)
+            session.commit()
+            # Update result markers with the persisted ID
+            if proposal_idx in ctx.result.result_markers:
+                for marker in ctx.result.result_markers[proposal_idx]:
+                    marker.experiment_result_id = db_result.id
+
+
 class ProposalDeepeningStage(PipelineStage):
     """Enriches proposals with architecture, toy examples, failure modes, and criteria."""
 

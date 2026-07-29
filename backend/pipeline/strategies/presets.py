@@ -39,6 +39,7 @@ def _all_stages_enabled(**overrides: dict) -> dict[str, StageConfig]:
         "proposal_synthesis",
         "adversarial_review",
         "evaluation",
+        "experiment_execution",  # Phase 5: opt-in, no-op unless experiment_spec_id in params
         "paper_synthesis",
         "citation_audit",
         "proposal_deepening",

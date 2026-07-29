@@ -64,6 +64,9 @@ class PipelineResult:
     refinement_history: dict[int, list[dict]] = field(default_factory=dict)
     evaluation_reports: dict[int, UnifiedEvaluationReport] = field(default_factory=dict)
     mechanical_metrics: dict[int, dict[str, float]] = field(default_factory=dict)  # BATCH-64
+    # Phase 5: empirical experiment results (proposal_idx -> manifest)
+    experiments: dict[int, Any] = field(default_factory=dict)  # dict[int, ExperimentManifest]
+    result_markers: dict[int, list] = field(default_factory=dict)  # dict[int, list[ResultMarker]]
     run_id: str = ""
     params_used: dict = field(default_factory=dict)
     persistence_warnings: list[str] = field(default_factory=list)
