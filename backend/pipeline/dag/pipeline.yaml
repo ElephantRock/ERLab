@@ -90,6 +90,7 @@ strategies:
       - proposal_synthesis
       - adversarial_review
       - evaluation
+      - experiment_execution
       - paper_synthesis
       - citation_audit
       - proposal_deepening
@@ -127,6 +128,7 @@ strategies:
       - proposal_synthesis
       - adversarial_review
       - evaluation
+      - experiment_execution
       - paper_synthesis
       - citation_audit
       - proposal_deepening
