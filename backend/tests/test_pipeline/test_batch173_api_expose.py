@@ -96,7 +96,7 @@ def test_api_returns_stage_report_key(mock_run_with_report):
 def test_api_stage_report_has_16_entries(mock_run_with_report):
     """stage_report should have exactly 16 entries for a full run."""
     response = _call_get_run(mock_run_with_report)
-    assert len(response["stage_report"]) == 17
+    assert len(response["stage_report"]) == 18
 
 
 # ── 3. Executed stages have elapsed_s > 0 ───────────────────────────────

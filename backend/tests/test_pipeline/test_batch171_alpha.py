@@ -28,7 +28,7 @@ class TestInternalAlphaReadiness:
     def test_03_all_stage_order_entries(self):
         from backend.pipeline.orchestrator import PipelineOrchestrator
         order = PipelineOrchestrator._STAGE_ORDER
-        assert len(order) == 17
+        assert len(order) == 18
         # Critical stages must be present
         for stage in ["literature_search", "gap_analysis", "idea_generation", "export"]:
             assert stage in order, f"Missing critical stage: {stage}"
@@ -73,7 +73,7 @@ class TestInternalAlphaReadiness:
         """Internal alpha requires 2,500+ tests."""
         # Just verify the module is importable — actual count is in STATE.md
         from backend.pipeline.orchestrator import PipelineOrchestrator
-        assert len(PipelineOrchestrator._STAGE_ORDER) >= 16
+        assert len(PipelineOrchestrator._STAGE_ORDER) >= 17
 
     def test_09_ai_honesty_badge_on_all_exports(self):
         from backend.pipeline.constants import AI_HONESTY_BADGE, AI_HONESTY_BADGE_BRIEF

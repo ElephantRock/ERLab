@@ -88,11 +88,11 @@ class TestOrchestratorYAML:
         assert len(enabled) == 6
 
     def test_03_deep_research_has_16_enabled_stages(self):
-        """deep_research strategy has all 16 enabled stages (17 total incl. trimmer)."""
+        """deep_research strategy has all 17 enabled stages (18 total incl. trimmer)."""
         from backend.pipeline.orchestrator import PipelineOrchestrator
         config = PipelineOrchestrator._load_yaml_strategy("deep_research")
         enabled = {k: v for k, v in config.stages.items() if v.enabled}
-        assert len(enabled) == 16
+        assert len(enabled) == 17
 
     def test_04_unknown_strategy_raises(self):
         """Unknown strategy name raises ValueError."""

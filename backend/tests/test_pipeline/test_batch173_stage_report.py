@@ -131,7 +131,7 @@ def test_all_17_stages_in_report():
     """A complete run should have exactly 17 entries covering all stages."""
     from backend.pipeline.orchestrator import PipelineOrchestrator
     expected_stages = PipelineOrchestrator._STAGE_ORDER
-    assert len(expected_stages) == 17
+    assert len(expected_stages) == 18
 
     # Simulate a run where first 3 executed, rest not_reached
     result = PipelineResult()
@@ -140,7 +140,7 @@ def test_all_17_stages_in_report():
     for name in expected_stages[3:]:
         result.stage_report.append(StageReport(name=name, status="not_reached"))
 
-    assert len(result.stage_report) == 17
+    assert len(result.stage_report) == 18
     reported_names = [r.name for r in result.stage_report]
     for name in expected_stages:
         assert name in reported_names, f"Missing stage: {name}"
