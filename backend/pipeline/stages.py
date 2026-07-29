@@ -2619,6 +2619,7 @@ class ExperimentExecutionStage(PipelineStage):
         """Persist experiment result immediately so a later paper-synthesis
         timeout cannot erase an already completed experiment."""
         import json
+        from pathlib import Path
         from backend.db.database import get_session
         from backend.db.models import ExperimentResult as ExperimentResultDB
         from backend.db.models import Proposal
