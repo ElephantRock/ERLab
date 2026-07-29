@@ -15,6 +15,7 @@ when the model's context is too small for monolithic generation.
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import re
 from dataclasses import asdict, dataclass
@@ -140,27 +141,41 @@ class SectionWiseSynthesizer:
         source_text = "\n".join(source_papers[:20])  # cap total source length
 
         for section_id, section_title, target_words in DEFAULT_SECTIONS:
-            # Select the most relevant sources for this section
-            relevant_sources = self._select_relevant_sources(
-                source_text, section_id, section_title, outline,
-            )
+            try:
+                # Select the most relevant sources for this section
+                relevant_sources = self._select_relevant_sources(
+                    source_text, section_id, section_title, outline,
+                )
 
-            draft = await self._generate_section(
-                section_id=section_id,
-                section_title=section_title,
-                target_words=target_words,
-                outline=outline,
-                proposal_summary=self._summarize_proposal(proposal_text),
-                relevant_sources=relevant_sources,
-                domain=domain,
-            )
-            sections.append(draft)
-            logger.info(
-                "Section '%s': %d words, %d citations",
-                section_title, draft.word_count, len(draft.citations_used),
-            )
+                draft = await self._generate_section(
+                    section_id=section_id,
+                    section_title=section_title,
+                    target_words=target_words,
+                    outline=outline,
+                    proposal_summary=self._summarize_proposal(proposal_text),
+                    relevant_sources=relevant_sources,
+                    domain=domain,
+                )
+                sections.append(draft)
+                logger.info(
+                    "Section '%s': %d words, %d citations",
+                    section_title, draft.word_count, len(draft.citations_used),
+                )
+            except (asyncio.TimeoutError, asyncio.CancelledError):
+                logger.warning(
+                    "Section '%s' cancelled/timed out — assembling partial paper with %d/%d sections",
+                    section_title, len(sections), len(DEFAULT_SECTIONS),
+                )
+                break
+            except Exception as e:
+                logger.warning("Section '%s' failed (non-fatal): %s", section_title, e)
+                # Continue to next section; the failed section is simply omitted
 
-        # Step 4: Assemble
+        # Step 4: Assemble — use whatever sections completed, even if partial
+        if not sections:
+            logger.warning("No sections completed — cannot assemble paper")
+            return None
+
         paper_md = self._assemble_paper(sections, outline, domain, venue, len(source_papers))
         total_words = len(paper_md.split())
 
@@ -174,7 +189,10 @@ class SectionWiseSynthesizer:
             model_used=model_used,
             source_count=len(source_papers),
             outline=outline[:500],
-            consistency_notes="Section-wise generation — sections may need manual coherence review",
+            consistency_notes=(
+                f"Section-wise generation ({len(sections)}/{len(DEFAULT_SECTIONS)} sections completed)"
+                + (" — partial paper assembled after timeout" if len(sections) < len(DEFAULT_SECTIONS) else "")
+            ),
         )
 
     async def _generate_outline(self, proposal_text: str, domain: str) -> str:
