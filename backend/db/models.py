@@ -407,7 +407,12 @@ class ResearchClaim(Base):
 
 
 class ExperimentResult(Base):
-    """Stores experiment execution results for ideas (BATCH-66)."""
+    """Stores experiment execution results for ideas (BATCH-66).
+
+    Phase 5: extended with proposal_id and manifest_json for the empirical
+    execution path. The manifest stores reproducibility metadata only —
+    code/stdout/stderr remain on this row to avoid duplication.
+    """
     __tablename__ = "experiment_results"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
@@ -420,6 +425,9 @@ class ExperimentResult(Base):
     execution_time_seconds: Mapped[float] = mapped_column(Float, default=0.0)
     error: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
+    # Phase 5: empirical execution path
+    proposal_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("proposals.id"), nullable=True)
+    manifest_json: Mapped[str | None] = mapped_column(Text, nullable=True)
 
 
 class RunEvent(Base):
