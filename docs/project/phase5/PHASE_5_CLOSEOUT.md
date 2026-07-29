@@ -141,12 +141,11 @@ Frontend build:                  PASS
 Frontend lint:                   PASS
 Frontend budgets:                all hold
 
-Full canonical selector:         4857 passed, 3 failed (pre-existing batch55), 47 skipped
-  Real pytest exit code:          1 (due to 3 pre-existing failures)
-  Pre-existing failures:          3 (test_batch55_task01 — confirmed pre-existing
-                                  by stash test on ad8934d; 503 from RunService
-                                  test-isolation, not caused by Phase 5)
-  Phase 5 regressions:            0
+Full canonical selector:         4857 passed, 3 failed, 47 skipped
+  Real pytest exit code:          1 (FAILING)
+  Status:                         FAILING
+  No new backend failures were introduced by the Phase 5 closeout corrections.
+  Three Batch 55 failures already present at ad8934d remain unresolved.
 ```
 
 ## What was proven
