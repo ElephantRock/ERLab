@@ -164,6 +164,7 @@ async def trigger_run(request: PipelineRunRequest):
                 proposal_depth=request.proposal_depth,
                 novelty_depth=request.novelty_depth,
                 idea_diversity=request.idea_diversity,
+                experiment_spec_id=request.experiment_spec_id,
             )
             # Mark DB record as completed
             try:

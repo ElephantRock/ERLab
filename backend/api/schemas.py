@@ -24,6 +24,9 @@ class PipelineRunRequest(BaseModel):
     proposal_depth: str = Field(default="standard", pattern="^(concise|standard|detailed)$", description="Controls proposal section minimum word counts")
     novelty_depth: str = Field(default="standard", pattern="^(light|standard|thorough)$", description="Controls how many papers novelty checking compares against")
     idea_diversity: str = Field(default="balanced", pattern="^(focused|balanced|exploratory)$", description="Controls ideator temperature for idea diversity")
+    # Phase 5: opt-in empirical experiment execution. When set, the
+    # ExperimentExecutionStage runs the registered spec's checked-in analysis.
+    experiment_spec_id: str | None = Field(default=None, description="Registered experiment spec ID (e.g. 'phase5-pilot-v1')")
 
 
 class SearchRequest(BaseModel):

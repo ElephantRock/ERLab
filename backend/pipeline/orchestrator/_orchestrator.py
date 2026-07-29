@@ -716,6 +716,7 @@ class PipelineOrchestrator:
         proposal_depth: str | None = None,
         novelty_depth: str | None = None,
         idea_diversity: str | None = None,
+        experiment_spec_id: str | None = None,
     ) -> PipelineResult:
         """Execute the full pipeline from literature search to export.
 
@@ -869,6 +870,8 @@ class PipelineOrchestrator:
             "ideas_per_round": ideas_per,
             "max_gaps": max_gaps,
         }
+        if experiment_spec_id:
+            params["experiment_spec_id"] = experiment_spec_id
         if self._services.evolver:
             evolved = self._services.evolver.propose()
             if generation_rounds is None and "generation_rounds" in evolved:
