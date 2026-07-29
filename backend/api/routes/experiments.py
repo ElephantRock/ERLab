@@ -96,7 +96,7 @@ async def run_idea_experiment(idea_id: int) -> dict:
         evaluation_approach="",
     )
     generator = ExperimentGenerator()
-    code = generator.generate(candidate)
+    code = await generator.generate(candidate)
 
     # Run via existing sandbox
     runner = ExperimentRunner()
