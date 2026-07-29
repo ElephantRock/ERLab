@@ -1,9 +1,10 @@
-"""``erock open|proposal|export`` — research CLI commands (BATCH-34).
+"""``erock open|proposal|export|recover`` — research CLI commands (BATCH-34).
 
 Provides commands for interacting with individual research ideas:
   - ``erock open {id}``     — open idea in browser
   - ``erock proposal {id}`` — generate a proposal for an idea
   - ``erock export {id}``   — export idea to a file
+  - ``erock recover {proposal_id} {experiment_id}`` — recover paper from persisted experiment (Phase 6)
 """
 
 from __future__ import annotations
@@ -164,3 +165,68 @@ def export_idea(
         output_path.write_text("\n".join(lines), encoding="utf-8")
 
     console.print(f"[green]Exported idea {idea_id} to {output_path}[/green]")
+
+
+@app.command("recover")
+def recover_paper(
+    proposal_id: int = typer.Argument(..., help="Proposal ID to write a paper for"),
+    experiment_id: int = typer.Argument(..., help="ExperimentResult ID with succeeded status"),
+    timeout: float = typer.Option(1800.0, "--timeout", help="Synthesis timeout in seconds"),
+):
+    """Phase 6: Recover a paper from a persisted successful experiment.
+
+    Loads the proposal, literature source map, and experiment results from the
+    database, then synthesizes a paper with [RESULT-N] markers. Does NOT rerun
+    any pipeline stages or the experiment.
+    """
+    from backend.pipeline.experiment.paper_recovery import resume_empirical_paper
+
+    console.print(f"[cyan]Recovering paper: proposal={proposal_id} experiment={experiment_id}[/cyan]")
+
+    try:
+        result = _run_async(resume_empirical_paper(proposal_id, experiment_id, timeout))
+    except Exception as e:
+        console.print(f"[red]Recovery failed: {e}[/red]")
+        raise typer.Exit(1)
+
+    if not result.get("success"):
+        console.print(f"[red]Paper synthesis failed: {result.get('error', 'unknown')}[/red]")
+        raise typer.Exit(1)
+
+    console.print(f"[green]Paper synthesized: {result['word_count']} words ({result['synthesis_strategy']})[/green]")
+    console.print(f"  Sections: {result['sections_generated']}/{result['sections_total']}")
+    console.print(f"  Evaluation: {result['eval_status']}")
+
+    if result['blocking_reasons']:
+        for r in result['blocking_reasons']:
+            console.print(f"  [yellow]Blocked: {r}[/yellow]")
+
+    for gate in result['gates']:
+        cls = gate.get('classification', gate.get('passed'))
+        console.print(f"  Gate {gate['gate']}: {cls}")
+
+    # Persist to database
+    import json as _json
+    from backend.db.database import get_session
+    from backend.db.models import Proposal as ProposalModel
+
+    with get_session() as session:
+        prop = session.get(ProposalModel, proposal_id)
+        if prop:
+            prop.paper_md = result['paper_markdown']
+            paper_meta = {
+                "status": "ready",
+                "word_count": result['word_count'],
+                "synthesis_strategy": result['synthesis_strategy'],
+                "paper_evaluation": {
+                    "status": result['eval_status'],
+                    "scope": "paper",
+                    "gates": result['gates'],
+                    **({"blocking_reasons": result['blocking_reasons']} if result['blocking_reasons'] else {}),
+                },
+                "source_map": result['source_map'],
+                "experiment_result_id": result['experiment_result_id'],
+            }
+            prop.paper_meta_json = _json.dumps(paper_meta)
+            session.commit()
+            console.print(f"[green]Paper persisted to proposal {proposal_id}[/green]")
