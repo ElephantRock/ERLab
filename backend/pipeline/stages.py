@@ -1937,6 +1937,23 @@ class PaperSynthesisStage(PipelineStage):
                 line += f"\n  Abstract: {abstract[:500]}"
             source_papers.append(line)
 
+        # Phase 5: build observed-results context for proposals with experiments
+        experiment_contexts: dict[int, str] = {}
+        for idx, manifest in ctx.result.experiments.items():
+            if hasattr(manifest, 'status') and manifest.status == "succeeded":
+                lines = ["", "## OBSERVED RESULTS (empirically measured — cite with [RESULT-N])", ""]
+                markers = ctx.result.result_markers.get(idx, [])
+                for m in markers:
+                    lines.append(
+                        f"[{m.marker}] {m.metric_name} = {m.observed_value} "
+                        f"(source: metrics.json, experiment_result_id: {m.experiment_result_id})"
+                    )
+                lines.append("")
+                lines.append("These results are from an actual executed experiment. You may state")
+                lines.append("'we demonstrate' or 'our results show' ONLY for claims that cite [RESULT-N]")
+                lines.append("markers above. Do not claim empirical results for metrics not listed here.")
+                experiment_contexts[idx] = "\n".join(lines)
+
         for idx, proposal in ctx.result.proposals.items():
             try:
                 # Phase 3 B-08: bound each proposal's synthesis time so the
@@ -1948,7 +1965,9 @@ class PaperSynthesisStage(PipelineStage):
                 await asyncio.wait_for(
                     self._synthesize_paper_for_proposal(
                         idx, proposal, ctx, provider, source_papers, source_ids,
-                        context_window
+                        context_window,
+                        experiment_context=experiment_contexts.get(idx),
+                        result_markers=ctx.result.result_markers.get(idx),
                     ),
                     timeout=self.PER_PROPOSAL_TIMEOUT,
                 )
@@ -1974,7 +1993,7 @@ class PaperSynthesisStage(PipelineStage):
 
     async def _synthesize_paper_for_proposal(
         self, idx, proposal, ctx, provider, source_papers, source_ids,
-        context_window,
+        context_window, experiment_context=None, result_markers=None,
     ) -> None:
         """Synthesize a paper for a single proposal. May raise TimeoutError
         when caught by the caller's asyncio.wait_for wrapper.
@@ -1990,7 +2009,11 @@ class PaperSynthesisStage(PipelineStage):
             if hasattr(proposal, "to_markdown")
             else str(proposal)
         )
-        estimated_input = len(proposal_text) // 3 + sum(len(s) // 3 for s in source_papers)
+        # Phase 5: inject observed results context if experiments succeeded
+        synthesis_sources = list(source_papers)
+        if experiment_context:
+            synthesis_sources.append(experiment_context)
+        estimated_input = len(proposal_text) // 3 + sum(len(s) // 3 for s in synthesis_sources)
         safety_margin = int(context_window * 0.85)
         available_output = safety_margin - estimated_input
 
@@ -2007,7 +2030,7 @@ class PaperSynthesisStage(PipelineStage):
             )
             result = await section_synth.synthesize(
                 proposal_text=proposal_text,
-                source_papers=source_papers,
+                source_papers=synthesis_sources,
                 domain=ctx.domain,
                 proposal_id=idx,
             )
@@ -2044,7 +2067,7 @@ class PaperSynthesisStage(PipelineStage):
             synthesizer = self._synthesizer or PaperSynthesizer(provider)
             result = await synthesizer.synthesize(
                 proposal_text=proposal_text,
-                source_papers=source_papers,
+                source_papers=synthesis_sources,
                 domain=ctx.domain,
                 proposal_id=idx,
             )
@@ -2248,9 +2271,10 @@ class PaperSynthesisStage(PipelineStage):
             "reason": scope_result.reason,
         })
 
-        # Phase 4 / WP-4F: conclusion support. Detect overreach in the
-        # abstract/conclusion vs. reported empirical results.
-        conclusion_result = self._classify_conclusion(ctx, proposal, paper_md)
+        # Phase 4 / WP-4F + Phase 5: conclusion support. When experiments ran,
+        # pass result markers so the checker can validate [RESULT-N] backing.
+        result_markers = ctx.result.result_markers.get(idx, []) if ctx.result.result_markers else []
+        conclusion_result = self._classify_conclusion(ctx, proposal, paper_md, result_markers)
         gates.append({
             "gate": "conclusion_support",
             "classification": conclusion_result.classification,
@@ -2382,8 +2406,13 @@ class PaperSynthesisStage(PipelineStage):
         )
 
     @staticmethod
-    def _classify_conclusion(ctx, proposal, paper_md: str):
-        """Phase 4 / WP-4F — extract abstract + conclusion and classify."""
+    def _classify_conclusion(ctx, proposal, paper_md: str, result_markers=None):
+        """Phase 4/4F + Phase 5 — extract abstract + conclusion and classify.
+
+        Phase 5: when result_markers are present (experiment succeeded),
+        check whether empirical claims in the paper are backed by [RESULT-N]
+        references. A claim that says "we demonstrate" must cite a [RESULT-N].
+        """
         from backend.pipeline.evaluation.conclusion_checker import classify_conclusion_support
 
         abstract = ""
@@ -2444,11 +2473,64 @@ class PaperSynthesisStage(PipelineStage):
             # OR experiments heading (which implies experiments were run).
             has_results = (has_results_heading and not has_expected_results) or has_experiments_heading
 
-        return classify_conclusion_support(
+        # Phase 5: when result markers exist from a succeeded experiment,
+        # use them as the authoritative empirical signal.
+        result_backed = False
+        unmapped_result_claims: list[str] = []
+        if result_markers:
+            # Check whether the paper actually cites any [RESULT-N] markers
+            result_marker_re = re.compile(r"\[RESULT-(\d+)\]")
+            cited_markers = set(result_marker_re.findall(paper_md or ""))
+            available_markers = {str(m.marker_index) for m in result_markers}
+            if cited_markers & available_markers:
+                result_backed = True  # at least one empirical claim is backed
+
+            # Find empirical assertion sentences without [RESULT-N] backing
+            text = f"{abstract}\n{conclusion}"
+            for pattern, label in [
+                (r"\bwe\s+demonstrate\b", "we demonstrate"),
+                (r"\bdemonstrates?\s+that\b", "demonstrates that"),
+                (r"\bexperimental\s+results?\b.{0,40}\b(show|indicate)\b", "experimental results show"),
+                (r"\bresults?\s+(show|indicate)\s+that\b", "results show that"),
+            ]:
+                for m in re.finditer(pattern, text, re.IGNORECASE):
+                    # Check if this sentence contains a [RESULT-N] reference
+                    start = max(0, m.start() - 200)
+                    end = min(len(text), m.end() + 200)
+                    context = text[start:end]
+                    if not result_marker_re.search(context):
+                        unmapped_result_claims.append(
+                            f"empirical claim '{label}' without [RESULT-N] backing"
+                        )
+
+        # Determine has_empirical_results for the conclusion checker
+        if result_markers:
+            # Experiment ran — empirical claims are only valid if result-backed
+            has_empirical = result_backed
+        elif has_results:
+            has_empirical = True
+        else:
+            has_empirical = None  # let the checker infer
+
+        result = classify_conclusion_support(
             abstract=abstract,
             conclusion=conclusion,
-            has_empirical_results=has_results if has_results else None,
+            has_empirical_results=has_empirical,
         )
+
+        # If experiment ran but claims lack result backing, override to overstated
+        if result_markers and unmapped_result_claims:
+            from backend.pipeline.evaluation.conclusion_checker import ConclusionSupportResult
+            return ConclusionSupportResult(
+                classification="overstated",
+                reason=(
+                    f"Experiment succeeded but {len(unmapped_result_claims)} empirical claim(s) "
+                    f"lack [RESULT-N] backing: {'; '.join(unmapped_result_claims[:3])}"
+                ),
+                indicators=unmapped_result_claims,
+            )
+
+        return result
 
 
 class ExperimentExecutionStage(PipelineStage):
