@@ -167,7 +167,7 @@ def export_idea(
     console.print(f"[green]Exported idea {idea_id} to {output_path}[/green]")
 
 
-@app.command("recover")
+@research_app.command("recover")
 def recover_paper(
     proposal_id: int = typer.Argument(..., help="Proposal ID to write a paper for"),
     experiment_id: int = typer.Argument(..., help="ExperimentResult ID with succeeded status"),
