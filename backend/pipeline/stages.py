@@ -2387,12 +2387,17 @@ class PaperSynthesisStage(PipelineStage):
                     key_terms.append("logistic regression")
                 if "linear regression" in method_lower:
                     key_terms.append("linear regression")
-                # Check dataset name (handle underscores/spaces)
+                # Check dataset name (handle underscores/spaces) — pass if ANY form present
                 dataset_terms = [
                     _eval_spec.dataset_name.lower(),
                     _eval_spec.dataset_name.lower().replace("_", " "),
                 ]
-                for term in key_terms + dataset_terms:
+                # For dataset: pass if any form is present
+                dataset_found = any(dt and dt in paper_lower for dt in dataset_terms)
+                if not dataset_found:
+                    missing_terms.append(_eval_spec.dataset_name)
+                # For method terms: each must be present
+                for term in key_terms:
                     if term and term not in paper_lower:
                         missing_terms.append(term)
                 if missing_terms:
