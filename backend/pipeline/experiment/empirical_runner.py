@@ -44,6 +44,57 @@ logger = logging.getLogger(__name__)
 _PROJECT_ROOT = Path(__file__).resolve().parents[3]
 
 
+def resolve_entrypoint_securely(
+    declared_entrypoint: str,
+    expected_code_sha256: str = "",
+) -> tuple[Path, str] | tuple[None, str]:
+    """Resolve a declared analysis entrypoint through the project root with
+    registered-path security validation (Phase 8 / D1).
+
+    Returns (resolved_path, code_snapshot) on success, or (None, error_reason)
+    on failure. Rejects:
+      * absolute entrypoints
+      * ``..`` traversal that escapes the project root
+      * symlink escape
+      * missing files
+      * code-hash mismatch (when expected_code_sha256 is provided)
+
+    The path is resolved canonically (``resolve()`` dereferences symlinks)
+    and then checked for containment within ``_PROJECT_ROOT``.
+    """
+    ep = Path(declared_entrypoint)
+
+    # Reject absolute entrypoints — they must be project-relative.
+    if ep.is_absolute():
+        return None, f"Entrypoint is absolute (not project-relative): {declared_entrypoint}"
+
+    resolved = (_PROJECT_ROOT / ep).resolve()
+
+    # Containment check: resolved path must be inside _PROJECT_ROOT.
+    try:
+        resolved.relative_to(_PROJECT_ROOT)
+    except ValueError:
+        return None, f"Entrypoint escapes project root: {declared_entrypoint} → {resolved}"
+
+    # File must exist.
+    if not resolved.exists():
+        return None, f"Entrypoint file not found: {resolved}"
+
+    code_snapshot = resolved.read_text()
+
+    # Code-hash verification (when the frozen spec declares a hash).
+    if expected_code_sha256:
+        actual_hash = compute_sha256(resolved)
+        if actual_hash != expected_code_sha256:
+            return None, (
+                f"Entrypoint code hash mismatch: expected {expected_code_sha256[:16]}..., "
+                f"got {actual_hash[:16]}..."
+            )
+
+    return resolved, code_snapshot
+
+
+
 async def execute_experiment(
     spec_id: str,
     output_dir: Path,

@@ -2705,9 +2705,19 @@ class ExperimentExecutionStage(PipelineStage):
                     proposal_db_id = existing.id
 
         code_snapshot = ""
-        entrypoint_path = Path(f"experiments/phase5_pilot_v1/analysis.py")
-        if entrypoint_path.exists():
-            code_snapshot = entrypoint_path.read_text()
+        # Phase 8 / D1: resolve the entrypoint through the registered spec,
+        # not a hardcoded Iris path. The manifest carries the entrypoint
+        # (relative) and code_sha256 from the runner. Validate containment
+        # and hash before reading.
+        from backend.pipeline.experiment.empirical_runner import resolve_entrypoint_securely
+        resolved, snapshot_or_err = resolve_entrypoint_securely(
+            manifest.analysis.entrypoint,
+            expected_code_sha256=manifest.analysis.code_sha256,
+        )
+        if resolved is not None:
+            code_snapshot = snapshot_or_err
+        else:
+            logger.warning("Could not resolve entrypoint for code snapshot: %s", snapshot_or_err)
 
         with get_session() as session:
             db_result = ExperimentResultDB(
