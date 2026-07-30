@@ -182,6 +182,35 @@ async def resume_empirical_paper(
     exp_lines.append(f"  Split: {manifest.split.train_fraction}/{manifest.split.test_fraction}" if manifest.split else "")
     exp_lines.append(f"  Seed: {manifest.split.random_seed}" if manifest.split else "")
     exp_lines.append(f"  Method: {manifest.analysis.method if manifest.analysis else 'checked-in analysis'}")
+
+    # Phase 8 / 8R.7: Load the experiment spec for claim-level constraints.
+    # The paper's abstract MUST name the executed dataset and method.
+    # The central contribution MUST be bounded to the executed analysis.
+    # Any broader architectural framing MUST be labeled as background or future work.
+    try:
+        from backend.pipeline.experiment.specification import load_spec as _rls
+        _recovery_spec = _rls(manifest.experiment_spec_id)
+        exp_lines.append("")
+        exp_lines.append("## PAPER NARRATIVE CONSTRAINT (critical — the paper will be blocked if violated)")
+        exp_lines.append(f"Research question: {_recovery_spec.research_question}")
+        exp_lines.append(f"Executed method: {_recovery_spec.analysis_method}")
+        exp_lines.append(f"Executed dataset: {_recovery_spec.dataset_name}")
+        exp_lines.append(f"Baseline: {_recovery_spec.baseline_method or '(see spec)'}")
+        if _recovery_spec.primary_metric:
+            exp_lines.append(f"Primary metric: {_recovery_spec.primary_metric}")
+        exp_lines.append("")
+        exp_lines.append("MANDATORY REQUIREMENTS:")
+        exp_lines.append(f"1. The ABSTRACT must name '{_recovery_spec.dataset_name}' and the executed method")
+        exp_lines.append(f"   ('{_recovery_spec.analysis_method}') as the paper's central contribution.")
+        exp_lines.append("2. The CONTRIBUTION STATEMENT must bound the contribution to the executed analysis.")
+        exp_lines.append("3. Any broader architectural discussion (e.g. quantum methods, neural networks)")
+        exp_lines.append("   MUST be explicitly labeled as 'background', 'motivation', or 'future work'.")
+        exp_lines.append("4. The CONCLUSION must attribute observed results to the executed method, not to")
+        exp_lines.append("   an unexecuted proposed architecture.")
+        exp_lines.append("5. Do NOT present an unexecuted method as the paper's demonstrated contribution.")
+    except Exception:
+        pass
+
     experiment_context = "\n".join(exp_lines)
 
     synthesis_sources = list(source_papers) + [experiment_context]
@@ -223,6 +252,7 @@ async def resume_empirical_paper(
     )
 
     # Provenance gate
+    from backend.pipeline.stages import PaperSynthesisStage
     prov_gate = PaperSynthesisStage.provenance_precondition(paper_md, source_map)
 
     # Scope gate — Phase 8 / D2: use the durable research_question from the
@@ -256,6 +286,26 @@ async def resume_empirical_paper(
         {"gate": "conclusion_support", "classification": conclusion_result.classification, "reason": conclusion_result.reason},
     ]
 
+    # Phase 8 / 8R.6: claim-level experiment alignment
+    claim_alignment_passed = True
+    claim_alignment_reason = "Not an empirical run"
+    try:
+        from backend.pipeline.experiment.specification import load_spec as _cls
+        from backend.pipeline.evaluation.claim_alignment import evaluate_claim_alignment
+        _claim_spec = _cls(manifest.experiment_spec_id)
+        claim_result = evaluate_claim_alignment(
+            paper_md=paper_md,
+            spec_method=_claim_spec.analysis_method,
+            spec_dataset=_claim_spec.dataset_name,
+            spec_baseline=_claim_spec.baseline_method,
+            spec_comparison=_claim_spec.comparison_method,
+        )
+        claim_alignment_passed = claim_result.passed
+        claim_alignment_reason = f"[{claim_result.finding}] {claim_result.reason}"
+    except Exception as e:
+        claim_alignment_reason = f"Alignment check skipped: {e}"
+    gates.append({"gate": "experiment_alignment", "passed": claim_alignment_passed, "reason": claim_alignment_reason})
+
     blocking_reasons = []
     if not prov_gate.passed:
         blocking_reasons.append(f"provenance: {prov_gate.reason}")
@@ -263,8 +313,39 @@ async def resume_empirical_paper(
         blocking_reasons.append(f"scope: {scope_result.reason}")
     if conclusion_result.classification == "overstated":
         blocking_reasons.append(f"conclusion: {conclusion_result.reason}")
+    if not claim_alignment_passed:
+        blocking_reasons.append(f"experiment_alignment: {claim_alignment_reason}")
 
     eval_status = "blocked" if blocking_reasons else "ready"
+
+    # Phase 8 / 8R.7: persist the regenerated paper to the DB so the corrected
+    # narrative replaces the old misaligned one.
+    import json as _recovery_json
+    with get_session() as session:
+        proposal_row = session.get(Proposal, proposal_id)
+        if proposal_row:
+            # Build paper_meta_json from the synthesis result + gates
+            paper_meta = {
+                "status": eval_status,
+                "word_count": synth_result.word_count,
+                "synthesis_strategy": synth_result.synthesis_strategy,
+                "sections_generated": synth_result.sections_generated,
+                "sections_total": synth_result.sections_total,
+                "generated_at": _recovery_json.dumps(None),  # will use DB default
+                "paper_evaluation": {
+                    "status": eval_status,
+                    "scope": "paper",
+                    "gates": gates,
+                    "blocking_reasons": blocking_reasons if blocking_reasons else None,
+                },
+                "source_map": source_map,
+                "result_markers": [m.to_dict() for m in result_markers],
+                "experiment_result_id": experiment_result_id,
+            }
+            proposal_row.paper_md = paper_md
+            proposal_row.paper_meta_json = _recovery_json.dumps(paper_meta)
+            session.commit()
+            logger.info("Persisted regenerated paper for proposal %d (eval=%s)", proposal_id, eval_status)
 
     return {
         "proposal_id": proposal_id,
