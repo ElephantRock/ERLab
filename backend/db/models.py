@@ -2448,6 +2448,7 @@ class PaperRevision(Base):
 
     __tablename__ = "paper_revisions"
     __table_args__ = (
+        UniqueConstraint("proposal_id", "revision_number", name="uq_paper_rev_proposal_number"),
         Index("ix_paper_rev_proposal_number", "proposal_id", "revision_number"),
         Index("ix_paper_rev_proposal_created", "proposal_id", "created_at"),
         CheckConstraint("revision_number >= 0", name="ck_paper_rev_nonneg"),
