@@ -176,6 +176,10 @@ class ResultMarker:
 
     Separates empirical provenance ([RESULT-N]) from literature provenance
     ([SOURCE-N]).
+
+    Phase 8 / D3: carries metric direction and role so the evaluator can
+    compute improvement structurally from persisted values, not from
+    language-model interpretation.
     """
 
     marker_index: int
@@ -187,6 +191,10 @@ class ResultMarker:
     experiment_result_id: int
     paper_claim_key: str = ""  # which claim this result supports
     paper_section: str = ""  # which paper section cites it
+    # Phase 8 / D3: structural metric metadata
+    direction: str = ""  # higher_better | lower_better | neutral
+    role: str = ""  # baseline | comparison | derived
+    derived_from: str = ""  # for derived metrics: the source metric pair
 
     def to_dict(self) -> dict:
         return {
@@ -199,6 +207,9 @@ class ResultMarker:
             "experiment_result_id": self.experiment_result_id,
             "paper_claim_key": self.paper_claim_key,
             "paper_section": self.paper_section,
+            "direction": self.direction,
+            "role": self.role,
+            "derived_from": self.derived_from,
         }
 
 

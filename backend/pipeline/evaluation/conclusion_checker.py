@@ -83,6 +83,7 @@ _CAUSAL_PATTERNS = [
 # Empirical-evidence markers that indicate ACTUAL reported results (not
 # speculation about expected results). These are specific enough to distinguish
 # "we report 92% accuracy on benchmark X" from "we expect results to improve."
+# Phase 8 / D3: extended to recognize lower-is-better regression metrics.
 _ACTUAL_RESULTS_MARKERS = [
     r"\baccuracy\s+(of|was|is|=)\s*\d",      # accuracy of 92%
     r"\b\d{1,3}\.\d+\s*%\b",                  # 92.3%
@@ -97,6 +98,15 @@ _ACTUAL_RESULTS_MARKERS = [
     r"\bwe\s+(trained|fine-tuned|evaluated)\b",  # we trained/evaluated
     r"\bon\s+(the\s+)?(test|validation)\s+set\b",
     r"\bbaseline\s+(achieved|scored|reached)\b",
+    # Phase 8: lower-is-better regression metrics
+    r"\b(rmse|mae|mse|mape|loss|error\s*rate|wer|perplexity)\s*"
+    r"(=|was|is|of|:)\s*\d",                   # rmse = 0.12, mae was 0.08
+    r"\b\d+\.\d+\s*(rmse|mae|mse|mape)\b",     # 0.12 rmse
+    r"\b(rmse|mae|mse|mape|loss|error\s*rate)"
+    r"\s+(of|was|is|=)\s*\d",                  # rmse of 0.12
+    r"\br[²2]\s*(=|was|is|of|:)\s*[-]?\d",     # r² = 0.85 (regression fit)
+    r"\bbaseline\s+(rmse|mae|mse|loss|error)\s*"
+    r"(=|was|is|of|:)\s*\d",                   # baseline rmse = 0.15
 ]
 
 # Phrases that HEDGE claims (speculation, not assertion).

@@ -254,6 +254,10 @@ def _extract_paper_artifact(proposal, result_markers=None) -> tuple[str | None, 
                 "experiment_result_id": m.experiment_result_id,
                 "artifact_path": m.artifact_path,
                 "artifact_sha256": m.artifact_sha256,
+                # Phase 8 / D3: structural direction metadata
+                "direction": getattr(m, "direction", ""),
+                "role": getattr(m, "role", ""),
+                "derived_from": getattr(m, "derived_from", ""),
             }
             for m in result_markers
         ]

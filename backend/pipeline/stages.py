@@ -2642,6 +2642,15 @@ class ExperimentExecutionStage(PipelineStage):
                 ctx.result.experiments[idx] = manifest
 
                 # Build result markers from observed metrics
+                # Phase 8 / D3: flow metric direction and role from the spec
+                # so the evaluator can compute improvement structurally.
+                from backend.pipeline.experiment.specification import load_spec as _load_spec_for_markers
+                try:
+                    _spec = _load_spec_for_markers(spec_id)
+                    _directions = _spec.metric_directions
+                except Exception:
+                    _directions = {}
+
                 markers: list[ResultMarker] = []
                 if manifest.status == "succeeded" and manifest.results:
                     for mi, (metric_name, value) in enumerate(sorted(manifest.results.items()), 1):
@@ -2649,6 +2658,12 @@ class ExperimentExecutionStage(PipelineStage):
                             (a for a in manifest.result_artifacts if a.artifact_type == "metrics"),
                             manifest.result_artifacts[0] if manifest.result_artifacts else None
                         )
+                        # Phase 8 / D3: classify metric role from name convention
+                        _role = "comparison"
+                        if metric_name.startswith("baseline_"):
+                            _role = "baseline"
+                        elif metric_name in ("improvement",) or metric_name.endswith("_reduction") or metric_name.endswith("_gain"):
+                            _role = "derived"
                         markers.append(ResultMarker(
                             marker_index=mi,
                             marker=f"RESULT-{mi}",
@@ -2657,6 +2672,8 @@ class ExperimentExecutionStage(PipelineStage):
                             artifact_path=artifact.filename if artifact else "",
                             artifact_sha256=artifact.sha256 if artifact else "",
                             experiment_result_id=0,  # filled by persistence
+                            direction=_directions.get(metric_name, ""),
+                            role=_role,
                         ))
                 ctx.result.result_markers[idx] = markers
 
