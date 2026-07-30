@@ -163,13 +163,17 @@ def content_hash(title: str) -> str:
     return hashlib.sha256(normalize_title(title).encode("utf-8")).hexdigest()
 
 
-def _extract_paper_artifact(proposal) -> tuple[str | None, dict | None]:
+def _extract_paper_artifact(proposal, result_markers=None) -> tuple[str | None, dict | None]:
     """Phase 1 1C: extract the synthesized full paper + metadata from a
     ResearchProposal as written by PaperSynthesisStage.
 
     PaperSynthesisStage stores the result under proposal.metadata["full_paper"]
     as a dict (monolithic path) or sets it to None on failure (failure paths).
     This helper normalizes both shapes into (paper_md, paper_meta).
+
+    Phase 7H: also captures experiment linkage (experiment_result_id,
+    result_markers map, selection metadata) from the proposal metadata so the
+    RESULT-marker linkage is durable across restart, not in-memory only.
 
     Truth rule (WP-1C): an empty/placeholder paper is recorded with
     status="failed", never "ready", so the API can never surface an empty
@@ -195,6 +199,16 @@ def _extract_paper_artifact(proposal) -> tuple[str | None, dict | None]:
     # A missing/absent full_paper key means the paper stage did not run for
     # this proposal (e.g. fast_scan). Leave the column NULL.
     if full_paper is None and "full_paper" not in meta_dict:
+        # Phase 7H: even without a paper, a non-selected proposal carries
+        # durable selection state (experiment_status, paper_status, selection
+        # metadata). Persist this minimal metadata so the selection contract
+        # survives restart.
+        if meta_dict.get("experiment_status") == "not_selected_for_experiment":
+            return None, {
+                "status": "not_requested",
+                "experiment_status": meta_dict.get("experiment_status"),
+                "paper_status": meta_dict.get("paper_status", "not_requested"),
+            }
         return None, None
     # Paper stage ran but explicitly failed -> record as failed (no markdown).
     if not full_paper or not isinstance(full_paper, dict):
@@ -225,6 +239,28 @@ def _extract_paper_artifact(proposal) -> tuple[str | None, dict | None]:
         # writes one paper_source_markers row per entry.
         "source_map": full_paper.get("source_map") or [],
     }
+
+    # Phase 7H: durable RESULT-marker linkage. Each entry resolves a paper
+    # [RESULT-N] marker to its experiment_result_id, metric_id, observed_value,
+    # and artifact hash. This must survive restart — the paper text alone is
+    # insufficient to resolve markers after a reload.
+    if result_markers:
+        meta["result_markers"] = [
+            {
+                "marker": m.marker,
+                "marker_index": m.marker_index,
+                "metric_id": m.metric_name,
+                "observed_value": m.observed_value,
+                "experiment_result_id": m.experiment_result_id,
+                "artifact_path": m.artifact_path,
+                "artifact_sha256": m.artifact_sha256,
+            }
+            for m in result_markers
+        ]
+        # Link the paper to the experiment row
+        if result_markers[0].experiment_result_id:
+            meta["experiment_result_id"] = result_markers[0].experiment_result_id
+
     return paper_md, meta
 
 
@@ -931,7 +967,13 @@ class PipelinePersistence:
                             # Proposal row. An empty/placeholder paper is
                             # recorded with status "failed" so it can never
                             # appear as ready (truth rule, WP-1C).
-                            paper_md, paper_meta = _extract_paper_artifact(proposal)
+                            #
+                            # Phase 7H: pass result_markers so the RESULT
+                            # marker→experiment linkage is durable.
+                            markers_for_proposal = result.result_markers.get(i) if hasattr(result, "result_markers") else None
+                            paper_md, paper_meta = _extract_paper_artifact(
+                                proposal, result_markers=markers_for_proposal
+                            )
                             # Phase 2 2B: persist the proposal-scope evaluation
                             # that EvaluationStage writes to metadata["evaluation"]
                             # and that was previously dropped (2A bug).
