@@ -1969,21 +1969,32 @@ class PaperSynthesisStage(PipelineStage):
                 continue
             proposal = ctx.result.proposals[idx]
             try:
-                # Phase 3 B-08: bound each proposal's synthesis time so the
-                # stage completes within the overall stage timeout. A timed-out
-                # proposal is marked as failed (full_paper=None) and the stage
-                # continues to the next proposal — papers already generated
-                # successfully are preserved. Same pattern as adversarial_review
-                # B-05.
-                await asyncio.wait_for(
-                    self._synthesize_paper_for_proposal(
+                # Phase 7: the unified synthesis service manages its own budget
+                # internally (monolithic timeout + section fallback reserve).
+                # The old PER_PROPOSAL_TIMEOUT wrapper is removed for the
+                # service-based path. For non-empirical runs that still use
+                # the legacy synthesizer path (when _synthesizer is set and
+                # no experiment context exists), the outer timeout is retained.
+                is_empirical = bool(experiment_contexts.get(idx) or ctx.params.get("experiment_spec_id"))
+                if is_empirical:
+                    # Phase 7: unified service manages budget internally
+                    await self._synthesize_paper_for_proposal(
                         idx, proposal, ctx, provider, source_papers, source_ids,
                         context_window,
                         experiment_context=experiment_contexts.get(idx),
                         result_markers=ctx.result.result_markers.get(idx),
-                    ),
-                    timeout=self.PER_PROPOSAL_TIMEOUT,
-                )
+                    )
+                else:
+                    # Legacy path: retain outer timeout for non-empirical runs
+                    await asyncio.wait_for(
+                        self._synthesize_paper_for_proposal(
+                            idx, proposal, ctx, provider, source_papers, source_ids,
+                            context_window,
+                            experiment_context=experiment_contexts.get(idx),
+                            result_markers=ctx.result.result_markers.get(idx),
+                        ),
+                        timeout=self.PER_PROPOSAL_TIMEOUT,
+                    )
             except asyncio.TimeoutError:
                 logger.warning(
                     "Paper synthesis timed out after %ds for proposal %d "
@@ -1992,6 +2003,7 @@ class PaperSynthesisStage(PipelineStage):
                 )
                 metadata = self._get_metadata(proposal)
                 metadata["full_paper"] = None
+                metadata["synthesis_state"] = "failed"
                 self._set_metadata(proposal, metadata)
             except Exception as e:
                 logger.warning(
@@ -2008,106 +2020,92 @@ class PaperSynthesisStage(PipelineStage):
         self, idx, proposal, ctx, provider, source_papers, source_ids,
         context_window, experiment_context=None, result_markers=None,
     ) -> None:
-        """Synthesize a paper for a single proposal. May raise TimeoutError
-        when caught by the caller's asyncio.wait_for wrapper.
+        """Synthesize a paper for a single proposal.
+
+        Phase 7: delegates to the unified synthesize_paper() service with
+        budget accounting and section checkpoints. The budget replaces the
+        old single PER_PROPOSAL_TIMEOUT wrapper.
 
         Phase 4 / WP-4C: ``source_ids`` is the ordered literature Paper.id
         list used to construct [SOURCE-N]; it is captured here so the
         marker→source map can be frozen and persisted on the result."""
-        from backend.pipeline.synthesis.paper_synthesizer import PaperSynthesizer
-        from backend.pipeline.synthesis.section_wise_synthesizer import SectionWiseSynthesizer
+        import json as _json
+        from backend.pipeline.synthesis.synthesis_service import synthesize_paper
+        from backend.pipeline.synthesis.synthesis_budget import SynthesisBudget
 
         proposal_text = (
             proposal.to_markdown()
             if hasattr(proposal, "to_markdown")
             else str(proposal)
         )
-        # Phase 5: inject observed results context if experiments succeeded
-        synthesis_sources = list(source_papers)
-        if experiment_context:
-            synthesis_sources.append(experiment_context)
-        estimated_input = len(proposal_text) // 3 + sum(len(s) // 3 for s in synthesis_sources)
-        safety_margin = int(context_window * 0.85)
-        available_output = safety_margin - estimated_input
 
-        # Strategy selection: section-wise if monolithic won't fit
-        if available_output < self.MIN_OUTPUT_TOKENS:
-            logger.info(
-                "Paper synthesis: switching to section-wise "
-                "(estimated input=%d, available output=%d < minimum %d)",
-                estimated_input, available_output, self.MIN_OUTPUT_TOKENS,
-            )
-            section_synth = SectionWiseSynthesizer(
-                provider=provider,
-                context_window=context_window,
-            )
-            result = await section_synth.synthesize(
-                proposal_text=proposal_text,
-                source_papers=synthesis_sources,
-                domain=ctx.domain,
-                proposal_id=idx,
-            )
-            # Phase 4 / WP-4C: freeze the marker→source map from the ordered
-            # source list and the actually-emitted markers in the paper.
-            result.source_map = self.build_source_map(source_ids, result.paper_markdown)
-            # Convert to dict for storage (compatible shape)
+        # Build existing checkpoints from proposal metadata (for resume)
+        metadata = self._get_metadata(proposal)
+        existing_checkpoints = metadata.get("section_checkpoints", {})
+
+        # Checkpoint callback: atomically merge section into paper_meta_json
+        def _checkpoint_callback(section_id: str, section_data: dict):
+            md = self._get_metadata(proposal)
+            checkpoints = md.get("section_checkpoints", {})
+            checkpoints[section_id] = section_data
+            md["section_checkpoints"] = checkpoints
+            md["synthesis_state"] = "section_synthesis"
+            self._set_metadata(proposal, md)
+            logger.info("Checkpoint persisted for section '%s'", section_id)
+
+        # Call the unified synthesis service
+        synth_result = await synthesize_paper(
+            provider=provider,
+            proposal_text=proposal_text,
+            source_papers=source_papers,
+            source_ids=source_ids,
+            domain=ctx.domain,
+            proposal_id=idx,
+            budget=SynthesisBudget(),
+            experiment_context=experiment_context,
+            existing_checkpoints=existing_checkpoints if existing_checkpoints else None,
+            checkpoint_callback=_checkpoint_callback,
+            context_window=context_window,
+        )
+
+        if synth_result.success:
             metadata = self._get_metadata(proposal)
             metadata["full_paper"] = {
-                "proposal_id": result.proposal_id,
-                "paper_markdown": result.paper_markdown,
-                "word_count": result.word_count,
-                "venue": result.venue,
-                "model_used": result.model_used,
-                "source_count": result.source_count,
-                "sections_generated": result.sections_generated,
-                "sections_total": result.sections_total,
-                "synthesis_strategy": "section_wise",
-                "source_map": result.source_map,
+                "proposal_id": idx,
+                "paper_markdown": synth_result.paper_markdown,
+                "word_count": synth_result.word_count,
+                "venue": "Generic",
+                "model_used": "unknown",
+                "source_count": len(source_papers),
+                "sections_generated": synth_result.sections_generated,
+                "sections_total": synth_result.sections_total,
+                "synthesis_strategy": synth_result.synthesis_strategy,
+                "source_map": synth_result.source_map,
             }
-            metadata["synthesis_strategy"] = "section_wise"
+            metadata["synthesis_strategy"] = synth_result.synthesis_strategy
+            metadata["synthesis_state"] = "ready"
+            # Clear checkpoints after successful assembly
+            metadata.pop("section_checkpoints", None)
             logger.info(
-                "Paper synthesis (section-wise) completed for proposal %d: "
-                "%d words, %d/%d sections",
-                idx, result.word_count,
-                result.sections_generated, result.sections_total,
+                "Paper synthesis (%s) completed for proposal %d: %d words, %d/%d sections",
+                synth_result.synthesis_strategy, idx, synth_result.word_count,
+                synth_result.sections_generated, synth_result.sections_total,
             )
-            # Phase 1 1D: paper-level evaluation (thin adapter; see
-            # monolithic branch for rationale).
+            # Phase 4/5: paper-level evaluation
             await self._evaluate_paper(ctx, proposal, metadata, idx)
             self._set_metadata(proposal, metadata)
         else:
-            # Monolithic synthesis — original path
-            synthesizer = self._synthesizer or PaperSynthesizer(provider)
-            result = await synthesizer.synthesize(
-                proposal_text=proposal_text,
-                source_papers=synthesis_sources,
-                domain=ctx.domain,
-                proposal_id=idx,
-            )
             metadata = self._get_metadata(proposal)
-            if result is not None:
-                # Phase 4 / WP-4C: freeze the marker→source map.
-                result.source_map = self.build_source_map(source_ids, result.paper_markdown)
-                result_dict = result.to_dict()
-                result_dict["synthesis_strategy"] = "monolithic"
-                metadata["full_paper"] = result_dict
-                metadata["synthesis_strategy"] = "monolithic"
-                logger.info(
-                    "Paper synthesis (monolithic) completed for proposal %d: %d words",
-                    idx, result.word_count,
-                )
-            else:
-                metadata["full_paper"] = None
-                logger.warning(
-                    "Paper synthesis failed for proposal %d (HB-02)", idx,
-                )
-            # Phase 1 1D: paper-level evaluation via a thin adapter —
-            # reuse ProposalEvaluator on the synthesized paper text.
-            # Runs only when a non-empty paper exists; failure is
-            # non-fatal and recorded as paper_evaluation.status="failed"
-            # so a failed evaluator can never block viewing/exporting
-            # a successfully generated paper (WP-1D truth rule).
-            await self._evaluate_paper(ctx, proposal, metadata, idx)
+            metadata["full_paper"] = None
+            metadata["synthesis_state"] = synth_result.workflow_state
+            # Persist section checkpoints even on failure (for resume)
+            if synth_result.section_checkpoints:
+                metadata["section_checkpoints"] = synth_result.section_checkpoints
+            metadata["synthesis_error"] = synth_result.error
+            logger.warning(
+                "Paper synthesis failed for proposal %d: state=%s error=%s",
+                idx, synth_result.workflow_state, synth_result.error,
+            )
             self._set_metadata(proposal, metadata)
 
     @staticmethod
