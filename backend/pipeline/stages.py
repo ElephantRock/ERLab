@@ -1186,6 +1186,41 @@ class ProposalSynthesisStage(PipelineStage):
                     f"{ctx.research_question.strip()}"
                 )
                 framing = f"{rq_line}\n{framing}".rstrip() if framing else rq_line
+
+            # Phase 8 / 8R.2: When an empirical experiment spec is registered,
+            # anchor the proposal to the spec's research question, method, and
+            # dataset. This prevents the proposal narrative from diverging into
+            # an unrelated topic (e.g. quantum computing) while the experiment
+            # runs a classical ML method. The proposal MUST describe the actual
+            # analysis method, dataset, and target declared in the spec.
+            exp_spec_id = ctx.params.get("experiment_spec_id")
+            if exp_spec_id:
+                try:
+                    from backend.pipeline.experiment.specification import load_spec as _ls
+                    _exp_spec = _ls(exp_spec_id)
+                    spec_anchor_lines = [
+                        f"EMPIRICAL EXPERIMENT CONSTRAINT — this proposal MUST be compatible with:",
+                        f"  Research question: {_exp_spec.research_question}",
+                        f"  Task type: {_exp_spec.task_type}",
+                        f"  Dataset: {_exp_spec.dataset_name}",
+                        f"  Analysis method: {_exp_spec.analysis_method}",
+                    ]
+                    if _exp_spec.primary_metric:
+                        spec_anchor_lines.append(f"  Primary metric: {_exp_spec.primary_metric}")
+                    if _exp_spec.baseline_method:
+                        spec_anchor_lines.append(f"  Baseline: {_exp_spec.baseline_method}")
+                    if _exp_spec.comparison_method:
+                        spec_anchor_lines.append(f"  Comparison model: {_exp_spec.comparison_method}")
+                    spec_anchor_lines.append(
+                        "The paper resulting from this proposal will report the results of this "
+                        "exact experiment. Do NOT propose a fundamentally different method, "
+                        "dataset, or research question. The proposed architecture or approach "
+                        "must include the declared analysis method as its core evaluation."
+                    )
+                    spec_anchor = "\n".join(spec_anchor_lines)
+                    framing = f"{spec_anchor}\n{framing}".rstrip() if framing else spec_anchor
+                except Exception as e:
+                    logger.warning("Could not load experiment spec for proposal anchoring: %s", e)
             try:
                 proposal = await asyncio.wait_for(
                     self._synthesizer.synthesize(
@@ -1938,10 +1973,47 @@ class PaperSynthesisStage(PipelineStage):
             source_papers.append(line)
 
         # Phase 5: build observed-results context for proposals with experiments
+        # Phase 8 / 8R.3: enrich with the experiment spec's method/dataset/target
+        # so the paper narrative describes the ACTUAL experiment, not an unrelated
+        # proposed architecture. Without this, the LLM may write about quantum
+        # computing while the experiment is classical linear regression.
         experiment_contexts: dict[int, str] = {}
+        # Load the experiment spec once for context enrichment
+        _paper_exp_spec = None
+        _paper_spec_id = ctx.params.get("experiment_spec_id")
+        if _paper_spec_id:
+            try:
+                from backend.pipeline.experiment.specification import load_spec as _pls
+                _paper_exp_spec = _pls(_paper_spec_id)
+            except Exception:
+                pass
+
         for idx, manifest in ctx.result.experiments.items():
             if hasattr(manifest, 'status') and manifest.status == "succeeded":
-                lines = ["", "## OBSERVED RESULTS (empirically measured — cite with [RESULT-N])", ""]
+                lines = ["", "## EXPERIMENT SPECIFICATION (the actual experiment this paper reports)", ""]
+                # Phase 8 / 8R.3: inject the spec's method/dataset/target first
+                if _paper_exp_spec:
+                    lines.append(f"Research question: {_paper_exp_spec.research_question}")
+                    lines.append(f"Dataset: {_paper_exp_spec.dataset_name}")
+                    lines.append(f"Analysis method: {_paper_exp_spec.analysis_method}")
+                    if _paper_exp_spec.task_type:
+                        lines.append(f"Task type: {_paper_exp_spec.task_type}")
+                    if _paper_exp_spec.target_name:
+                        lines.append(f"Target: {_paper_exp_spec.target_name}")
+                    if _paper_exp_spec.baseline_method:
+                        lines.append(f"Baseline: {_paper_exp_spec.baseline_method}")
+                    if _paper_exp_spec.comparison_method:
+                        lines.append(f"Comparison model: {_paper_exp_spec.comparison_method}")
+                    if _paper_exp_spec.primary_metric:
+                        lines.append(f"Primary metric: {_paper_exp_spec.primary_metric}")
+                    lines.append("")
+                    lines.append("IMPORTANT: The paper MUST describe the analysis method and dataset")
+                    lines.append("above as the core experiment. Do NOT claim results for a different")
+                    lines.append("method or dataset. The proposed architecture is the context for WHY")
+                    lines.append("this method is interesting, but the EVALUATED method is the one above.")
+                lines.append("")
+                lines.append("## OBSERVED RESULTS (empirically measured — cite with [RESULT-N])")
+                lines.append("")
                 markers = ctx.result.result_markers.get(idx, [])
                 for m in markers:
                     lines.append(
@@ -2293,6 +2365,62 @@ class PaperSynthesisStage(PipelineStage):
             "reason": conclusion_result.reason,
         })
 
+        # Phase 8 / 8R.3: experiment-proposal semantic alignment. When an
+        # experiment spec is registered, the paper MUST describe the actual
+        # analysis method and dataset. A paper about quantum computing that
+        # reports classical linear-regression results is scientifically invalid
+        # even if the metric chain is mechanically correct.
+        exp_alignment_passed = True
+        exp_alignment_reason = ""
+        _eval_spec_id = ctx.params.get("experiment_spec_id")
+        if _eval_spec_id and result_markers:
+            try:
+                from backend.pipeline.experiment.specification import load_spec as _els
+                _eval_spec = _els(_eval_spec_id)
+                paper_lower = paper_md.lower()
+                # Check that the spec's key method terms appear in the paper
+                missing_terms = []
+                # Extract key method terms from the spec
+                method_lower = _eval_spec.analysis_method.lower()
+                key_terms = []
+                if "logistic regression" in method_lower:
+                    key_terms.append("logistic regression")
+                if "linear regression" in method_lower:
+                    key_terms.append("linear regression")
+                # Check dataset name (handle underscores/spaces)
+                dataset_terms = [
+                    _eval_spec.dataset_name.lower(),
+                    _eval_spec.dataset_name.lower().replace("_", " "),
+                ]
+                for term in key_terms + dataset_terms:
+                    if term and term not in paper_lower:
+                        missing_terms.append(term)
+                if missing_terms:
+                    exp_alignment_passed = False
+                    exp_alignment_reason = (
+                        f"Paper does not mention the experiment's key terms: {missing_terms}. "
+                        f"The paper must describe the spec's analysis method "
+                        f"({_eval_spec.analysis_method}) and dataset "
+                        f"({_eval_spec.dataset_name}) as the evaluated experiment."
+                    )
+                else:
+                    exp_alignment_reason = (
+                        f"Paper describes the experiment's method and dataset "
+                        f"({_eval_spec.analysis_method}, {_eval_spec.dataset_name})"
+                    )
+            except Exception as e:
+                exp_alignment_reason = f"Alignment check skipped: {e}"
+        elif _eval_spec_id and not result_markers:
+            exp_alignment_reason = "No experiment results to check alignment against"
+        else:
+            exp_alignment_reason = "Not an empirical run"
+
+        gates.append({
+            "gate": "experiment_alignment",
+            "passed": exp_alignment_passed,
+            "reason": exp_alignment_reason,
+        })
+
         # Gate aggregation: any blocking gate downgrades the evaluation.
         blocking_reasons: list[str] = []
         if not prov_gate.passed:
@@ -2301,6 +2429,8 @@ class PaperSynthesisStage(PipelineStage):
             blocking_reasons.append(f"scope: {scope_result.reason}")
         if conclusion_result.classification == "overstated":
             blocking_reasons.append(f"conclusion: {conclusion_result.reason}")
+        if not exp_alignment_passed:
+            blocking_reasons.append(f"experiment_alignment: {exp_alignment_reason}")
 
         try:
             from backend.pipeline.evaluation.proposal_evaluator import ProposalEvaluator
