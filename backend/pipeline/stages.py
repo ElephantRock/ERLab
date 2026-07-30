@@ -2365,54 +2365,30 @@ class PaperSynthesisStage(PipelineStage):
             "reason": conclusion_result.reason,
         })
 
-        # Phase 8 / 8R.3: experiment-proposal semantic alignment. When an
-        # experiment spec is registered, the paper MUST describe the actual
-        # analysis method and dataset. A paper about quantum computing that
-        # reports classical linear-regression results is scientifically invalid
-        # even if the metric chain is mechanically correct.
+        # Phase 8 / 8R.6: claim-level experiment alignment. When an experiment
+        # spec is registered, the paper's abstract, contribution, and conclusion
+        # must center the executed method — not merely mention it. This replaces
+        # the earlier lexical term-presence check (8R.3) which was insufficient:
+        # a paper mentioning "linear regression" in the method section while the
+        # abstract frames the contribution around "physics-informed neural
+        # networks" passes lexical checks but is scientifically misleading.
         exp_alignment_passed = True
         exp_alignment_reason = ""
         _eval_spec_id = ctx.params.get("experiment_spec_id")
         if _eval_spec_id and result_markers:
             try:
                 from backend.pipeline.experiment.specification import load_spec as _els
+                from backend.pipeline.evaluation.claim_alignment import evaluate_claim_alignment
                 _eval_spec = _els(_eval_spec_id)
-                paper_lower = paper_md.lower()
-                # Check that the spec's key method terms appear in the paper
-                missing_terms = []
-                # Extract key method terms from the spec
-                method_lower = _eval_spec.analysis_method.lower()
-                key_terms = []
-                if "logistic regression" in method_lower:
-                    key_terms.append("logistic regression")
-                if "linear regression" in method_lower:
-                    key_terms.append("linear regression")
-                # Check dataset name (handle underscores/spaces) — pass if ANY form present
-                dataset_terms = [
-                    _eval_spec.dataset_name.lower(),
-                    _eval_spec.dataset_name.lower().replace("_", " "),
-                ]
-                # For dataset: pass if any form is present
-                dataset_found = any(dt and dt in paper_lower for dt in dataset_terms)
-                if not dataset_found:
-                    missing_terms.append(_eval_spec.dataset_name)
-                # For method terms: each must be present
-                for term in key_terms:
-                    if term and term not in paper_lower:
-                        missing_terms.append(term)
-                if missing_terms:
-                    exp_alignment_passed = False
-                    exp_alignment_reason = (
-                        f"Paper does not mention the experiment's key terms: {missing_terms}. "
-                        f"The paper must describe the spec's analysis method "
-                        f"({_eval_spec.analysis_method}) and dataset "
-                        f"({_eval_spec.dataset_name}) as the evaluated experiment."
-                    )
-                else:
-                    exp_alignment_reason = (
-                        f"Paper describes the experiment's method and dataset "
-                        f"({_eval_spec.analysis_method}, {_eval_spec.dataset_name})"
-                    )
+                claim_result = evaluate_claim_alignment(
+                    paper_md=paper_md,
+                    spec_method=_eval_spec.analysis_method,
+                    spec_dataset=_eval_spec.dataset_name,
+                    spec_baseline=_eval_spec.baseline_method,
+                    spec_comparison=_eval_spec.comparison_method,
+                )
+                exp_alignment_passed = claim_result.passed
+                exp_alignment_reason = f"[{claim_result.finding}] {claim_result.reason}"
             except Exception as e:
                 exp_alignment_reason = f"Alignment check skipped: {e}"
         elif _eval_spec_id and not result_markers:
