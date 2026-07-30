@@ -94,6 +94,7 @@ async def synthesize_paper(
     existing_checkpoints: dict[str, dict] | None = None,
     checkpoint_callback: Callable[[str, dict], None] | None = None,
     context_window: int = 128000,
+    synthesizer_override=None,
 ) -> SynthesisServiceResult:
     """Unified paper synthesis with budget accounting and checkpointing.
 
@@ -113,6 +114,10 @@ async def synthesize_paper(
         checkpoint_callback: Called with (section_id, checkpoint_dict) after
             each section completes. Used for atomic persistence.
         context_window: Provider context window size.
+        synthesizer_override: Optional pre-built PaperSynthesizer for the
+            monolithic attempt (used by PaperSynthesisStage to honor an
+            injected synthesizer, e.g. in tests). When None the service
+            constructs its own from ``provider``.
     """
     if budget is None:
         budget = SynthesisBudget()
@@ -129,7 +134,7 @@ async def synthesize_paper(
     )
 
     try:
-        synthesizer = PaperSynthesizer(provider)
+        synthesizer = synthesizer_override if synthesizer_override is not None else PaperSynthesizer(provider)
         result = await asyncio.wait_for(
             synthesizer.synthesize(
                 proposal_text=proposal_text,

@@ -186,6 +186,34 @@ class TestProposalSelection:
                 selected = idx
         assert selected == 0  # lower index on tie
 
+    def test_experiment_stage_can_mark_non_selected_proposals(self):
+        """Regression: ExperimentExecutionStage must own _get_metadata /
+        _set_metadata so the non-selected-proposal marking loop does not
+        crash with AttributeError before the experiment executes.
+
+        The live 7G run crashed here, so the experiment never ran and paper
+        synthesis produced a paper with no [RESULT-N] markers.
+        """
+        from backend.pipeline.stages import ExperimentExecutionStage
+
+        stage = ExperimentExecutionStage()
+        # The helpers must exist (they were missing, causing the crash).
+        assert hasattr(stage, "_get_metadata"), "missing _get_metadata"
+        assert hasattr(stage, "_set_metadata"), "missing _set_metadata"
+
+        # Exercise the exact marking loop from execute(): a non-selected
+        # proposal gets experiment_status="not_selected_for_experiment".
+        proposal = SimpleNamespace(metadata=None)  # JSON-string storage path
+        metadata = stage._get_metadata(proposal)
+        metadata["experiment_status"] = "not_selected_for_experiment"
+        metadata["paper_status"] = "not_requested"
+        stage._set_metadata(proposal, metadata)
+
+        # Round-trip: the marking survives serialization.
+        reloaded = stage._get_metadata(proposal)
+        assert reloaded["experiment_status"] == "not_selected_for_experiment"
+        assert reloaded["paper_status"] == "not_requested"
+
 
 # ── No duplicate experiment test ───────────────────────────────────
 

@@ -267,10 +267,16 @@ class TestPaperSynthesisStage:
     def test_stores_full_paper_in_metadata(self):
         from backend.pipeline.stages import PaperSynthesisStage
 
+        # The unified synthesis service reads result.paper_markdown directly
+        # (not to_dict), so the mock must expose a real ≥200-word string.
+        mock_paper_md = "# Full Paper\n\n" + " ".join(
+            f"word{i}" for i in range(250)
+        )
         mock_result = MagicMock()
         mock_result.word_count = 5000
+        mock_result.paper_markdown = mock_paper_md
         mock_result.to_dict = MagicMock(return_value={
-            "paper_markdown": "# Full Paper\n\nContent here...",
+            "paper_markdown": mock_paper_md,
             "word_count": 5000,
         })
 

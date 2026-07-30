@@ -2066,6 +2066,7 @@ class PaperSynthesisStage(PipelineStage):
             existing_checkpoints=existing_checkpoints if existing_checkpoints else None,
             checkpoint_callback=_checkpoint_callback,
             context_window=context_window,
+            synthesizer_override=self._synthesizer,
         )
 
         if synth_result.success:
@@ -2727,6 +2728,35 @@ class ExperimentExecutionStage(PipelineStage):
             if proposal_idx in ctx.result.result_markers:
                 for marker in ctx.result.result_markers[proposal_idx]:
                     marker.experiment_result_id = db_result.id
+
+    # Phase 7 / 7A regression fix: ExperimentExecutionStage marks non-selected
+    # proposals with experiment_status="not_selected_for_experiment". The
+    # marking loop needs metadata helpers identical to the ones on
+    # ProposalSynthesisStage / PaperSynthesisStage. Defining them here (rather
+    # than relying on inheritance) keeps the stage self-contained and matches
+    # the existing pattern.
+    @staticmethod
+    def _get_metadata(proposal) -> dict:
+        """Get metadata dict from a proposal, handling JSON string storage."""
+        metadata = {}
+        if hasattr(proposal, "metadata") and proposal.metadata:
+            if isinstance(proposal.metadata, str):
+                try:
+                    metadata = json.loads(proposal.metadata)
+                except (json.JSONDecodeError, TypeError):
+                    metadata = {}
+            elif isinstance(proposal.metadata, dict):
+                metadata = proposal.metadata
+        return metadata
+
+    @staticmethod
+    def _set_metadata(proposal, metadata: dict) -> None:
+        """Set metadata dict on a proposal, handling JSON string storage."""
+        current = getattr(proposal, "metadata", None)
+        if isinstance(current, str) or current is None:
+            proposal.metadata = json.dumps(metadata)
+        else:
+            proposal.metadata = metadata
 
 
 class ProposalDeepeningStage(PipelineStage):
