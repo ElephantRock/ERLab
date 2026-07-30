@@ -229,7 +229,7 @@ async def auto_revise_paper(
     # The original paper is included in the prompt and the LLM is
     # instructed to fix specific defects while preserving the structure.
     from backend.config import get_settings
-    from backend.providers.research_provider import get_generation_provider
+    from backend.providers.provider_factory import get_generation_provider
     from backend.pipeline.synthesis.paper_synthesizer import PaperSynthesizer
 
     settings = get_settings()
