@@ -1954,7 +1954,20 @@ class PaperSynthesisStage(PipelineStage):
                 lines.append("markers above. Do not claim empirical results for metrics not listed here.")
                 experiment_contexts[idx] = "\n".join(lines)
 
-        for idx, proposal in ctx.result.proposals.items():
+        # Phase 7 / 7A: When an empirical selection exists, only synthesize
+        # paper for the selected proposal. Non-selected proposals get no paper.
+        selection = ctx.params.get("empirical_selection")
+        if selection:
+            selected_idx = selection.get("selected_empirical_proposal_id")
+            proposal_indices = [selected_idx] if selected_idx is not None else []
+            logger.info("Paper synthesis: empirical selection active, proposal %d only", selected_idx)
+        else:
+            proposal_indices = list(ctx.result.proposals.keys())
+
+        for idx in proposal_indices:
+            if idx not in ctx.result.proposals:
+                continue
+            proposal = ctx.result.proposals[idx]
             try:
                 # Phase 3 B-08: bound each proposal's synthesis time so the
                 # stage completes within the overall stage timeout. A timed-out
@@ -2569,7 +2582,57 @@ class ExperimentExecutionStage(PipelineStage):
         output_base = Path(f"data/experiments/{ctx.run_id or 'run'}")
         output_base.mkdir(parents=True, exist_ok=True)
 
-        for idx, proposal in ctx.result.proposals.items():
+        # Phase 7 / 7A: Select exactly one proposal for empirical execution.
+        # Use feasibility score as the ranking signal (existing ranking), with
+        # deterministic tie-breaking by proposal index, then proposal ID.
+        all_indices = sorted(ctx.result.proposals.keys())
+        if not all_indices:
+            logger.warning("Experiment execution: no proposals to select from")
+            return True
+
+        selected_idx = None
+        best_score = -1.0
+        for idx in all_indices:
+            score = -1.0
+            report = ctx.result.feasibility_reports.get(idx)
+            if report and hasattr(report, 'overall_score') and report.overall_score is not None:
+                score = float(report.overall_score)
+            elif report and hasattr(report, 'score') and report.score is not None:
+                score = float(report.score)
+            if score > best_score:
+                best_score = score
+                selected_idx = idx
+
+        logger.info(
+            "Phase 7 / 7A: Selected proposal %d for empirical execution "
+            "(feasibility=%s, %d candidates)", selected_idx, best_score, len(all_indices)
+        )
+
+        # Persist the selection as durable shared state for downstream stages
+        selection_meta = {
+            "selected_empirical_proposal_id": selected_idx,
+            "selection_method": "feasibility_score",
+            "selection_rank": 1,
+            "selection_score": best_score,
+            "selection_reason": (
+                f"Highest feasibility score ({best_score}) among {len(all_indices)} candidates; "
+                "ties broken by proposal index"
+            ),
+        }
+        ctx.params["empirical_selection"] = selection_meta
+
+        # Mark non-selected proposals
+        for idx in all_indices:
+            if idx != selected_idx:
+                proposal = ctx.result.proposals[idx]
+                metadata = self._get_metadata(proposal)
+                metadata["experiment_status"] = "not_selected_for_experiment"
+                metadata["paper_status"] = "not_requested"
+                self._set_metadata(proposal, metadata)
+
+        # Execute experiment only for the selected proposal
+        for idx in [selected_idx]:
+            proposal = ctx.result.proposals[idx]
             try:
                 output_dir = output_base / f"proposal_{idx}"
                 manifest, stdout, stderr, exit_code, elapsed = await execute_experiment(
