@@ -24,9 +24,6 @@ from typing import Any
 from backend.db.database import get_session
 from backend.db.models import ExperimentResult, Proposal, PaperSourceMarker
 from backend.pipeline.experiment.manifest import ExperimentManifest, ResultMarker
-from backend.pipeline.synthesis.paper_synthesizer import PaperSynthesizer
-from backend.pipeline.synthesis.section_wise_synthesizer import SectionWiseSynthesizer
-from backend.pipeline.evaluation.proposal_evaluator import ProposalEvaluator
 from backend.pipeline.evaluation.conclusion_checker import classify_conclusion_support
 from backend.pipeline.evaluation.scope_checker import classify_scope_alignment
 from backend.providers.provider_factory import get_generation_provider
@@ -189,48 +186,37 @@ async def resume_empirical_paper(
 
     synthesis_sources = list(source_papers) + [experiment_context]
 
-    # ── 4. Synthesize paper (directly, no wait_for wrapper) ────────
+    # ── 4. Synthesize paper via unified service ────────────────────
+    from backend.pipeline.synthesis.synthesis_service import synthesize_paper
+    from backend.pipeline.synthesis.synthesis_budget import SynthesisBudget
+
     settings = get_settings()
     provider = get_generation_provider(settings)
 
-    # Try monolithic first
-    synthesizer = PaperSynthesizer(provider)
-    result = await synthesizer.synthesize(
+    synth_result = await synthesize_paper(
+        provider=provider,
         proposal_text=proposal_text,
         source_papers=synthesis_sources,
+        source_ids=source_ids,
         domain="machine learning",
         proposal_id=proposal_id,
+        budget=SynthesisBudget(),  # default 1200s total, 400s monolithic, 800s fallback
+        experiment_context=experiment_context,
     )
 
-    strategy = "monolithic"
-    if result is None:
-        # Fallback to section-wise
-        logger.info("Monolithic synthesis failed — trying section-wise")
-        section_synth = SectionWiseSynthesizer(
-            provider=provider,
-            context_window=128000,  # glm-4.6 has 128k context
-        )
-        result = await section_synth.synthesize(
-            proposal_text=proposal_text,
-            source_papers=synthesis_sources,
-            domain="machine learning",
-            proposal_id=proposal_id,
-        )
-        strategy = "section_wise"
-
-    if result is None:
+    if not synth_result.success:
         return {
             "proposal_id": proposal_id,
             "success": False,
-            "error": "Both monolithic and section-wise synthesis failed",
+            "error": synth_result.error or "Synthesis failed",
+            "workflow_state": synth_result.workflow_state,
         }
 
     # ── 5. Build source map and result map ─────────────────────────
-    from backend.pipeline.stages import PaperSynthesisStage
-    source_map = PaperSynthesisStage.build_source_map(source_ids, result.paper_markdown)
+    source_map = synth_result.source_map
 
     # ── 6. Evaluate the paper ──────────────────────────────────────
-    paper_md = result.paper_markdown
+    paper_md = synth_result.paper_markdown
     has_empirical = any(
         f"[RESULT-{m.marker_index}]" in paper_md
         for m in result_markers
@@ -272,10 +258,10 @@ async def resume_empirical_paper(
         "proposal_id": proposal_id,
         "success": True,
         "paper_markdown": paper_md,
-        "word_count": result.word_count,
-        "sections_generated": getattr(result, 'sections_generated', 1),
-        "sections_total": getattr(result, 'sections_total', 1),
-        "synthesis_strategy": strategy,
+        "word_count": synth_result.word_count,
+        "sections_generated": synth_result.sections_generated,
+        "sections_total": synth_result.sections_total,
+        "synthesis_strategy": synth_result.synthesis_strategy,
         "eval_status": eval_status,
         "blocking_reasons": blocking_reasons,
         "gates": gates,
@@ -283,4 +269,5 @@ async def resume_empirical_paper(
         "source_map": source_map,
         "experiment_result_id": experiment_result_id,
         "experiment_manifest_id": manifest.experiment_spec_id,
+        "workflow_state": synth_result.workflow_state,
     }
