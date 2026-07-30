@@ -38,7 +38,7 @@ maps every central empirical claim to [RESULT-N]         YES (6 occurrences, 3 m
 preserves all [SOURCE-N] provenance                      YES (7 markers, all mapped, 30-entry source_map)
 survives restart                                         YES (15/15 hashes identical post-restart)
 reproduces the experiment within frozen tolerances       YES (all metrics diff=0.000000, seed=42)
-leaves canonical backend and frontend verification green YES (backend: 4919 pass / 0 fail; frontend: 988 pass / 0 fail)
+leaves canonical backend and frontend verification green YES (backend: 4927 pass / 0 fail; frontend: 988 pass / 0 fail)
 ```
 
 ## Durable persistence corrections (7H-persist)
@@ -175,7 +175,7 @@ Minimal paper_meta_json now written for non-selected proposals.
 
 ```text
 selector:           pytest -m "not slow and not integration"
-result:             4919 passed, 22 skipped, 37 deselected, 0 failures
+result:             4927 passed, 22 skipped, 37 deselected, 0 failures
 ```
 
 ### Frontend (7H-5)
