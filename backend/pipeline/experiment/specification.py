@@ -34,6 +34,24 @@ class ExperimentSpec:
     tolerances: dict[str, float]
     output_artifacts: list[str]
     research_question: str
+    # Phase 8 / D2: structured research intent — the durable source of truth
+    # for scope alignment. Every empirical spec must declare these so the
+    # recovery and scope gates load a durable value, never infer from dataset
+    # name or paper title.
+    task_type: str = ""           # classification | regression | ...
+    target_name: str = ""         # the prediction target
+    baseline_method: str = ""     # declared baseline approach
+    comparison_method: str = ""   # declared comparison model
+    primary_metric: str = ""      # the single primary evaluation metric
+
+    @property
+    def research_intent(self) -> str:
+        """The durable research question used by scope gates and recovery.
+
+        Falls back to ``research_question`` for backward compatibility with
+        Phase 5/7 specs that don't declare the structured fields.
+        """
+        return self.research_question
 
     def to_dict(self) -> dict:
         return {
@@ -60,6 +78,13 @@ class ExperimentSpec:
             "tolerances": self.tolerances,
             "output_artifacts": self.output_artifacts,
             "research_question": self.research_question,
+            "research_intent": {
+                "task_type": self.task_type,
+                "target_name": self.target_name,
+                "baseline_method": self.baseline_method,
+                "comparison_method": self.comparison_method,
+                "primary_metric": self.primary_metric,
+            },
         }
 
 
@@ -88,6 +113,11 @@ def _parse_spec(raw: dict) -> ExperimentSpec:
     ds = raw["dataset"]
     sp = raw["split"]
     an = raw["analysis"]
+    # Phase 8 / D2: research_intent is a structured block for new specs.
+    # Backward-compatible: older specs (Iris/Phase 5/7) don't have it, so
+    # all fields default to empty strings. The research_question property
+    # still works as the scope-gate source.
+    ri = raw.get("research_intent", {})
     return ExperimentSpec(
         spec_id=raw["experiment_spec_id"],
         description=raw.get("description", ""),
@@ -106,4 +136,9 @@ def _parse_spec(raw: dict) -> ExperimentSpec:
         tolerances=raw.get("tolerances", {}),
         output_artifacts=raw.get("output_artifacts", []),
         research_question=raw.get("research_question", ""),
+        task_type=ri.get("task_type", ""),
+        target_name=ri.get("target_name", ""),
+        baseline_method=ri.get("baseline_method", ""),
+        comparison_method=ri.get("comparison_method", ""),
+        primary_metric=ri.get("primary_metric", ""),
     )

@@ -225,9 +225,21 @@ async def resume_empirical_paper(
     # Provenance gate
     prov_gate = PaperSynthesisStage.provenance_precondition(paper_md, source_map)
 
-    # Scope gate
+    # Scope gate — Phase 8 / D2: use the durable research_question from the
+    # registered spec, not a hardcoded Iris string. Load the spec from the
+    # manifest's experiment_spec_id. Fall back to research_question from the
+    # manifest if the spec can't be loaded (backward compat).
+    try:
+        from backend.pipeline.experiment.specification import load_spec
+        recovered_spec = load_spec(manifest.experiment_spec_id)
+        durable_research_intent = recovered_spec.research_intent or recovered_spec.research_question
+    except Exception:
+        durable_research_intent = (
+            getattr(manifest, 'research_question', None)
+            or manifest.experiment_spec_id
+        )
     scope_result = classify_scope_alignment(
-        research_intent="machine learning classification Iris dataset",
+        research_intent=durable_research_intent,
         paper_title="",  # let the checker extract it
         paper_abstract=paper_md[:2000],
     )
