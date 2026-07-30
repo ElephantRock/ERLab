@@ -2430,3 +2430,51 @@ class ConfigurationResolutionItem(Base):
     value_fingerprint: Mapped[str | None] = mapped_column(String(32), nullable=True)
     shadowed_source_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     sensitivity: Mapped[str] = mapped_column(String(20), nullable=False, default="public")
+
+
+class PaperRevision(Base):
+    """Phase 9 — append-only paper revision history.
+
+    Every version of a paper (original draft, automatic remediation, manual
+    recovery) is stored as an immutable row. The live ``proposals.paper_md``
+    always holds the accepted version; this table holds the full history.
+
+    Constraints:
+      UNIQUE(proposal_id, revision_number) — prevents concurrent duplicate revisions
+      revision 0 = original draft
+      revision 1 = first (and only) automatic remediation attempt
+      parent_revision_id links revision 1 → revision 0
+    """
+
+    __tablename__ = "paper_revisions"
+    __table_args__ = (
+        Index("ix_paper_rev_proposal_number", "proposal_id", "revision_number"),
+        Index("ix_paper_rev_proposal_created", "proposal_id", "created_at"),
+        CheckConstraint("revision_number >= 0", name="ck_paper_rev_nonneg"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    proposal_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("proposals.id"), nullable=False,
+    )
+    experiment_result_id: Mapped[int | None] = mapped_column(
+        Integer, nullable=True,
+    )
+    revision_number: Mapped[int] = mapped_column(Integer, nullable=False)
+    parent_revision_id: Mapped[int | None] = mapped_column(
+        Integer, nullable=True,
+    )
+    paper_md: Mapped[str] = mapped_column(Text, nullable=False)
+    paper_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    source: Mapped[str] = mapped_column(String(30), nullable=False)
+    trigger: Mapped[str] = mapped_column(String(40), nullable=False)
+    trigger_detail_json: Mapped[str | None] = mapped_column(Text, nullable=True)
+    directive_json: Mapped[str | None] = mapped_column(Text, nullable=True)
+    eval_status: Mapped[str] = mapped_column(String(20), nullable=False)
+    gates_json: Mapped[str | None] = mapped_column(Text, nullable=True)
+    experiment_manifest_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    result_map_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    source_map_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=lambda: datetime.now(timezone.utc),
+    )
