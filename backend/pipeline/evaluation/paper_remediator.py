@@ -123,39 +123,14 @@ async def auto_revise_paper(
         analysis_code_hash="",  # filled from manifest
     )
 
-    # ── Step 2: Atomically claim revision 1 ─────────────────────────
-    # Store original as revision 0, then revision 1 in one transaction.
-    # The UNIQUE(proposal_id, revision_number) constraint prevents
-    # concurrent duplicate revisions.
+    # ── Step 2: Store revision 0 (original) ─────────────────────────
+    # The original paper MUST be preserved in the revision table BEFORE
+    # any revision attempt. This happens unconditionally, before the
+    # idempotency check for revision 1.
+    parent_id = None
     try:
         with get_session() as session:
-            # Check if revision 1 already exists (idempotent)
             from sqlalchemy import select
-            existing = session.execute(
-                select(PaperRevision).where(
-                    PaperRevision.proposal_id == proposal_id,
-                    PaperRevision.revision_number == 1,
-                )
-            ).scalar_one_or_none()
-
-            if existing:
-                # Idempotent: return the existing revision result
-                logger.info(
-                    "Revision 1 already exists for proposal %d — returning cached result",
-                    proposal_id,
-                )
-                return RemediationResult(
-                    success=True,
-                    promoted=(existing.eval_status == "ready"),
-                    revision_number=1,
-                    eval_status=existing.eval_status,
-                    gates=json.loads(existing.gates_json) if existing.gates_json else [],
-                    blocking_reasons=json.loads(existing.trigger_detail_json).get("blocking_findings", []) if existing.trigger_detail_json else [],
-                    original_paper_hash=original_hash,
-                    revised_paper_hash=existing.paper_hash,
-                    invariant_violations=[],
-                )
-
             # Store revision 0 (original) if not already stored
             rev0 = session.execute(
                 select(PaperRevision).where(
@@ -184,6 +159,37 @@ async def auto_revise_paper(
                 session.flush()
 
             parent_id = rev0.id
+    except Exception as e:
+        logger.error("Failed to store revision 0: %s", e)
+
+    # ── Step 2b: Check idempotency for revision 1 ───────────────────
+    try:
+        with get_session() as session:
+            from sqlalchemy import select
+            existing = session.execute(
+                select(PaperRevision).where(
+                    PaperRevision.proposal_id == proposal_id,
+                    PaperRevision.revision_number == 1,
+                )
+            ).scalar_one_or_none()
+
+            if existing:
+                # Idempotent: return the existing revision result
+                logger.info(
+                    "Revision 1 already exists for proposal %d — returning cached result",
+                    proposal_id,
+                )
+                return RemediationResult(
+                    success=True,
+                    promoted=(existing.eval_status == "ready"),
+                    revision_number=1,
+                    eval_status=existing.eval_status,
+                    gates=json.loads(existing.gates_json) if existing.gates_json else [],
+                    blocking_reasons=json.loads(existing.trigger_detail_json).get("blocking_findings", []) if existing.trigger_detail_json else [],
+                    original_paper_hash=original_hash,
+                    revised_paper_hash=existing.paper_hash,
+                    invariant_violations=[],
+                )
     except Exception as e:
         logger.error("Failed to store revision 0: %s", e)
         return RemediationResult(
