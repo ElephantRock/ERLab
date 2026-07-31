@@ -1,0 +1,9 @@
+{
+  "paper_sha256": "51fba56bcc81c51cf255b91dd7c3d0bdd5db7716e8c8dd3689737486f713287b",
+  "defects": [
+    "quantum_title_retained",
+    "baseline_marker_in_model_claim"
+  ],
+  "internal_eval_before_hardening": "ready (false-ready)",
+  "external_review": "blocker"
+}

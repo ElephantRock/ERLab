@@ -171,6 +171,29 @@ def evaluate_paper_gates(
     if not exp_alignment_passed:
         blocking_reasons.append(f"experiment_alignment: {exp_alignment_reason}")
 
+    # ── Gate 5: Claim-to-result semantic validation (Phase 10 correction B) ──
+    # Checks that RESULT markers cited in model-claims are actually model markers,
+    # not baseline markers. Closes the false-ready defect where "the model achieved
+    # [RESULT-1]" passes when RESULT-1 is the baseline accuracy.
+    claim_result_passed = True
+    claim_result_reason = "No RESULT markers to validate"
+    if result_markers:
+        from backend.pipeline.evaluation.claim_result_validator import validate_claim_result_alignment
+        mismatches = validate_claim_result_alignment(paper_md, result_markers)
+        if mismatches:
+            claim_result_passed = False
+            claim_result_reason = "; ".join(
+                f"{m.marker} (role={m.marker_role}) credited to {m.claimed_subject}: {m.reason[:100]}"
+                for m in mismatches
+            )
+    gates.append({
+        "gate": "claim_result_alignment",
+        "passed": claim_result_passed,
+        "reason": claim_result_reason,
+    })
+    if not claim_result_passed:
+        blocking_reasons.append(f"claim_result_alignment: {claim_result_reason}")
+
     status = "blocked" if blocking_reasons else "ready"
     return PaperGateEvaluation(
         status=status,

@@ -207,6 +207,13 @@ def evaluate_claim_alignment(
     conclusion = _extract_conclusion(paper_md)
     contributions = _extract_contribution_statements(paper_md)
 
+    # Phase 10 correction A: extract and classify the title
+    title = ""
+    title_match = re.match(r'^#\s+(.+)', paper_md.strip())
+    if title_match:
+        title = title_match.group(1).strip()
+    title_class = _classify_method_mention(title, executed_terms, baseline_terms) if title else 'unknown'
+
     # Classify each region
     abstract_class = _classify_method_mention(abstract, executed_terms, baseline_terms)
     conclusion_class = _classify_method_mention(conclusion, executed_terms, baseline_terms)
@@ -234,6 +241,24 @@ def evaluate_claim_alignment(
 
     # ── Blocking conditions ────────────────────────────────────────
     issues = []
+
+    # Phase 10 correction A: title centered on unexecuted method is a blocker
+    if title_class == 'unexecuted':
+        title_unexecuted = ""
+        title_lower = title.lower() if title else ""
+        for pattern, name in [
+            (r'\bquantum\b', "quantum"),
+            (r'\bgraph neural network\b', "GNN"),
+            (r'\bphysics.informed neural network\b', "PINN"),
+        ]:
+            if re.search(pattern, title_lower):
+                title_unexecuted = name
+                break
+        issues.append(
+            f"Title centers an unexecuted method ({title_unexecuted or 'advanced architecture'}). "
+            f"The title must name the executed method or dataset. "
+            f"Current title: '{title[:60]}'"
+        )
 
     if abstract_class == 'unexecuted':
         issues.append(
@@ -269,14 +294,15 @@ def evaluate_claim_alignment(
 
     if issues:
         # Determine severity
+        has_title_issue = title_class == 'unexecuted'
         has_abstract_issue = abstract_class == 'unexecuted'
         has_contrib_issue = contrib_class == 'unexecuted'
         has_conclusion_issue = conclusion_class == 'unexecuted'
 
-        if has_abstract_issue and has_conclusion_issue:
-            finding = "blocker"
-            passed = False
-        elif has_abstract_issue or has_contrib_issue:
+        # Title, abstract, and contribution issues are blockers — they are
+        # the paper's central narrative identity. A quantum title on a
+        # logistic-regression paper is a fundamental misalignment.
+        if has_title_issue or has_abstract_issue or has_contrib_issue:
             finding = "blocker"
             passed = False
         elif has_conclusion_issue:

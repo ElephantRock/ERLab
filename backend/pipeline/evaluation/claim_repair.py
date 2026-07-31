@@ -90,8 +90,8 @@ def derive_repair_findings(
         if "mean" in bl:
             baseline_terms.append("mean")
 
-    # Detect unexecuted methods in abstract and conclusion
-    for section_name in ["abstract", "conclusion"]:
+    # Detect unexecuted methods in title, abstract, and conclusion
+    for section_name in ["title", "abstract", "conclusion"]:
         section = parsed.get_section(section_name)
         if not section:
             continue
