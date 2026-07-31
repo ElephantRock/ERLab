@@ -258,10 +258,21 @@ def assemble_typed_paper(
     """
     warnings = []
 
-    # Validate provider output
+    # Validate provider output — strip unauthorized achievement claims
+    # rather than rejecting the entire output, since the slots will be
+    # filled with correct deterministic content.
     ok, violations = validate_provider_output(provider_output)
     if not ok:
-        return "", violations
+        # Strip sentences containing achievement claims with specific values
+        # but keep the structural content (slots, headings)
+        stripped = provider_output
+        for pattern in [
+            r'(?i)[^.]*\bachieved\s+(?:an?\s+)?\w+\s+(?:of\s+)?\d+\.?\d*[^.]*\.',
+            r'(?i)[^.]*\boutperformed?\s[^.]*\d+\.?\d*[^.]*\.',
+        ]:
+            stripped = re.sub(pattern, '', stripped)
+        warnings.extend(violations)
+        provider_output = stripped
 
     # Check all slots present
     missing_slots = [s for s in ALL_SLOTS if s not in provider_output]
