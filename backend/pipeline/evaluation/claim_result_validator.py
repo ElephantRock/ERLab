@@ -36,28 +36,34 @@ class ClaimResultMismatch:
 # Patterns that indicate the claim is about the comparison model
 _MODEL_SUBJECT_PATTERNS = [
     r'(?i)\b(?:our|the)\s+(?:model|method|approach|proposed)\b',
-    r'(?i)\bachieved\b',
     r'(?i)\boutperformed?\b',
     r'(?i)\bdemonstrates?\s+(?:that\s+)?(?:our|the)\s+(?:model|method|approach)\b',
     r'(?i)\bwe\s+(?:show|demonstrate|find|observe|report)\b',
+    r'(?i)\bachieved\b',
 ]
 
-# Patterns that indicate the claim is about the baseline
+# Patterns that indicate the claim is about the baseline — checked FIRST
 _BASELINE_SUBJECT_PATTERNS = [
     r'(?i)\bbaseline\b',
     r'(?i)\bmajority.class\b',
     r'(?i)\bmean\s+predictor\b',
+    r'(?i)\bpredeclared\s+\w+\s+(?:baseline|predictor)\b',
 ]
 
 
 def _infer_claim_subject(claim_text: str) -> str:
-    """Infer whether a claim is about the model, baseline, or unknown."""
-    for pattern in _MODEL_SUBJECT_PATTERNS:
-        if re.search(pattern, claim_text):
-            return "model"
+    """Infer whether a claim is about the model, baseline, or unknown.
+
+    Baseline patterns are checked FIRST so that deterministic baseline
+    sentences like "The predeclared baseline achieved..." are correctly
+    classified as baseline claims, not model claims.
+    """
     for pattern in _BASELINE_SUBJECT_PATTERNS:
         if re.search(pattern, claim_text):
             return "baseline"
+    for pattern in _MODEL_SUBJECT_PATTERNS:
+        if re.search(pattern, claim_text):
+            return "model"
     return "unknown"
 
 
@@ -86,7 +92,8 @@ def validate_claim_result_alignment(
     # Split paper into sentences and check each RESULT citation
     # Focus on conclusion and abstract sections where claims are made
     import re as _re
-    sentences = _re.split(r'(?<=[.!?])\s+', paper_md)
+    # Split on sentence boundaries AND newlines to avoid cross-section merging
+    sentences = _re.split(r'(?<=[.!?])\s+|\n+', paper_md)
 
     mismatches: list[ClaimResultMismatch] = []
 
