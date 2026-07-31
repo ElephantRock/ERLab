@@ -43,6 +43,9 @@ class ExperimentSpec:
     baseline_method: str = ""     # declared baseline approach
     comparison_method: str = ""   # declared comparison model
     primary_metric: str = ""      # the single primary evaluation metric
+    # Phase 14: nonlinear method identity
+    model_family: str = ""        # e.g. "random_forest", "logistic_regression"
+    hyperparameters: dict = field(default_factory=dict)  # frozen hyperparameters
 
     @property
     def research_intent(self) -> str:
@@ -141,4 +144,6 @@ def _parse_spec(raw: dict) -> ExperimentSpec:
         baseline_method=ri.get("baseline_method", ""),
         comparison_method=ri.get("comparison_method", ""),
         primary_metric=ri.get("primary_metric", ""),
+        model_family=ri.get("model_family", raw.get("model_family", "")),
+        hyperparameters=raw.get("hyperparameters", {}),
     )

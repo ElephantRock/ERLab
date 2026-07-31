@@ -182,17 +182,29 @@ def evaluate_claim_alignment(
     # Build method terms for matching
     method_lower = spec_method.lower()
     executed_terms = []
-    if "logistic regression" in method_lower:
-        executed_terms.append("logistic regression")
-    if "linear regression" in method_lower:
-        executed_terms.append("linear regression")
+    # Phase 14: generalized method detection from spec.
+    # Instead of a hardcoded regression ladder, extract the core method
+    # name from the spec's analysis_method string.
+    _known_methods = [
+        "logistic regression", "linear regression", "random forest",
+        "decision tree", "gradient boosting", "support vector",
+        "k-nearest neighbors", "naive bayes", "ridge regression",
+        "lasso regression", "elastic net",
+    ]
+    for method_name in _known_methods:
+        if method_name in method_lower and method_name not in executed_terms:
+            executed_terms.append(method_name)
     # Also check for the comparison method
     if spec_comparison:
         comp_lower = spec_comparison.lower()
-        if "logistic regression" in comp_lower and "logistic regression" not in executed_terms:
-            executed_terms.append("logistic regression")
-        if "linear regression" in comp_lower and "linear regression" not in executed_terms:
-            executed_terms.append("linear regression")
+        for method_name in _known_methods:
+            if method_name in comp_lower and method_name not in executed_terms:
+                executed_terms.append(method_name)
+    # If no known method matched, extract the first words before "(" or " vs "
+    if not executed_terms:
+        core = method_lower.split("(")[0].strip().split(" vs ")[0].strip()
+        if core and len(core) > 2:
+            executed_terms.append(core)
 
     baseline_terms = []
     if spec_baseline:
@@ -201,6 +213,10 @@ def evaluate_claim_alignment(
             baseline_terms.append("majority")
         if "mean" in baseline_lower:
             baseline_terms.append("mean")
+        # Phase 14: also detect generic baseline terms
+        for term in ["random", "constant", "dummy", "uniform"]:
+            if term in baseline_lower and term not in baseline_terms:
+                baseline_terms.append(term)
 
     # Extract paper regions
     abstract = _extract_abstract(paper_md)

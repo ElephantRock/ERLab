@@ -109,6 +109,30 @@ def render_result_claim(
         return f"Observed {metric_display}: {value_str} [{marker}]."
 
 
+def render_feature_importance_claim(
+    marker: str,
+    feature_name: str,
+    importance_value: float,
+    executed_method: str = "",
+) -> str:
+    """Render a feature-importance claim from persisted artifact data.
+
+    Only renders when the artifact declares the feature and value.
+    The model may NOT invent rankings, feature names, or importance values.
+    Feature importance is reported descriptively, not as causal evidence.
+    """
+    method_short = executed_method.split("(")[0].strip().split(" vs ")[0].strip() if executed_method else "the model"
+    if abs(importance_value) < 1:
+        value_str = f"{importance_value:.6f}".rstrip("0").rstrip(".")
+    else:
+        value_str = f"{importance_value:.2f}"
+    return (
+        f"The {method_short} assigned the highest feature importance to "
+        f'"{feature_name}" (importance = {value_str}) [{marker}]. '
+        f"This reflects predictive contribution, not causal effect."
+    )
+
+
 def render_result_section(
     result_markers: list,  # list of ResultMarker objects
     executed_method: str = "",

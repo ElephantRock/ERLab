@@ -231,6 +231,7 @@ async def execute_experiment(
             artifact_sha = compute_sha256(artifact_path)
             artifact_type = "metrics" if artifact_name == "metrics.json" else \
                            "predictions" if "prediction" in artifact_name else \
+                           "feature_importance" if "importance" in artifact_name else \
                            "table" if "table" in artifact_name else "figure"
             result_artifacts.append(ResultArtifact(
                 filename=artifact_name,
