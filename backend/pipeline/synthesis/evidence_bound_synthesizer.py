@@ -134,6 +134,13 @@ def build_evidence_bound_context(
         "'future work'. They must NOT appear in the title, central contribution "
         "statement, or empirical-result attribution."
     )
+    proposal_creativity_note = (
+        "The research proposal may contain creative ideas beyond the executed "
+        "experiment. These ideas are valuable as motivation and future work, but "
+        "they MUST be explicitly labeled as 'proposed but not evaluated' or "
+        "'future work'. They must NOT appear in the title, central contribution "
+        "statement, or empirical-result attribution."
+    )
 
     return EvidenceBoundContext(
         canonical_title=f"# {canonical_title}",
@@ -183,3 +190,100 @@ def build_evidence_bound_synthesis_prompt(
     )
 
     return "\n".join(parts)
+
+
+async def generate_evidence_bound_paper(
+    provider: Any,
+    spec: Any,
+    result_markers: list,
+    source_papers: list[str] | None = None,
+    proposal_text: str = "",
+    domain: str = "machine learning",
+    timeout_seconds: float = 600.0,
+) -> str:
+    """Generate a first-pass paper with a deterministic Results section.
+
+    The Results section is generated deterministically from marker semantics
+    and appended to the LLM-generated content. This ensures correct
+    RESULT-marker attribution without post-hoc patching.
+
+    One provider call. Zero remediation. The Results section is part of
+    the initial generation, not a repair.
+    """
+    import asyncio
+
+    ctx = build_evidence_bound_context(spec, result_markers, source_map=None, proposal_text=proposal_text)
+
+    # Build prompt that asks the LLM to SKIP the Results section
+    # (it will be filled deterministically)
+    prompt_parts = [
+        f"## Research Domain\n{domain}\n",
+        ctx.build_evidence_bound_prompt_block(),
+        "",
+        "## Supporting Literature (CLOSED-BOOK — cite only these)\n",
+    ]
+    if source_papers:
+        prompt_parts.extend(source_papers)
+    else:
+        prompt_parts.append("No specific supporting papers provided.")
+
+    prompt_parts.append("\n## Research Proposal (use for motivation and related work)\n")
+    prompt_parts.append(proposal_text or f"# Research on {spec.dataset_name}")
+    prompt_parts.append(
+        "\n\nWrite a complete academic paper. The EVIDENCE-BOUND CONTENT above "
+        "defines the paper's empirical identity. Use the canonical TITLE exactly. "
+        "Do NOT write a Results section — it will be provided. "
+        "Write all other sections: Abstract, Introduction, Related Work, Methods, "
+        "Discussion, Limitations, Conclusion, and References. "
+        "The Methods section should describe the experiment from the EXPERIMENT DESCRIPTION. "
+        "The Conclusion should reference the results that will appear in the Results section."
+    )
+
+    prompt = "\n".join(prompt_parts)
+
+    # One provider call
+    try:
+        llm_content = await asyncio.wait_for(
+            provider.complete(
+                messages=[
+                    {"role": "system", "content": "You are an academic paper writer. Write a complete paper. Do NOT include a Results section."},
+                    {"role": "user", "content": prompt},
+                ],
+                temperature=0.3,
+                max_tokens=4096,
+            ),
+            timeout=timeout_seconds,
+        )
+    except Exception as e:
+        logger.error("Evidence-bound synthesis failed: %s", e)
+        return ""
+
+    # Deterministically insert the Results section
+    # The canonical title goes first
+    result_section = f"\n## Results\n\n{ctx.result_sentences}\n"
+
+    # Insert the Results section after the Methods section, or before Discussion
+    # if no Methods section exists
+    paper = ctx.canonical_title + "\n\n" + llm_content
+
+    # Find insertion point: after Methods or before Discussion
+    import re
+    methods_end = re.search(r'(?i)(##\s*Methods.*?\n)(?=#{1,3}\s|\Z)', paper, re.DOTALL)
+    discussion_start = re.search(r'(?i)#{1,3}\s*Discussion', paper)
+
+    if methods_end:
+        insert_pos = methods_end.end()
+        paper = paper[:insert_pos] + result_section + paper[insert_pos:]
+    elif discussion_start:
+        insert_pos = discussion_start.start()
+        paper = paper[:insert_pos] + result_section + "\n" + paper[insert_pos:]
+    else:
+        # Append before any References section, or at the end
+        refs_start = re.search(r'(?i)#{1,3}\s*References', paper)
+        if refs_start:
+            insert_pos = refs_start.start()
+            paper = paper[:insert_pos] + result_section + "\n" + paper[insert_pos:]
+        else:
+            paper = paper + "\n" + result_section
+
+    return paper
