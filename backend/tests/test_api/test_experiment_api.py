@@ -3,7 +3,7 @@
 import pytest
 from unittest.mock import patch, MagicMock
 
-pytestmark = pytest.mark.anyio
+pytestmark = [pytest.mark.anyio, pytest.mark.slow]
 
 
 @pytest.fixture
