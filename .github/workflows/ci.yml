@@ -33,6 +33,7 @@ jobs:
           --cov=backend
           --cov-report=term-missing
           --cov-report=xml
+          --cov-fail-under=60
 
       - name: Upload coverage report
         if: always()
