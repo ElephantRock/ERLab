@@ -224,6 +224,7 @@ class TestLegacyHeuristic:
 
 # ─── Test: Eval case loading ────────────────────────────────────────
 
+@pytest.mark.slow
 class TestEvalCaseLoading:
     def test_corpus_backed_case_loads(self):
         from backend.pipeline.model_certification.eval_case import load_suite

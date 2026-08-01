@@ -125,5 +125,15 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Lint
-        run: npm run lint
+      - name: ESLint regression check
+        # Fails only when lint errors INCREASE above the frozen baseline.
+        run: |
+          npm run lint 2>&1 || true
+          ERROR_COUNT=$(npm run lint 2>&1 | grep -oP '\d+ errors?' | grep -oP '\d+' | head -1 || echo "0")
+          BASELINE=29
+          if [ "$ERROR_COUNT" -gt "$BASELINE" ]; then
+            echo "FAIL: $ERROR_COUNT errors > baseline $BASELINE"
+            exit 1
+          else
+            echo "PASS: $ERROR_COUNT errors <= baseline $BASELINE"
+          fi

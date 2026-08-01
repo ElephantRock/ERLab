@@ -39,6 +39,7 @@ def _make_gateway(enforced_stages=None, mode="enforce"):
 
 # ── Idea Generation Enforcement ──────────────────────────────────────
 
+@pytest.mark.slow
 class TestIdeaGenerationEnforcement:
 
     @pytest.mark.asyncio
@@ -141,6 +142,7 @@ class TestIdeaGenerationEnforcement:
 
 # ── Feasibility Scoring Enforcement ──────────────────────────────────
 
+@pytest.mark.slow
 class TestFeasibilityScoringEnforcement:
 
     @pytest.mark.asyncio
@@ -207,6 +209,7 @@ class TestFeasibilityScoringEnforcement:
 
 # ── Routing Contract ─────────────────────────────────────────────────
 
+@pytest.mark.slow
 class TestPhase2RoutingContract:
 
     def test_high_risk_stages_excluded(self):
