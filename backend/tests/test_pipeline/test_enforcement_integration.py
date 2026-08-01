@@ -3,6 +3,8 @@
 Validates:
 - JSON extraction with LLM repair fallback (stage=repair)
 - Literature search query expansion (stage=query_generation)
+
+Marked slow: requires LLM provider access.
 - Enforcement behavior for both paths
 - Non-enforced stages remain dry-run
 """
@@ -11,6 +13,8 @@ import json
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 from dataclasses import dataclass, field
+
+pytestmark = pytest.mark.slow
 
 from backend.pipeline.utils.json_extraction import (
     extract_json,

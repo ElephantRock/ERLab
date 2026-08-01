@@ -1,12 +1,16 @@
 """Tests for BATCH-87 — SKILL.md + Recursive Search.
 
 AIV v5.3 — T1, T2, T5.
+
+Marked slow: requires local SKILL.md path (C:/Next-Era/elephant-rock-platform).
 """
 from __future__ import annotations
 
 import pytest
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock
+
+pytestmark = pytest.mark.slow
 
 from backend.pipeline.literature.search_service import SearchService
 from backend.pipeline.literature.models import Paper, SearchResult
