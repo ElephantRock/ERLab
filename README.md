@@ -1,8 +1,18 @@
 # Elephant Rock Research
 
-**v0.2.0** ![status](https://img.shields.io/badge/status-alpha-orange)
+**v1.0.0** ![status](https://img.shields.io/badge/status-stable-green) ![roadmap](https://img.shields.io/badge/roadmap-complete-blue)
 
-**Elephant Rock** is an AI-powered research idea generation platform that automates the entire lifecycle of academic ideation — from literature discovery and gap analysis through novel idea generation, feasibility scoring, and structured proposal export. Feed it a research domain and it produces scored, cited research proposals with novelty and feasibility reports, ready for refinement.
+**Elephant Rock** (ERLab) is an AI-powered research platform that automates the entire lifecycle of academic research — from literature discovery and gap analysis through novel idea generation, feasibility scoring, structured proposal synthesis, **frozen empirical experiment execution**, and **evidence-bound paper composition** with citation and result provenance.
+
+## What ERLab can do
+
+- **Literature pipeline**: Search, ingest, cluster, and analyze research papers with full [SOURCE-N] provenance tracking
+- **Idea generation**: Generate research gaps and novel ideas from the literature
+- **Proposal synthesis**: Expand ideas into structured research proposals with adversarial review
+- **Empirical experiments**: Execute frozen, checked-in analyses (logistic regression, linear regression, random forest) on registered datasets
+- **Evidence-bound papers**: Compose papers where titles, methods facts, observed values, metric interpretations, and RESULT attributions are generated deterministically from persisted evidence — not by the LLM
+- **Evaluation gates**: Provenance, scope, conclusion support, experiment alignment, and claim-to-RESULT semantic validation
+- **Durable persistence**: Full evidence chain (experiment → metrics → RESULT markers → paper → evaluation) survives restart
 
 ---
 
