@@ -4,8 +4,8 @@ build-backend = "hatchling.build"
 
 [project]
 name = "elephant-rock"
-version = "0.1.0"
-description = "AI/NLP Research Idea Generation Platform"
+version = "1.0.1"
+description = "Evidence-bound empirical research production and assurance platform"
 readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "MIT" }

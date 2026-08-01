@@ -1,6 +1,6 @@
 # Elephant Rock Research
 
-**v1.0.0** ![status](https://img.shields.io/badge/status-stable-green) ![roadmap](https://img.shields.io/badge/roadmap-complete-blue)
+**v1.0.1** ![status](https://img.shields.io/badge/status-research/engineering%20release-blue) ![roadmap](https://img.shields.io/badge/roadmap-complete-brightgreen)
 
 **Elephant Rock** (ERLab) is an AI-powered research platform that automates the entire lifecycle of academic research — from literature discovery and gap analysis through novel idea generation, feasibility scoring, structured proposal synthesis, **frozen empirical experiment execution**, and **evidence-bound paper composition** with citation and result provenance.
 
@@ -13,6 +13,8 @@
 - **Evidence-bound papers**: Compose papers where titles, methods facts, observed values, metric interpretations, and RESULT attributions are generated deterministically from persisted evidence — not by the LLM
 - **Evaluation gates**: Provenance, scope, conclusion support, experiment alignment, and claim-to-RESULT semantic validation
 - **Durable persistence**: Full evidence chain (experiment → metrics → RESULT markers → paper → evaluation) survives restart
+
+> **Important:** ERLab is a research/engineering release, not validated autonomous science. Papers produced by ERLab have been reviewed by independent computational review (GPT-5.3 LLM), not human peer review. ERLab does not establish publication-ready scientific validity autonomously. Datasets (UCI Iris, Wine Quality, Concrete Strength) must be obtained separately — see [REPRODUCIBILITY.md](REPRODUCIBILITY.md).
 
 ---
 

@@ -1,5 +1,31 @@
 # Reproducibility
 
+## Obtaining datasets
+
+ERLab uses three public datasets that are **not included** in the repository
+(the `data/` directory is gitignored). Download them separately:
+
+```bash
+# Iris (public domain)
+# The raw CSV is included in scikit-learn or available from:
+# https://archive.ics.uci.edu/dataset/53/iris
+
+# Wine Quality (CC BY 4.0)
+curl -sL "https://archive.ics.uci.edu/ml/machine-learning-databases/wine-quality/winequality-red.csv" \
+  -o data/datasets/wine_quality/winequality-red-raw.csv
+# Then run the preparation script:
+python experiments/phase8_g1_wine/prepare.py \
+  --raw data/datasets/wine_quality/winequality-red-raw.csv \
+  --output data/datasets/wine_quality/wine_processed.csv
+
+# Concrete Compressive Strength (CC BY 4.0)
+# Download from: https://archive.ics.uci.edu/dataset/165/concrete+compressive+strength
+# Convert the XLS to CSV and place at data/datasets/concrete_strength/concrete_raw.csv
+```
+
+The `dataset_meta.json` files in each dataset directory declare the expected
+SHA-256 hash of the raw data. ERLab verifies these hashes at load time.
+
 ## Frozen experiment specifications
 
 All empirical experiments use checked-in specifications that declare:
