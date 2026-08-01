@@ -1,5 +1,6 @@
 """Tests for the autonomous endpoint via API routes (P14)."""
 
+import pytest
 import sys
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -10,6 +11,8 @@ from fastapi.testclient import TestClient
 
 from backend.api.errors import APIError
 from backend.api.routes.pipeline import router
+
+pytestmark = pytest.mark.slow
 
 
 def _make_app():

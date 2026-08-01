@@ -22,6 +22,8 @@ from backend.db import crud
 from backend.db.database import Base
 from backend.db.models import Idea, PipelineRun, ExperimentResult
 
+pytestmark = pytest.mark.slow
+
 
 @pytest.fixture
 def app_env(tmp_path, monkeypatch):

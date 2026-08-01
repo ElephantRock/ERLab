@@ -10,6 +10,8 @@ import pytest
 
 from backend.pipeline.notifications.service import NotificationService, Notification
 
+pytestmark = pytest.mark.slow
+
 
 @pytest.fixture
 def notif_svc():

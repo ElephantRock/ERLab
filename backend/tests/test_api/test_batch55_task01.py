@@ -4,6 +4,7 @@ Tests that when the orchestrator's run() method throws an exception,
 the DB run record is updated to status='failed' with error_message
 and completed_at set.
 """
+import pytest
 from datetime import datetime, timezone
 from unittest.mock import MagicMock, patch, AsyncMock
 
@@ -11,6 +12,8 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from backend.api.routes.pipeline import router
+
+pytestmark = pytest.mark.slow
 
 app = FastAPI()
 app.include_router(router, prefix="/api/v1/pipeline")
