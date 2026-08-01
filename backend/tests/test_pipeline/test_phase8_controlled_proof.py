@@ -28,6 +28,7 @@ from backend.pipeline.experiment.specification import load_spec
 # ── Multi-specification registry tests ──────────────────────────────
 
 
+@pytest.mark.integration
 class TestMultiSpecRegistry:
     """G1 and G2 load through the same registry with different metric families."""
 
@@ -209,6 +210,7 @@ class TestNegativeResultHandling:
 # ── Backward compatibility ──────────────────────────────────────────
 
 
+@pytest.mark.integration
 class TestBackwardCompatibility:
     """Phase 5/7 Iris path remains unchanged and green."""
 

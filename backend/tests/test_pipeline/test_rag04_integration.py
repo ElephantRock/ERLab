@@ -178,6 +178,7 @@ def test_full_evaluation_pipeline():
 
 # ── API Registration Test ──────────────────────────────────────────────
 
+@pytest.mark.slow
 def test_evaluation_router_registered():
     """Evaluation router is registered in the FastAPI app."""
     from backend.api.app import app

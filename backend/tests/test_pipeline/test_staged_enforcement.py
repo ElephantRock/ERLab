@@ -198,6 +198,7 @@ class TestRoutingConfigParsing:
 
 # ── Test: LLMRepairService and LLMQueryGenerator ────────────────────
 
+@pytest.mark.slow
 class TestLLMRepairService:
     """Test LLMRepairService routes through gateway with stage='repair'."""
 
@@ -245,6 +246,7 @@ class TestLLMRepairService:
         assert result is None
 
 
+@pytest.mark.slow
 class TestLLMQueryGenerator:
     """Test LLMQueryGenerator routes through gateway with stage='query_generation'."""
 

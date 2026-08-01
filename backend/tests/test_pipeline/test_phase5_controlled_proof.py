@@ -30,8 +30,12 @@ def output_dir(tmp_path):
     return d
 
 
+@pytest.mark.integration
 class TestDatasetIdentity:
-    """1. Registered dataset identity and hashes survive restart."""
+    """1. Registered dataset identity and hashes survive restart.
+
+    Marked as integration — requires data/datasets/ which is gitignored.
+    """
 
     def test_dataset_hash_matches_recorded(self):
         identity, path = load_dataset("iris")
@@ -43,6 +47,7 @@ class TestDatasetIdentity:
         assert identity.version == "1.0.0"  # NOT derived from hash
 
 
+@pytest.mark.integration
 class TestExperimentExecution:
     """2-9. Execution produces valid results; failures are correctly classified."""
 
@@ -171,6 +176,7 @@ class TestExperimentExecution:
             empirical_runner.load_spec = original_load
 
 
+@pytest.mark.integration
 class TestExperimentPersistence:
     """10-11. Experiment persists even if paper synthesis fails."""
 
@@ -257,6 +263,7 @@ class TestLiteratureCitationsPreserved:
         assert source_map[0]["mapping_status"] == "mapped"
 
 
+@pytest.mark.integration
 class TestReproducibility:
     """17. Independent reproduction produces metrics within frozen tolerances."""
 

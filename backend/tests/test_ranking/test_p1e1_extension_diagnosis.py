@@ -30,6 +30,7 @@ def md():
     return MD.read_text(encoding="utf-8")
 
 
+@pytest.mark.slow
 class TestSourceIntegrity:
     """1. Diagnosis generated from sealed artifacts; 2. hashes match."""
 
