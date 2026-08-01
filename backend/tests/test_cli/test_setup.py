@@ -8,10 +8,10 @@ from __future__ import annotations
 import sys
 import pytest
 
-pytestmark = pytest.mark.skipif(
+pytestmark = [pytest.mark.skipif(
     sys.version_info >= (3, 14),
     reason="Python 3.14 CLI version detection incompatibility",
-)
+), pytest.mark.slow]
 
 import os
 from pathlib import Path
