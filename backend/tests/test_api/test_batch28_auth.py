@@ -1,8 +1,6 @@
 """Tests for BATCH-28 JWT authentication system.
 
 TEST-28-01-01 through TEST-28-01-10.
-
-Known CI failures: passlib/bcrypt version detection on CI Python 3.11.
 """
 import sys
 import pytest
@@ -16,7 +14,6 @@ from backend.api.errors import APIError
 from backend.db.database import Base
 from backend.db.models import User
 
-pytestmark = pytest.mark.xfail(reason="passlib/bcrypt version detection on CI", run=False)
 
 @pytest.fixture(autouse=True)
 def _isolated_db():

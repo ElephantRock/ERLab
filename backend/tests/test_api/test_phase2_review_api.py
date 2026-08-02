@@ -31,8 +31,6 @@ from backend.db import crud
 from backend.db.database import Base
 from backend.db.models import Idea, PipelineRun, Proposal, SourceReview
 
-pytestmark = pytest.mark.xfail(reason="FastAPI _IncludedRouter.path attribute removed", run=False)
-
 
 @pytest.fixture
 def env(tmp_path, monkeypatch):
@@ -320,7 +318,19 @@ def test_2g_12_review_routes_registered_under_auth(monkeypatch):
     """Case 12: review routes are mounted with the _auth dependency (same as
     the ideas router). Verified by route registration, not a live auth check."""
     from backend.api.app import app
-    paths = {r.path for r in app.routes}
+    # Some FastAPI versions wrap routes in _IncludedRouter which lacks .path
+    # Use getattr with fallback to handle both APIRouter and _IncludedRouter
+    paths = set()
+    for r in app.routes:
+        path = getattr(r, 'path', None)
+        if path is None:
+            # Handle _IncludedRouter by iterating its routes
+            for inner_r in getattr(r, 'routes', []):
+                inner_path = getattr(inner_r, 'path', None)
+                if inner_path:
+                    paths.add(inner_path)
+        else:
+            paths.add(path)
     assert "/api/v1/ideas/{idea_id}/review" in paths
     assert "/api/v1/ideas/{idea_id}/review/sources/decisions" in paths
     assert "/api/v1/ideas/{idea_id}/review/decisions" in paths

@@ -40,8 +40,6 @@ from backend.pipeline.strategies.models import PipelineStrategy, StageConfig
 from backend.pipeline.strategies.presets import register_presets
 from backend.pipeline.strategies.registry import StrategyRegistry
 
-pytestmark = pytest.mark.xfail(reason="FakeProvider response incompatible with unified service on CI", run=False)
-
 
 class FakeProvider:
     """Fake LLM provider returning a canned academic paper."""

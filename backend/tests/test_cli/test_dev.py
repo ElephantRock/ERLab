@@ -1,21 +1,16 @@
 """Tests for BATCH-08/TASK-01 — erock dev command.
 
 Test IDs: TEST-08-01-01 through TEST-08-01-05
-
-Known CI failures: typer.Exit(1) handling differs on CI Python 3.11.
 """
 from __future__ import annotations
 
 import sys
 import pytest
 
-pytestmark = [
-    pytest.mark.skipif(
-        sys.version_info >= (3, 14),
-        reason="Python 3.14 port detection incompatibility",
-    ),
-    pytest.mark.xfail(reason="typer.Exit(1) raised differently on CI", run=False),
-]
+pytestmark = pytest.mark.skipif(
+    sys.version_info >= (3, 14),
+    reason="Python 3.14 port detection incompatibility",
+)
 
 import os
 import signal
