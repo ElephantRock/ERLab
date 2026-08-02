@@ -1,0 +1,412 @@
+name: v1.0.1 Comprehensive E2E Audit
+
+on:
+  push:
+    branches:
+      - audit/v1.0.1-e2e
+
+permissions:
+  contents: read
+
+jobs:
+  runtime-api:
+    name: Runtime, API, DB, backend
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      EVIDENCE_DIR: ${{ github.workspace }}/evidence/runtime
+      EROCK_DATABASE_URL: sqlite:///${{ github.workspace }}/evidence/runtime/e2e.db
+      EROCK_ENV: development
+      EROCK_AUTH_ENABLED: "false"
+      EROCK_API_KEY: ""
+      EROCK_OPENAI_API_KEY: ""
+      EROCK_ANTHROPIC_API_KEY: ""
+      EROCK_GEMINI_API_KEY: ""
+      EROCK_LMSTUDIO_ENABLED: "false"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Prepare evidence directory
+        run: mkdir -p "$EVIDENCE_DIR"
+
+      - name: Install package
+        id: package_install
+        continue-on-error: true
+        run: |
+          python -m pip install --upgrade pip | tee "$EVIDENCE_DIR/pip_upgrade.log"
+          pip install -e ".[dev]" | tee "$EVIDENCE_DIR/package_install.log"
+
+      - name: Verify package identity
+        id: package_identity
+        continue-on-error: true
+        run: |
+          python - <<'PY' | tee "$EVIDENCE_DIR/package_identity.log"
+          from importlib.metadata import version
+          print(version("elephant-rock"))
+          assert version("elephant-rock") == "1.0.1"
+          PY
+
+      - name: Fresh database migration
+        id: migration
+        continue-on-error: true
+        run: alembic upgrade head 2>&1 | tee "$EVIDENCE_DIR/migration.log"
+
+      - name: Selected backend suite
+        id: backend_tests
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          pytest -m "not slow and not integration" --cov=backend --cov-report=term-missing --cov-report=xml 2>&1 | tee "$EVIDENCE_DIR/backend_tests.log"
+
+      - name: Runtime and API E2E harness
+        id: runtime_harness
+        if: always()
+        continue-on-error: true
+        run: python audit/e2e_runtime.py 2>&1 | tee "$EVIDENCE_DIR/runtime_harness.log"
+
+      - name: Record external execution boundary
+        if: always()
+        run: |
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          p = Path(os.environ["EVIDENCE_DIR"])
+          report = {
+            "scenarios": [
+              {
+                "name": "live_llm_provider_pipeline",
+                "status": "skip",
+                "classification": "external_dependency",
+                "details": {
+                  "reason": "No repository secrets or paid provider credentials were accessed by the read-only audit workflow.",
+                  "cost_posture": "zero paid-provider spend",
+                  "required_follow_up": "A separately authorized, cost-capped live-provider run is required for provider-specific E2E proof."
+                }
+              },
+              {
+                "name": "live_literature_provider_pipeline",
+                "status": "skip",
+                "classification": "external_dependency",
+                "details": {
+                  "reason": "The audit did not depend on changing third-party academic API availability or rate limits."
+                }
+              },
+              {
+                "name": "human_peer_review",
+                "status": "skip",
+                "classification": "declared_scope_boundary",
+                "details": {
+                  "reason": "Accountable human peer review is not a claimed v1.0.1 capability."
+                }
+              }
+            ]
+          }
+          (p / "external_boundary_report.json").write_text(json.dumps(report, indent=2))
+          PY
+
+      - name: Record command outcomes
+        if: always()
+        env:
+          PACKAGE_INSTALL: ${{ steps.package_install.outcome }}
+          PACKAGE_IDENTITY: ${{ steps.package_identity.outcome }}
+          MIGRATION: ${{ steps.migration.outcome }}
+          BACKEND_TESTS: ${{ steps.backend_tests.outcome }}
+          RUNTIME_HARNESS: ${{ steps.runtime_harness.outcome }}
+        run: |
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          p = Path(os.environ["EVIDENCE_DIR"])
+          mapping = {
+            "package_install": os.environ["PACKAGE_INSTALL"],
+            "package_identity": os.environ["PACKAGE_IDENTITY"],
+            "migration_fresh_database": os.environ["MIGRATION"],
+            "backend_selected_suite": os.environ["BACKEND_TESTS"],
+            "runtime_harness_execution": os.environ["RUNTIME_HARNESS"],
+          }
+          commands = [
+            {"name": name, "status": "pass" if outcome == "success" else "fail", "details": {"actions_outcome": outcome}}
+            for name, outcome in mapping.items()
+          ]
+          (p / "runtime_command_status.json").write_text(json.dumps({"commands": commands}, indent=2))
+          PY
+
+      - name: Capture environment
+        if: always()
+        run: |
+          python --version > "$EVIDENCE_DIR/python_version.txt" 2>&1 || true
+          python -m pip freeze > "$EVIDENCE_DIR/pip_freeze.txt" 2>&1 || true
+          git status --short > "$EVIDENCE_DIR/git_status.txt" 2>&1 || true
+          git rev-parse HEAD > "$EVIDENCE_DIR/audit_branch_head.txt" 2>&1 || true
+          git rev-parse v1.0.1^{commit} > "$EVIDENCE_DIR/product_tag_commit.txt" 2>&1 || true
+
+      - name: Upload runtime evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-runtime-evidence
+          path: evidence/runtime/
+          if-no-files-found: error
+          retention-days: 30
+
+  experiments:
+    name: Experiment and evidence reproduction
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      EVIDENCE_DIR: ${{ github.workspace }}/evidence/experiments
+      EROCK_DATABASE_URL: sqlite:///${{ github.workspace }}/evidence/experiments/experiments.db
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Prepare evidence directory
+        run: mkdir -p "$EVIDENCE_DIR"
+
+      - name: Install declared project dependencies
+        id: experiment_install
+        continue-on-error: true
+        run: |
+          python -m pip install --upgrade pip | tee "$EVIDENCE_DIR/pip_upgrade.log"
+          pip install -e ".[dev]" | tee "$EVIDENCE_DIR/package_install.log"
+
+      - name: Execute experiment E2E harness
+        id: experiment_harness
+        continue-on-error: true
+        run: python audit/e2e_experiments.py 2>&1 | tee "$EVIDENCE_DIR/experiment_harness.log"
+
+      - name: Record experiment command outcomes
+        if: always()
+        env:
+          INSTALL: ${{ steps.experiment_install.outcome }}
+          HARNESS: ${{ steps.experiment_harness.outcome }}
+        run: |
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          p = Path(os.environ["EVIDENCE_DIR"])
+          commands = [
+            {"name": "experiment_environment_install", "status": "pass" if os.environ["INSTALL"] == "success" else "fail", "details": {"actions_outcome": os.environ["INSTALL"]}},
+            {"name": "experiment_harness_execution", "status": "pass" if os.environ["HARNESS"] == "success" else "fail", "details": {"actions_outcome": os.environ["HARNESS"]}},
+          ]
+          (p / "experiment_command_status.json").write_text(json.dumps({"commands": commands}, indent=2))
+          PY
+
+      - name: Capture experiment environment
+        if: always()
+        run: |
+          python --version > "$EVIDENCE_DIR/python_version.txt" 2>&1 || true
+          python -m pip freeze > "$EVIDENCE_DIR/pip_freeze_final.txt" 2>&1 || true
+          git status --short > "$EVIDENCE_DIR/git_status.txt" 2>&1 || true
+
+      - name: Upload experiment evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-experiment-evidence
+          path: evidence/experiments/
+          if-no-files-found: error
+          retention-days: 30
+
+  frontend-browser:
+    name: Frontend, build, and browser surfaces
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      EVIDENCE_DIR: ${{ github.workspace }}/evidence/frontend
+      BROWSER_EVIDENCE_DIR: ${{ github.workspace }}/evidence/frontend/browser
+      EROCK_DATABASE_URL: sqlite:///${{ github.workspace }}/evidence/frontend/browser.db
+      EROCK_ENV: development
+      EROCK_AUTH_ENABLED: "false"
+      EROCK_API_KEY: ""
+      EROCK_OPENAI_API_KEY: ""
+      EROCK_LMSTUDIO_ENABLED: "false"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Prepare evidence directory
+        run: mkdir -p "$EVIDENCE_DIR" "$BROWSER_EVIDENCE_DIR"
+
+      - name: Install frontend dependencies
+        id: npm_install
+        continue-on-error: true
+        working-directory: frontend
+        run: npm ci 2>&1 | tee "$EVIDENCE_DIR/npm_ci.log"
+
+      - name: Frontend tests
+        id: frontend_tests
+        continue-on-error: true
+        working-directory: frontend
+        run: npm test 2>&1 | tee "$EVIDENCE_DIR/frontend_tests.log"
+
+      - name: TypeScript budget
+        id: frontend_ts
+        continue-on-error: true
+        working-directory: frontend
+        run: npm run ts:budget 2>&1 | tee "$EVIDENCE_DIR/typescript_budget.log"
+
+      - name: Production build
+        id: frontend_build
+        continue-on-error: true
+        working-directory: frontend
+        run: npm run build 2>&1 | tee "$EVIDENCE_DIR/frontend_build.log"
+
+      - name: Set up Python 3.11 for browser backend
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install backend for browser test
+        id: browser_backend_install
+        continue-on-error: true
+        run: pip install -e ".[dev]" 2>&1 | tee "$EVIDENCE_DIR/browser_backend_install.log"
+
+      - name: Install Playwright audit dependency
+        id: playwright_install
+        continue-on-error: true
+        working-directory: frontend
+        run: |
+          npm install --no-save --package-lock=false @playwright/test@1.55.0 2>&1 | tee "$EVIDENCE_DIR/playwright_package.log"
+          npx playwright install --with-deps chromium 2>&1 | tee "$EVIDENCE_DIR/playwright_browser.log"
+
+      - name: Start backend and frontend
+        id: start_surfaces
+        continue-on-error: true
+        run: |
+          nohup python -m uvicorn backend.api.app:app --host 127.0.0.1 --port 8000 > "$EVIDENCE_DIR/browser_backend.log" 2>&1 &
+          echo $! > "$EVIDENCE_DIR/backend.pid"
+          (cd frontend && nohup npm run dev -- --host 127.0.0.1 --port 5173 > "$EVIDENCE_DIR/vite.log" 2>&1 & echo $! > "$EVIDENCE_DIR/vite.pid")
+          python - <<'PY'
+          import time, urllib.request
+          for url in ["http://127.0.0.1:8000/health", "http://127.0.0.1:5173/"]:
+              deadline = time.time() + 60
+              last = None
+              while time.time() < deadline:
+                  try:
+                      with urllib.request.urlopen(url, timeout=2) as response:
+                          print(url, response.status)
+                          break
+                  except Exception as exc:
+                      last = exc
+                      time.sleep(0.5)
+              else:
+                  raise RuntimeError(f"surface failed to start: {url}: {last}")
+          PY
+
+      - name: Browser E2E
+        id: browser_e2e
+        continue-on-error: true
+        working-directory: frontend
+        env:
+          EVIDENCE_DIR: ${{ env.BROWSER_EVIDENCE_DIR }}
+          ERLAB_FRONTEND_URL: http://127.0.0.1:5173
+        run: node ../audit/e2e_browser.mjs 2>&1 | tee "$EVIDENCE_DIR/browser_e2e.log"
+
+      - name: Record frontend command outcomes
+        if: always()
+        env:
+          NPM_INSTALL: ${{ steps.npm_install.outcome }}
+          FRONTEND_TESTS: ${{ steps.frontend_tests.outcome }}
+          FRONTEND_TS: ${{ steps.frontend_ts.outcome }}
+          FRONTEND_BUILD: ${{ steps.frontend_build.outcome }}
+          BACKEND_INSTALL: ${{ steps.browser_backend_install.outcome }}
+          PLAYWRIGHT_INSTALL: ${{ steps.playwright_install.outcome }}
+          START_SURFACES: ${{ steps.start_surfaces.outcome }}
+          BROWSER_E2E: ${{ steps.browser_e2e.outcome }}
+        run: |
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          p = Path(os.environ["EVIDENCE_DIR"])
+          mapping = {
+            "frontend_npm_install": os.environ["NPM_INSTALL"],
+            "frontend_tests": os.environ["FRONTEND_TESTS"],
+            "frontend_typescript_budget": os.environ["FRONTEND_TS"],
+            "frontend_build": os.environ["FRONTEND_BUILD"],
+            "browser_backend_install": os.environ["BACKEND_INSTALL"],
+            "playwright_audit_install": os.environ["PLAYWRIGHT_INSTALL"],
+            "browser_surfaces_start": os.environ["START_SURFACES"],
+            "browser_e2e_execution": os.environ["BROWSER_E2E"],
+          }
+          commands = [
+            {"name": name, "status": "pass" if outcome == "success" else "fail", "details": {"actions_outcome": outcome}}
+            for name, outcome in mapping.items()
+          ]
+          (p / "frontend_command_status.json").write_text(json.dumps({"commands": commands}, indent=2))
+          PY
+
+      - name: Capture frontend environment
+        if: always()
+        run: |
+          node --version > "$EVIDENCE_DIR/node_version.txt" 2>&1 || true
+          npm --version > "$EVIDENCE_DIR/npm_version.txt" 2>&1 || true
+          git status --short > "$EVIDENCE_DIR/git_status.txt" 2>&1 || true
+
+      - name: Upload frontend evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-frontend-evidence
+          path: evidence/frontend/
+          if-no-files-found: error
+          retention-days: 30
+
+  consolidate:
+    name: Consolidate E2E verdict
+    if: always()
+    needs:
+      - runtime-api
+      - experiments
+      - frontend-browser
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download evidence artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: e2e-*-evidence
+          path: evidence-collected
+          merge-multiple: false
+
+      - name: Generate final E2E deliverables
+        env:
+          EVIDENCE_ROOT: ${{ github.workspace }}/evidence-collected
+          FINAL_EVIDENCE_DIR: ${{ github.workspace }}/evidence-final
+        run: python audit/consolidate_e2e.py
+
+      - name: Inventory collected evidence
+        run: find evidence-collected evidence-final -maxdepth 5 -type f -printf '%p\n' | sort > evidence-final/EVIDENCE_FILE_INVENTORY.txt
+
+      - name: Upload consolidated E2E evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: erlab-v1.0.1-comprehensive-e2e
+          path: evidence-final/
+          if-no-files-found: error
+          retention-days: 90
