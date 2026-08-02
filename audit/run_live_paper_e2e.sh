@@ -15,6 +15,30 @@ run_capture() {
 }
 
 set -e
+
+if [ "${EROCK_DEFAULT_PROVIDER:-}" = "ollama" ]; then
+  run_capture ollama_install bash -lc 'curl -fsSL https://ollama.com/install.sh | sh'
+  nohup ollama serve > "$EVIDENCE_DIR/ollama_serve.log" 2>&1 &
+  echo $! > "$EVIDENCE_DIR/ollama.pid"
+  python - <<'PY'
+import time, urllib.request
+last = None
+for _ in range(120):
+    try:
+        with urllib.request.urlopen("http://127.0.0.1:11434/api/tags", timeout=3) as r:
+            if r.status == 200:
+                break
+    except Exception as exc:
+        last = exc
+        time.sleep(1)
+else:
+    raise RuntimeError(f"Ollama did not start: {last}")
+PY
+  run_capture ollama_pull ollama pull "${EROCK_OLLAMA_MODEL:-qwen2.5:0.5b}"
+  run_capture ollama_inventory curl -fsS http://127.0.0.1:11434/api/tags
+  run_capture ollama_smoke bash -lc 'curl -fsS http://127.0.0.1:11434/api/chat -H "Content-Type: application/json" -d "{\"model\":\"${EROCK_OLLAMA_MODEL:-qwen2.5:0.5b}\",\"stream\":false,\"messages\":[{\"role\":\"user\",\"content\":\"Return exactly: READY\"}]}"'
+fi
+
 run_capture pip_upgrade python -m pip install --upgrade pip
 run_capture package_install pip install -e ".[dev]"
 run_capture package_identity python -c 'from importlib.metadata import version; value=version("elephant-rock"); print(value); assert value == "1.0.1"'
@@ -104,4 +128,7 @@ set -e
 
 kill "$(cat "$EVIDENCE_DIR/backend_restart.pid")" 2>/dev/null || true
 kill "$(cat "$EVIDENCE_DIR/vite.pid")" 2>/dev/null || true
+if [ -f "$EVIDENCE_DIR/ollama.pid" ]; then
+  kill "$(cat "$EVIDENCE_DIR/ollama.pid")" 2>/dev/null || true
+fi
 exit 0
