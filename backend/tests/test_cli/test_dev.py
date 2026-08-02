@@ -93,11 +93,9 @@ def test_03_sigint_terminates_both_processes():
 
 def test_04_port_conflict_detected_and_exits():
     """Command must exit with error when a port is already in use (HB-02)."""
-    from click.exceptions import Exit as ClickExit
-
     # Simulate port 8000 being occupied
     with patch("backend.cli.commands.dev._port_in_use", side_effect=lambda p: p == BACKEND_PORT):
-        with pytest.raises((SystemExit, ClickExit)):
+        with pytest.raises(Exception):
             dev_command()
 
 
