@@ -14,7 +14,6 @@ import pytest
 from backend.pipeline.soul_loader import load_soul, inject_soul, clear_cache
 from backend.pipeline.knowledge.error_store import ErrorKnowledgeStore, FailureEntry
 
-pytestmark = pytest.mark.slow
 
 
 # ══════════════════════════════════════════════════════════

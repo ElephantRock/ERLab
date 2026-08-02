@@ -8,7 +8,6 @@ from __future__ import annotations
 import pytest
 from pathlib import Path
 
-pytestmark = pytest.mark.slow
 
 
 PROJECT_ROOT = Path("C:/Next-Era/elephant-rock-platform")

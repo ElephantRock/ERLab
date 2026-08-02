@@ -9,7 +9,6 @@ from backend.db.database import Base
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-pytestmark = pytest.mark.slow
 
 
 @pytest.fixture

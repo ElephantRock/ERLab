@@ -15,6 +15,10 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
 def hash_password(password: str) -> str:
+    """Hash a password using bcrypt. Truncates to 72 bytes (bcrypt limit)."""
+    # bcrypt has a 72-byte password limit. Passlib with newer bcrypt
+    # versions enforces this strictly. Truncate to avoid ValueError.
+    password = password[:72]
     return pwd_context.hash(password)
 
 

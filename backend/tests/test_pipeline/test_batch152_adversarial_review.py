@@ -17,7 +17,6 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-pytestmark = pytest.mark.slow
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -231,9 +230,7 @@ class TestPromptContent:
     def test_prompt_contains_adversarial_keywords(self):
         from pathlib import Path
 
-        prompt_path = Path(
-            "C:/Next-Era/elephant-rock-platform/backend/pipeline/evaluation/prompts/adversarial_review.md"
-        )
+        prompt_path = Path(__file__).resolve().parents[3] / "backend" / "pipeline" / "evaluation" / "prompts" / "adversarial_review.md"
         content = prompt_path.read_text(encoding="utf-8").lower()
 
         assert "critical" in content, "Prompt must contain 'critical'"

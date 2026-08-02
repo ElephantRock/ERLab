@@ -40,8 +40,6 @@ from backend.pipeline.strategies.models import PipelineStrategy, StageConfig
 from backend.pipeline.strategies.presets import register_presets
 from backend.pipeline.strategies.registry import StrategyRegistry
 
-pytestmark = pytest.mark.slow
-
 
 # ── Helpers ──────────────────────────────────────────────────
 

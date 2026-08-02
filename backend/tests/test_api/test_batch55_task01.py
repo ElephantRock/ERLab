@@ -13,7 +13,6 @@ from fastapi.testclient import TestClient
 
 from backend.api.routes.pipeline import router
 
-pytestmark = pytest.mark.slow
 
 app = FastAPI()
 app.include_router(router, prefix="/api/v1/pipeline")
