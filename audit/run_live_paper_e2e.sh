@@ -34,9 +34,10 @@ for _ in range(120):
 else:
     raise RuntimeError(f"Ollama did not start: {last}")
 PY
-  run_capture ollama_pull ollama pull "${EROCK_OLLAMA_MODEL:-qwen2.5:0.5b}"
+  run_capture ollama_pull ollama pull "${EROCK_OLLAMA_MODEL:-qwen2.5:7b}"
   run_capture ollama_inventory curl -fsS http://127.0.0.1:11434/api/tags
-  run_capture ollama_smoke bash -lc 'curl -fsS http://127.0.0.1:11434/api/chat -H "Content-Type: application/json" -d "{\"model\":\"${EROCK_OLLAMA_MODEL:-qwen2.5:0.5b}\",\"stream\":false,\"messages\":[{\"role\":\"user\",\"content\":\"Return exactly: READY\"}]}"'
+  run_capture ollama_smoke bash -lc 'curl -fsS http://127.0.0.1:11434/api/chat -H "Content-Type: application/json" -d "{\"model\":\"${EROCK_OLLAMA_MODEL:-qwen2.5:7b}\",\"stream\":false,\"messages\":[{\"role\":\"user\",\"content\":\"Return exactly: READY\"}]}"'
+  run_capture ollama_capability_smoke bash -lc 'curl -fsS http://127.0.0.1:11434/api/chat -H "Content-Type: application/json" -d "{\"model\":\"${EROCK_OLLAMA_MODEL:-qwen2.5:7b}\",\"stream\":false,\"messages\":[{\"role\":\"system\",\"content\":\"You are an academic research writer. Follow structure and length requirements exactly.\"},{\"role\":\"user\",\"content\":\"Write a coherent 350-450 word mini research synthesis with these headings: Background, Methods, Findings, Limitations. Topic: reproducible evaluation for small-data tabular classification. Do not invent citations.\"}]}"'
 fi
 
 run_capture pip_upgrade python -m pip install --upgrade pip
