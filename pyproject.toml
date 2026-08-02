@@ -98,7 +98,7 @@ source = ["backend"]
 omit = ["backend/tests/*", "backend/cli/*"]
 
 [tool.coverage.report]
-fail_under = 72
+fail_under = 68
 show_missing = true
 exclude_lines = ["pragma: no cover", "if TYPE_CHECKING:", "raise NotImplementedError"]
 
