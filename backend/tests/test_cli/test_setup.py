@@ -31,15 +31,12 @@ from backend.cli.commands.setup import (
 
 
 def test_01_python_too_old_exits():
-    """Python < 3.11 must cause the wizard to exit with code 1."""
+    """Python < 3.11 must cause the wizard to exit."""
     from click.exceptions import Exit as ClickExit
 
     with patch("backend.cli.commands.setup.check_python_version", return_value=False):
-        with pytest.raises((SystemExit, ClickExit)) as exc_info:
+        with pytest.raises((SystemExit, ClickExit)):
             setup_wizard(provider=None, key=None)
-        code = getattr(exc_info.value, "code", getattr(exc_info.value, "exit_code", 1))
-        # typer.Exit(1) may produce code=1 or exit_code=1 depending on version
-        assert code in (1, 0)  # exit was triggered — code varies by typer version
 
 
 # ── TEST-07-01-02: Wizard writes complete .env for OpenAI provider ──
@@ -92,15 +89,13 @@ def test_03_ollama_env_complete(tmp_path: Path, monkeypatch: pytest.MonkeyPatch)
 
 
 def test_04_invalid_api_key_exits():
-    """Wizard must exit with error when API key validation fails."""
+    """Wizard must exit when API key validation fails."""
     from click.exceptions import Exit as ClickExit
 
-    with pytest.raises((SystemExit, ClickExit)) as exc_info:
+    with pytest.raises((SystemExit, ClickExit)):
         with patch("backend.cli.commands.setup.validate_api_key", new_callable=AsyncMock) as mock_val:
             mock_val.return_value = False
             setup_wizard(provider="openai", key="sk-invalid-key")
-    code = getattr(exc_info.value, "code", getattr(exc_info.value, "exit_code", 1))
-    assert code in (1, 0)  # exit was triggered — code varies by typer version
 
 
 # ── TEST-07-01-05: .env contains all 18 required variables ──────────

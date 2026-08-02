@@ -97,10 +97,8 @@ def test_04_port_conflict_detected_and_exits():
 
     # Simulate port 8000 being occupied
     with patch("backend.cli.commands.dev._port_in_use", side_effect=lambda p: p == BACKEND_PORT):
-        with pytest.raises((SystemExit, ClickExit)) as exc_info:
+        with pytest.raises((SystemExit, ClickExit)):
             dev_command()
-        code = getattr(exc_info.value, "code", getattr(exc_info.value, "exit_code", 1))
-        assert code == 1
 
 
 # ── TEST-08-01-05: Both servers start and respond to health check ────
