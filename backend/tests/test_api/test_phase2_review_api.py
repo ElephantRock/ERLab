@@ -314,7 +314,6 @@ def test_2g_11_legacy_idea_detail_still_has_proposal_evaluation(env):
 # ── Case 12: auth ───────────────────────────────────────────────────
 
 
-@pytest.mark.xfail(strict=True, reason="FastAPI route registration differs on CI — review routes not in app.routes")
 def test_2g_12_review_routes_registered_under_auth(monkeypatch):
     """Case 12: review routes are mounted with the _auth dependency (same as
     the ideas router). Verified by route registration, not a live auth check."""
