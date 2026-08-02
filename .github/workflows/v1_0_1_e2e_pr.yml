@@ -1,0 +1,233 @@
+name: v1.0.1 Comprehensive E2E Audit PR
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  comprehensive-e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    env:
+      EROCK_ENV: development
+      EROCK_AUTH_ENABLED: "false"
+      EROCK_API_KEY: ""
+      EROCK_OPENAI_API_KEY: ""
+      EROCK_ANTHROPIC_API_KEY: ""
+      EROCK_GEMINI_API_KEY: ""
+      EROCK_LMSTUDIO_ENABLED: "false"
+      EROCK_DATABASE_URL: sqlite:///${{ github.workspace }}/evidence/runtime/e2e.db
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Prepare evidence directories
+        run: mkdir -p evidence/runtime evidence/experiments evidence/frontend/browser evidence-final
+
+      - name: Install backend package
+        id: package_install
+        continue-on-error: true
+        run: |
+          python -m pip install --upgrade pip 2>&1 | tee evidence/runtime/pip_upgrade.log
+          pip install -e ".[dev]" 2>&1 | tee evidence/runtime/package_install.log
+
+      - name: Verify package identity
+        id: package_identity
+        continue-on-error: true
+        run: |
+          python - <<'PY' 2>&1 | tee evidence/runtime/package_identity.log
+          from importlib.metadata import version
+          print(version("elephant-rock"))
+          assert version("elephant-rock") == "1.0.1"
+          PY
+
+      - name: Fresh database migration
+        id: migration
+        continue-on-error: true
+        run: alembic upgrade head 2>&1 | tee evidence/runtime/migration.log
+
+      - name: Selected backend suite
+        id: backend_tests
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          pytest -m "not slow and not integration" --cov=backend --cov-report=term-missing --cov-report=xml 2>&1 | tee evidence/runtime/backend_tests.log
+
+      - name: Runtime and API harness
+        id: runtime_harness
+        continue-on-error: true
+        env:
+          EVIDENCE_DIR: ${{ github.workspace }}/evidence/runtime
+        run: python audit/e2e_runtime.py 2>&1 | tee evidence/runtime/runtime_harness.log
+
+      - name: Experiment reproduction harness
+        id: experiment_harness
+        continue-on-error: true
+        env:
+          EVIDENCE_DIR: ${{ github.workspace }}/evidence/experiments
+          EROCK_DATABASE_URL: sqlite:///${{ github.workspace }}/evidence/experiments/experiments.db
+        run: python audit/e2e_experiments.py 2>&1 | tee evidence/experiments/experiment_harness.log
+
+      - name: Install frontend dependencies
+        id: npm_install
+        continue-on-error: true
+        working-directory: frontend
+        run: npm ci 2>&1 | tee ../evidence/frontend/npm_ci.log
+
+      - name: Frontend tests
+        id: frontend_tests
+        continue-on-error: true
+        working-directory: frontend
+        run: npm test 2>&1 | tee ../evidence/frontend/frontend_tests.log
+
+      - name: TypeScript budget
+        id: frontend_ts
+        continue-on-error: true
+        working-directory: frontend
+        run: npm run ts:budget 2>&1 | tee ../evidence/frontend/typescript_budget.log
+
+      - name: Frontend production build
+        id: frontend_build
+        continue-on-error: true
+        working-directory: frontend
+        run: npm run build 2>&1 | tee ../evidence/frontend/frontend_build.log
+
+      - name: Install Playwright audit dependency
+        id: playwright_install
+        continue-on-error: true
+        working-directory: frontend
+        run: |
+          npm install --no-save --package-lock=false @playwright/test@1.55.0 2>&1 | tee ../evidence/frontend/playwright_package.log
+          npx playwright install --with-deps chromium 2>&1 | tee ../evidence/frontend/playwright_browser.log
+
+      - name: Start browser surfaces
+        id: start_surfaces
+        continue-on-error: true
+        env:
+          EROCK_DATABASE_URL: sqlite:///${{ github.workspace }}/evidence/frontend/browser.db
+        run: |
+          nohup python -m uvicorn backend.api.app:app --host 127.0.0.1 --port 8000 > evidence/frontend/browser_backend.log 2>&1 &
+          echo $! > evidence/frontend/backend.pid
+          (cd frontend && nohup npm run dev -- --host 127.0.0.1 --port 5173 > ../evidence/frontend/vite.log 2>&1 &)
+          python - <<'PY'
+          import time, urllib.request
+          for url in ["http://127.0.0.1:8000/health", "http://127.0.0.1:5173/"]:
+              deadline = time.time() + 60
+              last = None
+              while time.time() < deadline:
+                  try:
+                      with urllib.request.urlopen(url, timeout=2) as response:
+                          print(url, response.status)
+                          break
+                  except Exception as exc:
+                      last = exc
+                      time.sleep(0.5)
+              else:
+                  raise RuntimeError(f"surface failed to start: {url}: {last}")
+          PY
+
+      - name: Browser E2E
+        id: browser_e2e
+        continue-on-error: true
+        working-directory: frontend
+        env:
+          EVIDENCE_DIR: ${{ github.workspace }}/evidence/frontend/browser
+          ERLAB_FRONTEND_URL: http://127.0.0.1:5173
+        run: node ../audit/e2e_browser.mjs 2>&1 | tee ../evidence/frontend/browser_e2e.log
+
+      - name: Record command and external-boundary evidence
+        if: always()
+        env:
+          PACKAGE_INSTALL: ${{ steps.package_install.outcome }}
+          PACKAGE_IDENTITY: ${{ steps.package_identity.outcome }}
+          MIGRATION: ${{ steps.migration.outcome }}
+          BACKEND_TESTS: ${{ steps.backend_tests.outcome }}
+          RUNTIME_HARNESS: ${{ steps.runtime_harness.outcome }}
+          EXPERIMENT_HARNESS: ${{ steps.experiment_harness.outcome }}
+          NPM_INSTALL: ${{ steps.npm_install.outcome }}
+          FRONTEND_TESTS: ${{ steps.frontend_tests.outcome }}
+          FRONTEND_TS: ${{ steps.frontend_ts.outcome }}
+          FRONTEND_BUILD: ${{ steps.frontend_build.outcome }}
+          PLAYWRIGHT_INSTALL: ${{ steps.playwright_install.outcome }}
+          START_SURFACES: ${{ steps.start_surfaces.outcome }}
+          BROWSER_E2E: ${{ steps.browser_e2e.outcome }}
+        run: |
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          mapping = {
+            "package_install": os.environ["PACKAGE_INSTALL"],
+            "package_identity": os.environ["PACKAGE_IDENTITY"],
+            "migration_fresh_database": os.environ["MIGRATION"],
+            "backend_selected_suite": os.environ["BACKEND_TESTS"],
+            "runtime_harness_execution": os.environ["RUNTIME_HARNESS"],
+            "experiment_harness_execution": os.environ["EXPERIMENT_HARNESS"],
+            "frontend_npm_install": os.environ["NPM_INSTALL"],
+            "frontend_tests": os.environ["FRONTEND_TESTS"],
+            "frontend_typescript_budget": os.environ["FRONTEND_TS"],
+            "frontend_build": os.environ["FRONTEND_BUILD"],
+            "playwright_audit_install": os.environ["PLAYWRIGHT_INSTALL"],
+            "browser_surfaces_start": os.environ["START_SURFACES"],
+            "browser_e2e_execution": os.environ["BROWSER_E2E"],
+          }
+          commands = [{"name": k, "status": "pass" if v == "success" else "fail", "details": {"actions_outcome": v}} for k, v in mapping.items()]
+          Path("evidence/command_status.json").write_text(json.dumps({"commands": commands}, indent=2))
+          boundary = {
+            "scenarios": [
+              {"name": "live_llm_provider_pipeline", "status": "skip", "classification": "external_dependency", "details": {"reason": "No repository secrets or paid provider credentials were accessed; zero paid-provider spend."}},
+              {"name": "live_literature_provider_pipeline", "status": "skip", "classification": "external_dependency", "details": {"reason": "Third-party academic API behavior was not used as a release determinant."}},
+              {"name": "human_peer_review", "status": "skip", "classification": "declared_scope_boundary", "details": {"reason": "Not a claimed v1.0.1 capability."}}
+            ]
+          }
+          Path("evidence/external_boundary_report.json").write_text(json.dumps(boundary, indent=2))
+          PY
+
+      - name: Capture environment and repository state
+        if: always()
+        run: |
+          python --version > evidence/python_version.txt 2>&1 || true
+          python -m pip freeze > evidence/pip_freeze.txt 2>&1 || true
+          node --version > evidence/node_version.txt 2>&1 || true
+          npm --version > evidence/npm_version.txt 2>&1 || true
+          git status --short > evidence/git_status.txt 2>&1 || true
+          git rev-parse HEAD > evidence/audit_branch_head.txt 2>&1 || true
+          git rev-parse v1.0.1^{commit} > evidence/product_tag_commit.txt 2>&1 || true
+          git diff --exit-code v1.0.1 -- . ':(exclude)audit/**' ':(exclude).github/workflows/v1_0_1_e2e_audit.yml' ':(exclude).github/workflows/v1_0_1_e2e_pr.yml' > evidence/product_diff.log 2>&1 || true
+
+      - name: Consolidate E2E verdict
+        if: always()
+        env:
+          EVIDENCE_ROOT: ${{ github.workspace }}/evidence
+          FINAL_EVIDENCE_DIR: ${{ github.workspace }}/evidence-final
+        run: python audit/consolidate_e2e.py
+
+      - name: Inventory evidence
+        if: always()
+        run: find evidence evidence-final -type f -printf '%p\n' | sort > evidence-final/EVIDENCE_FILE_INVENTORY.txt
+
+      - name: Upload comprehensive E2E evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: erlab-v1.0.1-comprehensive-e2e
+          path: |
+            evidence/
+            evidence-final/
+          if-no-files-found: error
+          retention-days: 90
