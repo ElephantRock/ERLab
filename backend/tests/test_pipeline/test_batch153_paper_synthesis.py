@@ -53,11 +53,13 @@ class FakeProvider:
 
     @staticmethod
     def _default_response() -> str:
+        # Phase 7 fix: unified synthesis service rejects results < 200 words.
+        # Expanded response to exceed the 200-word minimum.
         return (
             "## Abstract\n\n"
             "This paper proposes a novel approach to automated research synthesis "
             "combining retrieval-augmented generation with structured attention. "
-            "We evaluate on standard benchmarks and show significant improvements "
+            "We evaluate on standard benchmarks and show improvements "
             "over existing baselines in accuracy and efficiency. Our framework "
             "integrates dense retrieval with a transformer-based generator that "
             "attends over retrieved passages at every decoding step.\n\n"

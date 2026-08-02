@@ -10,7 +10,7 @@ from pathlib import Path
 
 
 
-PROJECT_ROOT = Path("C:/Next-Era/elephant-rock-platform")
+PROJECT_ROOT = Path(__file__).resolve().parents[3]
 
 
 def test_100_01_all_phase6_modules_exist():

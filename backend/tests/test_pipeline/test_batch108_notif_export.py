@@ -57,14 +57,14 @@ def test_108_01_mark_read(notif_svc):
 def test_108_02_export_routes_exist():
     """Export API routes file exists."""
     from pathlib import Path
-    export_path = Path("C:/Next-Era/elephant-rock-platform/backend/api/routes/export.py")
+    export_path = Path(str(Path(__file__).resolve().parents[3] / "backend/api/routes/export.py"))
     assert export_path.exists()
 
 
 def test_108_02_export_has_markdown_route():
     """Export has markdown endpoint."""
     from pathlib import Path
-    content = Path("C:/Next-Era/elephant-rock-platform/backend/api/routes/export.py").read_text(encoding="utf-8")
+    content = Path(str(Path(__file__).resolve().parents[3] / "backend/api/routes/export.py")).read_text(encoding="utf-8")
     assert "export_markdown" in content
     assert "text/markdown" in content
 
@@ -72,7 +72,7 @@ def test_108_02_export_has_markdown_route():
 def test_108_02_export_has_bibtex_route():
     """Export has BibTeX endpoint."""
     from pathlib import Path
-    content = Path("C:/Next-Era/elephant-rock-platform/backend/api/routes/export.py").read_text(encoding="utf-8")
+    content = Path(str(Path(__file__).resolve().parents[3] / "backend/api/routes/export.py")).read_text(encoding="utf-8")
     assert "export_bibtex" in content
     assert "bibtex" in content.lower()
 

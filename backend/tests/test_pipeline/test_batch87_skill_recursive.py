@@ -26,12 +26,12 @@ def _make_paper(title, source="test"):
 
 def test_87_01_skill_md_exists():
     """SKILL.md exists in project root."""
-    assert Path("C:/Next-Era/elephant-rock-platform/SKILL.md").exists()
+    assert Path(str(Path(__file__).resolve().parents[3] / "SKILL.md")).exists()
 
 
 def test_87_01_skill_md_has_yaml_frontmatter():
     """SKILL.md has valid YAML frontmatter."""
-    content = Path("C:/Next-Era/elephant-rock-platform/SKILL.md").read_text()
+    content = Path(str(Path(__file__).resolve().parents[3] / "SKILL.md")).read_text()
     assert content.startswith("---")
     assert "name:" in content
     assert "capabilities:" in content
@@ -40,7 +40,7 @@ def test_87_01_skill_md_has_yaml_frontmatter():
 
 def test_87_01_skill_md_lists_pipeline_stages():
     """SKILL.md lists all 9 pipeline stages."""
-    content = Path("C:/Next-Era/elephant-rock-platform/SKILL.md").read_text()
+    content = Path(str(Path(__file__).resolve().parents[3] / "SKILL.md")).read_text()
     stages = [
         "literature_search", "ingestion", "gap_analysis",
         "idea_generation", "novelty_checking", "feasibility_scoring",
