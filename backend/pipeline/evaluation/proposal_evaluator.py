@@ -107,13 +107,20 @@ class ProposalEvaluator:
         user_prompt = f"Evaluate the following research proposal:\n\n{proposal_text[:8000]}"
 
         try:
-            response = await self._provider.complete(
-                messages=[
-                    {"role": "system", "content": self._system_prompt},
-                    {"role": "user", "content": user_prompt},
-                ],
-                max_tokens=1500,
-            )
+            msgs = [
+                {"role": "system", "content": self._system_prompt},
+                {"role": "user", "content": user_prompt},
+            ]
+            # B-COST-01: prefer the usage-enabled path so this provider call
+            # reports token usage and cost through _report_cost. Falls back to
+            # complete() for providers that do not implement complete_with_usage.
+            if hasattr(self._provider, "complete_with_usage"):
+                resp = await self._provider.complete_with_usage(
+                    msgs, max_tokens=1500, stage="proposal_evaluation",
+                )
+                response = resp.content if hasattr(resp, "content") else str(resp)
+            else:
+                response = await self._provider.complete(msgs, max_tokens=1500)
         except TimeoutError:
             logger.warning("LLM timeout during proposal evaluation — returning default scores")
             return ProposalEvaluation()
