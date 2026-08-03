@@ -106,6 +106,16 @@ class ProposalEvaluator:
 
         user_prompt = f"Evaluate the following research proposal:\n\n{proposal_text[:8000]}"
 
+        # B-EVAL-01 (F-7): use the product-authorized generation output budget
+        # (settings.generation_model_max_tokens, default 8192) instead of a
+        # hardcoded 1500. Reasoning models (e.g. glm-4.6) emit a separate
+        # reasoning_content that consumes tokens before final content; at 1500
+        # tokens the budget was exhausted mid-reasoning (finish_reason=length),
+        # yielding empty content and the silent-zero evaluation. The F-7
+        # diagnostic confirmed 8192 produces a complete tagged evaluation.
+        from backend.config import get_settings
+        eval_max_tokens = get_settings().generation_model_max_tokens
+
         try:
             msgs = [
                 {"role": "system", "content": self._system_prompt},
@@ -116,11 +126,11 @@ class ProposalEvaluator:
             # complete() for providers that do not implement complete_with_usage.
             if hasattr(self._provider, "complete_with_usage"):
                 resp = await self._provider.complete_with_usage(
-                    msgs, max_tokens=1500, stage="proposal_evaluation",
+                    msgs, max_tokens=eval_max_tokens, stage="proposal_evaluation",
                 )
                 response = resp.content if hasattr(resp, "content") else str(resp)
             else:
-                response = await self._provider.complete(msgs, max_tokens=1500)
+                response = await self._provider.complete(msgs, max_tokens=eval_max_tokens)
         except TimeoutError:
             logger.warning("LLM timeout during proposal evaluation — returning default scores")
             return ProposalEvaluation()
