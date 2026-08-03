@@ -303,6 +303,16 @@ class PipelineOrchestrator:
             if tools:
                 resp = await inner_provider.complete_with_tools(messages, tools, temperature, max_tokens)
                 return resp.content if hasattr(resp, 'content') else str(resp)
+            # B-COST-01: prefer the usage-enabled path so per-call token counts
+            # and cost fire through _report_cost (wired to CostTracker). Falls
+            # back to complete() for providers that do not implement it. Stage
+            # attribution is threaded from the gateway's current stage context.
+            stage = getattr(self._gateway, "_stage", "") or ""
+            if hasattr(inner_provider, "complete_with_usage"):
+                resp = await inner_provider.complete_with_usage(
+                    messages, temperature, max_tokens, stage=stage, run_id=self._current_run_id,
+                )
+                return resp.content if hasattr(resp, "content") else str(resp)
             return await inner_provider.complete(messages, temperature, max_tokens)
 
         self._gateway.set_provider_fn(_gateway_provider_fn)

@@ -54,6 +54,8 @@ class OpenAIProvider(LLMProvider):
         messages: list[dict],
         temperature: float = 0.7,
         max_tokens: int = 4096,
+        stage: str = "",
+        run_id: str | None = None,
     ) -> LLMResponse:
         response = await self._client.chat.completions.create(  # type: ignore[arg-type]
             model=self._model,
@@ -64,7 +66,7 @@ class OpenAIProvider(LLMProvider):
         usage = response.usage
         inp = usage.prompt_tokens if usage else 0
         out = usage.completion_tokens if usage else 0
-        self._report_cost(inp, out)
+        self._report_cost(inp, out, stage=stage, run_id=run_id)
         served = getattr(response, "model", None) or self._model
         self._set_receipt_from_response(served)
         return LLMResponse(

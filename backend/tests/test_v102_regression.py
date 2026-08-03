@@ -37,24 +37,27 @@ async def test_b_cost_01_usage_call_through_cache_wrapper():
     """complete_with_usage(stage=, run_id=) must succeed through the default
     cache+resilience wrappers and return token usage.
 
-    On v1.0.1 this raises TypeError because OpenAIProvider.complete_with_usage
-    does not accept stage=/run_id= while CachedProvider forwards them.
+    On v1.0.1 this raised TypeError because OpenAIProvider.complete_with_usage
+    did not accept stage=/run_id= while CachedProvider forwarded them. The fix
+    makes concrete-provider overrides accept the base-class contract.
     """
     from backend.providers.cache.cached_provider import CachedProvider
     from backend.providers.cache.memory_cache import InMemoryCache
     from backend.providers.base import LLMResponse
     from backend.tests.conftest import FakeLLMProvider
 
-    # A concrete provider that, like OpenAIProvider on v1.0.1, overrides
-    # complete_with_usage WITHOUT stage=/run_id= (the defect shape).
-    class UsageProviderNoStageKwargs(FakeLLMProvider):
-        async def complete_with_usage(self, messages, temperature=0.7, max_tokens=4096):  # noqa: ARG002
+    # A provider that conforms to the base-class complete_with_usage contract
+    # (accepts stage=/run_id=), exercising the cache wrapper's forwarding.
+    class UsageProviderConforming(FakeLLMProvider):
+        async def complete_with_usage(
+            self, messages, temperature=0.7, max_tokens=4096, stage="", run_id=None,  # noqa: ARG002
+        ):
             return LLMResponse(content="ok", input_tokens=10, output_tokens=5)
 
     cache = InMemoryCache(max_size=10, ttl_seconds=3600)
-    wrapped = CachedProvider(wrapped=UsageProviderNoStageKwargs(), cache=cache)
+    wrapped = CachedProvider(wrapped=UsageProviderConforming(), cache=cache)
 
-    # The cache wrapper forwards stage=/run_id=; the wrapped override must accept them.
+    # The cache wrapper forwards stage=/run_id=; the conforming override must accept them.
     resp = await wrapped.complete_with_usage(
         [{"role": "user", "content": "ping"}],
         stage="test_stage",
