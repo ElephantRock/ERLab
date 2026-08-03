@@ -146,25 +146,38 @@ async def test_b_eval_01_empty_response_does_not_silently_persist_zeros():
     """When the model returns an empty/unusable response, the evaluator must NOT
     silently persist an all-zero / empty-justification result.
 
-    On v1.0.1, ProposalEvaluator._parse_response("") builds a ProposalEvaluation
+    On v1.0.1, ProposalEvaluator._parse_response("") built a ProposalEvaluation
     with every score=0.0 and every justification="" — exactly the B-EVAL-01
-    symptom. The fix must signal failure (raise or return a sentinel) instead.
+    symptom. The fix raises UnusableEvaluationResponseError so the pipeline's
+    existing try/except stores an honest "Evaluation failed" label instead.
     """
-    evaluator = ProposalEvaluator(provider=_EmptyResponseProvider())
-    result = await evaluator.evaluate("A real proposal about SVM curriculum learning.")
+    from backend.pipeline.evaluation.proposal_evaluator import (
+        UnusableEvaluationResponseError,
+    )
 
-    # The current (broken) behavior: every dimension silently zero/empty.
-    broken = (
-        isinstance(result, ProposalEvaluation)
-        and all(getattr(result, d).score == 0.0 for d in DIMENSIONS)
-        and all(getattr(result, d).justification == "" for d in DIMENSIONS)
-        and result.overall == 0.0
+    evaluator = ProposalEvaluator(provider=_EmptyResponseProvider())
+
+    # After the fix: an empty response must raise, not return silent zeros.
+    with pytest.raises(UnusableEvaluationResponseError):
+        await evaluator.evaluate("A real proposal about SVM curriculum learning.")
+
+
+@pytest.mark.anyio
+async def test_b_eval_01_unparseable_response_does_not_silently_persist_zeros():
+    """A non-empty response that matches no dimension scores is also unusable
+    and must raise rather than persist silent zeros (the _parse_response guard).
+    """
+    from backend.pipeline.evaluation.proposal_evaluator import (
+        UnusableEvaluationResponseError,
     )
-    # After the fix, this silent-zero state must NOT occur for an empty response.
-    assert not broken, (
-        "B-EVAL-01 regression: evaluator silently persisted all-zero/empty "
-        "evaluation for an empty model response"
-    )
+
+    class _ProseProvider(_EmptyResponseProvider):
+        async def complete(self, messages, temperature=0.7, max_tokens=4096):  # noqa: ARG002
+            return "This proposal looks reasonable but I cannot score it precisely."
+
+    evaluator = ProposalEvaluator(provider=_ProseProvider())
+    with pytest.raises(UnusableEvaluationResponseError):
+        await evaluator.evaluate("A real proposal about SVM curriculum learning.")
 
 
 @pytest.mark.anyio

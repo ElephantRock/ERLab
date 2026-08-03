@@ -13,6 +13,17 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
+
+class UnusableEvaluationResponseError(RuntimeError):
+    """Raised when the model response cannot yield a usable evaluation.
+
+    B-EVAL-01 (defect F-4): on v1.0.1 an empty or unparseable model response
+    silently produced an all-zero / empty-justification ProposalEvaluation.
+    Callers (pipeline stages) already wrap evaluate() in try/except and store
+    an honest "Evaluation failed" label; raising here ensures that branch
+    fires instead of persisting silent zeros.
+    """
+
 _PROMPT_PATH = Path(__file__).parent / "prompts" / "evaluation.md"
 
 DIMENSIONS = ["novelty", "feasibility", "completeness", "rigor", "clarity", "baseline_adequacy", "compute_realism"]
@@ -110,11 +121,25 @@ class ProposalEvaluator:
             logger.warning("LLM error during proposal evaluation: %s — returning default", e)
             return ProposalEvaluation()
 
+        # B-EVAL-01: reject empty/whitespace-only responses explicitly rather
+        # than silently persisting an all-zero evaluation. Captured GLM-4.6
+        # behavior confirmed the model intermittently returns "" on some calls.
+        if not response or not response.strip():
+            raise UnusableEvaluationResponseError(
+                "model returned an empty response; cannot produce a usable evaluation"
+            )
+
         return self._parse_response(response)
 
     @staticmethod
     def _parse_response(text: str) -> ProposalEvaluation:
-        """Parse structured 5-dimension evaluation from LLM response."""
+        """Parse structured 5-dimension evaluation from LLM response.
+
+        Raises UnusableEvaluationResponseError when the response is non-empty
+        but yields zero parseable dimensions (B-EVAL-01): a response that
+        matches none of the DIM_SCORE patterns cannot produce a usable
+        evaluation and must not silently persist as all-zeros.
+        """
         scores = {}
         justifications = {}
 
@@ -134,6 +159,16 @@ class ProposalEvaluator:
             )
             if just_match:
                 justifications[dim] = just_match.group(1).strip()
+
+        # B-EVAL-01: a non-empty response that matched no dimension scores is
+        # unusable. Raise rather than persist silent zeros. Partial parses
+        # (some dimensions present) remain valid and return normally.
+        if not scores:
+            preview = (text or "").strip().replace("\n", " ")[:120]
+            raise UnusableEvaluationResponseError(
+                f"model response matched no dimension scores; cannot produce a "
+                f"usable evaluation. response preview: {preview!r}"
+            )
 
         overall = 0.0
         overall_match = re.search(r"OVERALL_SCORE:\s*([\d.]+)", text, re.IGNORECASE)
