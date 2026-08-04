@@ -392,7 +392,7 @@ async def test_b_cost_01_orchestrator_wires_cost_tracker_to_provider():
 
     summary = tracker.summary()
     assert summary["event_count"] >= 1, (
-        f"B-COST-01 registry wiring: expected >=1 cost event, got {summary["event_count"]}. "
+        f"B-COST-01 registry wiring: expected >=1 cost event, got {summary['event_count']}. "
         f"The cost tracker was not wired to the provider before creation."
     )
 
