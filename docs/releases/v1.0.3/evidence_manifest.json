@@ -1,0 +1,198 @@
+{
+  "schema_version": "1.0",
+  "release": "v1.0.3",
+  "status": "candidate",
+  "branch": "fix/v1.0.3-release-reconciliation",
+  "base_commit": "d0a2e7946a2c7ea3c0e39c1670e5105927699ebc",
+  "candidate_commit": "3b4aa1810b030e25d1819e715774466ee1bc9491",
+  "commits": [
+    {
+      "order": 1,
+      "sha": "f4e89c50b1259df57936c1e36c0210147f027954",
+      "subject": "test(v1.0.3): freeze release-reconciliation defects",
+      "blocker_class": "regression freeze",
+      "files_changed": ["backend/tests/test_v103_release_reconciliation.py"]
+    },
+    {
+      "order": 2,
+      "sha": "ec1f6a4c3f4365757c3e0b47082d5b4d0111ac91",
+      "subject": "fix(v1.0.3): align provider usage contracts",
+      "blocker_class": "provider contract conformance",
+      "files_changed": [
+        "backend/providers/openai_provider.py",
+        "backend/providers/anthropic_provider.py",
+        "backend/providers/gemini_provider.py",
+        "backend/providers/ollama_provider.py",
+        "backend/providers/litellm_provider.py"
+      ]
+    },
+    {
+      "order": 3,
+      "sha": "bc6933f94f62c474d50e142b952b5c67d9de0a97",
+      "subject": "fix(v1.0.3): isolate cost accounting by run",
+      "blocker_class": "run-scoped accounting",
+      "files_changed": [
+        "backend/providers/provider_factory.py",
+        "backend/pipeline/persistence.py"
+      ]
+    },
+    {
+      "order": 4,
+      "sha": "caf18f5d1f9f0cc94cbe99d75704abddf9a9035e",
+      "subject": "fix(v1.0.3): finalize sessions from run cost summary",
+      "blocker_class": "session finalization",
+      "files_changed": ["backend/pipeline/orchestrator/stage_lifecycle.py"]
+    },
+    {
+      "order": 5,
+      "sha": "d4475fcdeff68595f419f578f8fbc913188068ab",
+      "subject": "fix(v1.0.3): account for structured provider usage",
+      "blocker_class": "structured usage and partial posture",
+      "files_changed": [
+        "backend/pipeline/orchestrator/_orchestrator.py",
+        "backend/pipeline/persistence.py",
+        "backend/providers/provider_factory.py",
+        "backend/tests/test_v103_structured_usage.py"
+      ]
+    },
+    {
+      "order": 6,
+      "sha": "3b4aa1810b030e25d1819e715774466ee1bc9491",
+      "subject": "docs(v1.0.3): reconcile release identity and product description",
+      "blocker_class": "release identity and product description",
+      "files_changed": ["pyproject.toml", "README.md"]
+    }
+  ],
+  "blockers": [
+    {
+      "id": "B-PROV-01",
+      "summary": "Concrete providers did not honor the base usage-context signature (stage/run_id) and dropped usage attribution.",
+      "status": "repaired",
+      "repair_commit": "ec1f6a4c3f4365757c3e0b47082d5b4d0111ac91"
+    },
+    {
+      "id": "B-COST-02",
+      "summary": "CostTracker accounting views and persistence were not scoped by run_id; one run's events leaked into another's ledger.",
+      "status": "repaired",
+      "repair_commit": "bc6933f94f62c474d50e142b952b5c67d9de0a97"
+    },
+    {
+      "id": "B-SESS-01",
+      "summary": "Session terminalization read nonexistent CostTracker properties (total_tokens/total_cost) instead of the run-scoped summary.",
+      "status": "repaired",
+      "repair_commit": "caf18f5d1f9f0cc94cbe99d75704abddf9a9035e"
+    },
+    {
+      "id": "B-GW-01",
+      "summary": "Gateway schema branch bypassed the usage-aware boundary, issuing unattributed structured calls.",
+      "status": "repaired",
+      "repair_commit": "d4475fcdeff68595f419f578f8fbc913188068ab"
+    },
+    {
+      "id": "B-RECON-01",
+      "summary": "persist_cost_ledger could label a run reconciled based solely on a nonempty ledger, masking known accounting gaps.",
+      "status": "repaired",
+      "repair_commit": "d4475fcdeff68595f419f578f8fbc913188068ab"
+    },
+    {
+      "id": "B-ID-01",
+      "summary": "Package and README release identity disagreed with the v1.0.3 claim (stale 1.0.1).",
+      "status": "repaired",
+      "repair_commit": "3b4aa1810b030e25d1819e715774466ee1bc9491"
+    }
+  ],
+  "verification": [
+    {
+      "name": "v1.0.3 frozen contracts (21 tests)",
+      "command": "pytest backend/tests/test_v103_release_reconciliation.py",
+      "result": "21 passed",
+      "class": "runtime_verified",
+      "note": "Re-run in the dossier step at candidate commit 3b4aa18."
+    },
+    {
+      "name": "v1.0.3 focused behavioral tests (7 tests)",
+      "command": "pytest backend/tests/test_v103_structured_usage.py",
+      "result": "7 passed",
+      "class": "runtime_verified",
+      "note": "Re-run in the dossier step at candidate commit 3b4aa18."
+    },
+    {
+      "name": "v1.0.3 combined focused suites (28 tests)",
+      "command": "pytest backend/tests/test_v103_release_reconciliation.py backend/tests/test_v103_structured_usage.py",
+      "result": "28 passed",
+      "class": "runtime_verified",
+      "note": "Re-run in the dossier step at candidate commit 3b4aa18."
+    },
+    {
+      "name": "v1.0.2 regression (11 tests)",
+      "command": "pytest backend/tests/test_v102_regression.py",
+      "result": "11 passed",
+      "class": "runtime_verified",
+      "note": "Re-run during Commit 6 acceptance; confirmed at candidate commit 3b4aa18."
+    },
+    {
+      "name": "Provider test suite (48 tests)",
+      "command": "pytest backend/tests/test_providers/",
+      "result": "48 passed",
+      "class": "reported_not_independently_reproduced",
+      "note": "Observed during Commit 2; not re-run as a batch in the dossier step."
+    },
+    {
+      "name": "Cache test suite (32 tests)",
+      "command": "pytest backend/tests/test_caching/",
+      "result": "32 passed",
+      "class": "reported_not_independently_reproduced",
+      "note": "Observed during Commit 2/3; not re-run as a batch in the dossier step."
+    },
+    {
+      "name": "Budget/cost/gateway focused tests (110 tests)",
+      "command": "pytest backend/tests/test_autonomy/test_budget.py backend/tests/test_pipeline/test_batch98_cost.py backend/tests/test_pipeline/test_batch105_budget.py backend/tests/test_pipeline/test_batch139_budgets.py backend/tests/test_pipeline/test_batch187_cost_estimator.py backend/tests/test_compaction/test_budget_manager.py backend/tests/test_pipeline/test_gateway.py backend/tests/test_pipeline/test_gateway_v2.py",
+      "result": "110 passed",
+      "class": "reported_not_independently_reproduced",
+      "note": "Observed during Commit 5; not re-run as a batch in the dossier step."
+    },
+    {
+      "name": "Lifecycle/session/orchestrator/cost pipeline tests (104 tests)",
+      "command": "pytest backend/tests/test_pipeline/ -k 'lifecycle or session or orchestrat or finalize or cost'",
+      "result": "104 passed",
+      "class": "reported_not_independently_reproduced",
+      "note": "Observed during Commit 4; not re-run as a batch in the dossier step."
+    },
+    {
+      "name": "Gateway structured-output routing uses usage-aware path (source contract)",
+      "command": "inspect.getsource(PipelineOrchestrator.__init__)",
+      "result": "contract satisfied",
+      "class": "source_verified",
+      "note": "Frozen contract test_gateway_schema_branch_uses_usage_enabled_provider_path."
+    },
+    {
+      "name": "Partial reconciliation posture (source contract)",
+      "command": "inspect.getsource(PipelinePersistence.persist_cost_ledger)",
+      "result": "contract satisfied",
+      "class": "source_verified",
+      "note": "Frozen contract test_cost_summary_can_represent_partial_accounting."
+    },
+    {
+      "name": "Release identity consistency",
+      "command": "pyproject.toml version + README leading identifier",
+      "result": "1.0.3 in both",
+      "class": "runtime_verified",
+      "note": "Frozen contract test_release_identity_is_v1_0_3_everywhere."
+    }
+  ],
+  "pending_gates": [
+    "Full branch CI on the candidate commit (complete backend test suite via CI, not just focused suites).",
+    "Confirmatory literature-to-paper end-to-end run against a live OpenAI-compatible provider.",
+    "Restart-stability verification of durable artifacts (cost ledger, checkpoint).",
+    "Final clean-tree and commit binding reconfirmed immediately before tagging.",
+    "Merge to master and create the v1.0.3 tag."
+  ],
+  "bounded_claim": "v1.0.3 claims run-isolated cost accounting; stage/run attribution across all five concrete providers' complete_with_usage and structured_output_with_usage; structured-output accounting via the usage-aware gateway boundary; an explicit partial/reconciled/no_events reconciliation posture; honest session finalization from the run-scoped summary; and consistent release identity at 1.0.3. The claim is bounded to the focused reconciliation suites; full-branch CI and a confirmatory E2E remain pending.",
+  "non_claims": [
+    "No tool-call accounting claim (complete_with_tools attribution is out of scope).",
+    "No universal live-E2E provider claim (only the OpenAI-compatible cloud path is live-validated).",
+    "No human peer-review claim.",
+    "No autonomous scientific-validity claim.",
+    "No arbitrary-domain generality claim."
+  ]
+}
