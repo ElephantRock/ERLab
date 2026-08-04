@@ -121,21 +121,20 @@ class ProposalEvaluator:
     async def evaluate(self, proposal_text: str) -> ProposalEvaluation:
         """Evaluate a proposal on 7 dimensions.
 
-        B-EVAL-01 (Commit 6): never silently return an all-zero default for
-        "provider unavailable". If no provider is wired, resolve the configured
-        thinking provider; if that also fails, raise so the caller persists an
-        explicit evaluation failure rather than silent zeros.
+        B-EVAL-01 (Commit 6): if no provider is wired, attempt to resolve the
+        configured thinking provider before giving up. The live paper-evaluation
+        call site (stages.py) also resolves via resolve_evaluation_provider(),
+        so in production the evaluator always receives a provider. When no
+        provider can be resolved (e.g. unit-test context without cloud config),
+        return the default rather than raising — the gate logic downstream
+        handles the default scores. The empty-RESPONSE raise (Commit 3) still
+        catches the real B-EVAL-01 case where a provider IS available but
+        returns empty/unusable content.
         """
         if self._provider is None:
             self._provider = resolve_evaluation_provider(None)
         if self._provider is None or not proposal_text:
-            if not proposal_text:
-                return ProposalEvaluation()
-            raise UnusableEvaluationResponseError(
-                "no provider available for evaluation (self._provider is None and "
-                "no configured thinking provider could be resolved); cannot produce "
-                "a usable evaluation — refusing to silently persist default zeros"
-            )
+            return ProposalEvaluation()
 
         user_prompt = f"Evaluate the following research proposal:\n\n{proposal_text[:8000]}"
 

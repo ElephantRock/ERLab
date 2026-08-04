@@ -43,8 +43,22 @@ def _evaluate(stage, ctx, proposal):
 
 @pytest.fixture
 def stage(fake_provider):
+    # B-EVAL-01: the evaluator now rejects unparseable responses (Commit 3).
+    # These gate tests exercise gate logic, not eval parsing, so the fake
+    # provider must return a valid tagged evaluation response.
+    from backend.tests.conftest import FakeLLMProvider
+    _VALID_EVAL = (
+        "NOVELTY_SCORE: 0.7\nNOVELTY_JUSTIFICATION: Novel.\n"
+        "FEASIBILITY_SCORE: 0.7\nFEASIBILITY_JUSTIFICATION: Feasible.\n"
+        "COMPLETENESS_SCORE: 0.7\nCOMPLETENESS_JUSTIFICATION: Complete.\n"
+        "RIGOR_SCORE: 0.7\nRIGOR_JUSTIFICATION: Rigorous.\n"
+        "CLARITY_SCORE: 0.7\nCLARITY_JUSTIFICATION: Clear.\n"
+        "BASELINE_ADEQUACY_SCORE: 0.7\nBASELINE_ADEQUACY_JUSTIFICATION: Adequate.\n"
+        "COMPUTE_REALISM_SCORE: 0.7\nCOMPUTE_REALISM_JUSTIFICATION: Realistic.\n"
+        "OVERALL_SCORE: 0.7\n"
+    )
     s = PaperSynthesisStage()
-    s._provider = fake_provider
+    s._provider = FakeLLMProvider(responses={"complete": _VALID_EVAL})
     return s
 
 
