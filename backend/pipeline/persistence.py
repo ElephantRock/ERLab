@@ -1195,9 +1195,22 @@ class PipelinePersistence:
             # Summary: reconciled totals + cap comparison
             summary = tracker.summary(run_id=run_id)
             cap = cost_cap_usd if cost_cap_usd is not None else settings.budget_max_cost_usd
+            # Derive reconciliation posture honestly. A nonempty ledger alone
+            # is insufficient to claim full reconciliation: a run with a known
+            # unaccounted provider call is "partial" even when other events
+            # were captured. "no_events" only when nothing was captured and no
+            # billable call went unrecorded.
+            event_count = summary.get("event_count", 0)
+            has_accounting_gap = getattr(tracker, "is_accounting_partial", lambda _rid: False)(run_id)
+            if has_accounting_gap:
+                reconciliation_status = "partial"
+            elif event_count > 0:
+                reconciliation_status = "reconciled"
+            else:
+                reconciliation_status = "no_events"
             summary_record = {
                 "run_id": run_id,
-                "record_count": summary.get("event_count", 0),
+                "record_count": event_count,
                 "total_input_tokens": summary.get("total_input_tokens", 0),
                 "total_output_tokens": summary.get("total_output_tokens", 0),
                 "total_tokens": summary.get("total_tokens", 0),
@@ -1206,7 +1219,7 @@ class PipelinePersistence:
                 "within_cap": summary.get("total_cost_usd", 0.0) <= cap,
                 "by_provider": tracker.by_provider(run_id=run_id),
                 "by_stage": tracker.by_stage(run_id=run_id),
-                "reconciliation_status": "reconciled" if summary.get("event_count", 0) > 0 else "no_events",
+                "reconciliation_status": reconciliation_status,
             }
             summary_path.write_text(
                 json.dumps(summary_record, indent=2, default=str),

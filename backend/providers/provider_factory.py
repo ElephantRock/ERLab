@@ -383,9 +383,29 @@ class CostTracker:
     def __init__(self) -> None:
         self._events: list[CostEvent] = []
         self._cost_overrides: dict[str, dict[str, float]] = {}
+        # Run-scoped record of provider calls whose usage could not be
+        # authoritatively accounted (e.g. missing usage receipt, or a
+        # provider that lacks the usage-aware structured path). A nonempty
+        # ledger is not, by itself, proof that every billable call
+        # reconciled; this set carries the honest gap.
+        self._partial_runs: dict[str | None, list[str]] = {}
 
     def set_cost_per_1k(self, provider: str, input_cost: float, output_cost: float) -> None:
         self._cost_overrides[provider] = {"input": input_cost, "output": output_cost}
+
+    def mark_accounting_partial(self, run_id: str | None, reason: str) -> None:
+        """Record that ``run_id`` has at least one unaccounted provider call.
+
+        The existence of unrelated cost events does not prove every call
+        reconciled; this carries the known accounting gap so the persisted
+        summary can report ``partial`` rather than falsely ``reconciled``.
+        Run-scoped: marking run B partial never taints run A.
+        """
+        self._partial_runs.setdefault(run_id, []).append(reason)
+
+    def is_accounting_partial(self, run_id: str | None) -> bool:
+        """True when ``run_id`` has a known unaccounted provider call."""
+        return bool(self._partial_runs.get(run_id))
 
     def record(self, event: CostEvent) -> None:
         if event.cost_usd == 0.0:
