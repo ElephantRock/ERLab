@@ -396,20 +396,32 @@ class CostTracker:
             )
         self._events.append(event)
 
-    def summary(self) -> dict[str, Any]:
-        if not self._events:
+    def _filtered(self, run_id: str | None) -> list[CostEvent]:
+        """Return events scoped to ``run_id``, or all events when ``run_id`` is None.
+
+        CostTracker is process-lived and may accumulate events from several
+        runs; every accounting view is optionally scoped to one run so that a
+        ledger or summary written for run B never inherits run A's events.
+        """
+        if run_id is None:
+            return self._events
+        return [e for e in self._events if e.run_id == run_id]
+
+    def summary(self, run_id: str | None = None) -> dict[str, Any]:
+        events = self._filtered(run_id)
+        if not events:
             return {"total_cost_usd": 0.0, "total_tokens": 0, "event_count": 0}
         return {
-            "total_cost_usd": sum(e.cost_usd for e in self._events),
-            "total_tokens": sum(e.total_tokens for e in self._events),
-            "total_input_tokens": sum(e.input_tokens for e in self._events),
-            "total_output_tokens": sum(e.output_tokens for e in self._events),
-            "event_count": len(self._events),
+            "total_cost_usd": sum(e.cost_usd for e in events),
+            "total_tokens": sum(e.total_tokens for e in events),
+            "total_input_tokens": sum(e.input_tokens for e in events),
+            "total_output_tokens": sum(e.output_tokens for e in events),
+            "event_count": len(events),
         }
 
-    def by_provider(self) -> dict[str, dict[str, Any]]:
+    def by_provider(self, run_id: str | None = None) -> dict[str, dict[str, Any]]:
         result: dict[str, dict[str, Any]] = {}
-        for e in self._events:
+        for e in self._filtered(run_id):
             if e.provider not in result:
                 result[e.provider] = {"cost_usd": 0.0, "input_tokens": 0, "output_tokens": 0, "calls": 0}
             r = result[e.provider]
@@ -419,9 +431,9 @@ class CostTracker:
             r["calls"] += 1
         return result
 
-    def by_stage(self) -> dict[str, dict[str, Any]]:
+    def by_stage(self, run_id: str | None = None) -> dict[str, dict[str, Any]]:
         result: dict[str, dict[str, Any]] = {}
-        for e in self._events:
+        for e in self._filtered(run_id):
             stage = e.stage or "unspecified"
             if stage not in result:
                 result[stage] = {"cost_usd": 0.0, "input_tokens": 0, "output_tokens": 0, "calls": 0}
@@ -432,9 +444,9 @@ class CostTracker:
             r["calls"] += 1
         return result
 
-    def by_model(self) -> dict[str, dict[str, Any]]:
+    def by_model(self, run_id: str | None = None) -> dict[str, dict[str, Any]]:
         result: dict[str, dict[str, Any]] = {}
-        for e in self._events:
+        for e in self._filtered(run_id):
             key = f"{e.provider}/{e.model}"
             if key not in result:
                 result[key] = {"cost_usd": 0.0, "input_tokens": 0, "output_tokens": 0, "calls": 0}
@@ -455,12 +467,12 @@ class CostTracker:
             if start <= e.timestamp.timestamp() <= end
         ]
 
-    def persist(self, path: str) -> None:
-        """Write all cost events to a JSONL file."""
+    def persist(self, path: str, run_id: str | None = None) -> None:
+        """Write cost events to a JSONL file, optionally scoped to one run."""
         from pathlib import Path
         Path(path).parent.mkdir(parents=True, exist_ok=True)
         with open(path, "w", encoding="utf-8") as f:
-            for e in self._events:
+            for e in self._filtered(run_id):
                 line = json.dumps({
                     "provider": e.provider,
                     "model": e.model,

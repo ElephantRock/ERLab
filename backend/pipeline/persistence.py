@@ -1187,11 +1187,13 @@ class PipelinePersistence:
             ledger_path = out_dir / f"{run_id}_cost_ledger.jsonl"
             summary_path = out_dir / f"{run_id}_cost_summary.json"
 
-            # Ledger: existing CostTracker.persist writes JSONL per event
-            tracker.persist(str(ledger_path))
+            # Ledger: CostTracker.persist writes JSONL per event. Scope every
+            # accounting view to this run so a process-lived tracker cannot
+            # leak another run's events into this ledger.
+            tracker.persist(str(ledger_path), run_id=run_id)
 
             # Summary: reconciled totals + cap comparison
-            summary = tracker.summary()
+            summary = tracker.summary(run_id=run_id)
             cap = cost_cap_usd if cost_cap_usd is not None else settings.budget_max_cost_usd
             summary_record = {
                 "run_id": run_id,
@@ -1202,8 +1204,8 @@ class PipelinePersistence:
                 "total_cost_usd": round(summary.get("total_cost_usd", 0.0), 6),
                 "cost_cap_usd": cap,
                 "within_cap": summary.get("total_cost_usd", 0.0) <= cap,
-                "by_provider": tracker.by_provider(),
-                "by_stage": tracker.by_stage(),
+                "by_provider": tracker.by_provider(run_id=run_id),
+                "by_stage": tracker.by_stage(run_id=run_id),
                 "reconciliation_status": "reconciled" if summary.get("event_count", 0) > 0 else "no_events",
             }
             summary_path.write_text(
