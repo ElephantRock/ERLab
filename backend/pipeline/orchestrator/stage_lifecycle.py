@@ -675,10 +675,17 @@ class StageLifecycle:
             except Exception:
                 pass
 
-        # Persist cost events
+        # Persist cost events (B-COST-01: durable ledger + reconciled summary)
         if self._cost_tracker and self._cost_tracker._events:
             cost_dir = getattr(self._settings, "cost_persist_dir", "./data/costs")
-            self._cost_tracker.persist(f"{cost_dir}/{run_id}.jsonl")
+            cost_cap = getattr(self._settings, "budget_max_cost_usd", 100.0)
+            # Use the enhanced persistence (ledger JSONL + summary with cap comparison)
+            self._persistence.persist_cost_ledger(
+                run_id=run_id,
+                tracker=self._cost_tracker,
+                cost_persist_dir=cost_dir,
+                cost_cap_usd=cost_cap,
+            )
 
         # Session: complete run record
         if session_id and self._services.session_manager:

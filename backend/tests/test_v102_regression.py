@@ -278,3 +278,93 @@ async def test_b_eval_01_paper_eval_resolves_configured_provider_when_none_passe
         "construct ProposalEvaluator(None) and silently persist zeros"
     )
     assert hasattr(provider, "complete"), "resolved provider has no complete()"
+
+
+# ── Commit 7: durable cost-ledger persistence (B-COST-01) ─────────────────
+
+
+@pytest.mark.anyio
+async def test_b_cost_01_cost_tracker_persists_durable_ledger(tmp_path):
+    """After a run reaches terminal state, the CostTracker's captured events
+    must be durably persisted to a JSONL ledger with a reconciled run summary.
+
+    On the current branch (pre-Commit-7), CostTracker is in-memory only —
+    the confirmatory run (run_c600518856d2) made 88 cloud calls but left
+    zero cost files. This test verifies the persistence path exists and
+    writes records + summary.
+    """
+    import json
+    from backend.providers.provider_factory import CostTracker
+    from backend.providers.base import CostEvent
+    from datetime import datetime, timezone
+
+    tracker = CostTracker()
+    # Simulate two captured usage events
+    tracker.record(CostEvent(
+        provider="openai", model="glm-4.6", input_tokens=100, output_tokens=50,
+        stage="proposal_synthesis", run_id="run_test",
+    ))
+    tracker.record(CostEvent(
+        provider="openai", model="glm-4.6", input_tokens=200, output_tokens=100,
+        stage="evaluation", run_id="run_test",
+    ))
+
+    ledger_path = tmp_path / "costs" / "run_test_cost_ledger.jsonl"
+    summary_path = tmp_path / "costs" / "run_test_cost_summary.json"
+
+    # The persistence method must exist and write both files.
+    from backend.pipeline.persistence import PipelinePersistence
+    persistence = PipelinePersistence()
+    persistence.persist_cost_ledger(
+        run_id="run_test",
+        tracker=tracker,
+        cost_persist_dir=str(tmp_path / "costs"),
+        cost_cap_usd=100.0,
+    )
+
+    assert ledger_path.exists(), "cost ledger JSONL was not persisted"
+    assert summary_path.exists(), "cost summary JSON was not persisted"
+
+    # Ledger: every event durably stored
+    lines = ledger_path.read_text(encoding="utf-8").strip().split("\n")
+    assert len(lines) == 2, f"expected 2 ledger entries, got {len(lines)}"
+    entry0 = json.loads(lines[0])
+    assert entry0["provider"] == "openai"
+    assert entry0["model"] == "glm-4.6"
+    assert entry0["stage"] == "proposal_synthesis"
+    assert entry0["run_id"] == "run_test"
+    assert "input_tokens" in entry0 and "output_tokens" in entry0
+    assert "cost_usd" in entry0
+
+    # Summary: reconciled totals + cap comparison
+    summary = json.loads(summary_path.read_text(encoding="utf-8"))
+    assert summary["record_count"] == 2
+    assert summary["total_input_tokens"] == 300
+    assert summary["total_output_tokens"] == 150
+    assert summary["total_tokens"] == 450
+    assert summary["total_cost_usd"] >= 0.0
+    assert summary["cost_cap_usd"] == 100.0
+    assert summary["within_cap"] is True
+    assert summary["run_id"] == "run_test"
+    # No credentials in artifacts
+    ledger_text = ledger_path.read_text(encoding="utf-8") + summary_path.read_text(encoding="utf-8")
+    assert "api_key" not in ledger_text.lower() or "sk-" not in ledger_text
+
+
+def test_b_cost_01_cost_tracker_summary_reconciles():
+    """The summary's totals must equal the sum of persisted records."""
+    from backend.providers.provider_factory import CostTracker
+    from backend.providers.base import CostEvent
+
+    tracker = CostTracker()
+    for i in range(5):
+        tracker.record(CostEvent(
+            provider="openai", model="glm-4.6",
+            input_tokens=10 * (i + 1), output_tokens=5 * (i + 1),
+            stage=f"stage_{i}", run_id="run_recon",
+        ))
+    summary = tracker.summary()
+    # Sum of records must match summary
+    assert summary["event_count"] == 5
+    assert summary["total_input_tokens"] == 10 + 20 + 30 + 40 + 50
+    assert summary["total_output_tokens"] == 5 + 10 + 15 + 20 + 25
