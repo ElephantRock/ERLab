@@ -689,8 +689,13 @@ class StageLifecycle:
 
         # Session: complete run record
         if session_id and self._services.session_manager:
-            tokens = self._cost_tracker.total_tokens if self._cost_tracker else 0
-            cost = self._cost_tracker.total_cost if self._cost_tracker else 0.0
+            if self._cost_tracker:
+                cost_summary = self._cost_tracker.summary(run_id=run_id)
+                tokens = cost_summary.get("total_tokens", 0)
+                cost = cost_summary.get("total_cost_usd", 0.0)
+            else:
+                tokens = 0
+                cost = 0.0
             self._services.session_manager.complete_run(
                 session_id, run_id, tokens_used=tokens, cost_usd=cost
             )
