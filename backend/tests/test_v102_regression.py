@@ -214,3 +214,67 @@ async def test_b_eval_01_valid_tagged_response_still_parses():
     assert result.novelty.score == pytest.approx(0.7)
     assert "non-trivial" in result.novelty.justification
     assert result.clarity.score == pytest.approx(0.8)
+
+
+# ── Commit 6: live paper-evaluation call-site provider gap (B-EVAL-01) ─────
+
+
+@pytest.mark.anyio
+async def test_b_eval_01_paper_eval_no_provider_does_not_silently_return_zeros():
+    """The live paper-evaluation call site (PaperSynthesisStage, stages.py:2419)
+    constructs ProposalEvaluator(self._provider). When self._provider is None,
+    the evaluator must NOT silently return an all-zero / empty-justification
+    ProposalEvaluation — that is the exact B-EVAL-01 symptom observed in the
+    confirmatory run (run_c600518856d2).
+
+    On the current branch (pre-Commit-6), ProposalEvaluator(None).evaluate(real_paper)
+    returns the default ProposalEvaluation() via the provider-is-None early-return
+    (proposal_evaluator.py:104), bypassing the cloud model and the
+    UnusableEvaluationResponseError guard entirely.
+
+    The fix must: resolve a configured provider at the call site (or raise an
+    explicit failure), never persist silent zeros for "provider unavailable".
+    """
+    # Reproduce the call-site condition: provider=None, non-empty paper
+    evaluator = ProposalEvaluator(provider=None)
+    result = await evaluator.evaluate(
+        "## A Real Paper\n\n## Abstract\nThis is a complete paper about "
+        "SVM-guided curriculum learning for tabular transformers with full "
+        "methodology and evaluation sections."
+    )
+
+    # The broken behavior: silent all-zero / empty-justification default.
+    broken = (
+        isinstance(result, ProposalEvaluation)
+        and all(getattr(result, d).score == 0.0 for d in DIMENSIONS)
+        and all(getattr(result, d).justification == "" for d in DIMENSIONS)
+    )
+    assert not broken, (
+        "B-EVAL-01 integration regression: ProposalEvaluator(None) silently "
+        "returned all-zero/empty evaluation for a non-empty paper without "
+        "invoking the configured provider or signalling failure"
+    )
+
+
+@pytest.mark.anyio
+async def test_b_eval_01_paper_eval_resolves_configured_provider_when_none_passed():
+    """After the fix, the paper-evaluation path must resolve a configured
+    thinking provider when self._provider is None (mirroring the proposal-eval
+    call site at stages.py:3653 which uses get_thinking_provider() fallback).
+
+    This test verifies the call-site resolution helper exists and returns a
+    usable provider, so the evaluator is never constructed with None when a
+    provider is available.
+    """
+    from backend.pipeline.evaluation.proposal_evaluator import (
+        resolve_evaluation_provider,
+    )
+
+    # When called with None, must fall back to the configured thinking provider.
+    provider = resolve_evaluation_provider(provider=None)
+    assert provider is not None, (
+        "B-EVAL-01: resolve_evaluation_provider(None) returned None even though "
+        "a cloud provider is configured — the paper-eval call site would "
+        "construct ProposalEvaluator(None) and silently persist zeros"
+    )
+    assert hasattr(provider, "complete"), "resolved provider has no complete()"

@@ -29,6 +29,30 @@ _PROMPT_PATH = Path(__file__).parent / "prompts" / "evaluation.md"
 DIMENSIONS = ["novelty", "feasibility", "completeness", "rigor", "clarity", "baseline_adequacy", "compute_realism"]
 
 
+def resolve_evaluation_provider(provider: Any = None) -> Any:
+    """Resolve a provider for evaluation, with configured-provider fallback.
+
+    B-EVAL-01 (Commit 6): the paper-evaluation call site
+    (PaperSynthesisStage, stages.py:2419) constructed ProposalEvaluator(None)
+    when self._provider was None, causing the evaluator to silently return
+    all-zero defaults without invoking the cloud model. This helper mirrors
+    the fallback already used by the proposal-evaluation call site
+    (stages.py:3653): if no provider is passed, resolve the configured
+    thinking provider. Returns None only when no provider can be resolved
+    (caller must then handle explicitly — never as silent zeros).
+    """
+    if provider is not None:
+        return provider
+    try:
+        from backend.providers.provider_factory import get_thinking_provider
+        from backend.config import get_settings
+
+        return get_thinking_provider(get_settings())
+    except Exception as e:
+        logger.warning("Could not resolve evaluation provider via get_thinking_provider: %s", e)
+        return None
+
+
 @dataclass
 class DimensionScore:
     """Score and justification for a single evaluation dimension."""
@@ -95,14 +119,23 @@ class ProposalEvaluator:
         return "Evaluate the proposal on 5 dimensions: Novelty, Feasibility, Completeness, Rigor, Clarity."
 
     async def evaluate(self, proposal_text: str) -> ProposalEvaluation:
-        """Evaluate a proposal on 5 dimensions.
+        """Evaluate a proposal on 7 dimensions.
 
-        Returns:
-            ProposalEvaluation with scores and justifications.
-            Returns default evaluation if provider is unavailable.
+        B-EVAL-01 (Commit 6): never silently return an all-zero default for
+        "provider unavailable". If no provider is wired, resolve the configured
+        thinking provider; if that also fails, raise so the caller persists an
+        explicit evaluation failure rather than silent zeros.
         """
+        if self._provider is None:
+            self._provider = resolve_evaluation_provider(None)
         if self._provider is None or not proposal_text:
-            return ProposalEvaluation()
+            if not proposal_text:
+                return ProposalEvaluation()
+            raise UnusableEvaluationResponseError(
+                "no provider available for evaluation (self._provider is None and "
+                "no configured thinking provider could be resolved); cannot produce "
+                "a usable evaluation — refusing to silently persist default zeros"
+            )
 
         user_prompt = f"Evaluate the following research proposal:\n\n{proposal_text[:8000]}"
 
