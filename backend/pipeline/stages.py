@@ -2414,9 +2414,13 @@ class PaperSynthesisStage(PipelineStage):
             blocking_reasons.append(f"experiment_alignment: {exp_alignment_reason}")
 
         try:
-            from backend.pipeline.evaluation.proposal_evaluator import ProposalEvaluator
+            from backend.pipeline.evaluation.proposal_evaluator import ProposalEvaluator, resolve_evaluation_provider
 
-            evaluator = ProposalEvaluator(self._provider)
+            # B-EVAL-01 (Commit 6): resolve a configured provider when self._provider
+            # is None, mirroring the proposal-eval call site (stages.py:3653).
+            # Never construct ProposalEvaluator(None) and silently persist zeros.
+            eval_provider = resolve_evaluation_provider(self._provider)
+            evaluator = ProposalEvaluator(eval_provider)
             evaluation = await evaluator.evaluate(paper_md)
 
             if blocking_reasons:

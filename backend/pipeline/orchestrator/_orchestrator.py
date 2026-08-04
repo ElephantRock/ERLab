@@ -59,7 +59,7 @@ from backend.pipeline.synthesis.proposal_synthesizer import ProposalSynthesizer
 from backend.pipeline.synthesis.reference_validator import ReferenceValidator
 from backend.pipeline.verification.reference_verifier import ReferenceVerifier
 from backend.providers.base import LLMProvider
-from backend.providers.provider_factory import get_registry
+from backend.providers.provider_factory import get_registry, CostTracker
 from backend.providers.retry import retry_llm_call
 from backend.providers.token_counter import TokenCounter
 from backend.pipeline.compaction.middleware import CompactionMiddleware
@@ -205,6 +205,13 @@ class PipelineOrchestrator:
     def __init__(self, provider: LLMProvider | None = None, stage_callback=None, settings: "Settings | None" = None, strategy: str | None = None):
         settings = settings or get_settings()
         self._registry = get_registry()
+        # B-COST-01 (Commit 8): create a CostTracker and register it with the
+        # provider registry BEFORE creating the provider, so that the factory
+        # wires the cost callback into every provider it constructs. Without
+        # this, complete_with_usage fires _report_cost into a None callback
+        # and zero cost events are captured across the entire pipeline run.
+        if self._registry.cost_tracker is None:
+            self._registry.set_cost_tracker(CostTracker())
         # Guard against Settings being passed as provider (positional arg confusion)
         if provider is not None and not hasattr(provider, "structured_output"):
             logger.warning(
@@ -303,6 +310,16 @@ class PipelineOrchestrator:
             if tools:
                 resp = await inner_provider.complete_with_tools(messages, tools, temperature, max_tokens)
                 return resp.content if hasattr(resp, 'content') else str(resp)
+            # B-COST-01: prefer the usage-enabled path so per-call token counts
+            # and cost fire through _report_cost (wired to CostTracker). Falls
+            # back to complete() for providers that do not implement it. Stage
+            # attribution is threaded from the gateway's current stage context.
+            stage = getattr(self._gateway, "_stage", "") or ""
+            if hasattr(inner_provider, "complete_with_usage"):
+                resp = await inner_provider.complete_with_usage(
+                    messages, temperature, max_tokens, stage=stage, run_id=getattr(self, "_current_run_id", None),
+                )
+                return resp.content if hasattr(resp, "content") else str(resp)
             return await inner_provider.complete(messages, temperature, max_tokens)
 
         self._gateway.set_provider_fn(_gateway_provider_fn)

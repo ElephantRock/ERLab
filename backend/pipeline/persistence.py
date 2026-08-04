@@ -1157,6 +1157,68 @@ class PipelinePersistence:
             logger.warning("Failed to mark DB run as completed: %s", e)
             self.warnings.append(f"mark_run_completed: {e}")
 
+    def persist_cost_ledger(
+        self,
+        run_id: str,
+        tracker: Any,
+        cost_persist_dir: str | None = None,
+        cost_cap_usd: float | None = None,
+    ) -> None:
+        """B-COST-01 (Commit 7): durably persist the run's cost ledger + summary.
+
+        Writes two artifacts to cost_persist_dir:
+          <run_id>_cost_ledger.jsonl  — one line per captured usage event
+          <run_id>_cost_summary.json  — reconciled totals + cap comparison
+
+        Uses the existing CostTracker.persist() JSONL contract for the ledger
+        and tracker.summary() for reconciliation. No new DB schema/migration.
+        """
+        if tracker is None:
+            logger.debug("persist_cost_ledger: no tracker provided for run %s", run_id)
+            return
+        try:
+            from pathlib import Path
+            from backend.config import get_settings
+
+            settings = get_settings()
+            out_dir = Path(cost_persist_dir or settings.cost_persist_dir)
+            out_dir.mkdir(parents=True, exist_ok=True)
+
+            ledger_path = out_dir / f"{run_id}_cost_ledger.jsonl"
+            summary_path = out_dir / f"{run_id}_cost_summary.json"
+
+            # Ledger: existing CostTracker.persist writes JSONL per event
+            tracker.persist(str(ledger_path))
+
+            # Summary: reconciled totals + cap comparison
+            summary = tracker.summary()
+            cap = cost_cap_usd if cost_cap_usd is not None else settings.budget_max_cost_usd
+            summary_record = {
+                "run_id": run_id,
+                "record_count": summary.get("event_count", 0),
+                "total_input_tokens": summary.get("total_input_tokens", 0),
+                "total_output_tokens": summary.get("total_output_tokens", 0),
+                "total_tokens": summary.get("total_tokens", 0),
+                "total_cost_usd": round(summary.get("total_cost_usd", 0.0), 6),
+                "cost_cap_usd": cap,
+                "within_cap": summary.get("total_cost_usd", 0.0) <= cap,
+                "by_provider": tracker.by_provider(),
+                "by_stage": tracker.by_stage(),
+                "reconciliation_status": "reconciled" if summary.get("event_count", 0) > 0 else "no_events",
+            }
+            summary_path.write_text(
+                json.dumps(summary_record, indent=2, default=str),
+                encoding="utf-8",
+            )
+            logger.info(
+                "Cost ledger persisted for run %s: %d events, $%.6f, within_cap=%s",
+                run_id, summary.get("event_count", 0),
+                summary.get("total_cost_usd", 0.0), summary_record["within_cap"],
+            )
+        except Exception as e:
+            logger.warning("Failed to persist cost ledger for run %s: %s", run_id, e)
+            self.warnings.append(f"persist_cost_ledger: {e}")
+
     def find_stale_runs(self, max_age: timedelta, exclude_run_id: str | None = None) -> list:
         """Find runs stuck in 'running' longer than max_age.
 

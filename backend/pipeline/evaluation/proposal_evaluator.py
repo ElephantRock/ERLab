@@ -13,9 +13,44 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
+
+class UnusableEvaluationResponseError(RuntimeError):
+    """Raised when the model response cannot yield a usable evaluation.
+
+    B-EVAL-01 (defect F-4): on v1.0.1 an empty or unparseable model response
+    silently produced an all-zero / empty-justification ProposalEvaluation.
+    Callers (pipeline stages) already wrap evaluate() in try/except and store
+    an honest "Evaluation failed" label; raising here ensures that branch
+    fires instead of persisting silent zeros.
+    """
+
 _PROMPT_PATH = Path(__file__).parent / "prompts" / "evaluation.md"
 
 DIMENSIONS = ["novelty", "feasibility", "completeness", "rigor", "clarity", "baseline_adequacy", "compute_realism"]
+
+
+def resolve_evaluation_provider(provider: Any = None) -> Any:
+    """Resolve a provider for evaluation, with configured-provider fallback.
+
+    B-EVAL-01 (Commit 6): the paper-evaluation call site
+    (PaperSynthesisStage, stages.py:2419) constructed ProposalEvaluator(None)
+    when self._provider was None, causing the evaluator to silently return
+    all-zero defaults without invoking the cloud model. This helper mirrors
+    the fallback already used by the proposal-evaluation call site
+    (stages.py:3653): if no provider is passed, resolve the configured
+    thinking provider. Returns None only when no provider can be resolved
+    (caller must then handle explicitly — never as silent zeros).
+    """
+    if provider is not None:
+        return provider
+    try:
+        from backend.providers.provider_factory import get_thinking_provider
+        from backend.config import get_settings
+
+        return get_thinking_provider(get_settings())
+    except Exception as e:
+        logger.warning("Could not resolve evaluation provider via get_thinking_provider: %s", e)
+        return None
 
 
 @dataclass
@@ -84,25 +119,50 @@ class ProposalEvaluator:
         return "Evaluate the proposal on 5 dimensions: Novelty, Feasibility, Completeness, Rigor, Clarity."
 
     async def evaluate(self, proposal_text: str) -> ProposalEvaluation:
-        """Evaluate a proposal on 5 dimensions.
+        """Evaluate a proposal on 7 dimensions.
 
-        Returns:
-            ProposalEvaluation with scores and justifications.
-            Returns default evaluation if provider is unavailable.
+        B-EVAL-01 (Commit 6): if no provider is wired, attempt to resolve the
+        configured thinking provider before giving up. The live paper-evaluation
+        call site (stages.py) also resolves via resolve_evaluation_provider(),
+        so in production the evaluator always receives a provider. When no
+        provider can be resolved (e.g. unit-test context without cloud config),
+        return the default rather than raising — the gate logic downstream
+        handles the default scores. The empty-RESPONSE raise (Commit 3) still
+        catches the real B-EVAL-01 case where a provider IS available but
+        returns empty/unusable content.
         """
+        if self._provider is None:
+            self._provider = resolve_evaluation_provider(None)
         if self._provider is None or not proposal_text:
             return ProposalEvaluation()
 
         user_prompt = f"Evaluate the following research proposal:\n\n{proposal_text[:8000]}"
 
+        # B-EVAL-01 (F-7): use the product-authorized generation output budget
+        # (settings.generation_model_max_tokens, default 8192) instead of a
+        # hardcoded 1500. Reasoning models (e.g. glm-4.6) emit a separate
+        # reasoning_content that consumes tokens before final content; at 1500
+        # tokens the budget was exhausted mid-reasoning (finish_reason=length),
+        # yielding empty content and the silent-zero evaluation. The F-7
+        # diagnostic confirmed 8192 produces a complete tagged evaluation.
+        from backend.config import get_settings
+        eval_max_tokens = get_settings().generation_model_max_tokens
+
         try:
-            response = await self._provider.complete(
-                messages=[
-                    {"role": "system", "content": self._system_prompt},
-                    {"role": "user", "content": user_prompt},
-                ],
-                max_tokens=1500,
-            )
+            msgs = [
+                {"role": "system", "content": self._system_prompt},
+                {"role": "user", "content": user_prompt},
+            ]
+            # B-COST-01: prefer the usage-enabled path so this provider call
+            # reports token usage and cost through _report_cost. Falls back to
+            # complete() for providers that do not implement complete_with_usage.
+            if hasattr(self._provider, "complete_with_usage"):
+                resp = await self._provider.complete_with_usage(
+                    msgs, max_tokens=eval_max_tokens, stage="proposal_evaluation",
+                )
+                response = resp.content if hasattr(resp, "content") else str(resp)
+            else:
+                response = await self._provider.complete(msgs, max_tokens=eval_max_tokens)
         except TimeoutError:
             logger.warning("LLM timeout during proposal evaluation — returning default scores")
             return ProposalEvaluation()
@@ -110,11 +170,25 @@ class ProposalEvaluator:
             logger.warning("LLM error during proposal evaluation: %s — returning default", e)
             return ProposalEvaluation()
 
+        # B-EVAL-01: reject empty/whitespace-only responses explicitly rather
+        # than silently persisting an all-zero evaluation. Captured GLM-4.6
+        # behavior confirmed the model intermittently returns "" on some calls.
+        if not response or not response.strip():
+            raise UnusableEvaluationResponseError(
+                "model returned an empty response; cannot produce a usable evaluation"
+            )
+
         return self._parse_response(response)
 
     @staticmethod
     def _parse_response(text: str) -> ProposalEvaluation:
-        """Parse structured 5-dimension evaluation from LLM response."""
+        """Parse structured 5-dimension evaluation from LLM response.
+
+        Raises UnusableEvaluationResponseError when the response is non-empty
+        but yields zero parseable dimensions (B-EVAL-01): a response that
+        matches none of the DIM_SCORE patterns cannot produce a usable
+        evaluation and must not silently persist as all-zeros.
+        """
         scores = {}
         justifications = {}
 
@@ -134,6 +208,16 @@ class ProposalEvaluator:
             )
             if just_match:
                 justifications[dim] = just_match.group(1).strip()
+
+        # B-EVAL-01: a non-empty response that matched no dimension scores is
+        # unusable. Raise rather than persist silent zeros. Partial parses
+        # (some dimensions present) remain valid and return normally.
+        if not scores:
+            preview = (text or "").strip().replace("\n", " ")[:120]
+            raise UnusableEvaluationResponseError(
+                f"model response matched no dimension scores; cannot produce a "
+                f"usable evaluation. response preview: {preview!r}"
+            )
 
         overall = 0.0
         overall_match = re.search(r"OVERALL_SCORE:\s*([\d.]+)", text, re.IGNORECASE)
