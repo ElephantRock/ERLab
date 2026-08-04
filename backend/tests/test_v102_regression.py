@@ -353,3 +353,62 @@ def test_b_cost_01_cost_tracker_summary_reconciles():
     assert summary["event_count"] == 5
     assert summary["total_input_tokens"] == 10 + 20 + 30 + 40 + 50
     assert summary["total_output_tokens"] == 5 + 10 + 15 + 20 + 25
+
+
+# ── Commit 8: cost-tracker registry wiring (B-COST-01) ─────────────────────
+
+
+@pytest.mark.anyio
+async def test_b_cost_01_orchestrator_wires_cost_tracker_to_provider():
+    """The orchestrator must register a CostTracker with the provider factory
+    BEFORE creating the provider, so that complete_with_usage fires cost
+    callbacks. On the current branch, the orchestrator reads
+    self._registry.cost_tracker (which is None) but never creates one or
+    registers it, so 0 cost events fire in the live pipeline.
+
+    This test verifies the wiring exists: after orchestrator-equivalent init,
+    a complete_with_usage call on the production provider fires a cost event.
+    """
+    from backend.providers.provider_factory import get_registry, CostTracker
+    from backend.config import get_settings
+
+    registry = get_registry()
+
+    # Simulate what the orchestrator SHOULD do (and will after the fix):
+    # create a CostTracker and register it before creating the provider.
+    tracker = CostTracker()
+    registry.set_cost_tracker(tracker)
+    provider = registry.create(settings=get_settings())
+
+    # Verify the callback propagated to the inner provider
+    assert tracker is not None
+    assert hasattr(provider, "complete_with_usage")
+
+    # One call through the usage-enabled path
+    resp = await provider.complete_with_usage(
+        [{"role": "user", "content": "Say hello"}],
+        max_tokens=10, stage="test", run_id="run_test",
+    )
+
+    summary = tracker.summary()
+    assert summary["event_count"] >= 1, (
+        f"B-COST-01 registry wiring: expected >=1 cost event, got {summary["event_count"]}. "
+        f"The cost tracker was not wired to the provider before creation."
+    )
+
+
+def test_b_cost_01_orchestrator_creates_cost_tracker():
+    """The orchestrator must create and wire a CostTracker to the provider
+    registry before creating the provider, so cost callbacks fire on every
+    complete_with_usage call. On the current branch, the orchestrator reads
+    self._registry.cost_tracker (which is None because it never creates one)
+    — this test verifies the tracker is non-None after orchestrator init.
+    """
+    from backend.pipeline.orchestrator._orchestrator import PipelineOrchestrator
+    from backend.config import get_settings
+
+    orch = PipelineOrchestrator(settings=get_settings())
+    assert orch._cost_tracker is not None, (
+        "B-COST-01: orchestrator._cost_tracker is None — no CostTracker was "
+        "created or wired to the provider factory. Cost events will never fire."
+    )
