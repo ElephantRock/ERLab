@@ -103,6 +103,12 @@ class SyntheticPipelineProvider(LLMProvider):
     def _route_text(self, messages: list[dict]) -> str:
         """Return deterministic free text for the current stage."""
         stage = self._stage
+        # Content-based detection: PaperSynthesisStage auto-evaluates the
+        # paper via ProposalEvaluator within the paper_synthesis stage, so the
+        # stage context is still "paper_synthesis" when an evaluation prompt
+        # arrives. Detect it by its distinctive dimension keywords.
+        if self._looks_like_evaluation(messages):
+            return self._evaluation_text()
         if stage == "evaluation":
             return self._evaluation_text()
         if stage == "paper_synthesis":
@@ -117,6 +123,18 @@ class SyntheticPipelineProvider(LLMProvider):
             return self._deepening_markdown()
         # Generic fallback text.
         return "Synthetic completion response for stage " + (stage or "unknown") + "."
+
+    @staticmethod
+    def _looks_like_evaluation(messages: list[dict]) -> bool:
+        """Detect the ProposalEvaluator prompt by its seven-dimension keywords."""
+        text = " ".join(str(m.get("content", "")) for m in messages or []).lower()
+        # The evaluation prompt names all seven dimensions. Their joint
+        # presence is a reliable, stage-independent signal.
+        return (
+            "baseline_adequacy" in text
+            and "compute_realism" in text
+            and "novelty" in text
+        )
 
     # ── LLMProvider interface ────────────────────────────────────────
 
