@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json as _json
 from dataclasses import asdict, dataclass, field
+from enum import StrEnum
 from typing import TYPE_CHECKING, Any
 
 from backend.pipeline.feasibility.feasibility_scorer import FeasibilityReport
@@ -16,18 +17,52 @@ if TYPE_CHECKING:
     from backend.pipeline.evaluation.pipeline_evaluator import UnifiedEvaluationReport
 
 
+class PipelineOutcome(StrEnum):
+    """Authoritative terminal outcome of a pipeline run.
+
+    Replaces inference-from-empty-collections. A run starts ``running`` and
+    transitions to exactly one terminal value when the pipeline halts.
+
+    - ``running``: not yet terminal (in progress)
+    - ``succeeded``: all selected stages completed and produced artifacts
+    - ``no_research_gap``: a stage correctly identified no research gap;
+      transport-completed but no paper is produced
+    - ``failed_output_contract``: a stage's output failed the typed contract
+    - ``failed_execution``: a stage's provider/transport failed after retries
+    """
+
+    RUNNING = "running"
+    SUCCEEDED = "succeeded"
+    NO_RESEARCH_GAP = "no_research_gap"
+    FAILED_OUTPUT_CONTRACT = "failed_output_contract"
+    FAILED_EXECUTION = "failed_execution"
+
+    @property
+    def is_terminal(self) -> bool:
+        return self is not PipelineOutcome.RUNNING
+
+    @property
+    def is_failure(self) -> bool:
+        return self in {
+            PipelineOutcome.FAILED_OUTPUT_CONTRACT,
+            PipelineOutcome.FAILED_EXECUTION,
+        }
+
+
 @dataclass
 class StageReport:
     """Per-stage execution report for observability (BATCH-173).
 
-    Status vocabulary (7 states):
+    Status vocabulary (8 states):
     - "executed": Stage ran and completed
     - "skipped_by_strategy": Stage not in strategy preset
     - "skipped_by_gate": Stage disabled by run_* boolean
     - "skipped_by_doom": Optional stage skipped due to doom loop
     - "skipped_by_error": Stage raised exception, caught by HB-02
-    - "not_reached": Stage after a fatal error
+    - "skipped_by_policy": Stage denied by governance/approval gate
+    - "not_reached": Stage after a fatal error or terminalization
     - "contract_violation": Stage ran but output failed contract check
+    - "execution_failed": Stage's provider/transport failed after retries
     """
 
     name: str
@@ -73,3 +108,8 @@ class PipelineResult:
     tree_data: dict | None = None  # Serialized tree structure for frontend (HB-03: max 500KB)
     quality_report: dict | None = None  # Phase 8: Pipeline quality evaluation results
     stage_report: list = field(default_factory=list)  # list[StageReport] (BATCH-173)
+    # Typed terminal outcome (replaces inference from empty collections).
+    # StrEnum members are immutable, so they are safe as dataclass defaults.
+    outcome: PipelineOutcome = PipelineOutcome.RUNNING
+    terminal_stage: str | None = None
+    terminal_reason: str | None = None

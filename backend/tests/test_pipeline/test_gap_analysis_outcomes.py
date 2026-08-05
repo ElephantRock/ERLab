@@ -40,8 +40,8 @@ from backend.pipeline.gap_analysis.cluster_service import ClusterReport
 # Commit 2 symbols — imported eagerly so collection fails clearly if absent.
 from backend.pipeline.gap_analysis.contracts import (  # noqa: E402
     GapAnalysisExecutionError,
-    GapAnalysisPayload,
     GapCandidatePayload,
+    gap_analysis_schema,
 )
 from backend.pipeline.gap_analysis.gap_analyzer import (
     GapAnalysisOutputContractError,
@@ -259,7 +259,7 @@ class TestGapContractModels:
     """Freezes the canonical typed schema generated from the Pydantic models."""
 
     def test_payload_schema_is_generated_from_model(self):
-        schema = GapAnalysisPayload.model_json_schema()
+        schema = gap_analysis_schema()
         # The provider schema must be derived from the model, not handwritten.
         assert schema["type"] == "object"
         assert "gaps" in schema["properties"]
@@ -305,7 +305,7 @@ class TestGapContractModels:
             GapCandidatePayload.model_validate(_valid_gap(related_clusters=[-1]))
 
     def test_gap_type_is_controlled_enum(self):
-        schema = GapAnalysisPayload.model_json_schema()
+        schema = gap_analysis_schema()
         # gap_type must be a constrained enum, not free text.
         gap_type_schema = schema["properties"]["gaps"]["items"]["properties"]["gap_type"]
         assert "enum" in gap_type_schema, "gap_type must be a controlled enum"
@@ -354,7 +354,8 @@ class TestGapStageTerminalization:
         from backend.pipeline.result import PipelineResult
         from backend.pipeline.stages import GapAnalysisStage, StageContext
         hooks = MagicMock()
-        hooks.dispatch_sync_safe = MagicMock()
+        # dispatch_sync_safe is async in production (HookDispatcher).
+        hooks.dispatch_sync_safe = AsyncMock()
         stage = GapAnalysisStage(
             gap_analyzer=analyzer,
             goal_manager=None,
@@ -418,3 +419,130 @@ class TestDownstreamNotReached:
         assert rep.status == "execution_failed"
         rep2 = StageReport(name="gap_analysis", status="contract_violation")
         assert rep2.status == "contract_violation"
+
+    def test_coordinator_marks_later_stages_not_reached_after_terminal(self):
+        """Orchestrator-level: when gap_analysis returns False (terminalized),
+        the real RunCoordinator must mark all later stages not_reached and
+        return False — proving the wiring between the stage's typed outcome
+        and the orchestration loop (Commit 3 exit gate).
+        """
+        from types import SimpleNamespace
+
+        from backend.pipeline.execution.run_state import RunCheckpoint
+        from backend.pipeline.orchestrator.run_coordinator import RunCoordinator
+        from backend.pipeline.result import PipelineResult
+        from backend.pipeline.stages import PipelineStage, StageContext
+        from backend.pipeline.strategies.models import StageConfig, StrategyConfig
+
+        class _StubLifecycle:
+            doom_detected = False
+
+            async def post_stage_common(self, *a, **kw):
+                pass
+
+            async def post_stage_specific(self, *a, **kw):
+                return "continue"
+
+        class _StubCompaction:
+            async def prepare_context(self, ctx, stage_name):
+                return ctx
+
+        class _StubPersistence:
+            def advance_stage(self, *a, **kw):
+                pass
+
+            def save_checkpoint(self, *a, **kw):
+                pass
+
+        class _StubProcessor:
+            def persist_stage_report(self, *a, **kw):
+                pass
+
+            async def persist_stage_context(self, *a, **kw):
+                pass
+
+        class _StubServices:
+            cross_stage_ctx = None
+            governance_policy = None
+
+        settings = SimpleNamespace(heartbeat_enabled=False)
+
+        class _FakeOrchestrator:
+            def __init__(self):
+                self._provider = None
+                self._strategy_config = StrategyConfig(
+                    name="test",
+                    stages={
+                        "gap_analysis": StageConfig(enabled=True),
+                        "idea_generation": StageConfig(enabled=True),
+                    },
+                )
+                self._strategy_name = "test"
+                self._lifecycle = _StubLifecycle()
+                self._compaction = _StubCompaction()
+                self._persistence = _StubPersistence()
+                self._processor = _StubProcessor()
+                self._services = _StubServices()
+                self._settings = settings
+                self._model_manager = None
+                self._operation_executor = None
+                self._mm_stage_aliases = {}
+                self._task_router = None
+                self._resolve_user_model = None
+                self._should_stop = lambda: False
+                self._STAGE_ORDER = ["gap_analysis", "idea_generation"]
+                self._last_stage_retries = 0
+
+            async def _execute_stage_with_retry(self, stage, ctx, checkpoint):
+                return await stage.execute(ctx)
+
+            def _record_stage(self, stage_name, t0):
+                pass
+
+        class _TerminalGapStage(PipelineStage):
+            name = "gap_analysis"
+
+            async def execute(self, ctx: StageContext) -> bool:
+                from backend.pipeline.result import PipelineOutcome
+                ctx.result.outcome = PipelineOutcome.NO_RESEARCH_GAP
+                ctx.result.terminal_stage = "gap_analysis"
+                ctx.result.terminal_reason = "no gaps identified"
+                return False
+
+        class _ShouldNotRunStage(PipelineStage):
+            name = "idea_generation"
+            ran = False
+
+            async def execute(self, ctx: StageContext) -> bool:
+                _ShouldNotRunStage.ran = True
+                return True
+
+        fake_orch = _FakeOrchestrator()
+        coordinator = RunCoordinator(fake_orch)
+
+        result = PipelineResult()
+        ctx = StageContext(result=result)
+        checkpoint = RunCheckpoint.create_new(
+            run_id="run_term", stage_names=["gap_analysis", "idea_generation"],
+        )
+
+        completed = _run(coordinator.execute_stage_loop(
+            stages=[_TerminalGapStage(), _ShouldNotRunStage()],
+            ctx=ctx,
+            result=result,
+            checkpoint=checkpoint,
+            run_id="run_term",
+            domain="test",
+            db_run_id=None,
+        ))
+
+        # The loop returns False (halted) and the later stage never ran.
+        assert completed is False
+        assert _ShouldNotRunStage.ran is False
+        # The typed terminal outcome is preserved on the result.
+        assert result.outcome == PipelineOutcome.NO_RESEARCH_GAP
+        assert result.terminal_stage == "gap_analysis"
+        # gap_analysis executed; idea_generation was marked not_reached.
+        statuses = {r.name: r.status for r in result.stage_report}
+        assert statuses.get("gap_analysis") == "executed"
+        assert statuses.get("idea_generation") == "not_reached"

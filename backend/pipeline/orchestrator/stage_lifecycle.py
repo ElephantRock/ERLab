@@ -642,13 +642,31 @@ class StageLifecycle:
 
         logger.info("=== Pipeline Complete ===")
 
-        # Determine if pipeline produced meaningful output
+        # Authoritative run status: a typed terminal outcome, if already set
+        # by a stage, takes precedence over inference from collections. This
+        # is finalized exactly once here.
+        from backend.pipeline.result import PipelineOutcome
+        typed_outcome = getattr(result, "outcome", PipelineOutcome.RUNNING)
+
         n_gaps = len(result.gaps) if result.gaps else 0
         n_ideas = len(result.ideas) if result.ideas else 0
         n_proposals = len(result.proposals) if result.proposals else 0
 
-        if n_gaps == 0 and n_ideas == 0 and n_proposals == 0:
-            # Pipeline ran but produced nothing — mark as failed, not completed
+        if typed_outcome == PipelineOutcome.NO_RESEARCH_GAP:
+            # Legitimate transport-completed outcome: no paper produced, but
+            # not a failure. Mark completed so the product outcome is visible.
+            if result.outcome == PipelineOutcome.RUNNING:
+                result.outcome = PipelineOutcome.NO_RESEARCH_GAP
+            self._persistence.mark_run_completed(db_run_id)
+        elif typed_outcome.is_failure:
+            # Output-contract or execution failure at a stage.
+            self._persistence.mark_run_failed(
+                db_run_id,
+                f"{typed_outcome.value} at {result.terminal_stage}",
+            )
+        elif n_gaps == 0 and n_ideas == 0 and n_proposals == 0:
+            # Legacy fallback: pipeline ran but produced nothing and no stage
+            # set a typed outcome — mark as failed, not completed.
             logger.warning(
                 "Pipeline produced 0 gaps, 0 ideas, 0 proposals — marking as failed"
             )
@@ -657,6 +675,7 @@ class StageLifecycle:
                 "Pipeline completed without producing any gaps, ideas, or proposals",
             )
         else:
+            result.outcome = PipelineOutcome.SUCCEEDED
             self._persistence.mark_run_completed(db_run_id)
 
         # Run completed notification
