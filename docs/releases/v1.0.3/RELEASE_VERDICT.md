@@ -1,94 +1,92 @@
 # v1.0.3 Release Verdict
 
-**CANDIDATE — NOT YET RELEASED**
-
-This verdict records the state of the `v1.0.3` release-reconciliation track at
-the point its evidence dossier was sealed. It is **not** a `PASS` verdict. The
-release is not sealed until every pending gate below completes and this verdict
-is explicitly promoted by a final release-gate evaluation.
+**CANDIDATE — FAILED CONFIRMATORY GATE**
 
 - **Branch:** `fix/v1.0.3-release-reconciliation`
 - **Base commit:** `d0a2e7946a2c7ea3c0e39c1670e5105927699ebc` (v1.0.2 seal)
-- **Release-candidate commit:** `3b4aa1810b030e25d1819e715774466ee1bc9491`
-  (code-complete; the six blocker-class commits land here)
-- **Dossier commit:** this commit adds only the four dossier files; it is
-  documentation, not part of the release claim, and does not advance the
-  candidate commit.
+- **Final candidate commit:** `a82644014628f3f21cc89763d99aade5e4231993`
+- **PR:** #4 (open, draft, unmerged)
+- **CI run:** 31034674404 — all 4 jobs success
+- **Closeout document:** `CONFIRMATORY_E2E_CLOSEOUT.md`
 
 ---
 
-## Implementation gates already passed
+## What was validated
 
-The following were observed at runtime during the per-commit work and are
-recorded honestly in `evidence_manifest.json` with their verification class.
-They are **focused** results, not a full-branch CI run.
+The following were observed at runtime during per-commit work and in the
+final CI run at `a826440`:
 
-- **Six frozen reconciliation defects repaired.** The frozen contract suite
-  (`backend/tests/test_v103_release_reconciliation.py`, 21 tests) moved from
-  19 failures / 2 passes at baseline to 21 passes at the candidate commit.
-- **28 / 28 v1.0.3 focused tests pass.** Composed of the 21 frozen contracts
-  plus the 7 focused behavioral tests in `test_v103_structured_usage.py`.
-- **11 / 11 v1.0.2 regression tests pass.**
-- **Provider / cache / cost-focused results** were reported for the individual
-  commits (provider 48, cache 32, budget/cost 59, lifecycle 104, gateway 110
-  in focused, uncontaminated runs). These are recorded as
-  `reported_not_independently_reproduced` where they were not re-run as a
-  single batch in this dossier step.
-- **Package and README identity at `1.0.3`.** `pyproject.toml` version and the
-  README leading identifier agree, verified by the
-  `release_identity_is_v1_0_3_everywhere` frozen contract.
+- **Six frozen reconciliation defects repaired** and verified by the
+  21-test frozen contract suite (`test_v103_release_reconciliation.py`).
+- **Gateway stage/run context propagation** verified by the 19-test
+  first-E2E findings suite (`test_v103_e2e_findings.py`).
+- **Terminal outcome enforcement, session isolation, and gap-output
+  contract** verified by the 7-test second-E2E findings suite
+  (`test_v103_second_e2e_findings.py`).
+- **Full backend CI green:** 5003 passed, 34 skipped, 117 deselected,
+  3 xfailed, 0 failed, coverage 69.29%.
+- **Package and README identity at `1.0.3`.**
+- **Run isolation, ledger reconciliation, and session reconciliation**
+  validated for recorded events during the second confirmatory attempt.
+- **Stage attribution** validated (0/25 blank stages) during the second
+  confirmatory attempt.
 
----
+## What failed
 
-## Gates still pending
+- **Both confirmatory E2E attempts failed to produce a paper** (0 gaps,
+  0 ideas, 0 proposals on each attempt).
+- **Attempt 1** exposed blank stage attribution (25/25 events had
+  `stage=""`) — repaired by Commit 11.
+- **Attempt 1** exposed preflight/runtime run-ID mismatch and missing
+  session-finalization — repaired by Commits 12-14.
+- **Attempt 2** exposed a gap-analysis output-contract failure: a nonempty
+  provider response that did not conform to the gap schema was silently
+  accepted or normalized instead of producing an explicit contract failure
+  — repaired by Commit 15.
+- **Attempt 2** exposed two independent release/protocol defects:
+  the runner returned exit code 0 for a failed product outcome, and
+  session storage used the shared configured directory — repaired by
+  Commit 14.
 
-The release **must not** be called `PASS` until these complete:
+## What remains unproven
 
-- **Full branch CI.** The focused suites were run locally; a complete CI run of
-  the backend test suite on the candidate commit has not been executed.
-- **Confirmatory literature-to-paper E2E.** An end-to-end pipeline run from
-  literature search through paper synthesis against a live OpenAI-compatible
-  provider has not been executed against the candidate commit.
-- **Restart-stability verification.** Durable artifacts (cost ledger,
-  checkpoint) have not been exercised across a process restart on the candidate
-  commit.
-- **Final clean-tree and commit binding.** The tree is clean at dossier seal;
-  the candidate commit must be reconfirmed immediately before tagging.
-- **Merge and tag.** The branch has not been merged to `master`, and no `v1.0.3`
-  tag has been created.
+- **No successful live literature-to-paper completion** on the final
+  candidate `a826440`. Both paid attempts were consumed.
+- **No final-candidate paper/evaluation/citation/export persistence
+  evidence.**
+- **Accounting completeness** for the historical second attempt remains
+  not proven (no request-to-ledger correlation was performed).
+- **Live behavior of the repaired gap-output contract** remains
+  unverified (the repair is hermetic-test-verified only).
+- **Restart persistence** was not demonstrated on the final candidate.
+- **Browser/API retrieval** was not demonstrated on the final candidate.
 
 ---
 
 ## Bounded release claim
 
-`v1.0.3` claims, within the boundaries verified by the focused suites:
+`v1.0.3` claims, within the boundaries verified by the focused and CI suites:
 
-1. **Run-isolated cost accounting.** Ledger, summary, and aggregation views are
-   scoped per `run_id`; a process-lived `CostTracker` cannot leak one run's
-   events into another.
-2. **Stage / run attribution.** Every billable `complete_with_usage` and
-   `structured_output_with_usage` call across all five concrete providers
-   (OpenAI, Anthropic, Gemini, Ollama, LiteLLM) carries `stage` and `run_id`
-   into its cost event.
-3. **Structured-output accounting.** The gateway schema branch routes through
-   the usage-aware boundary so each structured request produces an
-   authoritative token receipt (exactly one provider request).
-4. **Explicit reconciliation posture.** Persisted cost summaries carry one of
-   `partial` (a known unaccounted provider call), `reconciled` (events captured,
-   no known gap), or `no_events`.
-5. **Honest session finalization.** Session runs are finalized from the
-   run-scoped cost summary, not from nonexistent tracker properties.
-6. **Release identity.** Package and README identify as `v1.0.3`.
+1. **Run-isolated cost accounting.**
+2. **Stage / run attribution** across all five concrete providers.
+3. **Structured-output accounting** via the usage-aware gateway boundary.
+4. **Explicit reconciliation posture** (`partial`/`reconciled`/`no_events`).
+5. **Honest session finalization** from the run-scoped summary.
+6. **Gap-analysis output-contract enforcement** (nonempty schema-incompatible
+   output raises a typed error rather than silently normalizing).
+7. **Release identity** at `1.0.3`.
+
+These claims are bounded to hermetic and CI verification. No successful live
+literature-to-paper E2E exists on the final candidate.
 
 ## Explicit non-claims
 
-- **No tool-call accounting claim.** `complete_with_tools` attribution is
-  outside the v1.0.3 release claim.
-- **No universal live-E2E provider claim.** Only the OpenAI-compatible cloud
-  path is live-validated; the other four providers have contract conformance,
-  not universal live E2E proof.
+- **No tool-call accounting claim.**
+- **No universal live-E2E provider claim.**
+- **No successful confirmatory paper-production claim.**
 - **No human peer-review claim.**
 - **No autonomous scientific-validity claim.**
 - **No arbitrary-domain generality claim.**
 
-See `known_limitations.md` for the full limitation list.
+See `known_limitations.md` and `CONFIRMATORY_E2E_CLOSEOUT.md` for the full
+evidence record.

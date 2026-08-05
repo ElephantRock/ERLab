@@ -30,6 +30,21 @@ reconciliation track but must not be silently exceeded.
    tests passed in isolation, and the issue reproduced on the prior baseline
    (Commit 4 / `caf18f5`), confirming it is pre-existing and not introduced by
    the v1.0.3 changes. It is classified as an improvement, not a release blocker.
+10. **No successful live literature-to-paper completion on the final SHA.**
+    Both authorized confirmatory E2E attempts failed to produce a paper.
+    No post-repair live E2E exists on candidate `a826440`.
+11. **No final-candidate paper/evaluation/citation/export persistence evidence.**
+    Paper production, seven-dimensional evaluation, citation-chain resolution,
+    exports, restart persistence, and browser/API recovery were not demonstrated
+    on the final candidate.
+12. **Accounting completeness for the historical second attempt remains not proven.**
+    No request-to-ledger correlation was performed; the absence of a
+    `gap_analysis` stage name in the ledger does not by itself prove the
+    gap-analysis call was absent from accounting.
+13. **Live behavior of the repaired gap-output contract remains unverified.**
+    The gap-analysis output-contract enforcement (Commit 15) is verified by
+    hermetic tests only. Its behavior against a live provider response has not
+    been demonstrated.
 
 ## Evidence-provenance gap
 
