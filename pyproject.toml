@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "elephant-rock"
-version = "1.0.1"
+version = "1.0.3"
 description = "Evidence-bound empirical research production and assurance platform"
 readme = "README.md"
 requires-python = ">=3.11"

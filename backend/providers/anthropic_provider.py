@@ -51,6 +51,8 @@ class AnthropicProvider(LLMProvider):
         messages: list[dict],
         temperature: float = 0.7,
         max_tokens: int = 4096,
+        stage: str = "",
+        run_id: str | None = None,
     ) -> LLMResponse:
         system, filtered = self._extract_system(messages)
         response = await self._client.messages.create(
@@ -62,7 +64,7 @@ class AnthropicProvider(LLMProvider):
         )
         inp = response.usage.input_tokens
         out = response.usage.output_tokens
-        self._report_cost(inp, out)
+        self._report_cost(inp, out, stage=stage, run_id=run_id)
         return LLMResponse(
             content=response.content[0].text,
             input_tokens=inp,
@@ -118,6 +120,8 @@ class AnthropicProvider(LLMProvider):
         messages: list[dict],
         schema: dict,
         temperature: float = 0.3,
+        stage: str = "",
+        run_id: str | None = None,
     ) -> LLMResponse:
         system, filtered = self._extract_system(messages)
         try:
@@ -137,7 +141,7 @@ class AnthropicProvider(LLMProvider):
             )
             inp = response.usage.input_tokens
             out = response.usage.output_tokens
-            self._report_cost(inp, out)
+            self._report_cost(inp, out, stage=stage, run_id=run_id)
             return LLMResponse(
                 content="",
                 structured=response.content[0].input,

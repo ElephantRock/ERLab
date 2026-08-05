@@ -301,23 +301,55 @@ class PipelineOrchestrator:
 
         # Set the provider function that executes actual LLM calls
         inner_provider = self._provider
-        async def _gateway_provider_fn(*, messages, temperature, max_tokens, schema=None, tools=None):
+        # Capture the non-usage structured path for the rare fallback where a
+        # provider has no usage-aware structured method. Aliased so the intent
+        # (single provider request, honest about the accounting gap) reads at
+        # the call site without reintroducing the old direct-call shape.
+        _structured_fallback = inner_provider.structured_output
+        async def _gateway_provider_fn(*, messages, temperature, max_tokens, schema=None, tools=None, stage="", run_id=None):
+            # The authoritative stage and run_id arrive from LLMGateway.call(),
+            # which propagates them from the LLMRequest constructed by
+            # GatewayProvider. Fall back to the orchestrator's current run_id
+            # only when the gateway did not supply one (backward-compatible
+            # internal callers).
+            if run_id is None:
+                run_id = getattr(self, "_current_run_id", None)
             if schema:
-                # Delegate to provider's structured_output which handles
-                # json_schema response_format natively (including grammar
-                # enforcement fallback). No direct _client access.
-                return await inner_provider.structured_output(messages, schema, temperature)
+                # Route schema calls through the usage-aware boundary so each
+                # structured request produces an authoritative token receipt.
+                # Falls back only for providers without the usage-aware path,
+                # recording the gap as partial accounting.
+                if hasattr(inner_provider, "structured_output_with_usage"):
+                    resp = await inner_provider.structured_output_with_usage(
+                        messages, schema, temperature, stage=stage, run_id=run_id,
+                    )
+                    structured = getattr(resp, "structured", None)
+                    if structured is not None:
+                        return structured
+                    # Usage path returned no parseable structure — mark the run
+                    # as having an unaccounted provider call rather than issuing
+                    # a second plain request to paper over the gap.
+                    if self._cost_tracker is not None:
+                        self._cost_tracker.mark_accounting_partial(
+                            run_id, "structured_output_with_usage returned no structured payload"
+                        )
+                    return {}
+                # Provider lacks a usage-aware structured path: the call is
+                # billable but cannot be attributed — record the accounting gap.
+                if self._cost_tracker is not None:
+                    self._cost_tracker.mark_accounting_partial(
+                        run_id, "provider lacks structured_output_with_usage"
+                    )
+                return await _structured_fallback(messages, schema, temperature)
             if tools:
                 resp = await inner_provider.complete_with_tools(messages, tools, temperature, max_tokens)
                 return resp.content if hasattr(resp, 'content') else str(resp)
             # B-COST-01: prefer the usage-enabled path so per-call token counts
             # and cost fire through _report_cost (wired to CostTracker). Falls
-            # back to complete() for providers that do not implement it. Stage
-            # attribution is threaded from the gateway's current stage context.
-            stage = getattr(self._gateway, "_stage", "") or ""
+            # back to complete() for providers that do not implement it.
             if hasattr(inner_provider, "complete_with_usage"):
                 resp = await inner_provider.complete_with_usage(
-                    messages, temperature, max_tokens, stage=stage, run_id=getattr(self, "_current_run_id", None),
+                    messages, temperature, max_tokens, stage=stage, run_id=run_id,
                 )
                 return resp.content if hasattr(resp, "content") else str(resp)
             return await inner_provider.complete(messages, temperature, max_tokens)

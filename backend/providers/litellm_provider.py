@@ -81,6 +81,8 @@ class LiteLLMProvider(LLMProvider):
         messages: list[dict],
         temperature: float = 0.7,
         max_tokens: int = 4096,
+        stage: str = "",
+        run_id: str | None = None,
     ) -> LLMResponse:
         import litellm
 
@@ -94,7 +96,7 @@ class LiteLLMProvider(LLMProvider):
         usage = getattr(response, "usage", None)
         inp = usage.prompt_tokens if usage else 0
         out = usage.completion_tokens if usage else 0
-        self._report_cost(inp, out)
+        self._report_cost(inp, out, stage=stage, run_id=run_id)
         return LLMResponse(
             content=response.choices[0].message.content or "",
             input_tokens=inp,
@@ -145,6 +147,8 @@ class LiteLLMProvider(LLMProvider):
         messages: list[dict],
         schema: dict,
         temperature: float = 0.3,
+        stage: str = "",
+        run_id: str | None = None,
     ) -> LLMResponse:
         import litellm
 
@@ -158,7 +162,7 @@ class LiteLLMProvider(LLMProvider):
         usage = getattr(response, "usage", None)
         inp = usage.prompt_tokens if usage else 0
         out = usage.completion_tokens if usage else 0
-        self._report_cost(inp, out)
+        self._report_cost(inp, out, stage=stage, run_id=run_id)
         content = response.choices[0].message.content or "{}"
         return LLMResponse(
             content="",

@@ -677,8 +677,10 @@ class StageLifecycle:
 
         # Persist cost events (B-COST-01: durable ledger + reconciled summary)
         if self._cost_tracker and self._cost_tracker._events:
-            cost_dir = getattr(self._settings, "cost_persist_dir", "./data/costs")
-            cost_cap = getattr(self._settings, "budget_max_cost_usd", 100.0)
+            # Authoritative settings contract — no hard-coded fallback defaults
+            # for material fields (architecture seal test_p0_5_seal).
+            cost_dir = self._settings.cost_persist_dir
+            cost_cap = self._settings.budget_max_cost_usd
             # Use the enhanced persistence (ledger JSONL + summary with cap comparison)
             self._persistence.persist_cost_ledger(
                 run_id=run_id,
@@ -689,8 +691,13 @@ class StageLifecycle:
 
         # Session: complete run record
         if session_id and self._services.session_manager:
-            tokens = self._cost_tracker.total_tokens if self._cost_tracker else 0
-            cost = self._cost_tracker.total_cost if self._cost_tracker else 0.0
+            if self._cost_tracker:
+                cost_summary = self._cost_tracker.summary(run_id=run_id)
+                tokens = cost_summary.get("total_tokens", 0)
+                cost = cost_summary.get("total_cost_usd", 0.0)
+            else:
+                tokens = 0
+                cost = 0.0
             self._services.session_manager.complete_run(
                 session_id, run_id, tokens_used=tokens, cost_usd=cost
             )

@@ -1187,24 +1187,39 @@ class PipelinePersistence:
             ledger_path = out_dir / f"{run_id}_cost_ledger.jsonl"
             summary_path = out_dir / f"{run_id}_cost_summary.json"
 
-            # Ledger: existing CostTracker.persist writes JSONL per event
-            tracker.persist(str(ledger_path))
+            # Ledger: CostTracker.persist writes JSONL per event. Scope every
+            # accounting view to this run so a process-lived tracker cannot
+            # leak another run's events into this ledger.
+            tracker.persist(str(ledger_path), run_id=run_id)
 
             # Summary: reconciled totals + cap comparison
-            summary = tracker.summary()
+            summary = tracker.summary(run_id=run_id)
             cap = cost_cap_usd if cost_cap_usd is not None else settings.budget_max_cost_usd
+            # Derive reconciliation posture honestly. A nonempty ledger alone
+            # is insufficient to claim full reconciliation: a run with a known
+            # unaccounted provider call is "partial" even when other events
+            # were captured. "no_events" only when nothing was captured and no
+            # billable call went unrecorded.
+            event_count = summary.get("event_count", 0)
+            has_accounting_gap = getattr(tracker, "is_accounting_partial", lambda _rid: False)(run_id)
+            if has_accounting_gap:
+                reconciliation_status = "partial"
+            elif event_count > 0:
+                reconciliation_status = "reconciled"
+            else:
+                reconciliation_status = "no_events"
             summary_record = {
                 "run_id": run_id,
-                "record_count": summary.get("event_count", 0),
+                "record_count": event_count,
                 "total_input_tokens": summary.get("total_input_tokens", 0),
                 "total_output_tokens": summary.get("total_output_tokens", 0),
                 "total_tokens": summary.get("total_tokens", 0),
                 "total_cost_usd": round(summary.get("total_cost_usd", 0.0), 6),
                 "cost_cap_usd": cap,
                 "within_cap": summary.get("total_cost_usd", 0.0) <= cap,
-                "by_provider": tracker.by_provider(),
-                "by_stage": tracker.by_stage(),
-                "reconciliation_status": "reconciled" if summary.get("event_count", 0) > 0 else "no_events",
+                "by_provider": tracker.by_provider(run_id=run_id),
+                "by_stage": tracker.by_stage(run_id=run_id),
+                "reconciliation_status": reconciliation_status,
             }
             summary_path.write_text(
                 json.dumps(summary_record, indent=2, default=str),

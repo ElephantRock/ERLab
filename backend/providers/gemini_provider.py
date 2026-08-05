@@ -48,6 +48,8 @@ class GeminiProvider(LLMProvider):
         messages: list[dict],
         temperature: float = 0.7,
         max_tokens: int = 4096,
+        stage: str = "",
+        run_id: str | None = None,
     ) -> LLMResponse:
         model = genai.GenerativeModel(self._model_name)
         prompt = self._messages_to_prompt(messages)
@@ -61,7 +63,7 @@ class GeminiProvider(LLMProvider):
         usage = response.usage_metadata
         inp = usage.prompt_token_count if usage else 0
         out = usage.candidates_token_count if usage else 0
-        self._report_cost(inp, out)
+        self._report_cost(inp, out, stage=stage, run_id=run_id)
         return LLMResponse(
             content=response.text,
             input_tokens=inp,
@@ -113,6 +115,8 @@ class GeminiProvider(LLMProvider):
         messages: list[dict],
         schema: dict,
         temperature: float = 0.3,
+        stage: str = "",
+        run_id: str | None = None,
     ) -> LLMResponse:
         model = genai.GenerativeModel(self._model_name)
         prompt = self._messages_to_prompt(messages)
@@ -129,7 +133,7 @@ class GeminiProvider(LLMProvider):
         usage = response.usage_metadata
         inp = usage.prompt_token_count if usage else 0
         out = usage.candidates_token_count if usage else 0
-        self._report_cost(inp, out)
+        self._report_cost(inp, out, stage=stage, run_id=run_id)
         return LLMResponse(
             content="",
             structured=json.loads(response.text),

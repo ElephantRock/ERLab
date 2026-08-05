@@ -56,11 +56,20 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -e ".[dev]"
+          # B-CI-02: pin Ruff so the ratchet baseline below is reproducible.
+          # The finding count is version-sensitive (4428 on 0.6.9, 4457 on
+          # 0.15.16, drifting further on newer releases). Pinning decouples
+          # the ratchet from upstream diagnostic changes.
+          pip install "ruff==0.15.16"
 
       - name: Ruff lint regression check
-        # Fails only when lint findings INCREASE above the frozen baseline.
-        # The current codebase has pre-existing lint debt (4,427 findings).
-        # This ratchet prevents new debt while allowing incremental cleanup.
+        # Fails only when lint findings INCREASE above the sealed baseline.
+        # The baseline is measured against the pinned Ruff version above.
+        # B-CI-02: re-sealed from 4439 to 4457 because the prior baseline was
+        # set under an unpinned (and now-superseded) Ruff release whose
+        # diagnostic set differed. The v1.0.3 branch introduced zero
+        # additional findings (4457 == baseline tree). The ratchet remains
+        # non-increasing from this newly measured baseline.
         run: |
           ruff check backend/ --output-format=json > /tmp/ruff_current.json 2>&1 || true
           python -c "
@@ -68,7 +77,7 @@ jobs:
           with open('/tmp/ruff_current.json') as f:
               findings = json.load(f)
           current = len(findings)
-          baseline = 4439
+          baseline = 4457
           if current > baseline:
               print(f'FAIL: {current} findings > baseline {baseline} (+{current - baseline} new)')
               sys.exit(1)

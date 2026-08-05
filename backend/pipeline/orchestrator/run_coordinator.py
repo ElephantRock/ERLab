@@ -152,11 +152,18 @@ class RunCoordinator:
                     await heartbeat.start(stage.name)
 
                 try:
-                    # Update provider stage context
-                    if hasattr(self._orch._provider, '_stage'):
-                        self._orch._provider._stage = stage.name
-                    if hasattr(self._orch._provider, '_run_id'):
-                        self._orch._provider._run_id = run_id
+                    # Update provider stage context. Prefer set_context() (which
+                    # delegates through StageAwareProvider to GatewayProvider)
+                    # so the inner provider receives the stage/run_id. Fall back
+                    # to direct attribute assignment only for providers without
+                    # set_context().
+                    if hasattr(self._orch._provider, 'set_context'):
+                        self._orch._provider.set_context(stage.name, run_id)
+                    else:
+                        if hasattr(self._orch._provider, '_stage'):
+                            self._orch._provider._stage = stage.name
+                        if hasattr(self._orch._provider, '_run_id'):
+                            self._orch._provider._run_id = run_id
 
                     # Set async context var for stage routing
                     from backend.providers.stage_context import set_stage, reset_stage

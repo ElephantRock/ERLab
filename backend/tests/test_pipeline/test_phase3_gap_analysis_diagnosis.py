@@ -19,7 +19,10 @@ import pytest
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
 
-from backend.pipeline.gap_analysis.gap_analyzer import GapAnalyzer
+from backend.pipeline.gap_analysis.gap_analyzer import (
+    GapAnalysisOutputContractError,
+    GapAnalyzer,
+)
 
 
 class FakeProvider:
@@ -105,40 +108,50 @@ async def test_bare_gap_object_without_wrapper_is_recovered():
 
 @pytest.mark.anyio
 async def test_malformed_output_produces_diagnostic(caplog):
-    """Case 2: Malformed output produces an explicit warning, not silent empty."""
+    """Case 2: Malformed output raises an explicit output-contract failure."""
     import logging
-    caplog.set_level(logging.WARNING, logger="backend.pipeline.gap_analysis.gap_analyzer")
+    caplog.set_level(logging.ERROR, logger="backend.pipeline.gap_analysis.gap_analyzer")
     analyzer = GapAnalyzer(provider=FakeProvider("not json at all"))
-    gaps, _ = await analyzer.analyze([_make_paper()], domain="AI/NLP", max_gaps=5)
-    # extract_json will return {} for non-JSON → 0 gaps
-    assert len(gaps) == 0
-    # The diagnostic should log that parsing produced 0 raw gaps
-    assert any("0 raw gaps" in r.message for r in caplog.records)
+    with pytest.raises(GapAnalysisOutputContractError):
+        await analyzer.analyze([_make_paper()], domain="AI/NLP", max_gaps=5)
+    # Safe diagnostics must contain structural fields.
+    assert any(
+        "output_contract" in r.message and "unparseable_json" in r.message
+        for r in caplog.records
+    )
 
 
 @pytest.mark.anyio
 async def test_empty_provider_output_distinguishable_from_parser_failure(caplog):
-    """Case 3: Empty provider output logs a specific warning."""
+    """Case 3: Empty provider output raises a distinct contract failure
+    (blank_response) distinguishable from nonempty unparseable JSON."""
     import logging
-    caplog.set_level(logging.WARNING, logger="backend.pipeline.gap_analysis.gap_analyzer")
+    caplog.set_level(logging.ERROR, logger="backend.pipeline.gap_analysis.gap_analyzer")
     analyzer = GapAnalyzer(provider=FakeProvider(""))
-    gaps, _ = await analyzer.analyze([_make_paper()], domain="AI/NLP", max_gaps=5)
-    assert len(gaps) == 0
-    # Empty response should be distinguished with its own warning
-    assert any("empty response" in r.message for r in caplog.records)
+    with pytest.raises(GapAnalysisOutputContractError, match="blank_response"):
+        await analyzer.analyze([_make_paper()], domain="AI/NLP", max_gaps=5)
+    # Must be distinguishable from nonempty unparseable: reason=blank_response
+    assert any(
+        "blank_response" in r.message and "response_nonempty=false" in r.message
+        for r in caplog.records
+    )
 
 
 @pytest.mark.anyio
 async def test_all_non_dict_candidates_produce_diagnostic(caplog):
-    """Case 4: If all candidates are non-dict (rejected by line 117-118),
-    a diagnostic is logged."""
+    """Case 4: Non-dict gap list members raise a contract failure with
+    safe structural diagnostics identifying the invalid member."""
+    import logging
     response = json.dumps({"gaps": ["string item", 42, None]})
     analyzer = GapAnalyzer(provider=FakeProvider(response))
-    with caplog.at_level("WARNING"):
-        gaps, _ = await analyzer.analyze([_make_paper()], domain="AI/NLP", max_gaps=5)
-    assert len(gaps) == 0
-    # Should log that raw gaps existed but were filtered
-    # (raw_gaps_check has 3 items, but all are non-dict → 0 accepted)
+    caplog.set_level(logging.ERROR, logger="backend.pipeline.gap_analysis.gap_analyzer")
+    with pytest.raises(GapAnalysisOutputContractError, match="gap_item_not_object"):
+        await analyzer.analyze([_make_paper()], domain="AI/NLP", max_gaps=5)
+    # Safe diagnostics must identify the invalid member index.
+    assert any(
+        "gap_item_not_object" in r.message and "item_index=0" in r.message
+        for r in caplog.records
+    )
 
 
 @pytest.mark.anyio

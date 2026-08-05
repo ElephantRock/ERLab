@@ -265,12 +265,28 @@ class LLMGateway:
             if self._provider_fn is None:
                 raise RuntimeError("LLMGateway has no provider function. Call set_provider_fn() first.")
 
+            # Propagate the authoritative request context (stage, run_id) to
+            # the provider callback. Detect whether the callback accepts these
+            # kwargs so legacy callbacks (without stage/run_id params) still work.
+            import contextlib
+            import inspect as _inspect
+
+            _cb_params: set = set()
+            with contextlib.suppress(ValueError, TypeError):
+                _cb_params = set(_inspect.signature(self._provider_fn).parameters)
+            _ctx_kwargs: dict = {}
+            if "stage" in _cb_params:
+                _ctx_kwargs["stage"] = request.stage
+            if "run_id" in _cb_params:
+                _ctx_kwargs["run_id"] = request.run_id
+
             content = await self._provider_fn(
                 messages=messages,
                 temperature=request.temperature,
                 max_tokens=request.max_output_tokens,
                 schema=request.schema,
                 tools=request.tools,
+                **_ctx_kwargs,
             )
 
             # 5. Validate output
