@@ -306,12 +306,14 @@ class PipelineOrchestrator:
         # (single provider request, honest about the accounting gap) reads at
         # the call site without reintroducing the old direct-call shape.
         _structured_fallback = inner_provider.structured_output
-        async def _gateway_provider_fn(*, messages, temperature, max_tokens, schema=None, tools=None):
-            # Stage attribution is threaded from the gateway's current stage
-            # context; run identity from the active run. Both apply to every
-            # provider request so usage receipts are billed to the right run.
-            stage = getattr(self._gateway, "_stage", "") or ""
-            run_id = getattr(self, "_current_run_id", None)
+        async def _gateway_provider_fn(*, messages, temperature, max_tokens, schema=None, tools=None, stage="", run_id=None):
+            # The authoritative stage and run_id arrive from LLMGateway.call(),
+            # which propagates them from the LLMRequest constructed by
+            # GatewayProvider. Fall back to the orchestrator's current run_id
+            # only when the gateway did not supply one (backward-compatible
+            # internal callers).
+            if run_id is None:
+                run_id = getattr(self, "_current_run_id", None)
             if schema:
                 # Route schema calls through the usage-aware boundary so each
                 # structured request produces an authoritative token receipt.

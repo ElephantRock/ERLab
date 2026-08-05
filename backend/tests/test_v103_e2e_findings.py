@@ -36,7 +36,7 @@ from types import SimpleNamespace
 import pytest
 
 from backend.pipeline.gateway.capability_registry import ModelCapabilityRegistry
-from backend.pipeline.gateway.gateway import LLMGateway
+from backend.pipeline.gateway.gateway import LLMGateway, LLMRequest
 from backend.pipeline.gateway.gateway_provider import GatewayProvider
 from backend.pipeline.gateway.token_budget import TokenBudgeter
 from backend.providers.base import CostEvent, LLMProvider, LLMResponse
@@ -105,11 +105,11 @@ def _build_gateway_and_provider():
     )
     provider = GatewayProvider(gateway, inner_provider=inner, stage="gap_analysis", run_id="run_test")
 
-    # Replicate the orchestrator's provider callback EXACTLY (the production
-    # closure). This is the code path that receives the dropped context.
-    async def _provider_fn(*, messages, temperature, max_tokens, schema=None, tools=None):
-        stage = getattr(gateway, "_stage", "") or ""
-        run_id = getattr(provider, "_run_id", None)  # simulates orchestrator state
+    # Replicate the orchestrator's provider callback (production closure shape).
+    # After the v1.0.3 gateway-context repair, the callback receives stage and
+    # run_id as kwargs from LLMGateway.call() (which propagates them from the
+    # LLMRequest constructed by GatewayProvider).
+    async def _provider_fn(*, messages, temperature, max_tokens, schema=None, tools=None, stage="", run_id=None):
         if schema:
             if hasattr(inner, "structured_output_with_usage"):
                 resp = await inner.structured_output_with_usage(
@@ -139,39 +139,42 @@ async def test_gateway_call_passes_stage_and_run_id_to_provider_callback():
     """Finding 1: LLMGateway.call() must propagate LLMRequest.stage and
     LLMRequest.run_id to the provider callback.
 
-    Currently call() passes only messages/temperature/max_tokens/schema/tools,
-    dropping stage and run_id.  After repair, the callback must receive them.
+    After repair, the callback receives them as kwargs.  This test installs a
+    callback that accepts stage/run_id and verifies call() actually passes the
+    request's values through.
     """
-    gateway, provider, inner = _build_gateway_and_provider()
+    inner = _RecordingInnerProvider()
+    cap_registry = ModelCapabilityRegistry()
+    budgeter = TokenBudgeter(default_context=4096)
+    gateway = LLMGateway(
+        capability_registry=cap_registry, token_budgeter=budgeter,
+        default_model=inner.default_model,
+    )
 
-    # Install a callback that records whether it received stage/run_id.
     received: dict = {}
 
-    async def _recording_callback(*, messages, temperature, max_tokens, schema=None, tools=None):
-        received["stage_received"] = "stage" in _recording_callback.__kwdefaults__  # type: ignore[attr-defined]
-        # The defect: the callback signature doesn't include stage/run_id at all.
-        # After repair, call() should pass them as kwargs.
-        received["has_stage"] = "stage" in received
+    async def _recording_cb(*, messages, temperature, max_tokens, schema=None, tools=None, stage="", run_id=None):  # noqa: ARG001
+        received["stage"] = stage
+        received["run_id"] = run_id
         return "ok"
 
-    # We can't easily change the callback signature mid-test. Instead, verify
-    # at the source level that the _provider_fn invocation includes stage.
-    import inspect as _inspect
+    gateway.set_provider_fn(_recording_cb)
 
-    call_source = _inspect.getsource(LLMGateway.call)
-    # The defect: call() invokes self._provider_fn without request.stage/run_id.
-    # Check specifically that the provider_fn call passes stage/run_id kwargs.
-    # The existing "request.stage" references are in call-logging, NOT in the
-    # provider_fn invocation — so we check for stage= in the fn call context.
-    fn_call_lines = [
-        line.strip() for line in call_source.splitlines()
-        if "_provider_fn" in line or "provider_fn" in line
-    ]
-    passes_context = any("stage=" in line or "run_id=" in line for line in fn_call_lines)
-    assert passes_context, (
-        "Finding 1: LLMGateway.call() must pass request.stage and request.run_id "
-        "to the provider callback invocation. Currently drops them — the "
-        "_provider_fn call includes only messages/temperature/max_tokens/schema/tools."
+    request = LLMRequest(
+        task="gap_analysis",
+        messages=[{"role": "user", "content": "q"}],
+        stage="gap_analysis",
+        run_id="run_test",
+    )
+    await gateway.call(request)
+
+    assert received.get("stage") == "gap_analysis", (
+        "Finding 1: LLMGateway.call() must pass request.stage to the provider "
+        f"callback. Got stage={received.get('stage')!r}."
+    )
+    assert received.get("run_id") == "run_test", (
+        "Finding 1: LLMGateway.call() must pass request.run_id to the provider "
+        f"callback. Got run_id={received.get('run_id')!r}."
     )
 
 
@@ -366,9 +369,9 @@ async def test_run_coordinator_propagates_context_through_stage_aware_provider()
     stage_aware = StageAwareProvider(gw_provider, model_manager=None)
 
     # Install the orchestrator's provider callback (production closure shape).
-    async def _provider_fn(*, messages, temperature, max_tokens, schema=None, tools=None):
-        stage = getattr(gateway, "_stage", "") or ""
-        run_id = getattr(gw_provider, "_run_id", None)
+    # After the v1.0.3 gateway-context repair, the callback receives stage and
+    # run_id as kwargs from LLMGateway.call().
+    async def _provider_fn(*, messages, temperature, max_tokens, schema=None, tools=None, stage="", run_id=None):
         if schema:
             if hasattr(inner, "structured_output_with_usage"):
                 resp = await inner.structured_output_with_usage(
