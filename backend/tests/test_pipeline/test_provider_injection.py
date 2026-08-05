@@ -79,14 +79,17 @@ class TestGapAnalyzerNoMutation:
         original = FakeProvider("original")
         override = OverrideProvider("override")
 
-        # Track which provider gets called
+        # Track which provider gets called. GapAnalysis is routed through
+        # structured_output() (the canonical analyzer entrypoint), so the
+        # spy must intercept that method and return a contract-conforming
+        # payload — no extra fields, since the typed model forbids them.
         call_log: list[str] = []
 
-        async def spy_complete(**kwargs):
+        async def spy_structured_output(**kwargs):
             call_log.append("called")
-            return '{"gaps": [], "reasoning": "test"}'
+            return {"gaps": []}
 
-        override.complete = spy_complete  # type: ignore
+        override.structured_output = spy_structured_output  # type: ignore
 
         analyzer = GapAnalyzer(provider=original)
         analyzer._cluster_service = MagicMock()
