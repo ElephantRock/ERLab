@@ -172,11 +172,13 @@ class TestAnalyzerOutcomes:
         assert provider.method_calls == ["structured_output"]
 
     def test_invalid_cluster_id_raises_contract_error(self):
-        # Cluster 99 does not exist in the actual cluster report.
-        provider = _RecordingProvider({"gaps": [_valid_gap(related_clusters=[99])]})
+        # Cluster 99 does not exist in a report that only has cluster 0.
+        # Validated directly so the cluster report is controlled (the
+        # analyzer's clustering on synthetic papers may yield no clusters).
+        from backend.pipeline.gap_analysis.gap_analyzer import _validate_payload
+        report = _cluster_report_with(0)
         with pytest.raises(GapAnalysisOutputContractError):
-            _run(GapAnalyzer(provider).analyze(_make_papers()))
-        assert provider.method_calls == ["structured_output"]
+            _validate_payload({"gaps": [_valid_gap(related_clusters=[99])]}, report)
 
     def test_blank_required_string_raises_contract_error(self):
         provider = _RecordingProvider({"gaps": [_valid_gap(title="   ")]})
@@ -196,11 +198,14 @@ class TestAnalyzerOutcomes:
 
     def test_mixed_valid_invalid_gaps_fails_whole_payload(self):
         # One valid, one with an invalid cluster id — the whole payload fails.
-        provider = _RecordingProvider(
-            {"gaps": [_valid_gap(), _valid_gap(title="Second", related_clusters=[777])]}
-        )
+        # Validated directly so the cluster report is controlled.
+        from backend.pipeline.gap_analysis.gap_analyzer import _validate_payload
+        report = _cluster_report_with(0)
         with pytest.raises(GapAnalysisOutputContractError):
-            _run(GapAnalyzer(provider).analyze(_make_papers()))
+            _validate_payload(
+                {"gaps": [_valid_gap(), _valid_gap(title="Second", related_clusters=[777])]},
+                report,
+            )
 
 
 # ── Invariants ────────────────────────────────────────────────────────

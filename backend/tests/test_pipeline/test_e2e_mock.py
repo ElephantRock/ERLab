@@ -101,7 +101,7 @@ class MockLLMProvider(LLMProvider):
         response = await self.complete(messages, temperature, max_tokens)
         yield response
 
-    async def structured_output(self, messages, schema, temperature=0.3) -> dict:
+    async def structured_output(self, messages, schema, temperature=0.3, max_tokens=4096, **kwargs) -> dict:
         """Return deterministic structured data based on the calling stage."""
         self._call_log.append({"method": "structured_output", "schema": schema})
         msg_text = " ".join(m.get("content", "") for m in messages).lower()
