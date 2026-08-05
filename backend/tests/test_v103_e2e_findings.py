@@ -392,7 +392,18 @@ class _FakeOrchestrator:
                 cost_usd=self._lifecycle_cost,
             )
         from types import SimpleNamespace
-        return SimpleNamespace(run_id=self._result_run_id, ideas=[], gaps=[], proposals={})
+
+        # Build a result with at least one completed paper so the runner's
+        # terminal-outcome validation accepts it.
+        proposal = SimpleNamespace(
+            sections={"title": "Test Paper"},
+            metadata={"full_paper": {"paper_markdown": "# Hermetic Completed Paper\n\nSubstantive test content."}},
+        )
+        return SimpleNamespace(
+            run_id=self._result_run_id,
+            ideas=[], gaps=[],
+            proposals={0: proposal},
+        )
 
 
 class _FakeCostTracker:

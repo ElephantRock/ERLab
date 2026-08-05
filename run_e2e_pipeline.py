@@ -3,15 +3,17 @@ Confirmatory E2E runner — v1.0.3 stage-attribution and session-binding protoco
 
 Runs the full deep_research pipeline against z.ai (glm-4.6) with explicit
 run-id and session-id binding, preflight validation, durable run-ID reservation
-through RunService, post-execution binding verification, and session-
-finalization reconciliation against the cost ledger.
+through RunService, attempt-isolated session storage, post-execution binding
+verification, session-finalization reconciliation against the cost ledger, and
+terminal-paper-outcome validation.
 
 The runner does NOT call ``register_run()`` or ``complete_run()`` — both
 belong to the production orchestrator/lifecycle. The runner only verifies
 their persisted results.
 
-Testable structure: ``validate_preflight`` and ``run_confirmatory`` are
-importable pure functions so tests can inject fakes without network calls.
+Testable structure: ``validate_preflight``, ``derive_attempt_session_dir``,
+``validate_terminal_outcome``, and ``run_confirmatory`` are importable pure
+functions so tests can inject fakes without network calls.
 """
 import os
 # These MUST be set before any backend imports — the shell env var
@@ -26,6 +28,7 @@ import re
 import sys
 import time
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 
 # Frozen research input (must not change between confirmatory runs).
@@ -42,6 +45,10 @@ FROZEN_PARAMS: dict = {
 
 class PreflightError(Exception):
     """Raised when the preflight validation rejects the run/session identity."""
+
+
+class TerminalOutcomeError(RuntimeError):
+    """Raised when the pipeline result does not contain a valid terminal paper."""
 
 
 @dataclass
@@ -75,6 +82,30 @@ def validate_preflight(config: ConfirmatoryConfig) -> None:
     for label, value in (("run_id", config.run_id), ("session_id", config.session_id)):
         if _UNSAFE.search(value):
             raise PreflightError(f"{label} contains unsafe characters: {value!r}")
+
+
+def derive_attempt_session_dir(base_dir: str, run_id: str) -> Path:
+    """Derive an attempt-specific session directory from the base and run ID.
+
+    Required properties:
+    - same run_id + same base → same derived path
+    - different run_id → different derived path
+    - derived path is a child of the configured base
+    - derived path never equals the configured base
+    """
+    attempt_dir = Path(base_dir) / "confirmatory" / run_id
+    base_resolved = Path(base_dir).resolve()
+    attempt_resolved = attempt_dir.resolve()
+    # Reject path escape or equality with base.
+    if attempt_resolved == base_resolved:
+        raise PreflightError(
+            f"derived attempt session dir equals the base: {attempt_dir}"
+        )
+    if not str(attempt_resolved).startswith(str(base_resolved)):
+        raise PreflightError(
+            f"derived attempt session dir escapes the base: {attempt_dir}"
+        )
+    return attempt_dir
 
 
 def _resolve_session(
@@ -115,6 +146,79 @@ def _resolve_session(
     return session_id
 
 
+def validate_terminal_outcome(result: Any, run_id: str) -> dict:
+    """Validate that the pipeline result contains a valid terminal paper.
+
+    Checks (in order):
+    1. Explicit failed/aborted/error/cancelled terminal status → reject.
+    2. At least one proposal with ``metadata['full_paper']['paper_markdown']``
+       that is a nonblank string → accept.
+    3. Otherwise → reject.
+
+    Returns a safe diagnostics dict with structural facts only.
+
+    Raises ``TerminalOutcomeError`` if no valid terminal paper is found.
+    """
+    # ── 1. Check explicit failed terminal status ──
+    terminal_status = getattr(result, "status", None)
+    status_str = None
+    if terminal_status is not None:
+        status_str = terminal_status.value if hasattr(terminal_status, "value") else str(terminal_status)
+        status_lower = status_str.lower().strip()
+        if status_lower in ("failed", "aborted", "error", "cancelled", "canceled"):
+            raise TerminalOutcomeError(
+                f"Terminal outcome for run_id={run_id!r} has explicit failed "
+                f"status: {status_str!r}"
+            )
+
+    # ── 2. Check for at least one completed paper ──
+    proposals = getattr(result, "proposals", None)
+    proposal_count = 0
+    completed_paper_count = 0
+
+    if proposals is not None:
+        # Support dict[int, Proposal] and list[Proposal] representations.
+        if isinstance(proposals, dict):
+            proposal_iter = proposals.values()
+        elif isinstance(proposals, (list, tuple)):
+            proposal_iter = proposals
+        else:
+            proposal_iter = []
+        for proposal in proposal_iter:
+            proposal_count += 1
+            metadata = getattr(proposal, "metadata", None)
+            if metadata is None:
+                continue
+            # metadata may be a JSON string or a dict.
+            if isinstance(metadata, str):
+                import json
+                try:
+                    metadata = json.loads(metadata)
+                except (json.JSONDecodeError, TypeError):
+                    continue
+            if not isinstance(metadata, dict):
+                continue
+            full_paper = metadata.get("full_paper")
+            if not isinstance(full_paper, dict):
+                continue
+            paper_md = full_paper.get("paper_markdown", "")
+            if isinstance(paper_md, str) and paper_md.strip():
+                completed_paper_count += 1
+
+    if completed_paper_count == 0:
+        raise TerminalOutcomeError(
+            f"Terminal outcome for run_id={run_id!r} produced no completed paper. "
+            f"proposals={proposal_count}, completed_papers={completed_paper_count}"
+        )
+
+    return {
+        "run_id": run_id,
+        "terminal_status": status_str if terminal_status is not None else None,
+        "proposal_count": proposal_count,
+        "completed_paper_count": completed_paper_count,
+    }
+
+
 async def run_confirmatory(
     config: ConfirmatoryConfig,
     orchestrator_factory: Any = None,
@@ -137,20 +241,29 @@ async def run_confirmatory(
     Raises:
         PreflightError: if identity validation or session resolution fails.
         RuntimeError: if post-execution binding or session reconciliation fails.
+        TerminalOutcomeError: if no valid terminal paper is found.
     """
     # ── 1. Preflight ──
     validate_preflight(config)
 
-    # ── 1b. Build effective settings with session management enabled ──
-    # The confirmatory protocol requires session finalization. The default
-    # configuration has session_enabled=False, which would leave the
-    # orchestrator's session_manager as None — preventing lifecycle-owned
-    # registration and finalization. Override it explicitly here.
+    # ── 1b. Build effective settings with attempt-isolated session store ──
     from backend.config import get_settings
 
     base_settings = get_settings()
+    base_session_dir = base_settings.session_data_dir
+    attempt_session_dir = derive_attempt_session_dir(base_session_dir, config.run_id)
+
+    # Reject an already-existing attempt directory (don't delete or reuse).
+    if attempt_session_dir.exists():
+        raise PreflightError(
+            f"attempt session directory already exists: {attempt_session_dir}"
+        )
+
     effective_settings = base_settings.model_copy(
-        update={"session_enabled": True}
+        update={
+            "session_enabled": True,
+            "session_data_dir": str(attempt_session_dir),
+        }
     )
     session_data_dir = effective_settings.session_data_dir
 
@@ -185,9 +298,6 @@ async def run_confirmatory(
         )
 
     # ── 4. Construct orchestrator with effective settings ──
-    # Pass the same effective_settings so the orchestrator's ServiceRegistry
-    # initializes its own SessionManager on the same directory. The runner and
-    # the production lifecycle independently open the same public session store.
     if orchestrator_factory is None:
         from backend.pipeline.orchestrator import PipelineOrchestrator
         orchestrator = PipelineOrchestrator(strategy="deep_research", settings=effective_settings)
@@ -195,9 +305,6 @@ async def run_confirmatory(
         orchestrator = orchestrator_factory(settings=effective_settings)
 
     # ── 4b. Verify the orchestrator's production-facing session boundary ──
-    # The orchestrator must have opened a session manager on the same store.
-    # If session_enabled was lost or ignored, session_manager will be None and
-    # the lifecycle will never register or finalize the run.
     services = getattr(orchestrator, "services", None)
     if services is None:
         services = getattr(orchestrator, "_services", None)
@@ -277,6 +384,9 @@ async def run_confirmatory(
             f"cost={record_cost} vs {summary.get('total_cost_usd')}"
         )
 
+    # ── 8. Validate terminal research outcome ──
+    outcome_diag = validate_terminal_outcome(result, config.run_id)
+
     return {
         "run_id": config.run_id,
         "session_id": resolved_session_id,
@@ -290,6 +400,8 @@ async def run_confirmatory(
         "session_reconciled": session_reconciled,
         "session_enabled": True,
         "session_data_dir": str(session_data_dir),
+        "terminal_outcome_verified": True,
+        "completed_paper_count": outcome_diag["completed_paper_count"],
     }
 
 
@@ -333,6 +445,9 @@ async def main():
             print(f"  {k}: {v}")
     except PreflightError as e:
         print(f"PREFLIGHT FAILED: {e}")
+        sys.exit(1)
+    except TerminalOutcomeError as e:
+        print(f"TERMINAL OUTCOME FAILED: {e}")
         sys.exit(1)
     except RuntimeError as e:
         print(f"VERIFICATION FAILED: {e}")
