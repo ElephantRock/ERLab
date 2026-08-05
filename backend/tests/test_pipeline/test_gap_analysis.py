@@ -10,6 +10,29 @@ from backend.pipeline.gap_analysis.models import ClusterInfo, ClusterReport, Res
 from backend.tests.test_pipeline.conftest import SchemaAwareFakeProvider
 
 
+class _GapJSONFakeProvider(SchemaAwareFakeProvider):
+    """Provider whose complete() returns valid gap-analysis JSON.
+
+    Returns all six required gap fields so the output-contract validator
+    accepts the payload.
+    """
+
+    async def complete(self, messages, temperature=0.7, max_tokens=4096):  # noqa: ARG002
+        import json
+        return json.dumps({
+            "gaps": [
+                {
+                    "title": "Novel approach to research methodology",
+                    "description": "A structurally valid research gap",
+                    "gap_type": "methodological",
+                    "related_clusters": [0],
+                    "potential_impact": "High",
+                    "confidence": 0.8,
+                },
+            ]
+        })
+
+
 class TestTitleSimilarity:
     def test_identical(self):
         assert _title_similarity("Machine Learning for NLP", "Machine Learning for NLP") == 1.0
@@ -80,7 +103,7 @@ class TestFormatPaperSummaries:
 
 class TestGapAnalyzer:
     def test_analyze_happy_path(self, many_papers):
-        provider = SchemaAwareFakeProvider()
+        provider = _GapJSONFakeProvider()
         analyzer = GapAnalyzer(provider)
         gaps, report = asyncio.run(analyzer.analyze(many_papers, max_gaps=2))
         assert isinstance(gaps, list)
@@ -91,7 +114,7 @@ class TestGapAnalyzer:
                 assert 0 <= g.confidence <= 1.0
 
     def test_analyze_with_prior_gaps(self, many_papers):
-        provider = SchemaAwareFakeProvider()
+        provider = _GapJSONFakeProvider()
         analyzer = GapAnalyzer(provider)
         prior = [
             ResearchGap(
@@ -105,19 +128,19 @@ class TestGapAnalyzer:
         assert isinstance(gaps, list)
 
     def test_analyze_llm_failure(self, many_papers):
-        provider = SchemaAwareFakeProvider()
+        provider = _GapJSONFakeProvider()
 
         async def _fail(*args, **kwargs):
             raise RuntimeError("LLM down")
 
-        provider.structured_output = _fail
+        provider.complete = _fail
         analyzer = GapAnalyzer(provider)
         gaps, report = asyncio.run(analyzer.analyze(many_papers))
         assert gaps == []
         assert isinstance(report, ClusterReport)
 
     def test_analyze_sorted_by_confidence(self, many_papers):
-        provider = SchemaAwareFakeProvider()
+        provider = _GapJSONFakeProvider()
         analyzer = GapAnalyzer(provider)
         gaps, _ = asyncio.run(analyzer.analyze(many_papers, max_gaps=5))
         if len(gaps) > 1:
