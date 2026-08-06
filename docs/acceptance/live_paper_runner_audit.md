@@ -114,20 +114,17 @@ or contains the paper.
 **Delta:** acceptance gate 10 must require the export file exists, contains
 the paper text, and preserves citation markers.
 
-### 2.8 Cost ceiling enforcement (not merely reconciliation) — **requires extension**
+### 2.8 Cost ceiling enforcement (not merely reconciliation) — **satisfied (follow-up scope)**
 
-The runner *reconciles* cost after execution (line 350-385) but does not
-*enforce* a ceiling. If the run overshoots, it fails reconciliation only if
-the session record disagrees — not if a hard cap was breached.
-
-**Capability check:** enforcement IS possible. `budget_guard.py:99-108`
-checks `max_cost_usd` and `autonomy/budget.py:104` checks
-`total_cost_usd >= max_cost_usd`. The gateway/cost layer can refuse the next
-call.
-
-**Delta:** acceptance preflight must wire the manifest's
-`maximum_cost_usd` into the budget guard and prove a call is refused at the
-ceiling. **Not blocked** — the mechanism exists.
+The runner *reconciles* cost after execution but previously did not
+*enforce* a ceiling. The follow-up acceptance scope added
+`backend/acceptance/budget_authority.py` (a hard pre-call authority that
+reserves a conservative maximum before each call) and wired it into
+`LLMGateway.call()` — the single chokepoint covering every billable call.
+A refused call raises `BudgetExceededError` (a `PromptTooLargeError`
+subclass) so the `GatewayProvider` re-raises rather than billing via the
+inner fallback. Proven via the real gateway boundary: a denied call leaves
+call/usage/token/cost counts unchanged.
 
 ### 2.9 Frozen-corpus integrity — **requires extension**
 
@@ -139,18 +136,15 @@ ingestion boundary without injecting gaps/ideas.
 harness) plus a corpus manifest with per-document and aggregate hashes.
 Phase A5.
 
-### 2.10 Fresh-process database restart recovery — **requires extension**
+### 2.10 Fresh-process database restart recovery — **satisfied (follow-up scope)**
 
-The runner verifies results in-memory within one process. It does not shut
-down persistence and reload from a fresh instance.
-
-**Capability check:** `RunService` is DB-backed (`create_run`, `mark_run`),
-so reload-by-run-id is feasible. Proposal metadata (paper/evaluation/source
-map) is persisted by `PipelinePersistence.persist_proposals`.
-
-**Delta:** acceptance gate 11 must, after execution, construct **new**
-persistence/RunService instances, load the run by ID, and recover the paper,
-evaluation, citation audit, source map, and export location. **Not blocked.**
+The runner verifies results in-memory within one process. The follow-up
+acceptance scope added `backend/acceptance/recovery.py`, which a fresh
+child process uses to load a completed run's artifacts through production
+read APIs (`get_run_by_uuid`, `load_gaps`, `crud.get_ideas_for_run`,
+`crud.get_proposal_by_idea`, and the `stage_report_json` blob). Proven via
+a real `subprocess.run` boundary; the paper/evaluation/source map come
+from `proposals.paper_md` / `paper_meta_json`, not an in-memory handoff.
 
 ### 2.11 Complete artifact collection and hashing — **requires extension**
 
