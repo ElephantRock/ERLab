@@ -415,7 +415,30 @@ async def main():
     parser.add_argument("--run-id", default=None, help="Explicit run ID (auto-generated if omitted)")
     parser.add_argument("--session-id", default=None, help="Explicit session ID (auto-generated if omitted)")
     parser.add_argument("--domain", default=FROZEN_DOMAIN, help="Research domain (frozen for confirmatory runs)")
+    # Acceptance mode (Phase A2): manifest-driven, verdict-classified.
+    parser.add_argument("--acceptance-case", default=None,
+                        help="Path to a LivePaperAcceptanceCase JSON manifest. "
+                             "When set, runs in acceptance mode (preflight + verdict + evidence).")
+    parser.add_argument("--evidence-dir", default=None,
+                        help="Directory for the immutable evidence bundle (acceptance mode).")
     args = parser.parse_args()
+
+    # ── Acceptance mode ──
+    if args.acceptance_case:
+        if not args.evidence_dir:
+            print("--evidence-dir is required with --acceptance-case")
+            sys.exit(3)
+        from backend.acceptance.runner import run_acceptance
+        report, _ev = await run_acceptance(
+            case_path=args.acceptance_case,
+            evidence_dir=args.evidence_dir,
+            run_id=args.run_id,
+            session_id=args.session_id,
+        )
+        print(f"ACCEPTANCE VERDICT: {report.verdict.value.upper()} (exit {report.exit_code})")
+        for g in report.failed_gates:
+            print(f"  FAILED GATE: {g.gate} ({g.reason_code})")
+        sys.exit(report.exit_code)
 
     run_id = args.run_id or _generate_id("run")
     session_id = args.session_id or _generate_id("session")
