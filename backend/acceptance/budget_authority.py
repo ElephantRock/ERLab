@@ -147,14 +147,20 @@ class BudgetAuthority:
         *,
         strict: bool = True,
         run_id: str | None = None,
+        price_per_1k_input: float = 0.0,
+        price_per_1k_output: float = 0.0,
     ):
         if ceiling_usd < 0.0:
             raise BudgetConfigurationError(
                 f"ceiling_usd must be non-negative, got {ceiling_usd}"
             )
+        if price_per_1k_input < 0.0 or price_per_1k_output < 0.0:
+            raise BudgetConfigurationError("prices must be non-negative")
         self._ceiling = ceiling_usd
         self._strict = strict
         self._run_id = run_id
+        self._price_in = price_per_1k_input
+        self._price_out = price_per_1k_output
         self._committed = 0.0
         self._reserved = 0.0
         self._denied = 0
@@ -182,6 +188,44 @@ class BudgetAuthority:
     def remaining_usd(self) -> float:
         with self._lock:
             return max(0.0, self._ceiling - self._committed - self._reserved)
+
+    def cost_for_tokens(self, input_tokens: int, output_tokens: int) -> float:
+        """Compute the actual cost of a completed call from token counts."""
+        return (
+            (input_tokens / 1000.0) * self._price_in
+            + (output_tokens / 1000.0) * self._price_out
+        )
+
+    def project_call(
+        self,
+        *,
+        max_input_tokens: int,
+        max_output_tokens: int,
+        stage: str = "",
+        run_id: str | None = None,
+    ) -> CallProjection:
+        """Build a conservative-maximum projection for a call.
+
+        If pricing is configured, the projection cost is token-limited.
+        If pricing is unknown (both zero), the projection conservatively
+        reserves the ENTIRE remaining budget — guaranteeing no overshoot
+        at the cost of admitting at most one call until pricing is set.
+        """
+        if self._price_in == 0.0 and self._price_out == 0.0:
+            # Unknown pricing: reserve the whole remaining budget as the
+            # worst case for this single call.
+            max_cost = self.remaining_usd()
+        else:
+            max_cost = (
+                (max_input_tokens / 1000.0) * self._price_in
+                + (max_output_tokens / 1000.0) * self._price_out
+            )
+        return CallProjection(
+            stage=stage, run_id=run_id,
+            max_cost_usd=max_cost,
+            max_input_tokens=max_input_tokens,
+            max_output_tokens=max_output_tokens,
+        )
 
     def reserve(self, projection: CallProjection) -> None:
         """Reserve the conservative maximum cost before a call.

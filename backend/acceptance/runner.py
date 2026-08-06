@@ -298,6 +298,7 @@ async def run_acceptance(
     run_id: str | None = None,
     session_id: str | None = None,
     restart_recovery_check: Any | None = None,
+    budget_authority: Any | None = None,
 ) -> tuple[VerdictReport, Path]:
     """Run one acceptance attempt end to end.
 
@@ -308,6 +309,10 @@ async def run_acceptance(
     The ``restart_recovery_check`` callable, if supplied, is invoked after
     execution with the run identity and must return True iff a fresh
     persistence instance recovered the artifacts.
+
+    The ``budget_authority``, if supplied, is snapshot into the evidence
+    bundle as ``budget_enforcement.json``. Wiring it into the orchestrator's
+    gateway is the caller's responsibility (Commit 2's gateway integration).
     """
     case = LivePaperAcceptanceCase.load(case_path)
     repo_root = repo_root or resolve_repo_root()
@@ -374,5 +379,10 @@ async def run_acceptance(
             )
         )
 
-    write_evidence(evidence_dir, case, report, preflight.code_origin, result=result)
+    extra_files: dict[str, Any] = {}
+    if budget_authority is not None and hasattr(budget_authority, "snapshot"):
+        extra_files["budget_enforcement.json"] = budget_authority.snapshot().to_dict()
+
+    write_evidence(evidence_dir, case, report, preflight.code_origin,
+                   result=result, extra_files=extra_files)
     return report, evidence_dir

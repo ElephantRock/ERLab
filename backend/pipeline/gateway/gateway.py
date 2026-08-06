@@ -125,6 +125,22 @@ class LLMGateway:
         self._routing_mode = "disabled"  # disabled | dry_run | enforce
         self._dry_run_logger = None
 
+        # Hard pre-call budget authority (optional, set via set_budget_authority).
+        # When set, every billable call through call() is reserved before it
+        # proceeds and reconciled after. None = no cost enforcement (legacy).
+        self._budget_authority = None
+
+    def set_budget_authority(self, authority) -> None:
+        """Set the run-scoped hard budget authority.
+
+        When set, LLMGateway.call() reserves a conservative maximum cost
+        before each provider call and reconciles actual usage after. A
+        refused call raises BudgetExceededError (a PromptTooLargeError
+        subclass) so GatewayProvider re-raises rather than billing via the
+        inner fallback.
+        """
+        self._budget_authority = authority
+
     def set_provider_fn(self, fn) -> None:
         """Set the function that executes LLM calls.
 
@@ -155,6 +171,26 @@ class LLMGateway:
         response = None
 
         try:
+            # ── Hard pre-call budget reservation (if authority is set) ──
+            # This is the single chokepoint covering every billable call.
+            # The refusal exception subclasses PromptTooLargeError, so the
+            # except clause below re-raises it rather than degrading.
+            budget_projection = None
+            if self._budget_authority is not None:
+                # Conservative maximum: estimate input tokens from the
+                # request plus the full requested output reserve, then let
+                # the authority translate that into a worst-case cost.
+                est_input = sum(len(str(m.get("content", "")).split())
+                                for m in (request.messages or []))
+                est_output = request.max_output_tokens or 4096
+                budget_projection = self._budget_authority.project_call(
+                    max_input_tokens=est_input,
+                    max_output_tokens=est_output,
+                    stage=request.stage or request.task or "",
+                    run_id=request.run_id,
+                )
+                self._budget_authority.reserve(budget_projection)
+
             # 0. SmartRouter routing (if enabled)
             routing_decision = None
             enforcement_applied = False
@@ -307,11 +343,25 @@ class LLMGateway:
                 latency_ms=elapsed_ms,
             )
 
+            # ── Reconcile the budget reservation with actual usage ──
+            if self._budget_authority is not None and budget_projection is not None:
+                actual_cost = self._budget_authority.cost_for_tokens(
+                    response.input_tokens, response.output_tokens,
+                )
+                self._budget_authority.reconcile(actual_cost)
+
             return response
 
         except PromptTooLargeError:
+            # Includes BudgetExceededError (refusal). A refused call never
+            # reached the provider, so there is no reservation to release —
+            # reserve() raised before any reservation was recorded.
             raise  # propagate to caller for compaction/splitting
         except Exception as e:
+            # Provider/transport failure: release the outstanding reservation
+            # so the budget authority does not hold a phantom reservation.
+            if self._budget_authority is not None:
+                self._budget_authority.release()
             error = str(e)[:200]
             elapsed_ms = (time.monotonic() - t0) * 1000
             logger.error("Gateway call failed for task '%s': %s", request.task, error)
