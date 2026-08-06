@@ -1,0 +1,141 @@
+{
+  "cluster_report": {
+    "clusters": [
+      {
+        "avg_citations": 0.0,
+        "cluster_id": 0,
+        "label": "low-resource transfer",
+        "paper_count": 2,
+        "top_terms": [
+          "transfer",
+          "low-resource",
+          "endangered"
+        ]
+      },
+      {
+        "avg_citations": 0.0,
+        "cluster_id": 1,
+        "label": "evaluation metrics",
+        "paper_count": 1,
+        "top_terms": [
+          "metrics",
+          "morphology",
+          "chrf"
+        ]
+      }
+    ],
+    "davies_bouldin_index": null,
+    "silhouette_score": null,
+    "total_papers": 3
+  },
+  "domain": "NLP / Machine Translation",
+  "fixture_id": "low_resource_mt_v1",
+  "gaps": [
+    {
+      "confidence": 0.82,
+      "description": "Existing low-resource MT benchmarks rarely include truly low-resource African or Oceanic languages with under 10k parallel sentences. Transfer methods are validated on medium-resource pairs, leaving their effectiveness on the lowest-resource settings unmeasured.",
+      "evidence_strength": null,
+      "frontier_rank": null,
+      "gap_type": "empirical",
+      "is_incumbent": false,
+      "potential_impact": "Robust benchmarks for the lowest-resource languages would expose where cross-lingual transfer actually breaks and guide targeted data collection.",
+      "related_clusters": [
+        0
+      ],
+      "title": "Lack of truly low-resource African and Oceanic language pairs in MT benchmarks",
+      "truth": {
+        "confidence": 0.5,
+        "evidence_count": 0,
+        "frequency": 0.5,
+        "propagation_debt": 0.0
+      }
+    },
+    {
+      "confidence": 0.76,
+      "description": "Morpheme-aware metrics have been proposed but never validated on polysynthetic languages where a single word encodes a full clause. It is unknown whether such metrics correlate with human fluency judgments in these settings.",
+      "evidence_strength": null,
+      "frontier_rank": null,
+      "gap_type": "methodological",
+      "is_incumbent": false,
+      "potential_impact": "Validated morpheme-aware metrics would make MT evaluation trustworthy for the languages where it currently fails most.",
+      "related_clusters": [
+        1
+      ],
+      "title": "Morpheme-aware evaluation metrics are unvalidated for polysynthetic languages",
+      "truth": {
+        "confidence": 0.5,
+        "evidence_count": 0,
+        "frequency": 0.5,
+        "propagation_debt": 0.0
+      }
+    }
+  ],
+  "papers": [
+    {
+      "abstract": "We survey benchmarks for low-resource machine translation, covering 40 language pairs and evaluating data scarcity, tokenization, and evaluation metric reliability. We find that standard BLEU scores under-report quality for morphologically rich languages and that few benchmarks include truly low-resource African or Oceanic languages.",
+      "arxiv_id": null,
+      "authors": [
+        {
+          "affiliations": [],
+          "id": null,
+          "name": "Synthetic Author"
+        }
+      ],
+      "citation_count": 0,
+      "doi": null,
+      "embedding": null,
+      "id": "SYN-lrmt-001",
+      "keywords": [],
+      "source": "synthetic",
+      "title": "A Survey of Low-Resource Machine Translation Benchmarks",
+      "url": "urn:erlab:synthetic:paper:lrmt-001",
+      "venue": "Synthetic Workshop",
+      "year": 2023
+    },
+    {
+      "abstract": "Cross-lingual transfer from multilingual encoders has advanced for medium-resource languages but struggles for endangered languages with minimal monolingual data. We review transfer techniques and identify open problems in script normalization, code-switching, and dialect continua.",
+      "arxiv_id": null,
+      "authors": [
+        {
+          "affiliations": [],
+          "id": null,
+          "name": "Synthetic Author"
+        }
+      ],
+      "citation_count": 0,
+      "doi": null,
+      "embedding": null,
+      "id": "SYN-lrmt-002",
+      "keywords": [],
+      "source": "synthetic",
+      "title": "Cross-Lingual Transfer for Endangered Languages: A Review",
+      "url": "urn:erlab:synthetic:paper:lrmt-002",
+      "venue": "Synthetic Workshop",
+      "year": 2024
+    },
+    {
+      "abstract": "Standard MT evaluation metrics assume whitespace tokenization and fail on morphologically rich, agglutinative languages. We propose morpheme-aware metrics and show that chrF under-estimates fluency for polysynthetic languages.",
+      "arxiv_id": null,
+      "authors": [
+        {
+          "affiliations": [],
+          "id": null,
+          "name": "Synthetic Author"
+        }
+      ],
+      "citation_count": 0,
+      "doi": null,
+      "embedding": null,
+      "id": "SYN-lrmt-003",
+      "keywords": [],
+      "source": "synthetic",
+      "title": "Evaluation Metrics for Morphologically Rich Languages",
+      "url": "urn:erlab:synthetic:paper:lrmt-003",
+      "venue": "Synthetic Workshop",
+      "year": 2023
+    }
+  ],
+  "research_question": "How can cross-lingual transfer and evaluation be made reliable for truly low-resource languages?",
+  "schema_version": "erlab.post_gap_seed.v1",
+  "synthetic": true
+}

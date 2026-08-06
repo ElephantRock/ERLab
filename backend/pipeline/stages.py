@@ -774,15 +774,43 @@ class GapAnalysisStage(PipelineStage):
         # Reduced from 15s to 2s since gap analysis now uses local LM Studio
         await asyncio.sleep(2.0)
 
-        prior_gaps = await self._recall_prior_gaps(ctx.domain)
-        gaps, cluster_report = await self._gap_analyzer.analyze(
-            ctx.all_papers,
-            domain=ctx.domain,
-            max_gaps=ctx.max_gaps,
-            prior_gaps=prior_gaps,
-            provider=provider,
-            receipts=receipts,
+        from backend.pipeline.gap_analysis.contracts import (
+            GapAnalysisExecutionError,
+            GapAnalysisOutputContractError,
         )
+        from backend.pipeline.result import PipelineOutcome
+
+        prior_gaps = await self._recall_prior_gaps(ctx.domain)
+        try:
+            gaps, cluster_report = await self._gap_analyzer.analyze(
+                ctx.all_papers,
+                domain=ctx.domain,
+                max_gaps=ctx.max_gaps,
+                prior_gaps=prior_gaps,
+                provider=provider,
+                receipts=receipts,
+            )
+        except GapAnalysisOutputContractError as exc:
+            # Output failed the typed contract. Terminalize the run and halt.
+            # Only safe structural diagnostics are recorded — never raw output.
+            ctx.result.outcome = PipelineOutcome.FAILED_OUTPUT_CONTRACT
+            ctx.result.terminal_stage = "gap_analysis"
+            ctx.result.terminal_reason = str(exc)[:200]
+            logger.error(
+                "Gap analysis output-contract failure — terminalizing run: %s",
+                ctx.result.terminal_reason,
+            )
+            return False
+        except GapAnalysisExecutionError as exc:
+            # Provider/transport failure after retry exhaustion. Terminalize.
+            ctx.result.outcome = PipelineOutcome.FAILED_EXECUTION
+            ctx.result.terminal_stage = "gap_analysis"
+            ctx.result.terminal_reason = str(exc)[:200]
+            logger.error(
+                "Gap analysis execution failure — terminalizing run: %s",
+                ctx.result.terminal_reason,
+            )
+            return False
         ctx.result.gaps = gaps
         ctx.result.cluster_report = cluster_report
         logger.info("Identified %d research gaps", len(gaps))
@@ -868,6 +896,16 @@ class GapAnalysisStage(PipelineStage):
                     "gap_type": gap.gap_type,
                 },
             )
+
+        # No-gap terminalization: a valid empty gap result is a legitimate,
+        # transport-completed outcome that produces no paper. It must halt the
+        # pipeline and stay distinguishable from failure (which raised above).
+        if not gaps:
+            ctx.result.outcome = PipelineOutcome.NO_RESEARCH_GAP
+            ctx.result.terminal_stage = "gap_analysis"
+            ctx.result.terminal_reason = "no gaps identified"
+            logger.info("Gap analysis identified no research gaps — terminalizing run")
+            return False
         return True
 
     async def _recall_prior_gaps(self, domain):

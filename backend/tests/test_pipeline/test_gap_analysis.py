@@ -2,7 +2,10 @@
 
 import asyncio
 
+import pytest
+
 from backend.pipeline.gap_analysis.gap_analyzer import (
+    GapAnalysisExecutionError,
     GapAnalyzer,
     _title_similarity,
 )
@@ -11,15 +14,15 @@ from backend.tests.test_pipeline.conftest import SchemaAwareFakeProvider
 
 
 class _GapJSONFakeProvider(SchemaAwareFakeProvider):
-    """Provider whose complete() returns valid gap-analysis JSON.
+    """Provider whose structured_output() returns a valid typed gap payload.
 
-    Returns all six required gap fields so the output-contract validator
-    accepts the payload.
+    Gap analysis is routed through structured_output() (the canonical
+    analyzer entrypoint). Returns all six required gap fields so the
+    typed contract validator accepts the payload.
     """
 
-    async def complete(self, messages, temperature=0.7, max_tokens=4096):  # noqa: ARG002
-        import json
-        return json.dumps({
+    async def structured_output(self, messages, schema, temperature=0.3, max_tokens=4096):  # noqa: ARG002
+        return {
             "gaps": [
                 {
                     "title": "Novel approach to research methodology",
@@ -30,7 +33,7 @@ class _GapJSONFakeProvider(SchemaAwareFakeProvider):
                     "confidence": 0.8,
                 },
             ]
-        })
+        }
 
 
 class TestTitleSimilarity:
@@ -133,11 +136,13 @@ class TestGapAnalyzer:
         async def _fail(*args, **kwargs):
             raise RuntimeError("LLM down")
 
-        provider.complete = _fail
+        # An exhausted provider failure must surface as a typed execution
+        # error, NOT be swallowed into an empty gap list. See the gap-contract
+        # outcome matrix: "No execution failure becomes []".
+        provider.structured_output = _fail
         analyzer = GapAnalyzer(provider)
-        gaps, report = asyncio.run(analyzer.analyze(many_papers))
-        assert gaps == []
-        assert isinstance(report, ClusterReport)
+        with pytest.raises(GapAnalysisExecutionError):
+            asyncio.run(analyzer.analyze(many_papers))
 
     def test_analyze_sorted_by_confidence(self, many_papers):
         provider = _GapJSONFakeProvider()

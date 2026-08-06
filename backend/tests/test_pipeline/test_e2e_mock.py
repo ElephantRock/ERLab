@@ -101,7 +101,7 @@ class MockLLMProvider(LLMProvider):
         response = await self.complete(messages, temperature, max_tokens)
         yield response
 
-    async def structured_output(self, messages, schema, temperature=0.3) -> dict:
+    async def structured_output(self, messages, schema, temperature=0.3, max_tokens=4096, **kwargs) -> dict:
         """Return deterministic structured data based on the calling stage."""
         self._call_log.append({"method": "structured_output", "schema": schema})
         msg_text = " ".join(m.get("content", "") for m in messages).lower()
@@ -658,3 +658,20 @@ class TestEndToEndMock:
         assert "title" in result
         assert "abstract" in result
         assert "proposed_method" in result
+
+    def test_gap_analyzer_uses_structured_output(self):
+        """GapAnalyzer must route through structured_output(), not complete().
+
+        The mock provider already implements _gap_response() for the gaps
+        schema. This asserts the production analyzer actually invokes
+        structured_output() so the gap path is exercised end-to-end.
+        """
+        provider = MockLLMProvider()
+        analyzer = GapAnalyzer(provider)
+        gaps, _ = asyncio.run(analyzer.analyze(_make_mock_papers(), max_gaps=2))
+        methods = [c["method"] for c in provider._call_log]
+        assert "structured_output" in methods, "GapAnalyzer must call structured_output()"
+        assert "complete" not in methods or methods.count("complete") == 0, (
+            "GapAnalyzer must NOT call complete() for gap analysis"
+        )
+        assert len(gaps) >= 1
