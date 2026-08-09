@@ -159,8 +159,30 @@ def build_governed_vector_runtime_from_settings(db_engine: Any) -> GovernedVecto
             return None
 
         # ── Step 5: Construct embedding provider (after reconciliation) ──
-        provider = create_provider()
-        embedding_service = EmbeddingService(provider)
+        # Use the EMBEDDING provider, not the LLM provider. create_provider()
+        # returns the LLM provider (glm-5.2 via ResilientProvider) which has
+        # complete() but not embed(). The governed adapter needs embed().
+        from backend.pipeline.knowledge.embedding_providers import (
+            create_embedding_provider,
+        )
+        _emb_base = app_settings.embedding_base_url
+        if _emb_base:
+            _emb_base = _emb_base.rstrip('/')
+            if not _emb_base.endswith('/v1'):
+                _emb_base += '/v1'
+        elif app_settings.embedding_provider == "lmstudio":
+            _emb_base = app_settings.lmstudio_base_url.rstrip('/') + '/v1'
+        else:
+            _emb_base = app_settings.ollama_base_url
+
+        embedding_provider = create_embedding_provider(
+            provider_name=app_settings.embedding_provider,
+            model=app_settings.embedding_model,
+            api_key=app_settings.openai_api_key,
+            base_url=_emb_base,
+            dimension=app_settings.embedding_dimension or None,
+        )
+        embedding_service = EmbeddingService(embedding_provider)
 
         # ── Step 6: Wrap in GovernedEmbeddingAdapter ──
         adapter = GovernedEmbeddingAdapter(
