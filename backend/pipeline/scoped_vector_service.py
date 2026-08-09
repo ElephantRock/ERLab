@@ -21,7 +21,7 @@ import math
 from datetime import datetime, timezone
 from typing import Any, Sequence
 
-from sqlalchemy import select, update, func
+from sqlalchemy import select, update, func, text
 from sqlalchemy.orm import Session, sessionmaker
 
 from backend.pipeline.vector_backend import BackendVectorMatch, GovernedVectorBackend
