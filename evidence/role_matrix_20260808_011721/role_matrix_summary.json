@@ -1,0 +1,337 @@
+{
+  "spend": {
+    "total_usd": 0.0289,
+    "ceiling_usd": 50.0,
+    "calls": 15,
+    "input_tokens": 20521,
+    "output_tokens": 43057
+  },
+  "decision_rule_frozen": "12/12 PASS required (automated); then semantic audit of any disputed cell to distinguish model defect from checker artifact",
+  "cells": [
+    {
+      "cell_id": "metric_direction_correct_monolithic_rep1",
+      "dimension": "metric_direction",
+      "level": "correct",
+      "path": "monolithic",
+      "rep": 1,
+      "hard_pass": false,
+      "error": null,
+      "checks": {
+        "paper_nonempty": true,
+        "gt_method_in_identity": true,
+        "gt_dataset_in_identity": true,
+        "all_markers_present": true,
+        "_missing_markers": [],
+        "marker_values_verbatim": true,
+        "_missing_values": [],
+        "result_roles_preserved": false,
+        "_role_failures": [
+          {
+            "marker": "[RESULT-1]",
+            "expected_role": "comparison",
+            "observed_role": "baseline",
+            "context": "cy and ROC-AUC are used as primary evaluation metrics to account for class balance and discriminative quality. The logistic regression model substantially outperforms the baseline, achieving a balanced accuracy of 0.973 [RESULT-1] compared to 0.500 [RESULT-2] for the majority-class predictor. The model also attains a ROC-AUC of 0.998 [RESULT-3], indicating near-perfect class separation. These results demonstrate that even simple linear classifier"
+          }
+        ],
+        "metric_direction_preserved": true,
+        "_direction_failures": []
+      },
+      "diagnostic_alert_count": 3
+    },
+    {
+      "cell_id": "metric_direction_correct_monolithic_rep2",
+      "dimension": "metric_direction",
+      "level": "correct",
+      "path": "monolithic",
+      "rep": 2,
+      "hard_pass": true,
+      "error": null,
+      "checks": {
+        "paper_nonempty": true,
+        "gt_method_in_identity": true,
+        "gt_dataset_in_identity": true,
+        "all_markers_present": true,
+        "_missing_markers": [],
+        "marker_values_verbatim": true,
+        "_missing_values": [],
+        "result_roles_preserved": true,
+        "_role_failures": [],
+        "metric_direction_preserved": true,
+        "_direction_failures": []
+      },
+      "diagnostic_alert_count": 3
+    },
+    {
+      "cell_id": "metric_direction_correct_monolithic_rep3",
+      "dimension": "metric_direction",
+      "level": "correct",
+      "path": "monolithic",
+      "rep": 3,
+      "hard_pass": true,
+      "error": null,
+      "checks": {
+        "paper_nonempty": true,
+        "gt_method_in_identity": true,
+        "gt_dataset_in_identity": true,
+        "all_markers_present": true,
+        "_missing_markers": [],
+        "marker_values_verbatim": true,
+        "_missing_values": [],
+        "result_roles_preserved": true,
+        "_role_failures": [],
+        "metric_direction_preserved": true,
+        "_direction_failures": []
+      },
+      "diagnostic_alert_count": 3
+    },
+    {
+      "cell_id": "metric_direction_correct_section_wise_rep1",
+      "dimension": "metric_direction",
+      "level": "correct",
+      "path": "section_wise",
+      "rep": 1,
+      "hard_pass": true,
+      "error": null,
+      "checks": {
+        "paper_nonempty": true,
+        "gt_method_in_identity": true,
+        "gt_dataset_in_identity": true,
+        "all_markers_present": true,
+        "_missing_markers": [],
+        "marker_values_verbatim": true,
+        "_missing_values": [],
+        "result_roles_preserved": true,
+        "_role_failures": [],
+        "metric_direction_preserved": true,
+        "_direction_failures": []
+      },
+      "diagnostic_alert_count": 3
+    },
+    {
+      "cell_id": "metric_direction_correct_section_wise_rep2",
+      "dimension": "metric_direction",
+      "level": "correct",
+      "path": "section_wise",
+      "rep": 2,
+      "hard_pass": true,
+      "error": null,
+      "checks": {
+        "paper_nonempty": true,
+        "gt_method_in_identity": true,
+        "gt_dataset_in_identity": true,
+        "all_markers_present": true,
+        "_missing_markers": [],
+        "marker_values_verbatim": true,
+        "_missing_values": [],
+        "result_roles_preserved": true,
+        "_role_failures": [],
+        "metric_direction_preserved": true,
+        "_direction_failures": []
+      },
+      "diagnostic_alert_count": 3
+    },
+    {
+      "cell_id": "metric_direction_correct_section_wise_rep3",
+      "dimension": "metric_direction",
+      "level": "correct",
+      "path": "section_wise",
+      "rep": 3,
+      "hard_pass": false,
+      "error": null,
+      "checks": {
+        "paper_nonempty": true,
+        "gt_method_in_identity": true,
+        "gt_dataset_in_identity": true,
+        "all_markers_present": true,
+        "_missing_markers": [],
+        "marker_values_verbatim": true,
+        "_missing_values": [],
+        "result_roles_preserved": false,
+        "_role_failures": [
+          {
+            "marker": "[RESULT-1]",
+            "expected_role": "comparison",
+            "observed_role": "baseline",
+            "context": "y flowers into three species, using a majority-class predictor as a baseline for comparison.\n\nWe aim to logistic regression will substantially outperform the majority-class baseline, achieving balanced accuracy of 0.973 [RESULT-1] versus 0.500 [RESULT-2] for the baseline, with an ROC-AUC of 0.998 [RESULT-3].\n\n\n## Introduction\n\nThe Iris dataset is a canonical benchmark for evaluating classification algorithms, comprising 150 samples across three s"
+          },
+          {
+            "marker": "[RESULT-3]",
+            "expected_role": "comparison",
+            "observed_role": "baseline",
+            "context": "or comparison.\n\nWe aim to logistic regression will substantially outperform the majority-class baseline, achieving balanced accuracy of 0.973 [RESULT-1] versus 0.500 [RESULT-2] for the baseline, with an ROC-AUC of 0.998 [RESULT-3].\n\n\n## Introduction\n\nThe Iris dataset is a canonical benchmark for evaluating classification algorithms, comprising 150 samples across three species with four morphological features each [SOURCE-1].\n\nLinear classificatio"
+          }
+        ],
+        "metric_direction_preserved": true,
+        "_direction_failures": []
+      },
+      "diagnostic_alert_count": 3
+    },
+    {
+      "cell_id": "metric_direction_reversed_attribution_monolithic_rep1",
+      "dimension": "metric_direction",
+      "level": "reversed_attribution",
+      "path": "monolithic",
+      "rep": 1,
+      "hard_pass": true,
+      "error": null,
+      "checks": {
+        "paper_nonempty": true,
+        "gt_method_in_identity": true,
+        "gt_dataset_in_identity": true,
+        "all_markers_present": true,
+        "_missing_markers": [],
+        "marker_values_verbatim": true,
+        "_missing_values": [],
+        "result_roles_preserved": true,
+        "_role_failures": [],
+        "metric_direction_preserved": true,
+        "_direction_failures": []
+      },
+      "diagnostic_alert_count": 3
+    },
+    {
+      "cell_id": "metric_direction_reversed_attribution_monolithic_rep2",
+      "dimension": "metric_direction",
+      "level": "reversed_attribution",
+      "path": "monolithic",
+      "rep": 2,
+      "hard_pass": true,
+      "error": null,
+      "checks": {
+        "paper_nonempty": true,
+        "gt_method_in_identity": true,
+        "gt_dataset_in_identity": true,
+        "all_markers_present": true,
+        "_missing_markers": [],
+        "marker_values_verbatim": true,
+        "_missing_values": [],
+        "result_roles_preserved": true,
+        "_role_failures": [],
+        "metric_direction_preserved": true,
+        "_direction_failures": []
+      },
+      "diagnostic_alert_count": 3
+    },
+    {
+      "cell_id": "metric_direction_reversed_attribution_monolithic_rep3",
+      "dimension": "metric_direction",
+      "level": "reversed_attribution",
+      "path": "monolithic",
+      "rep": 3,
+      "hard_pass": true,
+      "error": null,
+      "checks": {
+        "paper_nonempty": true,
+        "gt_method_in_identity": true,
+        "gt_dataset_in_identity": true,
+        "all_markers_present": true,
+        "_missing_markers": [],
+        "marker_values_verbatim": true,
+        "_missing_values": [],
+        "result_roles_preserved": true,
+        "_role_failures": [],
+        "metric_direction_preserved": true,
+        "_direction_failures": []
+      },
+      "diagnostic_alert_count": 3
+    },
+    {
+      "cell_id": "metric_direction_reversed_attribution_section_wise_rep1",
+      "dimension": "metric_direction",
+      "level": "reversed_attribution",
+      "path": "section_wise",
+      "rep": 1,
+      "hard_pass": false,
+      "error": null,
+      "checks": {
+        "paper_nonempty": true,
+        "gt_method_in_identity": true,
+        "gt_dataset_in_identity": true,
+        "all_markers_present": true,
+        "_missing_markers": [],
+        "marker_values_verbatim": true,
+        "_missing_values": [],
+        "result_roles_preserved": false,
+        "_role_failures": [
+          {
+            "marker": "[RESULT-1]",
+            "expected_role": "comparison",
+            "observed_role": "baseline",
+            "context": "t a majority-class baseline using balanced accuracy and ROC-AUC as primary metrics [SOURCE-2].\n\nLogistic regression achieves a balanced accuracy of 0.973, substantially outperforming the majority-class baseline at 0.500 [RESULT-1] [RESULT-2].\n\nThe model also demonstrates strong ranking performance with an ROC-AUC of 0.998 [RESULT-3].\n\nWe aim to demonstrate that logistic regression, despite its simplicity, provides highly effective classification"
+          }
+        ],
+        "metric_direction_preserved": true,
+        "_direction_failures": []
+      },
+      "diagnostic_alert_count": 3
+    },
+    {
+      "cell_id": "metric_direction_reversed_attribution_section_wise_rep2",
+      "dimension": "metric_direction",
+      "level": "reversed_attribution",
+      "path": "section_wise",
+      "rep": 2,
+      "hard_pass": true,
+      "error": null,
+      "checks": {
+        "paper_nonempty": true,
+        "gt_method_in_identity": true,
+        "gt_dataset_in_identity": true,
+        "all_markers_present": true,
+        "_missing_markers": [],
+        "marker_values_verbatim": true,
+        "_missing_values": [],
+        "result_roles_preserved": true,
+        "_role_failures": [],
+        "metric_direction_preserved": true,
+        "_direction_failures": []
+      },
+      "diagnostic_alert_count": 3
+    },
+    {
+      "cell_id": "metric_direction_reversed_attribution_section_wise_rep3",
+      "dimension": "metric_direction",
+      "level": "reversed_attribution",
+      "path": "section_wise",
+      "rep": 3,
+      "hard_pass": true,
+      "error": null,
+      "checks": {
+        "paper_nonempty": true,
+        "gt_method_in_identity": true,
+        "gt_dataset_in_identity": true,
+        "all_markers_present": true,
+        "_missing_markers": [],
+        "marker_values_verbatim": true,
+        "_missing_values": [],
+        "result_roles_preserved": true,
+        "_role_failures": [],
+        "metric_direction_preserved": true,
+        "_direction_failures": []
+      },
+      "diagnostic_alert_count": 3
+    }
+  ],
+  "dimensions": {
+    "metric_direction/correct/monolithic": {
+      "total": 3,
+      "hard_pass": 2,
+      "errors": 0
+    },
+    "metric_direction/correct/section_wise": {
+      "total": 3,
+      "hard_pass": 2,
+      "errors": 0
+    },
+    "metric_direction/reversed_attribution/monolithic": {
+      "total": 3,
+      "hard_pass": 3,
+      "errors": 0
+    },
+    "metric_direction/reversed_attribution/section_wise": {
+      "total": 3,
+      "hard_pass": 2,
+      "errors": 0
+    }
+  }
+}

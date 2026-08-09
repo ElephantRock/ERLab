@@ -140,7 +140,7 @@ class ProposalEvaluator:
 
         # B-EVAL-01 (F-7): use the product-authorized generation output budget
         # (settings.generation_model_max_tokens, default 8192) instead of a
-        # hardcoded 1500. Reasoning models (e.g. glm-4.6) emit a separate
+        # hardcoded 1500. Reasoning models (e.g. glm-5.2) emit a separate
         # reasoning_content that consumes tokens before final content; at 1500
         # tokens the budget was exhausted mid-reasoning (finish_reason=length),
         # yielding empty content and the silent-zero evaluation. The F-7

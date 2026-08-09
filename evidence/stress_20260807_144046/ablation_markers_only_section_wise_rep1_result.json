@@ -1,0 +1,84 @@
+{
+  "cell_id": "ablation_markers_only_section_wise_rep1",
+  "dimension": "ablation",
+  "level": "markers_only",
+  "path": "section_wise",
+  "rep": 1,
+  "hard_verdict": {
+    "all_hard_pass": false,
+    "checks": {
+      "paper_nonempty": true,
+      "gt_method_in_identity": false,
+      "gt_dataset_in_identity": true,
+      "all_markers_present": true,
+      "_missing_markers": [],
+      "marker_values_verbatim": true,
+      "_missing_values": []
+    }
+  },
+  "diagnostics": {
+    "alerts": [
+      {
+        "type": "conflicting_term_mentioned",
+        "term": "quantum",
+        "context": "ntational quality of features or states produced by an upstream solver [SOURCE-1] [SOURCE-2].\n\nWe propose a variational quantum linear solver (VQLS) that encodes the discretized Reynolds equation as a linear system into a parameterized quantum ans",
+        "adjudication": "May be a Related Work comparison (acceptable) or a method substitution (failure). Human must decide."
+      },
+      {
+        "type": "conflicting_term_mentioned",
+        "term": "vqls",
+        "context": "atures or states produced by an upstream solver [SOURCE-1] [SOURCE-2].\n\nWe propose a variational quantum linear solver (VQLS) that encodes the discretized Reynolds equation as a linear system into a parameterized quantum ansatz, whose parameter",
+        "adjudication": "May be a Related Work comparison (acceptable) or a method substitution (failure). Human must decide."
+      },
+      {
+        "type": "conflicting_term_mentioned",
+        "term": "lubrication",
+        "context": "# Research Paper: machine learning\n**Venue:** Generic\n**Sources:** 2 papers cited\n\n---\n\n## Abstract\n\nHydrodynamic lubrication in mechanical bearings is governed by the Reynolds equation, a partial differential equation whose numerical solution v",
+        "adjudication": "May be a Related Work comparison (acceptable) or a method substitution (failure). Human must decide."
+      },
+      {
+        "type": "conflicting_term_mentioned",
+        "term": "bearing",
+        "context": "chine learning\n**Venue:** Generic\n**Sources:** 2 papers cited\n\n---\n\n## Abstract\n\nHydrodynamic lubrication in mechanical bearings is governed by the Reynolds equation, a partial differential equation whose numerical solution via classical finite-el",
+        "adjudication": "May be a Related Work comparison (acceptable) or a method substitution (failure). Human must decide."
+      },
+      {
+        "type": "conflicting_term_mentioned",
+        "term": "reynolds",
+        "context": "neric\n**Sources:** 2 papers cited\n\n---\n\n## Abstract\n\nHydrodynamic lubrication in mechanical bearings is governed by the Reynolds equation, a partial differential equation whose numerical solution via classical finite-element methods scales poorly a",
+        "adjudication": "May be a Related Work comparison (acceptable) or a method substitution (failure). Human must decide."
+      },
+      {
+        "type": "marker_attribution_context",
+        "marker": "[RESULT-1]",
+        "sentence": "We aim to we expect the framework's utility to be reflected in the downstream Iris classification task, where the solver-derived representation is evaluated and is anticipated to reach [RESULT-1] balanced_accuracy = 0",
+        "role_words_nearby": [],
+        "adjudication": "Does the sentence credit the marker to the role expected by ground truth? Human must verify."
+      },
+      {
+        "type": "marker_attribution_context",
+        "marker": "[RESULT-2]",
+        "sentence": "998, in contrast to a degenerate baseline of [RESULT-2] balanced_accuracy = 0",
+        "role_words_nearby": [
+          "baseline"
+        ],
+        "adjudication": "Does the sentence credit the marker to the role expected by ground truth? Human must verify."
+      },
+      {
+        "type": "marker_attribution_context",
+        "marker": "[RESULT-3]",
+        "sentence": "973 and [RESULT-3] ROC-AUC = 0",
+        "role_words_nearby": [],
+        "adjudication": "Does the sentence credit the marker to the role expected by ground truth? Human must verify."
+      }
+    ]
+  },
+  "usage": {
+    "input_tokens": 1698,
+    "output_tokens": 2983,
+    "served_model": "glm-5.2",
+    "cost_usd": 0.009275,
+    "note_for_section_wise": "token counts reflect the LAST call only; cost_usd is cumulative across all calls in this cell"
+  },
+  "error": null
+}

@@ -661,9 +661,23 @@ class PipelineOrchestrator:
     def _build_stages(self) -> list[PipelineStage]:
         ref_validator = ReferenceValidator(store=self._services.store)
 
-        # Build the idea generation stage based on tree_of_thought_enabled flag (HB-01)
+        # Build the idea-generation stage. fast_scan must stay lightweight:
+        # it intentionally skips tree search but still needs ideas so its
+        # feasibility + FastProposalSynthesizer stages are reachable.
         idea_stage: PipelineStage
-        if getattr(self._settings, "tree_of_thought_enabled", False):
+        if self._strategy_name == "fast_scan":
+            idea_stage = IdeaGenerationStage(
+                self._services.agent,
+                self._services.hooks,
+                dag_executor=self._services.dag_executor,
+                dag_agents=self._services.dag_agents,
+                provider=self._provider,
+                kg=self._services.kg,
+                forest=self._services.forest,
+                reasoning_verifier=self._services.reasoning_verifier,
+            )
+            logger.info("fast_scan: lightweight IdeaGenerationStage (tree search disabled)")
+        elif getattr(self._settings, "tree_of_thought_enabled", False):
             from backend.pipeline.generation.tree_search import TreeSearchConfig, TreeSearchEngine
 
             tree_config = TreeSearchConfig(

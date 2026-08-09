@@ -80,13 +80,24 @@ def build_governed_vector_runtime_from_settings(db_engine: Any) -> GovernedVecto
         from sqlalchemy.orm import sessionmaker
 
         app_settings = get_settings()
-        embedding = EmbeddingService(create_provider())
+
+        # Use the configured embedding dimension directly rather than probing
+        # a possibly-unreachable provider. When the embedding endpoint is down
+        # (the acceptance run's ingestion failure), create_provider() returns
+        # the LLM provider which cannot produce embeddings; its dimension probe
+        # fails and defaults to 1536, causing a profile_id mismatch against
+        # the registered profile's actual dimension.
+        configured_dimension = (
+            app_settings.embedding_dimension
+            if app_settings.embedding_dimension
+            else 1536  # safe default only when unset
+        )
 
         # ── Step 1: Snapshot runtime settings (no credentials) ──
         settings_snapshot = EmbeddingRuntimeSettingsSnapshot(
             provider_kind=app_settings.embedding_provider,
             requested_model=app_settings.embedding_model,
-            expected_dimension=embedding.dimension,
+            expected_dimension=configured_dimension,
             declared_normalization_policy="none",
             document_task=None,
             query_task=None,
@@ -99,9 +110,9 @@ def build_governed_vector_runtime_from_settings(db_engine: Any) -> GovernedVecto
         profile_id = resolve_profile_id(
             embedding_provider=app_settings.embedding_provider,
             model_identifier=app_settings.embedding_model,
-            dimension=embedding.dimension,
+            dimension=configured_dimension,
             normalization_policy="none",
-            chunking_schema_version="title_abstract_v1",
+            chunking_schema_version="chunk_v1",
         )
 
         with get_session() as session:

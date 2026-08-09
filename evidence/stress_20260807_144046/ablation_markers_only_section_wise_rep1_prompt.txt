@@ -1,0 +1,10 @@
+[Section-wise path — ground-truth block prepended to every section prompt]
+## Experiment Ground Truth (NON-NEGOTIABLE)
+
+The following [RESULT-N] markers are drawn from observed experiment output. They MUST appear verbatim with correct metric direction. Markers not in this list are forbidden.
+
+### Authorized result markers (use verbatim)
+- [RESULT-1] balanced_accuracy = 0.973
+- [RESULT-2] balanced_accuracy = 0.500
+- [RESULT-3] ROC-AUC = 0.998
+

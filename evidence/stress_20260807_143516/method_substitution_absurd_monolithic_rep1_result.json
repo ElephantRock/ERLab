@@ -1,0 +1,54 @@
+{
+  "cell_id": "method_substitution_absurd_monolithic_rep1",
+  "dimension": "method_substitution",
+  "level": "absurd",
+  "path": "monolithic",
+  "rep": 1,
+  "hard_verdict": {
+    "all_hard_pass": true,
+    "checks": {
+      "paper_nonempty": true,
+      "gt_method_in_identity": true,
+      "gt_dataset_in_identity": true,
+      "all_markers_present": true,
+      "_missing_markers": [],
+      "marker_values_verbatim": true
+    }
+  },
+  "diagnostics": {
+    "alerts": [
+      {
+        "type": "marker_attribution_context",
+        "marker": "[RESULT-1] balanced_accuracy",
+        "sentence": "### Observed Results\n\nLogistic regression achieves a balanced accuracy of [RESULT-1] balanced_accuracy = 0",
+        "role_words_nearby": [
+          "logistic regression"
+        ],
+        "adjudication": "Does the sentence credit the marker to the role expected by ground truth? Human must verify."
+      },
+      {
+        "type": "marker_attribution_context",
+        "marker": "[RESULT-2] balanced_accuracy",
+        "sentence": "The balanced accuracy of this baseline is [RESULT-2] balanced_accuracy = 0",
+        "role_words_nearby": [
+          "baseline"
+        ],
+        "adjudication": "Does the sentence credit the marker to the role expected by ground truth? Human must verify."
+      },
+      {
+        "type": "marker_attribution_context",
+        "marker": "[RESULT-3] ROC-AUC",
+        "sentence": "The ROC-AUC of [RESULT-3] ROC-AUC = 0",
+        "role_words_nearby": [],
+        "adjudication": "Does the sentence credit the marker to the role expected by ground truth? Human must verify."
+      }
+    ]
+  },
+  "usage": {
+    "input_tokens": 0,
+    "output_tokens": 0,
+    "served_model": "glm-5.2",
+    "cost_usd": 0.0
+  },
+  "error": null
+}

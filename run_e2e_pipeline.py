@@ -1,7 +1,7 @@
 """
 Confirmatory E2E runner — v1.0.3 stage-attribution and session-binding protocol.
 
-Runs the full deep_research pipeline against z.ai (glm-4.6) with explicit
+Runs the full deep_research pipeline against z.ai (glm-5.2) with explicit
 run-id and session-id binding, preflight validation, durable run-ID reservation
 through RunService, attempt-isolated session storage, post-execution binding
 verification, session-finalization reconciliation against the cost ledger, and
@@ -451,7 +451,7 @@ async def main():
 
     print("=" * 60)
     print("CONFIRMATORY E2E — deep_research strategy")
-    print("Provider: z.ai (glm-4.6)")
+    print("Provider: z.ai (glm-5.2)")
     print("=" * 60)
     print(f"run_id:     {config.run_id}")
     print(f"session_id: {config.session_id}")

@@ -91,6 +91,7 @@ async def synthesize_paper(
     proposal_id: int,
     budget: SynthesisBudget | None = None,
     experiment_context: str | None = None,
+    result_markers: list[str] | None = None,
     existing_checkpoints: dict[str, dict] | None = None,
     checkpoint_callback: Callable[[str, dict], None] | None = None,
     context_window: int = 128000,
@@ -107,9 +108,13 @@ async def synthesize_paper(
         source_papers: Formatted source strings with [SOURCE-N] citations.
         source_ids: Ordered literature Paper.id list for source map.
         domain: Research domain.
-        proposal_id: Proposal identifier.
+        proposal_id: Proposal identifier (metadata; does not enter the prompt).
         budget: Synthesis time budget. Defaults to SynthesisBudget().
-        experiment_context: Optional observed-results context string.
+        experiment_context: Observed-results prose. Rendered as a non-negotiable
+            ## Experiment Ground Truth block at the top of the user prompt.
+        result_markers: Verbatim [RESULT-N] marker strings from persisted
+            experiment output. Listed inside the ground-truth block as the
+            authoritative marker set.
         existing_checkpoints: Previously persisted section checkpoints.
         checkpoint_callback: Called with (section_id, checkpoint_dict) after
             each section completes. Used for atomic persistence.
@@ -123,9 +128,14 @@ async def synthesize_paper(
         budget = SynthesisBudget()
 
     timer = BudgetTimer(budget)
+    # Ground-truth re-injection (phase-8 fix): experiment_context is NO LONGER
+    # folded into source_papers. It is passed as a dedicated argument and
+    # rendered as a non-negotiable ## Experiment Ground Truth block at the top
+    # of the user prompt (see PaperSynthesizer._build_user_prompt and the
+    # GROUND TRUTH INVARIANTS section of the system prompt). Folding it into
+    # sources caused phase-8 scope fabrication: the experiment was treated as
+    # supplementary literature while the proposal narrative took primacy.
     synthesis_sources = list(source_papers)
-    if experiment_context:
-        synthesis_sources.append(experiment_context)
 
     # ── Step 1: Try monolithic synthesis ───────────────────────────
     logger.info(
@@ -135,13 +145,18 @@ async def synthesize_paper(
 
     try:
         synthesizer = synthesizer_override if synthesizer_override is not None else PaperSynthesizer(provider)
+        # Route through SynthesisSession to enforce the information-isolation
+        # contract (phase-8 fix): only typed inputs reach the model.
+        from backend.pipeline.synthesis.paper_synthesizer import SynthesisSession
+        session = SynthesisSession(
+            proposal_text=proposal_text,
+            source_papers=tuple(synthesis_sources),
+            domain=domain,
+            experiment_context=experiment_context,
+            result_markers=tuple(result_markers) if result_markers else (),
+        )
         result = await asyncio.wait_for(
-            synthesizer.synthesize(
-                proposal_text=proposal_text,
-                source_papers=synthesis_sources,
-                domain=domain,
-                proposal_id=proposal_id,
-            ),
+            synthesizer.synthesize_session(session),
             timeout=timer.monolithic_remaining,
         )
     except (asyncio.TimeoutError, asyncio.CancelledError) as e:
@@ -238,6 +253,8 @@ async def synthesize_paper(
                     proposal_summary=proposal_summary,
                     relevant_sources=relevant_sources,
                     domain=domain,
+                    experiment_context=experiment_context,
+                    result_markers=result_markers,
                 ),
                 timeout=section_budget,
             )

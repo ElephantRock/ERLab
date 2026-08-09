@@ -1,0 +1,14 @@
+{
+  "run_id": "20260808_011721",
+  "model": "glm-5.2",
+  "base_url": "https://api.z.ai/api/coding/paas/v4",
+  "ceiling_usd": 50.0,
+  "pricing_assumption": {
+    "input_per_1m": 0.15,
+    "output_per_1m": 0.6,
+    "source": "cost_estimator.py:20 (glm-5.1); glm-5.2 assumed parity"
+  },
+  "total_cells_planned": 12,
+  "decision_rule_frozen": true,
+  "scope": "metric_direction only (correct + reversed_attribution)"
+}

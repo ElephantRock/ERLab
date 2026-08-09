@@ -1,0 +1,30 @@
+{
+  "cell_id": "ablation_context_only_monolithic_rep2",
+  "dimension": "ablation",
+  "level": "context_only",
+  "path": "monolithic",
+  "rep": 2,
+  "hard_verdict": {
+    "all_hard_pass": true,
+    "checks": {
+      "paper_nonempty": true,
+      "gt_method_in_identity": true,
+      "gt_dataset_in_identity": true,
+      "all_markers_present": true,
+      "_missing_markers": [],
+      "marker_values_verbatim": true,
+      "_missing_values": []
+    }
+  },
+  "diagnostics": {
+    "alerts": []
+  },
+  "usage": {
+    "input_tokens": 1481,
+    "output_tokens": 5189,
+    "served_model": "glm-5.2",
+    "cost_usd": 0.003336,
+    "note_for_section_wise": "token counts reflect the LAST call only; cost_usd is cumulative across all calls in this cell"
+  },
+  "error": null
+}

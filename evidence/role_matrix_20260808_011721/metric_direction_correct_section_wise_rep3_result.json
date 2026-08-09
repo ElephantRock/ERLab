@@ -1,0 +1,71 @@
+{
+  "cell_id": "metric_direction_correct_section_wise_rep3",
+  "dimension": "metric_direction",
+  "level": "correct",
+  "path": "section_wise",
+  "rep": 3,
+  "hard_verdict": {
+    "all_hard_pass": false,
+    "checks": {
+      "paper_nonempty": true,
+      "gt_method_in_identity": true,
+      "gt_dataset_in_identity": true,
+      "all_markers_present": true,
+      "_missing_markers": [],
+      "marker_values_verbatim": true,
+      "_missing_values": [],
+      "result_roles_preserved": false,
+      "_role_failures": [
+        {
+          "marker": "[RESULT-1]",
+          "expected_role": "comparison",
+          "observed_role": "baseline",
+          "context": "y flowers into three species, using a majority-class predictor as a baseline for comparison.\n\nWe aim to logistic regression will substantially outperform the majority-class baseline, achieving balanced accuracy of 0.973 [RESULT-1] versus 0.500 [RESULT-2] for the baseline, with an ROC-AUC of 0.998 [RESULT-3].\n\n\n## Introduction\n\nThe Iris dataset is a canonical benchmark for evaluating classification algorithms, comprising 150 samples across three s"
+        },
+        {
+          "marker": "[RESULT-3]",
+          "expected_role": "comparison",
+          "observed_role": "baseline",
+          "context": "or comparison.\n\nWe aim to logistic regression will substantially outperform the majority-class baseline, achieving balanced accuracy of 0.973 [RESULT-1] versus 0.500 [RESULT-2] for the baseline, with an ROC-AUC of 0.998 [RESULT-3].\n\n\n## Introduction\n\nThe Iris dataset is a canonical benchmark for evaluating classification algorithms, comprising 150 samples across three species with four morphological features each [SOURCE-1].\n\nLinear classificatio"
+        }
+      ],
+      "metric_direction_preserved": true,
+      "_direction_failures": []
+    }
+  },
+  "diagnostics": {
+    "alerts": [
+      {
+        "type": "marker_attribution_context",
+        "marker": "[RESULT-1]",
+        "sentence": "973 [RESULT-1] versus 0",
+        "role_words_nearby": [],
+        "adjudication": "Does the sentence credit the marker to the role expected by ground truth? Human must verify."
+      },
+      {
+        "type": "marker_attribution_context",
+        "marker": "[RESULT-2]",
+        "sentence": "500 [RESULT-2] for the baseline, with an ROC-AUC of 0",
+        "role_words_nearby": [
+          "baseline"
+        ],
+        "adjudication": "Does the sentence credit the marker to the role expected by ground truth? Human must verify."
+      },
+      {
+        "type": "marker_attribution_context",
+        "marker": "[RESULT-3]",
+        "sentence": "998 [RESULT-3]",
+        "role_words_nearby": [],
+        "adjudication": "Does the sentence credit the marker to the role expected by ground truth? Human must verify."
+      }
+    ]
+  },
+  "usage": {
+    "input_tokens": 643,
+    "output_tokens": 328,
+    "served_model": "glm-5.2",
+    "cost_usd": 0.000293,
+    "note_for_section_wise": "token counts reflect the LAST call only; cost_usd is cumulative across all calls in this cell"
+  },
+  "error": null
+}

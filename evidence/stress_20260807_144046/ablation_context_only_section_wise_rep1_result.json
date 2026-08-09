@@ -1,0 +1,61 @@
+{
+  "cell_id": "ablation_context_only_section_wise_rep1",
+  "dimension": "ablation",
+  "level": "context_only",
+  "path": "section_wise",
+  "rep": 1,
+  "hard_verdict": {
+    "all_hard_pass": true,
+    "checks": {
+      "paper_nonempty": true,
+      "gt_method_in_identity": true,
+      "gt_dataset_in_identity": true,
+      "all_markers_present": true,
+      "_missing_markers": [],
+      "marker_values_verbatim": true,
+      "_missing_values": []
+    }
+  },
+  "diagnostics": {
+    "alerts": [
+      {
+        "type": "conflicting_term_mentioned",
+        "term": "quantum",
+        "context": "e-element methods face significant computational bottlenecks at fine spatial discretizations.\n\nWe propose a variational quantum linear solver (VQLS) that encodes the Reynolds equation into a parameterized quantum circuit, using a variational ansat",
+        "adjudication": "May be a Related Work comparison (acceptable) or a method substitution (failure). Human must decide."
+      },
+      {
+        "type": "conflicting_term_mentioned",
+        "term": "vqls",
+        "context": "significant computational bottlenecks at fine spatial discretizations.\n\nWe propose a variational quantum linear solver (VQLS) that encodes the Reynolds equation into a parameterized quantum circuit, using a variational ansatz optimized to appro",
+        "adjudication": "May be a Related Work comparison (acceptable) or a method substitution (failure). Human must decide."
+      },
+      {
+        "type": "conflicting_term_mentioned",
+        "term": "lubrication",
+        "context": "earch Paper: machine learning\n**Venue:** Generic\n**Sources:** 2 papers cited\n\n---\n\n## Abstract\n\nSimulating hydrodynamic lubrication in mechanical bearings requires solving the Reynolds equation, and classical finite-element methods face significant co",
+        "adjudication": "May be a Related Work comparison (acceptable) or a method substitution (failure). Human must decide."
+      },
+      {
+        "type": "conflicting_term_mentioned",
+        "term": "bearing",
+        "context": "ing\n**Venue:** Generic\n**Sources:** 2 papers cited\n\n---\n\n## Abstract\n\nSimulating hydrodynamic lubrication in mechanical bearings requires solving the Reynolds equation, and classical finite-element methods face significant computational bottleneck",
+        "adjudication": "May be a Related Work comparison (acceptable) or a method substitution (failure). Human must decide."
+      },
+      {
+        "type": "conflicting_term_mentioned",
+        "term": "reynolds",
+        "context": "es:** 2 papers cited\n\n---\n\n## Abstract\n\nSimulating hydrodynamic lubrication in mechanical bearings requires solving the Reynolds equation, and classical finite-element methods face significant computational bottlenecks at fine spatial discretizatio",
+        "adjudication": "May be a Related Work comparison (acceptable) or a method substitution (failure). Human must decide."
+      }
+    ]
+  },
+  "usage": {
+    "input_tokens": 155,
+    "output_tokens": 1024,
+    "served_model": "glm-5.2",
+    "cost_usd": 0.000638,
+    "note_for_section_wise": "token counts reflect the LAST call only; cost_usd is cumulative across all calls in this cell"
+  },
+  "error": null
+}

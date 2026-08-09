@@ -95,6 +95,27 @@ _SPECS_DIR = Path(__file__).resolve().parents[3] / "data" / "datasets"
 _SPECS: dict[str, ExperimentSpec] = {}
 
 
+def list_specs(specs_dir: Path | None = None) -> list[ExperimentSpec]:
+    """List registered experiment specifications in deterministic ID order.
+
+    Registration remains file-based: any ``spec_*.json`` under the checked-in
+    datasets directory is a selectable specification. The same parser used by
+    ``load_spec`` validates each file so the API never invents a second schema.
+    """
+    base = specs_dir or _SPECS_DIR
+    specs: dict[str, ExperimentSpec] = {}
+    if not base.exists():
+        return []
+
+    for spec_file in sorted(base.rglob("spec_*.json")):
+        with open(spec_file) as f:
+            spec = _parse_spec(json.load(f))
+        specs[spec.spec_id] = spec
+        _SPECS[spec.spec_id] = spec
+
+    return [specs[spec_id] for spec_id in sorted(specs)]
+
+
 def load_spec(spec_id: str, specs_dir: Path | None = None) -> ExperimentSpec:
     """Load a registered experiment specification by ID."""
     if spec_id in _SPECS:

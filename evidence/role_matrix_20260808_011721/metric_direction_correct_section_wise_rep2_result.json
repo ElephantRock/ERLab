@@ -1,0 +1,60 @@
+{
+  "cell_id": "metric_direction_correct_section_wise_rep2",
+  "dimension": "metric_direction",
+  "level": "correct",
+  "path": "section_wise",
+  "rep": 2,
+  "hard_verdict": {
+    "all_hard_pass": true,
+    "checks": {
+      "paper_nonempty": true,
+      "gt_method_in_identity": true,
+      "gt_dataset_in_identity": true,
+      "all_markers_present": true,
+      "_missing_markers": [],
+      "marker_values_verbatim": true,
+      "_missing_values": [],
+      "result_roles_preserved": true,
+      "_role_failures": [],
+      "metric_direction_preserved": true,
+      "_direction_failures": []
+    }
+  },
+  "diagnostics": {
+    "alerts": [
+      {
+        "type": "marker_attribution_context",
+        "marker": "[RESULT-1]",
+        "sentence": "973 [RESULT-1], substantially outperforming the majority-class baseline balanced accuracy of 0",
+        "role_words_nearby": [
+          "baseline",
+          "majority",
+          "majority-class"
+        ],
+        "adjudication": "Does the sentence credit the marker to the role expected by ground truth? Human must verify."
+      },
+      {
+        "type": "marker_attribution_context",
+        "marker": "[RESULT-2]",
+        "sentence": "500 [RESULT-2]",
+        "role_words_nearby": [],
+        "adjudication": "Does the sentence credit the marker to the role expected by ground truth? Human must verify."
+      },
+      {
+        "type": "marker_attribution_context",
+        "marker": "[RESULT-3]",
+        "sentence": "998 [RESULT-3], indicating near-perfect class discrimination",
+        "role_words_nearby": [],
+        "adjudication": "Does the sentence credit the marker to the role expected by ground truth? Human must verify."
+      }
+    ]
+  },
+  "usage": {
+    "input_tokens": 643,
+    "output_tokens": 317,
+    "served_model": "glm-5.2",
+    "cost_usd": 0.000287,
+    "note_for_section_wise": "token counts reflect the LAST call only; cost_usd is cumulative across all calls in this cell"
+  },
+  "error": null
+}

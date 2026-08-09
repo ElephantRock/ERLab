@@ -983,6 +983,28 @@ class PipelinePersistence:
                             # and that was previously dropped (2A bug).
                             proposal_eval = _extract_proposal_evaluation(proposal)
                             if existing:
+                                # Release-final lifecycle: a new pipeline paper after a
+                                # frozen release is a successor current version, not a
+                                # rewrite of the frozen revision. Preserve the release
+                                # pointer across this whole-metadata replacement and
+                                # record the successor in PaperRevision.
+                                from backend.pipeline.evaluation.paper_release import (
+                                    merge_release_metadata,
+                                    record_successor_revision_if_released,
+                                )
+                                if paper_md:
+                                    _pe = (paper_meta or {}).get("paper_evaluation") or {}
+                                    record_successor_revision_if_released(
+                                        session,
+                                        existing,
+                                        paper_md,
+                                        eval_status=str(_pe.get("status") or "unavailable"),
+                                        gates=_pe.get("gates") if isinstance(_pe.get("gates"), list) else [],
+                                        source="pipeline",
+                                        trigger="post_release_pipeline",
+                                        experiment_result_id=(paper_meta or {}).get("experiment_result_id"),
+                                    )
+                                paper_meta = merge_release_metadata(existing, paper_meta)
                                 existing.content_md = proposal.to_markdown()
                                 existing.references_json = json.dumps(refs)
                                 existing.sections_json = json.dumps(sections_to_store)

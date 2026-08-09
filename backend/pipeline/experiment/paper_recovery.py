@@ -324,7 +324,15 @@ async def resume_empirical_paper(
     with get_session() as session:
         proposal_row = session.get(Proposal, proposal_id)
         if proposal_row:
-            # Build paper_meta_json from the synthesis result + gates
+            # Build paper_meta_json from the synthesis result + gates. Release
+            # metadata is preserved below so a recovery after publication
+            # creates a successor current paper without rewriting the frozen
+            # release revision.
+            from backend.pipeline.evaluation.paper_release import (
+                compute_paper_hash,
+                merge_release_metadata,
+                record_successor_revision_if_released,
+            )
             paper_meta = {
                 "status": eval_status,
                 "word_count": synth_result.word_count,
@@ -335,6 +343,7 @@ async def resume_empirical_paper(
                 "paper_evaluation": {
                     "status": eval_status,
                     "scope": "paper",
+                    "paper_hash": compute_paper_hash(paper_md),
                     "gates": gates,
                     "blocking_reasons": blocking_reasons if blocking_reasons else None,
                 },
@@ -342,6 +351,17 @@ async def resume_empirical_paper(
                 "result_markers": [m.to_dict() for m in result_markers],
                 "experiment_result_id": experiment_result_id,
             }
+            record_successor_revision_if_released(
+                session,
+                proposal_row,
+                paper_md,
+                eval_status=eval_status,
+                gates=gates,
+                source="recovery",
+                trigger="post_release_recovery",
+                experiment_result_id=experiment_result_id,
+            )
+            paper_meta = merge_release_metadata(proposal_row, paper_meta) or paper_meta
             proposal_row.paper_md = paper_md
             proposal_row.paper_meta_json = _recovery_json.dumps(paper_meta)
             session.commit()

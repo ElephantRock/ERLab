@@ -1,0 +1,12 @@
+{
+  "cell_id": "ablation_context_only_section_wise_rep1",
+  "identity": {
+    "identity_pass": true,
+    "gt_method_in_primacy": true,
+    "conflicting_terms_in_primacy": [],
+    "primacy_region_preview": "# Research Paper: machine learning\n**Venue:** Generic\n**Sources:** 2 papers cited\n\n---\n\n## Abstract\n\nClassification of Iris species from morphological measurements is a foundational and well-studied problem in machine learning, serving as a canonical benchmark for evaluating classification algorithm"
+  },
+  "markers_present": true,
+  "missing_markers": [],
+  "error": null
+}

@@ -1,0 +1,71 @@
+{
+  "cell_id": "method_substitution_subtle_monolithic_rep3",
+  "dimension": "method_substitution",
+  "level": "subtle",
+  "path": "monolithic",
+  "rep": 3,
+  "hard_verdict": {
+    "all_hard_pass": true,
+    "checks": {
+      "paper_nonempty": true,
+      "gt_method_in_identity": true,
+      "gt_dataset_in_identity": true,
+      "all_markers_present": true,
+      "_missing_markers": [],
+      "marker_values_verbatim": true,
+      "_missing_values": []
+    }
+  },
+  "diagnostics": {
+    "alerts": [
+      {
+        "type": "conflicting_term_mentioned",
+        "term": "l1 penalty",
+        "context": "data; the second term penalizes large coefficients, controlling model complexity and mitigating overfitting. Unlike the L1 penalty, which would induce sparsity by driving selected coefficients to zero, the L2 penalty uniformly shrinks all coefficient",
+        "adjudication": "May be a Related Work comparison (acceptable) or a method substitution (failure). Human must decide."
+      },
+      {
+        "type": "conflicting_term_mentioned",
+        "term": "lasso",
+        "context": "ctive information and the goal is to control variance rather than to perform feature selection. This contrasts with L1 (lasso) regularization, which induces sparsity and is preferred when explicit feature selection is desired. For the Iris probl",
+        "adjudication": "May be a Related Work comparison (acceptable) or a method substitution (failure). Human must decide."
+      },
+      {
+        "type": "marker_attribution_context",
+        "marker": "[RESULT-1]",
+        "sentence": "The proposed L2-regularized logistic regression achieves a balanced accuracy of **[RESULT-1] balanced_accuracy = 0",
+        "role_words_nearby": [
+          "proposed",
+          "logistic regression"
+        ],
+        "adjudication": "Does the sentence credit the marker to the role expected by ground truth? Human must verify."
+      },
+      {
+        "type": "marker_attribution_context",
+        "marker": "[RESULT-2]",
+        "sentence": "The majority-class baseline, by contrast, achieves **[RESULT-2] balanced_accuracy = 0",
+        "role_words_nearby": [
+          "baseline",
+          "majority",
+          "majority-class"
+        ],
+        "adjudication": "Does the sentence credit the marker to the role expected by ground truth? Human must verify."
+      },
+      {
+        "type": "marker_attribution_context",
+        "marker": "[RESULT-3]",
+        "sentence": "To assess ranking quality independent of the decision threshold, we additionally report **[RESULT-3] ROC-AUC = 0",
+        "role_words_nearby": [],
+        "adjudication": "Does the sentence credit the marker to the role expected by ground truth? Human must verify."
+      }
+    ]
+  },
+  "usage": {
+    "input_tokens": 1539,
+    "output_tokens": 4529,
+    "served_model": "glm-5.2",
+    "cost_usd": 0.002948,
+    "note_for_section_wise": "token counts reflect the LAST call only; cost_usd is cumulative across all calls in this cell"
+  },
+  "error": null
+}

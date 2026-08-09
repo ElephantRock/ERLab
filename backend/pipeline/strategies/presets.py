@@ -1,22 +1,9 @@
-"""Default strategy presets matching _STAGE_ORDER in orchestrator.py.
+"""Fallback strategy presets aligned with ``pipeline.yaml``.
 
-Actual stage names (from PipelineOrchestrator._STAGE_ORDER):
-  0. literature_search
-  1. ingestion
-  2. gap_analysis
-  3. gap_reflection
-  4. idea_generation
-  5. idea_reflection
-  4. novelty_checking
-  5. feasibility_scoring
-  6. mechanical_metrics
-  7. proposal_synthesis
-  8. adversarial_review
-  9. evaluation
-  10. paper_synthesis
-  11. citation_audit
-  12. proposal_deepening
-  13. export
+``pipeline.yaml`` is the production source of truth. These presets are used
+only when YAML strategy loading is unavailable and therefore intentionally
+mirror the four built-in YAML topologies. ``trimmer`` exists in the global
+stage order but is not enabled by any current built-in strategy.
 """
 from __future__ import annotations
 
@@ -25,7 +12,7 @@ from .registry import StrategyRegistry
 
 
 def _all_stages_enabled(**overrides: dict) -> dict[str, StageConfig]:
-    """Return all 16 stages enabled with optional per-stage overrides."""
+    """Return the 17 YAML strategy stages enabled, with optional overrides."""
     stage_names = [
         "literature_search",
         "ingestion",
@@ -58,37 +45,26 @@ def register_presets(registry: StrategyRegistry) -> None:
     """Register the four built-in strategy presets."""
 
     # ── DEEP RESEARCH ─────────────────────────────────────
-    # All 14 stages enabled. Adversarial review ON. Paper synthesis ON.
-    # Citation audit ON. Evaluation ON.
+    # Full proposal-to-paper topology; experiment_execution is opt-in at run time.
     registry.register(StrategyConfig(
         name=PipelineStrategy.DEEP_RESEARCH,
-        stages=_all_stages_enabled(
-            literature_search=StageConfig(params={"citation_explore": True}),
-            adversarial_review=StageConfig(params={"enabled": True}),
-            evaluation=StageConfig(),
-            paper_synthesis=StageConfig(params={"enabled": True}),
-            citation_audit=StageConfig(),
-            gap_reflection=StageConfig(),
-            idea_reflection=StageConfig(),
-        ),
+        stages=_all_stages_enabled(),
         max_total_time=1800.0,
         description=(
-            "Full pipeline: literature search, ingestion, gap analysis, "
-            "idea generation with tree search, novelty checking, feasibility "
-            "scoring, metrics, proposal synthesis, adversarial review, "
-            "paper synthesis, citation audit, proposal deepening, and export. "
-            "~25 minutes."
+            "Full proposal-to-paper pipeline: literature search, ingestion, gap analysis, "
+            "idea generation, novelty checking, feasibility scoring, metrics, proposal "
+            "synthesis, adversarial review/evaluation, optional experiment execution, "
+            "paper synthesis, citation audit, proposal deepening, and export."
         ),
     ))
 
     # ── FAST SCAN ─────────────────────────────────────────
-    # Skips expensive stages: idea_generation (tree search),
-    # novelty_checking, mechanical_metrics, adversarial_review,
-    # paper_synthesis, and citation_audit.
+    # Keeps lightweight idea generation so feasibility and concise synthesis
+    # are reachable, while skipping tree search and expensive assurance stages.
     registry.register(StrategyConfig(
         name=PipelineStrategy.FAST_SCAN,
         stages=_all_stages_enabled(
-            idea_generation=StageConfig(enabled=False),
+            idea_generation=StageConfig(enabled=True),
             novelty_checking=StageConfig(enabled=False),
             mechanical_metrics=StageConfig(enabled=False),
             adversarial_review=StageConfig(enabled=False, params={"enabled": False}),
@@ -97,39 +73,31 @@ def register_presets(registry: StrategyRegistry) -> None:
             idea_reflection=StageConfig(enabled=False),
             paper_synthesis=StageConfig(enabled=False, params={"enabled": False}),
             citation_audit=StageConfig(enabled=False),
+            experiment_execution=StageConfig(enabled=False),
+            proposal_deepening=StageConfig(enabled=False),
         ),
         max_total_time=300.0,
         description=(
             "Quick scan: literature search, ingestion, gap analysis, "
-            "feasibility scoring, light synthesis, and export. "
-            "Skips tree search, novelty checking, metrics, adversarial review, "
-            "paper synthesis, and citation audit. ~2-5 minutes."
+            "lightweight idea generation, feasibility scoring, concise synthesis, "
+            "and export. Skips tree search, novelty checking, metrics, adversarial "
+            "review, paper synthesis, and citation audit."
         ),
     ))
 
     # ── ACADEMIC PROPOSAL ─────────────────────────────────
-    # Like deep_research but with longer timeouts and stricter scoring.
-    # Paper synthesis enabled for publication-ready output.
-    # Citation audit ON.
+    # Current production topology is intentionally identical to deep_research.
+    # The distinct product label is preserved; no inactive threshold/timeout
+    # semantics are advertised in the fallback preset.
     registry.register(StrategyConfig(
         name=PipelineStrategy.ACADEMIC_PROPOSAL,
-        stages=_all_stages_enabled(
-            literature_search=StageConfig(params={"citation_explore": True}),
-            novelty_checking=StageConfig(timeout=600.0, params={"threshold": 0.7}),
-            feasibility_scoring=StageConfig(timeout=600.0, params={"threshold": 0.7}),
-            proposal_synthesis=StageConfig(timeout=900.0),
-            adversarial_review=StageConfig(timeout=600.0, params={"enabled": True}),
-            evaluation=StageConfig(),
-            paper_synthesis=StageConfig(timeout=900.0, params={"enabled": True}),
-            citation_audit=StageConfig(),
-            gap_reflection=StageConfig(),
-            idea_reflection=StageConfig(),
-        ),
-        max_total_time=3600.0,
+        stages=_all_stages_enabled(),
+        max_total_time=1800.0,
         description=(
-            "Academic-grade proposal: full pipeline with longer timeouts, "
-            "stricter novelty/feasibility thresholds, paper synthesis "
-            "and citation audit for publication-ready output. ~45 minutes."
+            "Academic proposal-to-paper workflow. Current production stage "
+            "topology matches deep_research: reflection, novelty/feasibility, "
+            "proposal review/evaluation, optional experiment execution, paper "
+            "synthesis, citation audit, deepening, and export."
         ),
     ))
 
@@ -151,6 +119,7 @@ def register_presets(registry: StrategyRegistry) -> None:
             paper_synthesis=StageConfig(enabled=False, params={"enabled": False}),
             citation_audit=StageConfig(enabled=False),
             proposal_deepening=StageConfig(enabled=False),
+            experiment_execution=StageConfig(enabled=False),
         ),
         max_total_time=600.0,
         description=(

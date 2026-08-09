@@ -58,6 +58,47 @@ class StageContext:
     governed_search_context: Any = None  # GovernedSearchContext | None
 
 
+def _build_empirical_experiment_constraint(experiment_spec_id: str | None) -> str:
+    """Render the authoritative empirical experiment constraint for synthesis.
+
+    The same renderer is used by initial proposal synthesis and adversarial
+    re-synthesis so a registered experiment cannot lose method/dataset/research
+    identity at a narrative rewrite boundary. An unavailable spec remains
+    fail-soft, preserving the existing proposal-synthesis behavior.
+    """
+    if not experiment_spec_id:
+        return ""
+
+    try:
+        from backend.pipeline.experiment.specification import load_spec
+
+        exp_spec = load_spec(experiment_spec_id)
+    except Exception as e:
+        logger.warning("Could not load experiment spec for proposal anchoring: %s", e)
+        return ""
+
+    lines = [
+        "EMPIRICAL EXPERIMENT CONSTRAINT — this proposal MUST be compatible with:",
+        f"  Research question: {exp_spec.research_question}",
+        f"  Task type: {exp_spec.task_type}",
+        f"  Dataset: {exp_spec.dataset_name}",
+        f"  Analysis method: {exp_spec.analysis_method}",
+    ]
+    if exp_spec.primary_metric:
+        lines.append(f"  Primary metric: {exp_spec.primary_metric}")
+    if exp_spec.baseline_method:
+        lines.append(f"  Baseline: {exp_spec.baseline_method}")
+    if exp_spec.comparison_method:
+        lines.append(f"  Comparison model: {exp_spec.comparison_method}")
+    lines.append(
+        "The paper resulting from this proposal will report the results of this "
+        "exact experiment. Do NOT propose a fundamentally different method, "
+        "dataset, or research question. The proposed architecture or approach "
+        "must include the declared analysis method as its core evaluation."
+    )
+    return "\n".join(lines)
+
+
 # Stages that do NOT use LLM models — no receipt required.
 # All other stages are model-backed and should produce receipts.
 NON_MODEL_STAGES: frozenset[str] = frozenset({
@@ -674,7 +715,7 @@ class IngestionStage(PipelineStage):
             "model_identifier": cfg.requested_model,
             "dimension": cfg.expected_dimension,
             "normalization_policy": cfg.implemented_postprocessing_policy,
-            "chunking_schema_version": "title_abstract_v1",
+            "chunking_schema_version": "chunk_v1",
         }
 
         # Index each paper
@@ -1227,38 +1268,13 @@ class ProposalSynthesisStage(PipelineStage):
 
             # Phase 8 / 8R.2: When an empirical experiment spec is registered,
             # anchor the proposal to the spec's research question, method, and
-            # dataset. This prevents the proposal narrative from diverging into
-            # an unrelated topic (e.g. quantum computing) while the experiment
-            # runs a classical ML method. The proposal MUST describe the actual
-            # analysis method, dataset, and target declared in the spec.
-            exp_spec_id = ctx.params.get("experiment_spec_id")
-            if exp_spec_id:
-                try:
-                    from backend.pipeline.experiment.specification import load_spec as _ls
-                    _exp_spec = _ls(exp_spec_id)
-                    spec_anchor_lines = [
-                        f"EMPIRICAL EXPERIMENT CONSTRAINT — this proposal MUST be compatible with:",
-                        f"  Research question: {_exp_spec.research_question}",
-                        f"  Task type: {_exp_spec.task_type}",
-                        f"  Dataset: {_exp_spec.dataset_name}",
-                        f"  Analysis method: {_exp_spec.analysis_method}",
-                    ]
-                    if _exp_spec.primary_metric:
-                        spec_anchor_lines.append(f"  Primary metric: {_exp_spec.primary_metric}")
-                    if _exp_spec.baseline_method:
-                        spec_anchor_lines.append(f"  Baseline: {_exp_spec.baseline_method}")
-                    if _exp_spec.comparison_method:
-                        spec_anchor_lines.append(f"  Comparison model: {_exp_spec.comparison_method}")
-                    spec_anchor_lines.append(
-                        "The paper resulting from this proposal will report the results of this "
-                        "exact experiment. Do NOT propose a fundamentally different method, "
-                        "dataset, or research question. The proposed architecture or approach "
-                        "must include the declared analysis method as its core evaluation."
-                    )
-                    spec_anchor = "\n".join(spec_anchor_lines)
-                    framing = f"{spec_anchor}\n{framing}".rstrip() if framing else spec_anchor
-                except Exception as e:
-                    logger.warning("Could not load experiment spec for proposal anchoring: %s", e)
+            # dataset. Stage 12 uses this exact renderer during adversarial
+            # re-synthesis so the empirical authority survives rewrites.
+            spec_anchor = _build_empirical_experiment_constraint(
+                ctx.params.get("experiment_spec_id")
+            )
+            if spec_anchor:
+                framing = f"{spec_anchor}\n{framing}".rstrip() if framing else spec_anchor
             try:
                 proposal = await asyncio.wait_for(
                     self._synthesizer.synthesize(
@@ -1850,7 +1866,13 @@ class AdversarialReviewStage(PipelineStage):
         ctx: StageContext,
         idx: int,
     ):
-        """Re-synthesize proposal using revision notes as the ONLY input (A-02)."""
+        """Re-synthesize with isolated revision notes and invariant experiment authority.
+
+        A-02 still governs revision content: ``revision_notes`` is the only
+        revision request carried into ``expected_contributions``. A registered
+        experiment specification is transported separately through
+        ``framing_directive`` as an execution constraint, not as revision content.
+        """
         # Build minimal idea from proposal for re-synthesis
         from backend.pipeline.generation.models import ResearchIdea
         idea = ResearchIdea(
@@ -1870,15 +1892,22 @@ class AdversarialReviewStage(PipelineStage):
             supporting_papers=[],
             source_gap_ids=[],
         )
-        new_proposal = await self._synthesizer.synthesize(
-            idea=idea,
-            novelty_report=None,
-            feasibility_report=None,
-            supporting_papers=ctx.all_papers[:30],
-            gaps=ctx.result.gaps,
-            provider=ctx.provider_override,
-            receipts=ctx.receipts,
+        synthesize_kwargs = {
+            "idea": idea,
+            "novelty_report": None,
+            "feasibility_report": None,
+            "supporting_papers": ctx.all_papers[:30],
+            "gaps": ctx.result.gaps,
+            "provider": ctx.provider_override,
+            "receipts": ctx.receipts,
+        }
+        empirical_framing = _build_empirical_experiment_constraint(
+            ctx.params.get("experiment_spec_id")
         )
+        if empirical_framing:
+            synthesize_kwargs["framing_directive"] = empirical_framing
+
+        new_proposal = await self._synthesizer.synthesize(**synthesize_kwargs)
         # Copy over sections from re-synthesized proposal
         if hasattr(new_proposal, "sections") and hasattr(proposal, "sections"):
             proposal.sections.update(new_proposal.sections)
@@ -1932,7 +1961,7 @@ class PaperSynthesisStage(PipelineStage):
     MIN_OUTPUT_TOKENS = 2000
     # Phase 3 B-08: per-proposal synthesis timeout so the stage completes
     # within the overall stage timeout. Section-wise synthesis makes 7+
-    # sequential LLM calls per proposal; with glm-4.6 this can exceed 1800s.
+    # sequential LLM calls per proposal; with glm-5.2 this can exceed 1800s.
     # Bounding each proposal prevents one slow synthesis from blocking the
     # entire stage (same pattern as adversarial_review B-05).
     PER_PROPOSAL_TIMEOUT = 600
@@ -1945,6 +1974,40 @@ class PaperSynthesisStage(PipelineStage):
     @property
     def name(self) -> str:
         return "paper_synthesis"
+
+    @staticmethod
+    def _format_result_marker(marker, *, include_provenance: bool = False) -> str:
+        """Render one ResultMarker without losing semantic attribution.
+
+        Stage 14 already records ``role`` and ``direction`` on ResultMarker.
+        Stage 15 must preserve those fields when converting markers to the
+        text contract consumed by monolithic and section-wise synthesis.
+
+        Empty optional fields are omitted for backward compatibility.
+        Provenance belongs to the long-form experiment_context; the short-form
+        authorized marker list carries the same marker/metric/value/role/
+        direction semantics without duplicating source metadata.
+        """
+        metadata: list[str] = []
+
+        role = str(getattr(marker, "role", "") or "").strip()
+        direction = str(getattr(marker, "direction", "") or "").strip()
+        if role:
+            metadata.append(f"role={role}")
+        if direction:
+            metadata.append(f"direction={direction}")
+
+        if include_provenance:
+            metadata.append("source=metrics.json")
+            experiment_result_id = getattr(marker, "experiment_result_id", None)
+            if experiment_result_id is not None:
+                metadata.append(f"experiment_result_id={experiment_result_id}")
+
+        suffix = f" ({', '.join(metadata)})" if metadata else ""
+        return (
+            f"[{marker.marker}] {marker.metric_name} = "
+            f"{marker.observed_value}{suffix}"
+        )
 
     async def execute(self, ctx: StageContext) -> bool:
         # Check strategy flag
@@ -2055,13 +2118,15 @@ class PaperSynthesisStage(PipelineStage):
                 markers = ctx.result.result_markers.get(idx, [])
                 for m in markers:
                     lines.append(
-                        f"[{m.marker}] {m.metric_name} = {m.observed_value} "
-                        f"(source: metrics.json, experiment_result_id: {m.experiment_result_id})"
+                        self._format_result_marker(m, include_provenance=True)
                     )
                 lines.append("")
                 lines.append("These results are from an actual executed experiment. You may state")
                 lines.append("'we demonstrate' or 'our results show' ONLY for claims that cite [RESULT-N]")
                 lines.append("markers above. Do not claim empirical results for metrics not listed here.")
+                lines.append("The role and direction metadata attached to each [RESULT-N] marker are")
+                lines.append("authoritative. Keep each value bound to its stated role (for example,")
+                lines.append("baseline vs comparison/model) and do not reverse the stated metric direction.")
                 experiment_contexts[idx] = "\n".join(lines)
 
         # Phase 7 / 7A: When an empirical selection exists, only synthesize
@@ -2088,20 +2153,35 @@ class PaperSynthesisStage(PipelineStage):
                 is_empirical = bool(experiment_contexts.get(idx) or ctx.params.get("experiment_spec_id"))
                 if is_empirical:
                     # Phase 7: unified service manages budget internally
+                    # Format ResultMarker objects to the verbatim strings the
+                    # SynthesisSession contract requires (list[str]). The same
+                    # objects are rendered into experiment_context above; here
+                    # we surface them as their own authoritative marker set so
+                    # the prompt's ground-truth block can list them separately.
+                    _raw_markers = ctx.result.result_markers.get(idx) or []
+                    _marker_strings = [
+                        self._format_result_marker(m)
+                        for m in _raw_markers
+                    ]
                     await self._synthesize_paper_for_proposal(
                         idx, proposal, ctx, provider, source_papers, source_ids,
                         context_window,
                         experiment_context=experiment_contexts.get(idx),
-                        result_markers=ctx.result.result_markers.get(idx),
+                        result_markers=_marker_strings or None,
                     )
                 else:
                     # Legacy path: retain outer timeout for non-empirical runs
+                    _raw_markers_legacy = ctx.result.result_markers.get(idx) or []
+                    _marker_strings_legacy = [
+                        self._format_result_marker(m)
+                        for m in _raw_markers_legacy
+                    ]
                     await asyncio.wait_for(
                         self._synthesize_paper_for_proposal(
                             idx, proposal, ctx, provider, source_papers, source_ids,
                             context_window,
                             experiment_context=experiment_contexts.get(idx),
-                            result_markers=ctx.result.result_markers.get(idx),
+                            result_markers=_marker_strings_legacy or None,
                         ),
                         timeout=self.PER_PROPOSAL_TIMEOUT,
                     )
@@ -2173,6 +2253,7 @@ class PaperSynthesisStage(PipelineStage):
             proposal_id=idx,
             budget=SynthesisBudget(),
             experiment_context=experiment_context,
+            result_markers=list(result_markers) if result_markers else None,
             existing_checkpoints=existing_checkpoints if existing_checkpoints else None,
             checkpoint_callback=_checkpoint_callback,
             context_window=context_window,
@@ -2372,6 +2453,12 @@ class PaperSynthesisStage(PipelineStage):
             metadata["paper_evaluation"] = {"status": "unavailable", "scope": "paper"}
             return
 
+        # Release-final lifecycle: bind assurance to the exact content it
+        # evaluated. A later mutation cannot be release-eligible under this
+        # evaluation because the paper hash will no longer match.
+        import hashlib as _paper_hashlib
+        paper_hash = _paper_hashlib.sha256(paper_md.encode("utf-8")).hexdigest()
+
         # Phase 4 / WP-4D: provenance precondition. A paper citing [SOURCE-N]
         # markers with no recoverable source identity cannot be quality-ready.
         source_map = (
@@ -2396,6 +2483,27 @@ class PaperSynthesisStage(PipelineStage):
         # Phase 4 / WP-4F + Phase 5: conclusion support. When experiments ran,
         # pass result markers so the checker can validate [RESULT-N] backing.
         result_markers = ctx.result.result_markers.get(idx, []) if ctx.result.result_markers else []
+
+        # R1 — Assurance integrity: when evaluation occurs outside the original
+        # pipeline context (e.g. post-remediation re-evaluation), transient
+        # StageContext.result_markers may be empty even though persisted
+        # experiment evidence exists. Hydrate from the DB so the
+        # experiment-alignment gate performs a real check rather than passing
+        # vacuously. Precedence: live context markers first, persisted
+        # evidence second, empty only when the proposal genuinely has no
+        # registered/executed experiment.
+        if not result_markers:
+            _eval_spec_id_for_hydration = ctx.params.get("experiment_spec_id")
+            if _eval_spec_id_for_hydration:
+                hydrated = self._hydrate_persisted_result_markers(idx)
+                if hydrated:
+                    result_markers = hydrated
+                    logger.info(
+                        "R1: Hydrated %d persisted result markers for proposal %d "
+                        "(evaluation outside pipeline context)",
+                        len(result_markers), idx,
+                    )
+
         conclusion_result = self._classify_conclusion(ctx, proposal, paper_md, result_markers)
         gates.append({
             "gate": "conclusion_support",
@@ -2470,6 +2578,7 @@ class PaperSynthesisStage(PipelineStage):
                     "scope": "paper",
                     "dimensions": evaluation.to_dict(),
                     "evaluated_object": "final_paper",
+                    "paper_hash": paper_hash,
                     "blocking_reasons": blocking_reasons,
                     "gates": gates,
                 }
@@ -2482,6 +2591,7 @@ class PaperSynthesisStage(PipelineStage):
                     "scope": "paper",
                     "dimensions": evaluation.to_dict(),
                     "evaluated_object": "final_paper",
+                    "paper_hash": paper_hash,
                     "gates": gates,
                 }
                 logger.info(
@@ -2495,6 +2605,7 @@ class PaperSynthesisStage(PipelineStage):
             metadata["paper_evaluation"] = {
                 "status": "failed",
                 "scope": "paper",
+                "paper_hash": paper_hash,
                 "error": str(e),
                 "gates": gates,
             }
@@ -2569,6 +2680,92 @@ class PaperSynthesisStage(PipelineStage):
             paper_title=title,
             paper_abstract=abstract,
         )
+
+    @staticmethod
+    def _hydrate_persisted_result_markers(idx: int) -> list:
+        """R1 — Load persisted ResultMarkers from the DB when the live
+        StageContext doesn't carry them (post-remediation evaluation).
+
+        Uses the same construction pattern as ExperimentExecutionStage
+        (lines ~2897-2920): reads the ExperimentResult manifest, builds
+        ResultMarker objects with role/direction classification from the spec.
+
+        Returns empty list if no persisted experiment evidence exists.
+        """
+        try:
+            from backend.db.database import get_session as _r1_get_session
+            from backend.db.models import ExperimentResult as _R1ExpResult
+            from backend.pipeline.experiment.manifest import ResultMarker
+            from sqlalchemy import select, text as _sa_text
+
+            with _r1_get_session() as session:
+                # Find the experiment result for this proposal
+                row = session.execute(
+                    _sa_text(
+                        "SELECT id, manifest_json FROM experiment_results "
+                        "WHERE proposal_id = :pid ORDER BY id DESC LIMIT 1"
+                    ),
+                    {"pid": idx},
+                ).fetchone()
+
+                if not row:
+                    # Try by idea_id fallback (older schema)
+                    return []
+
+                exp_result_id = row[0]
+                manifest_json = row[1]
+                if not manifest_json:
+                    return []
+
+                import json as _r1_json
+                manifest = _r1_json.loads(manifest_json) if isinstance(manifest_json, str) else manifest_json
+                results = manifest.get("results", {})
+                artifacts = manifest.get("result_artifacts", [])
+                status = manifest.get("status", "")
+
+                if status != "succeeded" or not results:
+                    return []
+
+                # Load spec for direction metadata
+                from backend.pipeline.experiment.specification import load_spec as _r1_load_spec
+                _directions = {}
+                try:
+                    # The spec_id may be in the manifest or in ctx.params;
+                    # for hydration we read from the manifest if present
+                    spec_id = manifest.get("experiment_spec_id", manifest.get("spec_id", ""))
+                    if spec_id:
+                        _spec = _r1_load_spec(spec_id)
+                        _directions = _spec.metric_directions
+                except Exception:
+                    pass  # Fail-soft: no directions is better than no markers
+
+                markers = []
+                for mi, (metric_name, value) in enumerate(sorted(results.items()), 1):
+                    artifact = next(
+                        (a for a in artifacts if isinstance(a, dict) and a.get("artifact_type") == "metrics"),
+                        artifacts[0] if artifacts else None,
+                    )
+                    _role = "comparison"
+                    if metric_name.startswith("baseline_"):
+                        _role = "baseline"
+                    elif metric_name in ("improvement",) or metric_name.endswith("_reduction") or metric_name.endswith("_gain"):
+                        _role = "derived"
+                    markers.append(ResultMarker(
+                        marker_index=mi,
+                        marker=f"RESULT-{mi}",
+                        metric_name=metric_name,
+                        observed_value=value,
+                        artifact_path=artifact.get("filename", "") if isinstance(artifact, dict) else "",
+                        artifact_sha256=artifact.get("sha256", "") if isinstance(artifact, dict) else "",
+                        experiment_result_id=exp_result_id,
+                        direction=_directions.get(metric_name, ""),
+                        role=_role,
+                    ))
+                return markers
+
+        except Exception as e:
+            logger.warning("R1: Failed to hydrate persisted result markers for proposal %d: %s", idx, e)
+            return []
 
     @staticmethod
     def _classify_conclusion(ctx, proposal, paper_md: str, result_markers=None):
@@ -3111,11 +3308,15 @@ class CitationAuditStage(PipelineStage):
             else str(proposal)
         )
 
-        # Include full paper text if available from paper_synthesis
+        # Include full paper text if available from paper_synthesis. Capture the
+        # exact pre-audit text so any Stage-16 repair can invalidate the
+        # Stage-15 evaluation that belonged to the previous paper version.
         metadata = self._get_metadata(proposal)
         full_paper = metadata.get("full_paper")
+        pre_audit_paper_md = None
         if full_paper and isinstance(full_paper, dict):
             paper_md = full_paper.get("paper_markdown", "")
+            pre_audit_paper_md = paper_md
             if paper_md:
                 proposal_text = paper_md
 
@@ -3204,6 +3405,46 @@ class CitationAuditStage(PipelineStage):
                 idx, proposal_text, corpus, metadata, full_paper,
             )
 
+        # Lifecycle consistency: Stage 15 evaluates the synthesized paper, but
+        # the legacy Stage-16 repair path may replace paper_markdown. If the
+        # scientific content changed, the old paper_evaluation no longer
+        # describes the canonical current paper. Invalidate it and run the
+        # existing paper-evaluation/gate machinery against the repaired text
+        # before persisting metadata. No-op when audit/repair leaves the paper
+        # unchanged.
+        post_audit_full_paper = metadata.get("full_paper")
+        post_audit_paper_md = (
+            post_audit_full_paper.get("paper_markdown", "")
+            if isinstance(post_audit_full_paper, dict)
+            else ""
+        )
+        if (
+            pre_audit_paper_md is not None
+            and post_audit_paper_md != pre_audit_paper_md
+        ):
+            metadata["paper_evaluation"] = {
+                "status": "unavailable",
+                "scope": "paper",
+                "reason": (
+                    "paper changed during citation audit; previous evaluation "
+                    "invalidated pending re-evaluation"
+                ),
+            }
+            try:
+                await self._reevaluate_repaired_paper(
+                    ctx=ctx, proposal=proposal, metadata=metadata, idx=idx,
+                )
+            except Exception as e:
+                logger.warning(
+                    "Post-repair paper evaluation failed for proposal %d "
+                    "(non-fatal): %s", idx, e,
+                )
+                metadata["paper_evaluation"] = {
+                    "status": "failed",
+                    "scope": "paper",
+                    "error": f"Post-repair evaluation failed: {e}",
+                }
+
         self._set_metadata(proposal, metadata)
 
         # Log warning if trust_score < 0.5
@@ -3216,6 +3457,19 @@ class CitationAuditStage(PipelineStage):
                 report.context_mismatches,
                 report.quantitative_errors,
             )
+
+    async def _reevaluate_repaired_paper(
+        self, ctx: StageContext, proposal, metadata: dict, idx: int,
+    ) -> None:
+        """Re-evaluate the exact repaired paper using the existing gate stack.
+
+        CitationAuditStage owns the mutation check; PaperSynthesisStage remains
+        the single implementation of paper evaluation, provenance/scope/
+        conclusion gates, and experiment alignment. The citation-audit stage's
+        configured provider is reused for the post-repair evaluation.
+        """
+        evaluator_stage = PaperSynthesisStage(provider=self._provider)
+        await evaluator_stage._evaluate_paper(ctx, proposal, metadata, idx)
 
     # ── Phase D: Structured claim helpers ────────────────────────────────
 

@@ -21,6 +21,7 @@ import { StageProgress } from "@/components/pipeline/stage-progress";
 import { usePipelineProgress } from "@/hooks/usePipelineProgress";
 import { useSession } from "@/hooks/useSession";
 import { triggerRun, getRunIdeas, cancelRun, getEstimate } from "@/api/pipeline";
+import { listExperimentSpecs } from "@/api/experiments";
 import { getSystemStatus } from "@/api/status";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -32,22 +33,57 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import type { PipelineRunRequest, IdeaSummary } from "@/api/types";
 import {
   CheckCircle2, Lightbulb, AlertCircle, XCircle, ExternalLink,
-  Search, FileText, GitBranch, Shield, FilePen,
+  Search, FileText, GitBranch, FilePen,
   Activity, Download, Clock, ArrowRight,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useResource } from "@/lib/useResource";
 import { DataView } from "@/components/ui/data-view";
 
-// ── Pipeline preview stages (visual flow) ──
-const PIPELINE_FLOW = [
-  { icon: Search, label: "Literature", sub: "Search & ingest" },
-  { icon: GitBranch, label: "Gaps", sub: "Identify opportunities" },
-  { icon: Lightbulb, label: "Ideas", sub: "Generate & score" },
-  { icon: FilePen, label: "Proposal", sub: "Synthesize & check" },
-  { icon: Shield, label: "Review", sub: "Quality & governance" },
-  { icon: Download, label: "Export", sub: "Markdown / LaTeX" },
+// ── Strategy-aware pipeline preview ──
+// The backend estimate is derived from pipeline.yaml, so the preview follows
+// the selected runtime strategy instead of showing one static six-step story.
+const PIPELINE_BANDS = [
+  { key: "literature", icon: Search, label: "Literature", sub: "Search & ingest", stages: ["literature_search", "ingestion", "trimmer"] },
+  { key: "gaps", icon: GitBranch, label: "Gaps", sub: "Analyze & reflect", stages: ["gap_analysis", "gap_reflection"] },
+  { key: "ideas", icon: Lightbulb, label: "Ideas", sub: "Generate & score", stages: ["idea_generation", "idea_reflection", "novelty_checking", "feasibility_scoring", "mechanical_metrics"] },
+  { key: "proposal", icon: FilePen, label: "Proposal", sub: "Synthesize & review", stages: ["proposal_synthesis", "adversarial_review", "evaluation"] },
+  { key: "experiment", icon: Activity, label: "Experiment", sub: "Execute registered spec", stages: ["experiment_execution"] },
+  { key: "paper", icon: FileText, label: "Paper", sub: "Synthesize & audit", stages: ["paper_synthesis", "citation_audit", "proposal_deepening"] },
+  { key: "export", icon: Download, label: "Finalize", sub: "Persist / export", stages: ["export"] },
 ] as const;
+
+function buildPipelineFlow(stageNames: string[]) {
+  const enabled = new Set(stageNames);
+  return PIPELINE_BANDS.filter((band) => band.stages.some((stage) => enabled.has(stage)));
+}
+
+const STRATEGY_OUTPUTS: Record<string, Array<{ icon: React.ElementType; label: string; value: string }>> = {
+  fast_scan: [
+    { icon: FileText, label: "Discovered papers", value: "Up to 50" },
+    { icon: GitBranch, label: "Research gaps", value: "Configured limit" },
+    { icon: Lightbulb, label: "Generated ideas", value: "Enabled" },
+    { icon: FilePen, label: "Concise proposals", value: "Per idea" },
+  ],
+  deep_research: [
+    { icon: FileText, label: "Discovered papers", value: "Up to 50" },
+    { icon: GitBranch, label: "Research gaps", value: "Configured limit" },
+    { icon: Lightbulb, label: "Generated ideas", value: "Enabled" },
+    { icon: FilePen, label: "Full proposals", value: "Per idea" },
+    { icon: FileText, label: "Full research papers", value: "Per proposal" },
+  ],
+  academic_proposal: [
+    { icon: FileText, label: "Discovered papers", value: "Up to 50" },
+    { icon: GitBranch, label: "Research gaps", value: "Configured limit" },
+    { icon: Lightbulb, label: "Generated ideas", value: "Enabled" },
+    { icon: FilePen, label: "Full proposals", value: "Per idea" },
+    { icon: FileText, label: "Full research papers", value: "Per proposal" },
+  ],
+  literature_review: [
+    { icon: FileText, label: "Discovered papers", value: "Up to 50" },
+    { icon: GitBranch, label: "Research gaps", value: "Configured limit" },
+  ],
+};
 
 export default function PipelineNew() {
   const navigate = useNavigate();
@@ -60,6 +96,7 @@ export default function PipelineNew() {
   const [ideasError, setIdeasError] = useState<string | null>(null);
   const [ideasLoading, setIdeasLoading] = useState(false);
   const [activeStrategy, setActiveStrategy] = useState("fast_scan");
+  const [activeExperimentSpecId, setActiveExperimentSpecId] = useState<string | null>(null);
   const { sessionId } = useSession();
   const { stages, isComplete, isConnected } = usePipelineProgress(runId);
 
@@ -75,9 +112,27 @@ export default function PipelineNew() {
   // ── System status (truthful — from real query, not hardcoded) ──
   const systemStatusResource = useResource(["system-status"], () => getSystemStatus(), { staleTime: 30000 });
 
+  // ── Registered experiment catalog (read-only backend registry) ──
+  const experimentCatalogResource = useResource(
+    ["experiment-specs"],
+    () => listExperimentSpecs(),
+    { staleTime: 60000, isEmpty: () => false },
+  );
+  const experimentCatalog = experimentCatalogResource.status === "ready" ? experimentCatalogResource.data : null;
+
   // ── Estimate (real, from backend) ──
-  const estimateResource = useResource(["estimate", activeStrategy], () => getEstimate(activeStrategy), { staleTime: 60000 });
+  // The backend adds experiment_execution only when a registered spec is selected.
+  const estimateResource = useResource(
+    ["estimate", activeStrategy, activeExperimentSpecId],
+    () => getEstimate(activeStrategy, activeExperimentSpecId),
+    { staleTime: 60000 },
+  );
   const estimate = estimateResource.status === "ready" ? estimateResource.data : null;
+  const previewFlow = estimate ? buildPipelineFlow((estimate.breakdown ?? []).map((stage) => stage.stage)) : [];
+  const baseExpectedOutputs = STRATEGY_OUTPUTS[activeStrategy] ?? STRATEGY_OUTPUTS.deep_research ?? [];
+  const expectedOutputs = activeExperimentSpecId
+    ? [...baseExpectedOutputs, { icon: Activity, label: "Registered experiment", value: activeExperimentSpecId }]
+    : baseExpectedOutputs;
 
   async function handleStart(config: PipelineRunRequest) {
     setIsLoading(true);
@@ -162,6 +217,10 @@ export default function PipelineNew() {
                   isLoading={isLoading}
                   initialDomain={initialTopic}
                   onStrategyChange={setActiveStrategy}
+                  experimentCatalog={experimentCatalog}
+                  experimentCatalogLoading={experimentCatalogResource.status === "loading"}
+                  experimentCatalogError={experimentCatalogResource.status === "error"}
+                  onExperimentSpecChange={setActiveExperimentSpecId}
                 />
               </TabsContent>
               <TabsContent value="autonomous">
@@ -188,8 +247,8 @@ export default function PipelineNew() {
                     )}
                   </div>
                   <div className="space-y-1.5">
-                    {PIPELINE_FLOW.map((stage) => (
-                      <div key={stage.label} className="flex items-center gap-2">
+                    {previewFlow.length > 0 ? previewFlow.map((stage) => (
+                      <div key={stage.key} className="flex items-center gap-2">
                         <div className="h-7 w-7 rounded-lg bg-muted/40 flex items-center justify-center">
                           <stage.icon className="h-3.5 w-3.5 text-muted-foreground" />
                         </div>
@@ -198,7 +257,9 @@ export default function PipelineNew() {
                           <p className="text-ui-micro text-muted-foreground leading-tight">{stage.sub}</p>
                         </div>
                       </div>
-                    ))}
+                    )) : (
+                      <p className="text-ui-micro text-muted-foreground">Loading strategy plan...</p>
+                    )}
                   </div>
                   {/* Cost — truthful from real estimate */}
                   {estimate && (
@@ -247,10 +308,9 @@ export default function PipelineNew() {
                     </span>
                   </div>
                   <div className="space-y-1.5 text-ui-meta">
-                    <OutputRow icon={FileText} label="Research papers" value="50-100" />
-                    <OutputRow icon={GitBranch} label="Research gaps" value="3-5" />
-                    <OutputRow icon={Lightbulb} label="Generated ideas" value="2-10" />
-                    <OutputRow icon={FilePen} label="Full proposals" value="Per idea" />
+                    {expectedOutputs.map((output) => (
+                      <OutputRow key={output.label} icon={output.icon} label={output.label} value={output.value} />
+                    ))}
                   </div>
                 </CardContent>
               </Card>
@@ -418,7 +478,11 @@ export default function PipelineNew() {
               {ideasLoading && <p className="text-ui-meta text-muted-foreground">Loading results...</p>}
               {!ideasLoading && !ideasError && ideas.length === 0 && (
                 <p className="text-ui-meta text-muted-foreground">
-                  {isCancelled ? "No ideas were generated before cancellation." : "No ideas generated in this run."}
+                  {isCancelled
+                    ? "No ideas were generated before cancellation."
+                    : activeStrategy === "literature_review"
+                      ? "Literature Review does not generate ideas; review the persisted gaps from this run."
+                      : "No ideas generated in this run."}
                 </p>
               )}
               {!ideasLoading && ideas.length > 0 && (

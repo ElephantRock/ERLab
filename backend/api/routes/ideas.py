@@ -5,7 +5,7 @@ import json
 from fastapi import APIRouter, Query
 from sqlalchemy import select
 
-from backend.api.errors import APIError, NotFoundError
+from backend.api.errors import APIError, ConflictError, NotFoundError
 from backend.api.schemas import IdeaFeedbackRequest
 from backend.api.traceability import resolve_source_gaps, extract_proposal_references
 from backend.api.quality_checks import compute_quality_checks, compute_remediation_hints, audit_citations
@@ -85,6 +85,20 @@ def _serialize_paper_state(proposal, idea) -> dict:
 def _paper_state_dict(*, status, paper_md, meta, idea) -> dict:
     """Phase 1 1C: build the shape-consistent paper state object used by both
     the no-proposal and has-proposal branches of _serialize_paper_state."""
+    release = meta.get("release")
+    if isinstance(release, dict):
+        import hashlib as _release_hashlib
+        release = dict(release)
+        current_hash = (
+            _release_hashlib.sha256((paper_md or "").encode("utf-8")).hexdigest()
+            if paper_md
+            else None
+        )
+        release["current_paper_hash"] = current_hash
+        release["current_matches_frozen"] = bool(
+            current_hash and current_hash == release.get("frozen_paper_hash")
+        )
+
     return {
         "status": status,
         "paper_md": paper_md if status == "ready" else None,
@@ -101,6 +115,9 @@ def _paper_state_dict(*, status, paper_md, meta, idea) -> dict:
         # The idea-detail response already carries the PROPOSAL evaluation
         # separately; these must not be collapsed into a single score.
         "paper_evaluation": meta.get("paper_evaluation"),
+        # Release-final is separate from ordinary artifact readiness. A paper
+        # may remain viewable/exportable without being frozen for release.
+        "release": release,
     }
 
 
@@ -518,6 +535,42 @@ async def get_idea(idea_id: int):
                 "created_at": str(idea.created_at),
             },
         }
+
+
+@router.post(
+    "/{idea_id}/paper/freeze",
+    summary="Freeze the current assured paper as release-final",
+)
+async def freeze_paper(idea_id: int):
+    """Freeze one exact assured paper revision without changing ordinary export.
+
+    The current paper must have a READY assurance result bound to its exact
+    content hash (or an existing READY PaperRevision for that exact hash).
+    The frozen release is an immutable PaperRevision snapshot; later current
+    revisions do not rewrite it.
+    """
+    from backend.db.database import get_session
+    from backend.db.models import Idea, Proposal
+    from backend.pipeline.evaluation.paper_release import (
+        PaperReleaseError,
+        freeze_current_paper,
+    )
+
+    with get_session() as session:
+        idea = session.get(Idea, idea_id)
+        if idea is None:
+            raise NotFoundError("Idea not found")
+        proposal = session.execute(
+            select(Proposal).where(Proposal.idea_id == idea_id).limit(1)
+        ).scalar_one_or_none()
+        if proposal is None:
+            raise NotFoundError("No proposal for this idea")
+        try:
+            release = freeze_current_paper(session, proposal)
+        except PaperReleaseError as exc:
+            raise ConflictError(str(exc)) from exc
+        session.commit()
+        return {"idea_id": idea_id, "proposal_id": proposal.id, "release": release}
 
 
 @router.post(
@@ -967,3 +1020,235 @@ async def backfill_all_citations():
                 for r in results
             ],
         }
+
+
+# ─── R2: Autonomous paper repair ─────────────────────────────────
+
+
+def _derive_blocking_findings(eval_data: dict) -> list[str]:
+    """Convert a persisted blocked evaluation into actionable repair findings.
+
+    Uses dimension justifications and blocking_reasons — no human diagnosis
+    required. The remediator receives these as its repair directive.
+    """
+    findings: list[str] = []
+
+    dims = eval_data.get("dimensions", {})
+    for dim_name, dim_data in sorted(dims.items()):
+        if isinstance(dim_data, dict):
+            score = dim_data.get("score", 1.0)
+            justification = dim_data.get("justification", "")
+            if score < 0.5 and justification:
+                findings.append(f"{dim_name} (score={score}): {justification}")
+
+    for reason in eval_data.get("blocking_reasons", []) or []:
+        findings.append(f"Gate finding: {reason}")
+
+    if not findings:
+        findings.append("Paper evaluation is blocked but no specific low-scoring dimensions were identified.")
+
+    return findings
+
+
+@router.post(
+    "/{idea_id}/paper/repair",
+    summary="Autonomously repair a blocked paper using evaluator diagnostics",
+)
+async def repair_paper(idea_id: int):
+    """Repair a blocked paper through governed autonomous remediation.
+
+    Derives repair findings from the paper's own blocked evaluation, gathers
+    persisted experiment evidence (spec, result markers, source map), and
+    invokes the existing auto_revise_paper() remediator. One LLM call, zero
+    human prose editing. The successor is then fully evaluated.
+
+    The frozen release (if any) remains immutable. This operation creates a
+    new current successor; it never edits historical revisions.
+    """
+    import hashlib as _hashlib
+
+    from backend.db.database import get_session
+    from backend.db.models import Idea, Proposal, ExperimentResult
+    from backend.pipeline.experiment.specification import load_spec
+    from backend.pipeline.experiment.manifest import ResultMarker
+    from backend.pipeline.evaluation.paper_remediator import auto_revise_paper
+    from backend.pipeline.stages import PaperSynthesisStage, StageContext
+    from backend.pipeline.result import PipelineResult
+    from backend.providers.provider_factory import create_provider
+    from types import SimpleNamespace
+    import asyncio
+
+    with get_session() as session:
+        idea = session.get(Idea, idea_id)
+        if idea is None:
+            raise NotFoundError("Idea not found")
+
+        proposal = session.execute(
+            select(Proposal).where(Proposal.idea_id == idea_id).limit(1)
+        ).scalar_one_or_none()
+        if proposal is None:
+            raise NotFoundError("No proposal for this idea")
+
+        paper_md = proposal.paper_md or ""
+        if not paper_md.strip():
+            raise ConflictError("No paper to repair")
+
+        meta = json.loads(proposal.paper_meta_json) if proposal.paper_meta_json else {}
+        eval_data = meta.get("paper_evaluation", {})
+        eval_status = eval_data.get("status", "unknown")
+        eval_hash = eval_data.get("paper_hash", "")
+
+        # Eligibility: must be blocked with exact-version evaluation
+        if eval_status != "blocked":
+            raise ConflictError(
+                f"Paper evaluation status is '{eval_status}', not 'blocked'. "
+                "Repair is only available for blocked papers."
+            )
+
+        actual_hash = _hashlib.sha256(paper_md.encode()).hexdigest()
+        if eval_hash and eval_hash != actual_hash:
+            raise ConflictError(
+                "Evaluation paper_hash does not match current paper. "
+                "Stale evaluation — re-evaluate before repairing."
+            )
+
+        # Derive blocking findings from the evaluation
+        blocking_findings = _derive_blocking_findings(eval_data)
+
+        # Resolve experiment evidence channels
+        config = json.loads(meta.get("config", "{}")) if isinstance(meta.get("config"), str) else {}
+        exp_spec_id = (
+            config.get("experiment_spec_id")
+            or meta.get("experiment_spec_id")
+            or None
+        )
+
+        spec = None
+        markers = []
+        exp_result_id = None
+        source_map = meta.get("full_paper", {}).get("source_map", []) if isinstance(meta.get("full_paper"), dict) else []
+
+        if exp_spec_id:
+            try:
+                spec = load_spec(exp_spec_id)
+            except Exception:
+                pass
+
+            # Find persisted experiment result
+            exp_row = session.execute(
+                select(ExperimentResult).where(
+                    ExperimentResult.idea_id == idea_id
+                ).order_by(ExperimentResult.id.desc()).limit(1)
+            ).scalar_one_or_none()
+
+            if exp_row:
+                exp_result_id = exp_row.id
+                manifest_raw = exp_row.manifest_json
+                if manifest_raw:
+                    manifest = json.loads(manifest_raw) if isinstance(manifest_raw, str) else manifest_raw
+                    results = manifest.get("results", {})
+                    artifacts = manifest.get("result_artifacts", [])
+                    if manifest.get("status") == "succeeded" and results:
+                        _directions = spec.metric_directions if spec else {}
+                        for mi, (name, value) in enumerate(sorted(results.items()), 1):
+                            artifact = next(
+                                (a for a in artifacts if isinstance(a, dict) and a.get("artifact_type") == "metrics"),
+                                artifacts[0] if artifacts else None,
+                            )
+                            _role = "comparison"
+                            if name.startswith("baseline_"):
+                                _role = "baseline"
+                            elif name in ("improvement",) or name.endswith("_reduction") or name.endswith("_gain"):
+                                _role = "derived"
+                            markers.append(ResultMarker(
+                                marker_index=mi, marker=f"RESULT-{mi}",
+                                metric_name=name, observed_value=value,
+                                artifact_path=artifact.get("filename", "") if isinstance(artifact, dict) else "",
+                                artifact_sha256=artifact.get("sha256", "") if isinstance(artifact, dict) else "",
+                                experiment_result_id=exp_result_id,
+                                direction=_directions.get(name, ""),
+                                role=_role,
+                            ))
+
+        if not exp_result_id:
+            raise ConflictError(
+                "No persisted experiment result found for this proposal. "
+                "Repair requires registered experiment evidence."
+            )
+
+    # Invoke the remediator (outside the session — it manages its own sessions)
+    result = await auto_revise_paper(
+        proposal_id=proposal.id,
+        experiment_result_id=exp_result_id,
+        original_paper_md=paper_md,
+        blocking_findings=blocking_findings,
+        source_map=source_map,
+        result_markers=markers,
+        spec=spec,
+        timeout_seconds=600.0,
+    )
+
+    # Run the full evaluator on the result (with R1 hydration for persisted markers)
+    repair_eval_status = "unknown"
+    repair_eval_hash = ""
+    repair_gates = []
+
+    if result.success and result.promoted:
+        try:
+            provider = create_provider()
+            stage = PaperSynthesisStage(provider=provider)
+
+            with get_session() as session:
+                row = session.execute(
+                    select(Proposal.paper_md, Proposal.paper_meta_json).where(
+                        Proposal.id == proposal.id
+                    )
+                ).fetchone()
+                new_md = row[0]
+                new_meta = json.loads(row[1]) if row[1] else {}
+                new_meta["paper_evaluation"] = {"status": "pending", "scope": "paper"}
+
+            pipeline_result = PipelineResult()
+            eval_ctx = StageContext(
+                result=pipeline_result,
+                domain="machine learning",
+                params={"experiment_spec_id": exp_spec_id} if exp_spec_id else {},
+            )
+            proposal_obj = SimpleNamespace(paper_md=new_md, metadata=new_meta)
+
+            await stage._evaluate_paper(eval_ctx, proposal_obj, new_meta, proposal.id)
+
+            eval_result = new_meta.get("paper_evaluation", {})
+            repair_eval_status = eval_result.get("status", "unknown")
+            repair_eval_hash = eval_result.get("paper_hash", "")
+            repair_gates = eval_result.get("gates", [])
+
+            with get_session() as session:
+                session.execute(
+                    Proposal.__table__.update().where(
+                        Proposal.id == proposal.id
+                    ).values(paper_meta_json=json.dumps(new_meta))
+                )
+                session.commit()
+        except Exception as exc:
+            repair_eval_status = "failed"
+            repair_eval_hash = ""
+
+    return {
+        "idea_id": idea_id,
+        "proposal_id": proposal.id,
+        "repair": {
+            "success": result.success,
+            "promoted": result.promoted,
+            "revision_number": result.revision_number,
+            "original_paper_hash": result.original_paper_hash,
+            "revised_paper_hash": result.revised_paper_hash,
+            "findings_count": len(blocking_findings),
+            "findings": blocking_findings,
+        },
+        "evaluation": {
+            "status": repair_eval_status,
+            "paper_hash": repair_eval_hash,
+            "gates": repair_gates,
+        },
+    }

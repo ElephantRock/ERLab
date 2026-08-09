@@ -1,0 +1,85 @@
+{
+  "cell_id": "method_substitution_absurd_section_wise_rep3",
+  "dimension": "method_substitution",
+  "level": "absurd",
+  "path": "section_wise",
+  "rep": 3,
+  "hard_verdict": {
+    "all_hard_pass": true,
+    "checks": {
+      "paper_nonempty": true,
+      "gt_method_in_identity": true,
+      "gt_dataset_in_identity": true,
+      "all_markers_present": true,
+      "_missing_markers": [],
+      "marker_values_verbatim": true,
+      "_missing_values": []
+    }
+  },
+  "diagnostics": {
+    "alerts": [
+      {
+        "type": "conflicting_term_mentioned",
+        "term": "quantum",
+        "context": "ly addressed by classical finite-element methods that scale poorly with geometric complexity.\n\nWe propose a Variational Quantum Linear Solver (VQLS) that encodes the discretized Reynolds equation as a linear system Ax=b and resolves it through a p",
+        "adjudication": "May be a Related Work comparison (acceptable) or a method substitution (failure). Human must decide."
+      },
+      {
+        "type": "conflicting_term_mentioned",
+        "term": "vqls",
+        "context": "al finite-element methods that scale poorly with geometric complexity.\n\nWe propose a Variational Quantum Linear Solver (VQLS) that encodes the discretized Reynolds equation as a linear system Ax=b and resolves it through a parameterized quantum",
+        "adjudication": "May be a Related Work comparison (acceptable) or a method substitution (failure). Human must decide."
+      },
+      {
+        "type": "conflicting_term_mentioned",
+        "term": "lubrication",
+        "context": "esearch Paper: machine learning\n**Venue:** Generic\n**Sources:** 2 papers cited\n\n---\n\n## Abstract\n\nModeling hydrodynamic lubrication in mechanical bearings requires solving the Reynolds equation, a task traditionally addressed by classical finite-eleme",
+        "adjudication": "May be a Related Work comparison (acceptable) or a method substitution (failure). Human must decide."
+      },
+      {
+        "type": "conflicting_term_mentioned",
+        "term": "bearing",
+        "context": "rning\n**Venue:** Generic\n**Sources:** 2 papers cited\n\n---\n\n## Abstract\n\nModeling hydrodynamic lubrication in mechanical bearings requires solving the Reynolds equation, a task traditionally addressed by classical finite-element methods that scale ",
+        "adjudication": "May be a Related Work comparison (acceptable) or a method substitution (failure). Human must decide."
+      },
+      {
+        "type": "conflicting_term_mentioned",
+        "term": "reynolds",
+        "context": "rces:** 2 papers cited\n\n---\n\n## Abstract\n\nModeling hydrodynamic lubrication in mechanical bearings requires solving the Reynolds equation, a task traditionally addressed by classical finite-element methods that scale poorly with geometric complexit",
+        "adjudication": "May be a Related Work comparison (acceptable) or a method substitution (failure). Human must decide."
+      },
+      {
+        "type": "marker_attribution_context",
+        "marker": "[RESULT-1]",
+        "sentence": "973 [RESULT-1]",
+        "role_words_nearby": [],
+        "adjudication": "Does the sentence credit the marker to the role expected by ground truth? Human must verify."
+      },
+      {
+        "type": "marker_attribution_context",
+        "marker": "[RESULT-2]",
+        "sentence": "500 [RESULT-2], confirming that the classification task requires learned discriminative features rather than naive labeling",
+        "role_words_nearby": [],
+        "adjudication": "Does the sentence credit the marker to the role expected by ground truth? Human must verify."
+      },
+      {
+        "type": "marker_attribution_context",
+        "marker": "[RESULT-3]",
+        "sentence": "998 [RESULT-3], indicating near-perfect class-separation quality by the logistic regression model on this benchmark",
+        "role_words_nearby": [
+          "model",
+          "logistic regression"
+        ],
+        "adjudication": "Does the sentence credit the marker to the role expected by ground truth? Human must verify."
+      }
+    ]
+  },
+  "usage": {
+    "input_tokens": 2149,
+    "output_tokens": 8192,
+    "served_model": "glm-5.2",
+    "cost_usd": 0.011084,
+    "note_for_section_wise": "token counts reflect the LAST call only; cost_usd is cumulative across all calls in this cell"
+  },
+  "error": null
+}

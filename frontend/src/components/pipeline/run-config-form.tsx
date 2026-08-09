@@ -4,8 +4,8 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { StageModelSelector } from "./stage-model-selector";
 import { useSession } from "@/hooks/useSession";
-import type { PipelineRunRequest } from "@/api/types";
-import { Loader2, ChevronDown, ChevronRight, Zap, Microscope, GraduationCap, BookOpen } from "lucide-react";
+import type { ExperimentSpecCatalog, PipelineRunRequest } from "@/api/types";
+import { Loader2, ChevronDown, ChevronRight, Zap, Microscope, GraduationCap, BookOpen, Compass, FlaskConical } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const VALIDATION = {
@@ -25,32 +25,28 @@ const STRATEGIES = [
     value: "fast_scan",
     icon: Zap,
     title: "Quick Scan",
-    time: "~2-5 min",
-    desc: "Fast scan skips tree search and metrics for rapid results.",
+    desc: "Rapid gaps → lightweight ideas → concise proposals. Skips tree search, novelty, metrics, review, and paper synthesis.",
     accent: "text-accent",
   },
   {
     value: "deep_research",
     icon: Microscope,
     title: "Deep Research",
-    time: "~25 min",
-    desc: "Full pipeline with tree search, novelty checking, and proposal synthesis.",
+    desc: "Full proposal-to-paper workflow with reflection, novelty checking, evaluation, and citation audit.",
     accent: "text-info",
   },
   {
     value: "academic_proposal",
     icon: GraduationCap,
     title: "Academic Proposal",
-    time: "~45 min",
-    desc: "Stricter thresholds and longer timeouts for academic-grade proposals.",
+    desc: "Academic proposal-to-paper workflow. Uses the same production stage graph as Deep Research.",
     accent: "text-warning",
   },
   {
     value: "literature_review",
     icon: BookOpen,
     title: "Literature Review",
-    time: "~10 min",
-    desc: "Literature search and gap analysis only, no proposal generation.",
+    desc: "Literature search and gap analysis only; no idea, proposal, or paper generation.",
     accent: "text-muted-foreground",
   },
 ] as const;
@@ -60,9 +56,22 @@ interface RunConfigFormProps {
   isLoading?: boolean;
   initialDomain?: string;
   onStrategyChange?: (strategy: string) => void;
+  experimentCatalog?: ExperimentSpecCatalog | null;
+  experimentCatalogLoading?: boolean;
+  experimentCatalogError?: boolean;
+  onExperimentSpecChange?: (specId: string | null) => void;
 }
 
-export function RunConfigForm({ onSubmit, isLoading, initialDomain = "", onStrategyChange }: RunConfigFormProps) {
+export function RunConfigForm({
+  onSubmit,
+  isLoading,
+  initialDomain = "",
+  onStrategyChange,
+  experimentCatalog = null,
+  experimentCatalogLoading = false,
+  experimentCatalogError = false,
+  onExperimentSpecChange,
+}: RunConfigFormProps) {
   const { sessionId, setSessionId } = useSession();
   const [researchQuestion, setResearchQuestion] = useState("");
   const [domain, setDomain] = useState(initialDomain);
@@ -80,10 +89,25 @@ export function RunConfigForm({ onSubmit, isLoading, initialDomain = "", onStrat
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const [strategy, setStrategy] = useState<string>("fast_scan");
   const [modelOverrides, setModelOverrides] = useState<Record<string, string>>({});
+  const [experimentSpecId, setExperimentSpecId] = useState<string | null>(null);
+
+  const compatibleStrategies = experimentCatalog?.compatible_strategies ?? [];
+  const registeredSpecs = experimentCatalog?.specs ?? [];
+  const empiricalCompatible = compatibleStrategies.includes(strategy);
+  const selectedExperiment = registeredSpecs.find((spec) => spec.spec_id === experimentSpecId) ?? null;
+  const activeExperimentSpecId = empiricalCompatible && selectedExperiment ? selectedExperiment.spec_id : null;
+
+  function updateExperimentSpec(specId: string | null) {
+    setExperimentSpecId(specId);
+    onExperimentSpecChange?.(specId);
+  }
 
   function selectStrategy(value: string) {
     setStrategy(value);
     onStrategyChange?.(value);
+    if (experimentSpecId && !compatibleStrategies.includes(value)) {
+      updateExperimentSpec(null);
+    }
   }
 
   function handleSubmit(e: React.FormEvent) {
@@ -116,6 +140,7 @@ export function RunConfigForm({ onSubmit, isLoading, initialDomain = "", onStrat
       proposal_depth: proposalDepth,
       novelty_depth: noveltyDepth,
       idea_diversity: ideaDiversity,
+      experiment_spec_id: activeExperimentSpecId || undefined,
     };
     onSubmit(config);
   }
@@ -187,7 +212,6 @@ export function RunConfigForm({ onSubmit, isLoading, initialDomain = "", onStrat
                   <div className="flex items-center gap-2 mb-1">
                     <s.icon className={cn("h-4 w-4", strategy === s.value ? s.accent : "text-muted-foreground")} />
                     <span className="text-sm font-medium">{s.title}</span>
-                    <span className="ml-auto text-[10px] font-mono text-muted-foreground">{s.time}</span>
                   </div>
                   <p className="text-[11px] text-muted-foreground leading-tight">{s.desc}</p>
                 </button>
@@ -205,6 +229,105 @@ export function RunConfigForm({ onSubmit, isLoading, initialDomain = "", onStrat
                 <option key={s.value} value={s.value}>{s.title}</option>
               ))}
             </select>
+          </div>
+
+          {/* ── Experiment Authority ── */}
+          <div className="space-y-2">
+            <label className="text-ui-micro font-semibold uppercase tracking-wider text-muted-foreground">
+              Experiment Authority
+            </label>
+            <div className="grid gap-2 sm:grid-cols-2">
+              <button
+                type="button"
+                onClick={() => updateExperimentSpec(null)}
+                data-testid="experiment-mode-exploratory"
+                className={cn(
+                  "text-left rounded-lg border p-3 transition-all",
+                  !activeExperimentSpecId
+                    ? "border-accent bg-accent/5 ring-1 ring-accent/20"
+                    : "border-border hover:border-accent/30 hover:bg-muted/30",
+                )}
+              >
+                <div className="flex items-center gap-2 mb-1">
+                  <Compass className={cn("h-4 w-4", !activeExperimentSpecId ? "text-accent" : "text-muted-foreground")} />
+                  <span className="text-sm font-medium">Exploratory</span>
+                </div>
+                <p className="text-[11px] text-muted-foreground leading-tight">
+                  Develop the research plan from the literature without a pre-registered experiment.
+                </p>
+              </button>
+
+              <button
+                type="button"
+                disabled={!empiricalCompatible || registeredSpecs.length === 0 || experimentCatalogLoading || experimentCatalogError}
+                onClick={() => {
+                  if (empiricalCompatible && registeredSpecs.length > 0) {
+                    updateExperimentSpec(registeredSpecs[0]!.spec_id);
+                  }
+                }}
+                data-testid="experiment-mode-registered"
+                className={cn(
+                  "text-left rounded-lg border p-3 transition-all disabled:cursor-not-allowed disabled:opacity-50",
+                  activeExperimentSpecId
+                    ? "border-accent bg-accent/5 ring-1 ring-accent/20"
+                    : "border-border hover:border-accent/30 hover:bg-muted/30",
+                )}
+              >
+                <div className="flex items-center gap-2 mb-1">
+                  <FlaskConical className={cn("h-4 w-4", activeExperimentSpecId ? "text-accent" : "text-muted-foreground")} />
+                  <span className="text-sm font-medium">Registered Experiment</span>
+                </div>
+                <p className="text-[11px] text-muted-foreground leading-tight">
+                  Anchor the run to a checked-in experiment specification and execute it before paper synthesis.
+                </p>
+              </button>
+            </div>
+
+            {!empiricalCompatible && (
+              <p className="text-xs text-muted-foreground" data-testid="experiment-mode-incompatible">
+                Registered experiments are available for Deep Research and Academic Proposal strategies.
+              </p>
+            )}
+            {empiricalCompatible && experimentCatalogLoading && (
+              <p className="text-xs text-muted-foreground">Loading registered experiments…</p>
+            )}
+            {empiricalCompatible && experimentCatalogError && (
+              <p className="text-xs text-destructive" data-testid="experiment-catalog-error">
+                Registered experiments could not be loaded. Exploratory mode remains available.
+              </p>
+            )}
+            {empiricalCompatible && !experimentCatalogLoading && !experimentCatalogError && registeredSpecs.length === 0 && (
+              <p className="text-xs text-muted-foreground" data-testid="experiment-catalog-empty">
+                No registered experiment specifications are available.
+              </p>
+            )}
+
+            {activeExperimentSpecId && selectedExperiment && (
+              <div className="rounded-md border border-border bg-muted/20 p-3 space-y-2" data-testid="registered-experiment-config">
+                <div className="space-y-1">
+                  <label className="text-xs font-medium" htmlFor="experiment-spec-select">Experiment Specification</label>
+                  <select
+                    id="experiment-spec-select"
+                    value={activeExperimentSpecId}
+                    onChange={(e) => updateExperimentSpec(e.target.value)}
+                    data-testid="experiment-spec-select"
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  >
+                    {registeredSpecs.map((spec) => (
+                      <option key={spec.spec_id} value={spec.spec_id}>
+                        {spec.spec_id} — {spec.dataset_name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="text-xs text-muted-foreground space-y-1">
+                  <p><span className="font-medium text-foreground">Research question:</span> {selectedExperiment.research_question || "—"}</p>
+                  <p><span className="font-medium text-foreground">Method:</span> {selectedExperiment.analysis_method || "—"}</p>
+                  <p><span className="font-medium text-foreground">Primary metric:</span> {selectedExperiment.primary_metric || "—"}</p>
+                  <p>The registered specification is authoritative if its experiment identity conflicts with free-text run inputs.</p>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* ── Research Intent ── */}

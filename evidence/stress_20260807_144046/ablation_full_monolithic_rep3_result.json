@@ -1,0 +1,61 @@
+{
+  "cell_id": "ablation_full_monolithic_rep3",
+  "dimension": "ablation",
+  "level": "full",
+  "path": "monolithic",
+  "rep": 3,
+  "hard_verdict": {
+    "all_hard_pass": true,
+    "checks": {
+      "paper_nonempty": true,
+      "gt_method_in_identity": true,
+      "gt_dataset_in_identity": true,
+      "all_markers_present": true,
+      "_missing_markers": [],
+      "marker_values_verbatim": true,
+      "_missing_values": []
+    }
+  },
+  "diagnostics": {
+    "alerts": [
+      {
+        "type": "marker_attribution_context",
+        "marker": "[RESULT-1]",
+        "sentence": "The logistic regression model achieves a balanced accuracy of [RESULT-1] balanced_accuracy = 0",
+        "role_words_nearby": [
+          "model",
+          "logistic regression"
+        ],
+        "adjudication": "Does the sentence credit the marker to the role expected by ground truth? Human must verify."
+      },
+      {
+        "type": "marker_attribution_context",
+        "marker": "[RESULT-2]",
+        "sentence": "973, dramatically outperforming the majority-class baseline, which attains [RESULT-2] balanced_accuracy = 0",
+        "role_words_nearby": [
+          "baseline",
+          "majority",
+          "majority-class"
+        ],
+        "adjudication": "Does the sentence credit the marker to the role expected by ground truth? Human must verify."
+      },
+      {
+        "type": "marker_attribution_context",
+        "marker": "[RESULT-3]",
+        "sentence": "Additionally, the model secures an ROC-AUC of [RESULT-3] ROC-AUC = 0",
+        "role_words_nearby": [
+          "model"
+        ],
+        "adjudication": "Does the sentence credit the marker to the role expected by ground truth? Human must verify."
+      }
+    ]
+  },
+  "usage": {
+    "input_tokens": 1535,
+    "output_tokens": 6156,
+    "served_model": "glm-5.2",
+    "cost_usd": 0.003924,
+    "note_for_section_wise": "token counts reflect the LAST call only; cost_usd is cumulative across all calls in this cell"
+  },
+  "error": null
+}

@@ -1,0 +1,573 @@
+{
+  "spend": {
+    "total_usd": 0.1895,
+    "ceiling_usd": 50.0,
+    "calls": 48,
+    "input_tokens": 67523,
+    "output_tokens": 215486
+  },
+  "cells": [
+    {
+      "cell_id": "ablation_context_only_monolithic_rep1",
+      "dimension": "ablation",
+      "level": "context_only",
+      "path": "monolithic",
+      "rep": 1,
+      "hard_pass": true,
+      "error": null,
+      "diagnostic_alert_count": 1
+    },
+    {
+      "cell_id": "ablation_context_only_monolithic_rep2",
+      "dimension": "ablation",
+      "level": "context_only",
+      "path": "monolithic",
+      "rep": 2,
+      "hard_pass": true,
+      "error": null,
+      "diagnostic_alert_count": 0
+    },
+    {
+      "cell_id": "ablation_context_only_monolithic_rep3",
+      "dimension": "ablation",
+      "level": "context_only",
+      "path": "monolithic",
+      "rep": 3,
+      "hard_pass": true,
+      "error": null,
+      "diagnostic_alert_count": 0
+    },
+    {
+      "cell_id": "ablation_context_only_section_wise_rep1",
+      "dimension": "ablation",
+      "level": "context_only",
+      "path": "section_wise",
+      "rep": 1,
+      "hard_pass": true,
+      "error": null,
+      "diagnostic_alert_count": 5
+    },
+    {
+      "cell_id": "ablation_context_only_section_wise_rep2",
+      "dimension": "ablation",
+      "level": "context_only",
+      "path": "section_wise",
+      "rep": 2,
+      "hard_pass": true,
+      "error": null,
+      "diagnostic_alert_count": 5
+    },
+    {
+      "cell_id": "ablation_context_only_section_wise_rep3",
+      "dimension": "ablation",
+      "level": "context_only",
+      "path": "section_wise",
+      "rep": 3,
+      "hard_pass": true,
+      "error": null,
+      "diagnostic_alert_count": 5
+    },
+    {
+      "cell_id": "ablation_full_monolithic_rep1",
+      "dimension": "ablation",
+      "level": "full",
+      "path": "monolithic",
+      "rep": 1,
+      "hard_pass": true,
+      "error": null,
+      "diagnostic_alert_count": 3
+    },
+    {
+      "cell_id": "ablation_full_monolithic_rep2",
+      "dimension": "ablation",
+      "level": "full",
+      "path": "monolithic",
+      "rep": 2,
+      "hard_pass": true,
+      "error": null,
+      "diagnostic_alert_count": 3
+    },
+    {
+      "cell_id": "ablation_full_monolithic_rep3",
+      "dimension": "ablation",
+      "level": "full",
+      "path": "monolithic",
+      "rep": 3,
+      "hard_pass": true,
+      "error": null,
+      "diagnostic_alert_count": 3
+    },
+    {
+      "cell_id": "ablation_full_section_wise_rep1",
+      "dimension": "ablation",
+      "level": "full",
+      "path": "section_wise",
+      "rep": 1,
+      "hard_pass": true,
+      "error": null,
+      "diagnostic_alert_count": 8
+    },
+    {
+      "cell_id": "ablation_full_section_wise_rep2",
+      "dimension": "ablation",
+      "level": "full",
+      "path": "section_wise",
+      "rep": 2,
+      "hard_pass": true,
+      "error": null,
+      "diagnostic_alert_count": 8
+    },
+    {
+      "cell_id": "ablation_full_section_wise_rep3",
+      "dimension": "ablation",
+      "level": "full",
+      "path": "section_wise",
+      "rep": 3,
+      "hard_pass": true,
+      "error": null,
+      "diagnostic_alert_count": 8
+    },
+    {
+      "cell_id": "ablation_markers_only_monolithic_rep1",
+      "dimension": "ablation",
+      "level": "markers_only",
+      "path": "monolithic",
+      "rep": 1,
+      "hard_pass": true,
+      "error": null,
+      "diagnostic_alert_count": 8
+    },
+    {
+      "cell_id": "ablation_markers_only_monolithic_rep2",
+      "dimension": "ablation",
+      "level": "markers_only",
+      "path": "monolithic",
+      "rep": 2,
+      "hard_pass": false,
+      "error": null,
+      "diagnostic_alert_count": 8
+    },
+    {
+      "cell_id": "ablation_markers_only_monolithic_rep3",
+      "dimension": "ablation",
+      "level": "markers_only",
+      "path": "monolithic",
+      "rep": 3,
+      "hard_pass": false,
+      "error": null,
+      "diagnostic_alert_count": 8
+    },
+    {
+      "cell_id": "ablation_markers_only_section_wise_rep1",
+      "dimension": "ablation",
+      "level": "markers_only",
+      "path": "section_wise",
+      "rep": 1,
+      "hard_pass": false,
+      "error": null,
+      "diagnostic_alert_count": 8
+    },
+    {
+      "cell_id": "ablation_markers_only_section_wise_rep2",
+      "dimension": "ablation",
+      "level": "markers_only",
+      "path": "section_wise",
+      "rep": 2,
+      "hard_pass": false,
+      "error": null,
+      "diagnostic_alert_count": 8
+    },
+    {
+      "cell_id": "ablation_markers_only_section_wise_rep3",
+      "dimension": "ablation",
+      "level": "markers_only",
+      "path": "section_wise",
+      "rep": 3,
+      "hard_pass": false,
+      "error": null,
+      "diagnostic_alert_count": 8
+    },
+    {
+      "cell_id": "method_substitution_absurd_monolithic_rep1",
+      "dimension": "method_substitution",
+      "level": "absurd",
+      "path": "monolithic",
+      "rep": 1,
+      "hard_pass": true,
+      "error": null,
+      "diagnostic_alert_count": 3
+    },
+    {
+      "cell_id": "method_substitution_absurd_monolithic_rep2",
+      "dimension": "method_substitution",
+      "level": "absurd",
+      "path": "monolithic",
+      "rep": 2,
+      "hard_pass": true,
+      "error": null,
+      "diagnostic_alert_count": 3
+    },
+    {
+      "cell_id": "method_substitution_absurd_monolithic_rep3",
+      "dimension": "method_substitution",
+      "level": "absurd",
+      "path": "monolithic",
+      "rep": 3,
+      "hard_pass": true,
+      "error": null,
+      "diagnostic_alert_count": 3
+    },
+    {
+      "cell_id": "method_substitution_absurd_section_wise_rep1",
+      "dimension": "method_substitution",
+      "level": "absurd",
+      "path": "section_wise",
+      "rep": 1,
+      "hard_pass": true,
+      "error": null,
+      "diagnostic_alert_count": 8
+    },
+    {
+      "cell_id": "method_substitution_absurd_section_wise_rep2",
+      "dimension": "method_substitution",
+      "level": "absurd",
+      "path": "section_wise",
+      "rep": 2,
+      "hard_pass": true,
+      "error": null,
+      "diagnostic_alert_count": 8
+    },
+    {
+      "cell_id": "method_substitution_absurd_section_wise_rep3",
+      "dimension": "method_substitution",
+      "level": "absurd",
+      "path": "section_wise",
+      "rep": 3,
+      "hard_pass": true,
+      "error": null,
+      "diagnostic_alert_count": 8
+    },
+    {
+      "cell_id": "method_substitution_plausible_monolithic_rep1",
+      "dimension": "method_substitution",
+      "level": "plausible",
+      "path": "monolithic",
+      "rep": 1,
+      "hard_pass": true,
+      "error": null,
+      "diagnostic_alert_count": 4
+    },
+    {
+      "cell_id": "method_substitution_plausible_monolithic_rep2",
+      "dimension": "method_substitution",
+      "level": "plausible",
+      "path": "monolithic",
+      "rep": 2,
+      "hard_pass": true,
+      "error": null,
+      "diagnostic_alert_count": 4
+    },
+    {
+      "cell_id": "method_substitution_plausible_monolithic_rep3",
+      "dimension": "method_substitution",
+      "level": "plausible",
+      "path": "monolithic",
+      "rep": 3,
+      "hard_pass": true,
+      "error": null,
+      "diagnostic_alert_count": 4
+    },
+    {
+      "cell_id": "method_substitution_plausible_section_wise_rep1",
+      "dimension": "method_substitution",
+      "level": "plausible",
+      "path": "section_wise",
+      "rep": 1,
+      "hard_pass": true,
+      "error": null,
+      "diagnostic_alert_count": 5
+    },
+    {
+      "cell_id": "method_substitution_plausible_section_wise_rep2",
+      "dimension": "method_substitution",
+      "level": "plausible",
+      "path": "section_wise",
+      "rep": 2,
+      "hard_pass": true,
+      "error": null,
+      "diagnostic_alert_count": 4
+    },
+    {
+      "cell_id": "method_substitution_plausible_section_wise_rep3",
+      "dimension": "method_substitution",
+      "level": "plausible",
+      "path": "section_wise",
+      "rep": 3,
+      "hard_pass": true,
+      "error": null,
+      "diagnostic_alert_count": 5
+    },
+    {
+      "cell_id": "method_substitution_subtle_monolithic_rep1",
+      "dimension": "method_substitution",
+      "level": "subtle",
+      "path": "monolithic",
+      "rep": 1,
+      "hard_pass": true,
+      "error": null,
+      "diagnostic_alert_count": 4
+    },
+    {
+      "cell_id": "method_substitution_subtle_monolithic_rep2",
+      "dimension": "method_substitution",
+      "level": "subtle",
+      "path": "monolithic",
+      "rep": 2,
+      "hard_pass": true,
+      "error": null,
+      "diagnostic_alert_count": 4
+    },
+    {
+      "cell_id": "method_substitution_subtle_monolithic_rep3",
+      "dimension": "method_substitution",
+      "level": "subtle",
+      "path": "monolithic",
+      "rep": 3,
+      "hard_pass": true,
+      "error": null,
+      "diagnostic_alert_count": 5
+    },
+    {
+      "cell_id": "method_substitution_subtle_section_wise_rep1",
+      "dimension": "method_substitution",
+      "level": "subtle",
+      "path": "section_wise",
+      "rep": 1,
+      "hard_pass": true,
+      "error": null,
+      "diagnostic_alert_count": 6
+    },
+    {
+      "cell_id": "method_substitution_subtle_section_wise_rep2",
+      "dimension": "method_substitution",
+      "level": "subtle",
+      "path": "section_wise",
+      "rep": 2,
+      "hard_pass": true,
+      "error": null,
+      "diagnostic_alert_count": 6
+    },
+    {
+      "cell_id": "method_substitution_subtle_section_wise_rep3",
+      "dimension": "method_substitution",
+      "level": "subtle",
+      "path": "section_wise",
+      "rep": 3,
+      "hard_pass": true,
+      "error": null,
+      "diagnostic_alert_count": 5
+    },
+    {
+      "cell_id": "metric_direction_correct_monolithic_rep1",
+      "dimension": "metric_direction",
+      "level": "correct",
+      "path": "monolithic",
+      "rep": 1,
+      "hard_pass": true,
+      "error": null,
+      "diagnostic_alert_count": 3
+    },
+    {
+      "cell_id": "metric_direction_correct_monolithic_rep2",
+      "dimension": "metric_direction",
+      "level": "correct",
+      "path": "monolithic",
+      "rep": 2,
+      "hard_pass": true,
+      "error": null,
+      "diagnostic_alert_count": 3
+    },
+    {
+      "cell_id": "metric_direction_correct_monolithic_rep3",
+      "dimension": "metric_direction",
+      "level": "correct",
+      "path": "monolithic",
+      "rep": 3,
+      "hard_pass": true,
+      "error": null,
+      "diagnostic_alert_count": 3
+    },
+    {
+      "cell_id": "metric_direction_correct_section_wise_rep1",
+      "dimension": "metric_direction",
+      "level": "correct",
+      "path": "section_wise",
+      "rep": 1,
+      "hard_pass": true,
+      "error": null,
+      "diagnostic_alert_count": 3
+    },
+    {
+      "cell_id": "metric_direction_correct_section_wise_rep2",
+      "dimension": "metric_direction",
+      "level": "correct",
+      "path": "section_wise",
+      "rep": 2,
+      "hard_pass": true,
+      "error": null,
+      "diagnostic_alert_count": 3
+    },
+    {
+      "cell_id": "metric_direction_correct_section_wise_rep3",
+      "dimension": "metric_direction",
+      "level": "correct",
+      "path": "section_wise",
+      "rep": 3,
+      "hard_pass": true,
+      "error": null,
+      "diagnostic_alert_count": 3
+    },
+    {
+      "cell_id": "metric_direction_reversed_attribution_monolithic_rep1",
+      "dimension": "metric_direction",
+      "level": "reversed_attribution",
+      "path": "monolithic",
+      "rep": 1,
+      "hard_pass": true,
+      "error": null,
+      "diagnostic_alert_count": 3
+    },
+    {
+      "cell_id": "metric_direction_reversed_attribution_monolithic_rep2",
+      "dimension": "metric_direction",
+      "level": "reversed_attribution",
+      "path": "monolithic",
+      "rep": 2,
+      "hard_pass": true,
+      "error": null,
+      "diagnostic_alert_count": 3
+    },
+    {
+      "cell_id": "metric_direction_reversed_attribution_monolithic_rep3",
+      "dimension": "metric_direction",
+      "level": "reversed_attribution",
+      "path": "monolithic",
+      "rep": 3,
+      "hard_pass": true,
+      "error": null,
+      "diagnostic_alert_count": 3
+    },
+    {
+      "cell_id": "metric_direction_reversed_attribution_section_wise_rep1",
+      "dimension": "metric_direction",
+      "level": "reversed_attribution",
+      "path": "section_wise",
+      "rep": 1,
+      "hard_pass": true,
+      "error": null,
+      "diagnostic_alert_count": 3
+    },
+    {
+      "cell_id": "metric_direction_reversed_attribution_section_wise_rep2",
+      "dimension": "metric_direction",
+      "level": "reversed_attribution",
+      "path": "section_wise",
+      "rep": 2,
+      "hard_pass": true,
+      "error": null,
+      "diagnostic_alert_count": 3
+    },
+    {
+      "cell_id": "metric_direction_reversed_attribution_section_wise_rep3",
+      "dimension": "metric_direction",
+      "level": "reversed_attribution",
+      "path": "section_wise",
+      "rep": 3,
+      "hard_pass": true,
+      "error": null,
+      "diagnostic_alert_count": 3
+    }
+  ],
+  "dimensions": {
+    "ablation/context_only/monolithic": {
+      "total": 3,
+      "hard_pass": 3,
+      "errors": 0
+    },
+    "ablation/context_only/section_wise": {
+      "total": 3,
+      "hard_pass": 3,
+      "errors": 0
+    },
+    "ablation/full/monolithic": {
+      "total": 3,
+      "hard_pass": 3,
+      "errors": 0
+    },
+    "ablation/full/section_wise": {
+      "total": 3,
+      "hard_pass": 3,
+      "errors": 0
+    },
+    "ablation/markers_only/monolithic": {
+      "total": 3,
+      "hard_pass": 1,
+      "errors": 0
+    },
+    "ablation/markers_only/section_wise": {
+      "total": 3,
+      "hard_pass": 0,
+      "errors": 0
+    },
+    "method_substitution/absurd/monolithic": {
+      "total": 3,
+      "hard_pass": 3,
+      "errors": 0
+    },
+    "method_substitution/absurd/section_wise": {
+      "total": 3,
+      "hard_pass": 3,
+      "errors": 0
+    },
+    "method_substitution/plausible/monolithic": {
+      "total": 3,
+      "hard_pass": 3,
+      "errors": 0
+    },
+    "method_substitution/plausible/section_wise": {
+      "total": 3,
+      "hard_pass": 3,
+      "errors": 0
+    },
+    "method_substitution/subtle/monolithic": {
+      "total": 3,
+      "hard_pass": 3,
+      "errors": 0
+    },
+    "method_substitution/subtle/section_wise": {
+      "total": 3,
+      "hard_pass": 3,
+      "errors": 0
+    },
+    "metric_direction/correct/monolithic": {
+      "total": 3,
+      "hard_pass": 3,
+      "errors": 0
+    },
+    "metric_direction/correct/section_wise": {
+      "total": 3,
+      "hard_pass": 3,
+      "errors": 0
+    },
+    "metric_direction/reversed_attribution/monolithic": {
+      "total": 3,
+      "hard_pass": 3,
+      "errors": 0
+    },
+    "metric_direction/reversed_attribution/section_wise": {
+      "total": 3,
+      "hard_pass": 3,
+      "errors": 0
+    }
+  }
+}

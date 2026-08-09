@@ -76,9 +76,14 @@ export interface EstimateResponse {
   breakdown: EstimateBreakdown[];
 }
 
-export function getEstimate(strategy: string): Promise<EstimateResponse> {
+export function getEstimate(strategy: string, experimentSpecId?: string | null): Promise<EstimateResponse> {
   // F1.7a: migrated from apiFetchUnchecked to callContract with runtime decoder.
-  return callContract(getEstimateContract, { query: { strategy } });
+  return callContract(getEstimateContract, {
+    query: {
+      strategy,
+      experiment_spec_id: experimentSpecId || undefined,
+    },
+  });
 }
 
 export function triggerAutonomous(req: AutonomousCycleRequest): Promise<AutonomousCycleResponse> {

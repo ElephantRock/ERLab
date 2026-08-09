@@ -9,7 +9,7 @@
   "corpus_mode": "frozen_real",
   "corpus_manifest_path": "acceptance/corpora/low_resource_mt_v1/corpus_manifest.json",
   "provider": "zai",
-  "model": "glm-4.6",
+  "model": "glm-5.2",
   "embedding_provider": "lmstudio",
   "embedding_model": "text-embedding-qwen3-embedding-0.6b",
   "generation_parameters": {

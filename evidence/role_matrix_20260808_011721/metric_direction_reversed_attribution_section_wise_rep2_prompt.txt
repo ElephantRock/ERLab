@@ -1,0 +1,28 @@
+[Section-wise path — ground-truth block prepended to every section prompt]
+## Experiment Ground Truth (NON-NEGOTIABLE)
+
+The experiment below has ALREADY BEEN RUN. These are observed results, not suggestions. Per the GROUND TRUTH INVARIANTS in your system instructions, this section MUST be consistent with the method and dataset below, and the [RESULT-N] markers MUST appear verbatim, preserve their marker/value/role association, and preserve metric direction.
+
+## EXPERIMENT SPECIFICATION (the actual experiment this paper reports)
+Research question: How well does logistic regression classify Iris?
+Dataset: Iris
+Analysis method: logistic regression
+Task type: classification
+Baseline: majority-class predictor
+Comparison model: logistic regression
+Primary metric: balanced_accuracy
+
+## OBSERVED RESULTS (empirically measured — cite with [RESULT-N])
+
+[RESULT-1] balanced_accuracy = 0.973 (role=comparison, direction=higher_is_better, source=metrics.json, experiment_result_id=0)
+[RESULT-2] balanced_accuracy = 0.500 (role=baseline, direction=higher_is_better, source=metrics.json, experiment_result_id=0)
+[RESULT-3] ROC-AUC = 0.998 (role=comparison, direction=higher_is_better, source=metrics.json, experiment_result_id=0)
+
+These results are from an actual executed experiment. You may state 'we demonstrate' or 'our results show' ONLY for claims that cite [RESULT-N] markers above.
+The role and direction metadata attached to each [RESULT-N] marker are authoritative. Keep each value bound to its stated role and do not reverse the stated metric direction.
+
+### Authorized result markers (use verbatim)
+- [RESULT-1] balanced_accuracy = 0.973 (role=comparison, direction=higher_is_better)
+- [RESULT-2] balanced_accuracy = 0.500 (role=baseline, direction=higher_is_better)
+- [RESULT-3] ROC-AUC = 0.998 (role=comparison, direction=higher_is_better)
+

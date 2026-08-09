@@ -213,6 +213,10 @@ def recover_paper(
     with get_session() as session:
         prop = session.get(ProposalModel, proposal_id)
         if prop:
+            from backend.pipeline.evaluation.paper_release import (
+                compute_paper_hash,
+                merge_release_metadata,
+            )
             prop.paper_md = result['paper_markdown']
             paper_meta = {
                 "status": "ready",
@@ -221,12 +225,14 @@ def recover_paper(
                 "paper_evaluation": {
                     "status": result['eval_status'],
                     "scope": "paper",
+                    "paper_hash": compute_paper_hash(result['paper_markdown']),
                     "gates": result['gates'],
                     **({"blocking_reasons": result['blocking_reasons']} if result['blocking_reasons'] else {}),
                 },
                 "source_map": result['source_map'],
                 "experiment_result_id": result['experiment_result_id'],
             }
+            paper_meta = merge_release_metadata(prop, paper_meta) or paper_meta
             prop.paper_meta_json = _json.dumps(paper_meta)
             session.commit()
             console.print(f"[green]Paper persisted to proposal {proposal_id}[/green]")

@@ -1,0 +1,88 @@
+{
+  "cell_id": "ablation_markers_only_monolithic_rep2",
+  "dimension": "ablation",
+  "level": "markers_only",
+  "path": "monolithic",
+  "rep": 2,
+  "hard_verdict": {
+    "all_hard_pass": false,
+    "checks": {
+      "paper_nonempty": true,
+      "gt_method_in_identity": false,
+      "gt_dataset_in_identity": true,
+      "all_markers_present": true,
+      "_missing_markers": [],
+      "marker_values_verbatim": true,
+      "_missing_values": []
+    }
+  },
+  "diagnostics": {
+    "alerts": [
+      {
+        "type": "conflicting_term_mentioned",
+        "term": "quantum",
+        "context": "# Variational Quantum Linear Solver for Hydrodynamic Lubrication: A Downstream Classification Evaluation on the Iris Dataset\n\n## Abstract\n\nHy",
+        "adjudication": "May be a Related Work comparison (acceptable) or a method substitution (failure). Human must decide."
+      },
+      {
+        "type": "conflicting_term_mentioned",
+        "term": "vqls",
+        "context": "s, motivating the exploration of quantum computing approaches. This paper proposes a variational quantum linear solver (VQLS) framework that encodes the discretized Reynolds equation into a parameterized quantum circuit ansatz. The VQLS approac",
+        "adjudication": "May be a Related Work comparison (acceptable) or a method substitution (failure). Human must decide."
+      },
+      {
+        "type": "conflicting_term_mentioned",
+        "term": "lubrication",
+        "context": "# Variational Quantum Linear Solver for Hydrodynamic Lubrication: A Downstream Classification Evaluation on the Iris Dataset\n\n## Abstract\n\nHydrodynamic lubrication modeling in mechanic",
+        "adjudication": "May be a Related Work comparison (acceptable) or a method substitution (failure). Human must decide."
+      },
+      {
+        "type": "conflicting_term_mentioned",
+        "term": "bearing",
+        "context": " Downstream Classification Evaluation on the Iris Dataset\n\n## Abstract\n\nHydrodynamic lubrication modeling in mechanical bearings requires solving the Reynolds equation, a partial differential equation that, upon spatial discretization, yields larg",
+        "adjudication": "May be a Related Work comparison (acceptable) or a method substitution (failure). Human must decide."
+      },
+      {
+        "type": "conflicting_term_mentioned",
+        "term": "reynolds",
+        "context": "luation on the Iris Dataset\n\n## Abstract\n\nHydrodynamic lubrication modeling in mechanical bearings requires solving the Reynolds equation, a partial differential equation that, upon spatial discretization, yields large-scale linear systems. Classic",
+        "adjudication": "May be a Related Work comparison (acceptable) or a method substitution (failure). Human must decide."
+      },
+      {
+        "type": "marker_attribution_context",
+        "marker": "[RESULT-1]",
+        "sentence": "The proposed VQLS method, using the parameterized ansatz with depth $D = 4$ and 28 trainable parameters per one-versus-rest subproblem, achieved a balanced accuracy of [RESULT-1] balanced_accuracy = 0",
+        "role_words_nearby": [
+          "proposed"
+        ],
+        "adjudication": "Does the sentence credit the marker to the role expected by ground truth? Human must verify."
+      },
+      {
+        "type": "marker_attribution_context",
+        "marker": "[RESULT-2]",
+        "sentence": "The naive majority-class baseline, which serves as a reference for chance-level performance, achieved a balanced accuracy of [RESULT-2] balanced_accuracy = 0",
+        "role_words_nearby": [
+          "baseline",
+          "majority",
+          "majority-class"
+        ],
+        "adjudication": "Does the sentence credit the marker to the role expected by ground truth? Human must verify."
+      },
+      {
+        "type": "marker_attribution_context",
+        "marker": "[RESULT-3]",
+        "sentence": "In addition to balanced accuracy, the VQLS classifier attained an ROC-AUC of [RESULT-3] ROC-AUC = 0",
+        "role_words_nearby": [],
+        "adjudication": "Does the sentence credit the marker to the role expected by ground truth? Human must verify."
+      }
+    ]
+  },
+  "usage": {
+    "input_tokens": 1336,
+    "output_tokens": 8513,
+    "served_model": "glm-5.2",
+    "cost_usd": 0.005308,
+    "note_for_section_wise": "token counts reflect the LAST call only; cost_usd is cumulative across all calls in this cell"
+  },
+  "error": null
+}

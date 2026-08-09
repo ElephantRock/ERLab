@@ -80,14 +80,15 @@ class TestOrchestratorYAML:
             assert config is not None
             assert len(config.stages) > 0, f"{strat} has no stages"
 
-    def test_02_fast_scan_has_6_enabled_stages(self):
-        """fast_scan strategy has exactly 6 enabled stages."""
+    def test_02_fast_scan_has_7_enabled_stages(self):
+        """fast_scan keeps lightweight idea generation so synthesis is reachable."""
         from backend.pipeline.orchestrator import PipelineOrchestrator
         config = PipelineOrchestrator._load_yaml_strategy("fast_scan")
         enabled = {k: v for k, v in config.stages.items() if v.enabled}
-        assert len(enabled) == 6
+        assert len(enabled) == 7
+        assert "idea_generation" in enabled
 
-    def test_03_deep_research_has_16_enabled_stages(self):
+    def test_03_deep_research_has_17_enabled_stages(self):
         """deep_research strategy has all 17 enabled stages (18 total incl. trimmer)."""
         from backend.pipeline.orchestrator import PipelineOrchestrator
         config = PipelineOrchestrator._load_yaml_strategy("deep_research")
@@ -107,7 +108,8 @@ class TestOrchestratorYAML:
         assert "literature_search" in config.stages
         assert "export" in config.stages
         enabled = {k: v for k, v in config.stages.items() if v.enabled}
-        assert len(enabled) == 6
+        assert len(enabled) == 7
+        assert "idea_generation" in enabled
 
 
 # ── DAG API Endpoint ─────────────────────────────────────────────────

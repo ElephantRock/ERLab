@@ -10,11 +10,17 @@ vi.mock("@/components/pipeline/run-config-form", () => ({
   RunConfigForm: ({
     onSubmit,
     isLoading,
+    onStrategyChange,
+    onExperimentSpecChange,
   }: {
     onSubmit: (config: Record<string, unknown>) => void;
     isLoading: boolean;
+    onStrategyChange?: (strategy: string) => void;
+    onExperimentSpecChange?: (specId: string | null) => void;
   }) => (
     <div data-testid="run-config-form">
+      <button data-testid="select-deep" onClick={() => onStrategyChange?.("deep_research")}>Deep</button>
+      <button data-testid="select-registered" onClick={() => onExperimentSpecChange?.("phase5-pilot-v1")}>Registered</button>
       <button
         data-testid="submit-btn"
         disabled={isLoading}
@@ -69,6 +75,22 @@ vi.mock("@/api/pipeline", () => ({
   }),
 }));
 
+vi.mock("@/api/experiments", () => ({
+  listExperimentSpecs: vi.fn().mockResolvedValue({
+    compatible_strategies: ["academic_proposal", "deep_research"],
+    specs: [
+      {
+        spec_id: "phase5-pilot-v1",
+        description: "Iris pilot",
+        research_question: "Does logistic regression classify Iris species?",
+        dataset_name: "iris",
+        analysis_method: "logistic_regression",
+        primary_metric: "balanced_accuracy",
+      },
+    ],
+  }),
+}));
+
 vi.mock("@/api/status", () => ({
   getSystemStatus: vi.fn().mockResolvedValue({
     app_name: "Elephant Rock Research",
@@ -82,10 +104,11 @@ vi.mock("@/api/status", () => ({
   }),
 }));
 
-import { triggerRun, cancelRun } from "@/api/pipeline";
+import { triggerRun, cancelRun, getEstimate } from "@/api/pipeline";
 
 const mockedTriggerRun = vi.mocked(triggerRun);
 const mockedCancelRun = vi.mocked(cancelRun);
+const mockedGetEstimate = vi.mocked(getEstimate);
 
 function renderPipelineNew() {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 } } });
@@ -120,6 +143,36 @@ describe("PipelineNew", () => {
     expect(screen.getByTestId("run-config-form")).toBeInTheDocument();
     expect(screen.getByText("Single Run")).toBeInTheDocument();
     expect(screen.getByText("Autonomous Cycle")).toBeInTheDocument();
+  });
+
+  it("updates the estimate/preview request when a registered experiment is selected", async () => {
+    const user = userEvent.setup();
+    mockedGetEstimate.mockImplementation(async (strategy: string, experimentSpecId?: string | null) => ({
+      strategy,
+      stages: experimentSpecId ? 2 : 1,
+      estimated_cost_usd: 0,
+      estimated_time_seconds: 60,
+      estimated_time_display: "1 min",
+      cost_display: "$0.00",
+      local_cost_usd: 0,
+      cloud_cost_usd: 0,
+      breakdown: experimentSpecId
+        ? [
+            { stage: "literature_search", model: "local", label: "local", input_tokens: 0, output_tokens: 0, cost_usd: 0, time_seconds: 10 },
+            { stage: "experiment_execution", model: "system", label: "system", input_tokens: 0, output_tokens: 0, cost_usd: 0, time_seconds: 50 },
+          ]
+        : [{ stage: "literature_search", model: "local", label: "local", input_tokens: 0, output_tokens: 0, cost_usd: 0, time_seconds: 10 }],
+    }));
+
+    renderPipelineNew();
+    await user.click(screen.getByTestId("select-deep"));
+    await user.click(screen.getByTestId("select-registered"));
+
+    await waitFor(() => {
+      expect(mockedGetEstimate).toHaveBeenCalledWith("deep_research", "phase5-pilot-v1");
+      expect(screen.getByText("Experiment")).toBeInTheDocument();
+      expect(screen.getByText("phase5-pilot-v1")).toBeInTheDocument();
+    });
   });
 
   // ── TEST-11-01-08: Handles SSE connection error ─────────────────

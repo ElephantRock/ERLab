@@ -1,0 +1,84 @@
+{
+  "cell_id": "ablation_markers_only_monolithic_rep3",
+  "dimension": "ablation",
+  "level": "markers_only",
+  "path": "monolithic",
+  "rep": 3,
+  "hard_verdict": {
+    "all_hard_pass": false,
+    "checks": {
+      "paper_nonempty": true,
+      "gt_method_in_identity": false,
+      "gt_dataset_in_identity": true,
+      "all_markers_present": true,
+      "_missing_markers": [],
+      "marker_values_verbatim": true,
+      "_missing_values": []
+    }
+  },
+  "diagnostics": {
+    "alerts": [
+      {
+        "type": "conflicting_term_mentioned",
+        "term": "quantum",
+        "context": "# Variational Quantum Linear Solver for Hydrodynamic Lubrication: A Classification-Driven Evaluation\n\n## Abstract\n\nHydrodynamic lubrication m",
+        "adjudication": "May be a Related Work comparison (acceptable) or a method substitution (failure). Human must decide."
+      },
+      {
+        "type": "conflicting_term_mentioned",
+        "term": "vqls",
+        "context": "ated by classical finite-element and finite-difference methods. This work proposes a variational quantum linear solver (VQLS) framework that encodes the Reynolds equation governing fluid film behavior into a parameterized quantum ansatz, enabli",
+        "adjudication": "May be a Related Work comparison (acceptable) or a method substitution (failure). Human must decide."
+      },
+      {
+        "type": "conflicting_term_mentioned",
+        "term": "lubrication",
+        "context": "# Variational Quantum Linear Solver for Hydrodynamic Lubrication: A Classification-Driven Evaluation\n\n## Abstract\n\nHydrodynamic lubrication modeling is a computationally intensive task",
+        "adjudication": "May be a Related Work comparison (acceptable) or a method substitution (failure). Human must decide."
+      },
+      {
+        "type": "conflicting_term_mentioned",
+        "term": "bearing",
+        "context": "en Evaluation\n\n## Abstract\n\nHydrodynamic lubrication modeling is a computationally intensive task central to mechanical bearing design, traditionally dominated by classical finite-element and finite-difference methods. This work proposes a variati",
+        "adjudication": "May be a Related Work comparison (acceptable) or a method substitution (failure). Human must decide."
+      },
+      {
+        "type": "conflicting_term_mentioned",
+        "term": "reynolds",
+        "context": "and finite-difference methods. This work proposes a variational quantum linear solver (VQLS) framework that encodes the Reynolds equation governing fluid film behavior into a parameterized quantum ansatz, enabling the solution of large-scale linear",
+        "adjudication": "May be a Related Work comparison (acceptable) or a method substitution (failure). Human must decide."
+      },
+      {
+        "type": "marker_attribution_context",
+        "marker": "[RESULT-1]",
+        "sentence": "The observed balanced accuracy of [RESULT-1] balanced_accuracy = 0",
+        "role_words_nearby": [],
+        "adjudication": "Does the sentence credit the marker to the role expected by ground truth? Human must verify."
+      },
+      {
+        "type": "marker_attribution_context",
+        "marker": "[RESULT-2]",
+        "sentence": "Third, the null baseline configuration is expected to yield [RESULT-2] balanced_accuracy = 0",
+        "role_words_nearby": [
+          "baseline"
+        ],
+        "adjudication": "Does the sentence credit the marker to the role expected by ground truth? Human must verify."
+      },
+      {
+        "type": "marker_attribution_context",
+        "marker": "[RESULT-3]",
+        "sentence": "The observed value of [RESULT-3] ROC-AUC = 0",
+        "role_words_nearby": [],
+        "adjudication": "Does the sentence credit the marker to the role expected by ground truth? Human must verify."
+      }
+    ]
+  },
+  "usage": {
+    "input_tokens": 1336,
+    "output_tokens": 5100,
+    "served_model": "glm-5.2",
+    "cost_usd": 0.00326,
+    "note_for_section_wise": "token counts reflect the LAST call only; cost_usd is cumulative across all calls in this cell"
+  },
+  "error": null
+}

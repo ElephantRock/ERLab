@@ -29,10 +29,14 @@ _background_tasks: set[asyncio.Task] = set()
 )
 async def estimate_run(
     strategy: str = Query(default="deep_research", description="Pipeline strategy"),
+    experiment_spec_id: str | None = Query(
+        default=None,
+        description="Registered experiment spec ID; when present, include experiment execution in the estimate.",
+    ),
 ):
     """Return estimated cost and time for a pipeline run."""
     from backend.pipeline.monitoring.cost_estimator import estimate_run_cost
-    est = estimate_run_cost(strategy)
+    est = estimate_run_cost(strategy, include_experiment=bool(experiment_spec_id))
     return {
         "strategy": est.strategy,
         "stages": est.stages,
@@ -89,6 +93,9 @@ async def trigger_run(request: PipelineRunRequest):
             # queryable in run lists/detail and survives resume. Materially
             # influences the run (literature search + synthesis); not display-only.
             "research_question": request.research_question,
+            # Empirical-mode exposure: persist the selected authority alongside
+            # the run so detail/history views can truthfully identify it.
+            "experiment_spec_id": request.experiment_spec_id,
             "quality": {
                 "proposal_depth": quality["proposal_depth"],
                 "novelty_depth": quality["novelty_depth"],

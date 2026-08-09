@@ -128,6 +128,25 @@ _STATIC_DEFAULTS: dict[str, dict[str, Any]] = {
         "cost_per_1k_input": 0.003,
         "cost_per_1k_output": 0.015,
     },
+    # glm-5.2: values inherited from glm-5.1 pending live probe.
+    # Assumes 5.2 >= 5.1 in capability. Adjust after a real probe measures
+    # the context window and reliability on the new model.
+    "glm-5.2": {
+        "provider": "openai",
+        "context_window": 8192,
+        "roles": {"reason", "synthesize", "critique"},
+        "supports_json_schema": True,
+        "supports_tools": True,
+        "reliability": {
+            "schema_following": 0.85,
+            "citation_grounding": 0.7,
+            "long_synthesis": 0.8,
+            "scoring": 0.8,
+        },
+        "latency_class": "cloud_medium",
+        "cost_per_1k_input": 0.003,
+        "cost_per_1k_output": 0.015,
+    },
 }
 
 # Conservative fallback for unknown models

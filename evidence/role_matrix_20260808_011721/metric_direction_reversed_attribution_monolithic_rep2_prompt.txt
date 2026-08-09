@@ -1,0 +1,43 @@
+## Experiment Ground Truth (NON-NEGOTIABLE)
+
+The experiment below has ALREADY BEEN RUN. These are observed results, not suggestions. Per the GROUND TRUTH INVARIANTS in your system instructions, the paper MUST be about this method and dataset, and the [RESULT-N] markers MUST appear verbatim with correct metric direction.
+
+## EXPERIMENT SPECIFICATION (the actual experiment this paper reports)
+Research question: How well does logistic regression classify Iris?
+Dataset: Iris
+Analysis method: logistic regression
+Task type: classification
+Baseline: majority-class predictor
+Comparison model: logistic regression
+Primary metric: balanced_accuracy
+
+## OBSERVED RESULTS (empirically measured — cite with [RESULT-N])
+
+[RESULT-1] balanced_accuracy = 0.973 (role=comparison, direction=higher_is_better, source=metrics.json, experiment_result_id=0)
+[RESULT-2] balanced_accuracy = 0.500 (role=baseline, direction=higher_is_better, source=metrics.json, experiment_result_id=0)
+[RESULT-3] ROC-AUC = 0.998 (role=comparison, direction=higher_is_better, source=metrics.json, experiment_result_id=0)
+
+These results are from an actual executed experiment. You may state 'we demonstrate' or 'our results show' ONLY for claims that cite [RESULT-N] markers above.
+The role and direction metadata attached to each [RESULT-N] marker are authoritative. Keep each value bound to its stated role and do not reverse the stated metric direction.
+
+### Authorized result markers (use verbatim)
+- [RESULT-1] balanced_accuracy = 0.973 (role=comparison, direction=higher_is_better)
+- [RESULT-2] balanced_accuracy = 0.500 (role=baseline, direction=higher_is_better)
+- [RESULT-3] ROC-AUC = 0.998 (role=comparison, direction=higher_is_better)
+
+## Research Domain
+machine learning
+
+## Supporting Literature (CLOSED-BOOK — cite only these)
+
+[SOURCE-1] Smith, J. (2020). A survey of linear classification methods. Journal of Machine Learning Research.
+[SOURCE-2] Lee, K. (2019). Multiclass evaluation metrics. Proceedings of the International Conference on Machine Learning (ICML).
+
+## Research Proposal to Expand
+
+## Proposal: Majority-Class Baseline for Iris Classification
+
+We find that the majority-class baseline is an unexpectedly strong predictor on the Iris dataset. The baseline achieves balanced_accuracy = 0.973 [RESULT-1], substantially outperforming logistic regression, which achieves only balanced_accuracy = 0.500 [RESULT-2]. The baseline's ROC-AUC = 0.998 [RESULT-3] confirms its strong ranking performance. This surprising result suggests the Iris classes are not as separable as commonly assumed.
+
+
+Now write a complete academic paper expanding this proposal. Follow the section structure from your instructions. Use [SOURCE-X] citations referencing only the papers listed above. The Experiment Ground Truth block above is authoritative — if the proposal conflicts with it, the ground truth wins.

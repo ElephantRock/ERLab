@@ -18,6 +18,38 @@ router = APIRouter()
 logger = logging.getLogger(__name__)
 
 
+@router.get(
+    "/specs",
+    summary="List registered experiment specifications",
+    description="Return the checked-in empirical specifications available for pipeline runs.",
+)
+async def list_experiment_specs() -> dict:
+    """Return selectable registered experiment specs and compatible strategies."""
+    from backend.pipeline.experiment.specification import list_specs
+    from backend.pipeline.monitoring.cost_estimator import STRATEGY_STAGES
+
+    specs = list_specs()
+    compatible_strategies = sorted(
+        strategy
+        for strategy, stages in STRATEGY_STAGES.items()
+        if "experiment_execution" in stages
+    )
+    return {
+        "specs": [
+            {
+                "spec_id": spec.spec_id,
+                "description": spec.description,
+                "research_question": spec.research_question,
+                "dataset_name": spec.dataset_name,
+                "analysis_method": spec.analysis_method,
+                "primary_metric": spec.primary_metric,
+            }
+            for spec in specs
+        ],
+        "compatible_strategies": compatible_strategies,
+    }
+
+
 @router.post(
     "/run",
     summary="Run experiment in sandbox",

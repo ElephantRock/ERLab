@@ -108,6 +108,8 @@ class SectionWiseSynthesizer:
         domain: str = "AI/NLP",
         venue: str = "Generic",
         proposal_id: int = 0,
+        experiment_context: str | None = None,
+        result_markers: list[str] | None = None,
     ) -> SectionWiseResult:
         """Generate a paper section by section.
 
@@ -123,6 +125,12 @@ class SectionWiseSynthesizer:
             domain: Research domain.
             venue: Target venue.
             proposal_id: Identifier for the proposal.
+            experiment_context: Observed-results prose. Forwarded to every
+                section prompt as a non-negotiable ground-truth block (parity
+                with the monolithic PaperSynthesizer — see prompts/
+                paper_synthesis_system.md § GROUND TRUTH INVARIANTS).
+            result_markers: Verbatim [RESULT-N] marker strings. Forwarded to
+                every section prompt as the authorized marker set.
 
         Returns:
             SectionWiseResult with the assembled paper.
@@ -130,7 +138,16 @@ class SectionWiseSynthesizer:
         model_used = self._get_model_name()
 
         # Step 1: Generate outline
-        outline = await self._generate_outline(proposal_text, domain)
+        # Step 1: Generate outline from the same authoritative inputs used by
+        # section generation. The outline establishes the paper's narrative
+        # identity, so leaving it proposal-only can re-introduce a conflicting
+        # method/dataset before grounded section generation begins.
+        outline = await self._generate_outline(
+            proposal_text,
+            domain,
+            experiment_context=experiment_context,
+            result_markers=result_markers,
+        )
         logger.info("Paper outline generated: %d chars", len(outline))
 
         # Step 2: Build a compressed source reference for citation
@@ -155,6 +172,8 @@ class SectionWiseSynthesizer:
                     proposal_summary=self._summarize_proposal(proposal_text),
                     relevant_sources=relevant_sources,
                     domain=domain,
+                    experiment_context=experiment_context,
+                    result_markers=result_markers,
                 )
                 sections.append(draft)
                 logger.info(
@@ -195,12 +214,41 @@ class SectionWiseSynthesizer:
             ),
         )
 
-    async def _generate_outline(self, proposal_text: str, domain: str) -> str:
-        """Generate a paper outline from the proposal."""
-        # Truncate proposal for outline generation to fit context
+    async def _generate_outline(
+        self,
+        proposal_text: str,
+        domain: str,
+        experiment_context: str | None = None,
+        result_markers: list[str] | None = None,
+    ) -> str:
+        """Generate a paper outline with ground truth taking precedence.
+
+        The outline is a narrative-control point for all downstream sections.
+        When empirical ground truth is available, it must therefore receive the
+        same authoritative context as section generation; otherwise an
+        adversarial or stale proposal can establish the wrong method/dataset in
+        the outline and that framing is then repeated in every section prompt.
+        """
+        # Truncate proposal for outline generation to fit context.
         proposal_summary = self._summarize_proposal(proposal_text)
+        ground_truth_block = self._render_ground_truth_block(
+            experiment_context=experiment_context,
+            result_markers=result_markers,
+        )
+
+        precedence_rule = ""
+        if ground_truth_block:
+            precedence_rule = (
+                "GROUND-TRUTH PRECEDENCE: The Experiment Ground Truth above is "
+                "authoritative. If the proposal conflicts with it, rewrite the "
+                "outline around the ground-truth method, dataset, and observed "
+                "results. Do NOT make the conflicting proposal method or dataset "
+                "the paper's title, thesis, proposed method, or evaluation target.\n\n"
+            )
 
         prompt = (
+            f"{ground_truth_block}"
+            f"{precedence_rule}"
             f"Generate a brief outline for an academic paper in the domain '{domain}'.\n\n"
             f"Proposal summary:\n{proposal_summary}\n\n"
             f"Provide a short outline with section titles and 1-2 sentence descriptions. "
@@ -208,10 +256,16 @@ class SectionWiseSynthesizer:
             f"Evaluation Plan, Discussion, Conclusion."
         )
 
+        system_prompt = (
+            "You are an academic paper outline generator. Be concise. "
+            "When an Experiment Ground Truth block is present, it is "
+            "non-negotiable and overrides conflicting proposal narrative."
+        )
+
         try:
             result = await self._provider.complete(
                 messages=[
-                    {"role": "system", "content": "You are an academic paper outline generator. Be concise."},
+                    {"role": "system", "content": system_prompt},
                     {"role": "user", "content": prompt},
                 ],
                 temperature=0.3,
@@ -296,6 +350,52 @@ class SectionWiseSynthesizer:
 
         return "\n".join(selected) if selected else source_text[:source_budget]
 
+    @staticmethod
+    def _render_ground_truth_block(
+        experiment_context: str | None,
+        result_markers: list[str] | None,
+    ) -> str:
+        """Render the ## Experiment Ground Truth block (parity with monolithic).
+
+        Mirrors PaperSynthesizer._build_user_prompt's ground-truth section so
+        the system prompt's GROUND TRUTH INVARIANTS apply uniformly across
+        monolithic and section-wise paths. Empty string when neither input is
+        present (non-empirical synthesis).
+        """
+        has_ctx = bool(experiment_context and experiment_context.strip())
+        has_markers = bool(result_markers)
+        if not (has_ctx or has_markers):
+            return ""
+
+        parts: list[str] = []
+        parts.append("## Experiment Ground Truth (NON-NEGOTIABLE)\n")
+        if has_ctx:
+            parts.append(
+                "The experiment below has ALREADY BEEN RUN. These are observed "
+                "results, not suggestions. Per the GROUND TRUTH INVARIANTS in "
+                "your system instructions, this section MUST be consistent with "
+                "the method and dataset below, and the [RESULT-N] markers MUST "
+                "appear verbatim, preserve their marker/value/role association, "
+                "and preserve metric direction.\n"
+            )
+            parts.append(experiment_context.strip())
+            parts.append("")
+        else:
+            parts.append(
+                "The following [RESULT-N] markers are drawn from observed "
+                "experiment output. They MUST appear verbatim, preserve their "
+                "marker/value/role association, and preserve metric direction. "
+                "Markers not in this list are forbidden.\n"
+            )
+
+        if has_markers:
+            parts.append("### Authorized result markers (use verbatim)")
+            for m in result_markers:  # type: ignore[union-attr]
+                parts.append(f"- {m}")
+            parts.append("")
+
+        return "\n".join(parts) + "\n"
+
     async def _generate_section(
         self,
         section_id: str,
@@ -306,6 +406,8 @@ class SectionWiseSynthesizer:
         relevant_sources: str,
         domain: str,
         proposal_id: int = 0,
+        experiment_context: str | None = None,
+        result_markers: list[str] | None = None,
     ) -> SectionDraft:
         """Generate a single section with contract-aware structured output.
 
@@ -315,6 +417,12 @@ class SectionWiseSynthesizer:
         3. Validate against CLAIM_SCHEMA
         4. If valid → ClaimRenderer → prose + sidecar
         5. If invalid → retry once with error feedback → prose fallback
+
+        Ground-truth parity (phase-8 fix): when ``experiment_context`` and/or
+        ``result_markers`` are present, a ``## Experiment Ground Truth`` block
+        is prepended to every prompt variant (structured, retry, prose
+        fallback) so the system prompt's GROUND TRUTH INVARIANTS apply on the
+        fallback path, not just the monolithic path.
         """
         from backend.pipeline.synthesis.section_contracts import (
             get_section_prompt, CLAIM_SCHEMA, CLAIM_SCHEMA_STR,
@@ -328,7 +436,12 @@ class SectionWiseSynthesizer:
         evidence_section = (
             f"## Available Evidence (cite ONLY these):\n{relevant_sources}"
         )
+        ground_truth_block = self._render_ground_truth_block(
+            experiment_context=experiment_context,
+            result_markers=result_markers,
+        )
         context = (
+            f"{ground_truth_block}"
             f"Paper outline:\n{outline[:500]}\n\n"
             f"Proposal summary:\n{proposal_summary[:1000]}\n\n"
             f"{evidence_section}\n\n"
@@ -451,6 +564,7 @@ class SectionWiseSynthesizer:
 
         # --- Attempt 3: Prose fallback ---
         prose_prompt = (
+            f"{ground_truth_block}"
             f"Write the '{section_title}' section ({target_words} target words) "
             f"for a research paper in '{domain}'.\n\n"
             f"Paper outline:\n{outline[:500]}\n\n"
@@ -473,7 +587,12 @@ class SectionWiseSynthesizer:
                     {"role": "user", "content": prose_prompt},
                 ],
                 temperature=0.4,
-                max_tokens=min(max_output, 4096),
+                # glm-5.2 reasoning model: needs room for reasoning_content
+                # before final content. Don't cap at 4096 — that produced empty
+                # content in earlier pings when reasoning exhausted the budget.
+                # Floor at max_output (section target); ceiling is the verified
+                # server-side max (z.ai code 1210 rejects >131072).
+                max_tokens=min(131072, max(max_output, 8192)),
             )
         except Exception as e:
             logger.warning("Section '%s' generation failed: %s", section_title, e)
