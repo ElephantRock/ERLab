@@ -162,7 +162,10 @@ class GovernedVectorBackend:
             return None
 
         embeddings = result.get("embeddings", [])
-        embedding = tuple(embeddings[0]) if embeddings else ()
+        if embeddings is not None and len(embeddings) > 0:
+            embedding = tuple(embeddings[0])
+        else:
+            embedding = ()
 
         metadatas = result.get("metadatas", [{}])
         meta = metadatas[0] if metadatas else {}
