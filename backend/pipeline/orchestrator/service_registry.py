@@ -156,7 +156,38 @@ class ServiceRegistry:
         from backend.pipeline.feasibility.feasibility_scorer import FeasibilityScorer
 
         self.gap_analyzer = GapAnalyzer(thinking)
-        self.novelty = NoveltyChecker(thinking, self.store, self.retriever)
+
+        # Build governed vector runtime once for the whole registry.
+        # Both ingestion (governed indexing) and novelty (governed retrieval)
+        # share the same embedding identity, profile, dimension, and backend.
+        self.governed_runtime = None
+        try:
+            from backend.db.database import _get_engine as _grt_get_engine
+            from backend.pipeline.vector_runtime import build_governed_vector_runtime_from_settings
+            self.governed_runtime = build_governed_vector_runtime_from_settings(
+                _grt_get_engine()
+            )
+            if self.governed_runtime is not None:
+                logger.info(
+                    "Governed vector runtime constructed: profile=%s",
+                    self.governed_runtime.effective_embedding_config.embedding_profile_id[:16],
+                )
+        except Exception as e:
+            logger.warning("Governed vector runtime construction failed: %s", e)
+
+        # Inject the same governed runtime + adapter into NoveltyChecker so
+        # governed novelty retrieval has the embedding dependency it needs.
+        self.novelty = NoveltyChecker(
+            thinking,
+            self.store,
+            self.retriever,
+            governed_runtime=self.governed_runtime,
+            governed_embedding=(
+                self.governed_runtime.embedding_adapter
+                if self.governed_runtime is not None
+                else None
+            ),
+        )
         self.feasibility = FeasibilityScorer(thinking)
 
         # Citation-aware novelty augmentation (Gap 11)
