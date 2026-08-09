@@ -145,6 +145,17 @@ class GovernedEmbeddingAdapter:
         query_tuple = await self.embed_query(text)
         return list(query_tuple)
 
+    async def embed_texts(self, texts: list[str]) -> list[list[float]]:
+        """Batch embed returning plain lists, satisfying the
+        ``GovernedEmbeddingProtocol`` used by NoveltyChecker.
+
+        Delegates to ``embed_documents`` for validation, then converts
+        tuples to lists for compatibility with callers that expect
+        ``list[list[float]]`` (matching ``EmbeddingService.embed_texts``).
+        """
+        doc_tuples = await self.embed_documents(texts)
+        return [list(v) for v in doc_tuples]
+
     async def embed_documents_with_evidence(
         self,
         texts: Sequence[str],
