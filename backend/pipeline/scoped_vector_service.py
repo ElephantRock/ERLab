@@ -295,6 +295,8 @@ async def query_vectors(
             )
         ).scalar_one_or_none()
 
+        _reusing_failed_event = False
+
         if existing is not None:
             if existing.status == "success" and existing.input_fingerprint == input_fp:
                 # Replay — return stored results
