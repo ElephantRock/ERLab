@@ -114,7 +114,7 @@ _STATIC_DEFAULTS: dict[str, dict[str, Any]] = {
     },
     "glm-5.1": {
         "provider": "anthropic",
-        "context_window": 8192,
+        "context_window": 128000,
         "roles": {"reason", "synthesize", "critique"},
         "supports_json_schema": True,
         "supports_tools": True,
@@ -128,12 +128,15 @@ _STATIC_DEFAULTS: dict[str, dict[str, Any]] = {
         "cost_per_1k_input": 0.003,
         "cost_per_1k_output": 0.015,
     },
-    # glm-5.2: values inherited from glm-5.1 pending live probe.
-    # Assumes 5.2 >= 5.1 in capability. Adjust after a real probe measures
-    # the context window and reliability on the new model.
+    # glm-5.2: 1M-token context window per Z.ai's official announcement
+    # (https://z.ai/blog/glm-5.2 — "Solid 1M Context"). The previous value
+    # of 8192 was inherited from glm-5.1 as a placeholder "pending live
+    # probe" — but that probe never ran, and 8192 caused the gateway's
+    # budget check to reject every synthesis/adversarial-review prompt,
+    # silently blocking all live pipeline runs.
     "glm-5.2": {
         "provider": "openai",
-        "context_window": 8192,
+        "context_window": 1000000,
         "roles": {"reason", "synthesize", "critique"},
         "supports_json_schema": True,
         "supports_tools": True,

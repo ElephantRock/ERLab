@@ -1793,12 +1793,23 @@ class AdversarialReviewStage(PipelineStage):
             for p in ctx.all_papers[:10]
         ]
 
-        # Determine context window from provider or gateway
+        # Determine context window from the capability registry so the
+        # adversarial reviewer's budget estimate matches the model's real
+        # capacity. Falls back to 8192 only if the registry is unavailable.
         context_window = 8192
         try:
-            from backend.config import get_settings
-            settings = get_settings()
-            # The gateway may have probed a different context
+            from backend.pipeline.gateway.capability_registry import ModelCapabilityRegistry
+            _model_id = ""
+            try:
+                from backend.config import get_settings
+                _s = get_settings()
+                _model_id = getattr(_s, "openai_model", "") or getattr(_s, "default_provider", "")
+            except Exception:
+                pass
+            if _model_id:
+                _caps = ModelCapabilityRegistry().get(_model_id)
+                if _caps and _caps.context_window:
+                    context_window = _caps.context_window
         except Exception:
             pass
 
