@@ -2583,6 +2583,11 @@ class PaperSynthesisStage(PipelineStage):
                 numeric_fidelity_reason = "; ".join(
                     f"{m.marker}: {m.reason[:120]}" for m in _numeric_only
                 )
+            else:
+                numeric_fidelity_reason = (
+                    f"{len(result_markers)} RESULT marker(s) validated; "
+                    f"0 numeric mismatches"
+                )
         gates.append({
             "gate": "numeric_fidelity",
             "passed": numeric_fidelity_passed,
