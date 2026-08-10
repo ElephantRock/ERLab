@@ -247,9 +247,16 @@ class GovernedVectorBackend:
 
         collection = self._collections.get(collection_name)
         if collection is None:
-            raise ValueError(
-                f"collection {collection_name!r} not initialized"
-            )
+            # Lazy-load from ChromaDB instead of failing — the collection
+            # exists on disk but wasn't cached because this backend instance
+            # didn't create it (a different process or the ingestion stage did).
+            try:
+                collection = self._client.get_collection(collection_name)
+                self._collections[collection_name] = collection
+            except Exception:
+                raise ValueError(
+                    f"collection {collection_name!r} not initialized"
+                )
 
         result = collection.query(
             query_embeddings=[list(query_vector)],
