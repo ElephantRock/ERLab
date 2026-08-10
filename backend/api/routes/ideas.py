@@ -1207,8 +1207,25 @@ async def repair_paper(idea_id: int):
                 new_md = row[0]
                 new_meta = json.loads(row[1]) if row[1] else {}
                 new_meta["paper_evaluation"] = {"status": "pending", "scope": "paper"}
+                # Wire the promoted paper into the metadata so _evaluate_paper()
+                # can read it. The evaluator reads metadata["full_paper"]
+                # ["paper_markdown"] and ["source_map"], not proposal.paper_md
+                # directly. Without this, the post-remediation evaluation
+                # returns "unavailable" and the hash-binding contract
+                # (eval.paper_hash == SHA256 of the current paper) is never
+                # established for the successor.
+                new_meta["full_paper"] = {
+                    "paper_markdown": new_md,
+                    "source_map": new_meta.get("source_map", []),
+                }
 
             pipeline_result = PipelineResult()
+            # Wire result_markers into the context so the numeric-fidelity
+            # and experiment-alignment gates fire non-vacuously on the
+            # successor paper. The markers are already in the proposal's
+            # persisted metadata from the original pipeline run.
+            if markers:
+                pipeline_result.result_markers = {proposal.id: markers}
             eval_ctx = StageContext(
                 result=pipeline_result,
                 domain="machine learning",
