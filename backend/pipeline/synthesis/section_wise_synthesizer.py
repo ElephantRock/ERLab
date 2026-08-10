@@ -20,7 +20,6 @@ import logging
 import re
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Any
 
 from backend.providers.base import LLMProvider
 
@@ -180,7 +179,7 @@ class SectionWiseSynthesizer:
                     "Section '%s': %d words, %d citations",
                     section_title, draft.word_count, len(draft.citations_used),
                 )
-            except (asyncio.TimeoutError, asyncio.CancelledError):
+            except (TimeoutError, asyncio.CancelledError):
                 logger.warning(
                     "Section '%s' cancelled/timed out — assembling partial paper with %d/%d sections",
                     section_title, len(sections), len(DEFAULT_SECTIONS),
@@ -424,11 +423,14 @@ class SectionWiseSynthesizer:
         fallback) so the system prompt's GROUND TRUTH INVARIANTS apply on the
         fallback path, not just the monolithic path.
         """
-        from backend.pipeline.synthesis.section_contracts import (
-            get_section_prompt, CLAIM_SCHEMA, CLAIM_SCHEMA_STR,
-        )
         from backend.pipeline.synthesis.claim_renderer import (
-            ClaimRenderer, ClaimIDGenerator, InvalidStructuredOutput,
+            ClaimIDGenerator,
+            ClaimRenderer,
+        )
+        from backend.pipeline.synthesis.section_contracts import (
+            CLAIM_SCHEMA,
+            CLAIM_SCHEMA_STR,
+            get_section_prompt,
         )
 
         # Build the contract-aware prompt

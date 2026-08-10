@@ -7,10 +7,9 @@ from authoritative ledger state, and that it is side-effect-free.
 from __future__ import annotations
 
 import sys
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from unittest.mock import MagicMock
 
-import pytest
 from sqlalchemy import create_engine, event, text
 from sqlalchemy.orm import sessionmaker
 
@@ -20,10 +19,8 @@ sys.modules.setdefault("google.generativeai", MagicMock())
 import backend.db.models
 from backend.db.database import Base
 from backend.pipeline.capability.lifecycle_posture import (
-    PHASE_ACTIVE,
     PHASE_BINDING_NOT_ACTIVATION_ELIGIBLE,
     PHASE_CUTOVER_REQUIRED,
-    PHASE_RUNTIME_VERIFIED_TRANSIENT,
     PHASE_VERIFICATION_FAILED,
     PHASE_VERIFICATION_REQUIRED,
     evaluate_lifecycle_posture,
@@ -62,7 +59,7 @@ def _seed_profile(session):
 
 
 def _seed_passed_check(session, expires_in_hours=1):
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     session.execute(text(
         "INSERT INTO embedding_capability_checks "
         "(check_id, embedding_profile_id, binding_id, "
@@ -133,7 +130,7 @@ class TestLifecyclePosture:
     def test_failed_check_verification_failed(self):
         engine = _make_engine()
         sf = _make_sf(engine)
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         with sf() as session:
             _seed_profile(session)
             session.execute(text(
@@ -187,7 +184,7 @@ class TestLifecyclePosture:
             _seed_profile(session)
 
             # Count rows before
-            from sqlalchemy import select, func
+            from sqlalchemy import func, select
             checks_before = session.execute(
                 select(func.count()).select_from(EmbeddingBackendCheck)
             ).scalar()

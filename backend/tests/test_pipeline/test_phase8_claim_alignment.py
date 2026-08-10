@@ -8,10 +8,7 @@ Run: pytest backend/tests/test_pipeline/test_phase8_claim_alignment.py -v
 
 from __future__ import annotations
 
-import pytest
-
 from backend.pipeline.evaluation.claim_alignment import evaluate_claim_alignment
-
 
 # ── Synthetic paper fixtures ─────────────────────────────────────────
 

@@ -11,14 +11,11 @@ Tests cover:
 import asyncio
 import json
 
-import pytest
-
 from backend.pipeline.evaluation.faithfulness_scorer import (
     ClaimAssessment,
     FaithfulnessReport,
     FaithfulnessScorer,
 )
-
 
 # ── Model Tests ────────────────────────────────────────────────────────
 

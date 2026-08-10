@@ -250,7 +250,6 @@ class LMStudioReranker(Reranker):
     ) -> list[ScoredDocument]:
         """Score each document via LM Studio chat completion."""
         import asyncio
-        import json
 
         scored: list[ScoredDocument] = []
 

@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import logging
-import math
 from enum import Enum
 from typing import TYPE_CHECKING
 

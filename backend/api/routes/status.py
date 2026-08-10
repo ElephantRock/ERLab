@@ -1,10 +1,10 @@
 """Status API routes."""
 
 from fastapi import APIRouter
+from sqlalchemy import text
 
 from backend.config import get_settings
 from backend.db.database import _get_engine
-from sqlalchemy import text
 
 router = APIRouter()
 

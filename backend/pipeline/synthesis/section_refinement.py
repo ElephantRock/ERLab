@@ -17,8 +17,7 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
-from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from dataclasses import dataclass
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -325,10 +324,10 @@ class ProposalSectionRefinementService:
     @staticmethod
     def _sanitize_section(text: str) -> str:
         """Run citation sanitization on a single section's text."""
-        from backend.pipeline.literature.models import Paper as PipelinePaper, Author
         from backend.db.database import get_session
         from backend.db.models import Paper as DBPaper
-        from backend.pipeline.synthesis.proposal_synthesizer import ResearchProposal
+        from backend.pipeline.literature.models import Author
+        from backend.pipeline.literature.models import Paper as PipelinePaper
 
         # Build a minimal proposal for the sanitizer
         class FakeProposal:

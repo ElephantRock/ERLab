@@ -65,11 +65,10 @@ jobs:
       - name: Ruff lint regression check
         # Fails only when lint findings INCREASE above the sealed baseline.
         # The baseline is measured against the pinned Ruff version above.
-        # B-CI-02: re-sealed from 4439 to 4457 because the prior baseline was
-        # set under an unpinned (and now-superseded) Ruff release whose
-        # diagnostic set differed. The v1.0.3 branch introduced zero
-        # additional findings (4457 == baseline tree). The ratchet remains
-        # non-increasing from this newly measured baseline.
+        # B-CI-03: re-sealed from 4457 to 1963 after bulk auto-fix of
+        # unused-import (F401), unsorted-imports (I001), and other
+        # auto-fixable findings. The ratchet remains non-increasing from
+        # this newly measured baseline.
         run: |
           ruff check backend/ --output-format=json > /tmp/ruff_current.json 2>&1 || true
           python -c "
@@ -77,7 +76,7 @@ jobs:
           with open('/tmp/ruff_current.json') as f:
               findings = json.load(f)
           current = len(findings)
-          baseline = 4457
+          baseline = 1963
           if current > baseline:
               print(f'FAIL: {current} findings > baseline {baseline} (+{current - baseline} new)')
               sys.exit(1)

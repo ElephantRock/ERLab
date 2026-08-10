@@ -4,10 +4,9 @@ AIV v5.3 — 6 tests.
 """
 
 import logging
-import pytest
 
-from backend.pipeline.curation.models import CurationRule
 from backend.pipeline.curation.engine import CurationEngine
+from backend.pipeline.curation.models import CurationRule
 
 
 def _sample_papers():

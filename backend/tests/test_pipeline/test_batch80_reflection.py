@@ -8,13 +8,13 @@ AIV v5.3 — T1, T2, T5. NOTE: Use asyncio.run() not @pytest.mark.asyncio.
 from __future__ import annotations
 
 import asyncio
-import pytest
 from unittest.mock import AsyncMock, MagicMock
 
-from backend.pipeline.reflection.reflector import ReflectionStage, ReflectionResult
-from backend.pipeline.strategies.registry import StrategyRegistry
-from backend.pipeline.strategies.presets import register_presets
+import pytest
 
+from backend.pipeline.reflection.reflector import ReflectionResult, ReflectionStage
+from backend.pipeline.strategies.presets import register_presets
+from backend.pipeline.strategies.registry import StrategyRegistry
 
 # ── Fixtures ──────────────────────────────────────────────
 

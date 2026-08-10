@@ -1,7 +1,9 @@
 """BATCH-47: Global Search tests."""
+from unittest.mock import MagicMock, patch
+
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
-from unittest.mock import MagicMock, patch
+
 from backend.api.routes.search import router
 
 app = FastAPI()

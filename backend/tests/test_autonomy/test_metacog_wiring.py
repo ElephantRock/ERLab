@@ -5,9 +5,7 @@ import sys
 import tempfile
 from datetime import datetime
 from types import ModuleType
-from unittest.mock import AsyncMock, MagicMock
-
-import pytest
+from unittest.mock import MagicMock
 
 # Stub out chromadb
 _chromadb = ModuleType("chromadb")

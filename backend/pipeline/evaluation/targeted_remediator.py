@@ -17,12 +17,15 @@ import logging
 from dataclasses import dataclass, field
 from typing import Any
 
-from backend.pipeline.evaluation.paper_sections import (
-    parse_paper, assemble_paper, ParsedPaper, verify_byte_identical,
-)
 from backend.pipeline.evaluation.claim_repair import ClaimRepairFinding, derive_repair_findings
+from backend.pipeline.evaluation.paper_sections import (
+    ParsedPaper,
+    assemble_paper,
+    parse_paper,
+)
 from backend.pipeline.evaluation.revision_directive import (
-    EvidenceInvariant, RevisionDirective, verify_revised_paper_invariants,
+    EvidenceInvariant,
+    verify_revised_paper_invariants,
 )
 
 logger = logging.getLogger(__name__)
@@ -307,6 +310,7 @@ async def auto_repair_paper_sections(
     else:
         # Live mode: call the actual provider
         import asyncio
+
         from backend.config import get_settings
         from backend.providers.provider_factory import get_generation_provider
 

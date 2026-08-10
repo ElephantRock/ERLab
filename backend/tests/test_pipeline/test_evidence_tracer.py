@@ -3,20 +3,17 @@
 from __future__ import annotations
 
 import sys
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from unittest.mock import MagicMock
 
-import pytest
 from sqlalchemy import create_engine, event, text
 from sqlalchemy.orm import sessionmaker
 
 sys.modules.setdefault("chromadb", MagicMock())
 sys.modules.setdefault("google.generativeai", MagicMock())
 
-import backend.db.models
 from backend.db.database import Base
 from backend.pipeline.capability.evidence_tracer import (
-    EvidenceTrace,
     trace_retrieval_evidence,
 )
 
@@ -60,7 +57,7 @@ def _seed_minimal(session):
     ), {"pid": _PROFILE_ID})
     session.commit()
 
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     session.execute(text(
         "INSERT INTO vector_retrieval_events "
         "(run_id, stage_name, retrieval_key, request_schema_version, "
@@ -132,7 +129,7 @@ class TestEvidenceTracer:
             session.commit()
 
             # Add a result with a DIFFERENT binding
-            now2 = datetime.now(timezone.utc)
+            now2 = datetime.now(UTC)
 
             # Seed Paper FIRST (FK for vector_index_records)
             from backend.db.models import Paper

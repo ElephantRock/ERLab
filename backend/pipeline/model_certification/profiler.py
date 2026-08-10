@@ -22,7 +22,7 @@ from __future__ import annotations
 import logging
 import time
 from dataclasses import asdict, dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 import httpx
@@ -204,7 +204,7 @@ class TokenProfiler:
         logger.info("Starting 3-tier token profiling for %s", model_id)
         profile = TokenProfile(
             model_id=model_id,
-            profiled_at=datetime.now(timezone.utc).isoformat(),
+            profiled_at=datetime.now(UTC).isoformat(),
             engine=self._detect_engine(),
         )
 

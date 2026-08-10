@@ -10,12 +10,8 @@ Uses local qwen3-4b for zero-cost question generation.
 
 from __future__ import annotations
 
-import json
-
-from backend.pipeline.utils.json_extraction import extract_json
 import logging
 import uuid
-from datetime import datetime
 from typing import TYPE_CHECKING
 
 from backend.pipeline.evaluation.benchmark_models import (
@@ -23,6 +19,7 @@ from backend.pipeline.evaluation.benchmark_models import (
     BenchmarkQuestion,
 )
 from backend.pipeline.literature.models import Paper
+from backend.pipeline.utils.json_extraction import extract_json
 
 if TYPE_CHECKING:
     from backend.providers.base import LLMProvider

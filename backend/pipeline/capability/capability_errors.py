@@ -5,7 +5,6 @@ Bounded error codes for capability authorization failures.
 
 from __future__ import annotations
 
-
 CAPABILITY_CHECK_NOT_FOUND = "capability_check_not_found"
 CAPABILITY_CHECK_EXPIRED = "capability_check_expired"
 CAPABILITY_CHECK_FAILED = "capability_check_failed"

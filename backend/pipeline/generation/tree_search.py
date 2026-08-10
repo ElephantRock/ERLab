@@ -19,13 +19,12 @@ Edge cases:
 from __future__ import annotations
 
 import logging
-import uuid
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Protocol
 
+from backend.pipeline.gap_analysis.models import ResearchGap
 from backend.pipeline.generation.borda import borda_rank_graph_nodes
 from backend.pipeline.generation.models import IdeaCandidate
-from backend.pipeline.gap_analysis.models import ResearchGap
 from backend.pipeline.literature.models import Paper
 
 if TYPE_CHECKING:

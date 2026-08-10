@@ -181,7 +181,7 @@ def check_claim_direction(
         return ClaimCheck(
             claim_text=claim_text,
             is_correct=True,
-            reason=f"Claim is consistent with structural improvement",
+            reason="Claim is consistent with structural improvement",
             comparison=comparison,
         )
 
@@ -200,7 +200,7 @@ def check_claim_direction(
         return ClaimCheck(
             claim_text=claim_text,
             is_correct=True,
-            reason=f"Claim is consistent with structural degradation",
+            reason="Claim is consistent with structural degradation",
             comparison=comparison,
         )
 
@@ -208,6 +208,6 @@ def check_claim_direction(
     return ClaimCheck(
         claim_text=claim_text,
         is_correct=True,
-        reason=f"Metric comparison is a tie; no directional claim to invalidate",
+        reason="Metric comparison is a tie; no directional claim to invalidate",
         comparison=comparison,
     )

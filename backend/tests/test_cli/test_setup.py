@@ -5,11 +5,10 @@ Test IDs: TEST-07-01-01 through TEST-07-01-06
 from __future__ import annotations
 
 import sys
-import pytest
-
-import os
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
 
 # ── Helpers ──────────────────────────────────────────────────────────
 
@@ -19,13 +18,9 @@ for _mod in ("chromadb",):
 
 from backend.cli.commands.setup import (
     REQUIRED_ENV_VARS,
-    check_python_version,
-    detect_ollama,
     generate_env_content,
     setup_wizard,
-    validate_api_key,
 )
-
 
 # ── TEST-07-01-01: Wizard detects Python <3.11 and exits with error ─
 

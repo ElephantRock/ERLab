@@ -15,10 +15,8 @@ from backend.pipeline.gateway.claim_type_validator import (
     ClaimTypeValidator,
     EpistemicMetrics,
     ValidatedClaim,
-    compute_metrics,
 )
 from backend.pipeline.gateway.evidence_repair import ExportQualityGate
-
 
 # ═══════════════════════════════════════════════════════════════════════════
 # Quality Gate: Three-Metric Classification
@@ -367,9 +365,6 @@ class TestFullMetadata:
     def test_export_quality_has_all_required_fields(self):
         """Verify the metadata schema after typed repair."""
         from backend.pipeline.stages import CitationAuditStage
-        from backend.pipeline.gateway.claim_type_validator import (
-            ValidatedClaim, ClaimClassification,
-        )
 
         # Minimal validated claims
         validated = {

@@ -128,8 +128,8 @@ def evaluate_paper_gates(
         blocking_reasons.append(f"scope: {scope_result.reason}")
 
     # ── Gate 3: Conclusion support ──────────────────────────────────
-    from backend.pipeline.evaluation.conclusion_checker import classify_conclusion_support
     from backend.pipeline.evaluation.claim_alignment import _extract_abstract, _extract_conclusion
+    from backend.pipeline.evaluation.conclusion_checker import classify_conclusion_support
     abstract_text = _extract_abstract(paper_md)
     conclusion_text = _extract_conclusion(paper_md)
     has_empirical = bool(result_markers)
@@ -181,7 +181,9 @@ def evaluate_paper_gates(
     claim_result_passed = True
     claim_result_reason = "No RESULT markers to validate"
     if result_markers:
-        from backend.pipeline.evaluation.claim_result_validator import validate_claim_result_alignment
+        from backend.pipeline.evaluation.claim_result_validator import (
+            validate_claim_result_alignment,
+        )
         mismatches = validate_claim_result_alignment(paper_md, result_markers)
         if mismatches:
             claim_result_passed = False

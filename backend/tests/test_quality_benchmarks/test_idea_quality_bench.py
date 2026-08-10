@@ -8,7 +8,6 @@ higher than low-quality ones.
 import asyncio
 
 from backend.pipeline.evaluation.pipeline_evaluator import PipelineEvaluator
-from backend.pipeline.evaluation.scorer import ScoreDimension
 
 
 class _FakeProvider:

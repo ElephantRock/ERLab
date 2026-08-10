@@ -125,8 +125,6 @@ class OpenAIProvider(LLMProvider):
         temperature: float = 0.3,
         max_tokens: int = 8192,
     ) -> dict:
-        import re as _re
-
         mode = self._structured_output_mode
 
         if mode == "json_object":
@@ -152,11 +150,15 @@ class OpenAIProvider(LLMProvider):
                 if result:
                     return result
                 logger.warning(
-                    "structured_output: json_object returned %d chars but failed all parse attempts",
+                    "structured_output: json_object returned"
+                    " %d chars but failed all parse attempts",
                     len(content),
                 )
             except Exception as e:
-                logger.debug("structured_output: json_object path failed: %s", str(e)[:200])
+                logger.debug(
+                    "structured_output: json_object path failed: %s",
+                    str(e)[:200],
+                )
 
             return await self._structured_output_fallback(messages, schema, temperature, max_tokens)
 
@@ -181,7 +183,11 @@ class OpenAIProvider(LLMProvider):
                 result = self._parse_structured_content(content)
                 if result:
                     return result
-                logger.warning("structured_output: json_schema returned %d chars but failed all parse attempts", len(content))
+                logger.warning(
+                    "structured_output: json_schema returned"
+                    " %d chars but failed all parse attempts",
+                    len(content),
+                )
         except Exception as e:
             logger.debug("structured_output: json_schema path failed: %s", str(e)[:200])
 

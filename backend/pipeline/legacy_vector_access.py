@@ -9,7 +9,7 @@ Governed code must never import or call this module.
 from __future__ import annotations
 
 import logging
-from typing import Any, Sequence
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -31,6 +31,7 @@ def _guard_legacy_only(run_id: int | None, db_engine: Any = None) -> None:
 
     try:
         from sqlalchemy.orm import sessionmaker
+
         from backend.pipeline.provenance_gate import (
             load_run_provenance_contract,
             select_run_execution_mode,

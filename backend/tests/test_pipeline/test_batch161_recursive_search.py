@@ -7,9 +7,6 @@ TASK-03: Strategy preset wiring (3 tests)
 import asyncio
 from unittest.mock import AsyncMock, MagicMock
 
-import pytest
-
-
 # ─── TASK-01: CitationExplorer ──────────────────────────────
 
 class TestCitationExplorer:
@@ -94,7 +91,9 @@ class TestTreeExplorationResult:
 
     def test_06_extract_papers(self):
         from backend.pipeline.literature.citation_explorer import (
-            CitationExplorer, TreeNode, TreeExplorationResult,
+            CitationExplorer,
+            TreeExplorationResult,
+            TreeNode,
         )
         from backend.pipeline.literature.models import Paper
 
@@ -144,9 +143,9 @@ class TestTreeExplorationResult:
 class TestCitationExplorePresets:
 
     def test_10_deep_research_has_citation_explore(self):
+        from backend.pipeline.strategies.models import PipelineStrategy
         from backend.pipeline.strategies.presets import register_presets
         from backend.pipeline.strategies.registry import StrategyRegistry
-        from backend.pipeline.strategies.models import PipelineStrategy
 
         registry = StrategyRegistry()
         register_presets(registry)
@@ -156,9 +155,9 @@ class TestCitationExplorePresets:
         assert ls_config.params.get("citation_explore") is True
 
     def test_11_academic_proposal_has_citation_explore(self):
+        from backend.pipeline.strategies.models import PipelineStrategy
         from backend.pipeline.strategies.presets import register_presets
         from backend.pipeline.strategies.registry import StrategyRegistry
-        from backend.pipeline.strategies.models import PipelineStrategy
 
         registry = StrategyRegistry()
         register_presets(registry)
@@ -168,9 +167,9 @@ class TestCitationExplorePresets:
         assert ls_config.params.get("citation_explore") is True
 
     def test_12_fast_scan_no_citation_explore(self):
+        from backend.pipeline.strategies.models import PipelineStrategy
         from backend.pipeline.strategies.presets import register_presets
         from backend.pipeline.strategies.registry import StrategyRegistry
-        from backend.pipeline.strategies.models import PipelineStrategy
 
         registry = StrategyRegistry()
         register_presets(registry)

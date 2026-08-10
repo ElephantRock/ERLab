@@ -1,17 +1,16 @@
 """Phase B tests: Hardware Probe + Safe Context."""
 
-import pytest
-from unittest.mock import AsyncMock, patch
-from dataclasses import replace
+from unittest.mock import patch
 
+import pytest
+
+from backend.pipeline.model_certification.context_stress import (
+    estimate_safe_context,
+)
 from backend.pipeline.model_certification.hardware_probe import (
     HardwareFitResult,
-    probe_model,
     _compute_safe_context,
-)
-from backend.pipeline.model_certification.context_stress import (
-    ContextEstimate,
-    estimate_safe_context,
+    probe_model,
 )
 
 

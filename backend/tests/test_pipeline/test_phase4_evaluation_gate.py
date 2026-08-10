@@ -14,7 +14,6 @@ ProposalEvaluator. paper.status (artifact generation) and paper_evaluation
 (quality state) remain distinct.
 """
 
-import pytest
 
 from backend.pipeline.stages import PaperSynthesisStage
 

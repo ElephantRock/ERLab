@@ -4,21 +4,20 @@ TEST-14-01-01 through TEST-14-01-10
 """
 
 import json
+from unittest.mock import MagicMock, patch
 
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from unittest.mock import MagicMock, patch
 
 from backend.api.errors import APIError
-from backend.api.routes.ideas import router as ideas_router
 from backend.api.routes.gaps import router as gaps_router
+from backend.api.routes.ideas import router as ideas_router
 from backend.db import crud
 from backend.db.database import Base
 from backend.db.models import Idea, PipelineRun, ResearchGapDB
-
 
 # ── Fixtures ─────────────────────────────────────────────────
 

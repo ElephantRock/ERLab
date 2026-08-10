@@ -1,7 +1,5 @@
 """Tests for consolidation scheduler."""
 
-import asyncio
-import time
 
 import pytest
 

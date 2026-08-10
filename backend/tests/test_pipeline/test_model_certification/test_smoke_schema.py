@@ -1,18 +1,15 @@
 """Phase C tests: Smoke Test + Schema Eval."""
 
 import json
-import pytest
-from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock
 
-from backend.pipeline.model_certification.smoke_test import (
-    SmokeTestResult,
-    run_smoke_test,
-    _strip_markdown_fences,
-)
+import pytest
+
 from backend.pipeline.model_certification.schema_eval import (
-    SchemaEvalResult,
     run_schema_eval,
+)
+from backend.pipeline.model_certification.smoke_test import (
+    run_smoke_test,
 )
 
 

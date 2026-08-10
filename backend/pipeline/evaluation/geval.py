@@ -17,8 +17,8 @@ from backend.pipeline.evaluation.cache import EvaluationCache
 from backend.pipeline.evaluation.scorer import (
     EvaluationReport,
     ScoreDimension,
-    ScoreResult,
     Scorer,
+    ScoreResult,
 )
 
 logger = logging.getLogger(__name__)

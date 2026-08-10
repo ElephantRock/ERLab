@@ -7,14 +7,11 @@ not code structure.
 
 import asyncio
 
-import pytest
-
 from backend.pipeline.literature.research_agent import (
     ResearchResult,
     ResearchSubAgent,
     run_parallel_research,
 )
-
 
 # ── Mock search function ─────────────────────────────────────────────
 

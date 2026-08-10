@@ -31,7 +31,7 @@ from __future__ import annotations
 import hashlib
 import json
 import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING
 
 from backend.pipeline.vector_contracts import (
@@ -141,5 +141,5 @@ def compute_check_id() -> str:
 def compute_check_expiry(probed_at: datetime, ttl_seconds: int) -> datetime:
     """Authorization expiry timestamp for a passed check."""
     if probed_at.tzinfo is None:
-        probed_at = probed_at.replace(tzinfo=timezone.utc)
+        probed_at = probed_at.replace(tzinfo=UTC)
     return probed_at + timedelta(seconds=ttl_seconds)

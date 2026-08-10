@@ -15,7 +15,7 @@ from __future__ import annotations
 
 import hashlib
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from sqlalchemy import func, select
 
@@ -182,7 +182,7 @@ def freeze_current_paper(session, proposal: Proposal) -> dict:
 
     latest = _latest_revision(session, proposal.id)
     revision_number = _next_revision_number(session, proposal.id)
-    frozen_at = datetime.now(timezone.utc)
+    frozen_at = datetime.now(UTC)
     revision = PaperRevision(
         proposal_id=proposal.id,
         experiment_result_id=(

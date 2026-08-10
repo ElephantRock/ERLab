@@ -2,7 +2,7 @@
 
 import pytest
 
-from backend.pipeline.compaction.window_manager import CHARS_PER_TOKEN, ContextWindowManager
+from backend.pipeline.compaction.window_manager import ContextWindowManager
 
 
 class FakeProvider:

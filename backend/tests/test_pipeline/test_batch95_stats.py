@@ -4,14 +4,14 @@ AIV v5.3 — T1, T2, T5.
 """
 from __future__ import annotations
 
-import pytest
 from unittest.mock import MagicMock, patch
 
 
 def test_95_01_stats_endpoint_returns_dict():
     """Stats endpoint returns aggregate statistics."""
-    from backend.api.routes.pipeline import run_stats
     import asyncio
+
+    from backend.api.routes.pipeline import run_stats
 
     mock_run = MagicMock()
     mock_run.status = "completed"
@@ -32,8 +32,9 @@ def test_95_01_stats_endpoint_returns_dict():
 
 def test_95_01_stats_handles_empty_runs():
     """Stats endpoint handles no runs gracefully."""
-    from backend.api.routes.pipeline import run_stats
     import asyncio
+
+    from backend.api.routes.pipeline import run_stats
 
     mock_persistence = MagicMock()
     mock_persistence.list_runs.return_value = []
@@ -47,8 +48,9 @@ def test_95_01_stats_handles_empty_runs():
 
 def test_95_01_stats_groups_by_status():
     """Stats endpoint groups runs by status."""
-    from backend.api.routes.pipeline import run_stats
     import asyncio
+
+    from backend.api.routes.pipeline import run_stats
 
     runs = []
     for status in ["completed", "completed", "failed", "running"]:
@@ -71,8 +73,9 @@ def test_95_01_stats_groups_by_status():
 
 def test_95_01_stats_handles_exception():
     """Stats endpoint handles exceptions gracefully."""
-    from backend.api.routes.pipeline import run_stats
     import asyncio
+
+    from backend.api.routes.pipeline import run_stats
 
     mock_persistence = MagicMock()
     mock_persistence.list_runs.side_effect = Exception("DB error")

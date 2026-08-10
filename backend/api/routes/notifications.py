@@ -7,8 +7,8 @@ import logging
 from fastapi import APIRouter, Depends, Query, Request
 from fastapi.responses import StreamingResponse
 
-from backend.api.errors import ForbiddenError, NotFoundError, UnauthorizedError
 from backend.api.auth import get_current_user
+from backend.api.errors import NotFoundError, UnauthorizedError
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -35,9 +35,10 @@ async def list_notifications(
     Returns:
         {"notifications": [...], "total": N}
     """
+    from sqlalchemy import func, select
+
     from backend.db.database import get_session
     from backend.db.models import NotificationDB
-    from sqlalchemy import select, func
 
     user_id = current_user.user_id
 
@@ -177,7 +178,7 @@ async def notification_stream(request: Request):
                     yield f"data: {json.dumps(data)}\n\n"
                     if data.get("done"):
                         break
-                except asyncio.TimeoutError:
+                except TimeoutError:
                     yield f"data: {json.dumps({'heartbeat': True})}\n\n"
         except asyncio.CancelledError:
             pass

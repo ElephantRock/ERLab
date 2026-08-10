@@ -48,7 +48,7 @@ def canonical_text(text: str) -> str:
 def content_hash(title: str, abstract: str) -> str:
     """SHA-256 over canonical '{title}\\n\\n{abstract}' (matches v2 _content_hash byte-for-byte
     when title/abstract are already canonical)."""
-    blob = f"{canonical_text(title)}\n\n{canonical_text(abstract)}".encode("utf-8")
+    blob = f"{canonical_text(title)}\n\n{canonical_text(abstract)}".encode()
     return hashlib.sha256(blob).hexdigest()
 
 
@@ -111,7 +111,6 @@ def sha256_text(text: str) -> str:
 
 
 def sha256_file(path) -> str:
-    import os
     from pathlib import Path
     p = Path(path)
     return sha256_bytes(p.read_bytes())

@@ -12,12 +12,11 @@ import pytest
 import sqlalchemy
 
 from backend.db.database import (
+    Base,
     _build_engine_kwargs,
     _is_postgresql,
-    Base,
     create_db_engine,
 )
-
 
 # ── TEST-30-01-01: SQLite connection works (default) ────────────────
 

@@ -11,7 +11,6 @@ from sqlalchemy.pool import StaticPool
 
 from backend.api.errors import APIError
 from backend.api.routes.ideas import router
-from backend.db import crud
 from backend.db.database import Base
 from backend.db.models import Idea, IdeaPaperLink, Paper, PipelineRun, Proposal
 

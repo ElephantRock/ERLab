@@ -3,7 +3,6 @@
 AIV §13: Tests verify behavior (proposal under budget, sections preserved).
 """
 
-import pytest
 
 from backend.pipeline.synthesis.context_compactor import (
     compact_proposal,

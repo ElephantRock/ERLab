@@ -9,7 +9,6 @@ from __future__ import annotations
 import asyncio
 import logging
 import time
-from typing import Any
 
 from backend.pipeline.sandboxing.protocol import (
     ExecutionResult,
@@ -166,7 +165,7 @@ async def _docker_run(command: str, config: SandboxConfig, image: str) -> Execut
             stdout_bytes, stderr_bytes = await asyncio.wait_for(
                 proc.communicate(), timeout=config.timeout_seconds
             )
-        except asyncio.TimeoutError:
+        except TimeoutError:
             proc.kill()
             await proc.wait()
             stdout_bytes, stderr_bytes = b"", b""
@@ -202,7 +201,7 @@ async def _docker_exec(container_id: str, command: str, config: SandboxConfig) -
             stdout_bytes, stderr_bytes = await asyncio.wait_for(
                 proc.communicate(), timeout=config.timeout_seconds
             )
-        except asyncio.TimeoutError:
+        except TimeoutError:
             proc.kill()
             await proc.wait()
             stdout_bytes, stderr_bytes = b"", b""

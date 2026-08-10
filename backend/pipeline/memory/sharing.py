@@ -12,7 +12,7 @@ import logging
 from typing import TYPE_CHECKING
 
 from backend.pipeline.knowledge.truth import TruthValue
-from backend.pipeline.memory.models import MemoryEntry, MemoryRevision, MemoryQuery, MemoryType
+from backend.pipeline.memory.models import MemoryEntry, MemoryQuery, MemoryRevision, MemoryType
 
 if TYPE_CHECKING:
     from backend.pipeline.agents.message_bus import MessageBus
@@ -179,7 +179,7 @@ class SharedMemoryBridge:
             self._on_message,
         )
 
-    async def _on_message(self, message: "AgentMessage") -> None:
+    async def _on_message(self, message: AgentMessage) -> None:
         """Handle incoming bus messages by publishing to shared KB."""
         payload = message.payload if isinstance(message.payload, dict) else {}
         content = payload.get("content", "")

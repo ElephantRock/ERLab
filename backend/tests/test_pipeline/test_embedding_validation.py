@@ -7,8 +7,6 @@ every frozen rejection rule plus the no-L2-application invariant.
 
 from __future__ import annotations
 
-import math
-
 import pytest
 
 from backend.pipeline.knowledge.embedding_validation import (
@@ -29,7 +27,6 @@ from backend.pipeline.knowledge.embedding_validation import (
     validate_l2_normalization,
     validate_query_embedding,
 )
-
 
 # ── compute_l2_norm ──────────────────────────────────────────────────
 

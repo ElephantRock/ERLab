@@ -11,16 +11,13 @@ Verifies that the source correctly:
 
 from __future__ import annotations
 
-import asyncio
-import json
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import httpx
 import pytest
 
 from backend.pipeline.literature.crossref_source import CrossRefSource
-from backend.pipeline.literature.models import Paper, SearchResult
-
+from backend.pipeline.literature.models import SearchResult
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -135,7 +132,7 @@ class TestCrossRefSearch:
         outcome = await source.search("transformer attention", limit=5)
 
         # First paper has JATS tags in abstract
-        assert "We propose a new architecture." == outcome.results[0].paper.abstract
+        assert outcome.results[0].paper.abstract == "We propose a new architecture."
         assert "<jats:" not in outcome.results[0].paper.abstract
 
     @pytest.mark.asyncio

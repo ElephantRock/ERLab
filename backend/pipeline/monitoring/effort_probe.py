@@ -5,8 +5,6 @@ Validates whether a model supports the requested reasoning effort level
 by firing a 1-token probe and checking the response.
 """
 
-import asyncio
-import json
 import logging
 import time
 from dataclasses import dataclass

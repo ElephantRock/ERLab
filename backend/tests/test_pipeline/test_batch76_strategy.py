@@ -9,6 +9,7 @@ AIV v5.3 Test Integrity Protocol:
 from __future__ import annotations
 
 import json
+
 import pytest
 
 from backend.pipeline.strategies.models import (
@@ -16,9 +17,8 @@ from backend.pipeline.strategies.models import (
     StageConfig,
     StrategyConfig,
 )
-from backend.pipeline.strategies.registry import StrategyRegistry
 from backend.pipeline.strategies.presets import register_presets
-
+from backend.pipeline.strategies.registry import StrategyRegistry
 
 # ── Fixtures ──────────────────────────────────────────────
 

@@ -30,8 +30,9 @@ receive only well-formed vectors.
 from __future__ import annotations
 
 import logging
+from collections.abc import Sequence
 from dataclasses import dataclass
-from typing import Any, Sequence
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -93,8 +94,8 @@ class GovernedEmbeddingAdapter:
             ) from exc
 
         from backend.pipeline.knowledge.embedding_validation import (
-            validate_document_embeddings,
             EmbeddingValidationError,
+            validate_document_embeddings,
         )
         try:
             return validate_document_embeddings(
@@ -122,8 +123,8 @@ class GovernedEmbeddingAdapter:
             ) from exc
 
         from backend.pipeline.knowledge.embedding_validation import (
-            validate_query_embedding,
             EmbeddingValidationError,
+            validate_query_embedding,
         )
         try:
             return validate_query_embedding(
@@ -190,8 +191,8 @@ class GovernedEmbeddingAdapter:
             ) from exc
 
         from backend.pipeline.knowledge.embedding_validation import (
-            validate_document_embeddings,
             EmbeddingValidationError,
+            validate_document_embeddings,
         )
         try:
             validated = validate_document_embeddings(
@@ -222,8 +223,8 @@ class GovernedEmbeddingAdapter:
             ) from exc
 
         from backend.pipeline.knowledge.embedding_validation import (
-            validate_query_embedding,
             EmbeddingValidationError,
+            validate_query_embedding,
         )
         try:
             validated = validate_query_embedding(
@@ -249,8 +250,8 @@ class GovernedEmbeddingAdapter:
         role-named methods which call the canonical validator directly.
         """
         from backend.pipeline.knowledge.embedding_validation import (
-            validate_embedding_vector,
             EmbeddingValidationError,
+            validate_embedding_vector,
         )
         try:
             return validate_embedding_vector(

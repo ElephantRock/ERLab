@@ -18,10 +18,11 @@ from __future__ import annotations
 import hashlib
 import logging
 import math
-from datetime import datetime, timezone
-from typing import Any, Sequence
+from collections.abc import Sequence
+from datetime import UTC, datetime
+from typing import Any
 
-from sqlalchemy import select, update, func, text
+from sqlalchemy import select, text, update
 from sqlalchemy.orm import Session, sessionmaker
 
 from backend.pipeline.vector_backend import BackendVectorMatch, GovernedVectorBackend
@@ -29,11 +30,10 @@ from backend.pipeline.vector_contracts import (
     VECTOR_INDEX_V1,
     EligibleVectorSnapshot,
     RetrievalAlreadyClaimedError,
+    ScopedVectorResult,
     ScopedVectorRetrievalOutcome,
     ScopedVectorRetrievalRequest,
-    ScopedVectorResult,
     VectorRetrievalDriftError,
-    compute_collection_name,
 )
 from backend.pipeline.vector_scope import resolve_vector_scope
 
@@ -44,7 +44,7 @@ _DEFAULT_BATCH_SIZE = 500
 
 
 def _now() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 def _query_vector_fingerprint(query_vector: Sequence[float]) -> str:

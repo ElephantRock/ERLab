@@ -6,14 +6,12 @@ Returns differentiated scores (0.1-0.9) instead of hardcoded 0.5.
 
 from __future__ import annotations
 
-import json
-
-from backend.pipeline.utils.json_extraction import extract_json
 import logging
 from dataclasses import dataclass
 from pathlib import Path
 
 from backend.pipeline.claims.models import Claim, ClaimType
+from backend.pipeline.utils.json_extraction import extract_json
 
 logger = logging.getLogger(__name__)
 

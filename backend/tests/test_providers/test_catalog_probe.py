@@ -10,10 +10,8 @@ and triggering cascading graceful-degradation failures.
 
 from __future__ import annotations
 
-import asyncio
 from unittest.mock import AsyncMock, MagicMock, patch
 
-import httpx
 import pytest
 
 from backend.providers.catalog import (
@@ -21,7 +19,6 @@ from backend.providers.catalog import (
     ModelInfo,
     probe_openai_compatible,
 )
-
 
 # ---------------------------------------------------------------------------
 # Simulated API responses
@@ -213,8 +210,6 @@ class TestModelSelectorFallback:
 
     def test_fallback_prefers_loaded_model(self):
         """When no model meets requirements, loaded models are preferred."""
-        from backend.providers.catalog import ModelCatalog, EndpointConfig
-        from backend.providers.hardware import GPUInfo
         from backend.providers.selector import ModelSelector
 
         # Create two models: one loaded, one not
@@ -246,7 +241,6 @@ class TestModelSelectorFallback:
 
     def test_fallback_prefers_configured_model(self):
         """Configured preferred_model wins among loaded models."""
-        from backend.providers.catalog import ModelCatalog
         from backend.providers.selector import ModelSelector
 
         model_a = ModelInfo(

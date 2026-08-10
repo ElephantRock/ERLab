@@ -13,7 +13,6 @@ from backend.pipeline.synthesis.section_wise_synthesizer import (
     SectionWiseSynthesizer,
 )
 
-
 PROPOSAL = """## Proposal: Variational Quantum Linear Solver for Hydrodynamic Lubrication
 
 We propose a VQLS method for the Reynolds equation in mechanical bearings.

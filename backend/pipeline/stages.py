@@ -12,8 +12,12 @@ from typing import TYPE_CHECKING, Any
 
 from backend.pipeline.generation.models import ResearchIdea
 from backend.pipeline.ingestion.chunker import DocumentChunk  # noqa: F401 — re-exported by stages
-from backend.pipeline.novelty.novelty_checker import NoveltyReport  # noqa: F401 — legacy compat in NoveltyCheckingStage
-from backend.pipeline.synthesis.proposal_synthesizer import ResearchProposal  # noqa: F401 — used by ProposalSynthesisStage
+from backend.pipeline.novelty.novelty_checker import (
+    NoveltyReport,  # noqa: F401 — legacy compat in NoveltyCheckingStage
+)
+from backend.pipeline.synthesis.proposal_synthesizer import (
+    ResearchProposal,  # noqa: F401 — used by ProposalSynthesisStage
+)
 from backend.pipeline.verification.citation_claim_auditor import (  # noqa: F401 — used by CitationAuditStage
     CitationAuditReport,
     CitationClaimAuditor,
@@ -21,7 +25,6 @@ from backend.pipeline.verification.citation_claim_auditor import (  # noqa: F401
 )
 
 if TYPE_CHECKING:
-    from backend.providers.base import LLMProvider
     from backend.pipeline.result import PipelineResult
 
 logger = logging.getLogger(__name__)
@@ -154,8 +157,8 @@ class LiteratureSearchStage(PipelineStage):
         local_docs = []
         try:
             from backend.config import get_settings
-            from backend.pipeline.knowledge.embedding_service import EmbeddingService
             from backend.pipeline.knowledge.embedding_providers import create_embedding_provider
+            from backend.pipeline.knowledge.embedding_service import EmbeddingService
             from backend.pipeline.knowledge.vector_store import VectorStore
 
             settings = get_settings()
@@ -280,7 +283,8 @@ class LiteratureSearchStage(PipelineStage):
             logger.debug("LLM query expansion skipped (no gateway available)")
         # P0.1: Build SearchQueryData with deterministic query_keys
         from backend.pipeline.persistence import (
-            SearchQueryData, CandidateWithDiscoveries, DiscoveryMetadata,
+            CandidateWithDiscoveries,
+            SearchQueryData,
             compute_query_key,
         )
 
@@ -425,7 +429,7 @@ class LiteratureSearchStage(PipelineStage):
 
         # Merge pre-existing knowledge library papers
         if pre_existing:
-            from backend.pipeline.literature.models import Paper, Author
+            from backend.pipeline.literature.models import Paper
             for entry in pre_existing:
                 try:
                     content = json.loads(entry.get("content", "{}")) if isinstance(entry.get("content"), str) else entry.get("content", {})
@@ -481,8 +485,8 @@ class LiteratureSearchStage(PipelineStage):
 
             if explore_enabled and unique:
                 from backend.pipeline.literature.citation_explorer import CitationExplorer
-                from backend.pipeline.literature.semantic_scholar import SemanticScholarSource
                 from backend.pipeline.literature.openalex_source import OpenAlexSource
+                from backend.pipeline.literature.semantic_scholar import SemanticScholarSource
 
                 s2 = None
                 oa = None
@@ -664,19 +668,20 @@ class IngestionStage(PipelineStage):
             return
 
         try:
+            from sqlalchemy.orm import sessionmaker
+
+            from backend.config import get_settings
             from backend.db.database import _get_engine, get_session
             from backend.pipeline.provenance_gate import (
                 load_run_provenance_contract,
                 select_run_execution_mode,
             )
+            from backend.pipeline.vector_access_policy import resolve_profile_id
+            from backend.pipeline.vector_backend import GovernedVectorBackend
             from backend.pipeline.vector_contracts import (
                 build_title_abstract_document,
             )
             from backend.pipeline.vector_indexer import index_document
-            from backend.pipeline.vector_backend import GovernedVectorBackend
-            from backend.pipeline.vector_access_policy import resolve_profile_id
-            from backend.config import get_settings
-            from sqlalchemy.orm import sessionmaker
         except ImportError as e:
             logger.debug("Governed indexing imports unavailable: %s", e)
             return
@@ -859,7 +864,6 @@ class GapAnalysisStage(PipelineStage):
         # Write gaps to Knowledge Graph
         if self._kg:
             from backend.pipeline.knowledge.entities import EntityType, KnowledgeEntity
-            from backend.pipeline.knowledge.relationships import KnowledgeRelationship, RelationType
             from backend.pipeline.knowledge.truth import TruthValue
 
             for gap in gaps:
@@ -1289,7 +1293,7 @@ class ProposalSynthesisStage(PipelineStage):
                     ),
                     timeout=timeout,
                 )
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 logger.warning(
                     "Proposal synthesis timed out after %.1fs for idea %d: %s",
                     timeout, i + 1, idea.title[:50],
@@ -1365,7 +1369,7 @@ class TreeSearchStage(PipelineStage):
 
     def __init__(
         self,
-        engine: "TreeSearchEngine",
+        engine: TreeSearchEngine,
         hooks,
         provider=None,
         kg=None,
@@ -1803,7 +1807,7 @@ class AdversarialReviewStage(PipelineStage):
             try:
                 from backend.config import get_settings
                 _s = get_settings()
-                _model_id = getattr(_s, "openai_model", "") or getattr(_s, "default_provider", "")
+                _model_id = getattr(_s, "openai_model", "")
             except Exception:
                 pass
             if _model_id:
@@ -2043,8 +2047,6 @@ class PaperSynthesisStage(PipelineStage):
                 logger.warning("Cannot resolve generation provider for paper synthesis: %s", e)
                 return True
 
-        from backend.pipeline.synthesis.paper_synthesizer import PaperSynthesizer
-        from backend.pipeline.synthesis.section_wise_synthesizer import SectionWiseSynthesizer
 
         # Determine context window from gateway if available
         context_window = self._context_window
@@ -2196,7 +2198,7 @@ class PaperSynthesisStage(PipelineStage):
                         ),
                         timeout=self.PER_PROPOSAL_TIMEOUT,
                     )
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 logger.warning(
                     "Paper synthesis timed out after %ds for proposal %d "
                     "(non-fatal, B-08) — marking paper as failed",
@@ -2230,9 +2232,8 @@ class PaperSynthesisStage(PipelineStage):
         Phase 4 / WP-4C: ``source_ids`` is the ordered literature Paper.id
         list used to construct [SOURCE-N]; it is captured here so the
         marker→source map can be frozen and persisted on the result."""
-        import json as _json
-        from backend.pipeline.synthesis.synthesis_service import synthesize_paper
         from backend.pipeline.synthesis.synthesis_budget import SynthesisBudget
+        from backend.pipeline.synthesis.synthesis_service import synthesize_paper
 
         proposal_text = (
             proposal.to_markdown()
@@ -2385,7 +2386,7 @@ class PaperSynthesisStage(PipelineStage):
     @staticmethod
     def provenance_precondition(
         paper_markdown: str, source_map: list[dict]
-    ) -> "ProvenanceGateResult":
+    ) -> ProvenanceGateResult:
         """Phase 4 / WP-4D — the provenance precondition for paper evaluation.
 
         The paper-evaluation state and the paper-artifact state must remain
@@ -2534,8 +2535,8 @@ class PaperSynthesisStage(PipelineStage):
         _eval_spec_id = ctx.params.get("experiment_spec_id")
         if _eval_spec_id and result_markers:
             try:
-                from backend.pipeline.experiment.specification import load_spec as _els
                 from backend.pipeline.evaluation.claim_alignment import evaluate_claim_alignment
+                from backend.pipeline.experiment.specification import load_spec as _els
                 _eval_spec = _els(_eval_spec_id)
                 claim_result = evaluate_claim_alignment(
                     paper_md=paper_md,
@@ -2608,7 +2609,10 @@ class PaperSynthesisStage(PipelineStage):
             blocking_reasons.append(f"numeric_fidelity: {numeric_fidelity_reason}")
 
         try:
-            from backend.pipeline.evaluation.proposal_evaluator import ProposalEvaluator, resolve_evaluation_provider
+            from backend.pipeline.evaluation.proposal_evaluator import (
+                ProposalEvaluator,
+                resolve_evaluation_provider,
+            )
 
             # B-EVAL-01 (Commit 6): resolve a configured provider when self._provider
             # is None, mirroring the proposal-eval call site (stages.py:3653).
@@ -2741,10 +2745,10 @@ class PaperSynthesisStage(PipelineStage):
         Returns empty list if no persisted experiment evidence exists.
         """
         try:
+            from sqlalchemy import text as _sa_text
+
             from backend.db.database import get_session as _r1_get_session
-            from backend.db.models import ExperimentResult as _R1ExpResult
             from backend.pipeline.experiment.manifest import ResultMarker
-            from sqlalchemy import select, text as _sa_text
 
             with _r1_get_session() as session:
                 # Find the experiment result for this proposal
@@ -2971,6 +2975,7 @@ class ExperimentExecutionStage(PipelineStage):
             return True
 
         from pathlib import Path
+
         from backend.pipeline.experiment.empirical_runner import execute_experiment
         from backend.pipeline.experiment.manifest import ExperimentManifest, ResultMarker
 
@@ -3042,7 +3047,9 @@ class ExperimentExecutionStage(PipelineStage):
                 # Build result markers from observed metrics
                 # Phase 8 / D3: flow metric direction and role from the spec
                 # so the evaluator can compute improvement structurally.
-                from backend.pipeline.experiment.specification import load_spec as _load_spec_for_markers
+                from backend.pipeline.experiment.specification import (
+                    load_spec as _load_spec_for_markers,
+                )
                 try:
                     _spec = _load_spec_for_markers(spec_id)
                     _directions = _spec.metric_directions
@@ -3096,7 +3103,7 @@ class ExperimentExecutionStage(PipelineStage):
         """Persist experiment result immediately so a later paper-synthesis
         timeout cannot erase an already completed experiment."""
         import json
-        from pathlib import Path
+
         from backend.db.database import get_session
         from backend.db.models import ExperimentResult as ExperimentResultDB
         from backend.db.models import Proposal
@@ -3595,12 +3602,12 @@ class CitationAuditStage(PipelineStage):
 
         Returns (EpistemicMetrics, {section: [ValidatedClaim]}).
         """
+        from backend.pipeline.gateway.claim_evidence_validator import (
+            ClaimEvidenceValidator,
+        )
         from backend.pipeline.gateway.claim_type_validator import (
             ClaimTypeValidator,
             compute_metrics,
-        )
-        from backend.pipeline.gateway.claim_evidence_validator import (
-            ClaimEvidenceValidator,
         )
 
         validator = ClaimTypeValidator()
@@ -3673,8 +3680,8 @@ class CitationAuditStage(PipelineStage):
         structured_claims_by_section: dict[str, list[dict]],
     ) -> None:
         """Run typed repair loop + quality gate, storing full metadata."""
-        from backend.pipeline.gateway.evidence_repair import EvidenceRepairLoop, ExportQualityGate
         from backend.pipeline.gateway.claim_type_validator import compute_metrics
+        from backend.pipeline.gateway.evidence_repair import EvidenceRepairLoop, ExportQualityGate
 
         # Collect all validated claims for repair
         all_validated = []
@@ -3765,7 +3772,10 @@ class CitationAuditStage(PipelineStage):
         """Fallback: legacy prose-based validation and repair."""
         try:
             from backend.pipeline.gateway.claim_evidence_validator import ClaimEvidenceValidator
-            from backend.pipeline.gateway.evidence_repair import EvidenceRepairLoop, ExportQualityGate
+            from backend.pipeline.gateway.evidence_repair import (
+                EvidenceRepairLoop,
+                ExportQualityGate,
+            )
 
             corpus_ids = set(corpus.keys())
             validator = ClaimEvidenceValidator(corpus_ids=corpus_ids)
@@ -3901,9 +3911,10 @@ class CitationAuditStage(PipelineStage):
         if not records:
             return
         try:
+            from sqlalchemy import select
+
             from backend.db.database import get_session
             from backend.db.models import Idea, Proposal, QuarantinedCitation
-            from sqlalchemy import select
 
             with get_session() as session:
                 # Resolve the DB Proposal row from the in-memory idea index.
@@ -3988,8 +3999,8 @@ class EvaluationStage(PipelineStage):
                 provider = self._provider
                 if provider is None:
                     try:
-                        from backend.providers.provider_factory import get_thinking_provider
                         from backend.config import get_settings
+                        from backend.providers.provider_factory import get_thinking_provider
                         provider = get_thinking_provider(get_settings())
                     except Exception as e:
                         logger.warning("Could not get thinking provider for evaluation: %s", e)
@@ -4098,8 +4109,8 @@ class GapReflectionStage(PipelineStage):
                 provider = self._provider
                 if provider is None:
                     try:
-                        from backend.providers.provider_factory import get_thinking_provider
                         from backend.config import get_settings
+                        from backend.providers.provider_factory import get_thinking_provider
                         provider = get_thinking_provider(get_settings())
                     except Exception:
                         provider = None
@@ -4183,8 +4194,8 @@ class IdeaReflectionStage(PipelineStage):
                 provider = self._provider
                 if provider is None:
                     try:
-                        from backend.providers.provider_factory import get_thinking_provider
                         from backend.config import get_settings
+                        from backend.providers.provider_factory import get_thinking_provider
                         provider = get_thinking_provider(get_settings())
                     except Exception:
                         provider = None

@@ -32,11 +32,10 @@ Composition (frozen in the sealed protocol d2e16ae):
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass, field
-from typing import Mapping
 
 from backend.ranking.p1e1_canon import content_hash
-
 
 # ── Grade-free candidate schema ──────────────────────────────────────
 

@@ -23,9 +23,9 @@ vector records remain pre_capability_v0 under the P0.3 contract.
 from __future__ import annotations
 
 import logging
+from collections.abc import Sequence
 from dataclasses import dataclass
-from datetime import datetime, timezone
-from typing import Any, Sequence
+from datetime import UTC, datetime
 
 from sqlalchemy.orm import sessionmaker
 
@@ -35,13 +35,13 @@ from backend.pipeline.capability.capability_drift import (
     is_check_current,
 )
 from backend.pipeline.capability.capability_errors import (
-    CapabilityAuthorizationError,
     CAPABILITY_AUTHORITY_REVOKED_AT_USE,
     CAPABILITY_BINDING_MISMATCH,
     CAPABILITY_CHECK_EXPIRED,
     CAPABILITY_CHECK_FAILED,
     CAPABILITY_CHECK_NOT_FOUND,
     CAPABILITY_RUNTIME_DRIFT,
+    CapabilityAuthorizationError,
 )
 from backend.pipeline.capability.contracts import (
     STATUS_ABANDONED,
@@ -166,7 +166,7 @@ class VerifiedEmbeddingRuntime:
             capability_binding_id=self._capability_binding_id,
             capability_check_id=self._capability_check_id,
             runtime_config_fingerprint=self._runtime_config_fingerprint,
-            authorized_at=datetime.now(timezone.utc),
+            authorized_at=datetime.now(UTC),
         )
 
     async def embed_query_authorized(
@@ -185,7 +185,7 @@ class VerifiedEmbeddingRuntime:
             capability_binding_id=self._capability_binding_id,
             capability_check_id=self._capability_check_id,
             runtime_config_fingerprint=self._runtime_config_fingerprint,
-            authorized_at=datetime.now(timezone.utc),
+            authorized_at=datetime.now(UTC),
         )
 
     # ── Read-only accessors (no adapter) ──
@@ -213,12 +213,12 @@ class VerifiedEmbeddingRuntime:
 
         Called before every embed_documents / embed_query call.
         """
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
 
         # 1. Check not expired (derived, not stored)
         expires = self._check_expires_at
         if expires.tzinfo is None:
-            expires = expires.replace(tzinfo=timezone.utc)
+            expires = expires.replace(tzinfo=UTC)
         if now >= expires:
             raise CapabilityAuthorizationError(
                 CAPABILITY_CHECK_EXPIRED,

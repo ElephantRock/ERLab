@@ -10,8 +10,6 @@ import asyncio
 import sys
 from unittest.mock import AsyncMock, MagicMock, patch
 
-import pytest
-
 # ── Stub heavy imports before anything else ─────────────────────────────────
 sys.modules.setdefault("chromadb", MagicMock())
 sys.modules.setdefault("google.generativeai", MagicMock())
@@ -19,7 +17,6 @@ sys.modules.setdefault("google.generativeai", MagicMock())
 from backend.pipeline.gap_analysis.models import ClusterReport, ResearchGap
 from backend.pipeline.generation.models import ResearchIdea
 from backend.pipeline.literature.models import Author, Paper
-from backend.pipeline.novelty.novelty_checker import NoveltyReport
 from backend.pipeline.result import PipelineResult
 from backend.pipeline.stages import (
     FeasibilityScoringStage,
@@ -28,7 +25,6 @@ from backend.pipeline.stages import (
     IngestionStage,
     LiteratureSearchStage,
     MechanicalMetricsStage,
-    NoveltyCheckingStage,
     StageContext,
 )
 

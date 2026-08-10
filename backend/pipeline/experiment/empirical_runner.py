@@ -20,11 +20,10 @@ import asyncio
 import json
 import logging
 import math
-import os
 import platform
 import sys
 import time
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 from backend.pipeline.experiment.dataset_registry import load_dataset
@@ -154,7 +153,7 @@ async def execute_experiment(
             proc.communicate(), timeout=timeout_seconds
         )
         exit_code = proc.returncode or 0
-    except asyncio.TimeoutError:
+    except TimeoutError:
         proc.kill()
         await proc.wait()
         elapsed = time.monotonic() - t0
@@ -286,7 +285,7 @@ def _build_manifest(
         },
         results=metrics,
         result_artifacts=artifacts,
-        observed_at=datetime.now(timezone.utc).isoformat(),
+        observed_at=datetime.now(UTC).isoformat(),
         reproduction={"declared_tolerances": spec.tolerances},
         status=status,
     )

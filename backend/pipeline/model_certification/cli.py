@@ -20,8 +20,8 @@ import sys
 from pathlib import Path
 
 from backend.pipeline.model_certification.manifest import CandidateModelManifest
-from backend.pipeline.model_certification.runner import CertificationRunner
 from backend.pipeline.model_certification.registries import ProductionModelRegistry
+from backend.pipeline.model_certification.runner import CertificationRunner
 
 logger = logging.getLogger(__name__)
 
@@ -38,8 +38,8 @@ async def _certify(args) -> None:
     )
 
     # Build provider from manifest
-    from backend.providers.provider_factory import create_provider
     from backend.config import get_settings
+    from backend.providers.provider_factory import create_provider
     settings = get_settings()
 
     if manifest.provider == "lmstudio":

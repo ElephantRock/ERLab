@@ -524,8 +524,8 @@ def test_cached_chat_wrapper_still_functions():
 def test_resilient_chat_wrapper_still_functions():
     """ResilientProvider forwards chat without exposing embed."""
     inner = _make_openai_with_mocked_client()
-    from backend.providers.resilience.resilient_provider import ResilientProvider
     from backend.providers.resilience.circuit_breaker import CircuitBreaker
+    from backend.providers.resilience.resilient_provider import ResilientProvider
 
     retry_config = MagicMock()
     retry_config.max_attempts = 1

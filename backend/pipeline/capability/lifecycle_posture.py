@@ -20,10 +20,10 @@ Do not collapse runtime health and activation posture into one status.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from dataclasses import dataclass
+from datetime import UTC, datetime
 
-from sqlalchemy import select, func
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from backend.db.models import (
@@ -33,19 +33,14 @@ from backend.db.models import (
     EmbeddingCapabilityCheck,
     EmbeddingProfileBindingActivation,
     EmbeddingProfileEmbeddingWriteGuard,
-    VectorIndexRecord,
 )
+from backend.pipeline.capability.capability_drift import is_check_current
 from backend.pipeline.capability.contracts import (
     STATUS_ABANDONED,
     STATUS_CANCELLED,
     STATUS_FAILED,
     STATUS_PASSED,
-    STATUS_PENDING,
-    STATUS_RUNNING,
-    TERMINAL_CHECK_STATUSES,
 )
-from backend.pipeline.capability.capability_drift import is_check_current
-from backend.pipeline.vector_contracts import EMBEDDING_PROBE_SUITE_V1
 
 # ── Readiness phases ─────────────────────────────────────────────────
 
@@ -154,7 +149,7 @@ def evaluate_lifecycle_posture(
 
     Side-effect-free. Reads only.
     """
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
 
     # ── 1. Latest check ──
     latest_check = session.execute(

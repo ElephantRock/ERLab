@@ -23,7 +23,8 @@ from sqlalchemy.orm import sessionmaker
 sys.modules.setdefault("chromadb", MagicMock())
 sys.modules.setdefault("google.generativeai", MagicMock())
 
-import backend.db.models
+from datetime import UTC
+
 from backend.db.database import Base
 from backend.db.models import EmbeddingProfile, Paper, VectorIndexRecord
 from backend.pipeline.vector_contracts import (
@@ -163,8 +164,8 @@ def test_valid_indexed_record_accepted():
     Session = sessionmaker(bind=engine, expire_on_commit=False)
     s = Session()
     try:
-        from datetime import datetime, timezone
-        now = datetime.now(timezone.utc)
+        from datetime import datetime
+        now = datetime.now(UTC)
         rec = VectorIndexRecord(
             vector_record_id=vid,
             paper_id=paper_id,
@@ -185,7 +186,6 @@ def test_valid_indexed_record_accepted():
 
 
 def test_invalid_status_rejected():
-    from sqlalchemy.exc import IntegrityError as SAIntegrityError
     engine = _make_engine()
     pid, paper_id = _setup_profile_and_paper(engine)
     h = compute_content_hash("content")
@@ -208,7 +208,6 @@ def test_invalid_status_rejected():
 
 
 def test_negative_attempt_count_rejected():
-    from sqlalchemy.exc import IntegrityError as SAIntegrityError
     engine = _make_engine()
     pid, paper_id = _setup_profile_and_paper(engine)
     h = compute_content_hash("content")
@@ -231,7 +230,6 @@ def test_negative_attempt_count_rejected():
 
 
 def test_invalid_content_kind_rejected():
-    from sqlalchemy.exc import IntegrityError as SAIntegrityError
     engine = _make_engine()
     pid, paper_id = _setup_profile_and_paper(engine)
     h = compute_content_hash("content")
@@ -254,7 +252,6 @@ def test_invalid_content_kind_rejected():
 
 
 def test_unknown_paper_rejected():
-    from sqlalchemy.exc import IntegrityError as SAIntegrityError
     engine = _make_engine()
     pid, _ = _setup_profile_and_paper(engine)
     h = compute_content_hash("content")
@@ -277,7 +274,6 @@ def test_unknown_paper_rejected():
 
 
 def test_unknown_profile_rejected():
-    from sqlalchemy.exc import IntegrityError as SAIntegrityError
     engine = _make_engine()
     _, paper_id = _setup_profile_and_paper(engine)
     fake_pid = "a" * 64  # not registered
@@ -301,7 +297,6 @@ def test_unknown_profile_rejected():
 
 
 def test_duplicate_vector_record_id_rejected():
-    from sqlalchemy.exc import IntegrityError as SAIntegrityError
     engine = _make_engine()
     pid, paper_id = _setup_profile_and_paper(engine)
     h = compute_content_hash("content")

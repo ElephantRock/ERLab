@@ -17,22 +17,14 @@ Expected after evidence-grounded generation:
   direct_support: stable (not materially lower)
 """
 
-import pytest
 
-from backend.pipeline.gateway.claim_types import ClaimType
 from backend.pipeline.gateway.claim_type_validator import (
-    ClaimClassification,
     ClaimTypeValidator,
-    EpistemicMetrics,
-    ValidatedClaim,
     compute_metrics,
 )
 from backend.pipeline.gateway.evidence_repair import (
-    EvidenceRepairLoop,
     ExportQualityGate,
-    RepairAction,
 )
-
 
 # ═══════════════════════════════════════════════════════════════════════════
 # Synthetic Proposal Data
@@ -240,7 +232,7 @@ class TestE2EComparison:
         level = ExportQualityGate.classify_from_metrics(metrics)
         assert level == "draft"  # Hard gate
 
-        print(f"\nOLD STYLE (run_0944 baseline):")
+        print("\nOLD STYLE (run_0944 baseline):")
         print(f"  overclaim: {metrics.overclaim_rate:.1%}")
         print(f"  speculative_honesty: {metrics.speculative_honesty:.1%}")
         print(f"  epistemic_acceptability: {metrics.epistemic_acceptability_rate:.1%}")
@@ -273,7 +265,7 @@ class TestE2EComparison:
         assert metrics.speculative_honesty >= 0.70  # >70% honesty
         assert metrics.epistemic_acceptability_rate >= 0.50  # >=50%
 
-        print(f"\nNEW STYLE (evidence-grounded):")
+        print("\nNEW STYLE (evidence-grounded):")
         print(f"  overclaim: {metrics.overclaim_rate:.1%}")
         print(f"  speculative_honesty: {metrics.speculative_honesty:.1%}")
         print(f"  epistemic_acceptability: {metrics.epistemic_acceptability_rate:.1%}")
@@ -313,7 +305,7 @@ class TestE2EComparison:
             f"old={old_metrics.direct_support_rate:.1%}, new={new_metrics.direct_support_rate:.1%}"
         )
 
-        print(f"\n--- HONESTY IMPROVEMENT (NOT PERMISSIVENESS) ---")
+        print("\n--- HONESTY IMPROVEMENT (NOT PERMISSIVENESS) ---")
         print(f"  overclaim: {old_metrics.overclaim_rate:.1%} -> {new_metrics.overclaim_rate:.1%} "
               f"(down{old_metrics.overclaim_rate - new_metrics.overclaim_rate:.1%})")
         print(f"  direct_support: {old_metrics.direct_support_rate:.1%} -> {new_metrics.direct_support_rate:.1%} "
@@ -419,7 +411,7 @@ class TestE2EComparison:
         print(f"\n  {'quality_level':<28} {old_level:>12} {new_level:>12}")
 
         # Success criteria
-        print(f"\n--- SUCCESS CRITERIA ---")
+        print("\n--- SUCCESS CRITERIA ---")
         print(f"  overclaim_rate: 25-35%? {new_m.overclaim_rate:.1%} -> "
               f"{'PASS' if 0.25 <= new_m.overclaim_rate <= 0.35 else 'WARN' if new_m.overclaim_rate < 0.25 else 'FAIL'}")
         print(f"  speculative_honesty >70%? {new_m.speculative_honesty:.1%} -> "

@@ -91,7 +91,6 @@ class TestSession:
         assert s.last_activity() == 200
 
     def test_last_activity_no_runs(self):
-        import time
 
         s = Session(name="t")
         assert s.last_activity() >= s.created_at

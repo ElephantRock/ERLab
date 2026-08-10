@@ -11,19 +11,14 @@ Proves:
 
 from __future__ import annotations
 
-import pytest
-
 from backend.config import Settings
 from backend.pipeline.config.field_registry import (
     EFFECT_BEHAVIORAL,
-    EFFECT_CREDENTIAL,
     LIFECYCLE_ACTIVE,
     MATERIAL_INFORMATIONAL,
     MATERIAL_INTERNAL,
     MATERIAL_PUBLIC,
     SENSITIVITY_SECRET,
-    FieldRegistry,
-    ConfigurationFieldContract,
     build_registry,
     validate_registry,
 )
@@ -122,7 +117,7 @@ class TestRegistryValidation:
         """The registry validation must pass with zero errors."""
         registry = build_registry()
         errors = validate_registry(registry)
-        assert not errors, f"Registry validation errors:\n" + "\n".join(errors)
+        assert not errors, "Registry validation errors:\n" + "\n".join(errors)
 
 
 class TestRegistryStructure:

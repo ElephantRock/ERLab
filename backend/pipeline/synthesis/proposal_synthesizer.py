@@ -251,7 +251,9 @@ class ProposalSynthesizer:
             llm = provider or self._provider
             # Collect receipt for this model-backed call
             if receipts is not None:
-                from backend.pipeline.operations.provider_conformance import build_receipt_from_provider
+                from backend.pipeline.operations.provider_conformance import (
+                    build_receipt_from_provider,
+                )
                 receipts.append(build_receipt_from_provider(llm))
             raw_text = await llm.complete(
                 messages=[
@@ -581,7 +583,7 @@ class ProposalSynthesizer:
         [SOURCE-N] reference when possible, or 'internal reasoning' as
         a last resort.
         """
-        from backend.pipeline.verification.surname_utils import extract_surname, build_surname_set
+        from backend.pipeline.verification.surname_utils import build_surname_set
 
         if not corpus_papers:
             return proposal

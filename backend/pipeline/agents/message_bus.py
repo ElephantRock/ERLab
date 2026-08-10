@@ -138,7 +138,7 @@ class MessageBus:
                 asyncio.gather(*tasks, return_exceptions=True),
                 timeout=timeout,
             )
-        except asyncio.TimeoutError:
+        except TimeoutError:
             logger.warning("publish_and_collect timed out after %.1fs", timeout)
 
         return responses

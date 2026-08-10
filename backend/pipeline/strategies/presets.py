@@ -48,7 +48,9 @@ def register_presets(registry: StrategyRegistry) -> None:
     # Full proposal-to-paper topology; experiment_execution is opt-in at run time.
     registry.register(StrategyConfig(
         name=PipelineStrategy.DEEP_RESEARCH,
-        stages=_all_stages_enabled(),
+        stages=_all_stages_enabled(
+            literature_search=StageConfig(enabled=True, params={"citation_explore": True}),
+        ),
         max_total_time=1800.0,
         description=(
             "Full proposal-to-paper pipeline: literature search, ingestion, gap analysis, "
@@ -91,7 +93,9 @@ def register_presets(registry: StrategyRegistry) -> None:
     # semantics are advertised in the fallback preset.
     registry.register(StrategyConfig(
         name=PipelineStrategy.ACADEMIC_PROPOSAL,
-        stages=_all_stages_enabled(),
+        stages=_all_stages_enabled(
+            literature_search=StageConfig(enabled=True, params={"citation_explore": True}),
+        ),
         max_total_time=1800.0,
         description=(
             "Academic proposal-to-paper workflow. Current production stage "

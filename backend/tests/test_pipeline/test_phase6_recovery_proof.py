@@ -4,18 +4,17 @@
 No provider calls required.
 """
 
-import asyncio
-import json
-import pytest
-from types import SimpleNamespace
-from unittest.mock import AsyncMock, MagicMock, patch
 
 from backend.pipeline.experiment.manifest import (
-    ExperimentManifest, ResultMarker, DatasetIdentity, SplitSpec,
-    AnalysisSpec, EnvironmentRecord, ResultArtifact,
+    AnalysisSpec,
+    DatasetIdentity,
+    EnvironmentRecord,
+    ExperimentManifest,
+    ResultArtifact,
+    ResultMarker,
+    SplitSpec,
 )
 from backend.pipeline.stages import PaperSynthesisStage
-
 
 # ── Helpers ────────────────────────────────────────────────────────
 

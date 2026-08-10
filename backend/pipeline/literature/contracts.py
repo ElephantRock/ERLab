@@ -14,8 +14,9 @@ This keeps the graph acyclic.
 from __future__ import annotations
 
 import json
+from collections.abc import Mapping
 from dataclasses import dataclass, field
-from typing import Any, Literal, Mapping, Protocol, runtime_checkable
+from typing import Any, Literal, Protocol, runtime_checkable
 
 from backend.pipeline.literature.models import SearchResult
 

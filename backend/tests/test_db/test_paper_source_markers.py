@@ -13,8 +13,8 @@ from sqlalchemy import create_engine
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from backend.db.models import Base, Idea, Paper, PipelineRun, Proposal, PaperSourceMarker
 from backend.db import crud
+from backend.db.models import Base, Idea, Paper, PaperSourceMarker, PipelineRun, Proposal
 
 
 @pytest.fixture

@@ -5,7 +5,6 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
-import time
 from abc import ABC, abstractmethod
 from typing import Any
 
@@ -71,7 +70,7 @@ class StdIOTransport(BaseTransport):
             self._process.terminate()
             try:
                 await asyncio.wait_for(self._process.wait(), timeout=5.0)
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 self._process.kill()
             self._process = None
 

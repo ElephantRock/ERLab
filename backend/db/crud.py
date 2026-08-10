@@ -2,8 +2,9 @@
 
 import json
 from collections.abc import Sequence
+from datetime import UTC
 
-from sqlalchemy import select, func, case, desc, asc
+from sqlalchemy import asc, case, desc, func, select
 from sqlalchemy.orm import Session
 
 from backend.db.models import Idea, Paper, PaperSourceMarker, PipelineRun, Proposal, ResearchGapDB
@@ -345,10 +346,10 @@ def update_pipeline_run(
             run.stages_completed = json.dumps(completed)
     if error_message is not None:
         run.error_message = error_message
-    from datetime import datetime, timezone
+    from datetime import datetime
 
     if status in ("completed", "failed"):
-        run.completed_at = datetime.now(timezone.utc)
+        run.completed_at = datetime.now(UTC)
     session.commit()
     session.refresh(run)
     return run
@@ -555,7 +556,6 @@ def find_gap_by_hash(session: Session, content_hash: str) -> ResearchGapDB | Non
 
 def list_canonical_gaps(session: Session, limit: int = 100) -> list[ResearchGapDB]:
     """List deduplicated gaps (one per unique content_hash, BATCH-42)."""
-    from sqlalchemy import distinct
     # Get unique hashes and pick the first gap for each
     subq = (
         select(ResearchGapDB.id, ResearchGapDB.content_hash)

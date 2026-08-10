@@ -4,22 +4,21 @@ from __future__ import annotations
 
 import pytest
 
+from backend.ranking.benchmark_cases import ALL_DISCOVERY_CASES
+from backend.ranking.contracts import (
+    RankingCandidate,
+    RankingRequest,
+)
 from backend.ranking.evaluation import (
-    RankingMetrics,
     _dcg_at_k,
-    _ndcg_at_k,
     _mrr_at_k,
+    _ndcg_at_k,
     _precision_at_k,
     _recall_at_k,
     evaluate_ranking,
     macro_average,
 )
-from backend.ranking.benchmark_cases import ALL_DISCOVERY_CASES
 from backend.ranking.policies import rank_legacy_lexical
-from backend.ranking.contracts import (
-    RankingCandidate,
-    RankingRequest,
-)
 
 
 class TestMetrics:

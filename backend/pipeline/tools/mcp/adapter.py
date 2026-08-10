@@ -7,7 +7,7 @@ import logging
 from typing import Any
 
 from backend.pipeline.tools.mcp.client import MCPClient
-from backend.pipeline.tools.mcp.models import MCPServerConfig, MCPToolInfo
+from backend.pipeline.tools.mcp.models import MCPServerConfig
 from backend.pipeline.tools.registry import ToolDefinition
 
 logger = logging.getLogger(__name__)

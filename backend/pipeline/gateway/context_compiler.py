@@ -21,7 +21,7 @@ Strategies (in order of preference):
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 from backend.pipeline.gateway.token_budget import TokenBudget, TokenBudgeter
 

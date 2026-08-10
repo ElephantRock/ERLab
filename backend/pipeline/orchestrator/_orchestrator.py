@@ -1,36 +1,16 @@
 """Pipeline orchestrator — coordinates all research pipeline stages."""
 
-import asyncio
 import logging
 import time
 from datetime import datetime
 
 from backend.config import get_settings
-from backend.pipeline.export.export_service import ExportService
-from backend.pipeline.feasibility.feasibility_scorer import FeasibilityScorer
-from backend.pipeline.gap_analysis.gap_analyzer import GapAnalyzer
-from backend.pipeline.generation.agent_orchestrator import AgentOrchestrator
-from backend.pipeline.ingestion.pdf_service import PDFService
-from backend.pipeline.knowledge.embedding_service import EmbeddingService
-from backend.pipeline.knowledge.vector_store import VectorStore
-from backend.pipeline.tracing.spans import SpanKind, create_span
-from backend.pipeline.tracing.processor import InMemoryProcessor, LoggingProcessor, set_tracer
-from backend.pipeline.execution.run_state import RunCheckpoint, RunState, StageCheckpoint, StageStatus
-from backend.pipeline.literature.search_service import SearchService
-from backend.pipeline.memory.extraction import extract_from_pipeline_result
-from backend.pipeline.memory.service import MemoryService
-from backend.pipeline.novelty.novelty_checker import NoveltyChecker
-from backend.pipeline.verification.proposal_deepener import ProposalDeepener
+from backend.pipeline.compaction.middleware import CompactionMiddleware
+from backend.pipeline.evaluation.proposal_evaluator import ProposalEvaluator
+from backend.pipeline.execution.run_state import RunCheckpoint
 from backend.pipeline.persistence import PipelinePersistence
+from backend.pipeline.reflection.reflector import ReflectionStage
 from backend.pipeline.result import PipelineResult, StageReport
-from backend.pipeline.monitoring.doom_loop import (
-    StageOutputSignature,
-    check_pipeline_doom,
-    hash_stage_output,
-)
-from backend.pipeline.self_improve.evolution import PipelineEvolver
-from backend.pipeline.self_improve.frontier import ParetoFrontier
-from backend.pipeline.self_improve.lessons import LessonExtractor
 from backend.pipeline.stages import (
     AdversarialReviewStage,
     CitationAuditStage,
@@ -53,16 +33,13 @@ from backend.pipeline.stages import (
     StageContext,
     TreeSearchStage,
 )
-from backend.pipeline.reflection.reflector import ReflectionStage
-from backend.pipeline.evaluation.proposal_evaluator import ProposalEvaluator
-from backend.pipeline.synthesis.proposal_synthesizer import ProposalSynthesizer
 from backend.pipeline.synthesis.reference_validator import ReferenceValidator
+from backend.pipeline.tracing.processor import InMemoryProcessor
+from backend.pipeline.verification.proposal_deepener import ProposalDeepener
 from backend.pipeline.verification.reference_verifier import ReferenceVerifier
 from backend.providers.base import LLMProvider
-from backend.providers.provider_factory import get_registry, CostTracker
-from backend.providers.retry import retry_llm_call
+from backend.providers.provider_factory import CostTracker, get_registry
 from backend.providers.token_counter import TokenCounter
-from backend.pipeline.compaction.middleware import CompactionMiddleware
 
 logger = logging.getLogger(__name__)
 
@@ -285,9 +262,9 @@ class PipelineOrchestrator:
 
         # ── LLM Gateway (control plane) ───────────────────────────
         from backend.pipeline.gateway.capability_registry import ModelCapabilityRegistry
-        from backend.pipeline.gateway.token_budget import TokenBudgeter
         from backend.pipeline.gateway.gateway import LLMGateway
         from backend.pipeline.gateway.gateway_provider import GatewayProvider
+        from backend.pipeline.gateway.token_budget import TokenBudgeter
 
         self._capability_registry = ModelCapabilityRegistry()
         self._token_budgeter = TokenBudgeter(
@@ -358,9 +335,9 @@ class PipelineOrchestrator:
 
         # ── SmartRouter (dry-run by default) ──────────────────────
         try:
-            from backend.pipeline.routing.smart_router import SmartRouter
             from backend.pipeline.routing.certified_lookup import CertifiedCapabilityLookup
             from backend.pipeline.routing.dry_run_logger import DryRunLogger
+            from backend.pipeline.routing.smart_router import SmartRouter
             from backend.pipeline.routing.stage_contract import get_smart_router_config
 
             router_config = get_smart_router_config()
@@ -528,7 +505,7 @@ class PipelineOrchestrator:
 
         lines = [
             f"dry_run: strategy={strat}, domain={domain}",
-            f"run_id: (not generated -- dry run)",
+            "run_id: (not generated -- dry run)",
             f"stages: {len(stages)}",
             "",
         ]
@@ -613,8 +590,8 @@ class PipelineOrchestrator:
                 pass
 
         # Legacy fallback
-        from backend.providers.provider_factory import create_provider
         from backend.config import get_settings
+        from backend.providers.provider_factory import create_provider
         settings = get_settings()
 
         if model_id == "cloud":
@@ -910,8 +887,9 @@ class PipelineOrchestrator:
 
         # G5: Run watchdog before starting — clean up stale runs from prior crashes
         try:
-            from backend.pipeline.execution.watchdog import PipelineWatchdog
             from datetime import timedelta as _td
+
+            from backend.pipeline.execution.watchdog import PipelineWatchdog
             watchdog = PipelineWatchdog(self._persistence, timeout=_td(minutes=30))
             stale_count = watchdog.check_sync(exclude_run_id=run_id)
             if stale_count > 0:

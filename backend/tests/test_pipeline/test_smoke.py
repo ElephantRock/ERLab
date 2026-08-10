@@ -9,7 +9,6 @@ import asyncio
 
 import pytest
 
-from backend.pipeline.gap_analysis.gap_analyzer import GapAnalyzer
 from backend.pipeline.gap_analysis.models import ResearchGap
 from backend.pipeline.generation.agent_orchestrator import AgentOrchestrator
 from backend.pipeline.literature.models import Paper

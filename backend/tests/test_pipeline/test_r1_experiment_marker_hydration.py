@@ -20,16 +20,15 @@ import hashlib
 import json
 from types import SimpleNamespace
 from unittest.mock import patch
-from sqlalchemy import create_engine, text
-from sqlalchemy.orm import sessionmaker
 
 import pytest
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
 
 from backend.db.database import Base
-from backend.db.models import Proposal, Idea, ExperimentResult
-from backend.pipeline.stages import PaperSynthesisStage, StageContext
+from backend.db.models import ExperimentResult, Idea, Proposal
 from backend.pipeline.result import PipelineResult
-
+from backend.pipeline.stages import PaperSynthesisStage, StageContext
 
 VALID_EVAL_TEXT = (
     "NOVELTY_SCORE: 0.7\nNOVELTY_JUSTIFICATION: Novel.\n"

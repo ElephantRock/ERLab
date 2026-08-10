@@ -2,9 +2,9 @@
 
 import time
 
+from backend.providers.base import LLMResponse
 from backend.providers.cache.base import CacheEntry
 from backend.providers.cache.memory_cache import InMemoryCache
-from backend.providers.base import LLMResponse
 
 
 def _entry(content: str = "test") -> CacheEntry:

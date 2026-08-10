@@ -4,9 +4,8 @@ Converts Paper objects and proposal metadata to BibTeX format.
 """
 from __future__ import annotations
 
-import re
 import logging
-from typing import Any
+import re
 
 from backend.pipeline.constants import AI_HONESTY_BADGE_BRIEF
 from backend.pipeline.literature.models import Paper
@@ -65,7 +64,7 @@ def proposal_to_bibtex(
 
     lines = [f"@misc{{{key},"]
     lines.append(f"  title = {{{title}}},")
-    lines.append(f"  author = {{Elephant Rock Research Platform}},")
+    lines.append("  author = {Elephant Rock Research Platform},")
     if year:
         lines.append(f"  year = {{{year}}},")
     if domain:

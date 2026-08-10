@@ -5,19 +5,15 @@
 
 from __future__ import annotations
 
-import pytest
-import re
-
-from backend.pipeline.synthesis.typed_claim_composer import (
-    build_deterministic_components, build_slot_prompt,
-    validate_provider_output, assemble_typed_paper,
-    SLOT_METHOD, SLOT_RESULTS, SLOT_CONCLUSION,
-)
-from backend.pipeline.evaluation.deterministic_finalizer import (
-    build_canonical_title, render_result_claim,
-)
 from backend.pipeline.experiment.manifest import ResultMarker
-
+from backend.pipeline.synthesis.typed_claim_composer import (
+    SLOT_CONCLUSION,
+    SLOT_METHOD,
+    SLOT_RESULTS,
+    assemble_typed_paper,
+    build_deterministic_components,
+    validate_provider_output,
+)
 
 IRIS_MARKERS = [
     ResultMarker(1, "RESULT-1", "baseline_accuracy", 0.333333, "m", "a", 1, direction="higher_better", role="baseline"),
@@ -131,6 +127,7 @@ class TestAssembly:
     def test_10_no_remediation_invoked(self):
         """10. No Phase 9-11 remediation or patch function is invoked."""
         import inspect
+
         from backend.pipeline.synthesis.typed_claim_composer import assemble_typed_paper
         source = inspect.getsource(assemble_typed_paper)
         assert "auto_revise" not in source
@@ -140,6 +137,7 @@ class TestAssembly:
     def test_11_no_revision_record(self):
         """11. No revision record is created during assembly."""
         import inspect
+
         from backend.pipeline.synthesis.typed_claim_composer import assemble_typed_paper
         source = inspect.getsource(assemble_typed_paper)
         assert "PaperRevision" not in source

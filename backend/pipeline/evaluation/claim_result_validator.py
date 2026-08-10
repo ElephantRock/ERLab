@@ -24,6 +24,7 @@ match within tolerance is a block, and unmodeled unit/scale transforms
 
 from __future__ import annotations
 
+import contextlib
 import re
 from dataclasses import dataclass
 
@@ -113,20 +114,16 @@ def _extract_adjacent_numbers(paper_md: str, bracket_marker: str) -> list[float]
     # Numbers appearing immediately before any [RESULT-N] occurrence.
     for m in _NUM_BEFORE_RE.finditer(paper_md):
         if f"[RESULT-{marker_index}]" in m.group(0):
-            try:
+            with contextlib.suppress(ValueError):
                 numbers.append(float(m.group("num")))
-            except ValueError:
-                pass
 
     # Numbers appearing immediately after this specific marker.
     after_pattern = re.compile(
         r'\[RESULT-' + str(marker_index) + r'\]\s*(?:of|=|:)?\s*(?P<num>\d+\.?\d*)\s*%?'
     )
     for m in after_pattern.finditer(paper_md):
-        try:
+        with contextlib.suppress(ValueError):
             numbers.append(float(m.group("num")))
-        except ValueError:
-            pass
 
     return numbers
 

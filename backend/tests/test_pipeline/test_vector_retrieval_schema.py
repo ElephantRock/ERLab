@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import sys
 import tempfile
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -23,7 +23,6 @@ from sqlalchemy.orm import sessionmaker
 sys.modules.setdefault("chromadb", MagicMock())
 sys.modules.setdefault("google.generativeai", MagicMock())
 
-import backend.db.models
 from backend.db.database import Base
 from backend.db.models import (
     EmbeddingProfile,
@@ -34,7 +33,6 @@ from backend.db.models import (
     VectorRetrievalEligibleRecord,
     VectorRetrievalEvent,
     VectorRetrievalResult,
-    VectorRetrievalScopePaper,
 )
 from backend.pipeline.vector_contracts import (
     compute_collection_name,
@@ -89,7 +87,7 @@ def _setup_full(engine):
 
         ch = compute_content_hash("content")
         vid = compute_vector_record_id(paper.id, "title_abstract:0", ch, pid)
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         s.add(VectorIndexRecord(
             vector_record_id=vid, paper_id=paper.id, chunk_key="title_abstract:0",
             content_kind="title_abstract", content_hash=ch, embedding_profile_id=pid,
@@ -170,7 +168,7 @@ def _make_event(s, run_id, pid):
         unindexed_paper_count=0, eligible_vector_record_count=1,
         coverage_status="complete", status="success",
         returned_result_count=0,
-        completed_at=datetime.now(timezone.utc),
+        completed_at=datetime.now(UTC),
     )
     s.add(event); s.flush()
     return event.id

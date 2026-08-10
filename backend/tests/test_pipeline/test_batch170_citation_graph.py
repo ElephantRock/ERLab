@@ -1,5 +1,4 @@
 """BATCH-170: Citation Graph Visualization & Frontend Polish."""
-import pytest
 
 
 class TestCitationGraph:
@@ -23,6 +22,7 @@ class TestCitationGraph:
 
     def test_05_citation_graph_returns_404_for_missing(self):
         from fastapi.testclient import TestClient
+
         from backend.api.app import app
         client = TestClient(app)
         response = client.get("/api/v1/pipeline/runs/nonexistent_xxx/citation-graph")

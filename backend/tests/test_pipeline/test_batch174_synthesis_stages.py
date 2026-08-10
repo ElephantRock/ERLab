@@ -26,6 +26,7 @@ from backend.pipeline.result import PipelineResult
 from backend.pipeline.stages import StageContext
 from backend.pipeline.synthesis.proposal_synthesizer import ResearchProposal
 
+
 def _paper(idx: int = 0) -> Paper:
     return Paper(
         id=f"p{idx}",

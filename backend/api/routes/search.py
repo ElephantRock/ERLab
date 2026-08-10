@@ -14,9 +14,11 @@ async def global_search(
     q: str = Query(default="", description="Search query"),
     types: str = Query(default="ideas,gaps,papers,runs", description="Resource types to search"),
 ):
-    from sqlalchemy import func, select as sa_select, or_
+    from sqlalchemy import or_
+    from sqlalchemy import select as sa_select
+
     from backend.db.database import get_session
-    from backend.db.models import Idea, ResearchGapDB, Paper, PipelineRun
+    from backend.db.models import Idea, Paper, PipelineRun, ResearchGapDB
 
     if not q.strip():
         return {"query": q, "results": {}, "total": 0}

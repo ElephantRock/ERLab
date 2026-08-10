@@ -5,8 +5,9 @@ including sections_json with ensemble review data.
 """
 
 import json
+from unittest.mock import patch
+
 import pytest
-from unittest.mock import MagicMock, AsyncMock, patch
 
 from backend.pipeline.persistence import PipelinePersistence
 from backend.pipeline.result import PipelineResult
@@ -52,9 +53,10 @@ def mock_result_with_proposal():
 @pytest.fixture
 def temp_db():
     """Create a temporary in-memory database for testing."""
-    from backend.db.models import Base
-    from sqlalchemy import create_engine, text
+    from sqlalchemy import create_engine
     from sqlalchemy.orm import sessionmaker
+
+    from backend.db.models import Base
     
     engine = create_engine("sqlite:///:memory:")
     Base.metadata.create_all(engine)
@@ -62,7 +64,7 @@ def temp_db():
     
     # Insert a pipeline run and idea to match against
     with Session() as session:
-        from backend.db.models import PipelineRun, Idea
+        from backend.db.models import Idea, PipelineRun
         run = PipelineRun(
             run_id_str="test_run_001",
             status="running",
@@ -107,8 +109,9 @@ class TestProposalPersistence:
         
         # Verify proposal was persisted
         with Session() as session:
-            from backend.db.models import Proposal
             from sqlalchemy import select
+
+            from backend.db.models import Proposal
             proposal = session.execute(
                 select(Proposal).where(Proposal.idea_id == temp_db["idea_id"])
             ).scalar_one_or_none()
@@ -144,8 +147,9 @@ class TestProposalPersistence:
         
         # Verify only one proposal row
         with Session() as session:
+            from sqlalchemy import func, select
+
             from backend.db.models import Proposal
-            from sqlalchemy import select, func
             count = session.execute(
                 select(func.count()).select_from(Proposal).where(
                     Proposal.idea_id == temp_db["idea_id"]
@@ -179,7 +183,8 @@ class TestProposalPersistence:
         
         # Verify no proposal was created
         with Session() as session:
+            from sqlalchemy import func, select
+
             from backend.db.models import Proposal
-            from sqlalchemy import select, func
             count = session.execute(select(func.count()).select_from(Proposal)).scalar()
             assert count == 0

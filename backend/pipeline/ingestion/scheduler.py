@@ -5,10 +5,9 @@ AIV v5.3 — BATCH-128
 
 from __future__ import annotations
 
-import asyncio
 import logging
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 logger = logging.getLogger(__name__)
 
@@ -61,7 +60,7 @@ class IngestionScheduler:
         Returns:
             IngestionResult with counts.
         """
-        result = IngestionResult(run_time=datetime.now(timezone.utc))
+        result = IngestionResult(run_time=datetime.now(UTC))
 
         try:
             # Step 1: Fetch papers
@@ -105,7 +104,7 @@ class IngestionScheduler:
             result.errors.append(f"Ingestion failed: {e}")
             logger.error("Ingestion run failed: %s", e)
 
-        self._last_run = datetime.now(timezone.utc)
+        self._last_run = datetime.now(UTC)
         return result
 
     async def _fetch_papers(self, query: str, max_papers: int) -> list[dict]:

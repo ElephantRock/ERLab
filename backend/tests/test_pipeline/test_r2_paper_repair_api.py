@@ -18,15 +18,15 @@ import hashlib
 import json
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
+
+import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
-import pytest
-
-from backend.db.database import Base
-from backend.db.models import Proposal, Idea, ExperimentResult
 from backend.api.routes.ideas import _derive_blocking_findings
+from backend.db.database import Base
+from backend.db.models import ExperimentResult, Idea, Proposal
 
 
 @pytest.fixture
@@ -227,11 +227,12 @@ class TestRepairEligibility:
         )
 
         # Verify the experiment exists from a fresh session
-        from backend.db.database import get_session as _verify_session
         from sqlalchemy import text as _verify_text
+
+        from backend.db.database import get_session as _verify_session
         with _verify_session() as s:
             rows = s.execute(_verify_text(
-                f"SELECT id, idea_id, proposal_id FROM experiment_results"
+                "SELECT id, idea_id, proposal_id FROM experiment_results"
             )).fetchall()
             print(f"Experiments in DB: {rows}")
             print(f"Looking for idea_id={idea_id}")
@@ -265,6 +266,7 @@ class TestRepairEligibility:
 def get_session_mock(paper_md, prop_id):
     """Context manager that mocks get_session to return the paper for evaluation."""
     from contextlib import contextmanager
+
     from backend.db.database import get_session
 
     @contextmanager

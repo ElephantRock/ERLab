@@ -1,9 +1,6 @@
 """BATCH-165: Self-Improving Prompts (TextGrad)."""
-import os
 import tempfile
 from pathlib import Path
-
-import pytest
 
 
 class TestTextGrad:
@@ -51,8 +48,9 @@ class TestTextGrad:
         assert history[1].version == 2
 
     def test_06_persist_writes_file(self):
-        from backend.pipeline.self_improve.textgrad import TextGradEngine
         import json
+
+        from backend.pipeline.self_improve.textgrad import TextGradEngine
         tmpdir = tempfile.mkdtemp()
         engine = TextGradEngine(persist_dir=tmpdir)
         g = engine.compute_gradient("test", "p", 0.3, 0.8)

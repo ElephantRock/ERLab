@@ -5,17 +5,13 @@ TASK-02: IdeaReflectionStage (5 tests)
 TASK-03: Strategy Presets (2 tests)
 """
 import asyncio
-import json
-from unittest.mock import AsyncMock, MagicMock, patch
-
-import pytest
-
+from unittest.mock import AsyncMock, MagicMock
 
 # ─── Helpers ────────────────────────────────────────────────
 
 def _make_stage_context(gaps=None, ideas=None, domain="test domain"):
-    from backend.pipeline.stages import StageContext
     from backend.pipeline.result import PipelineResult
+    from backend.pipeline.stages import StageContext
     result = PipelineResult()
     if gaps is not None:
         result.gaps = gaps
@@ -49,11 +45,11 @@ class TestGapReflectionStage:
         order = PipelineOrchestrator._STAGE_ORDER
         gap_idx = order.index("gap_analysis")
         ref_idx = order.index("gap_reflection")
-        assert ref_idx == gap_idx + 1, f"gap_reflection should be right after gap_analysis"
+        assert ref_idx == gap_idx + 1, "gap_reflection should be right after gap_analysis"
 
     def test_04_graceful_fallback_on_failure(self):
-        from backend.pipeline.stages import GapReflectionStage
         from backend.pipeline.reflection.reflector import ReflectionStage
+        from backend.pipeline.stages import GapReflectionStage
 
         mock_reflector = MagicMock(spec=ReflectionStage)
         mock_reflector.reflect_gaps = AsyncMock(side_effect=Exception("LLM down"))
@@ -96,8 +92,8 @@ class TestIdeaReflectionStage:
         assert ref_idx == idea_gen_idx + 1
 
     def test_09_graceful_fallback_on_failure(self):
-        from backend.pipeline.stages import IdeaReflectionStage
         from backend.pipeline.reflection.reflector import ReflectionStage
+        from backend.pipeline.stages import IdeaReflectionStage
 
         mock_reflector = MagicMock(spec=ReflectionStage)
         mock_reflector.reflect_ideas = AsyncMock(side_effect=Exception("Timeout"))
@@ -128,9 +124,9 @@ class TestIdeaReflectionStage:
 class TestReflectionPresets:
 
     def test_11_deep_research_enables_reflection(self):
+        from backend.pipeline.strategies.models import PipelineStrategy
         from backend.pipeline.strategies.presets import register_presets
         from backend.pipeline.strategies.registry import StrategyRegistry
-        from backend.pipeline.strategies.models import PipelineStrategy
 
         registry = StrategyRegistry()
         register_presets(registry)
@@ -139,9 +135,9 @@ class TestReflectionPresets:
         assert "idea_reflection" in config.stages
 
     def test_12_fast_scan_disables_reflection(self):
+        from backend.pipeline.strategies.models import PipelineStrategy
         from backend.pipeline.strategies.presets import register_presets
         from backend.pipeline.strategies.registry import StrategyRegistry
-        from backend.pipeline.strategies.models import PipelineStrategy
 
         registry = StrategyRegistry()
         register_presets(registry)

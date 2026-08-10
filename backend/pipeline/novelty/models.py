@@ -10,7 +10,6 @@ Part of Pillar 6 (Novelty Redesign) in the Comprehensive Solution Design v2.
 from __future__ import annotations
 
 from enum import Enum
-from typing import List, Dict, Any, Optional
 
 from pydantic import BaseModel, Field, field_validator
 
@@ -42,7 +41,7 @@ class AxisAssessment(BaseModel):
     axis: AxisType
     score: float = Field(..., ge=0.0, le=1.0)
     confidence: float = Field(..., ge=0.0, le=1.0)
-    evidence_found: List[str] = Field(default_factory=list)
+    evidence_found: list[str] = Field(default_factory=list)
     reasoning: str = ""
 
 
@@ -57,10 +56,10 @@ class PriorWorkMatch(BaseModel):
 
 class SearchCoverage(BaseModel):
     """Track what search queries were run and where blind spots exist."""
-    queries_used: List[str] = Field(default_factory=list)
-    sources_queried: List[str] = Field(default_factory=list)
-    results_per_source: Dict[str, int] = Field(default_factory=dict)
-    blind_spots_identified: List[str] = Field(default_factory=list)
+    queries_used: list[str] = Field(default_factory=list)
+    sources_queried: list[str] = Field(default_factory=list)
+    results_per_source: dict[str, int] = Field(default_factory=dict)
+    blind_spots_identified: list[str] = Field(default_factory=list)
 
 
 class NoveltyProfile(BaseModel):
@@ -74,13 +73,13 @@ class NoveltyProfile(BaseModel):
     strategic_direction: StrategicDirection = StrategicDirection.EMERGENT_PROBLEM_EXPLORATION
     overall_score: float = Field(0.5, ge=0.0, le=1.0)
     overall_confidence: float = Field(0.2, ge=0.0, le=1.0)
-    axes: List[AxisAssessment] = Field(default_factory=list)
-    closest_prior_work: List[PriorWorkMatch] = Field(default_factory=list)
-    differentiations: List[str] = Field(default_factory=list)
+    axes: list[AxisAssessment] = Field(default_factory=list)
+    closest_prior_work: list[PriorWorkMatch] = Field(default_factory=list)
+    differentiations: list[str] = Field(default_factory=list)
     search_coverage: SearchCoverage = Field(default_factory=SearchCoverage)
     novelty_arguments: str = ""
     # P0.3.4F: Retrieval provenance linkage
-    retrieval_event_id: Optional[int] = None
+    retrieval_event_id: int | None = None
     retrieval_mode: str = ""  # governed_vector | legacy_vector | non_vector
 
     @field_validator("axes")
@@ -108,7 +107,7 @@ class DownstreamDirectives(BaseModel):
     EvaluationStage, and CitationAuditStage.
     """
     strategic_direction: StrategicDirection = StrategicDirection.EMERGENT_PROBLEM_EXPLORATION
-    feasibility_weight_overrides: Dict[str, float] = Field(
+    feasibility_weight_overrides: dict[str, float] = Field(
         default_factory=dict,
         description="Dynamic overrides for feasibility scoring weights.",
     )
@@ -116,11 +115,11 @@ class DownstreamDirectives(BaseModel):
         default="",
         description="System prompt injection for proposal synthesizer.",
     )
-    evaluation_baseline_requirements: List[str] = Field(
+    evaluation_baseline_requirements: list[str] = Field(
         default_factory=list,
         description="Explicit baselines or validation checks required.",
     )
-    required_citations: List[str] = Field(
+    required_citations: list[str] = Field(
         default_factory=list,
         description="Paper IDs/DOIs from closest_prior_work that must be cited.",
     )

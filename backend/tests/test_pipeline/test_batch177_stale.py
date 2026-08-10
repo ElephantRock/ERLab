@@ -10,12 +10,10 @@ TASK-02: Watchdog verification + regression + doc checks
 
 from __future__ import annotations
 
-import asyncio
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from unittest.mock import MagicMock, patch
 
 from fastapi.testclient import TestClient
-
 
 # ── Helpers ──────────────────────────────────────────────────────────
 
@@ -32,9 +30,9 @@ def _make_run(
     run.id = run_id
     run.status = status
     run.domain = domain
-    run.created_at = datetime.now(timezone.utc) - timedelta(hours=created_hours_ago)
+    run.created_at = datetime.now(UTC) - timedelta(hours=created_hours_ago)
     run.updated_at = (
-        datetime.now(timezone.utc) - timedelta(hours=updated_hours_ago)
+        datetime.now(UTC) - timedelta(hours=updated_hours_ago)
         if updated_hours_ago is not None
         else None
     )
@@ -58,7 +56,7 @@ def _make_run_detail(
     run.ideas = []
     run.tree_data_json = None
     run.stage_report_json = None
-    run.created_at = datetime.now(timezone.utc) - timedelta(hours=created_hours_ago)
+    run.created_at = datetime.now(UTC) - timedelta(hours=created_hours_ago)
     run.completed_at = None
     run.error_message = None
     return run
@@ -214,8 +212,8 @@ def test_watchdog_marks_stale_failed():
 def test_no_regressions():
     """TEST-177-08: Batch 172-176 modules still import cleanly."""
     # Verify core modules from B172-B176 are importable (no broken deps)
-    from backend.pipeline.preflight import run_preflight  # B172
     from backend.pipeline.execution.watchdog import PipelineWatchdog  # B174 (watchdog existed)
+    from backend.pipeline.preflight import run_preflight  # B172
     from backend.pipeline.result import StageReport  # B173
     from backend.providers.retry import retry_llm_call  # B176
 

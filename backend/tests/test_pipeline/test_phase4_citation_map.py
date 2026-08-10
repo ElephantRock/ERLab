@@ -13,8 +13,6 @@ Required behavior under test:
 
 import re
 
-import pytest
-
 from backend.pipeline.synthesis.paper_synthesizer import PaperSynthesisResult
 
 
@@ -120,9 +118,9 @@ class TestPersistSourceMarkersResolution:
         from sqlalchemy import create_engine
         from sqlalchemy.orm import sessionmaker
 
-        from backend.db.database import Base
         from backend.db import crud
-        from backend.db.models import Idea, Paper as DBPaper, PipelineRun, Proposal
+        from backend.db.database import Base
+        from backend.db.models import Idea, PipelineRun, Proposal
         from backend.pipeline.persistence import PipelinePersistence
 
         engine = create_engine(f"sqlite:///{tmp_path}/m.db")
@@ -171,8 +169,8 @@ class TestPersistSourceMarkersResolution:
         from sqlalchemy import create_engine
         from sqlalchemy.orm import sessionmaker
 
-        from backend.db.database import Base
         from backend.db import crud
+        from backend.db.database import Base
         from backend.db.models import Idea, PipelineRun, Proposal
         from backend.pipeline.persistence import PipelinePersistence
 

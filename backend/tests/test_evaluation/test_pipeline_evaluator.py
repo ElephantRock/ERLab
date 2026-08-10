@@ -4,7 +4,11 @@ import asyncio
 
 from backend.pipeline.evaluation.cache import EvaluationCache
 from backend.pipeline.evaluation.pipeline_evaluator import PipelineEvaluator
-from backend.pipeline.evaluation.quality_gate import QualityGate, QualityGateConfig, QualityThreshold
+from backend.pipeline.evaluation.quality_gate import (
+    QualityGate,
+    QualityGateConfig,
+    QualityThreshold,
+)
 from backend.pipeline.evaluation.scorer import ScoreDimension
 
 

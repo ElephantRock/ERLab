@@ -122,7 +122,10 @@ async def search_knowledge(request: SearchRequest):
         from backend.db.database import get_session
         from backend.pipeline.knowledge.embedding_service import EmbeddingService
         from backend.pipeline.knowledge.vector_store import VectorStore
-        from backend.pipeline.legacy_collection_freeze import assert_legacy_not_frozen, LegacyCollectionFrozenError
+        from backend.pipeline.legacy_collection_freeze import (
+            LegacyCollectionFrozenError,
+            assert_legacy_not_frozen,
+        )
         from backend.providers.provider_factory import create_provider
 
         # P0.3.6: Check if legacy collection is frozen
@@ -161,25 +164,22 @@ async def search_knowledge_governed(
     Requires a provenance_v1 run and an explicit scope mode.
     Returns retrieval_event_id and coverage metadata.
     """
-    import asyncio
+
 
     from backend.config import get_settings
     from backend.db.database import _get_engine, get_session
+    from backend.pipeline.knowledge.embedding_service import EmbeddingService
     from backend.pipeline.provenance_gate import (
+        ProvenanceContractError,
         load_run_provenance_contract,
         select_run_execution_mode,
-        ProvenanceContractError,
     )
-    from backend.pipeline.vector_access_policy import resolve_profile_id
+    from backend.pipeline.scoped_vector_service import query_vectors
     from backend.pipeline.vector_contracts import (
         ScopedVectorRetrievalRequest,
         VectorRetrievalScope,
     )
-    from backend.pipeline.scoped_vector_service import query_vectors
-    from backend.pipeline.vector_backend import GovernedVectorBackend
-    from backend.pipeline.knowledge.embedding_service import EmbeddingService
     from backend.providers.provider_factory import create_provider
-    from sqlalchemy.orm import sessionmaker
 
     # Verify governed run
     try:

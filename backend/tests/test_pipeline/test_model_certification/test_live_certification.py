@@ -5,13 +5,13 @@ They are skipped by default — use --live flag or set EROCK_LMSTUDIO_BASE_URL.
 """
 
 import os
-import pytest
 from pathlib import Path
 
-from backend.pipeline.model_certification.manifest import CandidateModelManifest
-from backend.pipeline.model_certification.runner import CertificationRunner
-from backend.pipeline.model_certification.registries import ProductionModelRegistry
+import pytest
 
+from backend.pipeline.model_certification.manifest import CandidateModelManifest
+from backend.pipeline.model_certification.registries import ProductionModelRegistry
+from backend.pipeline.model_certification.runner import CertificationRunner
 
 # Skip all tests in this module unless LM Studio is available
 pytestmark = pytest.mark.skipif(
@@ -83,7 +83,7 @@ async def test_live_certification_qwen3_4b(qwen_manifest, provider, tmp_path):
     report_files = list((reports_dir / "qwen/qwen3-4b-2507").glob("*.yaml"))
     assert len(report_files) >= 1
 
-    print(f"\nLive certification result:")
+    print("\nLive certification result:")
     print(f"  Status: {report.status}")
     print(f"  Safe context: {report.safe_context_window}")
     print(f"  Schema valid rate: {report.schema_eval.get('schema_valid_rate', 'N/A')}")

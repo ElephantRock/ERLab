@@ -1,11 +1,12 @@
 """BATCH-49 TASK-02: Sandboxed Experiment Execution tests."""
-from fastapi import FastAPI
-from fastapi.testclient import TestClient
-from unittest.mock import MagicMock, patch, AsyncMock
+from unittest.mock import MagicMock, patch
 
-from backend.api.routes.experiments import router
-from backend.api.errors import APIError
+from fastapi import FastAPI
 from fastapi.responses import JSONResponse
+from fastapi.testclient import TestClient
+
+from backend.api.errors import APIError
+from backend.api.routes.experiments import router
 
 app = FastAPI()
 

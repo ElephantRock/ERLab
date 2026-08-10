@@ -23,16 +23,16 @@ from __future__ import annotations
 
 import asyncio
 import hashlib
-import json
 import logging
-import re
+from collections.abc import Callable
 from dataclasses import dataclass, field
-from pathlib import Path
-from typing import Any, Callable
 
-from backend.pipeline.synthesis.paper_synthesizer import PaperSynthesizer, PaperSynthesisResult
-from backend.pipeline.synthesis.section_wise_synthesizer import SectionWiseSynthesizer, DEFAULT_SECTIONS
-from backend.pipeline.synthesis.synthesis_budget import SynthesisBudget, BudgetTimer
+from backend.pipeline.synthesis.paper_synthesizer import PaperSynthesizer
+from backend.pipeline.synthesis.section_wise_synthesizer import (
+    DEFAULT_SECTIONS,
+    SectionWiseSynthesizer,
+)
+from backend.pipeline.synthesis.synthesis_budget import BudgetTimer, SynthesisBudget
 from backend.providers.base import LLMProvider
 
 logger = logging.getLogger(__name__)
@@ -159,7 +159,7 @@ async def synthesize_paper(
             synthesizer.synthesize_session(session),
             timeout=timer.monolithic_remaining,
         )
-    except (asyncio.TimeoutError, asyncio.CancelledError) as e:
+    except (TimeoutError, asyncio.CancelledError):
         logger.warning("Monolithic synthesis timed out after %.0fs", timer.elapsed)
         result = None
     except Exception as e:
@@ -213,7 +213,7 @@ async def synthesize_paper(
             section_synth._generate_outline(proposal_text, domain),
             timeout=min(60.0, timer.section_remaining),
         )
-    except (asyncio.TimeoutError, asyncio.CancelledError):
+    except (TimeoutError, asyncio.CancelledError):
         logger.warning("Outline generation timed out")
         outline = "Standard academic paper structure"
     except Exception as e:
@@ -280,7 +280,7 @@ async def synthesize_paper(
                 section_title, draft.word_count, len(draft.citations_used),
             )
 
-        except (asyncio.TimeoutError, asyncio.CancelledError):
+        except (TimeoutError, asyncio.CancelledError):
             logger.warning(
                 "Section '%s' timed out — checkpointing %d/%d sections",
                 section_title, len(completed_sections), len(DEFAULT_SECTIONS),

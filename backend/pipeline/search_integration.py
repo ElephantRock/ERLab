@@ -10,7 +10,6 @@ All operations fail-safe.
 from __future__ import annotations
 
 import logging
-from typing import Any
 
 from backend.pipeline.literature.multi_source import MultiSourceSearcher
 from backend.pipeline.literature.relevance_filter import RelevanceFilter

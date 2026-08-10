@@ -7,11 +7,9 @@ AIV v5.3 — T1, T2, T5
 """
 from __future__ import annotations
 
-import pytest
 from unittest.mock import MagicMock
 
-from backend.pipeline.streaming.progress_reporter import ProgressReporter, ProgressEvent
-
+from backend.pipeline.streaming.progress_reporter import ProgressEvent, ProgressReporter
 
 # ══════════════════════════════════════════════════════════
 # TASK-01: ProgressReporter + Event Model

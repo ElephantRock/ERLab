@@ -6,7 +6,6 @@ from the orchestration flow.
 
 import json
 import logging
-import time
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -138,8 +137,8 @@ class ResultProcessor:
         HB-01: Non-blocking — catches all exceptions.
         """
         try:
-            from backend.pipeline.verification.pipeline_evaluator import PipelineEvaluator as PE
             from backend.pipeline.verification.gold_standards import get_gold_gaps
+            from backend.pipeline.verification.pipeline_evaluator import PipelineEvaluator as PE
 
             domain = ctx.domain or "AI/NLP"
             gold_gaps = get_gold_gaps(domain)

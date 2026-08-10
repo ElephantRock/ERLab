@@ -8,7 +8,6 @@ import importlib.util
 import sys
 from pathlib import Path
 
-
 # Load the harness from scripts/ — parents[3] from backend/tests/test_pipeline/
 HARNESS = Path(__file__).resolve().parents[3] / "scripts" / "stress_ground_truth.py"
 spec = importlib.util.spec_from_file_location("stress_ground_truth", HARNESS)

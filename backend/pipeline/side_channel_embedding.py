@@ -15,7 +15,6 @@ import json
 from dataclasses import dataclass
 from typing import Literal
 
-
 EmbeddingPurpose = Literal[
     "paper",
     "knowledge_graph_entity",

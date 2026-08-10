@@ -1,13 +1,12 @@
 """Tests for BATCH-RAG-06: Context Window Registry."""
 
-import pytest
 
 from backend.pipeline.knowledge.context_windows import (
+    MODEL_CONTEXT_REGISTRY,
     ModelContextInfo,
     get_model_context,
     get_recommended_budget,
     list_models,
-    MODEL_CONTEXT_REGISTRY,
 )
 
 

@@ -12,19 +12,15 @@ evidence or binding mismatches. Does not silently produce a partial
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass, field
-from datetime import datetime
+from dataclasses import dataclass
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from backend.db.models import (
-    EmbeddingCapabilityBinding,
-    EmbeddingCapabilityCheck,
     EmbeddingProfileBindingActivation,
     VectorIndexRecord,
     VectorRetrievalEvent,
-    VectorRetrievalEligibleRecord,
     VectorRetrievalResult,
 )
 

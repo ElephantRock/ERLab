@@ -1,7 +1,8 @@
 """BATCH-45: Gap-to-Paper Navigation & Related Gaps tests."""
+from unittest.mock import MagicMock
+
 from fastapi import FastAPI
-from fastapi.testclient import TestClient
-from unittest.mock import MagicMock, patch
+
 from backend.api.routes.gaps import router
 
 app = FastAPI()

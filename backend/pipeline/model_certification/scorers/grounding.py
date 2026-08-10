@@ -22,12 +22,9 @@ uses those to compute precise metrics instead of heuristic extraction.
 
 from __future__ import annotations
 
-import json
 import re
-from typing import Any
 
-from backend.pipeline.model_certification.eval_case import StageEvalCase, GoldAnswer
-
+from backend.pipeline.model_certification.eval_case import GoldAnswer, StageEvalCase
 
 # Known fabricated citation patterns
 _FABRICATION_INDICATORS = {
@@ -352,9 +349,7 @@ def _compute_heuristic_metrics(
         else:
             if gold and gold.expected_keys:
                 gold_cites_lower = [k.lower() for k in gold.expected_keys]
-                if any(g in cite_lower for g in gold_cites_lower):
-                    real_citations += 1
-                elif len(cite.strip()) > 5 and "http" not in cite_lower:
+                if any(g in cite_lower for g in gold_cites_lower) or len(cite.strip()) > 5 and "http" not in cite_lower:
                     real_citations += 1
                 else:
                     fabricated += 1
@@ -392,9 +387,7 @@ def _compute_heuristic_metrics(
                 if has_real:
                     if gold and gold.expected_fields:
                         claim_topic = gold.expected_fields.get("topic", "")
-                        if claim_topic and claim_topic.lower() in claim_lower:
-                            supported += 1
-                        elif has_evidence_text:
+                        if claim_topic and claim_topic.lower() in claim_lower or has_evidence_text:
                             supported += 1
                         else:
                             supported += 0  # Wrong context

@@ -20,8 +20,6 @@ import importlib.util
 import sys
 from pathlib import Path
 
-import pytest
-
 # Load the harness module from scripts/ (not on the package path).
 # Register in sys.modules BEFORE exec so @dataclass's module lookup succeeds.
 _HARNESS_PATH = (

@@ -21,13 +21,10 @@ from __future__ import annotations
 
 from backend.ranking.benchmark_v2_schema import (
     ANNOTATOR_SECOND_PASS,
-    ANNOTATOR_ADJUDICATOR,
-    AnnotationPass,
     DISAGREE_NONE,
     DISAGREE_RESOLVED,
-    JudgmentProvenance,
+    AnnotationPass,
 )
-
 
 # (case_id, candidate_id) -> (second_pass AnnotationPass fields,
 #                              adjudicated_grade, disagreement_status)

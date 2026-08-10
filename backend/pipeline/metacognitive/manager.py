@@ -4,7 +4,8 @@ from __future__ import annotations
 
 import logging
 import time
-from typing import TYPE_CHECKING, Callable
+from collections.abc import Callable
+from typing import TYPE_CHECKING
 
 from backend.pipeline.metacognitive.ledger import LedgerEntry, ProgressLedger
 from backend.pipeline.metacognitive.plateau_detector import PlateauDetector, PlateauResult

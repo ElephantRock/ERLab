@@ -15,22 +15,21 @@ from __future__ import annotations
 
 import json
 import os
-import pytest
 from pathlib import Path
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
-from backend.pipeline.persistence import (
-    PipelinePersistence,
-    CheckpointPersistenceError,
-    IncompatibleCheckpointError,
-    CHECKPOINT_SCHEMA_VERSION,
-    content_hash,
-)
+import pytest
+
 from backend.pipeline.execution.run_state import (
     RunCheckpoint,
     RunState,
-    StageCheckpoint,
-    StageStatus,
+)
+from backend.pipeline.persistence import (
+    CHECKPOINT_SCHEMA_VERSION,
+    CheckpointPersistenceError,
+    IncompatibleCheckpointError,
+    PipelinePersistence,
+    content_hash,
 )
 
 

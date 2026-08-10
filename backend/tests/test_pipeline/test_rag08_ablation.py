@@ -1,16 +1,16 @@
 """Tests for BATCH-RAG-08: Ablation Study Runner."""
 
 import asyncio
+
 import pytest
 
 from backend.pipeline.experiment.ablation import (
     ABLATABLE_COMPONENTS,
-    AblationRunner,
-    AblationVariant,
     AblationReport,
     AblationResult,
+    AblationRunner,
+    AblationVariant,
 )
-from backend.pipeline.strategies.models import PipelineStrategy
 
 
 def test_ablatable_components():

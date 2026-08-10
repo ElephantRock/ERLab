@@ -14,20 +14,18 @@ The router selects both model AND execution strategy, not just a model name.
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass, field
-from typing import Any
+from dataclasses import dataclass
 
-from backend.pipeline.routing.stage_contract import (
-    StageContract,
-    get_smart_router_config,
-)
 from backend.pipeline.routing.certified_lookup import (
     CertifiedCapabilityLookup,
     CertifiedModelCandidate,
 )
 from backend.pipeline.routing.hard_gates import HardGateEngine
-from backend.pipeline.routing.strategy_planner import StrategyPlanner, StrategyPlan
 from backend.pipeline.routing.routing_decision import RoutingDecision
+from backend.pipeline.routing.stage_contract import (
+    StageContract,
+)
+from backend.pipeline.routing.strategy_planner import StrategyPlan, StrategyPlanner
 
 logger = logging.getLogger(__name__)
 
@@ -111,7 +109,7 @@ class SmartRouter:
                 eligibility="forced_unsafe",
                 strategy="single_call",
                 confidence=0.0,
-                reason=f"Forced model (unsafe override, hard gates bypassed)",
+                reason="Forced model (unsafe override, hard gates bypassed)",
                 warnings=["UNSAFE: Hard gates bypassed by forced_model_unsafe override"],
             )
 

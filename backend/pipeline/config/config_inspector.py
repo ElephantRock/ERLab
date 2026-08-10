@@ -6,9 +6,8 @@ persists secret raw values — only presence markers and safe fingerprints.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-from datetime import datetime, timezone
-from typing import Any
+from dataclasses import dataclass
+from datetime import UTC, datetime
 
 from backend.pipeline.config.effective_resolver import (
     ResolvedConfigurationValue,
@@ -27,7 +26,7 @@ class ConfigurationResolutionSnapshot:
     precedence_policy_version: str
     effective_configuration_fingerprint: str
     created_at: datetime
-    items: tuple["ConfigurationResolutionItem", ...]
+    items: tuple[ConfigurationResolutionItem, ...]
 
 
 @dataclass(frozen=True)
@@ -60,12 +59,11 @@ def build_resolution_snapshot(
       value_fingerprint = None
     """
     import hashlib
-    import uuid
 
     snapshot_id = hashlib.sha256(
-        f"{scope_kind}:{scope_id}:{datetime.now(timezone.utc).isoformat()}".encode()
+        f"{scope_kind}:{scope_id}:{datetime.now(UTC).isoformat()}".encode()
     ).hexdigest()[:32]
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     fingerprint = resolve_configuration_fingerprint(resolved_values)
 
     items: list[ConfigurationResolutionItem] = []

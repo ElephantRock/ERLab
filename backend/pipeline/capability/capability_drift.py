@@ -20,8 +20,7 @@ The authority rule (fail-closed):
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
-from typing import Any
+from datetime import UTC, datetime
 
 from sqlalchemy import select, text
 from sqlalchemy.orm import Session
@@ -89,7 +88,7 @@ def is_check_current(
     mutated to 'expired'.
     """
     if now is None:
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
     if check.check_status != STATUS_PASSED:
         return False
     if check.expires_at is None:
@@ -97,5 +96,5 @@ def is_check_current(
     # Handle timezone-naive datetimes from SQLite
     expires = check.expires_at
     if expires.tzinfo is None:
-        expires = expires.replace(tzinfo=timezone.utc)
+        expires = expires.replace(tzinfo=UTC)
     return now < expires

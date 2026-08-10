@@ -7,10 +7,7 @@ contract violations even when the stage found 80+ papers.
 
 from __future__ import annotations
 
-import pytest
-
 from backend.pipeline.monitoring.contracts import (
-    ContractViolation,
     StageContract,
     verify_contract,
 )

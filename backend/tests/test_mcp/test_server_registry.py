@@ -1,6 +1,5 @@
 """Tests for MCP server registry — YAML loading and validation."""
 
-import pytest
 
 from backend.pipeline.tools.mcp.models import MCPTransport
 from backend.pipeline.tools.mcp.server_registry import MCPServerRegistry

@@ -8,14 +8,15 @@ AIV v5.3 — T1, T2, T5. Use asyncio.run() not @pytest.mark.asyncio.
 from __future__ import annotations
 
 import asyncio
+from unittest.mock import AsyncMock
+
 import pytest
-from unittest.mock import AsyncMock, MagicMock
 
 from backend.pipeline.evaluation.proposal_evaluator import (
-    ProposalEvaluator,
-    ProposalEvaluation,
-    DimensionScore,
     DIMENSIONS,
+    DimensionScore,
+    ProposalEvaluation,
+    ProposalEvaluator,
 )
 
 

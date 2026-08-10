@@ -12,13 +12,12 @@ Design constraints:
 from __future__ import annotations
 
 import json
-
-from backend.pipeline.utils.json_extraction import extract_json
 import logging
 from typing import TYPE_CHECKING
 
 from backend.pipeline.knowledge.relationships import KnowledgeRelationship, RelationType
 from backend.pipeline.knowledge.truth import TruthValue
+from backend.pipeline.utils.json_extraction import extract_json
 
 if TYPE_CHECKING:
     from backend.pipeline.literature.models import Paper

@@ -13,7 +13,6 @@ from backend.pipeline.gap_analysis.models import ResearchGap
 from backend.pipeline.generation.borda import (
     BordaTournament,
 )
-from backend.pipeline.tracing.spans import SpanKind, create_span
 from backend.pipeline.generation.critic_agent import CriticAgent
 from backend.pipeline.generation.ideator_agent import IdeatorAgent
 from backend.pipeline.generation.impasse import ImpasseDetector, Resolution
@@ -30,6 +29,7 @@ from backend.pipeline.generation.strategies import (
     select_strategy,
 )
 from backend.pipeline.literature.models import Paper
+from backend.pipeline.tracing.spans import SpanKind, create_span
 from backend.providers.base import LLMProvider
 
 if TYPE_CHECKING:
@@ -73,7 +73,7 @@ class AgentOrchestrator:
         """Set per-agent temperature overrides from evolved parameters."""
         self._temperature_overrides = temps
 
-    def set_hooks(self, hooks: "HookDispatcher") -> None:
+    def set_hooks(self, hooks: HookDispatcher) -> None:
         """Set hook dispatcher for impasse events."""
         self._hooks = hooks
 
@@ -140,7 +140,9 @@ class AgentOrchestrator:
             refiner = RefinerAgent(provider)
             # Collect receipt for the provider used in this run
             if receipts is not None:
-                from backend.pipeline.operations.provider_conformance import build_receipt_from_provider
+                from backend.pipeline.operations.provider_conformance import (
+                    build_receipt_from_provider,
+                )
                 receipts.append(build_receipt_from_provider(provider))
         else:
             ideator = self._ideator
@@ -148,7 +150,9 @@ class AgentOrchestrator:
             refiner = self._refiner
             # Collect receipt for the default provider
             if receipts is not None:
-                from backend.pipeline.operations.provider_conformance import build_receipt_from_provider
+                from backend.pipeline.operations.provider_conformance import (
+                    build_receipt_from_provider,
+                )
                 receipts.append(build_receipt_from_provider(self._provider))
 
         # Accumulators for traceability

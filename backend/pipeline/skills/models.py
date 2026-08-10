@@ -138,12 +138,12 @@ class SkillMarkdown:
             return content
 
         parts = [f"# {skill.name}", ""]
-        parts.append(f"## Description")
+        parts.append("## Description")
         parts.append(skill.description)
         parts.append("")
 
         if current:
-            parts.append(f"## Content")
+            parts.append("## Content")
             parts.append(f"Version {current.version} (score: {current.score:.2f})")
             parts.append(current.content)
             parts.append("")

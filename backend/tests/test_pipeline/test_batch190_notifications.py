@@ -4,15 +4,12 @@ AIV §13: Tests verify behavior (notifications dispatched, errors handled)."""
 
 import asyncio
 
-import pytest
-
 from backend.pipeline.notifications.gateway import (
     CompositeNotifier,
     ConsoleNotifier,
     Notification,
     NotificationGateway,
     PipelineEvent,
-    WebhookNotifier,
     create_notifier,
 )
 

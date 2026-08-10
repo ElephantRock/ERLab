@@ -235,7 +235,6 @@ class _ConcurrentFakeGenai:
         # also reads model identity at this point). Yield to the event loop
         # to give other tasks a chance to interleave — without the lock, an
         # interleaving instance's configure() would land here.
-        import asyncio as _asyncio
         # The call runs inside asyncio.to_thread in production; we cannot
         # await from inside a sync function, but we can simulate yielding
         # by recording the observed key BEFORE any further mutation.

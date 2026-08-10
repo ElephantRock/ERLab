@@ -11,21 +11,17 @@ persist real bibliographic metadata, force the embedding path to fail, and
 assert the metadata remains queryable with full identifiers.
 """
 
-import json
 from contextlib import contextmanager
 
 import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 
+from backend.db import crud
 from backend.db.database import Base
 from backend.db.models import (
-    Idea,
-    Paper as DBPaper,
     PipelineRun,
-    Proposal,
 )
-from backend.db import crud
 from backend.pipeline.literature.models import Author, Paper
 from backend.pipeline.persistence import (
     CandidateWithDiscoveries,

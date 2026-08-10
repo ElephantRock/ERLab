@@ -61,7 +61,7 @@ def test_101_02_journal_note_fails_safe():
 
 def test_101_02_journal_write():
     """journal_write produces paths."""
-    import tempfile, os
+    import tempfile
     with tempfile.TemporaryDirectory() as tmpdir:
         svc = PipelineIntegrationService(run_id="test-journal", domain="AI")
         # Override output dir

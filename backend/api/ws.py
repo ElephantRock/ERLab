@@ -128,7 +128,7 @@ async def websocket_endpoint(
                 await websocket.send_json({"type": "error", "message": "Authentication required"})
                 await websocket.close(code=4001, reason="Authentication required")
                 return
-        except asyncio.TimeoutError:
+        except TimeoutError:
             await websocket.send_json({"type": "error", "message": "Auth timeout"})
             await websocket.close(code=4001, reason="Authentication timeout")
             return

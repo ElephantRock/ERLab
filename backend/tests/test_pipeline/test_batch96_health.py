@@ -5,10 +5,12 @@ AIV v5.3 — T1, T2, T5.
 from __future__ import annotations
 
 import asyncio
-import pytest
 
 from backend.pipeline.monitoring.health import (
-    HealthMonitor, HealthReport, ComponentHealth, HealthStatus,
+    ComponentHealth,
+    HealthMonitor,
+    HealthReport,
+    HealthStatus,
 )
 
 

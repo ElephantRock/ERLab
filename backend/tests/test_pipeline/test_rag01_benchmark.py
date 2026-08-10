@@ -13,13 +13,13 @@ import math
 
 import pytest
 
+from backend.pipeline.evaluation.benchmark_generator import BenchmarkGenerator
 from backend.pipeline.evaluation.benchmark_models import (
     BenchmarkDataset,
     BenchmarkQuestion,
     BenchmarkRunReport,
     RetrievalResult,
 )
-from backend.pipeline.evaluation.benchmark_generator import BenchmarkGenerator
 from backend.pipeline.evaluation.retrieval_benchmark import (
     RetrievalBenchmarkRunner,
     compute_hit_rate,
@@ -28,7 +28,6 @@ from backend.pipeline.evaluation.retrieval_benchmark import (
     compute_precision_at_k,
 )
 from backend.pipeline.literature.models import Author, Paper
-
 
 # ── Fixtures ───────────────────────────────────────────────────────────
 

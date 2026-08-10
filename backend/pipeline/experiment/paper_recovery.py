@@ -15,19 +15,16 @@ the PER_PROPOSAL_TIMEOUT wrapper that caused the B-08 failure in Phase 5.
 
 from __future__ import annotations
 
-import hashlib
 import json
 import logging
 from pathlib import Path
-from typing import Any
 
-from backend.db.database import get_session
-from backend.db.models import ExperimentResult, Proposal, PaperSourceMarker
-from backend.pipeline.experiment.manifest import ExperimentManifest, ResultMarker
-from backend.pipeline.evaluation.conclusion_checker import classify_conclusion_support
-from backend.pipeline.evaluation.scope_checker import classify_scope_alignment
-from backend.providers.provider_factory import get_generation_provider
 from backend.config import get_settings
+from backend.db.database import get_session
+from backend.db.models import ExperimentResult, PaperSourceMarker, Proposal
+from backend.pipeline.evaluation.scope_checker import classify_scope_alignment
+from backend.pipeline.experiment.manifest import ExperimentManifest, ResultMarker
+from backend.providers.provider_factory import get_generation_provider
 
 logger = logging.getLogger(__name__)
 
@@ -78,8 +75,9 @@ async def resume_empirical_paper(
         proposal_text = proposal.content_md or ""
 
         # Get linked papers for source formatting
-        from backend.db.models import Paper, Idea, RunPaper
         from sqlalchemy import select
+
+        from backend.db.models import Idea, Paper, RunPaper
 
         source_papers = []
         source_ids = []
@@ -216,8 +214,8 @@ async def resume_empirical_paper(
     synthesis_sources = list(source_papers) + [experiment_context]
 
     # ── 4. Synthesize paper via unified service ────────────────────
-    from backend.pipeline.synthesis.synthesis_service import synthesize_paper
     from backend.pipeline.synthesis.synthesis_budget import SynthesisBudget
+    from backend.pipeline.synthesis.synthesis_service import synthesize_paper
 
     settings = get_settings()
     provider = get_generation_provider(settings)
@@ -290,8 +288,8 @@ async def resume_empirical_paper(
     claim_alignment_passed = True
     claim_alignment_reason = "Not an empirical run"
     try:
-        from backend.pipeline.experiment.specification import load_spec as _cls
         from backend.pipeline.evaluation.claim_alignment import evaluate_claim_alignment
+        from backend.pipeline.experiment.specification import load_spec as _cls
         _claim_spec = _cls(manifest.experiment_spec_id)
         claim_result = evaluate_claim_alignment(
             paper_md=paper_md,

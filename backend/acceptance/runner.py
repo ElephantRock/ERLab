@@ -331,7 +331,17 @@ async def run_acceptance(
 
     rid = run_id or f"accept_{case.case_id}_{time.strftime('%Y%m%d_%H%M%S')}"
     sid = session_id or f"session_{case.case_id}_{time.strftime('%Y%m%d_%H%M%S')}"
-    config = spine.ConfirmatoryConfig(run_id=rid, session_id=sid, domain=case.research_domain)
+    config = spine.ConfirmatoryConfig(
+        run_id=rid,
+        session_id=sid,
+        domain=case.research_domain,
+        strategy=case.strategy.value if hasattr(case.strategy, "value") else str(case.strategy),
+        research_question=case.research_question,
+        generation_rounds=case.generation_parameters.generation_rounds,
+        ideas_per_round=case.generation_parameters.ideas_per_round,
+        max_gaps=case.generation_parameters.max_gaps,
+        export_format=case.generation_parameters.export_format,
+    )
 
     result = None
     execution_error: str = ""
@@ -362,8 +372,17 @@ async def run_acceptance(
             exit_code=1,
         )
     else:
+        # evaluate_gates reads PipelineResult attributes (.outcome,
+        # .stage_report, .proposals, .gaps). run_confirmatory returns a
+        # summary dict; the raw PipelineResult is stashed under the
+        # reserved "_pipeline_result" key for gate evaluation.
+        pipeline_result = (
+            result.get("_pipeline_result", result)
+            if isinstance(result, dict)
+            else result
+        )
         report = evaluate_gates(
-            case, result, attempt_id=rid,
+            case, pipeline_result, attempt_id=rid,
             code_origin_ok=True,  # preflight already enforced this
             identity_isolation_ok=True,
             restart_recovery_ok=restart_ok,

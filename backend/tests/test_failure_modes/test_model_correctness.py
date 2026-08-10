@@ -13,9 +13,12 @@ Run: pytest backend/tests/test_failure_modes/test_model_correctness.py -v
 from __future__ import annotations
 
 import asyncio
-import pytest
-from unittest.mock import MagicMock, patch, AsyncMock
+from unittest.mock import MagicMock
 
+import pytest
+
+from backend.pipeline.operations.executor import OperationExecutor
+from backend.pipeline.operations.provider_conformance import build_receipt_from_response
 from backend.pipeline.operations.types import (
     FailureClass,
     MissingModelReceiptError,
@@ -25,11 +28,7 @@ from backend.pipeline.operations.types import (
     StageExecutionResult,
     StageStatus,
     WrongModelServedError,
-    LMStudioUnreachableError,
 )
-from backend.pipeline.operations.provider_conformance import build_receipt_from_response
-from backend.pipeline.operations.executor import OperationExecutor
-
 
 # ── Helpers ─────────────────────────────────────────────────────
 
@@ -122,7 +121,7 @@ class TestMissingReceipt:
                 provider_name="lmstudio",
                 endpoint="http://localhost:1234/v1",
             )
-        assert FailureClass.MISSING_RECEIPT == exc_info.value.failure_class
+        assert exc_info.value.failure_class == FailureClass.MISSING_RECEIPT
 
     def test_missing_receipt_message_includes_provider_and_model(self):
         response = MockLLMResponse(served_model=None)

@@ -6,9 +6,10 @@ from __future__ import annotations
 
 import os
 import tempfile
+
 import pytest
 
-from backend.pipeline.knowledge.gap_queue import GapQueue, QueuedGap, GapPriority
+from backend.pipeline.knowledge.gap_queue import GapPriority, GapQueue, QueuedGap
 
 
 @pytest.fixture

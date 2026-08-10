@@ -12,10 +12,10 @@ fail context for single_call but pass for section_wise.
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
-from backend.pipeline.routing.stage_contract import StageContract
 from backend.pipeline.routing.certified_lookup import CertifiedModelCandidate
+from backend.pipeline.routing.stage_contract import StageContract
 
 logger = logging.getLogger(__name__)
 

@@ -1,15 +1,13 @@
 """Tests for proposal section refinement pass (GAP 2 fix)."""
 
 import asyncio
-from unittest.mock import MagicMock
 
+from backend.pipeline.generation.models import ResearchIdea
 from backend.pipeline.synthesis.proposal_synthesizer import (
+    SECTION_CHECKLIST,
     ProposalSynthesizer,
     ResearchProposal,
-    SECTION_CHECKLIST,
-    MIN_WORDS,
 )
-from backend.pipeline.generation.models import ResearchIdea
 from backend.tests.test_pipeline.conftest import SchemaAwareFakeProvider
 
 

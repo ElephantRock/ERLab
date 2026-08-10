@@ -12,13 +12,11 @@ import math
 import pytest
 
 from backend.pipeline.evaluation.retrieval_metrics import (
-    RetrievedDocument,
     RetrievalMetricsReport,
-    QueryMetrics,
+    RetrievedDocument,
     compute_retrieval_metrics,
     evaluate_search_results,
 )
-
 
 # ── Helper ─────────────────────────────────────────────────────────────
 

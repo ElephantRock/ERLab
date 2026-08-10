@@ -1,16 +1,13 @@
 """Tests for POST /recombination/propose endpoint (BATCH-65/TASK-02)."""
 
-import json
 from unittest.mock import AsyncMock, MagicMock, patch
 
-import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from backend.api.errors import APIError
 from backend.api.routes.recombination import router
 from backend.db.models import Idea
-
 
 # ── Test app setup ──────────────────────────────────────────────
 

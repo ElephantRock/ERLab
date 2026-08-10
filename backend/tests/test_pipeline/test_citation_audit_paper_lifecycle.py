@@ -16,7 +16,6 @@ from backend.pipeline.result import PipelineResult
 from backend.pipeline.stages import CitationAuditStage, StageContext
 from backend.pipeline.verification.citation_claim_auditor import CitationAuditReport
 
-
 _VALID_EVAL = (
     "NOVELTY_SCORE: 0.7\nNOVELTY_JUSTIFICATION: Novel.\n"
     "FEASIBILITY_SCORE: 0.7\nFEASIBILITY_JUSTIFICATION: Feasible.\n"

@@ -10,12 +10,11 @@ import random
 import time
 from typing import TYPE_CHECKING
 
-from backend.pipeline.result import StageReport
 from backend.providers.retry import retry_llm_call
 
 if TYPE_CHECKING:
-    from backend.pipeline.stages import PipelineStage, StageContext
     from backend.pipeline.execution.run_state import RunCheckpoint
+    from backend.pipeline.stages import PipelineStage, StageContext
 
 logger = logging.getLogger(__name__)
 
@@ -74,7 +73,7 @@ class StageExecutor:
 
                 result = await asyncio.wait_for(_run(), timeout=stage_timeout)
                 return result
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 self._last_stage_retries = 0
                 logger.error(
                     "Stage %s TIMED OUT after %ds (attempt %d/%d)",

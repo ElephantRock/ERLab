@@ -20,9 +20,8 @@ from backend.pipeline.knowledge.entities import EntityType, KnowledgeEntity
 from backend.pipeline.side_channel_embedding import (
     SideChannelEmbeddingError,
     SideChannelEmbeddingRuntime,
-    compute_namespace_fingerprint,
-    compute_side_channel_collection_name,
     assert_purpose_not_paper,
+    compute_side_channel_collection_name,
 )
 
 if TYPE_CHECKING:

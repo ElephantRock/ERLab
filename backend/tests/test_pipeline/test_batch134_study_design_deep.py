@@ -1,10 +1,9 @@
 """BATCH-134 Tests — LLM-Grounded StudyDesigner."""
 
 import json
-import pytest
 from unittest.mock import AsyncMock, MagicMock
 
-from backend.pipeline.claims.study_designer import StudyDesigner, StudyDesign
+from backend.pipeline.claims.study_designer import StudyDesign, StudyDesigner
 
 
 def _mock_llm_response():

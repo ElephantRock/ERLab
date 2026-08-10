@@ -23,11 +23,8 @@ from __future__ import annotations
 import pytest
 
 from backend.pipeline.evaluation.proposal_evaluator import (
-    DIMENSIONS,
-    ProposalEvaluation,
     ProposalEvaluator,
 )
-
 
 # ── B-COST-01: usage contract broken under the cache wrapper ──────────────
 
@@ -41,9 +38,9 @@ async def test_b_cost_01_usage_call_through_cache_wrapper():
     did not accept stage=/run_id= while CachedProvider forwarded them. The fix
     makes concrete-provider overrides accept the base-class contract.
     """
+    from backend.providers.base import LLMResponse
     from backend.providers.cache.cached_provider import CachedProvider
     from backend.providers.cache.memory_cache import InMemoryCache
-    from backend.providers.base import LLMResponse
     from backend.tests.conftest import FakeLLMProvider
 
     # A provider that conforms to the base-class complete_with_usage contract
@@ -299,9 +296,9 @@ async def test_b_cost_01_cost_tracker_persists_durable_ledger(tmp_path):
     writes records + summary.
     """
     import json
-    from backend.providers.provider_factory import CostTracker
+
     from backend.providers.base import CostEvent
-    from datetime import datetime, timezone
+    from backend.providers.provider_factory import CostTracker
 
     tracker = CostTracker()
     # Simulate two captured usage events
@@ -358,8 +355,8 @@ async def test_b_cost_01_cost_tracker_persists_durable_ledger(tmp_path):
 
 def test_b_cost_01_cost_tracker_summary_reconciles():
     """The summary's totals must equal the sum of persisted records."""
-    from backend.providers.provider_factory import CostTracker
     from backend.providers.base import CostEvent
+    from backend.providers.provider_factory import CostTracker
 
     tracker = CostTracker()
     for i in range(5):
@@ -388,8 +385,8 @@ async def test_b_cost_01_orchestrator_wires_cost_tracker_to_provider(monkeypatch
     complete_with_usage() emits a synthetic CostEvent, so the wiring contract
     is verified without a cloud key or live endpoint.
     """
-    from backend.providers.provider_factory import get_registry, CostTracker
-    from backend.providers.base import LLMResponse, CostEvent
+    from backend.providers.base import CostEvent, LLMResponse
+    from backend.providers.provider_factory import CostTracker, get_registry
 
     class _FakeUsageProvider:
         """Minimal provider that fires the cost callback on the usage path."""
@@ -459,7 +456,7 @@ def test_b_cost_01_orchestrator_creates_cost_tracker(monkeypatch):
     path is exercised in isolation — the same production logic, without the
     environment-sensitive service stack.
     """
-    from backend.providers.provider_factory import get_registry, CostTracker
+    from backend.providers.provider_factory import CostTracker, get_registry
 
     registry = get_registry()
     prior_tracker = registry.cost_tracker

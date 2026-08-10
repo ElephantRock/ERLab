@@ -7,13 +7,10 @@ of two parent IdeaCandidates into a single child with traceable lineage.
 
 from __future__ import annotations
 
-import json
-
-from backend.pipeline.utils.json_extraction import extract_json
 import logging
-import re
 
 from backend.pipeline.generation.models import IdeaCandidate
+from backend.pipeline.utils.json_extraction import extract_json
 from backend.providers.base import LLMProvider
 
 logger = logging.getLogger(__name__)

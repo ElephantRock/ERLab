@@ -16,7 +16,6 @@ Critical failure modes tested:
 
 import pytest
 
-from backend.pipeline.gateway.claim_types import ClaimType, DesignAssumption
 from backend.pipeline.gateway.claim_type_validator import (
     ClaimClassification,
     ClaimTypeValidator,
@@ -25,6 +24,7 @@ from backend.pipeline.gateway.claim_type_validator import (
     ValidatedClaim,
     compute_metrics,
 )
+from backend.pipeline.gateway.claim_types import DesignAssumption
 from backend.pipeline.gateway.evidence_repair import (
     EvidenceRepairLoop,
     ExportQualityGate,
@@ -35,7 +35,6 @@ from backend.pipeline.synthesis.claim_renderer import (
     ClaimRenderer,
     InvalidStructuredOutput,
 )
-
 
 # ═══════════════════════════════════════════════════════════════════════════
 # Failure Mode: Invalid Structured JSON → prose_fallback
@@ -617,7 +616,7 @@ class TestFullPipelineSmoke:
         # Abstract is all correctly marked speculative
         assert per_section["abstract"].correctly_marked_hypotheses == 1
 
-        print(f"\n--- 7-Section Paper Diagnostics ---")
+        print("\n--- 7-Section Paper Diagnostics ---")
         print(f"Total claims: {full_metrics.total_claims}")
         print(f"Direct support: {full_metrics.direct_support_rate:.1%}")
         print(f"Epistemic acceptability: {full_metrics.epistemic_acceptability_rate:.1%}")

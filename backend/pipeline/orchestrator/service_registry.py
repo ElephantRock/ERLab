@@ -36,15 +36,14 @@ class ServiceRegistry:
         cost_tracker,
     ) -> None:
         """Core pipeline services: search, PDF, embedding, store, agents."""
-        from backend.pipeline.ingestion.pdf_service import PDFService
-        from backend.pipeline.knowledge.embedding_service import EmbeddingService
-        from backend.pipeline.knowledge.vector_store import VectorStore
-        from backend.pipeline.literature.search_service import SearchService
-
         # Build effective domain configurations (P0.5B WP1)
         from backend.pipeline.config.effective_configurations import (
             build_effective_domain_configurations,
         )
+        from backend.pipeline.ingestion.pdf_service import PDFService
+        from backend.pipeline.knowledge.embedding_service import EmbeddingService
+        from backend.pipeline.knowledge.vector_store import VectorStore
+        from backend.pipeline.literature.search_service import SearchService
         self._effective = build_effective_domain_configurations(settings)
 
         self.search = SearchService()
@@ -151,9 +150,9 @@ class ServiceRegistry:
 
         thinking = thinking_provider or provider
 
+        from backend.pipeline.feasibility.feasibility_scorer import FeasibilityScorer
         from backend.pipeline.gap_analysis.gap_analyzer import GapAnalyzer
         from backend.pipeline.novelty.novelty_checker import NoveltyChecker
-        from backend.pipeline.feasibility.feasibility_scorer import FeasibilityScorer
 
         self.gap_analyzer = GapAnalyzer(thinking)
 
@@ -318,8 +317,8 @@ class ServiceRegistry:
             self.novelty._citation_traverser = self.citation_traverser
 
         if self._embedding_novelty_enabled and hasattr(self, "embedding"):
-            from backend.pipeline.novelty.embedding_scorer import EmbeddingNoveltyScorer
             from backend.pipeline.knowledge.graph_embeddings import GraphEmbeddingIndex
+            from backend.pipeline.novelty.embedding_scorer import EmbeddingNoveltyScorer
             graph_index = GraphEmbeddingIndex(
                 persist_dir=settings.chroma_persist_dir,
                 embedding_service=self.embedding,
@@ -413,10 +412,10 @@ class ServiceRegistry:
 
             # Gap 3: Verified Self-Improvement
             if getattr(settings, "evolution_engine_enabled", False):
-                from backend.pipeline.self_improve.engine import EvolutionEngine
                 from backend.pipeline.self_improve.ab_test import ABTestHarness
-                from backend.pipeline.self_improve.ratchet import RatchetLoop
+                from backend.pipeline.self_improve.engine import EvolutionEngine
                 from backend.pipeline.self_improve.feedback_history import FeedbackHistory
+                from backend.pipeline.self_improve.ratchet import RatchetLoop
 
                 self.evolution_engine = EvolutionEngine(
                     self.evolver, provider,

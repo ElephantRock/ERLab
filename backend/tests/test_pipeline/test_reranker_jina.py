@@ -1,17 +1,16 @@
 """Tests for jina-reranker-v3 integration and reranker factory."""
 
 import asyncio
+
 import pytest
 
 from backend.pipeline.knowledge.reranker import (
     JinaCrossEncoderReranker,
-    LMStudioReranker,
     LLMReranker,
-    CrossEncoderReranker,
+    LMStudioReranker,
     ScoredDocument,
     create_reranker,
 )
-
 
 SAMPLE_DOCS = [
     {"id": "d1", "text": "The Transformer architecture uses self-attention mechanisms for sequence processing."},

@@ -1,6 +1,5 @@
 """Tests for IdeaPaperLink persistence and junction table behavior."""
 
-import json
 
 import pytest
 from sqlalchemy import create_engine, select
@@ -163,7 +162,6 @@ class TestIdeaPaperLinkModel:
 
     def test_default_role_is_supporting(self, db_session, run_and_papers):
         """The role column should default to 'supporting'."""
-        from sqlalchemy import text
         idea = run_and_papers["idea"]
         paper = run_and_papers["papers"][0]
 

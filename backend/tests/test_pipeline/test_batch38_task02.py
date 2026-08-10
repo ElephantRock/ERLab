@@ -22,10 +22,9 @@ from sqlalchemy.orm import sessionmaker
 
 from backend.db.database import Base
 from backend.db.models import PipelineRun, ResearchGapDB
-from backend.pipeline.gap_analysis.models import ClusterReport, ClusterInfo, ResearchGap
+from backend.pipeline.gap_analysis.models import ClusterInfo, ClusterReport, ResearchGap
 from backend.pipeline.knowledge.truth import TruthValue
 from backend.pipeline.persistence import PipelinePersistence
-
 
 # ── Fixtures ──────────────────────────────────────────────────────────
 

@@ -14,11 +14,9 @@ import pytest
 from backend.pipeline.claims.corroboration import check_corroboration
 from backend.pipeline.wiki.models import WikiEntry
 from backend.pipeline.wiki.verifier import (
-    ClaimVerificationResult,
     TrustTier,
     WikiVerifier,
 )
-
 
 # ---------------------------------------------------------------------------
 # Helpers

@@ -7,18 +7,16 @@ Two route groups:
 
 from __future__ import annotations
 
-import json
-from datetime import datetime, timezone
+from typing import Literal
 
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
-from sqlalchemy import select, func
-from typing import Literal
+from sqlalchemy import func, select
 
+from backend.api.auth import TokenData, get_current_user
 from backend.api.errors import NotFoundError, ServiceUnavailableError
-from backend.api.auth import get_current_user, TokenData
 from backend.db.database import get_session
-from backend.db.models import GovernanceDecision, Comment, Proposal, ProposalSectionRevision
+from backend.db.models import Comment, GovernanceDecision, Proposal, ProposalSectionRevision
 
 router = APIRouter()
 

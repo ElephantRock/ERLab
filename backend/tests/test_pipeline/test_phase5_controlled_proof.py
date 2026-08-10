@@ -5,10 +5,7 @@ evaluation. No provider calls. All 17 required failure-path tests.
 """
 
 import asyncio
-import json
 import math
-import shutil
-from pathlib import Path
 
 import pytest
 

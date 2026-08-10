@@ -5,16 +5,13 @@ from the stage iteration loop.
 """
 
 import asyncio
-import json
 import logging
-import time
 from datetime import datetime
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from backend.pipeline.result import PipelineResult, StageReport
+    from backend.pipeline.result import PipelineResult
     from backend.pipeline.stages import PipelineStage, StageContext
-    from backend.pipeline.execution.run_state import RunCheckpoint
     from backend.providers.base import LLMProvider
 
 logger = logging.getLogger(__name__)
@@ -132,9 +129,9 @@ class StageLifecycle:
         if not self._doom_detected:
             try:
                 from backend.pipeline.monitoring.doom_loop import (
+                    check_pipeline_doom,
                     extract_stage_fingerprint,
                     hash_stage_output,
-                    check_pipeline_doom,
                 )
                 fingerprint = extract_stage_fingerprint(
                     stage.name,
@@ -224,7 +221,6 @@ class StageLifecycle:
         self, result, ctx, run_id, db_run_id, domain, strategy, should_continue
     ) -> str | None:
         """Post-processing for literature_search: persist, rerank, metrics, early-exit check."""
-        from backend.pipeline.result import StageReport
 
         # P0.2.7: Route from the durable provenance contract, not context truthiness.
         if db_run_id:
@@ -325,8 +321,8 @@ class StageLifecycle:
         # Compute retrieval metrics
         try:
             from backend.pipeline.evaluation.retrieval_metrics import (
-                compute_retrieval_metrics,
                 RetrievedDocument,
+                compute_retrieval_metrics,
             )
             queries = ctx.search_queries or [ctx.domain]
             if ctx.all_papers and queries:
@@ -419,7 +415,7 @@ class StageLifecycle:
                                 tracker.record(
                                     direction=getattr(idea, "title", "Untitled idea"),
                                     reason=f"Low composite score ({idea.score:.2f} < {min_composite})",
-                                    evidence=f"Novelty/feasibility scores below viable threshold",
+                                    evidence="Novelty/feasibility scores below viable threshold",
                                     run_id=getattr(result, 'run_id', 'unknown'),
                                     reopen_condition="Higher-quality literature or different angle",
                                 )

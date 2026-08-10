@@ -15,16 +15,14 @@ from __future__ import annotations
 
 import copy
 import json
-
-from backend.pipeline.utils.json_extraction import extract_json
 import logging
 import re
 from dataclasses import dataclass, field
 from difflib import SequenceMatcher
 from enum import Enum
 from pathlib import Path
-from typing import Any
 
+from backend.pipeline.utils.json_extraction import extract_json
 from backend.pipeline.wiki.models import WikiEntry
 
 logger = logging.getLogger(__name__)

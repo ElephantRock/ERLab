@@ -4,10 +4,12 @@ AIV v5.3 — T1, T2, T5.
 """
 from __future__ import annotations
 
-import pytest
-
+from backend.pipeline.export.bibtex_exporter import (
+    paper_to_bibtex,
+    papers_to_bibtex,
+    proposal_to_bibtex,
+)
 from backend.pipeline.literature.models import Author, Paper
-from backend.pipeline.export.bibtex_exporter import paper_to_bibtex, papers_to_bibtex, proposal_to_bibtex
 
 
 def _make_paper(title="Test Paper", year=2024, doi="10.1234/test", venue="Nature"):

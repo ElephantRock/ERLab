@@ -1,15 +1,8 @@
 """BATCH-173 TASK-01: StageReport data model + orchestrator tracking tests."""
 
-import asyncio
-import json
-import time
-from dataclasses import asdict
-from unittest.mock import AsyncMock, MagicMock, patch
-
-import pytest
+from unittest.mock import MagicMock
 
 from backend.pipeline.result import PipelineResult, StageReport
-
 
 # ── 1. StageReport dataclass has correct fields ──────────────────────────
 

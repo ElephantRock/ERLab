@@ -6,10 +6,9 @@ independent context with budget enforcement and doom loop detection.
 """
 
 import asyncio
-import json
 import logging
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
-from typing import Any, Callable, Awaitable
 
 logger = logging.getLogger(__name__)
 

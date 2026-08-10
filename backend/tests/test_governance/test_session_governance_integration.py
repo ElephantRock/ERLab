@@ -1,6 +1,5 @@
 """Tests for session + governance integration — policy with session context."""
 
-import pytest
 
 from backend.pipeline.governance.condition_eval import evaluate
 from backend.pipeline.governance.policy import GovernancePolicy, PolicyAction, PolicyRule

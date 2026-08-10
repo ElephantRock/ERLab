@@ -1,12 +1,10 @@
 """BATCH-132 Tests — LLM-Grounded Contradiction Verification."""
 
-import asyncio
-import pytest
 from unittest.mock import AsyncMock, MagicMock
 
-from backend.pipeline.claims.models import Claim, ClaimType
-from backend.pipeline.claims.contradiction.models import ContradictionCandidate
 from backend.pipeline.claims.contradiction.detector import ContradictionDetector
+from backend.pipeline.claims.contradiction.models import ContradictionCandidate
+from backend.pipeline.claims.models import Claim, ClaimType
 
 
 def _result(paper_id, dataset, metric, value, method_name=None):

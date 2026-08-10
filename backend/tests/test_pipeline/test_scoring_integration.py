@@ -13,11 +13,10 @@ from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
+import backend.db.models  # noqa: F401 — ensure models register with Base.metadata
 from backend.api.errors import APIError
 from backend.api.routes.ideas import router
 from backend.db.database import Base
-import backend.db.models  # noqa: F401 — ensure models register with Base.metadata
-
 
 # ── Test app / DB setup ────────────────────────────────────────
 
@@ -45,8 +44,9 @@ def _test_env():
     session = Session()
 
     app = _make_app()
-    import backend.db.database as db_mod
     from contextlib import contextmanager
+
+    import backend.db.database as db_mod
 
     @contextmanager
     def _test_session():
@@ -186,6 +186,7 @@ class TestMechanicalMetricsStage:
 
     def test_stage_populates_result_metrics(self):
         import asyncio
+
         from backend.pipeline.gap_analysis.models import ResearchGap
         from backend.pipeline.generation.models import ResearchIdea
         from backend.pipeline.result import PipelineResult

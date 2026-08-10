@@ -3,7 +3,7 @@
 import pytest
 
 from backend.pipeline.generation.dag_executor import DAGExecutor
-from backend.pipeline.generation.topology import DAGNode, DAGEdge, ExecutionDAG, NodeType
+from backend.pipeline.generation.topology import DAGEdge, DAGNode, ExecutionDAG, NodeType
 
 
 class FakeProvider:

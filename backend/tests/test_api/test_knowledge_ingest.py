@@ -3,7 +3,9 @@
 # NOTE: Test hangs on Python 3.14 — TestClient/chunked upload incompatibility.
 # Tracked as environmental, skip until fix is available.
 import sys
+
 import pytest
+
 pytestmark = pytest.mark.skipif(
     sys.version_info >= (3, 14),
     reason="Hangs on Python 3.14 (TestClient upload issue)",
@@ -96,7 +98,7 @@ class TestIngestEndpoint:
 
     def test_ingest_text_file_returns_success(self, client):
         """POST /knowledge/ingest with a plain text file returns 200 (B160: TXT is supported)."""
-        from unittest.mock import AsyncMock, MagicMock, patch
+        from unittest.mock import AsyncMock, patch
 
         text_file = io.BytesIO(TEXT_BYTES)
 

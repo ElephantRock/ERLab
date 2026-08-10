@@ -5,18 +5,15 @@
 
 from __future__ import annotations
 
-import pytest
-
-from backend.pipeline.synthesis.evidence_bound_synthesizer import (
-    build_evidence_bound_context, build_evidence_bound_synthesis_prompt,
-    EvidenceBoundContext,
-)
 from backend.pipeline.evaluation.deterministic_finalizer import (
-    build_canonical_title, render_result_claim,
+    render_result_claim,
 )
 from backend.pipeline.evaluation.paper_gate_evaluator import evaluate_paper_gates
 from backend.pipeline.experiment.manifest import ResultMarker
-
+from backend.pipeline.synthesis.evidence_bound_synthesizer import (
+    build_evidence_bound_context,
+    build_evidence_bound_synthesis_prompt,
+)
 
 IRIS_MARKERS = [
     ResultMarker(1, "RESULT-1", "baseline_accuracy", 0.333333, "m", "a", 1, direction="higher_better", role="baseline"),
@@ -131,6 +128,7 @@ Logistic regression outperforms the baseline. [RESULT-3]
     def test_09_no_remediation_called(self):
         """9. No remediation or deterministic-finalization function is called during evaluation."""
         import inspect
+
         from backend.pipeline.evaluation.paper_gate_evaluator import evaluate_paper_gates
         source = inspect.getsource(evaluate_paper_gates)
         assert "auto_revise" not in source

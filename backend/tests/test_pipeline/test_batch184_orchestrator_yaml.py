@@ -1,12 +1,8 @@
 """Tests for BATCH-181/184: Trimmer + Orchestrator YAML integration."""
 
 import asyncio
-import os
-import sys
-import tempfile
 
 import pytest
-
 
 # ── Trimmer Stage ────────────────────────────────────────────────────
 
@@ -15,8 +11,8 @@ class TestTrimmerStage:
     """Trimmer reranks papers, keeps top_k, truncates abstracts."""
 
     def _make_ctx(self, papers=None, domain="AI/NLP"):
-        from backend.pipeline.stages import StageContext
         from backend.pipeline.result import PipelineResult
+        from backend.pipeline.stages import StageContext
         result = PipelineResult()
         ctx = StageContext(result=result, domain=domain, run_id="test")
         ctx.all_papers = papers or []

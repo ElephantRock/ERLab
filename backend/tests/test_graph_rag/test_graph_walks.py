@@ -1,8 +1,7 @@
 """Tests for graph walk traversal."""
 
-import pytest
 
-from backend.pipeline.knowledge.entities import KnowledgeEntity, EntityType, TruthValue
+from backend.pipeline.knowledge.entities import EntityType, KnowledgeEntity, TruthValue
 from backend.pipeline.knowledge.graph import KnowledgeGraph
 from backend.pipeline.knowledge.graph_walks import GraphWalker
 from backend.pipeline.knowledge.relationships import KnowledgeRelationship, RelationType

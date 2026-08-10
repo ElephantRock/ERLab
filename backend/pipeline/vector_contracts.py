@@ -10,9 +10,9 @@ from __future__ import annotations
 import hashlib
 import json
 import unicodedata
+from collections.abc import Sequence
 from dataclasses import dataclass
-from typing import Literal, Sequence
-
+from typing import Literal
 
 # ── Schema and contract version constants ────────────────────────────
 # P0.4B0.8: centralize the version literals that participate in vector
@@ -230,7 +230,7 @@ class GovernedRetrievedContext:
     scope_fingerprint: str
     embedding_profile_id: str
     coverage_status: str
-    results: tuple["ScopedVectorResult", ...]
+    results: tuple[ScopedVectorResult, ...]
 
 
 # ── Vector document and identity (P0.3.2) ────────────────────────────
@@ -459,4 +459,4 @@ class ScopedVectorRetrievalOutcome:
     allowed_paper_count: int
     indexed_paper_count: int
     eligible_vector_record_count: int
-    results: tuple["ScopedVectorResult", ...]
+    results: tuple[ScopedVectorResult, ...]

@@ -138,9 +138,7 @@ class ContextBudgetManager:
             chars += self._count_papers_chars(ctx, 20)
             chars += self._count_gaps_chars(ctx)
             chars += self._count_critiques_chars(ctx)
-        elif stage_name == "novelty_checking":
-            chars += self._count_ideas_chars(ctx)
-        elif stage_name == "feasibility_scoring":
+        elif stage_name == "novelty_checking" or stage_name == "feasibility_scoring":
             chars += self._count_ideas_chars(ctx)
         elif stage_name == "proposal_synthesis":
             chars += self._count_papers_chars(ctx, 15)

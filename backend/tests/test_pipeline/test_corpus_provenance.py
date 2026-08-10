@@ -23,25 +23,28 @@ sys.modules.setdefault("chromadb", MagicMock())
 sys.modules.setdefault("google.generativeai", MagicMock())
 
 import pytest
-from sqlalchemy import create_engine, select, text, func, event
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy import create_engine, event, func, select, text
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import sessionmaker
 
 from backend.db.database import Base
 from backend.db.models import (
-    Paper, PipelineRun, Idea, Proposal,
-    SearchQuery, RunPaper, PaperDiscovery,
+    Paper,
+    PaperDiscovery,
+    PipelineRun,
+    RunPaper,
+    SearchQuery,
 )
+from backend.pipeline.literature.models import Author
+from backend.pipeline.literature.models import Paper as SearchPaper
 from backend.pipeline.persistence import (
+    CandidateWithDiscoveries,
+    DiscoveryMetadata,
     PipelinePersistence,
     SearchQueryData,
-    DiscoveryMetadata,
-    CandidateWithDiscoveries,
-    compute_query_key,
     compute_discovery_key,
+    compute_query_key,
 )
-from backend.pipeline.literature.models import Paper as SearchPaper, Author
-
 
 # ── Test fixtures ────────────────────────────────────────────────
 
@@ -238,8 +241,8 @@ def test_cross_run_canonical_reuse():
 
 def test_per_query_provenance_survives_dedup():
     """Two source adapters return same paper → candidate has both routes."""
-    from backend.pipeline.literature.search_service import SearchService
     from backend.pipeline.literature.models import SearchResult
+    from backend.pipeline.literature.search_service import SearchService
 
     paper = SearchPaper(id="W123", source="openalex", title="Shared Paper", doi="10.1/x")
     results = [
@@ -395,7 +398,6 @@ def test_transactional_rollback_production_method(monkeypatch):
     monkeypatch.setattr(db_module, "get_session", patched_get_session)
     monkeypatch.setattr("backend.pipeline.persistence.get_session", patched_get_session, raising=False)
     # Also patch in the module's import context
-    import backend.pipeline.persistence as pmod
     # The method uses a local import: from backend.db.database import get_session
     # So patching database.get_session is sufficient.
 
@@ -457,6 +459,7 @@ def test_transactional_rollback_production_method(monkeypatch):
 def test_commit_boundary_success(monkeypatch):
     """Successful persist_search_results commits exactly once."""
     from contextlib import contextmanager
+
     from backend.db import database as db_module
 
     engine = _make_engine()
@@ -561,8 +564,8 @@ def test_idempotent_replay_reconstructed_objects():
     pd_after = session.execute(select(func.count(PaperDiscovery.id))).scalar_one()
     sq_after = session.execute(select(func.count(SearchQuery.id))).scalar_one()
 
-    assert sq_after == sq_before, f"SearchQuery inflated with reconstructed objects"
-    assert pd_after == pd_before, f"PaperDiscovery inflated with reconstructed objects"
+    assert sq_after == sq_before, "SearchQuery inflated with reconstructed objects"
+    assert pd_after == pd_before, "PaperDiscovery inflated with reconstructed objects"
 
 
 # ══ 12. Deletion semantics ═══════════════════════════════════════
@@ -668,7 +671,6 @@ def _persist_directly(persistence, session, candidates, queries, run_id):
     Does NOT use crud.create_paper (which auto-commits). Instead does direct ORM
     add+flush to stay within the caller's transaction.
     """
-    import json
 
     query_ids_by_key: dict[str, int] = {}
 

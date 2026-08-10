@@ -4,13 +4,12 @@ AIV §13 Test Integrity: Tests verify behavioral outcomes
 (correct cost calculations, time estimates), not structure.
 """
 
-import pytest
 
 from backend.pipeline.monitoring.cost_estimator import (
+    STRATEGY_STAGES,
     CostEstimate,
     estimate_run_cost,
     get_model_pricing,
-    STRATEGY_STAGES,
 )
 
 

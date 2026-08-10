@@ -11,8 +11,9 @@ Similarity querying is intentionally NOT in this interface (deferred to P0.3.3).
 from __future__ import annotations
 
 import logging
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
-from typing import Any, Mapping, Protocol, Sequence
+from typing import Any
 
 from backend.pipeline.vector_contracts import VECTOR_INDEX_V1
 
@@ -228,7 +229,7 @@ class GovernedVectorBackend:
         query_vector: Sequence[float],
         candidate_vector_record_ids: Sequence[str],
         top_k: int,
-    ) -> list["BackendVectorMatch"]:
+    ) -> list[BackendVectorMatch]:
         """Candidate-constrained similarity query.
 
         The backend receives exact ``vector_record_record_ids`` to rank

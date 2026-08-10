@@ -2,8 +2,6 @@
 import asyncio
 from unittest.mock import AsyncMock, MagicMock
 
-import pytest
-
 
 class TestIdeaRecombination:
 
@@ -12,8 +10,8 @@ class TestIdeaRecombination:
         assert IdeaRecombinator is not None
 
     def test_02_recombine_creates_child(self):
-        from backend.pipeline.generation.recombination import IdeaRecombinator
         from backend.pipeline.generation.models import IdeaCandidate
+        from backend.pipeline.generation.recombination import IdeaRecombinator
 
         mock_provider = MagicMock()
         mock_provider.complete = AsyncMock(return_value='{"title": "Combined Idea", "problem_statement": "merged", "proposed_method": "hybrid", "expected_contributions": "both", "novelty_rationale": "novel", "evaluation_approach": "test"}')
@@ -27,8 +25,8 @@ class TestIdeaRecombination:
         assert child.parent_idea_ids == ["a", "b"]
 
     def test_03_lineage_tracking(self):
-        from backend.pipeline.generation.recombination import IdeaRecombinator
         from backend.pipeline.generation.models import IdeaCandidate
+        from backend.pipeline.generation.recombination import IdeaRecombinator
 
         mock_provider = MagicMock()
         mock_provider.complete = AsyncMock(return_value='{"title": "Child", "problem_statement": "", "proposed_method": "", "expected_contributions": ""}')
@@ -67,8 +65,8 @@ class TestIdeaRecombination:
         assert idea.parent_idea_ids is None or idea.parent_idea_ids == []
 
     def test_09_recombination_preserves_parent_info(self):
-        from backend.pipeline.generation.recombination import IdeaRecombinator
         from backend.pipeline.generation.models import IdeaCandidate
+        from backend.pipeline.generation.recombination import IdeaRecombinator
 
         mock_provider = MagicMock()
         mock_provider.complete = AsyncMock(return_value='{"title": "Hybrid Method", "problem_statement": "Both problems", "proposed_method": "Combined approach", "expected_contributions": "Merged contributions", "novelty_rationale": "Novel hybrid", "evaluation_approach": "Ablation study"}')

@@ -1,13 +1,13 @@
 """Tests for LM Studio embedding provider."""
 
 import asyncio
+
 import pytest
 
 from backend.pipeline.knowledge.embedding_providers import (
     LMStudioEmbeddingProvider,
     create_embedding_provider,
 )
-
 
 # ── Unit Tests (no network) ───────────────────────────────────────────
 

@@ -11,12 +11,11 @@ Validates:
 """
 import pytest
 
-from backend.pipeline.model_certification.eval_case import StageEvalCase, GoldAnswer
+from backend.pipeline.model_certification.eval_case import GoldAnswer, StageEvalCase
 from backend.pipeline.model_certification.scorers.grounding import (
-    compute_grounding_metrics,
     _is_corpus_backed,
+    compute_grounding_metrics,
 )
-
 
 # ─── Helpers ────────────────────────────────────────────────────────
 

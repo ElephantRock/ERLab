@@ -4,13 +4,9 @@ import asyncio
 import json
 from unittest.mock import AsyncMock, MagicMock
 
-import pytest
-
 from backend.pipeline.knowledge.relationship_extractor import (
-    MAX_COMPARISONS_PER_PAPER,
-    MIN_CONFIDENCE,
-    extract_relationships,
     _parse_relation_response,
+    extract_relationships,
 )
 from backend.pipeline.knowledge.relationships import RelationType
 
@@ -155,8 +151,8 @@ class TestExtractRelationships:
 class TestIngestionStageIntegration:
     def test_ingestion_calls_relationship_extraction(self):
         """TEST-74-01-05: IngestionStage calls relationship extraction."""
-        from backend.pipeline.stages import IngestionStage, StageContext
         from backend.pipeline.result import PipelineResult
+        from backend.pipeline.stages import IngestionStage, StageContext
 
         store = MagicMock()
         store.add_papers = AsyncMock(return_value=3)

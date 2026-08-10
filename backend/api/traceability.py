@@ -14,7 +14,8 @@ from typing import Any
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from backend.db.models import Idea as IdeaModel, ResearchGapDB
+from backend.db.models import Idea as IdeaModel
+from backend.db.models import ResearchGapDB
 
 
 def _normalize_title(title: str) -> str:

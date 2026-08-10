@@ -18,8 +18,7 @@ logger = logging.getLogger(__name__)
 
 # Minimal English stopwords (keep index small)
 _STOPWORDS = frozenset(
-    "a an and are as at be by for from has he in is it its of on that the to "
-    "was were will with".split()
+    ["a", "an", "and", "are", "as", "at", "be", "by", "for", "from", "has", "he", "in", "is", "it", "its", "of", "on", "that", "the", "to", "was", "were", "will", "with"]
 )
 
 _WORD_RE = re.compile(r"[a-z0-9]+")

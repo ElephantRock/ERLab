@@ -95,7 +95,7 @@ async def _run_subprocess(
         stdout_bytes, stderr_bytes = await asyncio.wait_for(
             proc.communicate(), timeout=config.timeout_seconds
         )
-    except asyncio.TimeoutError:
+    except TimeoutError:
         proc.kill()
         await proc.wait()
         stdout_bytes, stderr_bytes = b"", b""

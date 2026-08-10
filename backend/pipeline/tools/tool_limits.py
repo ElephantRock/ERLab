@@ -7,10 +7,8 @@ untrusted tools loaded from external plugins.
 from __future__ import annotations
 
 import logging
-import time
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -67,8 +65,8 @@ class ToolAuditLog:
             self._append_to_file(event)
 
     def _append_to_file(self, event: ToolExecutionEvent) -> None:
-        from pathlib import Path
         import json
+        from pathlib import Path
 
         Path(self._persist_path).parent.mkdir(parents=True, exist_ok=True)
         with open(self._persist_path, "a", encoding="utf-8") as f:

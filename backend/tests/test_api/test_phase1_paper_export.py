@@ -22,7 +22,7 @@ from sqlalchemy.orm import sessionmaker
 from backend.api.routes.paper_export import router as paper_router
 from backend.db import crud
 from backend.db.database import Base
-from backend.db.models import Idea, PipelineRun, Proposal
+from backend.db.models import Proposal
 
 
 @pytest.fixture

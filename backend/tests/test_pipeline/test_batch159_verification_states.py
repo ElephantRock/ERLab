@@ -4,12 +4,7 @@ TASK-01: VerificationState 5-state enum (5 tests)
 TASK-02: TrustTier gates in CitationClaimAuditor (5 tests)
 TASK-03: Temporal decay for confidence (4 tests)
 """
-import math
 from datetime import datetime
-from unittest.mock import MagicMock
-
-import pytest
-
 
 # ─── TASK-01: VerificationState ─────────────────────────────
 
@@ -27,7 +22,8 @@ class TestVerificationState:
 
     def test_02_citation_check_default_unverified(self):
         from backend.pipeline.verification.reference_verifier import (
-            CitationCheck, VerificationState,
+            CitationCheck,
+            VerificationState,
         )
         check = CitationCheck(
             citation_text="Smith et al., 2020",
@@ -39,7 +35,8 @@ class TestVerificationState:
 
     def test_03_verify_sets_supported_state(self):
         from backend.pipeline.verification.reference_verifier import (
-            ReferenceVerifier, VerificationState,
+            ReferenceVerifier,
+            VerificationState,
         )
         verifier = ReferenceVerifier()
         report = verifier.verify(
@@ -54,7 +51,8 @@ class TestVerificationState:
 
     def test_04_verify_sets_unverified_for_missing(self):
         from backend.pipeline.verification.reference_verifier import (
-            ReferenceVerifier, VerificationState,
+            ReferenceVerifier,
+            VerificationState,
         )
         verifier = ReferenceVerifier()
         report = verifier.verify(
@@ -66,7 +64,8 @@ class TestVerificationState:
 
     def test_05_backward_compat_found_in_corpus(self):
         from backend.pipeline.verification.reference_verifier import (
-            CitationCheck, VerificationState,
+            CitationCheck,
+            VerificationState,
         )
         check = CitationCheck(
             citation_text="Test",
@@ -99,7 +98,8 @@ class TestTrustTierGates:
 
     def test_07_compute_tiers_very_high(self):
         from backend.pipeline.verification.citation_claim_auditor import (
-            CitationAuditItem, CitationAuditReport,
+            CitationAuditItem,
+            CitationAuditReport,
         )
         item = CitationAuditItem(
             ref_index=1, ref_exists=True, claim_text="Test",
@@ -118,7 +118,8 @@ class TestTrustTierGates:
 
     def test_08_compute_tiers_unverified(self):
         from backend.pipeline.verification.citation_claim_auditor import (
-            CitationAuditItem, CitationAuditReport,
+            CitationAuditItem,
+            CitationAuditReport,
         )
         item = CitationAuditItem(
             ref_index=1, ref_exists=False, claim_text="Test",
@@ -137,7 +138,8 @@ class TestTrustTierGates:
 
     def test_09_low_trust_warning(self):
         from backend.pipeline.verification.citation_claim_auditor import (
-            CitationAuditItem, CitationAuditReport,
+            CitationAuditItem,
+            CitationAuditReport,
         )
         items = [
             CitationAuditItem(
@@ -158,7 +160,8 @@ class TestTrustTierGates:
 
     def test_10_to_dict_includes_tier_and_warnings(self):
         from backend.pipeline.verification.citation_claim_auditor import (
-            CitationAuditItem, CitationAuditReport,
+            CitationAuditItem,
+            CitationAuditReport,
         )
         item = CitationAuditItem(
             ref_index=1, ref_exists=True, claim_text="Test",

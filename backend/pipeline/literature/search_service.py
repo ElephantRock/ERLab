@@ -123,7 +123,6 @@ class SearchService:
             executions), or ``list[CandidateWithDiscoveries]`` on the legacy path.
         """
         from backend.pipeline.persistence import (
-            CandidateWithDiscoveries,
             DiscoveryMetadata,
         )
 

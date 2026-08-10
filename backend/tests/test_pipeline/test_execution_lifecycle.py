@@ -19,7 +19,6 @@ from __future__ import annotations
 import asyncio
 import sys
 import tempfile
-from datetime import datetime
 from pathlib import Path
 from unittest.mock import MagicMock
 
@@ -32,25 +31,20 @@ sys.modules.setdefault("google.generativeai", MagicMock())
 
 from backend.db.database import Base
 from backend.db.models import (
-    PaperDiscovery,
     PipelineRun,
-    RunPaper,
     SearchQuery,
     SearchQueryExecution,
 )
 from backend.pipeline.literature.contracts import (
-    AttemptOutcome,
-    SearchBatchOutcome,
     SourceSearchOutcome,
 )
 from backend.pipeline.literature.execution_recorder import (
     DatabaseAttemptObserver,
     ExecutionAlreadyClaimed,
     ExecutionRecorder,
-    sanitize_error_detail,
 )
-from backend.pipeline.literature.models import Paper as SearchPaper, SearchResult
-
+from backend.pipeline.literature.models import Paper as SearchPaper
+from backend.pipeline.literature.models import SearchResult
 
 # ── Session helpers ──────────────────────────────────────────────────
 
@@ -92,7 +86,6 @@ def _fake_paper(title="Test Paper", source_id="test:1"):
 # ── Fake adapters (implement build_query_plan + execute_query_plan) ──
 
 from backend.pipeline.literature.contracts import (
-    AttemptObserver as _AO,
     SourceQueryPlan,
     canonical_plan_json,
 )

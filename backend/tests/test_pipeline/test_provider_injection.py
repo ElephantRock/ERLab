@@ -14,13 +14,10 @@ from __future__ import annotations
 import asyncio
 from unittest.mock import AsyncMock, MagicMock
 
-import pytest
-
-from backend.pipeline.gap_analysis.gap_analyzer import GapAnalyzer
 from backend.pipeline.feasibility.feasibility_scorer import FeasibilityScorer
-from backend.pipeline.synthesis.proposal_synthesizer import ProposalSynthesizer
+from backend.pipeline.gap_analysis.gap_analyzer import GapAnalyzer
 from backend.pipeline.generation.agent_orchestrator import AgentOrchestrator
-from backend.providers.base import LLMProvider
+from backend.pipeline.synthesis.proposal_synthesizer import ProposalSynthesizer
 
 
 class FakeProvider:

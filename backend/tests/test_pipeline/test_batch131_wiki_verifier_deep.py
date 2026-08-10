@@ -11,11 +11,8 @@ import asyncio
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock
 
-import pytest
-
 from backend.pipeline.wiki.models import WikiEntry
 from backend.pipeline.wiki.verifier import WikiVerifier
-
 
 # ═══════════════════════════════════════════════════════════
 # Helpers

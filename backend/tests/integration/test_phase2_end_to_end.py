@@ -32,8 +32,7 @@ from backend.api.errors import APIError as _APIError
 from backend.api.routes.review import router as review_router
 from backend.db import crud
 from backend.db.database import Base
-from backend.db.models import Idea, PipelineRun, Proposal, SourceReview
-
+from backend.db.models import Proposal
 
 pytestmark = pytest.mark.integration
 

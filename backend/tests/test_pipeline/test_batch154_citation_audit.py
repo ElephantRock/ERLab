@@ -13,26 +13,22 @@ import json
 import sys
 from unittest.mock import MagicMock, patch
 
-import pytest
-
 # Ensure chromadb mock
 sys.modules.setdefault("chromadb", MagicMock())
 sys.modules.setdefault("google.generativeai", MagicMock())
 
+from backend.pipeline.orchestrator import PipelineOrchestrator
+from backend.pipeline.stages import CitationAuditStage, StageContext
+from backend.pipeline.strategies.models import PipelineStrategy, StageConfig, StrategyConfig
+from backend.pipeline.strategies.presets import register_presets
+from backend.pipeline.strategies.registry import StrategyRegistry
+from backend.pipeline.synthesis.proposal_synthesizer import ResearchProposal
 from backend.pipeline.verification.citation_claim_auditor import (
     CitationAuditItem,
     CitationAuditReport,
     CitationClaimAuditor,
-    create_skipped_report,
 )
-from backend.pipeline.stages import CitationAuditStage, StageContext
-from backend.pipeline.synthesis.proposal_synthesizer import ResearchProposal
-from backend.pipeline.orchestrator import PipelineOrchestrator
 from backend.pipeline.verification.reference_verifier import ReferenceVerifier
-from backend.pipeline.strategies.models import PipelineStrategy, StageConfig, StrategyConfig
-from backend.pipeline.strategies.presets import register_presets
-from backend.pipeline.strategies.registry import StrategyRegistry
-
 
 # ── Helpers ──────────────────────────────────────────────────
 
@@ -333,7 +329,6 @@ class TestCitationAuditStage:
         auditor = CitationClaimAuditor(provider=FakeProvider(response=low_trust_response))
         stage = CitationAuditStage(auditor=auditor)
 
-        import logging
         with patch.object(stage.__class__.__module__ and __import__("logging").getLogger(
             "backend.pipeline.stages"), "warning"
         ) as mock_warn:

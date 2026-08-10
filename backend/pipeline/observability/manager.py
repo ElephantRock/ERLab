@@ -9,9 +9,9 @@ from backend.pipeline.tracing.processor import (
     CompositeProcessor,
     InMemoryProcessor,
     LoggingProcessor,
+    TracingProcessor,
     set_tracer,
 )
-from backend.pipeline.tracing.processor import TracingProcessor
 from backend.pipeline.tracing.spans import Span
 
 if TYPE_CHECKING:

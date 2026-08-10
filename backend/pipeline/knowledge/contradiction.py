@@ -13,7 +13,7 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 logger = logging.getLogger(__name__)
 
@@ -117,7 +117,7 @@ class ContradictionScanner:
                                 entity_b_id=rel.target_id,
                                 contradiction_type="logical",
                                 severity=severity,
-                                evidence=f"Both entities have high confidence despite CONTRADICTS relation",
+                                evidence="Both entities have high confidence despite CONTRADICTS relation",
                                 resolution="truth_revision",
                             ))
         return reports

@@ -11,22 +11,14 @@ Run: pytest backend/tests/test_failure_modes/test_run_durability.py -v
 
 from __future__ import annotations
 
-import json
-import pytest
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from unittest.mock import patch
 
+import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 from backend.db.database import Base
-from backend.db.models import (
-    PipelineRun,
-    RunCancellation,
-    RunEvent,
-    RunWorker,
-)
-
 
 # ── Test fixtures ───────────────────────────────────────────────
 
@@ -80,7 +72,7 @@ class TestWorkerCrashOrphanDetection:
         # Simulate crash: backdate the heartbeat far into the past
         with db_engine.connect() as conn:
             from sqlalchemy import text
-            old_time = datetime.now(timezone.utc) - timedelta(minutes=10)
+            old_time = datetime.now(UTC) - timedelta(minutes=10)
             conn.execute(
                 text("UPDATE run_workers SET last_heartbeat = :ts WHERE worker_id = :wid"),
                 {"ts": old_time, "wid": worker_id},
@@ -108,7 +100,7 @@ class TestWorkerCrashOrphanDetection:
         # Crash simulation
         with db_engine.connect() as conn:
             from sqlalchemy import text
-            old_time = datetime.now(timezone.utc) - timedelta(minutes=10)
+            old_time = datetime.now(UTC) - timedelta(minutes=10)
             conn.execute(
                 text("UPDATE run_workers SET last_heartbeat = :ts WHERE worker_id = :wid"),
                 {"ts": old_time, "wid": worker_id},
@@ -125,7 +117,7 @@ class TestWorkerCrashOrphanDetection:
 
         with db_engine.connect() as conn:
             from sqlalchemy import text
-            old_time = datetime.now(timezone.utc) - timedelta(minutes=10)
+            old_time = datetime.now(UTC) - timedelta(minutes=10)
             conn.execute(
                 text("UPDATE run_workers SET last_heartbeat = :ts WHERE run_id_str = :rid"),
                 {"ts": old_time, "rid": run_id},
@@ -160,7 +152,7 @@ class TestOrphanedRunResume:
         # Crash the old worker
         with db_engine.connect() as conn:
             from sqlalchemy import text
-            old_time = datetime.now(timezone.utc) - timedelta(minutes=10)
+            old_time = datetime.now(UTC) - timedelta(minutes=10)
             conn.execute(
                 text("UPDATE run_workers SET last_heartbeat = :ts WHERE worker_id = :wid"),
                 {"ts": old_time, "wid": old_worker},
@@ -181,7 +173,7 @@ class TestOrphanedRunResume:
 
         with db_engine.connect() as conn:
             from sqlalchemy import text
-            old_time = datetime.now(timezone.utc) - timedelta(minutes=10)
+            old_time = datetime.now(UTC) - timedelta(minutes=10)
             conn.execute(
                 text("UPDATE run_workers SET last_heartbeat = :ts WHERE worker_id = :wid"),
                 {"ts": old_time, "wid": old_worker},

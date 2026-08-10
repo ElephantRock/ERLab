@@ -10,9 +10,7 @@ INTEGRITY, architecture, and failure-modes sections were intentionally
 removed because they caused the LLM to generate 63K chars of output,
 truncating mid-JSON.
 """
-import pytest
 from pathlib import Path
-
 
 PROMPT_PATH = Path(__file__).resolve().parents[3] / "backend" / "pipeline" / "generation" / "prompts" / "ideator_system.md"
 

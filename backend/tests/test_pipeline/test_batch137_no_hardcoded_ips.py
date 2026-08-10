@@ -9,8 +9,6 @@ Tests:
 import os
 import re
 
-import pytest
-
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
 
 # Regex for private/non-localhost IP ranges
@@ -52,7 +50,7 @@ class TestNoHardcodedNonLocalhostIPs:
                     violations.append(f"{filepath}:{lineno}: {line.strip()}")
 
         assert violations == [], (
-            f"Found hardcoded non-localhost IPs:\n" + "\n".join(violations)
+            "Found hardcoded non-localhost IPs:\n" + "\n".join(violations)
         )
 
 
@@ -77,6 +75,7 @@ class TestConfigDefaultIsLocalhost:
 
     def test_default_is_localhost(self) -> None:
         import inspect
+
         from backend.config import Settings
 
         # Verify the source code default, not the runtime value (which may be

@@ -1,8 +1,10 @@
 """BATCH-49 TASK-01: Notification Center tests."""
+import asyncio
+from datetime import UTC
+from unittest.mock import MagicMock, patch
+
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
-from unittest.mock import MagicMock, patch, AsyncMock
-import asyncio
 
 from backend.api.routes.notifications import router
 
@@ -26,8 +28,8 @@ def _make_notif(id=1, user_id=None, type="info", title="Test", message="msg", re
     n.title = title
     n.message = message
     n.read = read
-    from datetime import datetime, timezone
-    n.created_at = datetime(2026, 5, 2, 12, 0, 0, tzinfo=timezone.utc)
+    from datetime import datetime
+    n.created_at = datetime(2026, 5, 2, 12, 0, 0, tzinfo=UTC)
     return n
 
 
@@ -38,7 +40,6 @@ def test_49_01_01_create_notification_and_verify():
     ms.query.return_value.filter.return_value.first.return_value = notif
     ms.query.return_value.filter.return_value.order_by.return_value.offset.return_value.limit.return_value.scalars.return_value.all.return_value = [notif]
     ms.execute.return_value.scalars.return_value.all.return_value = [notif]
-    from sqlalchemy import func
     ms.execute.return_value.scalar.return_value = 1
 
     with patch("backend.db.database.get_session", return_value=mc):

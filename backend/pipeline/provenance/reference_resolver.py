@@ -16,14 +16,14 @@ can surface provenance quality honestly.
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass, field
-from typing import Any, Sequence
+from collections.abc import Sequence
+from dataclasses import dataclass
+from typing import Any
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from backend.db.models import Paper
-
 
 # ---------------------------------------------------------------------------
 # Regex patterns for parsing raw reference strings

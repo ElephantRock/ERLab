@@ -15,10 +15,10 @@ import hashlib
 import json
 import logging
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
-from sqlalchemy import func, select, text
+from sqlalchemy import func, select
 from sqlalchemy.orm import sessionmaker
 
 logger = logging.getLogger(__name__)
@@ -39,7 +39,7 @@ class ExecutionScopeDriftError(RunReconciliationError):
 
 
 def _now() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 # ── Reconciliation snapshot ──────────────────────────────────────────
@@ -352,7 +352,6 @@ def _compute_fingerprint(
     queries, scopes, executions, ledgers, session, run_id, run_paper_ids,
 ) -> str:
     """Compute a deterministic SHA-256 fingerprint over all reconciliation inputs."""
-    from backend.db.models import PaperDiscovery
 
     fingerprint_data: dict[str, Any] = {
         "query_scopes": sorted([

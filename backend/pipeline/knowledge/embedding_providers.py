@@ -542,7 +542,9 @@ class LMStudioEmbeddingProvider(EmbeddingProvider):
             )
             if response.status_code != 200:
                 # Diagnostic: capture the exact 400 response body
-                import json as _diag_json, hashlib as _diag_hash, os as _diag_os
+                import hashlib as _diag_hash
+                import json as _diag_json
+                import os as _diag_os
                 input_summaries = [
                     {"len": len(t), "sha256": _diag_hash.sha256(t.encode()).hexdigest()[:16], "first_80": t[:80]}
                     for t in batch

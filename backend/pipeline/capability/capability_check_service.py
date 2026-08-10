@@ -27,8 +27,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
-from datetime import datetime, timezone
-from typing import Any
+from datetime import UTC, datetime
 
 from sqlalchemy.orm import sessionmaker
 
@@ -52,12 +51,11 @@ from backend.pipeline.capability.capability_repository import (
 )
 from backend.pipeline.capability.capability_resolution import classify_resolution
 from backend.pipeline.capability.contracts import (
+    STATUS_FAILED,
+    STATUS_PASSED,
     CheckAlreadyClaimed,
-    CheckAlreadyTerminal,
     FailedCheckEvidence,
     PassedCheckObservations,
-    STATUS_PASSED,
-    STATUS_FAILED,
 )
 from backend.pipeline.governed_embedding_adapter import GovernedEmbeddingAdapter
 from backend.pipeline.knowledge.embedding_configuration import (
@@ -151,7 +149,7 @@ def _publish_passed(
     check_ttl_seconds: int,
 ) -> CheckPublication:
     """Resolve binding and publish a passed check."""
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     expires_at = compute_check_expiry(now, check_ttl_seconds)
 
     # Classify resolution from probe evidence

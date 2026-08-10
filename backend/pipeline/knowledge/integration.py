@@ -12,9 +12,9 @@ from __future__ import annotations
 import logging
 from typing import Any
 
+from backend.pipeline.knowledge.error_store import ErrorKnowledgeStore, FailureEntry
 from backend.pipeline.knowledge.library import KnowledgeLibrary
 from backend.pipeline.knowledge.library_indexer import LibraryIndexer
-from backend.pipeline.knowledge.error_store import ErrorKnowledgeStore, FailureEntry
 
 logger = logging.getLogger(__name__)
 

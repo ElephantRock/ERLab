@@ -4,8 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
-from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
@@ -506,11 +505,10 @@ class CostTracker:
                 f.write(line + "\n")
 
     @classmethod
-    def load(cls, path: str) -> "CostTracker":
+    def load(cls, path: str) -> CostTracker:
         """Load cost events from a JSONL file."""
         tracker = cls()
         from backend.providers.base import CostEvent
-        from datetime import datetime, timezone
         with open(path, encoding="utf-8") as f:
             for line in f:
                 data = json.loads(line.strip())
@@ -522,7 +520,7 @@ class CostTracker:
                     cost_usd=data.get("cost_usd", 0.0),
                     stage=data.get("stage", ""),
                     run_id=data.get("run_id"),
-                    timestamp=datetime.fromisoformat(data.get("timestamp", datetime.now(timezone.utc).isoformat())),
+                    timestamp=datetime.fromisoformat(data.get("timestamp", datetime.now(UTC).isoformat())),
                 )
                 tracker._events.append(event)
         return tracker

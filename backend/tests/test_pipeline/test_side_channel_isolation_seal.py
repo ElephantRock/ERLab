@@ -12,7 +12,6 @@ namespace isolation.
 
 from __future__ import annotations
 
-import ast
 import os
 import sys
 from pathlib import Path
@@ -34,7 +33,10 @@ def build_kg_collection_metadata(runtime):
 
 def test_kg_governed_constructor_creates_namespaced_runtime():
     """The governed KG constructor creates a namespace-specific collection."""
-    from backend.pipeline.knowledge.graph_embeddings import GraphEmbeddingIndex, LEGACY_COLLECTION_NAME
+    from backend.pipeline.knowledge.graph_embeddings import (
+        LEGACY_COLLECTION_NAME,
+        GraphEmbeddingIndex,
+    )
     from backend.pipeline.side_channel_embedding import (
         SideChannelEmbeddingRuntime,
         compute_namespace_fingerprint,
@@ -92,7 +94,8 @@ def test_kg_paper_purpose_rejected():
     """KG constructor rejects paper purpose."""
     from backend.pipeline.knowledge.graph_embeddings import GraphEmbeddingIndex
     from backend.pipeline.side_channel_embedding import (
-        SideChannelEmbeddingRuntime, SideChannelEmbeddingError,
+        SideChannelEmbeddingError,
+        SideChannelEmbeddingRuntime,
     )
     cfg = MagicMock(embedding_profile_id="p" * 64)
     runtime = SideChannelEmbeddingRuntime(
@@ -105,10 +108,11 @@ def test_kg_paper_purpose_rejected():
 
 def test_tool_governed_constructor_rejects_non_tool_purpose():
     """Tool constructor rejects KG/cache/paper purposes."""
-    from backend.pipeline.tools.tool_index import ToolEmbeddingIndex
     from backend.pipeline.side_channel_embedding import (
-        SideChannelEmbeddingRuntime, SideChannelEmbeddingError,
+        SideChannelEmbeddingError,
+        SideChannelEmbeddingRuntime,
     )
+    from backend.pipeline.tools.tool_index import ToolEmbeddingIndex
     for wrong_purpose in ["paper", "knowledge_graph_entity", "llm_cache_key"]:
         cfg = MagicMock(embedding_profile_id="t" * 64)
         runtime = SideChannelEmbeddingRuntime(
@@ -237,8 +241,8 @@ def test_cache_different_namespace_different_collection():
 def test_paper_profile_guard_exists():
     """The assert_profile_not_paper_profile guard is callable and rejects."""
     from backend.pipeline.side_channel_embedding import (
-        assert_profile_not_paper_profile,
         SideChannelEmbeddingError,
+        assert_profile_not_paper_profile,
     )
     with pytest.raises(SideChannelEmbeddingError):
         assert_profile_not_paper_profile("same", "same")

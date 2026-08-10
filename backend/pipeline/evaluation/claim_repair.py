@@ -14,10 +14,7 @@ import re
 from dataclasses import dataclass
 from typing import Any
 
-from backend.pipeline.evaluation.paper_sections import parse_paper, ParsedPaper
-from backend.pipeline.evaluation.claim_alignment import (
-    _extract_abstract, _extract_conclusion, _classify_method_mention
-)
+from backend.pipeline.evaluation.paper_sections import parse_paper
 
 
 @dataclass(frozen=True)

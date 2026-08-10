@@ -7,10 +7,8 @@ into a structured academic paper with proper sections and [SOURCE-X] citations.
 from __future__ import annotations
 
 import logging
-import re
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
-from typing import Any, Iterable
 
 from backend.providers.base import LLMProvider
 

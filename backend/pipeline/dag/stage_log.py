@@ -8,10 +8,9 @@ from __future__ import annotations
 
 import json
 import time
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
-
 
 # Fields required in every log entry (HB-03)
 REQUIRED_FIELDS = (
@@ -101,7 +100,7 @@ class StageLogger:
         if not self._log_file.exists():
             return []
         entries: list[dict[str, Any]] = []
-        with open(self._log_file, "r", encoding="utf-8") as fh:
+        with open(self._log_file, encoding="utf-8") as fh:
             for line in fh:
                 line = line.strip()
                 if line:
@@ -124,7 +123,7 @@ class StageLogger:
         return {
             "run_id": "",  # filled by _append
             "stage": stage,
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
             "event": event,
             "elapsed_s": round(elapsed_s, 4),
             "config": config,
@@ -152,7 +151,7 @@ class StageLogger:
             fh.write(json.dumps(entry, default=str) + "\n")
 
 
-def measure_stage(stage_name: str, logger: StageLogger, **kwargs: Any) -> "_StageTimer":
+def measure_stage(stage_name: str, logger: StageLogger, **kwargs: Any) -> _StageTimer:
     """Context-manager helper to measure stage elapsed time."""
     return _StageTimer(stage_name, logger, **kwargs)
 
@@ -174,7 +173,7 @@ class _StageTimer:
         self._inputs = inputs or {}
         self._start: float = 0.0
 
-    def __enter__(self) -> "_StageTimer":
+    def __enter__(self) -> _StageTimer:
         self._start = time.time()
         self._logger.log(
             stage=self._stage,

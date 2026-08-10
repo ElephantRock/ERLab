@@ -7,7 +7,7 @@ from pathlib import Path
 
 import yaml
 
-from backend.pipeline.tools.mcp.models import MCPServerConfig, MCPTransport
+from backend.pipeline.tools.mcp.models import MCPServerConfig
 
 logger = logging.getLogger(__name__)
 

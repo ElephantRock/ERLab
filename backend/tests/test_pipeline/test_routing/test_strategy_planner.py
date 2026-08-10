@@ -1,9 +1,8 @@
 """Phase D tests: StrategyPlanner."""
 
-import pytest
 
-from backend.pipeline.routing.stage_contract import StageContract
 from backend.pipeline.routing.certified_lookup import CertifiedModelCandidate
+from backend.pipeline.routing.stage_contract import StageContract
 from backend.pipeline.routing.strategy_planner import StrategyPlanner
 
 

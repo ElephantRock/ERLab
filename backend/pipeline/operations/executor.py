@@ -27,7 +27,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from backend.pipeline.operations.types import (
     LMStudioUnreachableError,
@@ -185,6 +185,6 @@ class OperationExecutor:
         return ResourceEpoch(
             operation_id=f"op_{uuid.uuid4().hex[:12]}",
             model_id=model_id,
-            loaded_at=datetime.now(timezone.utc).isoformat(),
+            loaded_at=datetime.now(UTC).isoformat(),
             observed_loaded_models=loaded_ids,
         )

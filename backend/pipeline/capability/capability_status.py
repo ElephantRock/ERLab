@@ -15,30 +15,18 @@ Status vocabulary:
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime, timezone
-from typing import Any
+from datetime import UTC, datetime
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from backend.db.models import EmbeddingCapabilityCheck
+from backend.pipeline.capability.capability_drift import is_check_current
 from backend.pipeline.capability.contracts import (
-    STATUS_ABANDONED,
-    STATUS_CANCELLED,
-    STATUS_FAILED,
     STATUS_PASSED,
     STATUS_RUNNING,
-    TERMINAL_CHECK_STATUSES,
-)
-from backend.pipeline.capability.capability_identity import (
-    compute_runtime_config_fingerprint,
-)
-from backend.pipeline.capability.capability_drift import is_check_current
-from backend.pipeline.knowledge.embedding_configuration import (
-    EffectiveEmbeddingConfiguration,
 )
 from backend.pipeline.vector_contracts import EMBEDDING_PROBE_SUITE_V1
-
 
 STATUS_CURRENTLY_VERIFIED = "currently_verified"
 STATUS_EXPIRED = "expired"
@@ -74,7 +62,7 @@ def derive_capability_status(
     is omitted from the possible results (cannot determine drift
     without the live config).
     """
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
 
     # If fingerprint provided, check for any check under that fingerprint
     if current_runtime_config_fingerprint is not None:

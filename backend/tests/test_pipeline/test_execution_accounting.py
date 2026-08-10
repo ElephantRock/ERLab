@@ -19,14 +19,13 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
-from sqlalchemy import create_engine, event, inspect, text
+from sqlalchemy import create_engine, event, text
 from sqlalchemy.exc import IntegrityError as SAIntegrityError
 from sqlalchemy.orm import sessionmaker
 
 sys.modules.setdefault("chromadb", MagicMock())
 sys.modules.setdefault("google.generativeai", MagicMock())
 
-import backend.db.models  # ensure models loaded
 from backend.db.database import Base
 from backend.db.models import PipelineRun, SearchQuery, SearchQueryExecution
 from backend.pipeline.literature.contracts import (
@@ -37,13 +36,11 @@ from backend.pipeline.literature.contracts import (
     validate_accounting,
 )
 from backend.pipeline.literature.execution_recorder import ExecutionRecorder
-from backend.pipeline.literature.models import Paper as SPaper, SearchResult
+from backend.pipeline.literature.models import Paper as SPaper
+from backend.pipeline.literature.models import SearchResult
 from backend.pipeline.literature.result_accounting import (
-    normalize_doi,
     reconcile_source_results,
-    title_hash,
 )
-
 
 # ── Session helpers ──────────────────────────────────────────────────
 

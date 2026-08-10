@@ -1,10 +1,9 @@
 """BATCH-128 Tests — Daily Auto-Ingestion Scheduler."""
 
 import asyncio
-import pytest
 from unittest.mock import AsyncMock, MagicMock
 
-from backend.pipeline.ingestion.scheduler import IngestionScheduler, IngestionResult
+from backend.pipeline.ingestion.scheduler import IngestionResult, IngestionScheduler
 
 
 class TestIngestionScheduler:

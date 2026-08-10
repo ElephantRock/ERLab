@@ -1,18 +1,15 @@
 """Pipeline DB persistence operations."""
 
-import json
 import hashlib
+import json
 import logging
 import os
 import re
 import unicodedata
-import uuid
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
-
-from sqlalchemy.exc import IntegrityError
 
 logger = logging.getLogger(__name__)
 
@@ -228,7 +225,7 @@ def _extract_paper_artifact(proposal, result_markers=None) -> tuple[str | None, 
         "synthesis_strategy": full_paper.get("synthesis_strategy"),
         "sections_generated": full_paper.get("sections_generated"),
         "sections_total": full_paper.get("sections_total"),
-        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "generated_at": datetime.now(UTC).isoformat(),
         # Phase 1 1D: paper-level evaluation (scope=paper), written by
         # PaperSynthesisStage._evaluate_paper. Stored under paper_meta_json
         # so the API can expose it alongside the paper state.
@@ -308,9 +305,10 @@ class PipelinePersistence:
 
     def create_run_record(self, domain: str, params: dict, session_id: str | None = None, run_id: str | None = None) -> int | None:
         try:
+            from sqlalchemy import select as sa_select
+
             from backend.db import crud
             from backend.db.database import get_session
-            from sqlalchemy import select as sa_select, update as sa_update
             from backend.db.models import PipelineRun as _PR
 
             with get_session() as session:
@@ -509,10 +507,11 @@ class PipelinePersistence:
             from backend.db import crud
             from backend.db.database import get_session
             from backend.db.models import (
-                Paper as DBPaper,
-                SearchQuery as SearchQueryModel,
-                RunPaper,
                 PaperDiscovery,
+                RunPaper,
+            )
+            from backend.db.models import (
+                SearchQuery as SearchQueryModel,
             )
 
             with get_session() as session:
@@ -632,8 +631,9 @@ class PipelinePersistence:
 
                 # ── P0.2.5: Linkage-ledger reconciliation ──
                 if execution_linkage_expectations:
+                    from datetime import datetime
+
                     from backend.db.models import ExecutionDiscoveryLinkage
-                    from datetime import datetime, timezone as dt_tz
 
                     for exp in execution_linkage_expectations:
                         if exp.accounting_status != "reconciled":
@@ -674,7 +674,7 @@ class PipelinePersistence:
                         if ledger and ledger.status == "pending":
                             ledger.status = "linked"
                             ledger.linked_discovery_count = actual_count
-                            ledger.completed_at = datetime.now(dt_tz.utc)
+                            ledger.completed_at = datetime.now(UTC)
 
                 session.commit()
                 logger.info(
@@ -1087,9 +1087,9 @@ class PipelinePersistence:
         if not db_run_id:
             return
         try:
+
             from backend.db.database import get_session
             from backend.db.models import PipelineRun as PipelineRunModel
-            from sqlalchemy import select
 
             report_data = cluster_report
             if hasattr(cluster_report, "model_dump"):
@@ -1138,7 +1138,7 @@ class PipelinePersistence:
                     if stage_name not in stages:
                         stages.append(stage_name)
                     run.stages_completed = json.dumps(stages)
-                    run.updated_at = datetime.now(timezone.utc)
+                    run.updated_at = datetime.now(UTC)
                     session.commit()
         except Exception as e:
             logger.warning("Failed to advance stage: %s", e)
@@ -1200,6 +1200,7 @@ class PipelinePersistence:
             return
         try:
             from pathlib import Path
+
             from backend.config import get_settings
 
             settings = get_settings()
@@ -1270,7 +1271,7 @@ class PipelinePersistence:
             from backend.db.database import get_session
             from backend.db.models import PipelineRun
 
-            cutoff = datetime.now(timezone.utc) - max_age
+            cutoff = datetime.now(UTC) - max_age
             with get_session() as session:
                 # Check updated_at first (heartbeat-updated), fall back to created_at
                 stale = session.query(PipelineRun).filter(
@@ -1292,7 +1293,7 @@ class PipelinePersistence:
                     if last_active:
                         # Handle both tz-aware and tz-naive datetimes
                         if last_active.tzinfo is None:
-                            last_active = last_active.replace(tzinfo=timezone.utc)
+                            last_active = last_active.replace(tzinfo=UTC)
                         if last_active < cutoff:
                             result.append(run)
                 return result

@@ -5,6 +5,7 @@ Test IDs: TEST-08-01-01 through TEST-08-01-05
 from __future__ import annotations
 
 import sys
+
 import pytest
 
 pytestmark = pytest.mark.skipif(
@@ -13,10 +14,7 @@ pytestmark = pytest.mark.skipif(
 )
 
 import os
-import signal
-import socket
 import subprocess
-import threading
 import time
 from pathlib import Path
 from unittest.mock import MagicMock, patch
@@ -33,7 +31,6 @@ from backend.cli.commands.dev import (
     _port_in_use,
     dev_command,
 )
-
 
 # ── TEST-08-01-01: Command constructs correct uvicorn subprocess args ─
 

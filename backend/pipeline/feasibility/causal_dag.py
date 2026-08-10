@@ -232,7 +232,7 @@ class PipelineCausalModel:
             all_passed=all(results.values()),
         )
 
-    def feasibility_to_dag_scores(self, report: "FeasibilityReport") -> dict[str, float]:
+    def feasibility_to_dag_scores(self, report: FeasibilityReport) -> dict[str, float]:
         """Convert a FeasibilityReport to DAG node scores."""
         mapping = {
             "data_availability": report.data_availability,

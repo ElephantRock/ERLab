@@ -12,8 +12,8 @@ from typing import Any
 from backend.pipeline.evaluation.scorer import (
     EvaluationReport,
     ScoreDimension,
-    ScoreResult,
     Scorer,
+    ScoreResult,
 )
 
 logger = logging.getLogger(__name__)

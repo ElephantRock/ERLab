@@ -13,7 +13,6 @@ from typing import Any
 
 import yaml
 
-
 VALID_RISK_LEVELS = frozenset({"low", "medium", "high", "critical"})
 VALID_SCHEMA_STRICTNESSES = frozenset({"none", "low", "medium", "high"})
 VALID_COST_SENSITIVITIES = frozenset({"low", "medium", "high"})

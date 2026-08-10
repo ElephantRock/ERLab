@@ -5,13 +5,15 @@ AIV v5.3 — T1, T2, T5. Use asyncio.run() not @pytest.mark.asyncio.
 from __future__ import annotations
 
 import asyncio
-import pytest
 from unittest.mock import AsyncMock
 
-from backend.pipeline.literature.relevance_filter import (
-    RelevanceFilter, _cosine_similarity, DEFAULT_THRESHOLD, MIN_PAPERS,
-)
+import pytest
+
 from backend.pipeline.literature.models import Paper, SearchResult
+from backend.pipeline.literature.relevance_filter import (
+    RelevanceFilter,
+    _cosine_similarity,
+)
 
 
 def _make_result(title, abstract="", score=1.0):

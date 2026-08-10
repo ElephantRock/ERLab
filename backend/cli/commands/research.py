@@ -9,7 +9,6 @@ Provides commands for interacting with individual research ideas:
 
 from __future__ import annotations
 
-import json
 import webbrowser
 from pathlib import Path
 
@@ -102,7 +101,7 @@ def generate_proposal(
         title=f"Proposal: {proposal.title}",
         width=100,
     ))
-    console.print(f"\n[green]Proposal generated successfully.[/green]")
+    console.print("\n[green]Proposal generated successfully.[/green]")
 
 
 # ── erock export {id} ─────────────────────────────────────────────
@@ -207,6 +206,7 @@ def recover_paper(
 
     # Persist to database
     import json as _json
+
     from backend.db.database import get_session
     from backend.db.models import Proposal as ProposalModel
 

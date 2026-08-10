@@ -104,7 +104,9 @@ class FeasibilityScorer:
             llm = provider or self._provider
             # Collect receipt for this model-backed call
             if receipts is not None:
-                from backend.pipeline.operations.provider_conformance import build_receipt_from_provider
+                from backend.pipeline.operations.provider_conformance import (
+                    build_receipt_from_provider,
+                )
                 receipts.append(build_receipt_from_provider(llm))
             result = await llm.structured_output(
                 messages=[

@@ -7,7 +7,6 @@ path. It must not accept arbitrary file paths produced by the model.
 
 from __future__ import annotations
 
-import hashlib
 import json
 from dataclasses import dataclass, field
 from pathlib import Path

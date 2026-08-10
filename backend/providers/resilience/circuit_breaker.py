@@ -116,10 +116,7 @@ class CircuitBreaker:
             self._total_count += 1
             self._last_failure_time = time.monotonic()
             self._failure_timestamps.append(self._last_failure_time)
-            if self._state == _State.HALF_OPEN:
-                self._consecutive_opens += 1
-                self._state = _State.OPEN
-            elif self._failure_count >= self._failure_threshold:
+            if self._state == _State.HALF_OPEN or self._failure_count >= self._failure_threshold:
                 self._consecutive_opens += 1
                 self._state = _State.OPEN
 

@@ -5,6 +5,7 @@ This fixes the 'no such table' errors on CI where the DB path
 may differ from the development environment.
 """
 import pytest
+
 from backend.db.database import init_db
 
 

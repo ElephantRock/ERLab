@@ -15,7 +15,7 @@ from __future__ import annotations
 
 import sys
 import tempfile
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -26,11 +26,9 @@ from sqlalchemy.orm import sessionmaker
 sys.modules.setdefault("chromadb", MagicMock())
 sys.modules.setdefault("google.generativeai", MagicMock())
 
-import backend.db.models
 from backend.db.database import Base
 from backend.db.models import (
     ExecutionDiscoveryLinkage,
-    Paper as DBPaper,
     PaperDiscovery,
     PipelineRun,
     RunPaper,
@@ -39,19 +37,18 @@ from backend.db.models import (
     SearchQueryExecution,
     SearchQueryExecutionScope,
 )
+from backend.db.models import (
+    Paper as DBPaper,
+)
 from backend.pipeline.literature.run_reconciliation import (
-    RunReconciliationDriftError,
     ExecutionScopeDriftError,
-    build_reconciliation_snapshot,
-    canonical_source_set,
     canonical_source_json,
+    canonical_source_set,
     ensure_execution_scope,
     ensure_pending_reconciliation,
     reconcile_run_search,
     source_set_hash,
-    validate_snapshot,
 )
-
 
 # ── Session helpers ──────────────────────────────────────────────────
 
@@ -103,7 +100,7 @@ def _make_completed_execution(
     Session = sessionmaker(bind=engine, expire_on_commit=False)
     session = Session()
     try:
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         ex = SearchQueryExecution(
             search_query_id=sq_id, source=source, status=status,
             attempt_count=1, completed_at=now,
@@ -314,7 +311,7 @@ def test_degraded_posture_with_failed_execution():
     Session = sessionmaker(bind=engine, expire_on_commit=False)
     session = Session()
     try:
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         ex2 = SearchQueryExecution(
             search_query_id=sq_id, source="openalex", status="failed",
             attempt_count=1, completed_at=now,
@@ -365,7 +362,7 @@ def test_no_usable_sources_posture():
     Session = sessionmaker(bind=engine, expire_on_commit=False)
     session = Session()
     try:
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         ex = SearchQueryExecution(
             search_query_id=sq_id, source="arxiv", status="failed",
             attempt_count=1, completed_at=now,

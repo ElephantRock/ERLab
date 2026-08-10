@@ -1,12 +1,9 @@
 """Tests for ClaimEvidenceValidator — the claim survival gate."""
 
-import pytest
 
 from backend.pipeline.gateway.claim_evidence_validator import (
     ClaimAction,
-    ClaimEvidenceResult,
     ClaimEvidenceValidator,
-    DocumentValidationResult,
     SupportLevel,
 )
 

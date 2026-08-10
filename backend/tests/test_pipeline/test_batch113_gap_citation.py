@@ -10,7 +10,6 @@ Tests verify:
 - Valid gap types in prompt
 """
 
-import pytest
 
 from backend.pipeline.gap_analysis.gap_analyzer import GAP_ANALYSIS_PROMPT, GapAnalyzer
 from backend.pipeline.literature.models import Author, Paper

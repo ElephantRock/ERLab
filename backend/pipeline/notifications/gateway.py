@@ -4,7 +4,6 @@ Ported from huggingface/ml-intern messaging/gateway.py pattern.
 Provides abstract notification interface with console and webhook implementations.
 """
 
-import json
 import logging
 from abc import ABC, abstractmethod
 from dataclasses import dataclass

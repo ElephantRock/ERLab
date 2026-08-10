@@ -11,7 +11,6 @@ from pydantic import ValidationError
 
 from backend.api.schemas import PipelineRunRequest
 
-
 # ── TEST-76-03-01: POST accepts strategy field ──────────
 # AC-03-01
 

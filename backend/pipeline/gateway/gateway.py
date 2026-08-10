@@ -20,8 +20,8 @@ import time
 from dataclasses import dataclass, field
 from typing import Any
 
-from backend.pipeline.gateway.token_budget import PromptTooLargeError, TokenBudget, TokenBudgeter
 from backend.pipeline.gateway.capability_registry import ModelCapabilities, ModelCapabilityRegistry
+from backend.pipeline.gateway.token_budget import PromptTooLargeError, TokenBudgeter
 
 logger = logging.getLogger(__name__)
 
@@ -386,10 +386,11 @@ class LLMGateway:
     def _route_request(self, request: LLMRequest) -> Any:
         """Ask SmartRouter for a routing decision. Returns RoutingDecision or None."""
         try:
-            from backend.pipeline.routing.stage_contract import (
-                StageContract, load_contracts, get_contract,
-            )
             from backend.pipeline.routing.smart_router import RoutingRuntimeContext
+            from backend.pipeline.routing.stage_contract import (
+                get_contract,
+                load_contracts,
+            )
 
             stage = request.stage or request.task
             if not stage:

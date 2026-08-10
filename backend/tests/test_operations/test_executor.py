@@ -13,8 +13,9 @@ These tests verify:
 from __future__ import annotations
 
 import asyncio
+from unittest.mock import MagicMock
+
 import pytest
-from unittest.mock import MagicMock, patch, call
 
 from backend.pipeline.operations.executor import OperationExecutor
 from backend.pipeline.operations.types import (

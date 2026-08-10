@@ -11,11 +11,8 @@ from __future__ import annotations
 
 import asyncio
 import hashlib
-import json
 import sys
 from unittest.mock import MagicMock
-
-import pytest
 
 sys.modules.setdefault("chromadb", MagicMock())
 sys.modules.setdefault("google.generativeai", MagicMock())
@@ -24,13 +21,12 @@ from backend.pipeline.quarantine import (
     DEFAULT_DISPLAY_MARKER,
     render_quarantined_view,
 )
+from backend.pipeline.stages import CitationAuditStage, StageContext
+from backend.pipeline.synthesis.proposal_synthesizer import ResearchProposal
 from backend.pipeline.verification.citation_claim_auditor import (
     CitationAuditItem,
     CitationAuditReport,
 )
-from backend.pipeline.stages import CitationAuditStage, StageContext
-from backend.pipeline.synthesis.proposal_synthesizer import ResearchProposal
-
 
 # ── Unit tests for render_quarantined_view ──────────────────
 

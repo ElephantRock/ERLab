@@ -1,5 +1,4 @@
 """Tests for the shared JSON extraction utility."""
-import json
 import pytest
 
 from backend.pipeline.utils.json_extraction import (

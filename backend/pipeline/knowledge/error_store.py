@@ -6,13 +6,11 @@ so future runs can avoid repeating the same mistakes.
 from __future__ import annotations
 
 import hashlib
-import json
 import logging
 import sqlite3
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
-from typing import Any
 
 logger = logging.getLogger(__name__)
 

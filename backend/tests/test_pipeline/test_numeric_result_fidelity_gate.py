@@ -27,7 +27,6 @@ and passing — the numeric gate is additive, not a replacement.
 from dataclasses import dataclass
 
 from backend.pipeline.evaluation.claim_result_validator import (
-    ClaimResultMismatch,
     validate_claim_result_alignment,
 )
 

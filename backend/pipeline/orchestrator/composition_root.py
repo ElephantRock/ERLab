@@ -23,8 +23,8 @@ import logging
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from backend.providers.base import LLMProvider
     from backend.config import Settings
+    from backend.providers.base import LLMProvider
 
 logger = logging.getLogger(__name__)
 
@@ -39,8 +39,8 @@ class CompositionRoot:
 
     @staticmethod
     def create(
-        settings: "Settings",
-        provider: "LLMProvider | None",
+        settings: Settings,
+        provider: LLMProvider | None,
         stage_callback,
         strategy: str | None,
     ) -> dict:
@@ -136,8 +136,8 @@ def init_orchestrator(orchestrator, settings, provider, stage_callback, strategy
     This is called from PipelineOrchestrator.__init__ and sets all
     the attributes that the old __init__ body used to set inline.
     """
-    from backend.pipeline.tracing import InMemoryProcessor
     from backend.pipeline.governance.guardrails import default_input_guardrails
+    from backend.pipeline.tracing import InMemoryProcessor
 
     components = CompositionRoot.create(settings, provider, stage_callback, strategy)
 

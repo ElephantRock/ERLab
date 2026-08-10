@@ -1,9 +1,8 @@
 """BATCH-125 Tests — Contradiction Detector."""
 
-import pytest
-from backend.pipeline.claims.models import Claim, ClaimType
-from backend.pipeline.claims.contradiction.models import ContradictionCandidate
 from backend.pipeline.claims.contradiction.detector import ContradictionDetector
+from backend.pipeline.claims.contradiction.models import ContradictionCandidate
+from backend.pipeline.claims.models import Claim, ClaimType
 
 
 def _result_claim(paper_id, dataset, metric, value):

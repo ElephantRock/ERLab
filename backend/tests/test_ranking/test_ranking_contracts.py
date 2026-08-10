@@ -2,16 +2,15 @@
 
 from __future__ import annotations
 
-import math
 import pytest
 
 from backend.ranking.contracts import (
     DISPOSITION_EXCLUDED_INVALID,
     DISPOSITION_SELECTED,
+    RankedCandidate,
     RankingCandidate,
     RankingRequest,
     RankingResult,
-    RankedCandidate,
     compute_tie_break_key,
     validate_ranked_candidate,
     validate_ranking_result,

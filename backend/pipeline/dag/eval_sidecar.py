@@ -13,7 +13,7 @@ from __future__ import annotations
 import json
 import logging
 import sqlite3
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -100,7 +100,7 @@ def _load_stage_logs(logs_dir: str, run_id: str) -> list[dict]:
         return []
 
     entries = []
-    with open(log_file, "r", encoding="utf-8") as f:
+    with open(log_file, encoding="utf-8") as f:
         for line in f:
             line = line.strip()
             if line:
@@ -114,7 +114,7 @@ def _load_stage_logs(logs_dir: str, run_id: str) -> list[dict]:
 def _load_benchmark(benchmark_path: str) -> dict | None:
     """Load benchmark JSON file."""
     try:
-        with open(benchmark_path, "r", encoding="utf-8") as f:
+        with open(benchmark_path, encoding="utf-8") as f:
             return json.load(f)
     except (json.JSONDecodeError, FileNotFoundError) as e:
         logger.warning("Could not load benchmark: %s", e)
@@ -183,7 +183,7 @@ def _compute_metrics(
 
     metrics = {
         "run_id": run_id,
-        "evaluated_at": datetime.now(timezone.utc).isoformat(),
+        "evaluated_at": datetime.now(UTC).isoformat(),
         # Timing
         "total_elapsed_s": round(total_elapsed, 2),
         "avg_stage_elapsed_s": round(avg_stage_elapsed, 2),

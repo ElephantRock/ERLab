@@ -9,11 +9,8 @@ Uses asyncio.run() directly. pytest.ini has -p no:asyncio.
 from __future__ import annotations
 
 import asyncio
-import json
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock
-
-import pytest
 
 # ---------------------------------------------------------------------------
 # Lightweight stubs — avoid importing the full pipeline dependency tree
@@ -92,11 +89,11 @@ class TestEvaluationMetadata:
     """TEST-156-01-03: Evaluation stored in metadata."""
 
     def test_evaluation_stored_in_metadata(self):
-        from backend.pipeline.stages import EvaluationStage
         from backend.pipeline.evaluation.proposal_evaluator import (
             DimensionScore,
             ProposalEvaluation,
         )
+        from backend.pipeline.stages import EvaluationStage
 
         proposal = _make_proposal()
         ctx = _make_ctx(proposals={0: proposal})
@@ -156,8 +153,8 @@ class TestEvaluationSkippedWhenDisabled:
 
     def test_skipped_when_strategy_disables(self):
         from backend.pipeline.stages import EvaluationStage
-        from backend.pipeline.strategies.models import StageConfig, StrategyConfig
         from backend.pipeline.strategies import PipelineStrategy
+        from backend.pipeline.strategies.models import StageConfig, StrategyConfig
 
         proposal = _make_proposal()
         strategy_config = StrategyConfig(
@@ -192,7 +189,6 @@ class TestPresetsEvaluationConfig:
     def test_deep_research_enables_evaluation(self):
         from backend.pipeline.strategies.presets import register_presets
         from backend.pipeline.strategies.registry import StrategyRegistry
-        from backend.pipeline.strategies.models import PipelineStrategy
 
         registry = StrategyRegistry()
         register_presets(registry)

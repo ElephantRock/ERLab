@@ -1,8 +1,7 @@
 """Phase A tests: Manifest + Registries."""
 
+
 import pytest
-import tempfile
-from pathlib import Path
 
 from backend.pipeline.model_certification.manifest import CandidateModelManifest
 from backend.pipeline.model_certification.registries import (
@@ -10,7 +9,6 @@ from backend.pipeline.model_certification.registries import (
     ProductionModelRegistry,
     PromotionDenied,
 )
-
 
 # ── Manifest ──────────────────────────────────────────────────────────
 

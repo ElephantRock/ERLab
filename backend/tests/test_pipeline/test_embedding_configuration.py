@@ -21,10 +21,9 @@ from backend.pipeline.knowledge.embedding_configuration import (
     EmbeddingConfigurationError,
     EmbeddingProfileSnapshot,
     EmbeddingRuntimeSettingsSnapshot,
-    sanitize_endpoint_identity,
     resolve_effective_embedding_configuration,
+    sanitize_endpoint_identity,
 )
-
 
 # ── Fixtures ─────────────────────────────────────────────────────────
 

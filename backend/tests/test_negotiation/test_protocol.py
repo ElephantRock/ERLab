@@ -1,6 +1,5 @@
 """Tests for negotiation protocol models."""
 
-import pytest
 
 from backend.pipeline.negotiation.protocol import (
     ConsensusResult,

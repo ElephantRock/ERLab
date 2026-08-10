@@ -18,9 +18,9 @@ from sqlalchemy.orm import sessionmaker
 
 from backend.api.errors import APIError
 from backend.api.routes.experiments import router
-from backend.db import crud
 from backend.db.database import Base
-from backend.db.models import Idea, PipelineRun, ExperimentResult
+from backend.db.models import Idea, PipelineRun
+
 
 @pytest.fixture
 def app_env(tmp_path, monkeypatch):

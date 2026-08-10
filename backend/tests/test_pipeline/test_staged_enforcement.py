@@ -7,20 +7,22 @@ Validates:
 4. Non-enforced stages continue through legacy path
 5. GatewayCallLog includes enforcement fields
 """
-import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock
 
-from backend.pipeline.gateway.gateway import (
-    LLMGateway, LLMRequest, LLMResponse, GatewayCallLog,
-)
+import pytest
+
 from backend.pipeline.gateway.capability_registry import (
-    ModelCapabilities, ModelCapabilityRegistry,
+    ModelCapabilityRegistry,
+)
+from backend.pipeline.gateway.gateway import (
+    GatewayCallLog,
+    LLMGateway,
+    LLMRequest,
 )
 from backend.pipeline.gateway.token_budget import TokenBudgeter
-from backend.pipeline.routing.smart_router import SmartRouter
 from backend.pipeline.routing.certified_lookup import CertifiedCapabilityLookup
 from backend.pipeline.routing.dry_run_logger import DryRunLogger
-
+from backend.pipeline.routing.smart_router import SmartRouter
 
 # ─── Fixtures ────────────────────────────────────────────────────────
 
@@ -206,7 +208,6 @@ class TestLLMRepairService:
     async def test_repair_routes_through_gateway(self):
         """Repair calls go through gateway with stage='repair'."""
         from backend.pipeline.gateway.llm_repair_and_query import LLMRepairService
-        from backend.pipeline.gateway.gateway import LLMResponse
 
         gateway = _make_gateway(enforced_stages=["repair"], mode="enforce")
         # Mock provider to return valid JSON

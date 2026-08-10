@@ -9,12 +9,9 @@ AIV v5.3 — T1, T2, T5.
 """
 from __future__ import annotations
 
-import pytest
-
-from backend.pipeline.verification.reference_verifier import ReferenceVerifier
-from backend.pipeline.verification.proposal_deepener import ProposalDeepener, DeepenedProposal
 from backend.pipeline.verification.pipeline_evaluator import PipelineEvaluator
-
+from backend.pipeline.verification.proposal_deepener import DeepenedProposal, ProposalDeepener
+from backend.pipeline.verification.reference_verifier import ReferenceVerifier
 
 # ══════════════════════════════════════════════════════════
 # ReferenceVerifier

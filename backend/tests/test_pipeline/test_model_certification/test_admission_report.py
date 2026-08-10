@@ -1,11 +1,8 @@
 """Phase D tests: Admission Policy + Report."""
 
-import pytest
-from pathlib import Path
 
 from backend.pipeline.model_certification.admission_policy import (
     AdmissionStatus,
-    AdmissionDecision,
     decide_admission,
     load_policy,
 )

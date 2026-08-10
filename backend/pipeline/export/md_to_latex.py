@@ -5,8 +5,8 @@ tables, and links to their LaTeX equivalents.
 """
 from __future__ import annotations
 
-import re
 import logging
+import re
 
 from backend.pipeline.constants import AI_HONESTY_BADGE_BRIEF
 

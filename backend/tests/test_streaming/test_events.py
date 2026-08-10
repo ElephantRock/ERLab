@@ -1,7 +1,6 @@
 """Tests for stream events."""
 
 import json
-import time
 
 from backend.pipeline.streaming.events import StreamEvent, StreamEventType
 

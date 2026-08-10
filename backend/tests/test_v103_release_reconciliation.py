@@ -33,7 +33,6 @@ from backend.providers.ollama_provider import OllamaProvider
 from backend.providers.openai_provider import OpenAIProvider
 from backend.providers.provider_factory import CostTracker
 
-
 PROVIDER_CLASSES = (
     OpenAIProvider,
     AnthropicProvider,

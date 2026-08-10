@@ -208,6 +208,7 @@ def test_activation_service_no_external_io():
 def test_receipt_dataclasses_are_frozen():
     """AuthorizedEmbeddingBatch and AuthorizedQueryEmbedding are frozen."""
     import dataclasses
+
     from backend.pipeline.capability.verified_embedding_runtime import (
         AuthorizedEmbeddingBatch,
         AuthorizedQueryEmbedding,

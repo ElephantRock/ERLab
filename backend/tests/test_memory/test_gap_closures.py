@@ -8,8 +8,6 @@ from datetime import datetime, timedelta
 from types import ModuleType
 from unittest.mock import AsyncMock, MagicMock
 
-import pytest
-
 # Stub out chromadb before any backend imports that need it
 _chromadb = ModuleType("chromadb")
 _chromadb.PersistentClient = MagicMock

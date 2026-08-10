@@ -2,7 +2,6 @@
 
 import pytest
 
-from backend.pipeline.knowledge.entities import KnowledgeEntity, EntityType, TruthValue
 from backend.pipeline.knowledge.entity_extractor import (
     EntityExtractor,
     ExtractedEntity,

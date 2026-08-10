@@ -13,12 +13,11 @@ Run: pytest backend/tests/test_security/ -v
 from __future__ import annotations
 
 import asyncio
-import json
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from backend.config import Settings, ProductionConfigError
+import pytest
 
+from backend.config import ProductionConfigError, Settings
 
 # ===================================================================
 # 1. Production Config Validation
@@ -132,6 +131,7 @@ class TestWebSocketAuth:
     def test_websocket_no_query_param_in_signature(self):
         """The websocket_endpoint should not accept a 'token' query param."""
         import inspect
+
         from backend.api.ws import websocket_endpoint
         sig = inspect.signature(websocket_endpoint)
         assert "token" not in sig.parameters, (
@@ -164,8 +164,8 @@ class TestEmbeddingFailClosed:
     def test_provider_failure_raises(self):
         """When the embedding provider raises, embed_texts raises."""
         from backend.pipeline.knowledge.embedding_service import (
-            EmbeddingService,
             EmbeddingProviderError,
+            EmbeddingService,
         )
 
         mock_provider = AsyncMock()
@@ -179,8 +179,8 @@ class TestEmbeddingFailClosed:
     def test_zero_vector_from_provider_raises(self):
         """When the provider returns zero vectors, embed_texts raises."""
         from backend.pipeline.knowledge.embedding_service import (
-            EmbeddingService,
             EmbeddingProviderError,
+            EmbeddingService,
         )
 
         mock_provider = AsyncMock()
@@ -195,7 +195,6 @@ class TestEmbeddingFailClosed:
         """No path in embed_texts produces zero vectors as a return value."""
         from backend.pipeline.knowledge.embedding_service import (
             EmbeddingService,
-            EmbeddingProviderError,
         )
 
         # Provider returns valid vectors — should work
@@ -211,8 +210,8 @@ class TestEmbeddingFailClosed:
     def test_embed_single_raises_on_failure(self):
         """embed_single propagates errors instead of returning zero vector."""
         from backend.pipeline.knowledge.embedding_service import (
-            EmbeddingService,
             EmbeddingProviderError,
+            EmbeddingService,
         )
 
         mock_provider = AsyncMock()
@@ -244,11 +243,11 @@ class TestPersistenceFailurePropagation:
 
     def test_save_checkpoint_raises_not_warns(self):
         """save_checkpoint failure raises CheckpointPersistenceError."""
-        from backend.pipeline.persistence import (
-            PipelinePersistence,
-            CheckpointPersistenceError,
-        )
         from backend.pipeline.execution.run_state import RunCheckpoint
+        from backend.pipeline.persistence import (
+            CheckpointPersistenceError,
+            PipelinePersistence,
+        )
 
         persistence = PipelinePersistence()
         cp = RunCheckpoint.create_new("test_propagation", ["s1"])
@@ -260,8 +259,8 @@ class TestPersistenceFailurePropagation:
     def test_load_checkpoint_raises_on_corrupt(self):
         """load_checkpoint failure on corrupted file raises typed error."""
         from backend.pipeline.persistence import (
-            PipelinePersistence,
             CheckpointPersistenceError,
+            PipelinePersistence,
         )
 
         persistence = PipelinePersistence()
@@ -295,12 +294,11 @@ class TestExceptionDiscipline:
 
     def test_executor_exception_is_typed(self):
         """OperationExecutor converts exceptions to typed errors."""
-        from backend.pipeline.operations.executor import OperationExecutor
-        from backend.pipeline.operations.types import LMStudioUnreachableError
-
         # The _safe_get_loaded_models catches Exception but converts to
         # LMStudioUnreachableError or returns empty
         import inspect
+
+        from backend.pipeline.operations.executor import OperationExecutor
         source = inspect.getsource(OperationExecutor._safe_get_loaded_models)
         assert "LMStudioUnreachableError" in source
         assert "except Exception" in source  # Caught but converted
@@ -308,6 +306,7 @@ class TestExceptionDiscipline:
     def test_run_service_has_no_broad_except(self):
         """RunService should not have any 'except Exception' handlers."""
         import inspect
+
         from backend.api.run_service import RunService
         source = inspect.getsource(RunService)
         # RunService should be clean — no bare except Exception
@@ -321,6 +320,7 @@ class TestExceptionDiscipline:
     def test_persistence_save_has_no_warning_only(self):
         """save_checkpoint must not have warning-only error handling."""
         import inspect
+
         from backend.pipeline.persistence import PipelinePersistence
         source = inspect.getsource(PipelinePersistence.save_checkpoint)
         assert "self.warnings" not in source, (

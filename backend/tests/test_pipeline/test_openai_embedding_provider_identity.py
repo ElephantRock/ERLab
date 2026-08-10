@@ -21,7 +21,6 @@ from backend.pipeline.knowledge.embedding_provider_identity import (
     EVIDENCE_SOURCE_CONFIGURED_ONLY,
     EVIDENCE_SOURCE_OPENAI_RESPONSE_MODEL,
     ProviderEmbeddingBatch,
-    ProviderModelIdentityEvidence,
 )
 from backend.pipeline.knowledge.embedding_providers import OpenAIEmbeddingProvider
 

@@ -137,7 +137,7 @@ class CachedProvider(LLMProvider):
         if cached is not None and cached.structured is not None:
             return cached.structured
 
-        result = await self._wrapped.structured_output(messages, schema, temperature, max_tokens)
+        result = await self._wrapped.structured_output(messages, schema, temperature, max_tokens=max_tokens)
         response = LLMResponse(content="", structured=result)
         self._store_exact(key, response)
         await self._store_semantic(serialized, response)

@@ -10,7 +10,6 @@ Paper/proposal synthesis is capped at limited_use unless manually overridden.
 from __future__ import annotations
 
 from backend.pipeline.model_certification.stage_scorer import StageScorer
-from backend.pipeline.model_certification.eval_case import StageEvalCase, GoldAnswer
 
 
 class SynthesisScorer(StageScorer):

@@ -58,6 +58,16 @@ class ConfirmatoryConfig:
     run_id: str
     session_id: str
     domain: str = FROZEN_DOMAIN
+    # Optional overrides from the acceptance case manifest. When None,
+    # the frozen defaults (deep_research, FROZEN_PARAMS) are used,
+    # preserving backward compatibility.
+    strategy: str | None = None
+    research_question: str | None = None
+    generation_rounds: int | None = None
+    ideas_per_round: int | None = None
+    max_gaps: int | None = None
+    export_format: str | None = None
+    experiment_spec_id: str | None = None
 
     def summary(self) -> dict:
         """Credential-free machine-readable summary."""
@@ -324,15 +334,27 @@ async def run_confirmatory(
         )
 
     # ── 5. Execute pipeline with explicit identities ──
-    result = await orchestrator.run(
+    # Resolve parameters: case overrides take precedence over frozen defaults.
+    _gen_rounds = config.generation_rounds or FROZEN_PARAMS["generation_rounds"]
+    _ideas = config.ideas_per_round or FROZEN_PARAMS["ideas_per_round"]
+    _gaps = config.max_gaps or FROZEN_PARAMS["max_gaps"]
+    _export = config.export_format or FROZEN_PARAMS["export_format"]
+
+    run_kwargs: dict[str, Any] = dict(
         domain=config.domain,
-        generation_rounds=FROZEN_PARAMS["generation_rounds"],
-        ideas_per_round=FROZEN_PARAMS["ideas_per_round"],
-        max_gaps=FROZEN_PARAMS["max_gaps"],
-        export_format=FROZEN_PARAMS["export_format"],
+        generation_rounds=_gen_rounds,
+        ideas_per_round=_ideas,
+        max_gaps=_gaps,
+        export_format=_export,
         run_id=config.run_id,
         session_id=resolved_session_id,
     )
+    if config.research_question:
+        run_kwargs["research_question"] = config.research_question
+    if config.experiment_spec_id:
+        run_kwargs["experiment_spec_id"] = config.experiment_spec_id
+
+    result = await orchestrator.run(**run_kwargs)
 
     # ── 6. Verify binding ──
     result_run_id = getattr(result, "run_id", None)
@@ -402,6 +424,10 @@ async def run_confirmatory(
         "session_data_dir": str(session_data_dir),
         "terminal_outcome_verified": True,
         "completed_paper_count": outcome_diag["completed_paper_count"],
+        # The raw PipelineResult for callers that need to evaluate gates
+        # (evaluate_gates reads .outcome, .stage_report, .proposals, etc.).
+        # Existing callers that only access summary dict keys are unaffected.
+        "_pipeline_result": result,
     }
 
 

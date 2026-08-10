@@ -587,7 +587,7 @@ class Settings(BaseSettings):
             )
 
 
-@functools.lru_cache()
+@functools.lru_cache
 def get_settings() -> Settings:
     """Return a cached Settings instance."""
     settings = Settings()

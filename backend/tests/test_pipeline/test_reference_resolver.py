@@ -1,6 +1,5 @@
 """Tests for reference parsing and matching in the provenance layer."""
 
-import json
 
 import pytest
 from sqlalchemy import create_engine
@@ -10,15 +9,14 @@ from sqlalchemy.pool import StaticPool
 from backend.db.database import Base
 from backend.db.models import Paper
 from backend.pipeline.provenance.reference_resolver import (
+    StructuredReference,
+    _jaccard,
+    _normalize_title,
+    _token_set,
     parse_reference,
     resolve_reference,
     resolve_references,
-    StructuredReference,
-    _normalize_title,
-    _jaccard,
-    _token_set,
 )
-
 
 # ── Parsing tests ──────────────────────────────────────────────
 

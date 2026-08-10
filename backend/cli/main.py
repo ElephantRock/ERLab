@@ -243,11 +243,10 @@ def generate_ideas(
     # Resume: load run state from DB and compute skip_stages (HB-02)
     skip_stages: set[str] | None = None
     if resume:
-        from sqlalchemy import select
+        import json
+
         from backend.db.database import get_session
         from backend.db.models import PipelineRun
-
-        import json
 
         with get_session() as session:
             try:
@@ -740,11 +739,11 @@ def _print_score_guide():
     )
 
 
-from backend.cli.commands.setup import setup_wizard
-from backend.cli.commands.dev import dev_command
-from backend.cli.commands.db import db_app
-from backend.cli.commands.research import research_app
 from backend.cli.capability_cli import capability_app
+from backend.cli.commands.db import db_app
+from backend.cli.commands.dev import dev_command
+from backend.cli.commands.research import research_app
+from backend.cli.commands.setup import setup_wizard
 from backend.cli.config_cli import config_app
 
 app.command("setup")(setup_wizard)

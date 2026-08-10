@@ -26,7 +26,7 @@ from __future__ import annotations
 
 import time
 from collections import deque
-from typing import Deque, Dict, Literal, Tuple
+from typing import Literal
 
 from fastapi import APIRouter, Request, Response
 from fastapi.responses import JSONResponse
@@ -109,7 +109,7 @@ RATE_LIMIT_PER_MINUTE = 10
 RATE_WINDOW_SECONDS = 60
 MAX_TRACKED_IPS = 10_000  # bounded — prevents unbounded growth under load
 
-_ip_hits: Dict[str, Deque[float]] = {}
+_ip_hits: dict[str, deque[float]] = {}
 
 
 def _check_rate_limit(client_ip: str) -> bool:

@@ -1,11 +1,10 @@
 """Tests for surname extraction utility."""
 
-import pytest
-from backend.pipeline.verification.surname_utils import (
-    extract_surname,
-    build_surname_set,
-)
 from backend.pipeline.literature.models import Author
+from backend.pipeline.verification.surname_utils import (
+    build_surname_set,
+    extract_surname,
+)
 
 
 class TestExtractSurname:

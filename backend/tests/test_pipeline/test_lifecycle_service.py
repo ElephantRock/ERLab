@@ -7,10 +7,8 @@ lifecycle tables.
 
 from __future__ import annotations
 
-import asyncio
-import math
 import sys
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from unittest.mock import MagicMock
 
 import pytest
@@ -20,7 +18,6 @@ from sqlalchemy.orm import sessionmaker
 sys.modules.setdefault("chromadb", MagicMock())
 sys.modules.setdefault("google.generativeai", MagicMock())
 
-import backend.db.models
 from backend.db.database import Base
 from backend.db.models import (
     EmbeddingBindingCutover,
@@ -29,13 +26,6 @@ from backend.db.models import (
 from backend.pipeline.capability.lifecycle_service import (
     CapabilityLifecycleService,
     LifecycleError,
-)
-from backend.pipeline.knowledge.embedding_configuration import (
-    EffectiveEmbeddingConfiguration,
-)
-from backend.pipeline.knowledge.embedding_provider_identity import (
-    EVIDENCE_SOURCE_OPENAI_RESPONSE_MODEL,
-    ProviderModelIdentityEvidence,
 )
 
 _PROFILE_ID = "a" * 64
@@ -79,7 +69,7 @@ def _seed_profile_and_binding(session):
         "        'v1', 'v1', 'v1', 'capability_binding_v1')"
     ), {"bid": _BINDING_ID, "pid": _PROFILE_ID})
     # Seed a passed check so posture is valid
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     session.execute(text(
         "INSERT INTO embedding_capability_checks "
         "(check_id, embedding_profile_id, binding_id, "

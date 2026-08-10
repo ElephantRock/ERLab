@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json as _json
 from dataclasses import asdict, dataclass, field
 from enum import StrEnum
 from typing import TYPE_CHECKING, Any

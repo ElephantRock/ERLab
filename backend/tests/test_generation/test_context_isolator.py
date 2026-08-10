@@ -1,6 +1,5 @@
 """Tests for ContextIsolator and BufferedErrorTaxonomy."""
 
-import pytest
 
 from backend.pipeline.gap_analysis.models import ResearchGap
 from backend.pipeline.generation.buffered_taxonomy import BufferedErrorTaxonomy

@@ -8,9 +8,6 @@ produces output on the PipelineResult.
 from __future__ import annotations
 
 import asyncio
-import json
-import os
-import subprocess
 import sys
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -29,7 +26,7 @@ from backend.pipeline.literature.models import Author, Paper
 from backend.pipeline.novelty.novelty_checker import NoveltyReport
 from backend.pipeline.orchestrator import PipelineOrchestrator
 from backend.pipeline.reflection.reflector import ReflectionResult
-from backend.pipeline.result import PipelineResult, StageReport
+from backend.pipeline.result import PipelineResult
 from backend.pipeline.stages import (
     AdversarialReviewStage,
     CitationAuditStage,
@@ -47,7 +44,6 @@ from backend.pipeline.stages import (
     PaperSynthesisStage,
     ProposalDeepeningStage,
     ProposalSynthesisStage,
-    StageContext,
 )
 from backend.pipeline.synthesis.proposal_synthesizer import ResearchProposal
 from backend.pipeline.verification.citation_claim_auditor import CitationAuditReport

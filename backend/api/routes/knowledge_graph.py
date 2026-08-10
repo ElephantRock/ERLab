@@ -3,14 +3,13 @@
 from __future__ import annotations
 
 from collections import deque
-from typing import Optional
 
 from fastapi import APIRouter, Query
 
 from backend.api.errors import NotFoundError
 from backend.pipeline.knowledge.entities import EntityType, KnowledgeEntity
 from backend.pipeline.knowledge.graph import KnowledgeGraph
-from backend.pipeline.knowledge.relationships import KnowledgeRelationship, RelationType
+from backend.pipeline.knowledge.relationships import KnowledgeRelationship
 
 router = APIRouter()
 
@@ -123,8 +122,8 @@ async def graph_stats():
     description="Returns up to 100 entities with optional type and search filters (HB-02).",
 )
 async def list_entities(
-    type: Optional[str] = Query(None, description="Filter by entity type"),
-    search: Optional[str] = Query(None, description="Search entity names/aliases"),
+    type: str | None = Query(None, description="Filter by entity type"),
+    search: str | None = Query(None, description="Search entity names/aliases"),
     limit: int = Query(100, ge=1, le=100, description="Max entities to return (HB-02: capped at 100)"),
 ):
     """GET /api/v1/knowledge-graph/entities → entity list."""

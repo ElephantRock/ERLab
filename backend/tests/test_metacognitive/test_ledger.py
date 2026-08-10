@@ -1,6 +1,5 @@
 """Tests for ProgressLedger and LedgerEntry."""
 
-import pytest
 
 from backend.pipeline.metacognitive.ledger import LedgerEntry, ProgressLedger
 from backend.tests.test_metacognitive.conftest import make_entry

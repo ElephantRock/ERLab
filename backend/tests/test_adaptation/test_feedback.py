@@ -1,6 +1,5 @@
 """Tests for feedback collector."""
 
-import pytest
 
 from backend.pipeline.adaptation.feedback import FeedbackCollector, RunFeedback
 

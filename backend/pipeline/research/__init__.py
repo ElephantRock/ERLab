@@ -21,7 +21,7 @@ import json
 import logging
 import time
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime, timezone
 from enum import IntEnum
 from pathlib import Path
 from typing import Any
@@ -81,7 +81,7 @@ class TelemetrySample:
 
     def __post_init__(self):
         if not self.timestamp:
-            self.timestamp = datetime.now(timezone.utc).isoformat()
+            self.timestamp = datetime.now(UTC).isoformat()
 
 
 class TelemetryLog:
@@ -230,7 +230,7 @@ class LMStudioRequestQueue:
 
         try:
             return await asyncio.wait_for(future, timeout=timeout)
-        except asyncio.TimeoutError:
+        except TimeoutError:
             future.cancel(msg="Queue timeout")
             raise
 

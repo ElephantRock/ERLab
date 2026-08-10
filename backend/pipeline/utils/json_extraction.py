@@ -445,15 +445,7 @@ def _validate_against_schema(data: dict | list, schema: dict) -> bool:
             for prop_name, prop_schema in properties.items():
                 if prop_name in data:
                     expected_type = prop_schema.get("type")
-                    if expected_type == "string" and not isinstance(data[prop_name], str):
-                        return False
-                    elif expected_type == "number" and not isinstance(data[prop_name], (int, float)):
-                        return False
-                    elif expected_type == "boolean" and not isinstance(data[prop_name], bool):
-                        return False
-                    elif expected_type == "array" and not isinstance(data[prop_name], list):
-                        return False
-                    elif expected_type == "object" and not isinstance(data[prop_name], dict):
+                    if expected_type == "string" and not isinstance(data[prop_name], str) or expected_type == "number" and not isinstance(data[prop_name], (int, float)) or expected_type == "boolean" and not isinstance(data[prop_name], bool) or expected_type == "array" and not isinstance(data[prop_name], list) or expected_type == "object" and not isinstance(data[prop_name], dict):
                         return False
 
         return True

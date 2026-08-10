@@ -2,11 +2,9 @@
 
 from datetime import datetime, timedelta
 
-import pytest
-
 from backend.pipeline.tools.registry import ToolDefinition
 from backend.pipeline.tools.tool_index import ToolSearchResult
-from backend.pipeline.tools.tool_scoring import ToolScorer, ToolScore
+from backend.pipeline.tools.tool_scoring import ToolScore, ToolScorer
 
 
 def _make_tool(name: str, trust_level: str = "trusted") -> ToolDefinition:

@@ -3,16 +3,15 @@
 import logging
 
 from fastapi import APIRouter
-from sqlalchemy import select
 
 from backend.api.errors import BadRequestError, ForbiddenError
 from backend.config import get_settings
 from backend.db.database import get_session
 from backend.db.models import ExperimentResult as ExperimentResultDB
 from backend.db.models import Idea
+from backend.pipeline.experiment.experiment_generator import ExperimentGenerator
 from backend.pipeline.experiment.models import ExperimentRequest, ExperimentResult
 from backend.pipeline.experiment.runner import ExperimentRunner
-from backend.pipeline.experiment.experiment_generator import ExperimentGenerator
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -80,7 +79,6 @@ async def run_experiment(request: ExperimentRequest) -> ExperimentResult:
 
     # Check code size
     if len(request.code) > settings.experiment_max_code_size:
-        from fastapi import status
         raise BadRequestError(
             detail=f"Code exceeds maximum size of {settings.experiment_max_code_size} characters",
             hint="Reduce code size or increase EROCK_EXPERIMENT_MAX_CODE_SIZE",

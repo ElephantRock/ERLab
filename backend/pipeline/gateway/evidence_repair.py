@@ -17,7 +17,6 @@ import logging
 import re
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -150,8 +149,6 @@ class EvidenceRepairLoop:
         # Import both old (ClaimEvidenceResult) and new (ValidatedClaim) types
         from backend.pipeline.gateway.claim_type_validator import (
             ValidatedClaim,
-            RepairRecommendation,
-            ClaimClassification,
         )
 
         repaired_claims: list[RepairedClaim] = []
@@ -350,7 +347,7 @@ class EvidenceRepairLoop:
 
     def _repair_validated_claim(
         self,
-        vc: 'ValidatedClaim',
+        vc: ValidatedClaim,
         text: str,
     ) -> RepairedClaim | None:
         """Repair a ValidatedClaim based on its recommendation.
@@ -358,8 +355,8 @@ class EvidenceRepairLoop:
         The validator classified and recommended. This method acts.
         """
         from backend.pipeline.gateway.claim_type_validator import (
-            RepairRecommendation,
             ClaimClassification,
+            RepairRecommendation,
         )
 
         base = RepairedClaim(
@@ -496,7 +493,7 @@ class EvidenceRepairLoop:
     @staticmethod
     def _apply_repair_to_text(
         text: str,
-        vc: 'ValidatedClaim',
+        vc: ValidatedClaim,
         rc: RepairedClaim,
     ) -> str:
         """Apply a repair to the full text."""
@@ -661,7 +658,7 @@ class ExportQualityGate:
     REVIEWABLE_OVERCLAIM = 0.15
 
     @staticmethod
-    def classify_from_metrics(metrics: 'EpistemicMetrics') -> str:
+    def classify_from_metrics(metrics: EpistemicMetrics) -> str:
         """Classify paper quality from pre-computed EpistemicMetrics.
 
         This is the PRIMARY classification method. It consumes validator output.
@@ -705,7 +702,7 @@ class ExportQualityGate:
     REVIEWABLE_THRESHOLD = 0.50
 
     @staticmethod
-    def get_banner_from_metrics(metrics: 'EpistemicMetrics') -> str:
+    def get_banner_from_metrics(metrics: EpistemicMetrics) -> str:
         """Get a quality banner with full three-metric reporting."""
         level = ExportQualityGate.classify_from_metrics(metrics)
 

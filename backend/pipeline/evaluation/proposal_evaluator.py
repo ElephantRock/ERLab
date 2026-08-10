@@ -44,8 +44,8 @@ def resolve_evaluation_provider(provider: Any = None) -> Any:
     if provider is not None:
         return provider
     try:
-        from backend.providers.provider_factory import get_thinking_provider
         from backend.config import get_settings
+        from backend.providers.provider_factory import get_thinking_provider
 
         return get_thinking_provider(get_settings())
     except Exception as e:

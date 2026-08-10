@@ -14,10 +14,8 @@ from __future__ import annotations
 import asyncio
 import math
 import sys
-from datetime import timezone
 from unittest.mock import MagicMock
 
-import pytest
 from sqlalchemy import create_engine, event, text
 from sqlalchemy.orm import sessionmaker
 
@@ -25,19 +23,13 @@ sys.modules.setdefault("chromadb", MagicMock())
 sys.modules.setdefault("google.generativeai", MagicMock())
 
 from backend.db.database import Base
-from backend.pipeline.vector_contracts import (
-    compute_v2_collection_name,
-    compute_vector_record_id,
-    compute_vector_record_id_v2,
+from backend.pipeline.capability.capability_check_service import (
+    run_capability_check,
 )
 from backend.pipeline.capability.verified_embedding_runtime import (
     AuthorizedEmbeddingBatch,
     AuthorizedQueryEmbedding,
-    VerifiedEmbeddingRuntime,
     build_verified_embedding_runtime,
-)
-from backend.pipeline.capability.capability_check_service import (
-    run_capability_check,
 )
 from backend.pipeline.knowledge.embedding_configuration import (
     EffectiveEmbeddingConfiguration,
@@ -45,6 +37,11 @@ from backend.pipeline.knowledge.embedding_configuration import (
 from backend.pipeline.knowledge.embedding_provider_identity import (
     EVIDENCE_SOURCE_OPENAI_RESPONSE_MODEL,
     ProviderModelIdentityEvidence,
+)
+from backend.pipeline.vector_contracts import (
+    compute_v2_collection_name,
+    compute_vector_record_id,
+    compute_vector_record_id_v2,
 )
 
 _PROFILE_ID = "a" * 64

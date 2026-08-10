@@ -37,7 +37,6 @@ import re
 from dataclasses import dataclass
 from typing import Literal
 
-
 # ── Classifier version ────────────────────────────────────────────────
 
 MODEL_RESOLUTION_CLASSIFIER_V1 = "model_resolution_classifier_v1"
@@ -218,7 +217,7 @@ def _decision(posture: str, evidence_code: str) -> ModelResolutionDecision:
 
 
 def _classify_openai(
-    evidence: "ProviderModelIdentityEvidence",  # forward for type hint
+    evidence: ProviderModelIdentityEvidence,  # forward for type hint
     context: ModelResolutionContext,
 ) -> ModelResolutionDecision:
     """OpenAI: response.model echo is alias_only. stable_deployment only
@@ -252,7 +251,7 @@ def _classify_openai(
 
 
 def _classify_gemini(
-    evidence: "ProviderModelIdentityEvidence",
+    evidence: ProviderModelIdentityEvidence,
     context: ModelResolutionContext,
 ) -> ModelResolutionDecision:
     """Gemini: configured/SDK model names are alias_only. Process-global
@@ -279,7 +278,7 @@ def _classify_gemini(
 
 
 def _classify_ollama(
-    evidence: "ProviderModelIdentityEvidence",
+    evidence: ProviderModelIdentityEvidence,
     context: ModelResolutionContext,
 ) -> ModelResolutionDecision:
     """Ollama: a valid immutable model digest is sufficient for
@@ -319,7 +318,7 @@ def _classify_ollama(
 
 
 def _classify_lmstudio(
-    evidence: "ProviderModelIdentityEvidence",
+    evidence: ProviderModelIdentityEvidence,
     context: ModelResolutionContext,
 ) -> ModelResolutionDecision:
     """LM Studio: configured/served model names AND a deployment_id
@@ -363,7 +362,7 @@ _PROVIDER_CLASSIFIERS = {
 
 
 def classify_model_resolution(
-    evidence: "ProviderModelIdentityEvidence",
+    evidence: ProviderModelIdentityEvidence,
     context: ModelResolutionContext,
 ) -> ModelResolutionDecision:
     """Interpret captured evidence + runtime context into a posture decision.

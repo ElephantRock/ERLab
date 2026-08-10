@@ -7,8 +7,8 @@ from backend.pipeline.evaluation.scorer import (
     EvaluationReport,
     FitnessScorer,
     ScoreDimension,
-    ScoreResult,
     Scorer,
+    ScoreResult,
     WeightedCompositeScorer,
 )
 

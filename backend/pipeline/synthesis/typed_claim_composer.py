@@ -12,11 +12,12 @@ from __future__ import annotations
 
 import logging
 import re
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any
 
 from backend.pipeline.evaluation.deterministic_finalizer import (
-    build_canonical_title, render_result_claim, render_result_section,
+    build_canonical_title,
+    render_result_section,
 )
 
 logger = logging.getLogger(__name__)
@@ -189,7 +190,7 @@ def validate_provider_output(raw: str) -> tuple[bool, list[str]]:
     ]
     for pattern in achievement_patterns:
         if re.search(pattern, raw):
-            violations.append(f"Provider output contains an unauthorized empirical achievement claim")
+            violations.append("Provider output contains an unauthorized empirical achievement claim")
 
     return (len(violations) == 0, violations)
 
@@ -223,7 +224,7 @@ def build_slot_prompt(
         "4. Write the abstract, introduction, related work, discussion, and limitations.",
         "5. Include the three placeholders exactly where the deterministic content goes.",
         "",
-        f"## Experiment Context",
+        "## Experiment Context",
         f"Dataset: {spec.dataset_name}",
         f"Task: {spec.task_type or 'classification'}",
         f"Method: {spec.analysis_method}",

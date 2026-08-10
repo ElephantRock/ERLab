@@ -60,24 +60,23 @@ def build_governed_vector_runtime_from_settings(db_engine: Any) -> GovernedVecto
     Steps 1-4 must complete before step 5 (provider construction).
     """
     try:
+        from sqlalchemy import select
+        from sqlalchemy.orm import sessionmaker
+
         from backend.config import get_settings
         from backend.db.database import get_session
         from backend.db.models import EmbeddingProfile
         from backend.pipeline.governed_embedding_adapter import GovernedEmbeddingAdapter
         from backend.pipeline.knowledge.embedding_configuration import (
             EmbeddingAdapterCapabilitySnapshot,
+            EmbeddingConfigurationError,
             EmbeddingProfileSnapshot,
             EmbeddingRuntimeSettingsSnapshot,
             resolve_effective_embedding_configuration,
-            EmbeddingConfigurationError,
         )
-        from backend.pipeline.vector_access_policy import resolve_profile_id
-        from backend.pipeline.vector_contracts import compute_collection_name
-        from backend.pipeline.vector_backend import GovernedVectorBackend
         from backend.pipeline.knowledge.embedding_service import EmbeddingService
-        from backend.providers.provider_factory import create_provider
-        from sqlalchemy import select
-        from sqlalchemy.orm import sessionmaker
+        from backend.pipeline.vector_access_policy import resolve_profile_id
+        from backend.pipeline.vector_backend import GovernedVectorBackend
 
         app_settings = get_settings()
 

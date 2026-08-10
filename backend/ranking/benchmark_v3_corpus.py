@@ -31,7 +31,6 @@ from backend.ranking.benchmark_v3_candidates import (
     v3_candidate,
     v3_case,
 )
-from backend.ranking.p1e1_canon import content_hash
 
 # ── Frozen allocation table (44 fully-new cases) ─────────────────────
 # Matches allocation_table_sha256 5a7985827b319d21a4944b603317cb9011071f7a62e9392eaedf7dde2df2ff96

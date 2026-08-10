@@ -1,6 +1,5 @@
 """Tests for MetacognitiveManager."""
 
-import pytest
 
 from backend.pipeline.evaluation.quality_gate import QualityGateResult
 from backend.pipeline.evaluation.scorer import ScoreDimension, ScoreResult

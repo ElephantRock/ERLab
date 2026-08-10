@@ -10,17 +10,14 @@ from __future__ import annotations
 import asyncio
 import math
 import sys
-from datetime import datetime, timedelta, timezone
 from unittest.mock import MagicMock
 
-import pytest
 from sqlalchemy import create_engine, event, text
 from sqlalchemy.orm import sessionmaker
 
 sys.modules.setdefault("chromadb", MagicMock())
 sys.modules.setdefault("google.generativeai", MagicMock())
 
-import backend.db.models
 from backend.db.database import Base
 from backend.pipeline.capability.capability_check_service import (
     run_capability_check,

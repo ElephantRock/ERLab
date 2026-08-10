@@ -23,7 +23,6 @@ What this test does NOT prove:
 
 from __future__ import annotations
 
-import asyncio
 from unittest.mock import AsyncMock
 
 import pytest
@@ -31,7 +30,6 @@ import pytest
 from backend.pipeline.synthesis.section_wise_synthesizer import (
     SectionWiseSynthesizer,
 )
-
 
 # ─── _render_ground_truth_block unit tests ────────────────────────────────
 

@@ -4,18 +4,11 @@ Validates that the EvaluationPlanGenerator produces structured plans
 with datasets, baselines, metrics, and ablation experiments.
 """
 import asyncio
-import json
-import pytest
 
 from backend.pipeline.evaluation.plan_generator import (
-    EvaluationPlanGenerator,
     EvaluationPlan,
-    DatasetRecommendation,
-    BaselineMethod,
-    MetricTarget,
-    AblationExperiment,
+    EvaluationPlanGenerator,
 )
-
 
 # ── TEST-115-01-01: Class exists ──────────────────────────────────
 

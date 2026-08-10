@@ -12,7 +12,6 @@ from __future__ import annotations
 import logging
 from datetime import datetime
 from pathlib import Path
-from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -58,15 +57,15 @@ class JournalWriter:
         """Generate detailed notes.md."""
         lines = [
             f"# Pipeline Run Journal — {self.run_id}",
-            f"",
+            "",
             f"**Domain**: {self.domain}",
             f"**Started**: {self._started_at.isoformat()}",
             f"**Entries**: {len(self._entries)}",
-            f"",
-            f"> **AI-Generated Content**: This journal was produced by an automated",
-            f"> research pipeline (Elephant Rock). All content below was generated",
-            f"> by AI systems. Verify findings independently.",
-            f"",
+            "",
+            "> **AI-Generated Content**: This journal was produced by an automated",
+            "> research pipeline (Elephant Rock). All content below was generated",
+            "> by AI systems. Verify findings independently.",
+            "",
             "---",
             "",
         ]
@@ -92,17 +91,17 @@ class JournalWriter:
 
         lines = [
             f"# Research Report — {self.run_id}",
-            f"",
-            f"| Field | Value |",
-            f"|-------|-------|",
+            "",
+            "| Field | Value |",
+            "|-------|-------|",
             f"| Domain | {self.domain} |",
             f"| Started | {self._started_at.strftime('%Y-%m-%d %H:%M UTC')} |",
             f"| Duration | {duration:.0f}s |",
             f"| Stages | {len(set(e['stage'] for e in self._entries))} |",
             f"| Notes | {len(self._entries)} |",
-            f"",
+            "",
             f"> {AI_HONESTY_BADGE_BRIEF}",
-            f"",
+            "",
         ]
 
         # Stage summaries
@@ -115,9 +114,9 @@ class JournalWriter:
                 stage_entries = [e for e in self._entries if e["stage"] == stage]
                 last_msg = stage_entries[-1]["message"]
                 lines.append(f"### {stage.replace('_', ' ').title()}")
-                lines.append(f"")
+                lines.append("")
                 lines.append(f"{last_msg}")
-                lines.append(f"")
+                lines.append("")
 
         return "\n".join(lines)
 

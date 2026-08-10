@@ -117,7 +117,7 @@ def parse_paper(paper_md: str) -> ParsedPaper:
 
     if first_line_idx < len(lines):
         first_line = lines[first_line_idx].strip()
-        if first_line.startswith("#") and not _normalize_section_name(first_line).replace("#", "").strip() in _SECTION_ALIASES:
+        if first_line.startswith("#") and _normalize_section_name(first_line).replace("#", "").strip() not in _SECTION_ALIASES:
             # This is a title
             title_text = first_line
             canon = _normalize_section_name(title_text)

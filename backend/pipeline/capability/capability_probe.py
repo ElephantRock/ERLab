@@ -29,14 +29,14 @@ from __future__ import annotations
 import logging
 import math
 from dataclasses import dataclass
-from typing import Any
 
-from backend.pipeline.governed_embedding_adapter import GovernedEmbeddingAdapter
-from backend.pipeline.governed_embedding_adapter import GovernedEmbeddingAdapterError
+from backend.pipeline.governed_embedding_adapter import (
+    GovernedEmbeddingAdapter,
+    GovernedEmbeddingAdapterError,
+)
 from backend.pipeline.knowledge.embedding_provider_identity import (
     ProviderModelIdentityEvidence,
 )
-from backend.pipeline.vector_contracts import EMBEDDING_PROBE_SUITE_V1
 
 logger = logging.getLogger(__name__)
 

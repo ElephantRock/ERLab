@@ -4,7 +4,6 @@ Updated: process-local globals removed — autonomous cycles now use
 RunService for durable cancellation and DB-backed history.
 """
 
-import pytest
 import sys
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -15,7 +14,6 @@ from fastapi.testclient import TestClient
 
 from backend.api.errors import APIError
 from backend.api.routes.pipeline import router
-
 
 
 def _make_app():

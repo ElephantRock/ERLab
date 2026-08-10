@@ -5,7 +5,7 @@ TEST-27-01-02: Evolution disabled returns appropriate status
 TEST-27-01-03: Evolution enabled shows overlay count
 """
 
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
 from fastapi import FastAPI
 from fastapi.testclient import TestClient

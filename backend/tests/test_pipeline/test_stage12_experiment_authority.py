@@ -12,7 +12,6 @@ from backend.pipeline.stages import (
 )
 from backend.pipeline.synthesis.proposal_synthesizer import ResearchProposal
 
-
 SPEC_ID = "registered-iris-logreg"
 REVISION_ATTACK = "Replace the core method with a VQLS quantum linear solver on a synthetic dataset."
 

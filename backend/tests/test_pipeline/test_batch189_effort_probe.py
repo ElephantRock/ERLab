@@ -4,10 +4,7 @@ AIV §13: Tests verify behavior (effort level resolved correctly)."""
 
 import asyncio
 
-import pytest
-
 from backend.pipeline.monitoring.effort_probe import (
-    EffortResult,
     get_effective_effort,
     probe_effort,
 )

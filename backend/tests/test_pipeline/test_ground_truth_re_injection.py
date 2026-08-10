@@ -33,7 +33,6 @@ from backend.pipeline.synthesis.paper_synthesizer import (
     SynthesisSession,
 )
 
-
 SYSTEM_PROMPT_PATH = (
     Path(__file__).parent.parent.parent
     / "pipeline"

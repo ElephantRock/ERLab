@@ -22,7 +22,6 @@ from backend.db.models import Idea, PipelineRun
 from backend.pipeline.generation.models import IdeaCandidate, ResearchIdea
 from backend.pipeline.persistence import PipelinePersistence
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------

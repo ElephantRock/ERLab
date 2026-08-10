@@ -5,7 +5,6 @@ from __future__ import annotations
 import pytest
 
 from backend.pipeline.capability.side_channel_binding_policy import (
-    SideChannelNamespace,
     compute_cache_namespace,
     compute_kg_collection_name,
     compute_tool_collection_name,

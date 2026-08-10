@@ -7,13 +7,11 @@ effective config objects.
 
 from __future__ import annotations
 
-import pytest
 from unittest.mock import MagicMock
 
 from backend.config import Settings
 from backend.pipeline.config.effective_configurations import (
     EffectiveDomainConfigurations,
-    build_effective_domain_configurations,
 )
 from backend.pipeline.orchestrator.service_registry import ServiceRegistry
 
@@ -84,6 +82,6 @@ class TestCompositionMigration:
                             violations.append(f"line {node.lineno}: {field_name}")
 
         assert not violations, (
-            f"Material fields read via getattr-with-fallback in service_registry:\n"
+            "Material fields read via getattr-with-fallback in service_registry:\n"
             + "\n".join(violations)
         )

@@ -8,11 +8,37 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from backend.api.auth import get_current_user, verify_api_key
-from backend.api.errors import APIError
-from backend.api.routes import auth as auth_routes, collaboration, costs, diagnostics, evaluation, experiments, exports, gaps, governance, ideas, knowledge, knowledge_graph, literature, memory, model_config, notifications, ops, paper_export, pipeline, plugins, recombination, review, search, status, traces
 from backend.api import ws as ws_module
+from backend.api.auth import verify_api_key
+from backend.api.errors import APIError
 from backend.api.middleware.diagnostics_body_limit import DiagnosticsBodyLimitMiddleware
+from backend.api.routes import auth as auth_routes
+from backend.api.routes import (
+    collaboration,
+    costs,
+    diagnostics,
+    evaluation,
+    experiments,
+    exports,
+    gaps,
+    governance,
+    ideas,
+    knowledge,
+    knowledge_graph,
+    literature,
+    memory,
+    model_config,
+    notifications,
+    ops,
+    paper_export,
+    pipeline,
+    plugins,
+    recombination,
+    review,
+    search,
+    status,
+    traces,
+)
 
 app = FastAPI(
     title="Elephant Rock Research API",
@@ -257,9 +283,9 @@ app.include_router(ws_module.router)
 @app.middleware("http")
 async def jwt_auth_middleware(request: Request, call_next):
     """When auth_enabled=True, validate JWT on all routes except auth endpoints."""
-    from backend.config import get_settings
     from backend.api.auth import decode_access_token
     from backend.api.errors import UnauthorizedError
+    from backend.config import get_settings
 
     settings = get_settings()
     path = request.url.path

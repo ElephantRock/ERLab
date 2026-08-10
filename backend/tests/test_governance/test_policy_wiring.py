@@ -1,10 +1,6 @@
 """Tests for WP-7 governance policy activation: policy evaluation, DENY, GATE."""
 
 import tempfile
-from datetime import datetime
-from unittest.mock import MagicMock
-
-import pytest
 
 from backend.pipeline.governance.events import GovernanceAuditLog, GovernanceEvent
 from backend.pipeline.governance.policy import GovernancePolicy, PolicyAction, PolicyRule

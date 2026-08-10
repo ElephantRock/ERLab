@@ -8,7 +8,6 @@ but with varied creative angles, increasing the chance of finding novel ideas.
 from __future__ import annotations
 
 import logging
-import uuid
 from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel, Field
@@ -20,8 +19,6 @@ from backend.pipeline.generation.reasoning_graph import (
 
 if TYPE_CHECKING:
     from backend.pipeline.gap_analysis.models import ResearchGap
-    from backend.pipeline.generation.critic_agent import CriticAgent
-    from backend.pipeline.generation.ideator_agent import IdeatorAgent
     from backend.pipeline.generation.tot_adapter import ToTAdapter
     from backend.pipeline.literature.models import Paper
 
@@ -69,7 +66,6 @@ class ForestOfThought:
         papers: list[Paper],
     ) -> ForestResult:
         """Run N independent trees and select the best idea across all."""
-        import asyncio
 
         perspectives = _PERSPECTIVES[: self._n_trees]
         while len(perspectives) < self._n_trees:

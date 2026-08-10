@@ -12,7 +12,6 @@ import pytest
 
 from backend.db.metrics_models import PipelineMetric
 
-
 # ── Model Tests ────────────────────────────────────────────────────────
 
 def test_pipeline_metric_model():

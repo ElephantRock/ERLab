@@ -6,9 +6,13 @@ from fastapi import APIRouter, Query
 from sqlalchemy import select
 
 from backend.api.errors import APIError, ConflictError, NotFoundError
+from backend.api.quality_checks import (
+    audit_citations,
+    compute_quality_checks,
+    compute_remediation_hints,
+)
 from backend.api.schemas import IdeaFeedbackRequest
-from backend.api.traceability import resolve_source_gaps, extract_proposal_references
-from backend.api.quality_checks import compute_quality_checks, compute_remediation_hints, audit_citations
+from backend.api.traceability import extract_proposal_references, resolve_source_gaps
 from backend.pipeline.provenance.reference_resolver import resolve_references
 
 router = APIRouter()
@@ -204,13 +208,15 @@ async def list_ideas(
     Returns:
         {"ideas": [...], "total": 42, "score_guide": {...}}
     """
-    from backend.db.crud import count_ideas, list_ideas as db_list_ideas
+    from backend.db.crud import count_ideas
+    from backend.db.crud import list_ideas as db_list_ideas
     from backend.db.database import get_session
 
     effective_min_score = min_score if min_score > 0 else None
 
-    from backend.db.models import GovernanceDecision, IdeaPaperLink, Proposal
     from sqlalchemy import func as sa_func
+
+    from backend.db.models import GovernanceDecision, IdeaPaperLink, Proposal
 
     with get_session() as session:
         ideas = db_list_ideas(
@@ -436,7 +442,8 @@ async def get_idea(idea_id: int):
                 ]
 
         # Fetch supporting papers via junction table (schema-backed provenance)
-        from backend.db.models import IdeaPaperLink, Paper as PaperModel
+        from backend.db.models import IdeaPaperLink
+        from backend.db.models import Paper as PaperModel
         supporting_papers_raw = session.execute(
             select(IdeaPaperLink).where(IdeaPaperLink.idea_id == idea.id)
         ).scalars().all()
@@ -625,6 +632,7 @@ async def refine_idea(idea_id: int):
         {"id": 1, "novelty_score": 0.88, "feasibility_score": 7.5, "proposal_title": "Improved Attention via Sparse Gating"}
     """
     import traceback
+
     from backend.db.crud import get_idea as db_get_idea
     from backend.db.crud import update_idea_scores
     from backend.db.database import get_session
@@ -737,13 +745,13 @@ async def refine_section(
     from backend.db.crud import get_idea as db_get_idea
     from backend.db.crud import get_proposal_by_idea
     from backend.db.database import get_session
+    from backend.pipeline.generation.models import ResearchIdea
+    from backend.pipeline.synthesis.proposal_synthesizer import MIN_WORDS, ProposalSynthesizer
     from backend.pipeline.synthesis.section_refinement import (
-        ProposalSectionRefinementService,
         ConcurrencyConflict,
+        ProposalSectionRefinementService,
         ReceiptRequired,
     )
-    from backend.pipeline.synthesis.proposal_synthesizer import ProposalSynthesizer, MIN_WORDS
-    from backend.pipeline.generation.models import ResearchIdea
     from backend.providers.provider_factory import create_provider
 
     if section_key not in MIN_WORDS:
@@ -820,8 +828,8 @@ async def restore_section(
     from backend.db.crud import get_proposal_by_idea
     from backend.db.database import get_session
     from backend.pipeline.synthesis.section_refinement import (
-        ProposalSectionRefinementService,
         ConcurrencyConflict,
+        ProposalSectionRefinementService,
     )
 
     with get_session() as session:
@@ -863,12 +871,12 @@ async def restore_section(
 async def get_section_revisions(idea_id: int, section_key: str):
     """Get revision history for a proposal section."""
     import hashlib
+
+    from backend.api.quality_checks import compute_quality_checks
     from backend.db.crud import get_idea as db_get_idea
     from backend.db.crud import get_proposal_by_idea
     from backend.db.database import get_session
     from backend.db.models import ProposalSectionRevision
-    from backend.pipeline.synthesis.proposal_synthesizer import MIN_WORDS
-    from backend.api.quality_checks import compute_quality_checks
 
     with get_session() as session:
         idea = db_get_idea(session, idea_id)
@@ -1066,17 +1074,16 @@ async def repair_paper(idea_id: int):
     new current successor; it never edits historical revisions.
     """
     import hashlib as _hashlib
+    from types import SimpleNamespace
 
     from backend.db.database import get_session
-    from backend.db.models import Idea, Proposal, ExperimentResult
-    from backend.pipeline.experiment.specification import load_spec
-    from backend.pipeline.experiment.manifest import ResultMarker
+    from backend.db.models import ExperimentResult, Idea, Proposal
     from backend.pipeline.evaluation.paper_remediator import auto_revise_paper
-    from backend.pipeline.stages import PaperSynthesisStage, StageContext
+    from backend.pipeline.experiment.manifest import ResultMarker
+    from backend.pipeline.experiment.specification import load_spec
     from backend.pipeline.result import PipelineResult
+    from backend.pipeline.stages import PaperSynthesisStage, StageContext
     from backend.providers.provider_factory import create_provider
-    from types import SimpleNamespace
-    import asyncio
 
     with get_session() as session:
         idea = session.get(Idea, idea_id)
@@ -1247,7 +1254,7 @@ async def repair_paper(idea_id: int):
                     ).values(paper_meta_json=json.dumps(new_meta))
                 )
                 session.commit()
-        except Exception as exc:
+        except Exception:
             repair_eval_status = "failed"
             repair_eval_hash = ""
 

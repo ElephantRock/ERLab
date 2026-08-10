@@ -1,21 +1,20 @@
 """Phase E+G tests: Stage Policy, Report, Runner."""
 
-import pytest
-from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock
 
-from backend.pipeline.model_certification.stage_report import (
-    StageScoreCard,
-    StageEligibilityDecisionV2,
-    extend_report_with_stage_eval,
-    compute_latency_percentiles,
-)
-from backend.pipeline.model_certification.stage_policy import (
-    decide_stage_eligibility,
-    decide_all_stages,
-    _DEFAULT_STAGE_GATES,
-)
+import pytest
+
 from backend.pipeline.model_certification.report import CapabilityReport
+from backend.pipeline.model_certification.stage_policy import (
+    decide_all_stages,
+    decide_stage_eligibility,
+)
+from backend.pipeline.model_certification.stage_report import (
+    StageEligibilityDecisionV2,
+    StageScoreCard,
+    compute_latency_percentiles,
+    extend_report_with_stage_eval,
+)
 
 
 def _make_scorecard(stage="query_generation", **overrides):
@@ -192,8 +191,8 @@ class TestStageReport:
 class TestStageRunner:
     @pytest.mark.asyncio
     async def test_stage_runner_records_latency_tokens_errors(self, tmp_path):
-        from backend.pipeline.model_certification.stage_runner import StageEvalRunner
         from backend.pipeline.model_certification.eval_case import StageEvalCase
+        from backend.pipeline.model_certification.stage_runner import StageEvalRunner
 
         provider = AsyncMock()
         resp = MagicMock()
@@ -212,8 +211,8 @@ class TestStageRunner:
 
     @pytest.mark.asyncio
     async def test_stage_runner_handles_provider_failure(self):
-        from backend.pipeline.model_certification.stage_runner import StageEvalRunner
         from backend.pipeline.model_certification.eval_case import StageEvalCase
+        from backend.pipeline.model_certification.stage_runner import StageEvalRunner
 
         provider = AsyncMock()
         provider.complete = AsyncMock(side_effect=RuntimeError("provider down"))
@@ -229,8 +228,8 @@ class TestStageRunner:
 
     @pytest.mark.asyncio
     async def test_stage_runner_schema_check_when_schema_provided(self):
-        from backend.pipeline.model_certification.stage_runner import StageEvalRunner
         from backend.pipeline.model_certification.eval_case import StageEvalCase
+        from backend.pipeline.model_certification.stage_runner import StageEvalRunner
 
         provider = AsyncMock()
         resp = MagicMock()
@@ -255,8 +254,8 @@ class TestStageRunner:
 
     @pytest.mark.asyncio
     async def test_stage_runner_marks_case_failed_on_token_budget_violation(self):
-        from backend.pipeline.model_certification.stage_runner import StageEvalRunner
         from backend.pipeline.model_certification.eval_case import StageEvalCase
+        from backend.pipeline.model_certification.stage_runner import StageEvalRunner
 
         provider = AsyncMock()
         # Return very long text that exceeds budget

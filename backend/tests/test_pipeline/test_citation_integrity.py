@@ -7,10 +7,9 @@ Validates that:
   - Sections without any citations after sanitization get flagged
 """
 
-import pytest
-from unittest.mock import AsyncMock, MagicMock
 
-from backend.pipeline.literature.models import Author, Paper as PipelinePaper
+from backend.pipeline.literature.models import Author
+from backend.pipeline.literature.models import Paper as PipelinePaper
 from backend.pipeline.synthesis.proposal_synthesizer import (
     ProposalSynthesizer,
     ResearchProposal,

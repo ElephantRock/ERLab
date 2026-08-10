@@ -26,17 +26,16 @@ from __future__ import annotations
 
 import logging
 import time
-from datetime import datetime, timezone
 from typing import TYPE_CHECKING
 
 from backend.pipeline.operations.types import OperationError
 
 if TYPE_CHECKING:
+    from backend.api.run_service import RunService
+    from backend.pipeline.execution.run_state import RunCheckpoint
     from backend.pipeline.orchestrator._orchestrator import PipelineOrchestrator
     from backend.pipeline.result import PipelineResult
     from backend.pipeline.stages import PipelineStage, StageContext
-    from backend.pipeline.execution.run_state import RunCheckpoint
-    from backend.api.run_service import RunService
 
 logger = logging.getLogger(__name__)
 
@@ -50,20 +49,20 @@ class RunCoordinator:
     loop that was in ``PipelineOrchestrator.run()``.
     """
 
-    def __init__(self, orchestrator: "PipelineOrchestrator") -> None:
+    def __init__(self, orchestrator: PipelineOrchestrator) -> None:
         self._orch = orchestrator
 
     async def execute_stage_loop(
         self,
-        stages: list["PipelineStage"],
-        ctx: "StageContext",
-        result: "PipelineResult",
-        checkpoint: "RunCheckpoint",
+        stages: list[PipelineStage],
+        ctx: StageContext,
+        result: PipelineResult,
+        checkpoint: RunCheckpoint,
         run_id: str,
         domain: str,
         db_run_id: int | None,
         skip_stages: set[str] | None = None,
-        run_svc: "RunService | None" = None,
+        run_svc: RunService | None = None,
     ) -> bool:
         """Execute the pipeline stage loop.
 
@@ -137,7 +136,7 @@ class RunCoordinator:
                 if prior:
                     ctx.params["prior_context"] = prior
 
-            from backend.pipeline.tracing import create_span, SpanKind
+            from backend.pipeline.tracing import SpanKind, create_span
             with create_span(SpanKind.STAGE, stage.name, run_id=run_id) as span:
                 prepared_ctx = await self._orch._compaction.prepare_context(ctx, stage.name)
 
@@ -166,7 +165,7 @@ class RunCoordinator:
                             self._orch._provider._run_id = run_id
 
                     # Set async context var for stage routing
-                    from backend.providers.stage_context import set_stage, reset_stage
+                    from backend.providers.stage_context import reset_stage, set_stage
                     _stage_token = set_stage(stage.name)
                     try:
                         should_continue = await self._orch._execute_stage_with_retry(
@@ -279,8 +278,8 @@ class RunCoordinator:
 
     async def _route_model_for_stage(
         self,
-        stage: "PipelineStage",
-        ctx: "StageContext",
+        stage: PipelineStage,
+        ctx: StageContext,
         run_id: str,
     ) -> None:
         """Execute the model routing cascade for a stage.
@@ -322,8 +321,8 @@ class RunCoordinator:
 
     async def _ensure_model_loaded(
         self,
-        stage: "PipelineStage",
-        ctx: "StageContext",
+        stage: PipelineStage,
+        ctx: StageContext,
     ) -> None:
         """Delegate model lifecycle to OperationExecutor.
 
@@ -351,7 +350,7 @@ class RunCoordinator:
 
     async def _evaluate_policy_gate(
         self,
-        stage: "PipelineStage",
+        stage: PipelineStage,
     ) -> str:
         """Evaluate governance policy before stage execution.
 
@@ -423,16 +422,16 @@ class RunCoordinator:
         max_gaps: int = 5,
         export_format: str | None = "markdown",
         max_stage_retries: int = 2,
-    ) -> "PipelineResult | None":
+    ) -> PipelineResult | None:
         """Resume a previously failed/interrupted pipeline run from checkpoint.
 
         Loads the checkpoint, skips completed stages, and continues from the
         next unfinished stage. Returns None if no checkpoint found.
         """
-        from backend.pipeline.result import PipelineResult, StageReport
-        from backend.pipeline.stages import StageContext
         from backend.pipeline.execution.run_state import StageStatus
-        from backend.pipeline.tracing import create_span, SpanKind
+        from backend.pipeline.result import PipelineResult
+        from backend.pipeline.stages import StageContext
+        from backend.pipeline.tracing import SpanKind, create_span
 
         orch = self._orch
         checkpoint = orch._persistence.load_checkpoint(run_id)

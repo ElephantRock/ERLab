@@ -9,8 +9,7 @@ These tests prove:
 
 from __future__ import annotations
 
-import asyncio
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -20,9 +19,9 @@ from backend.pipeline.operations.types import (
     StageExecutionResult,
     StageStatus,
 )
-from backend.pipeline.stages import StageContext
 from backend.pipeline.result import PipelineResult
-from backend.providers.base import LLMProvider, LLMResponse
+from backend.pipeline.stages import StageContext
+from backend.providers.base import LLMResponse
 
 
 class FakeProvider:

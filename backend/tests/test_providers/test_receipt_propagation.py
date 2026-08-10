@@ -6,16 +6,15 @@ ResilientProvider → CachedProvider → OpenAIProvider
 and that last_receipt is accessible on the outermost wrapper.
 """
 
-import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
 
-from backend.providers.base import LLMProvider, LLMResponse
-from backend.providers.resilience.resilient_provider import ResilientProvider
-from backend.providers.resilience.circuit_breaker import CircuitBreaker
-from backend.providers.resilience.retry import RetryConfig
+import pytest
+
+from backend.providers.base import LLMProvider
 from backend.providers.cache.cached_provider import CachedProvider
 from backend.providers.cache.memory_cache import InMemoryCache
-from backend.pipeline.operations.types import ModelReceipt
+from backend.providers.resilience.circuit_breaker import CircuitBreaker
+from backend.providers.resilience.resilient_provider import ResilientProvider
+from backend.providers.resilience.retry import RetryConfig
 
 
 class ReceiptCapturingProvider(LLMProvider):

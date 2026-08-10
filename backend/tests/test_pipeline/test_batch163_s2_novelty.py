@@ -6,8 +6,6 @@ TASK-02: NoveltyChecker S2 augmentation (4 tests)
 import asyncio
 from unittest.mock import AsyncMock, MagicMock
 
-import pytest
-
 
 class TestS2NoveltyVerifier:
 
@@ -83,7 +81,7 @@ class TestS2NoveltyVerifier:
         assert S2NoveltyVerifier._verdict_to_score("unknown") == 0.5
 
     def test_09_s2_verifier_in_novelty_package(self):
-        from backend.pipeline.novelty.s2_verifier import S2NoveltyVerifier, S2NoveltyResult
+        from backend.pipeline.novelty.s2_verifier import S2NoveltyResult, S2NoveltyVerifier
         assert S2NoveltyVerifier is not None
         assert S2NoveltyResult is not None
 

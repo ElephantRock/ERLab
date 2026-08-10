@@ -10,11 +10,7 @@ These tests prove:
 
 from __future__ import annotations
 
-import json
-import pytest
-from unittest.mock import MagicMock, patch
-
-from backend.api.run_service import RunService, reset_run_service, get_run_service
+from backend.api.run_service import get_run_service
 
 
 class TestCancellationIsDurable:
@@ -40,11 +36,11 @@ class TestProgressIsDurable:
 
     def test_no_authoritative_progress_queue(self):
         """The SSE endpoint must read from run_svc.get_events_since, not _progress_queues."""
-        from backend.api.routes import pipeline as pipeline_mod
-
         # _progress_queues may exist for backward compat, but the SSE endpoint
         # must not use it as the primary data source
         import inspect
+
+        from backend.api.routes import pipeline as pipeline_mod
         source = inspect.getsource(pipeline_mod.run_progress)
         assert "get_events_since" in source, (
             "SSE endpoint must read from durable event outbox"
@@ -93,6 +89,7 @@ class TestMainTriggerUsesDurableState:
     def test_trigger_uses_run_service(self):
         """trigger_run must acquire_worker and append_event through RunService."""
         import inspect
+
         from backend.api.routes import pipeline as pipeline_mod
 
         # Find the trigger endpoint source

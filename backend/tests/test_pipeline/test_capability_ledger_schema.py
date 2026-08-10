@@ -28,18 +28,11 @@ from sqlalchemy.orm import sessionmaker
 sys.modules.setdefault("chromadb", MagicMock())
 sys.modules.setdefault("google.generativeai", MagicMock())
 
-import backend.db.models
 from backend.db.database import Base
-from backend.db.models import (
-    EmbeddingCapabilityBinding,
-    EmbeddingCapabilityCheck,
-    EmbeddingProfile,
-)
 from backend.pipeline.vector_contracts import (
     CAPABILITY_BINDING_SCHEMA_V1,
     CAPABILITY_CHECK_SCHEMA_V1,
 )
-
 
 # ── Test helpers ──────────────────────────────────────────────────────
 

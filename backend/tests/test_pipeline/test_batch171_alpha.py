@@ -3,22 +3,22 @@
 Verifies the platform is ready for internal alpha testing.
 Checks all critical paths, API health, frontend routes, and pipeline integrity.
 """
-import pytest
 
 
 class TestInternalAlphaReadiness:
 
     def test_01_backend_health_endpoint(self):
         from fastapi.testclient import TestClient
+
         from backend.api.app import app
         client = TestClient(app)
         response = client.get("/health")
         assert response.status_code == 200
 
     def test_02_pipeline_strategies_registered(self):
+        from backend.pipeline.strategies.models import PipelineStrategy
         from backend.pipeline.strategies.presets import register_presets
         from backend.pipeline.strategies.registry import StrategyRegistry
-        from backend.pipeline.strategies.models import PipelineStrategy
         registry = StrategyRegistry()
         register_presets(registry)
         for strategy in PipelineStrategy:
@@ -34,7 +34,6 @@ class TestInternalAlphaReadiness:
             assert stage in order, f"Missing critical stage: {stage}"
 
     def test_04_export_formats_work(self):
-        from backend.pipeline.export.markdown_exporter import MarkdownExporter
         from backend.pipeline.constants import AI_HONESTY_BADGE
         assert "AI pipeline" in AI_HONESTY_BADGE or "AI-generated" in AI_HONESTY_BADGE or "independently verified" in AI_HONESTY_BADGE
 

@@ -1,6 +1,5 @@
 """Tests for MCP data models."""
 
-import pytest
 
 from backend.pipeline.tools.mcp.models import (
     MCPCallResult,

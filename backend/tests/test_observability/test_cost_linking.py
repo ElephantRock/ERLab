@@ -1,7 +1,7 @@
 """Tests for cost-per-span linking via _CostLinkingProcessor."""
 
 import time
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from backend.pipeline.observability.manager import _CostLinkingProcessor
 from backend.pipeline.tracing.spans import Span, SpanKind
@@ -35,7 +35,7 @@ class FakeCostTracker:
 class TestCostLinking:
     def test_attaches_cost_to_span(self):
         now = time.time()
-        tracker = FakeCostTracker([_make_cost_event(datetime.fromtimestamp(now + 0.01, tz=timezone.utc))])
+        tracker = FakeCostTracker([_make_cost_event(datetime.fromtimestamp(now + 0.01, tz=UTC))])
         linker = _CostLinkingProcessor(tracker)
 
         span = Span(kind=SpanKind.LLM_CALL, name="test")
@@ -48,7 +48,7 @@ class TestCostLinking:
 
     def test_no_cost_outside_range(self):
         now = time.time()
-        tracker = FakeCostTracker([_make_cost_event(datetime.fromtimestamp(now - 10, tz=timezone.utc))])
+        tracker = FakeCostTracker([_make_cost_event(datetime.fromtimestamp(now - 10, tz=UTC))])
         linker = _CostLinkingProcessor(tracker)
 
         span = Span(kind=SpanKind.STAGE, name="test")
@@ -62,8 +62,8 @@ class TestCostLinking:
     def test_multiple_events_summed(self):
         now = time.time()
         events = [
-            _make_cost_event(datetime.fromtimestamp(now + 0.01, tz=timezone.utc), cost_usd=0.02, tokens=50),
-            _make_cost_event(datetime.fromtimestamp(now + 0.02, tz=timezone.utc), cost_usd=0.03, tokens=75),
+            _make_cost_event(datetime.fromtimestamp(now + 0.01, tz=UTC), cost_usd=0.02, tokens=50),
+            _make_cost_event(datetime.fromtimestamp(now + 0.02, tz=UTC), cost_usd=0.03, tokens=75),
         ]
         tracker = FakeCostTracker(events)
         linker = _CostLinkingProcessor(tracker)

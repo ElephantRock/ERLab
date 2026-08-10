@@ -13,7 +13,6 @@ from __future__ import annotations
 import logging
 import re
 from dataclasses import dataclass
-from typing import Literal
 from urllib.parse import urlparse, urlunparse
 
 logger = logging.getLogger(__name__)
@@ -176,9 +175,7 @@ def sanitize_endpoint_identity(endpoint: str | None) -> str:
     port = parsed.port
 
     # Normalize default ports
-    if port == 80 and scheme == "http":
-        port = None
-    elif port == 443 and scheme == "https":
+    if port == 80 and scheme == "http" or port == 443 and scheme == "https":
         port = None
 
     # Normalize path

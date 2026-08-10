@@ -13,8 +13,8 @@ This test verifies the profile_id computation matches the registered
 DB profile when configured correctly.
 """
 
-from backend.pipeline.vector_contracts import compute_profile_id
 from backend.pipeline.vector_access_policy import resolve_profile_id
+from backend.pipeline.vector_contracts import compute_profile_id
 
 
 def test_chunk_v1_matches_registered_profile():

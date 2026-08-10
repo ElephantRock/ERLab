@@ -1,6 +1,5 @@
 """Tests for noop sandbox backend."""
 
-import asyncio
 
 import pytest
 

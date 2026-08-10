@@ -45,10 +45,11 @@ from __future__ import annotations
 
 import hashlib
 import json
-from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from collections.abc import Sequence
+from dataclasses import dataclass
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Mapping, Sequence
+from typing import Any
 
 SNAPSHOT_SCHEMA_VERSION = "ranking_embedding_snapshot_v1"
 
@@ -291,7 +292,7 @@ def write_snapshot(
             f"an approved snapshot. Remove it explicitly first."
         )
 
-    ts = (created_at or datetime.now(timezone.utc)).isoformat()
+    ts = (created_at or datetime.now(UTC)).isoformat()
 
     snapshot_fp = compute_snapshot_fingerprint(
         snapshot_schema_version=SNAPSHOT_SCHEMA_VERSION,

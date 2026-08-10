@@ -59,8 +59,8 @@ def test_1g_03b_research_question_length_limit_enforced():
 
 def test_1g_02b_stage_context_carries_research_question():
     """Case 2 (runtime): StageContext propagates research_question to stages."""
-    from backend.pipeline.stages import StageContext
     from backend.pipeline.result import PipelineResult
+    from backend.pipeline.stages import StageContext
 
     ctx = StageContext(result=PipelineResult(), domain="AI/NLP", research_question="the question")
     assert ctx.research_question == "the question"
@@ -68,8 +68,8 @@ def test_1g_02b_stage_context_carries_research_question():
 
 def test_1g_02c_stage_context_defaults_to_none():
     """Legacy: StageContext without research_question stays None (not a string)."""
-    from backend.pipeline.stages import StageContext
     from backend.pipeline.result import PipelineResult
+    from backend.pipeline.stages import StageContext
 
     ctx = StageContext(result=PipelineResult(), domain="AI/NLP")
     assert ctx.research_question is None

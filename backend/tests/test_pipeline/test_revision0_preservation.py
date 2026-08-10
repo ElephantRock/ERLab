@@ -11,14 +11,13 @@ The fix: session.commit() after creating revision 0.
 from __future__ import annotations
 
 import json
-from types import SimpleNamespace
 
 import pytest
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
 
 from backend.db.database import Base
-from backend.db.models import Proposal, Idea, PaperRevision
+from backend.db.models import Idea, PaperRevision, Proposal
 
 
 @pytest.fixture
@@ -81,7 +80,6 @@ def test_revision_0_preserved_after_auto_revise_on_fresh_proposal(fresh_proposal
     # creating revision 0 via get_session (which closes without commit).
 
     from backend.db.database import get_session
-    from backend.db.models import PaperRevision
 
     # Simulate the old buggy pattern: flush without commit
     with get_session() as session:
@@ -144,7 +142,6 @@ def test_revision_1_parent_points_to_revision_0_not_itself(fresh_proposal):
     to revision 0's ID, not to its own ID."""
 
     from backend.db.database import get_session
-    from backend.db.models import PaperRevision
 
     # Create revision 0 with commit (the fix)
     with get_session() as session:

@@ -22,10 +22,9 @@ import hashlib
 import json
 import logging
 from dataclasses import dataclass
-from datetime import datetime, timezone
 
 from backend.db.database import get_session
-from backend.db.models import PaperRevision, Proposal, ExperimentResult
+from backend.db.models import ExperimentResult, PaperRevision, Proposal
 
 logger = logging.getLogger(__name__)
 
@@ -98,7 +97,9 @@ async def auto_revise_paper(
 
     # ── Step 1: Verify evidence package ─────────────────────────────
     from backend.pipeline.evaluation.revision_directive import (
-        EvidenceInvariant, RevisionDirective, verify_revised_paper_invariants,
+        EvidenceInvariant,
+        RevisionDirective,
+        verify_revised_paper_invariants,
     )
 
     result_map_tuple = tuple(
@@ -235,8 +236,8 @@ async def auto_revise_paper(
     # The original paper is included in the prompt and the LLM is
     # instructed to fix specific defects while preserving the structure.
     from backend.config import get_settings
-    from backend.providers.provider_factory import get_generation_provider
     from backend.pipeline.synthesis.paper_synthesizer import PaperSynthesizer
+    from backend.providers.provider_factory import get_generation_provider
 
     settings = get_settings()
     provider = get_generation_provider(settings)

@@ -17,8 +17,6 @@ Commands:
 from __future__ import annotations
 
 import asyncio
-import sys
-from typing import Optional
 
 import typer
 from rich.console import Console
@@ -39,8 +37,9 @@ capability_app = typer.Typer(name="capability", no_args_is_help=True)
 
 def _get_session_factory():
     """Build a session factory from the database engine."""
-    from backend.db.database import _get_engine
     from sqlalchemy.orm import sessionmaker
+
+    from backend.db.database import _get_engine
 
     engine = _get_engine()
     return sessionmaker(bind=engine, expire_on_commit=False)
@@ -52,23 +51,23 @@ def _build_adapter_and_config():
     This is the same composition path as vector_runtime, but without
     requiring a verified runtime — the probe itself produces the check.
     """
+    from sqlalchemy import select
+    from sqlalchemy.orm import sessionmaker
+
     from backend.config import get_settings
-    from backend.pipeline.knowledge.embedding_providers import (
-        create_embedding_provider,
-    )
-    from backend.pipeline.knowledge.embedding_service import EmbeddingService
+    from backend.db.database import _get_engine
+    from backend.db.models import EmbeddingProfile
+    from backend.pipeline.governed_embedding_adapter import GovernedEmbeddingAdapter
     from backend.pipeline.knowledge.embedding_configuration import (
         EmbeddingAdapterCapabilitySnapshot,
         EmbeddingProfileSnapshot,
         EmbeddingRuntimeSettingsSnapshot,
         resolve_effective_embedding_configuration,
     )
-    from backend.pipeline.governed_embedding_adapter import GovernedEmbeddingAdapter
-    from backend.pipeline.vector_contracts import EMBEDDING_PROFILE_V1
-    from backend.db.database import _get_engine
-    from sqlalchemy import select
-    from backend.db.models import EmbeddingProfile
-    from sqlalchemy.orm import sessionmaker
+    from backend.pipeline.knowledge.embedding_providers import (
+        create_embedding_provider,
+    )
+    from backend.pipeline.knowledge.embedding_service import EmbeddingService
 
     settings = get_settings()
 
@@ -84,9 +83,6 @@ def _build_adapter_and_config():
     dimension = emb_service.dimension
 
     # Build settings snapshot
-    from backend.pipeline.knowledge.embedding_configuration import (
-        EmbeddingRuntimeSettingsSnapshot,
-    )
 
     endpoint = getattr(settings, "embedding_base_url", None) or getattr(
         settings, "openai_base_url", None
@@ -425,7 +421,7 @@ def activate_binding_cmd(
     activation_id: str = typer.Option(..., help="Candidate activation ID"),
 ):
     """Execute the atomic activation transaction."""
-    from backend.pipeline.capability.activation_service import activate_binding, ActivationError
+    from backend.pipeline.capability.activation_service import ActivationError, activate_binding
 
     sf = _get_session_factory()
     try:

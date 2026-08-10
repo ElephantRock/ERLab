@@ -11,9 +11,9 @@ Run: pytest backend/tests/test_operations/ -v
 
 from __future__ import annotations
 
+from unittest.mock import AsyncMock
+
 import pytest
-from datetime import datetime, timezone
-from unittest.mock import AsyncMock, MagicMock, patch
 
 from backend.pipeline.operations.types import (
     FailureClass,
@@ -26,7 +26,6 @@ from backend.pipeline.operations.types import (
     WrongModelServedError,
 )
 from backend.providers.base import LLMProvider, LLMResponse
-
 
 # ── ModelReceipt ──────────────────────────────────────────────
 

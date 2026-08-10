@@ -7,7 +7,8 @@ from __future__ import annotations
 import pytest
 
 from backend.pipeline.safety.anti_fabrication import (
-    AntiFabricationGuard, GuardResult, FabricationWarning, WarningLevel,
+    AntiFabricationGuard,
+    GuardResult,
 )
 
 

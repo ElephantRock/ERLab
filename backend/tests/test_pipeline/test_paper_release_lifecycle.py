@@ -21,7 +21,6 @@ from backend.pipeline.evaluation.paper_release import (
     PaperReleaseError,
     compute_paper_hash,
     freeze_current_paper,
-    load_frozen_revision,
     record_successor_revision_if_released,
 )
 
@@ -280,6 +279,7 @@ def test_ordinary_export_remains_available_before_freeze(env):
 def test_mutation_writers_are_wired_to_release_history_or_existing_revision_history():
     """All production paper writers have an explicit post-release history path."""
     import inspect
+
     from backend.pipeline import persistence
     from backend.pipeline.evaluation import paper_remediator, targeted_remediator
     from backend.pipeline.experiment import paper_recovery

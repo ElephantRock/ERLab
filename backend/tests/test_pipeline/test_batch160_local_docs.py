@@ -7,11 +7,8 @@ TASK-03: Pipeline integration (3 tests)
 import asyncio
 import os
 import tempfile
-from pathlib import Path
-from unittest.mock import MagicMock, patch
 
 import pytest
-
 
 # ─── TASK-01: DocumentParser ────────────────────────────────
 
@@ -90,14 +87,14 @@ class TestUploadAPI:
         assert ".docx" in _ALLOWED_EXTENSIONS
 
     def test_07_validate_rejects_bad_extension(self):
-        from backend.api.routes.knowledge import _validate_upload
         from backend.api.errors import BadRequestError
+        from backend.api.routes.knowledge import _validate_upload
         with pytest.raises(BadRequestError):
             _validate_upload("malware.exe", b"binary data")
 
     def test_08_validate_rejects_oversized(self):
-        from backend.api.routes.knowledge import _validate_upload, _MAX_FILE_SIZE
         from backend.api.errors import BadRequestError
+        from backend.api.routes.knowledge import _MAX_FILE_SIZE, _validate_upload
         big_data = b"x" * (_MAX_FILE_SIZE + 1)
         with pytest.raises(BadRequestError):
             _validate_upload("big.pdf", big_data)

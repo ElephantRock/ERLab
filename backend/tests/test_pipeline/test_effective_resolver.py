@@ -5,17 +5,15 @@ from __future__ import annotations
 import pytest
 
 from backend.pipeline.config.effective_resolver import (
-    CONFIG_PRECEDENCE_POLICY_V1,
     ORIGIN_API,
     ORIGIN_CLI,
-    ORIGIN_DEFAULT,
     ORIGIN_ENV,
-    ConfigurationConflict,
-    ResolvedConfigurationValue,
-    SourceCandidate,
     TIER_DECLARED_DEFAULT,
     TIER_DEPLOYMENT,
     TIER_OPERATION_OVERRIDE,
+    ConfigurationConflict,
+    ResolvedConfigurationValue,
+    SourceCandidate,
     resolve_configuration_fingerprint,
     resolve_field,
 )

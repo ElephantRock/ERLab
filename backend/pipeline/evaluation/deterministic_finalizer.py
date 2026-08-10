@@ -14,7 +14,6 @@ import hashlib
 import re
 from dataclasses import dataclass, field
 
-
 # ── 11B: Canonical title builder ────────────────────────────────────
 
 def build_canonical_title(
@@ -99,9 +98,7 @@ def render_result_claim(
     elif role == "derived":
         # Derived metrics describe improvement or difference
         if "improvement" in metric_id.lower() or "reduction" in metric_id.lower():
-            if direction == "higher_better":
-                return f"The observed {metric_display} was {value_str} [{marker}]."
-            elif direction == "lower_better":
+            if direction == "higher_better" or direction == "lower_better":
                 return f"The observed {metric_display} was {value_str} [{marker}]."
         return f"The observed {metric_display} was {value_str} [{marker}]."
 

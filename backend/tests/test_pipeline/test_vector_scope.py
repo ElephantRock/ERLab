@@ -17,7 +17,7 @@ from __future__ import annotations
 
 import sys
 import tempfile
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -28,7 +28,6 @@ from sqlalchemy.orm import sessionmaker
 sys.modules.setdefault("chromadb", MagicMock())
 sys.modules.setdefault("google.generativeai", MagicMock())
 
-import backend.db.models
 from backend.db.database import Base
 from backend.db.models import (
     GlobalLibraryMembership,
@@ -39,7 +38,6 @@ from backend.db.models import (
 )
 from backend.pipeline.vector_contracts import (
     EmbeddingProfileRef,
-    ResolvedVectorScope,
     VectorRetrievalScope,
     compute_scope_fingerprint,
     derive_domain_scope_key,
@@ -81,7 +79,7 @@ def _make_governed_run(engine, domain="AI/NLP", domain_key=None, reconciled=Fals
 
         if reconciled:
             # Provide all required aggregate counts for the reconciled CHECK
-            now = datetime.now(timezone.utc)
+            now = datetime.now(UTC)
             rsr = RunSearchReconciliation(
                 run_id=run.id,
                 reconciliation_schema_version="run_reconciliation_v1",

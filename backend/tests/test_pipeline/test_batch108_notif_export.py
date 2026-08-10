@@ -6,10 +6,10 @@ from __future__ import annotations
 
 import os
 import tempfile
+
 import pytest
 
-from backend.pipeline.notifications.service import NotificationService, Notification
-
+from backend.pipeline.notifications.service import Notification, NotificationService
 
 
 @pytest.fixture

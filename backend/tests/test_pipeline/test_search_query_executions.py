@@ -23,12 +23,11 @@ dependency) matching the P0.1 test style.
 from __future__ import annotations
 
 import tempfile
-from datetime import datetime, timezone
+from datetime import UTC
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
-import sqlalchemy
 from sqlalchemy import create_engine, event, func, inspect, select, text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import sessionmaker
@@ -42,7 +41,6 @@ from backend.db.models import (
     SearchQuery,
     SearchQueryExecution,
 )
-
 
 # ── Session helpers (mirror test_corpus_provenance.py) ──────────────
 
@@ -212,11 +210,12 @@ def test_accounting_status_default_incomplete_and_invalid_rejected():
         session.rollback()  # clear the dirty txn state from the failed insert
         # 'reconciled' requires all four counts + accounting_v1 (P0.2.4 constraint).
         # Test with a complete reconciled row:
-        from datetime import datetime, timezone
+        from datetime import datetime
+
         from backend.db.models import SearchQueryExecution
         ex2 = SearchQueryExecution(
             search_query_id=q.id, source="openalex", status="success",
-            attempt_count=1, completed_at=datetime(2026, 1, 1, tzinfo=timezone.utc),
+            attempt_count=1, completed_at=datetime(2026, 1, 1, tzinfo=UTC),
             accounting_status="reconciled", accounting_schema_version="accounting_v1",
             execution_metadata_version="execution_v1",
             translated_query='{"schema":"source_query_v1"}',

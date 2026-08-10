@@ -1,21 +1,16 @@
 """Phase E+F tests: SmartRouter + RoutingDecision + DryRunLogger."""
 
-import pytest
-from pathlib import Path
-from unittest.mock import MagicMock
 
+import pytest
 import yaml
 
-from backend.pipeline.routing.stage_contract import StageContract
 from backend.pipeline.routing.certified_lookup import (
     CertifiedCapabilityLookup,
-    CertifiedModelCandidate,
 )
-from backend.pipeline.routing.hard_gates import HardGateEngine
-from backend.pipeline.routing.strategy_planner import StrategyPlanner
-from backend.pipeline.routing.smart_router import SmartRouter, RoutingRuntimeContext
-from backend.pipeline.routing.routing_decision import RoutingDecision
 from backend.pipeline.routing.dry_run_logger import DryRunLogger
+from backend.pipeline.routing.routing_decision import RoutingDecision
+from backend.pipeline.routing.smart_router import RoutingRuntimeContext, SmartRouter
+from backend.pipeline.routing.stage_contract import StageContract
 
 
 def _make_contract(**overrides):

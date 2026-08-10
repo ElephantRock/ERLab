@@ -19,7 +19,7 @@ from backend.api.errors import APIError
 from backend.api.routes.exports import router
 from backend.db import crud
 from backend.db.database import Base
-from backend.db.models import Idea, PipelineRun, Proposal
+from backend.db.models import Idea, Proposal
 
 
 def _make_app():
