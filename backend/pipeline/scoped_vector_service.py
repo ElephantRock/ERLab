@@ -343,6 +343,22 @@ async def query_vectors(
                     ),
                     {"eid": existing.id},
                 )
+                # Also clear scope papers and eligible records to avoid
+                # UNIQUE constraint conflicts on re-insertion.
+                session.execute(
+                    text(
+                        "DELETE FROM vector_retrieval_scope_papers "
+                        "WHERE retrieval_event_id = :eid"
+                    ),
+                    {"eid": existing.id},
+                )
+                session.execute(
+                    text(
+                        "DELETE FROM vector_retrieval_eligible_records "
+                        "WHERE retrieval_event_id = :eid"
+                    ),
+                    {"eid": existing.id},
+                )
                 event = existing  # reuse the row
                 event.status = "pending"
                 event.attempt_count = (event.attempt_count or 0) + 1
@@ -351,6 +367,35 @@ async def query_vectors(
                 # Skip to the retrieval step (step 5+)
                 # by jumping past the event creation below.
                 # We achieve this by setting a flag that the code below checks.
+                _reusing_failed_event = True
+            elif existing.status in ("pending", "running"):
+                # Another in-flight or stale attempt — reuse it.
+                event = existing
+                event.status = "pending"
+                event.attempt_count = (event.attempt_count or 0) + 1
+                session.execute(
+                    text(
+                        "DELETE FROM vector_retrieval_results "
+                        "WHERE retrieval_event_id = :eid"
+                    ),
+                    {"eid": existing.id},
+                )
+                session.execute(
+                    text(
+                        "DELETE FROM vector_retrieval_scope_papers "
+                        "WHERE retrieval_event_id = :eid"
+                    ),
+                    {"eid": existing.id},
+                )
+                session.execute(
+                    text(
+                        "DELETE FROM vector_retrieval_eligible_records "
+                        "WHERE retrieval_event_id = :eid"
+                    ),
+                    {"eid": existing.id},
+                )
+                session.flush()
+                event_id = event.id
                 _reusing_failed_event = True
             else:
                 _reusing_failed_event = False
