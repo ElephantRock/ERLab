@@ -2548,6 +2548,36 @@ class PaperSynthesisStage(PipelineStage):
             "reason": exp_alignment_reason,
         })
 
+        # ── Numeric value-fidelity gate (2026-08-10) ───────────────────
+        # The deterministic renderer formats observed_value correctly, but a
+        # later LLM prose rewrite can drop the leading 0. (rendering
+        # "966667 [RESULT-3]" beside a persisted 0.966667). This gate catches
+        # that class of corruption regardless of where it originates. It is
+        # placed on the LIVE evaluation path so the same defect that let
+        # revision 15 become ready is now a blocking gate. One corrupted
+        # attribution blocks; referential prose (no adjacent number) is
+        # skipped; unit/scale transforms fail closed.
+        numeric_fidelity_passed = True
+        numeric_fidelity_reason = "No RESULT markers to validate"
+        if result_markers:
+            from backend.pipeline.evaluation.claim_result_validator import (
+                validate_claim_result_alignment as _validate_numeric_fidelity,
+            )
+            _numeric_mismatches = _validate_numeric_fidelity(paper_md, result_markers)
+            _numeric_only = [
+                m for m in _numeric_mismatches if m.section == "numeric_fidelity"
+            ]
+            if _numeric_only:
+                numeric_fidelity_passed = False
+                numeric_fidelity_reason = "; ".join(
+                    f"{m.marker}: {m.reason[:120]}" for m in _numeric_only
+                )
+        gates.append({
+            "gate": "numeric_fidelity",
+            "passed": numeric_fidelity_passed,
+            "reason": numeric_fidelity_reason,
+        })
+
         # Gate aggregation: any blocking gate downgrades the evaluation.
         blocking_reasons: list[str] = []
         if not prov_gate.passed:
@@ -2558,6 +2588,8 @@ class PaperSynthesisStage(PipelineStage):
             blocking_reasons.append(f"conclusion: {conclusion_result.reason}")
         if not exp_alignment_passed:
             blocking_reasons.append(f"experiment_alignment: {exp_alignment_reason}")
+        if not numeric_fidelity_passed:
+            blocking_reasons.append(f"numeric_fidelity: {numeric_fidelity_reason}")
 
         try:
             from backend.pipeline.evaluation.proposal_evaluator import ProposalEvaluator, resolve_evaluation_provider

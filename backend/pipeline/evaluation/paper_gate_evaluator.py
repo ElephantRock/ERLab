@@ -171,10 +171,13 @@ def evaluate_paper_gates(
     if not exp_alignment_passed:
         blocking_reasons.append(f"experiment_alignment: {exp_alignment_reason}")
 
-    # ── Gate 5: Claim-to-result semantic validation (Phase 10 correction B) ──
-    # Checks that RESULT markers cited in model-claims are actually model markers,
-    # not baseline markers. Closes the false-ready defect where "the model achieved
-    # [RESULT-1]" passes when RESULT-1 is the baseline accuracy.
+    # ── Gate 5: Claim-to-result validation (Phase 10 correction B + 2026-08-10 numeric gate) ──
+    # Checks (a) that RESULT markers cited in model-claims are actually model
+    # markers, not baseline markers, and (b) that the number rendered beside
+    # each [RESULT-N] equals its persisted observed_value. Together these close
+    # the false-ready defects where "the model achieved [RESULT-1]" passes when
+    # RESULT-1 is the baseline accuracy, and where "966667 [RESULT-3]" passes
+    # when the persisted observed_value is 0.966667.
     claim_result_passed = True
     claim_result_reason = "No RESULT markers to validate"
     if result_markers:
