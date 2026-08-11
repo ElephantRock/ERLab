@@ -116,6 +116,59 @@ class ConfigLoader:
         if missing:
             raise ValueError(f"Missing search fields: {', '.join(missing)}")
 
+        # Validate adaptive_search subsection if present.
+        adaptive = search.get("adaptive_search")
+        if adaptive is not None:
+            ConfigLoader._validate_adaptive_search(adaptive)
+
+    @staticmethod
+    def _validate_adaptive_search(cfg: dict) -> None:
+        """Validate the adaptive_search config block."""
+        if not isinstance(cfg, dict):
+            raise ValueError("adaptive_search must be a mapping")
+
+        if "enabled" in cfg and not isinstance(cfg["enabled"], bool):
+            raise ValueError("adaptive_search.enabled must be bool")
+
+        if "enabled_strategies" in cfg:
+            if not isinstance(cfg["enabled_strategies"], list):
+                raise ValueError(
+                    "adaptive_search.enabled_strategies must be a list"
+                )
+            if not all(
+                isinstance(s, str) for s in cfg["enabled_strategies"]
+            ):
+                raise ValueError(
+                    "adaptive_search.enabled_strategies must be list[str]"
+                )
+
+        int_fields = {
+            "max_rounds": 0,
+            "queries_per_round": 1,
+            "limit_per_source": 1,
+            "digest_max_papers": 1,
+            "digest_abstract_chars": 1,
+        }
+        for field, minimum in int_fields.items():
+            if field in cfg:
+                val = cfg[field]
+                if not isinstance(val, int) or val < minimum:
+                    raise ValueError(
+                        f"adaptive_search.{field} must be int >= {minimum}"
+                    )
+
+        if "dedup_similarity_threshold" in cfg:
+            val = cfg["dedup_similarity_threshold"]
+            if (
+                not isinstance(val, (int, float))
+                or val < 0.0
+                or val > 1.0
+            ):
+                raise ValueError(
+                    "adaptive_search.dedup_similarity_threshold"
+                    " must be 0.0 <= x <= 1.0"
+                )
+
     @staticmethod
     def _validate_strategies(strategies: dict) -> None:
         if not strategies:

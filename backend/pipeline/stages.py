@@ -61,6 +61,22 @@ class StageContext:
     governed_search_context: Any = None  # GovernedSearchContext | None
 
 
+@dataclass
+class QueryBatchResult:
+    """Normalized output of one governed query-batch execution."""
+
+    candidates: list  # list[CandidateWithDiscoveries]
+    linkage_expectations: list  # list[ExecutionLinkageExpectation]
+
+
+@dataclass
+class CandidateMergeResult:
+    """Output of cross-batch candidate corpus merging."""
+
+    candidates: list  # list[CandidateWithDiscoveries]
+    new_unique_count: int
+
+
 def _build_empirical_experiment_constraint(experiment_spec_id: str | None) -> str:
     """Render the authoritative empirical experiment constraint for synthesis.
 
@@ -126,15 +142,224 @@ class PipelineStage(ABC):
 
 
 class LiteratureSearchStage(PipelineStage):
-    def __init__(self, search, hooks, gateway=None, persistence=None):
+    def __init__(
+        self,
+        search,
+        hooks,
+        gateway=None,
+        persistence=None,
+        *,
+        adaptive_config: dict | None = None,
+        strategy_name: str = "",
+    ):
         self._search = search
         self._hooks = hooks
         self._gateway = gateway
         self._persistence = persistence
+        self._adaptive_config = adaptive_config or {}
+        self._strategy_name = strategy_name
 
     @property
     def name(self) -> str:
         return "literature_search"
+
+    async def _execute_query_batch(
+        self,
+        *,
+        ctx: StageContext,
+        query_data: list,
+        db_engine,
+        limit_per_source: int = 20,
+    ) -> QueryBatchResult:
+        """Execute one batch of governed search queries.
+
+        Owns: logical-query persistence, parallel fan-out, and result
+        normalization (SearchBatchOutcome / list / Exception / unexpected).
+        Does NOT perform cross-batch candidate merging.
+
+        Returns a normalized QueryBatchResult. The caller never branches
+        on SearchBatchOutcome versus list.
+        """
+        from backend.pipeline.literature.contracts import SearchBatchOutcome
+
+        # Per-batch: ensure SearchQuery rows exist and resolve IDs.
+        query_ids_by_key: dict[str, int] = {}
+        if ctx.db_run_id and self._persistence:
+            query_ids_by_key = self._persistence.ensure_search_queries(
+                query_data, ctx.db_run_id,
+            )
+
+        queries = [sqd.query_text for sqd in query_data]
+
+        # Parallel fan-out with provenance.
+        query_results = await asyncio.gather(
+            *(
+                self._search.search_all_with_provenance(
+                    q, sqd.query_key,
+                    limit_per_source=limit_per_source,
+                    search_query_id=query_ids_by_key.get(sqd.query_key),
+                    db_engine=db_engine,
+                )
+                for q, sqd in zip(queries, query_data, strict=True)
+            ),
+            return_exceptions=True,
+        )
+
+        all_candidates: list = []
+        all_linkage_expectations: list = []
+        for sqd, result in zip(query_data, query_results, strict=True):
+            if isinstance(result, Exception):
+                logger.warning(
+                    "Query '%s' failed: %s",
+                    sqd.query_text[:50], result,
+                )
+            elif isinstance(result, SearchBatchOutcome):
+                all_candidates.extend(result.candidates)
+                for exec_outcome in result.executions:
+                    from backend.pipeline.literature.contracts import (
+                        ExecutionLinkageExpectation,
+                    )
+                    if exec_outcome.status in ("success", "partial"):
+                        all_linkage_expectations.append(
+                            ExecutionLinkageExpectation(
+                                execution_id=exec_outcome.execution_id,
+                                search_query_id=query_ids_by_key.get(
+                                    sqd.query_key, 0,
+                                ),
+                                source=exec_outcome.source,
+                                expected_discovery_count=len(
+                                    exec_outcome.results,
+                                ),
+                                accounting_status="reconciled",
+                            )
+                        )
+                    elif exec_outcome.status == "skipped":
+                        all_linkage_expectations.append(
+                            ExecutionLinkageExpectation(
+                                execution_id=exec_outcome.execution_id,
+                                search_query_id=query_ids_by_key.get(
+                                    sqd.query_key, 0,
+                                ),
+                                source=exec_outcome.source,
+                                expected_discovery_count=None,
+                                accounting_status="incomplete",
+                            )
+                        )
+                logger.info(
+                    "Found %d papers for query: %s",
+                    len(result.candidates), sqd.query_text[:50],
+                )
+            elif isinstance(result, list):
+                all_candidates.extend(result)
+                logger.info(
+                    "Found %d papers for query: %s",
+                    len(result), sqd.query_text[:50],
+                )
+            else:
+                logger.warning(
+                    "Query '%s' returned unexpected type: %s",
+                    sqd.query_text[:50], type(result),
+                )
+
+        return QueryBatchResult(
+            candidates=all_candidates,
+            linkage_expectations=all_linkage_expectations,
+        )
+
+    def _merge_candidate_corpus(
+        self,
+        existing: list,
+        incoming: list,
+        *,
+        fuzzy_threshold: float = 0.85,
+    ) -> CandidateMergeResult:
+        """Merge incoming candidates into an existing corpus.
+
+        Runs the existing exact-key then fuzzy-title dedup algorithm
+        verbatim. Existing candidates win on both exact and fuzzy matches
+        (they are processed first). Discovery routes are always preserved
+        and merged.
+
+        ``new_unique_count`` counts net-new corpus identities — papers
+        whose canonical key did not exist in ``existing``. A paper that
+        only contributes another discovery route does not count as new.
+        """
+        from difflib import SequenceMatcher
+
+        # Track existing identities for new-unique counting.
+        existing_identities: set[str] = set()
+        for c in existing:
+            p = c.paper
+            key = (
+                p.doi if getattr(p, "doi", None)
+                else p.title.lower().strip()
+            )
+            existing_identities.add(key)
+
+        all_candidates = list(existing) + list(incoming)
+
+        # Exact-key merge (same as pre-refactor).
+        seen_keys: dict[str, object] = {}
+        for cand in all_candidates:
+            p = cand.paper
+            key = (
+                p.doi if getattr(p, "doi", None)
+                else p.title.lower().strip()
+            )
+            if key in seen_keys:
+                seen_keys[key].discoveries.extend(cand.discoveries)
+            else:
+                seen_keys[key] = cand
+
+        unique_candidates = list(seen_keys.values())
+
+        # Fuzzy-title merge (same as pre-refactor).
+        fuzzy_unique: list = []
+        for cand in unique_candidates:
+            paper_title = cand.paper.title.lower().strip()
+            is_dup = any(
+                SequenceMatcher(
+                    None,
+                    paper_title,
+                    ex.paper.title.lower().strip(),
+                ).ratio() > fuzzy_threshold
+                for ex in fuzzy_unique
+            )
+            if not is_dup:
+                fuzzy_unique.append(cand)
+            else:
+                for ex in fuzzy_unique:
+                    if SequenceMatcher(
+                        None,
+                        paper_title,
+                        ex.paper.title.lower().strip(),
+                    ).ratio() > fuzzy_threshold:
+                        ex.discoveries.extend(cand.discoveries)
+                        break
+
+        if len(fuzzy_unique) < len(unique_candidates):
+            logger.info(
+                "Fuzzy dedup removed %d near-duplicates"
+                " (%d → %d)",
+                len(unique_candidates) - len(fuzzy_unique),
+                len(unique_candidates), len(fuzzy_unique),
+            )
+
+        # Count net-new identities.
+        new_unique_count = 0
+        for c in fuzzy_unique:
+            p = c.paper
+            key = (
+                p.doi if getattr(p, "doi", None)
+                else p.title.lower().strip()
+            )
+            if key not in existing_identities:
+                new_unique_count += 1
+
+        return CandidateMergeResult(
+            candidates=fuzzy_unique,
+            new_unique_count=new_unique_count,
+        )
 
     async def execute(self, ctx: StageContext) -> bool:
         # Pre-run knowledge library query (B158)
@@ -305,10 +530,8 @@ class LiteratureSearchStage(PipelineStage):
         # P0.2.2: Pre-resolve search_query_id before the fan-out so the
         # execution recorder can link execution rows to the correct query.
         from backend.db.database import _get_engine
-        from backend.pipeline.literature.contracts import SearchBatchOutcome
 
         db_engine = None
-        query_ids_by_key: dict[str, int] = {}
         if ctx.db_run_id:
             db_engine = _get_engine()
             # P0.2.6: Ensure pending run reconciliation ledger exists before
@@ -317,115 +540,136 @@ class LiteratureSearchStage(PipelineStage):
                 ensure_pending_reconciliation,
             )
             ensure_pending_reconciliation(db_engine, ctx.db_run_id)
-            # ensure_search_queries is a non-corpus short transaction.
-            query_ids_by_key = self._persistence.ensure_search_queries(
-                search_query_data, ctx.db_run_id,
-            )
 
-        # Parallel query fan-out with provenance.
-        # Governed path: returns SearchBatchOutcome (candidates + executions).
-        # Legacy path (no db_run_id): returns list[CandidateWithDiscoveries].
-        query_results = await asyncio.gather(
-            *(
-                self._search.search_all_with_provenance(
-                    q, sqd.query_key, limit_per_source=20,
-                    search_query_id=query_ids_by_key.get(sqd.query_key),
-                    db_engine=db_engine,
-                )
-                for q, sqd in zip(queries, search_query_data, strict=True)
-            ),
-            return_exceptions=True,
+        # Execute governed query batch (persistence + fan-out + normalization).
+        batch = await self._execute_query_batch(
+            ctx=ctx,
+            query_data=search_query_data,
+            db_engine=db_engine,
+            limit_per_source=20,
         )
+        all_linkage_expectations = list(batch.linkage_expectations)
 
-        all_candidates: list[CandidateWithDiscoveries] = []
-        all_linkage_expectations: list = []
-        for sqd, result in zip(search_query_data, query_results, strict=True):
-            if isinstance(result, Exception):
-                logger.warning("Query '%s' failed: %s", sqd.query_text[:50], result)
-            elif isinstance(result, SearchBatchOutcome):
-                all_candidates.extend(result.candidates)
-                # P0.2.5: Collect linkage expectations for governed persistence
-                for exec_outcome in result.executions:
-                    from backend.pipeline.literature.contracts import ExecutionLinkageExpectation
-                    if exec_outcome.status in ("success", "partial"):
-                        all_linkage_expectations.append(ExecutionLinkageExpectation(
-                            execution_id=exec_outcome.execution_id,
-                            search_query_id=query_ids_by_key.get(sqd.query_key, 0),
-                            source=exec_outcome.source,
-                            expected_discovery_count=len(exec_outcome.results),
-                            accounting_status="reconciled",
-                        ))
-                    elif exec_outcome.status == "skipped":
-                        all_linkage_expectations.append(ExecutionLinkageExpectation(
-                            execution_id=exec_outcome.execution_id,
-                            search_query_id=query_ids_by_key.get(sqd.query_key, 0),
-                            source=exec_outcome.source,
-                            expected_discovery_count=None,
-                            accounting_status="incomplete",
-                        ))
+        # Cross-query candidate merge (exact + fuzzy dedup).
+        merged = self._merge_candidate_corpus(
+            existing=[],
+            incoming=batch.candidates,
+        )
+        unique_candidates = merged.candidates
+
+        # ── Adaptive evidence search loop (AES-3) ─────────────────────
+        # When enabled for the active strategy and a gateway is available,
+        # inspect retrieved literature and generate follow-up queries
+        # targeting uncovered aspects. Each round goes through the same
+        # governed execution path as the initial search.
+        all_candidates = list(batch.candidates)
+        cfg = self._adaptive_config
+        adaptive_enabled = (
+            bool(cfg.get("enabled"))
+            and self._strategy_name in cfg.get("enabled_strategies", [])
+            and self._gateway is not None
+        )
+        if adaptive_enabled:
+            from backend.pipeline.gateway.llm_repair_and_query import (
+                LLMQueryGenerator,
+            )
+
+            max_rounds = cfg.get("max_rounds", 2)
+            queries_per_round = cfg.get("queries_per_round", 3)
+            adaptive_limit = cfg.get("limit_per_source", 10)
+            digest_max_papers = cfg.get("digest_max_papers", 20)
+            digest_abstract_chars = cfg.get("digest_abstract_chars", 600)
+            dedup_threshold = cfg.get("dedup_similarity_threshold", 0.85)
+
+            gen = LLMQueryGenerator(self._gateway)
+            attempted_queries = [q.query_text for q in search_query_data]
+            next_sequence = len(search_query_data)
+
+            for round_no in range(max_rounds):
+                # Build evidence digest from current governed corpus.
+                proposed = await gen.generate_adaptive_queries(
+                    research_question=(
+                        ctx.research_question.strip()
+                        if ctx.research_question
+                        and ctx.research_question.strip()
+                        else str(ctx.domain)
+                    ),
+                    attempted_queries=attempted_queries,
+                    papers=[c.paper for c in unique_candidates],
+                    n_queries=queries_per_round,
+                    run_id=ctx.run_id or "",
+                    max_papers=digest_max_papers,
+                    abstract_chars=digest_abstract_chars,
+                    dedup_similarity_threshold=dedup_threshold,
+                )
+
+                if not proposed:
+                    break
+
+                # Assign governed identity to each adaptive query.
+                adaptive_query_data = []
+                for query in proposed:
+                    q_key = compute_query_key(
+                        query,
+                        "llm_generated",
+                        "adaptive",
+                        next_sequence,
+                    )
+                    adaptive_query_data.append(SearchQueryData(
+                        query_text=query,
+                        query_type="llm_generated",
+                        generation_origin="adaptive",
+                        sequence_number=next_sequence,
+                        query_key=q_key,
+                    ))
+                    next_sequence += 1
+
+                # Execute through the same governed path.
+                adaptive_batch = await self._execute_query_batch(
+                    ctx=ctx,
+                    query_data=adaptive_query_data,
+                    db_engine=db_engine,
+                    limit_per_source=adaptive_limit,
+                )
+
+                # Merge into the growing corpus.
+                round_merge = self._merge_candidate_corpus(
+                    existing=unique_candidates,
+                    incoming=adaptive_batch.candidates,
+                    fuzzy_threshold=dedup_threshold,
+                )
+                unique_candidates = round_merge.candidates
+
+                search_query_data.extend(adaptive_query_data)
+                attempted_queries.extend(proposed)
+                all_linkage_expectations.extend(
+                    adaptive_batch.linkage_expectations
+                )
+                all_candidates.extend(adaptive_batch.candidates)
+
                 logger.info(
-                    "Found %d papers for query: %s",
-                    len(result.candidates), sqd.query_text[:50],
-                )
-            elif isinstance(result, list):
-                all_candidates.extend(result)
-                logger.info("Found %d papers for query: %s", len(result), sqd.query_text[:50])
-            else:
-                logger.warning(
-                    "Query '%s' returned unexpected type: %s",
-                    sqd.query_text[:50], type(result),
+                    "Adaptive round %d: %d queries, %d new unique papers",
+                    round_no + 1,
+                    len(proposed),
+                    round_merge.new_unique_count,
                 )
 
-        # Cross-query dedup with provenance merging
-        # When the same paper appears through different queries, merge discovery lists
-        from difflib import SequenceMatcher
-        seen_keys: dict[str, CandidateWithDiscoveries] = {}
-
-        for cand in all_candidates:
-            p = cand.paper
-            key = p.doi if getattr(p, 'doi', None) else p.title.lower().strip()
-            if key in seen_keys:
-                # Merge discovery events from this candidate into the existing one
-                seen_keys[key].discoveries.extend(cand.discoveries)
-            else:
-                seen_keys[key] = cand
-
-        unique_candidates = list(seen_keys.values())
-
-        # G6: Fuzzy dedup — merge discovery lists for near-duplicates
-        fuzzy_unique: list[CandidateWithDiscoveries] = []
-        for cand in unique_candidates:
-            paper_title = cand.paper.title.lower().strip()
-            is_dup = any(
-                SequenceMatcher(
-                    None,
-                    paper_title,
-                    existing.paper.title.lower().strip(),
-                ).ratio() > 0.85
-                for existing in fuzzy_unique
-            )
-            if not is_dup:
-                fuzzy_unique.append(cand)
-            else:
-                # Find the matching candidate and merge discoveries
-                for existing in fuzzy_unique:
-                    if SequenceMatcher(
-                        None, paper_title,
-                        existing.paper.title.lower().strip(),
-                    ).ratio() > 0.85:
-                        existing.discoveries.extend(cand.discoveries)
-                        break
-
-        if len(fuzzy_unique) < len(unique_candidates):
-            logger.info(
-                "Fuzzy dedup removed %d near-duplicates (%d → %d)",
-                len(unique_candidates) - len(fuzzy_unique),
-                len(unique_candidates), len(fuzzy_unique),
-            )
-        unique_candidates = fuzzy_unique
+                # Convergence: no new papers means stop.
+                if round_merge.new_unique_count == 0:
+                    break
 
         # Extract bare papers for backward compatibility
         unique = [c.paper for c in unique_candidates]
+
+        # Canonical identity set for non-governed enrichment branches.
+        # Initialized from the governed corpus after cross-query dedup so
+        # that knowledge-library, local-upload, and citation-tree enrichment
+        # can dedup against already-accepted papers without a NameError.
+        seen = {
+            p.doi if getattr(p, "doi", None)
+            else p.title.lower().strip()
+            for p in unique
+        }
 
         # Merge pre-existing knowledge library papers
         if pre_existing:
@@ -535,15 +779,23 @@ class LiteratureSearchStage(PipelineStage):
                 execution_linkage_expectations=tuple(all_linkage_expectations),
             )
         ctx.result.papers_found = len(unique)
-        logger.info("Total unique papers: %d (from %d total)", len(unique), len(all_candidates))
+        logger.info(
+            "Total unique papers: %d (from %d total)",
+            len(unique), len(all_candidates),
+        )
 
         # B162: Journal note
         if ctx.journal:
             try:
-                ctx.journal.add_note("literature_search", f"Found {len(unique)} unique papers from {len(all_candidates)} total", {
-                    "unique_papers": len(unique),
-                    "total_found": len(all_candidates),
-                })
+                ctx.journal.add_note(
+                    "literature_search",
+                    f"Found {len(unique)} unique papers"
+                    f" from {len(all_candidates)} total",
+                    {
+                        "unique_papers": len(unique),
+                        "total_found": len(all_candidates),
+                    },
+                )
             except Exception:
                 pass
 

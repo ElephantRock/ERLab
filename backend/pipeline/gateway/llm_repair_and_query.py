@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 from typing import Any
 
 logger = logging.getLogger(__name__)
@@ -163,3 +164,144 @@ class LLMQueryGenerator:
 
         logger.warning("Query generation produced unparseable output")
         return []
+
+    async def generate_adaptive_queries(
+        self,
+        *,
+        research_question: str,
+        attempted_queries: list[str],
+        papers: list[Any],
+        n_queries: int = 3,
+        run_id: str = "",
+        max_papers: int = 20,
+        abstract_chars: int = 600,
+        dedup_similarity_threshold: float = 0.85,
+    ) -> list[str]:
+        """Generate evidence-aware follow-up search queries.
+
+        Inspects the literature already retrieved and generates queries
+        targeting uncovered aspects. Returns at most ``n_queries`` clean,
+        non-duplicate query strings. Returns ``[]`` on any failure or
+        when no further search is justified.
+
+        The call goes through the gateway with stage='query_generation',
+        inheriting the same routing and accounting as initial query
+        generation. No direct provider call.
+
+        Args:
+            research_question: The run's research question or domain.
+            attempted_queries: Queries already executed (for dedup).
+            papers: Papers discovered so far (``Paper`` objects).
+            n_queries: Maximum queries to return.
+            run_id: Pipeline run ID for gateway accounting.
+            max_papers: Maximum papers to include in the digest.
+            abstract_chars: Maximum abstract characters per paper.
+            dedup_similarity_threshold: SequenceMatcher ratio above
+                which a candidate is considered a near-duplicate.
+        """
+        from backend.pipeline.gateway.gateway import LLMRequest
+        from backend.pipeline.literature.adaptive_search import (
+            filter_adaptive_queries,
+        )
+
+        # ── Build bounded evidence digest ────────────────────────────
+        digest_papers = papers[:max_papers]
+        digest_lines: list[str] = []
+
+        digest_lines.append(f"RESEARCH QUESTION\n{research_question}\n")
+        digest_lines.append("SEARCHES ALREADY EXECUTED")
+        for i, q in enumerate(attempted_queries, 1):
+            digest_lines.append(f"{i}. {q}")
+        digest_lines.append("")
+        digest_lines.append("CURRENTLY DISCOVERED LITERATURE")
+
+        for i, p in enumerate(digest_papers, 1):
+            abstract = (getattr(p, "abstract", None) or "")[:abstract_chars]
+            digest_lines.append(
+                f"\n[{i}]\n"
+                f"Title: {getattr(p, 'title', '')}\n"
+                f"Year: {getattr(p, 'year', '')}\n"
+                f"Venue: {getattr(p, 'venue', '')}\n"
+                f"Source: {getattr(p, 'source', '')}\n"
+                f"Abstract: {abstract}"
+            )
+
+        user_content = "\n".join(digest_lines)
+
+        system_content = (
+            "You are an evidence-aware academic search planner.\n"
+            "Given the research question, searches already executed, "
+            "and literature discovered so far, identify aspects of the "
+            "existing research landscape that remain insufficiently "
+            "covered.\n\n"
+            f"Return at most {n_queries} academic search queries "
+            "targeting those missing coverage areas.\n\n"
+            "Do not:\n"
+            "- declare research gaps\n"
+            "- propose research ideas\n"
+            "- repeat or trivially paraphrase prior queries\n"
+            "- explain your answer\n\n"
+            "If no additional search is justified, return [].\n"
+            "Return ONLY a JSON array of strings."
+        )
+
+        request = LLMRequest(
+            task="query_generation",
+            messages=[
+                {"role": "system", "content": system_content},
+                {"role": "user", "content": user_content},
+            ],
+            stage="query_generation",
+            max_output_tokens=1024,
+            run_id=run_id,
+        )
+
+        # ── Call gateway ─────────────────────────────────────────────
+        try:
+            response = await self._gateway.call(request)
+        except Exception as e:  # noqa: BLE001
+            logger.warning("Adaptive query planner exception: %s", e)
+            return []
+
+        if response.degraded:
+            logger.warning(
+                "Adaptive query planner degraded: %s",
+                response.warnings,
+            )
+            return []
+
+        content = response.content
+        if not content:
+            return []
+
+        # ── Parse JSON array ─────────────────────────────────────────
+        raw_queries: list[str] = []
+        try:
+            parsed = json.loads(content)
+            if isinstance(parsed, list):
+                raw_queries = [str(q) for q in parsed if isinstance(q, str)]
+        except json.JSONDecodeError:
+            json_match = re.search(r'\[.*\]', content, re.DOTALL)
+            if json_match:
+                try:
+                    parsed = json.loads(json_match.group(0))
+                    if isinstance(parsed, list):
+                        raw_queries = [
+                            str(q) for q in parsed if isinstance(q, str)
+                        ]
+                except json.JSONDecodeError:
+                    pass
+
+        if not raw_queries:
+            logger.debug(
+                "Adaptive query planner produced no parseable queries"
+            )
+            return []
+
+        # ── Filter through query hygiene ─────────────────────────────
+        return filter_adaptive_queries(
+            raw_queries,
+            attempted_queries,
+            max_queries=n_queries,
+            similarity_threshold=dedup_similarity_threshold,
+        )
