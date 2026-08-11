@@ -203,18 +203,24 @@ def evaluate_gates(
     record("citation_integrity", cite_ok, reason_code=cite_reason)
 
     # ── Gate 9: accounting ──
+    # When the accounting gate is active but the runner did not supply a
+    # verified result (accounting_ok is None), fail-closed instead of
+    # silently passing. This prevents execution without budget enforcement
+    # from reporting PASS on an active accounting gate.
     if accounting_ok is None:
-        accounting_ok = True  # runner supplies the real value; default pass for unit tests
+        accounting_ok = not getattr(gates, "accounting", True)
     record("accounting", accounting_ok,
-           reason_code="" if accounting_ok else "accounting_mismatch")
+           reason_code="" if accounting_ok else "accounting_not_enforced")
 
     # ── Gate 10: export ──
     export_ok, export_reason = _check_export(result, paper_view, export_paths)
     record("export", export_ok, reason_code=export_reason)
 
     # ── Gate 11: restart recovery ──
+    # Same fail-closed principle: when restart_recovery is active but the
+    # runner did not supply a verified result, fail-closed.
     if restart_recovery_ok is None:
-        restart_recovery_ok = True  # runner supplies the real value
+        restart_recovery_ok = not getattr(gates, "restart_recovery", True)
     record("restart_recovery", restart_recovery_ok,
            reason_code="" if restart_recovery_ok else "restart_recovery_failed")
 

@@ -326,6 +326,57 @@ async def run_acceptance(
         write_evidence(evidence_dir, case, verdict, preflight.code_origin)
         return verdict, evidence_dir
 
+    # ── Manifest identity preflight ──
+    # Fail-closed: the acceptance case declares a specific provider, model,
+    # and embedding configuration. If the runtime settings do not match,
+    # the run would execute a different specimen than the case describes.
+    # Also fail when a frozen corpus manifest is declared but absent.
+    from backend.config import get_settings as _get_settings
+
+    _s = _get_settings()
+    _identity_errors: list[str] = []
+    if case.provider and _s.default_provider != case.provider:
+        _identity_errors.append(
+            f"provider mismatch: manifest={case.provider!r}"
+            f" runtime={_s.default_provider!r}"
+        )
+    if case.model and getattr(_s, "openai_model", "") != case.model:
+        _identity_errors.append(
+            f"model mismatch: manifest={case.model!r}"
+            f" runtime={getattr(_s, 'openai_model', '')!r}"
+        )
+    if case.embedding_model and getattr(_s, "embedding_model", "") != case.embedding_model:
+        _identity_errors.append(
+            f"embedding_model mismatch:"
+            f" manifest={case.embedding_model!r}"
+            f" runtime={getattr(_s, 'embedding_model', '')!r}"
+        )
+    if (
+        case.corpus_manifest_path
+        and not Path(case.corpus_manifest_path).resolve().exists()
+    ):
+        _identity_errors.append(
+            f"corpus_manifest_path declared but absent:"
+            f" {case.corpus_manifest_path!r}"
+        )
+    if _identity_errors:
+        verdict = VerdictReport(
+            verdict=AcceptanceVerdict.INVALID_CASE,
+            case_id=case.case_id,
+            attempt_id="",
+            failed_gates=[
+                GateResult(
+                    gate="manifest_identity",
+                    passed=False,
+                    reason_code="manifest_identity_mismatch",
+                    detail="; ".join(_identity_errors),
+                ),
+            ],
+            exit_code=1,
+        )
+        write_evidence(evidence_dir, case, verdict, preflight.code_origin)
+        return verdict, evidence_dir
+
     # ── Execution (delegated to the existing confirmatory spine) ──
     import run_e2e_pipeline as spine  # type: ignore
 
