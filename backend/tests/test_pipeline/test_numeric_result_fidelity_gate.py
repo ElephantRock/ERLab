@@ -214,3 +214,36 @@ def test_clean_model_claim_with_correct_values_passes_both_gates():
         f"A clean model claim with correct value should pass both gates. "
         f"Got: {mismatches}"
     )
+
+
+# ── Edge-case numeric formats (PR review blocker 5) ─────────────────────
+
+
+def test_leading_dot_decimal_passes():
+    """A value rendered as .966667 (leading-dot) must match 0.966667."""
+    markers = [MarkerStub(marker="RESULT-3", metric_name="model_accuracy",
+                          observed_value=0.966667)]
+    paper = "Accuracy was .966667 [RESULT-3], matching the persisted value."
+    mismatches = validate_claim_result_alignment(paper, markers)
+    numeric = [m for m in mismatches if m.section == "numeric_fidelity"]
+    assert numeric == [], f"Leading-dot decimal should match. Got: {numeric}"
+
+
+def test_scientific_notation_passes():
+    """A value rendered as 9.67e-1 must match 0.967 within tolerance."""
+    markers = [MarkerStub(marker="RESULT-3", metric_name="model_accuracy",
+                          observed_value=0.967)]
+    paper = "Accuracy was 9.67e-1 [RESULT-3], measured on the test set."
+    mismatches = validate_claim_result_alignment(paper, markers)
+    numeric = [m for m in mismatches if m.section == "numeric_fidelity"]
+    assert numeric == [], f"Scientific notation should match. Got: {numeric}"
+
+
+def test_number_after_marker_leading_dot_passes():
+    """A leading-dot value after the marker must also match."""
+    markers = [MarkerStub(marker="RESULT-1", metric_name="baseline_accuracy",
+                          observed_value=0.333333, role="baseline")]
+    paper = "The baseline [RESULT-1] was .333333 on the Iris dataset."
+    mismatches = validate_claim_result_alignment(paper, markers)
+    numeric = [m for m in mismatches if m.section == "numeric_fidelity"]
+    assert numeric == [], f"Leading-dot after marker should match. Got: {numeric}"

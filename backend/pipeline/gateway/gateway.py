@@ -189,7 +189,7 @@ class LLMGateway:
                     stage=request.stage or request.task or "",
                     run_id=request.run_id,
                 )
-                self._budget_authority.reserve(budget_projection)
+                _reservation_id = self._budget_authority.reserve(budget_projection)
 
             # 0. SmartRouter routing (if enabled)
             routing_decision = None
@@ -348,7 +348,7 @@ class LLMGateway:
                 actual_cost = self._budget_authority.cost_for_tokens(
                     response.input_tokens, response.output_tokens,
                 )
-                self._budget_authority.reconcile(actual_cost)
+                self._budget_authority.reconcile(_reservation_id, actual_cost)
 
             return response
 
@@ -361,7 +361,7 @@ class LLMGateway:
             # Provider/transport failure: release the outstanding reservation
             # so the budget authority does not hold a phantom reservation.
             if self._budget_authority is not None:
-                self._budget_authority.release()
+                self._budget_authority.release(_reservation_id)
             error = str(e)[:200]
             elapsed_ms = (time.monotonic() - t0) * 1000
             logger.error("Gateway call failed for task '%s': %s", request.task, error)

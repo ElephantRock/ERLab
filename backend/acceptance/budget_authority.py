@@ -34,6 +34,7 @@ a plain Exception there would be swallowed and the call would proceed.
 from __future__ import annotations
 
 import threading
+import uuid
 from dataclasses import dataclass
 
 from backend.pipeline.gateway.token_budget import PromptTooLargeError
@@ -166,7 +167,7 @@ class BudgetAuthority:
         self._denied = 0
         self._overshoot = 0.0
         self._reconciled = True
-        self._reservation_stack: list[float] = []
+        self._reservations: dict[str, float] = {}
         self._lock = threading.Lock()
 
     @property
@@ -227,10 +228,12 @@ class BudgetAuthority:
             max_output_tokens=max_output_tokens,
         )
 
-    def reserve(self, projection: CallProjection) -> None:
+    def reserve(self, projection: CallProjection) -> str:
         """Reserve the conservative maximum cost before a call.
 
-        Raises BudgetReservationDeniedError if the reservation would overshoot
+        Returns a reservation ID that must be passed to ``reconcile`` or
+        ``release`` for this specific call. Raises
+        BudgetReservationDeniedError if the reservation would overshoot
         the ceiling. On denial the call MUST NOT proceed and MUST NOT retry.
         """
         with self._lock:
@@ -242,18 +245,20 @@ class BudgetAuthority:
                     f"reserved={self._reserved:.8f} projected_call={projection.max_cost_usd:.8f} "
                     f"ceiling={self._ceiling:.8f}"
                 )
+            reservation_id = uuid.uuid4().hex
+            self._reservations[reservation_id] = projection.max_cost_usd
             self._reserved += projection.max_cost_usd
-            self._reservation_stack.append(projection.max_cost_usd)
+            return reservation_id
 
-    def reconcile(self, actual_cost_usd: float) -> None:
-        """Reconcile a reservation with actual usage after the call.
+    def reconcile(self, reservation_id: str, actual_cost_usd: float) -> None:
+        """Reconcile a specific reservation with actual usage after the call.
 
-        Releases the unused portion of the most recent reservation. If
+        Releases the unused portion of the identified reservation. If
         actual committed cost exceeds the ceiling (an overshoot), records
         it and (in strict mode) marks the authority unreconciled.
         """
         with self._lock:
-            reserved_amt = self._reservation_stack.pop() if self._reservation_stack else 0.0
+            reserved_amt = self._reservations.pop(reservation_id, 0.0)
             self._reserved = max(0.0, self._reserved - reserved_amt)
             self._committed += actual_cost_usd
             if self._committed > self._ceiling + 1e-9:
@@ -261,10 +266,10 @@ class BudgetAuthority:
                 if self._strict:
                     self._reconciled = False
 
-    def release(self) -> None:
-        """Release the most recent outstanding reservation (e.g. on exception)."""
+    def release(self, reservation_id: str) -> None:
+        """Release a specific outstanding reservation (e.g. on exception)."""
         with self._lock:
-            reserved_amt = self._reservation_stack.pop() if self._reservation_stack else 0.0
+            reserved_amt = self._reservations.pop(reservation_id, 0.0)
             self._reserved = max(0.0, self._reserved - reserved_amt)
 
     def snapshot(self) -> BudgetEnforcementSnapshot:

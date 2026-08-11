@@ -308,9 +308,10 @@ async def run_confirmatory(
         )
 
     # ── 4. Construct orchestrator with effective settings ──
+    _strategy = config.strategy or "deep_research"
     if orchestrator_factory is None:
         from backend.pipeline.orchestrator import PipelineOrchestrator
-        orchestrator = PipelineOrchestrator(strategy="deep_research", settings=effective_settings)
+        orchestrator = PipelineOrchestrator(strategy=_strategy, settings=effective_settings)
     else:
         orchestrator = orchestrator_factory(settings=effective_settings)
 

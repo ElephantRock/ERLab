@@ -338,6 +338,13 @@ def _check_citation_integrity(
     # Every [SOURCE-N] marker in the paper must be mapped.
     markers = source_markers_in_paper(paper_view.paper_markdown)
     mapped = mapped_source_indices(paper_view.source_map)
+    # A paper with zero citation markers has no literature grounding.
+    if not markers:
+        return False, "no_source_markers_in_paper"
+    # A source map with zero mapped sources means citations were not
+    # resolved to any literature.
+    if not mapped:
+        return False, "no_mapped_sources"
     unmapped_in_paper = markers - mapped
     if unmapped_in_paper:
         return False, f"unmapped_source_markers:{sorted(unmapped_in_paper)}"

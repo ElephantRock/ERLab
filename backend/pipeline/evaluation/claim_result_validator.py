@@ -86,14 +86,17 @@ def _infer_claim_subject(claim_text: str) -> str:
 #   [RESULT-3] of 0.966667   (number after the marker)
 # A marker with no adjacent number is referential prose and is skipped.
 
-# Number before the marker: digits with optional decimal point, optional
-# trailing markdown emphasis (** or *), optional '%'.
+# Number before the marker: handles integers, decimals (0.966667), leading-dot
+# decimals (.966667), scientific notation (9.67e-1), and optional sign.
+# Tolerates trailing markdown emphasis (** or *), optional '%'.
 _NUM_BEFORE_RE = re.compile(
-    r'(?P<num>\d+\.?\d*)\s*%?\s*(?:\*\*|\*)?\s*\[RESULT-\d+\]'
+    r'(?P<num>[-+]?(?:\d+\.?\d*|\.\d+)(?:[eE][-+]?\d+)?)'
+    r'\s*%?\s*(?:\*\*|\*)?\s*\[RESULT-\d+\]'
 )
 # Number after the marker: [RESULT-N] then optional prose-joiner then number.
 _NUM_AFTER_RE = re.compile(
-    r'\[RESULT-\d+\]\s*(?:of|=|:)?\s*(?P<num>\d+\.?\d*)\s*%?'
+    r'\[RESULT-\d+\]\s*(?:of|=|:)?\s*'
+    r'(?P<num>[-+]?(?:\d+\.?\d*|\.\d+)(?:[eE][-+]?\d+)?)\s*%?'
 )
 
 
@@ -119,7 +122,8 @@ def _extract_adjacent_numbers(paper_md: str, bracket_marker: str) -> list[float]
 
     # Numbers appearing immediately after this specific marker.
     after_pattern = re.compile(
-        r'\[RESULT-' + str(marker_index) + r'\]\s*(?:of|=|:)?\s*(?P<num>\d+\.?\d*)\s*%?'
+        r'\[RESULT-' + str(marker_index) + r'\]\s*(?:of|=|:)?\s*'
+        r'(?P<num>[-+]?(?:\d+\.?\d*|\.\d+)(?:[eE][-+]?\d+)?)\s*%?'
     )
     for m in after_pattern.finditer(paper_md):
         with contextlib.suppress(ValueError):

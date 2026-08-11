@@ -118,8 +118,8 @@ class TestPositiveIntegratedRehearsal:
                                price_per_1k_output=1.5)
         for _ in range(3):
             proj = auth.project_call(max_input_tokens=100, max_output_tokens=50)
-            auth.reserve(proj)
-            auth.reconcile(auth.cost_for_tokens(60, 40))
+            rid = auth.reserve(proj)
+            auth.reconcile(rid, auth.cost_for_tokens(60, 40))
         report = evaluate_gates(
             case, result, restart_recovery_ok=True,
             accounting_ok=(auth.snapshot().reconciled and auth.snapshot().overshoot_usd == 0.0),
@@ -134,8 +134,8 @@ class TestPositiveIntegratedRehearsal:
                                price_per_1k_output=1.5)
         for _ in range(3):
             proj = auth.project_call(max_input_tokens=100, max_output_tokens=50)
-            auth.reserve(proj)
-            auth.reconcile(auth.cost_for_tokens(60, 40))
+            rid = auth.reserve(proj)
+            auth.reconcile(rid, auth.cost_for_tokens(60, 40))
         snap = auth.snapshot()
         assert snap.overshoot_usd == 0.0
         assert snap.reconciled is True
@@ -156,8 +156,8 @@ class TestBudgetNegativeControls:
         auth = BudgetAuthority(ceiling_usd=0.03, price_per_1k_input=0.5,
                                price_per_1k_output=1.5)
         # First call fits.
-        auth.reserve(auth.project_call(max_input_tokens=10, max_output_tokens=10))
-        auth.reconcile(auth.cost_for_tokens(6, 4))
+        rid = auth.reserve(auth.project_call(max_input_tokens=10, max_output_tokens=10))
+        auth.reconcile(rid, auth.cost_for_tokens(6, 4))
         # Second call: remaining budget too small for the projection.
         with pytest.raises(BudgetReservationDeniedError):
             auth.reserve(auth.project_call(max_input_tokens=100, max_output_tokens=50))
@@ -175,18 +175,18 @@ class TestBudgetNegativeControls:
     def test_reservation_released_after_exception(self):
         auth = BudgetAuthority(ceiling_usd=1.0, price_per_1k_input=0.5,
                                price_per_1k_output=1.5)
-        auth.reserve(auth.project_call(max_input_tokens=100, max_output_tokens=50))
+        rid = auth.reserve(auth.project_call(max_input_tokens=100, max_output_tokens=50))
         assert auth.reserved_usd() > 0.0
-        auth.release()  # simulate provider exception
+        auth.release(rid)  # simulate provider exception
         assert auth.reserved_usd() == pytest.approx(0.0)
         assert auth.committed_usd() == pytest.approx(0.0)
 
     def test_actual_usage_exceeding_reservation_marks_unreconciled(self):
         auth = BudgetAuthority(ceiling_usd=0.05, price_per_1k_input=0.5,
                                price_per_1k_output=1.5, strict=True)
-        auth.reserve(auth.project_call(max_input_tokens=10, max_output_tokens=10))
+        rid = auth.reserve(auth.project_call(max_input_tokens=10, max_output_tokens=10))
         # Actual usage far exceeds both the reservation and the ceiling.
-        auth.reconcile(actual_cost_usd=0.10)
+        auth.reconcile(rid, actual_cost_usd=0.10)
         snap = auth.snapshot()
         assert snap.overshoot_usd > 0.0
         assert snap.reconciled is False
@@ -236,7 +236,7 @@ class TestAccountingGate:
         result = _passing_result(tmp_path)
         auth = BudgetAuthority(ceiling_usd=0.01, price_per_1k_input=0.5,
                                price_per_1k_output=1.5)
-        auth.reconcile(0.10)  # overshoot
+        auth.reconcile("overshoot-test", 0.10)  # overshoot with explicit ID
         snap = auth.snapshot()
         accounting_ok = snap.reconciled and snap.overshoot_usd == 0.0
         report = evaluate_gates(case, result, accounting_ok=accounting_ok,

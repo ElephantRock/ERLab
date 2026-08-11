@@ -60,7 +60,7 @@ class TestRefusalMatrix:
 
     def test_exactly_at_ceiling_denies(self):
         auth = BudgetAuthority(ceiling_usd=0.10)
-        auth.reconcile(0.10)  # commit the full ceiling
+        auth.reconcile("seed", 0.10)  # commit the full ceiling
         with pytest.raises(BudgetReservationDeniedError):
             auth.reserve(CallProjection(max_cost_usd=0.01))
 
@@ -71,7 +71,7 @@ class TestRefusalMatrix:
 
     def test_remaining_budget_smaller_than_projected_denies(self):
         auth = BudgetAuthority(ceiling_usd=0.10)
-        auth.reconcile(0.08)  # 0.02 remaining
+        auth.reconcile("seed", 0.08)  # 0.02 remaining
         with pytest.raises(BudgetReservationDeniedError):
             auth.reserve(CallProjection(max_cost_usd=0.05))
 
@@ -91,36 +91,36 @@ class TestRefusalMatrix:
 class TestReservationLifecycle:
     def test_reconcile_releases_unused_and_commits_actual(self):
         auth = BudgetAuthority(ceiling_usd=1.0)
-        auth.reserve(CallProjection(max_cost_usd=0.10))
+        rid = auth.reserve(CallProjection(max_cost_usd=0.10))
         assert auth.reserved_usd() == pytest.approx(0.10)
-        auth.reconcile(actual_cost_usd=0.03)
+        auth.reconcile(rid, actual_cost_usd=0.03)
         assert auth.reserved_usd() == pytest.approx(0.0)
         assert auth.committed_usd() == pytest.approx(0.03)
 
     def test_release_on_exception_frees_reservation(self):
         auth = BudgetAuthority(ceiling_usd=1.0)
-        auth.reserve(CallProjection(max_cost_usd=0.10))
-        auth.release()
+        rid = auth.reserve(CallProjection(max_cost_usd=0.10))
+        auth.release(rid)
         assert auth.reserved_usd() == pytest.approx(0.0)
         assert auth.committed_usd() == pytest.approx(0.0)
 
     def test_overshoot_detected_on_reconcile(self):
         auth = BudgetAuthority(ceiling_usd=0.10, strict=True)
-        auth.reserve(CallProjection(max_cost_usd=0.10))
+        rid = auth.reserve(CallProjection(max_cost_usd=0.10))
         # Actual usage exceeded the reservation.
-        auth.reconcile(actual_cost_usd=0.15)
+        auth.reconcile(rid, actual_cost_usd=0.15)
         snap = auth.snapshot()
         assert snap.overshoot_usd > 0.0
         assert snap.reconciled is False
 
     def test_multiple_sequential_reservations(self):
         auth = BudgetAuthority(ceiling_usd=0.30)
-        auth.reserve(CallProjection(max_cost_usd=0.10))
-        auth.reconcile(0.08)
-        auth.reserve(CallProjection(max_cost_usd=0.10))
-        auth.reconcile(0.09)
-        auth.reserve(CallProjection(max_cost_usd=0.10))
-        auth.reconcile(0.07)
+        r1 = auth.reserve(CallProjection(max_cost_usd=0.10))
+        auth.reconcile(r1, 0.08)
+        r2 = auth.reserve(CallProjection(max_cost_usd=0.10))
+        auth.reconcile(r2, 0.09)
+        r3 = auth.reserve(CallProjection(max_cost_usd=0.10))
+        auth.reconcile(r3, 0.07)
         snap = auth.snapshot()
         assert snap.committed_usd == pytest.approx(0.24)
         assert snap.reconciled is True
@@ -185,9 +185,9 @@ class TestProviderSpyProof:
         auth = BudgetAuthority(ceiling_usd=0.03)
 
         # First call fits.
-        auth.reserve(CallProjection(max_cost_usd=0.02))
+        rid1 = auth.reserve(CallProjection(max_cost_usd=0.02))
         _run(provider.structured_output_with_usage([], {}, stage="gap_analysis"))
-        auth.reconcile(actual_cost_usd=0.02)
+        auth.reconcile(rid1, actual_cost_usd=0.02)
         assert provider.calls == 1
 
         # Second call denied (only 0.01 remains, call projects 0.02).

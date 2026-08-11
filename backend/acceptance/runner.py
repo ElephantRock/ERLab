@@ -353,15 +353,35 @@ async def run_acceptance(
         execution_error = f"{type(e).__name__}: {str(e)[:300]}"
 
     # ── Restart recovery ──
-    restart_ok = True
-    if case.execution.require_restart_recovery and restart_recovery_check is not None:
-        try:
-            restart_ok = bool(restart_recovery_check(rid))
-        except Exception as e:  # noqa: BLE001
+    # Fail-closed: when the case requires restart recovery but no callback
+    # is supplied, the gate must FAIL rather than silently passing. This
+    # prevents a required recovery check from being skipped.
+    restart_ok: bool | None = None
+    if case.execution.require_restart_recovery:
+        if restart_recovery_check is None:
             restart_ok = False
-            execution_error = f"{execution_error}; restart_check_error: {e}".strip("; ")
+            execution_error = (
+                f"{execution_error};"
+                " restart_recovery_required_but_no_callback"
+            ).strip("; ")
+        else:
+            try:
+                restart_ok = bool(restart_recovery_check(rid))
+            except Exception as e:  # noqa: BLE001
+                restart_ok = False
+                execution_error = f"{execution_error}; restart_check_error: {e}".strip("; ")
 
     # ── Verdict ──
+    # Extract the raw PipelineResult from the summary dict so both the
+    # verdict evaluator and the evidence writer receive the real result.
+    pipeline_result: Any = None
+    if result is not None:
+        pipeline_result = (
+            result.get("_pipeline_result", result)
+            if isinstance(result, dict)
+            else result
+        )
+
     if result is None:
         # Execution failed before producing a result.
         report = VerdictReport(
@@ -372,21 +392,21 @@ async def run_acceptance(
             exit_code=1,
         )
     else:
-        # evaluate_gates reads PipelineResult attributes (.outcome,
-        # .stage_report, .proposals, .gaps). run_confirmatory returns a
-        # summary dict; the raw PipelineResult is stashed under the
-        # reserved "_pipeline_result" key for gate evaluation.
-        pipeline_result = (
-            result.get("_pipeline_result", result)
-            if isinstance(result, dict)
-            else result
-        )
+        # Derive accounting_ok from the budget authority if supplied;
+        # fail-closed (None) when no authority was wired, so the
+        # accounting gate does not silently pass on unverified budgets.
+        if budget_authority is not None and hasattr(budget_authority, "snapshot"):
+            snap = budget_authority.snapshot()
+            accounting_ok = snap.reconciled and snap.overshoot_usd == 0.0
+        else:
+            accounting_ok = None  # gate records as not_applicable if inactive
+
         report = evaluate_gates(
             case, pipeline_result, attempt_id=rid,
             code_origin_ok=True,  # preflight already enforced this
             identity_isolation_ok=True,
             restart_recovery_ok=restart_ok,
-            accounting_ok=True,  # the spine reconciles accounting; refine later
+            accounting_ok=accounting_ok,
         )
 
     # Attach execution error detail if present.
@@ -403,5 +423,6 @@ async def run_acceptance(
         extra_files["budget_enforcement.json"] = budget_authority.snapshot().to_dict()
 
     write_evidence(evidence_dir, case, report, preflight.code_origin,
-                   result=result, extra_files=extra_files)
+                   result=pipeline_result if result is not None else None,
+                   extra_files=extra_files)
     return report, evidence_dir
