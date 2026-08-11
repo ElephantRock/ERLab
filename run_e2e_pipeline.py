@@ -68,6 +68,8 @@ class ConfirmatoryConfig:
     max_gaps: int | None = None
     export_format: str | None = None
     experiment_spec_id: str | None = None
+    corpus_manifest_path: str | None = None
+    corpus_manifest_sha256: str | None = None
 
     def summary(self) -> dict:
         """Credential-free machine-readable summary."""
@@ -235,6 +237,7 @@ async def run_confirmatory(
     session_manager: Any = None,
     run_service: Any = None,
     cost_tracker: Any = None,
+    budget_authority: Any = None,
 ) -> dict:
     """Execute the confirmatory pipeline with identity binding and verification.
 
@@ -334,6 +337,15 @@ async def run_confirmatory(
             f"orchestrator session store"
         )
 
+    # ── 4c. Wire budget authority into the gateway ──
+    # The authority must govern provider spend through the gateway's
+    # pre-call reservation mechanism. Without this wiring, a supplied
+    # authority would snapshot as clean without ever governing a call.
+    if budget_authority is not None:
+        _gateway = getattr(orchestrator, "_gateway", None)
+        if _gateway is not None and hasattr(_gateway, "set_budget_authority"):
+            _gateway.set_budget_authority(budget_authority)
+
     # ── 5. Execute pipeline with explicit identities ──
     # Resolve parameters: case overrides take precedence over frozen defaults.
     _gen_rounds = config.generation_rounds or FROZEN_PARAMS["generation_rounds"]
@@ -429,6 +441,10 @@ async def run_confirmatory(
         # (evaluate_gates reads .outcome, .stage_report, .proposals, etc.).
         # Existing callers that only access summary dict keys are unaffected.
         "_pipeline_result": result,
+        # Corpus manifest identity: when a frozen corpus was declared,
+        # its SHA-256 is included so post-execution verification can
+        # confirm the run was bound to the declared corpus content.
+        "corpus_manifest_sha256": config.corpus_manifest_sha256,
     }
 
 

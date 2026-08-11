@@ -411,6 +411,13 @@ async def run_acceptance(
     # ── Execution (delegated to the existing confirmatory spine) ──
     import run_e2e_pipeline as spine  # type: ignore
 
+    # Compute corpus manifest hash for execution-bound identity.
+    _corpus_sha = None
+    if case.corpus_manifest_path:
+        _corpus_p = Path(case.corpus_manifest_path).resolve()
+        if _corpus_p.is_file():
+            _corpus_sha = hashlib.sha256(_corpus_p.read_bytes()).hexdigest()
+
     rid = run_id or f"accept_{case.case_id}_{time.strftime('%Y%m%d_%H%M%S')}"
     sid = session_id or f"session_{case.case_id}_{time.strftime('%Y%m%d_%H%M%S')}"
     config = spine.ConfirmatoryConfig(
@@ -423,6 +430,8 @@ async def run_acceptance(
         ideas_per_round=case.generation_parameters.ideas_per_round,
         max_gaps=case.generation_parameters.max_gaps,
         export_format=case.generation_parameters.export_format,
+        corpus_manifest_path=case.corpus_manifest_path,
+        corpus_manifest_sha256=_corpus_sha,
     )
 
     result = None
@@ -430,6 +439,7 @@ async def run_acceptance(
     try:
         result = await spine.run_confirmatory(
             config, orchestrator_factory=orchestrator_factory,
+            budget_authority=budget_authority,
         )
     except Exception as e:  # noqa: BLE001 — classify, don't crash
         execution_error = f"{type(e).__name__}: {str(e)[:300]}"
