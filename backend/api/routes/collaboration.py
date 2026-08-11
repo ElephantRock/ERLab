@@ -2,7 +2,6 @@
 
 import json
 import secrets
-from datetime import datetime, timezone
 
 from fastapi import APIRouter
 from pydantic import BaseModel, Field
@@ -83,9 +82,10 @@ async def list_comments(idea_id: int):
     Returns:
         {"comments": [...], "total": 5}
     """
+    from sqlalchemy import func, select
+
     from backend.db.database import get_session
     from backend.db.models import Comment
-    from sqlalchemy import select, func
 
     with get_session() as session:
         comments = (
@@ -175,9 +175,10 @@ async def get_shared_idea(token: str):
     Returns:
         {"idea": {...}} with full idea details (read-only, no proposal).
     """
-    from backend.db.database import get_session
-    from backend.db.models import SharedIdea, Idea
     from sqlalchemy import select
+
+    from backend.db.database import get_session
+    from backend.db.models import Idea, SharedIdea
 
     with get_session() as session:
         shared = session.execute(

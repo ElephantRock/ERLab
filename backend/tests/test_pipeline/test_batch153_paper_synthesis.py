@@ -9,10 +9,8 @@ Uses asyncio.run() (NOT @pytest.mark.asyncio) — pytest.ini has -p no:asyncio.
 from __future__ import annotations
 
 import asyncio
-import json
 import re
 import sys
-from dataclasses import dataclass
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -21,24 +19,20 @@ import pytest
 sys.modules.setdefault("chromadb", MagicMock())
 sys.modules.setdefault("google.generativeai", MagicMock())
 
+from backend.pipeline.export.venue_templates import (
+    IEEE_TEMPLATE,
+    VENUE_TEMPLATES,
+)
+from backend.pipeline.orchestrator import PipelineOrchestrator
 from backend.pipeline.stages import PaperSynthesisStage, StageContext
+from backend.pipeline.strategies.models import PipelineStrategy, StageConfig
+from backend.pipeline.strategies.presets import register_presets
+from backend.pipeline.strategies.registry import StrategyRegistry
 from backend.pipeline.synthesis.paper_synthesizer import (
     PaperSynthesisResult,
     PaperSynthesizer,
 )
-from backend.pipeline.export.venue_templates import (
-    ACM_TEMPLATE,
-    GENERIC_TEMPLATE,
-    IEEE_TEMPLATE,
-    NEURIPS_TEMPLATE,
-    VENUE_TEMPLATES,
-    get_venue_template,
-)
 from backend.pipeline.synthesis.proposal_synthesizer import ResearchProposal
-from backend.pipeline.orchestrator import PipelineOrchestrator
-from backend.pipeline.strategies.models import PipelineStrategy, StageConfig
-from backend.pipeline.strategies.presets import register_presets
-from backend.pipeline.strategies.registry import StrategyRegistry
 
 
 class FakeProvider:
@@ -411,6 +405,7 @@ class TestLatexExporter:
         with patch("backend.pipeline.persistence.PipelinePersistence",
                    return_value=mock_persistence):
             from fastapi import FastAPI
+
             from backend.api.routes.export import router
 
             app = FastAPI()
@@ -444,6 +439,7 @@ class TestLatexExporter:
         with patch("backend.pipeline.persistence.PipelinePersistence",
                    return_value=mock_persistence):
             from fastapi import FastAPI
+
             from backend.api.routes.export import router
 
             app = FastAPI()

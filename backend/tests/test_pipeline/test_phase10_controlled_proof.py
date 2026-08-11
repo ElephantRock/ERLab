@@ -16,21 +16,20 @@ from __future__ import annotations
 
 import hashlib
 import json
-import pytest
 from pathlib import Path
-from types import SimpleNamespace
-from unittest.mock import MagicMock
 
-from backend.pipeline.evaluation.paper_sections import (
-    parse_paper, assemble_paper, verify_byte_identical,
-)
 from backend.pipeline.evaluation.claim_repair import derive_repair_findings
-from backend.pipeline.evaluation.targeted_remediator import (
-    TargetedRevisionDirective, validate_targeted_revision,
-    _parse_replacement_response,
+from backend.pipeline.evaluation.paper_sections import (
+    assemble_paper,
+    parse_paper,
+    verify_byte_identical,
 )
 from backend.pipeline.evaluation.revision_directive import EvidenceInvariant
-
+from backend.pipeline.evaluation.targeted_remediator import (
+    TargetedRevisionDirective,
+    _parse_replacement_response,
+    validate_targeted_revision,
+)
 
 # ── Fixtures ────────────────────────────────────────────────────────
 
@@ -301,6 +300,7 @@ class TestIntegrityAndPersistence:
     def test_19_no_experiment_functions_called(self):
         """21. No experiment, retrieval, idea, or proposal function is called."""
         import inspect
+
         from backend.pipeline.evaluation.targeted_remediator import auto_repair_paper_sections
         source = inspect.getsource(auto_repair_paper_sections)
         assert "execute_experiment" not in source
@@ -317,6 +317,7 @@ class TestIntegrityAndPersistence:
     def test_21_one_attempt_enforced(self):
         """10. Only one targeted attempt is allowed."""
         import inspect
+
         from backend.pipeline.evaluation.targeted_remediator import auto_repair_paper_sections
         source = inspect.getsource(auto_repair_paper_sections)
         assert "max_provider_calls" in source
@@ -330,7 +331,6 @@ class TestIntegrityAndPersistence:
 
     def test_23_directive_immutable(self):
         """TargetedRevisionDirective is immutable."""
-        from backend.pipeline.evaluation.targeted_remediator import TargetedRevisionDirective
         try:
             d = TargetedRevisionDirective(
                 original_paper_hash="x", allowed_sections=("abstract",),

@@ -2,15 +2,14 @@
 
 from __future__ import annotations
 
-import json
 import logging
 
-from backend.providers.base import LLMProvider
 from backend.pipeline.compaction.prompts import (
     CRITIQUE_SUMMARY_PROMPT,
     GAP_SUMMARY_PROMPT,
     REPORT_SUMMARY_PROMPT,
 )
+from backend.providers.base import LLMProvider
 
 logger = logging.getLogger(__name__)
 

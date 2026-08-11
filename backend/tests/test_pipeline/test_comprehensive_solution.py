@@ -11,8 +11,6 @@ Tests verify BEHAVIOR not structure — they check that:
 Phase F: Comprehensive Solution Design v2
 """
 import asyncio
-import json
-import pytest
 
 # ── Phase A: Dead Stage Fixes ──────────────────────────────────
 
@@ -50,8 +48,9 @@ class TestTrimmerFix:
 
     def test_trimmer_handles_pydantic_objects(self):
         """TrimmerStage should not crash on Pydantic paper objects."""
-        from backend.pipeline.dag.trimmer import TrimmerStage
         from unittest.mock import MagicMock
+
+        from backend.pipeline.dag.trimmer import TrimmerStage
 
         stage = TrimmerStage(top_k=5)
         ctx = MagicMock()
@@ -72,8 +71,9 @@ class TestAdversarialFix:
 
     def test_different_providers_allowed(self):
         """Different endpoints should NOT trigger self-play skip."""
-        from backend.pipeline.stages import AdversarialReviewStage
         from unittest.mock import MagicMock
+
+        from backend.pipeline.stages import AdversarialReviewStage
 
         thinking = MagicMock()
         thinking.base_url = "http://100.64.0.1:1234"
@@ -96,8 +96,9 @@ class TestAdversarialFix:
 
     def test_same_endpoint_skipped(self):
         """Same endpoint AND same model SHOULD trigger self-play skip."""
-        from backend.pipeline.stages import AdversarialReviewStage
         from unittest.mock import MagicMock
+
+        from backend.pipeline.stages import AdversarialReviewStage
 
         provider = MagicMock()
         provider.base_url = "http://100.64.0.1:1234"
@@ -131,8 +132,10 @@ class TestNoveltyModels:
 
     def test_full_profile(self):
         from backend.pipeline.novelty.models import (
-            NoveltyProfile, DownstreamDirectives, StrategicDirection,
-            AxisAssessment, AxisType, build_directives,
+            AxisAssessment,
+            AxisType,
+            NoveltyProfile,
+            StrategicDirection,
         )
         profile = NoveltyProfile(
             idea_id="test-1",
@@ -145,7 +148,8 @@ class TestNoveltyModels:
 
     def test_unverifiable_profile(self):
         from backend.pipeline.novelty.models import (
-            NoveltyProfile, StrategicDirection,
+            NoveltyProfile,
+            StrategicDirection,
         )
         profile = NoveltyProfile(
             idea_id="test-2",
@@ -158,7 +162,9 @@ class TestNoveltyModels:
 
     def test_all_strategic_directions_produce_directives(self):
         from backend.pipeline.novelty.models import (
-            NoveltyProfile, StrategicDirection, build_directives,
+            NoveltyProfile,
+            StrategicDirection,
+            build_directives,
         )
         for d in StrategicDirection:
             profile = NoveltyProfile(idea_id="t", strategic_direction=d)
@@ -169,7 +175,9 @@ class TestNoveltyModels:
 
     def test_methodological_weights_normalized(self):
         from backend.pipeline.novelty.models import (
-            NoveltyProfile, StrategicDirection, build_directives,
+            NoveltyProfile,
+            StrategicDirection,
+            build_directives,
         )
         dd = build_directives(NoveltyProfile(
             idea_id="t", strategic_direction=StrategicDirection.METHODOLOGICAL_INNOVATION,
@@ -179,7 +187,10 @@ class TestNoveltyModels:
 
     def test_directives_require_prior_work_citations(self):
         from backend.pipeline.novelty.models import (
-            NoveltyProfile, PriorWorkMatch, StrategicDirection, build_directives,
+            NoveltyProfile,
+            PriorWorkMatch,
+            StrategicDirection,
+            build_directives,
         )
         profile = NoveltyProfile(
             idea_id="t",
@@ -198,9 +209,10 @@ class TestFeasibilityWeightOverrides:
     """FeasibilityScorer accepts and applies weight overrides."""
 
     def test_score_feasibility_with_overrides(self):
+        from unittest.mock import AsyncMock
+
         from backend.pipeline.feasibility.feasibility_scorer import FeasibilityScorer
         from backend.pipeline.generation.models import ResearchIdea
-        from unittest.mock import AsyncMock
 
         provider = AsyncMock()
         provider.structured_output.return_value = {
@@ -330,8 +342,9 @@ class TestRecordingProvider:
     """RecordingProvider captures LLM calls for functional testing."""
 
     def test_recording_provider_records_calls(self):
-        from backend.tests.test_pipeline.recording_provider import RecordingProvider
         from unittest.mock import AsyncMock
+
+        from backend.tests.test_pipeline.recording_provider import RecordingProvider
 
         inner = AsyncMock()
         inner.complete.return_value = "Test response"
@@ -349,10 +362,12 @@ class TestRecordingProvider:
         assert result2 == {"score": 0.8}
 
     def test_assert_call_counts(self):
-        from backend.tests.test_pipeline.recording_provider import (
-            RecordingProvider, assert_call_counts,
-        )
         from unittest.mock import AsyncMock
+
+        from backend.tests.test_pipeline.recording_provider import (
+            RecordingProvider,
+            assert_call_counts,
+        )
 
         inner = AsyncMock()
         inner.complete.return_value = "ok"
@@ -369,8 +384,9 @@ class TestRecordingProvider:
         assert len(violations) > 0
 
     def test_recording_provider_properties(self):
-        from backend.tests.test_pipeline.recording_provider import RecordingProvider
         from unittest.mock import MagicMock
+
+        from backend.tests.test_pipeline.recording_provider import RecordingProvider
 
         inner = MagicMock()
         inner.provider_name = "test_provider"

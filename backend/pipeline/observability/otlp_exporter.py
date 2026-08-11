@@ -8,7 +8,6 @@ Feature-flagged: only imported when EROCK_OBSERVABILITY_OTLP_ENABLED=true.
 from __future__ import annotations
 
 import logging
-from typing import Any
 
 from backend.pipeline.tracing.processor import TracingProcessor
 from backend.pipeline.tracing.spans import Span
@@ -17,9 +16,9 @@ logger = logging.getLogger(__name__)
 
 try:
     from opentelemetry import trace
+    from opentelemetry.sdk.resources import Resource
     from opentelemetry.sdk.trace import TracerProvider
     from opentelemetry.sdk.trace.export import BatchSpanProcessor
-    from opentelemetry.sdk.resources import Resource
     _OTEL_AVAILABLE = True
 except ImportError:
     _OTEL_AVAILABLE = False

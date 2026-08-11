@@ -13,8 +13,8 @@ from __future__ import annotations
 import json
 from types import SimpleNamespace
 
-from backend.pipeline.persistence import _extract_paper_artifact
 from backend.api.routes.ideas import _serialize_paper_state
+from backend.pipeline.persistence import _extract_paper_artifact
 
 
 def _proposal_with_paper(paper_md=None, meta=None, full_paper_key_present=True):

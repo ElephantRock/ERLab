@@ -9,8 +9,9 @@ Validates:
 - Grounded stages remain excluded
 - Invalid feasibility scores are handled
 """
-import pytest
 from unittest.mock import AsyncMock
+
+import pytest
 
 from backend.pipeline.gateway.gateway import LLMGateway, LLMRequest
 
@@ -18,9 +19,9 @@ from backend.pipeline.gateway.gateway import LLMGateway, LLMRequest
 def _make_gateway(enforced_stages=None, mode="enforce"):
     from backend.pipeline.gateway.capability_registry import ModelCapabilityRegistry
     from backend.pipeline.gateway.token_budget import TokenBudgeter
-    from backend.pipeline.routing.smart_router import SmartRouter
     from backend.pipeline.routing.certified_lookup import CertifiedCapabilityLookup
     from backend.pipeline.routing.dry_run_logger import DryRunLogger
+    from backend.pipeline.routing.smart_router import SmartRouter
 
     registry = ModelCapabilityRegistry()
     budgeter = TokenBudgeter()
@@ -98,11 +99,11 @@ class TestIdeaGenerationEnforcement:
     @pytest.mark.asyncio
     async def test_idea_generation_degraded_returns_explicit(self):
         """Degraded idea_generation returns explicit degraded LLMResponse."""
-        from backend.pipeline.routing.certified_lookup import CertifiedCapabilityLookup
-        from backend.pipeline.routing.smart_router import SmartRouter
-        from backend.pipeline.routing.dry_run_logger import DryRunLogger
         from backend.pipeline.gateway.capability_registry import ModelCapabilityRegistry
         from backend.pipeline.gateway.token_budget import TokenBudgeter
+        from backend.pipeline.routing.certified_lookup import CertifiedCapabilityLookup
+        from backend.pipeline.routing.dry_run_logger import DryRunLogger
+        from backend.pipeline.routing.smart_router import SmartRouter
 
         registry = ModelCapabilityRegistry()
         budgeter = TokenBudgeter()
@@ -170,7 +171,7 @@ class TestFeasibilityScoringEnforcement:
     @pytest.mark.asyncio
     async def test_feasibility_scoring_maps_to_idea_generation_contract(self):
         """feasibility_scoring maps to idea_generation contract in routing."""
-        from backend.pipeline.routing.stage_contract import load_contracts, get_contract
+        from backend.pipeline.routing.stage_contract import get_contract, load_contracts
         contracts = load_contracts()
         # Verify feasibility_scoring maps to idea_generation
         ig_contract = get_contract("idea_generation", contracts)
@@ -180,11 +181,11 @@ class TestFeasibilityScoringEnforcement:
     @pytest.mark.asyncio
     async def test_feasibility_scoring_degraded_returns_explicit(self):
         """Degraded feasibility_scoring returns explicit degraded LLMResponse."""
-        from backend.pipeline.routing.certified_lookup import CertifiedCapabilityLookup
-        from backend.pipeline.routing.smart_router import SmartRouter
-        from backend.pipeline.routing.dry_run_logger import DryRunLogger
         from backend.pipeline.gateway.capability_registry import ModelCapabilityRegistry
         from backend.pipeline.gateway.token_budget import TokenBudgeter
+        from backend.pipeline.routing.certified_lookup import CertifiedCapabilityLookup
+        from backend.pipeline.routing.dry_run_logger import DryRunLogger
+        from backend.pipeline.routing.smart_router import SmartRouter
 
         registry = ModelCapabilityRegistry()
         budgeter = TokenBudgeter()
@@ -237,7 +238,7 @@ class TestPhase2RoutingContract:
 
     def test_idea_generation_has_contract(self):
         """idea_generation has a routing contract."""
-        from backend.pipeline.routing.stage_contract import load_contracts, get_contract
+        from backend.pipeline.routing.stage_contract import get_contract, load_contracts
         contracts = load_contracts()
         contract = get_contract("idea_generation", contracts)
         assert contract.risk_level == "medium"
@@ -256,7 +257,7 @@ class TestPhase2RoutingContract:
         """qwen3-4b-2507 passes all hard gates for idea_generation."""
         from backend.pipeline.routing.certified_lookup import CertifiedCapabilityLookup
         from backend.pipeline.routing.hard_gates import HardGateEngine
-        from backend.pipeline.routing.stage_contract import load_contracts, get_contract
+        from backend.pipeline.routing.stage_contract import get_contract, load_contracts
 
         lookup = CertifiedCapabilityLookup()
         engine = HardGateEngine()

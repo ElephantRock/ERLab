@@ -6,9 +6,10 @@ from __future__ import annotations
 
 import os
 import tempfile
+
 import pytest
 
-from backend.pipeline.versioning import ProposalVersionStore, ProposalVersion
+from backend.pipeline.versioning import ProposalVersion, ProposalVersionStore
 
 
 @pytest.fixture

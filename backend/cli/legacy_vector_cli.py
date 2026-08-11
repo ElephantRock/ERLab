@@ -17,17 +17,14 @@ import argparse
 import json
 import logging
 import sys
-from dataclasses import asdict
-from datetime import datetime, timezone
-from typing import Any, Literal
+from datetime import UTC, datetime
 
 from sqlalchemy import select
 from sqlalchemy.orm import sessionmaker
 
-from backend.db.database import _get_engine, get_session
+from backend.db.database import _get_engine
 from backend.pipeline.legacy_vector_inventory import (
     ChromaLegacyInventoryBackend,
-    LegacyVectorInventoryBackend,
     create_inventory_run,
     execute_reindex_targets,
     plan_reindex_targets,
@@ -51,7 +48,6 @@ class LegacyVectorMigrationReport:
     def __init__(self, session, inventory_run_id: int):
         from backend.db.models import (
             LegacyVectorInventoryRun,
-            LegacyVectorReindexTarget,
         )
         run = session.execute(
             select(LegacyVectorInventoryRun).where(
@@ -121,6 +117,7 @@ def cmd_inventory_legacy(args: argparse.Namespace) -> int:
 
     # Scan
     import chromadb
+
     from backend.config import get_settings
     settings = get_settings()
     chroma_client = chromadb.PersistentClient(path=settings.chroma_persist_dir)
@@ -131,7 +128,7 @@ def cmd_inventory_legacy(args: argparse.Namespace) -> int:
 
     # Map
     run_mapping_phase(Session, inventory_run_id=run_id)
-    print(f"Mapping complete")
+    print("Mapping complete")
 
     # Plan targets
     target_count = plan_reindex_targets(
@@ -210,6 +207,7 @@ def cmd_verify_legacy(args: argparse.Namespace) -> int:
 
     # Rescan source
     import chromadb
+
     from backend.config import get_settings
     settings = get_settings()
     chroma_client = chromadb.PersistentClient(path=settings.chroma_persist_dir)
@@ -233,7 +231,7 @@ def cmd_verify_legacy(args: argparse.Namespace) -> int:
         s.execute(
             __import__("sqlalchemy").update(LegacyVectorInventoryRun)
             .where(LegacyVectorInventoryRun.id == args.inventory_run_id)
-            .values(status="complete", completed_at=datetime.now(timezone.utc))
+            .values(status="complete", completed_at=datetime.now(UTC))
         )
         s.commit()
     finally:
@@ -291,9 +289,6 @@ def _execute_reindex(Session, run_id: int, profile_id: str) -> int:
     # provider/model/dimension identity and performs fail-closed structural
     # validation; the inline adapter did neither. Profile-derived dimension
     # drives validation; provider/model come from the runtime profile.
-    from backend.pipeline.governed_embedding_adapter import (
-        GovernedEmbeddingAdapter,
-    )
     cfg = runtime.effective_embedding_config
     profile_dict = {
         "provider": cfg.provider_kind,
@@ -333,15 +328,16 @@ def _get_profile_for_run(Session, run_id: int) -> str:
 
 
 def _mark_failed(Session, run_id: int, code: str, detail: str = "") -> None:
-    from backend.db.models import LegacyVectorInventoryRun
     from sqlalchemy import update
+
+    from backend.db.models import LegacyVectorInventoryRun
     s = Session()
     try:
         s.execute(
             update(LegacyVectorInventoryRun)
             .where(LegacyVectorInventoryRun.id == run_id)
             .values(status="failed", failure_code=code, failure_detail=detail[:500],
-                    completed_at=datetime.now(timezone.utc))
+                    completed_at=datetime.now(UTC))
         )
         s.commit()
     finally:

@@ -5,7 +5,6 @@ TEST-61-01-02: All proposals succeed → no placeholders, all real proposals
 TEST-61-01-03: Timeout value respects 300s cap from HB-01
 """
 
-import asyncio
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -68,7 +67,7 @@ class TestProposalTimeout:
         real_proposal_2 = _make_proposal("Idea 2")
         stage._synthesizer.synthesize = AsyncMock(
             side_effect=[
-                asyncio.TimeoutError(),
+                TimeoutError(),
                 real_proposal_1,
                 real_proposal_2,
             ]

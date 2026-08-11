@@ -1,0 +1,24 @@
+{
+  "schema_version": "1.0",
+  "release": "v1.0.3",
+  "algorithm": "sha256",
+  "note": "Hashes cover the four hashable dossier files. This file (artifact_hashes.json) is intentionally not hashed to avoid circularity.",
+  "artifacts": [
+    {
+      "path": "docs/releases/v1.0.3/CONFIRMATORY_E2E_CLOSEOUT.md",
+      "sha256": "fc086f453d7ae526e6127b1e6bb8a487a040df07277948d53f711549126152a7"
+    },
+    {
+      "path": "docs/releases/v1.0.3/RELEASE_VERDICT.md",
+      "sha256": "dd0a07e4d5f4fff5963b75ee69bda1758dd8880ab4c5a316427605a40a2b287a"
+    },
+    {
+      "path": "docs/releases/v1.0.3/evidence_manifest.json",
+      "sha256": "6c28dc40e09fb4409bd7bbe73366a665fbbe29479c22e05449054e010a9ebb67"
+    },
+    {
+      "path": "docs/releases/v1.0.3/known_limitations.md",
+      "sha256": "08f71fb6f9039c3bab6bc0a5cbb2b44c4c039236c032f5fe6d9021a303de1ca4"
+    }
+  ]
+}

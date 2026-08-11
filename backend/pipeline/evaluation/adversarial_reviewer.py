@@ -11,7 +11,6 @@ HB-05: All scores clamped to [1, 10].
 
 from __future__ import annotations
 
-import json
 import logging
 import re
 from dataclasses import asdict, dataclass

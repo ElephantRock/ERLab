@@ -1,8 +1,7 @@
 """BATCH-129 Tests — Cross-Paper Connection Agent."""
 
-import pytest
-from backend.pipeline.claims.models import Claim, ClaimType
 from backend.pipeline.claims.connection_agent import ConnectionAgent, PaperConnection
+from backend.pipeline.claims.models import Claim, ClaimType
 
 
 class TestConnectionAgent:

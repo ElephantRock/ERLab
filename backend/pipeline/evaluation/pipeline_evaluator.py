@@ -8,15 +8,15 @@ Reuses already-computed reports to avoid duplicate LLM calls.
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from pydantic import BaseModel
 
+from backend.pipeline.evaluation.adversarial_debate import AdversarialDebate, DebateResult
 from backend.pipeline.evaluation.cache import EvaluationCache
 from backend.pipeline.evaluation.cost import EvaluationCostRecord, EvaluationCostTracker
 from backend.pipeline.evaluation.deepeval_adapter import DeepEvalScorer
-from backend.pipeline.evaluation.adversarial_debate import AdversarialDebate, DebateResult
 from backend.pipeline.evaluation.geval import DEFAULT_RUBRICS, GEvalScorer
 from backend.pipeline.evaluation.normalizers import (
     FeasibilityScorerAdapter,
@@ -28,7 +28,6 @@ from backend.pipeline.evaluation.scorer import (
     EvaluationReport,
     ScoreDimension,
     ScoreResult,
-    WeightedCompositeScorer,
 )
 
 logger = logging.getLogger(__name__)
@@ -42,7 +41,7 @@ class UnifiedEvaluationReport(BaseModel):
     quality_gate_result: QualityGateResult | None = None
     debate_result: DebateResult | None = None
     cost: EvaluationCostRecord | None = None
-    evaluated_at: datetime = datetime.now(timezone.utc)
+    evaluated_at: datetime = datetime.now(UTC)
 
 
 class PipelineEvaluator:

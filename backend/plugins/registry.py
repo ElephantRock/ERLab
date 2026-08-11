@@ -7,7 +7,7 @@ The registry is backed by an in-memory store (can be swapped for DB later).
 from __future__ import annotations
 
 import threading
-from dataclasses import dataclass, field, asdict
+from dataclasses import asdict, dataclass, field
 
 
 @dataclass

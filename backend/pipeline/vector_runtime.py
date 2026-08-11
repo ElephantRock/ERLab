@@ -60,33 +60,43 @@ def build_governed_vector_runtime_from_settings(db_engine: Any) -> GovernedVecto
     Steps 1-4 must complete before step 5 (provider construction).
     """
     try:
+        from sqlalchemy import select
+        from sqlalchemy.orm import sessionmaker
+
         from backend.config import get_settings
         from backend.db.database import get_session
         from backend.db.models import EmbeddingProfile
         from backend.pipeline.governed_embedding_adapter import GovernedEmbeddingAdapter
         from backend.pipeline.knowledge.embedding_configuration import (
             EmbeddingAdapterCapabilitySnapshot,
+            EmbeddingConfigurationError,
             EmbeddingProfileSnapshot,
             EmbeddingRuntimeSettingsSnapshot,
             resolve_effective_embedding_configuration,
-            EmbeddingConfigurationError,
         )
-        from backend.pipeline.vector_access_policy import resolve_profile_id
-        from backend.pipeline.vector_contracts import compute_collection_name
-        from backend.pipeline.vector_backend import GovernedVectorBackend
         from backend.pipeline.knowledge.embedding_service import EmbeddingService
-        from backend.providers.provider_factory import create_provider
-        from sqlalchemy import select
-        from sqlalchemy.orm import sessionmaker
+        from backend.pipeline.vector_access_policy import resolve_profile_id
+        from backend.pipeline.vector_backend import GovernedVectorBackend
 
         app_settings = get_settings()
-        embedding = EmbeddingService(create_provider())
+
+        # Use the configured embedding dimension directly rather than probing
+        # a possibly-unreachable provider. When the embedding endpoint is down
+        # (the acceptance run's ingestion failure), create_provider() returns
+        # the LLM provider which cannot produce embeddings; its dimension probe
+        # fails and defaults to 1536, causing a profile_id mismatch against
+        # the registered profile's actual dimension.
+        configured_dimension = (
+            app_settings.embedding_dimension
+            if app_settings.embedding_dimension
+            else 1536  # safe default only when unset
+        )
 
         # ── Step 1: Snapshot runtime settings (no credentials) ──
         settings_snapshot = EmbeddingRuntimeSettingsSnapshot(
             provider_kind=app_settings.embedding_provider,
             requested_model=app_settings.embedding_model,
-            expected_dimension=embedding.dimension,
+            expected_dimension=configured_dimension,
             declared_normalization_policy="none",
             document_task=None,
             query_task=None,
@@ -99,9 +109,9 @@ def build_governed_vector_runtime_from_settings(db_engine: Any) -> GovernedVecto
         profile_id = resolve_profile_id(
             embedding_provider=app_settings.embedding_provider,
             model_identifier=app_settings.embedding_model,
-            dimension=embedding.dimension,
+            dimension=configured_dimension,
             normalization_policy="none",
-            chunking_schema_version="title_abstract_v1",
+            chunking_schema_version="chunk_v1",
         )
 
         with get_session() as session:
@@ -148,8 +158,30 @@ def build_governed_vector_runtime_from_settings(db_engine: Any) -> GovernedVecto
             return None
 
         # ── Step 5: Construct embedding provider (after reconciliation) ──
-        provider = create_provider()
-        embedding_service = EmbeddingService(provider)
+        # Use the EMBEDDING provider, not the LLM provider. create_provider()
+        # returns the LLM provider (glm-5.2 via ResilientProvider) which has
+        # complete() but not embed(). The governed adapter needs embed().
+        from backend.pipeline.knowledge.embedding_providers import (
+            create_embedding_provider,
+        )
+        _emb_base = app_settings.embedding_base_url
+        if _emb_base:
+            _emb_base = _emb_base.rstrip('/')
+            if not _emb_base.endswith('/v1'):
+                _emb_base += '/v1'
+        elif app_settings.embedding_provider == "lmstudio":
+            _emb_base = app_settings.lmstudio_base_url.rstrip('/') + '/v1'
+        else:
+            _emb_base = app_settings.ollama_base_url
+
+        embedding_provider = create_embedding_provider(
+            provider_name=app_settings.embedding_provider,
+            model=app_settings.embedding_model,
+            api_key=app_settings.openai_api_key,
+            base_url=_emb_base,
+            dimension=app_settings.embedding_dimension or None,
+        )
+        embedding_service = EmbeddingService(embedding_provider)
 
         # ── Step 6: Wrap in GovernedEmbeddingAdapter ──
         adapter = GovernedEmbeddingAdapter(

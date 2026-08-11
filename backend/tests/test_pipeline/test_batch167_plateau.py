@@ -1,6 +1,5 @@
 """BATCH-167: Error Analysis, Guard Commands & Plateau Detection."""
-import pytest
-from backend.pipeline.metacognition.plateau import PlateauDetector, GuardAction, PlateauCheck
+from backend.pipeline.metacognition.plateau import GuardAction, PlateauCheck, PlateauDetector
 
 
 class TestPlateauDetector:
@@ -63,6 +62,6 @@ class TestPlateauDetector:
         assert result.delta == 0.0
 
     def test_10_metacognition_monitor_exists(self):
-        from backend.pipeline.metacognition.monitor import SignalType, InterventionSignal
+        from backend.pipeline.metacognition.monitor import InterventionSignal, SignalType
         assert SignalType.STAGNATION is not None
         assert InterventionSignal is not None

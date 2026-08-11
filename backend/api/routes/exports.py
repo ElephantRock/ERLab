@@ -3,14 +3,14 @@
 import io
 import json
 import zipfile
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from fastapi import APIRouter
 from fastapi.responses import StreamingResponse
+from starlette.responses import PlainTextResponse
 
 from backend.api.errors import NotFoundError
-from backend.api.schemas import ExportPdfRequest, BulkExportRequest
-from starlette.responses import PlainTextResponse
+from backend.api.schemas import BulkExportRequest, ExportPdfRequest
 
 router = APIRouter()
 
@@ -117,7 +117,8 @@ async def export_pdf(request: ExportPdfRequest):
     Returns:
         PDF file as application/pdf streaming response.
     """
-    from backend.db.crud import get_idea as db_get_idea, get_proposal_by_idea
+    from backend.db.crud import get_idea as db_get_idea
+    from backend.db.crud import get_proposal_by_idea
     from backend.db.database import get_session
 
     with get_session() as session:
@@ -181,7 +182,8 @@ async def bulk_export(request: BulkExportRequest):
     Returns:
         ZIP archive as application/zip streaming response.
     """
-    from backend.db.crud import get_idea as db_get_idea, get_proposal_by_idea
+    from backend.db.crud import get_idea as db_get_idea
+    from backend.db.crud import get_proposal_by_idea
     from backend.db.database import get_session
 
     export_format = request.format or "markdown"
@@ -283,13 +285,19 @@ async def bulk_export(request: BulkExportRequest):
                         md_content += "\n"
 
                     # Evidence Trace (Phase C)
+                    from sqlalchemy import select as _sel
+
                     from backend.api.traceability import (
-                        resolve_source_gaps as _resolve,
                         extract_proposal_references as _extract_refs,
                     )
-                    from backend.pipeline.provenance.reference_resolver import resolve_references as _resolve_refs
-                    from backend.db.models import IdeaPaperLink as _IPL, Paper as _PaperModel
-                    from sqlalchemy import select as _sel
+                    from backend.api.traceability import (
+                        resolve_source_gaps as _resolve,
+                    )
+                    from backend.db.models import IdeaPaperLink as _IPL
+                    from backend.db.models import Paper as _PaperModel
+                    from backend.pipeline.provenance.reference_resolver import (
+                        resolve_references as _resolve_refs,
+                    )
 
                     try:
                         raw_gids = json.loads(idea.source_gap_ids) if idea.source_gap_ids else []
@@ -357,7 +365,7 @@ async def bulk_export(request: BulkExportRequest):
                     zf.writestr(f"{safe_title}.md", md_content.encode("utf-8"))
 
     buffer.seek(0)
-    timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+    timestamp = datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
     return StreamingResponse(
         buffer,
         media_type="application/zip",
@@ -374,12 +382,13 @@ async def bulk_export(request: BulkExportRequest):
 )
 async def export_run_markdown(run_id: int):
     """Export a pipeline run's proposals as Markdown."""
-    from backend.db.database import get_session
-    from backend.db.crud import get_ideas_for_run, get_proposal_by_idea
-    from backend.api.traceability import resolve_source_gaps, extract_proposal_references
     from backend.api.quality_checks import compute_quality_checks
+    from backend.api.traceability import extract_proposal_references, resolve_source_gaps
+    from backend.db.crud import get_ideas_for_run, get_proposal_by_idea
+    from backend.db.database import get_session
+    from backend.db.models import IdeaPaperLink
+    from backend.db.models import Paper as PaperModel
     from backend.pipeline.provenance.reference_resolver import resolve_references
-    from backend.db.models import IdeaPaperLink, Paper as PaperModel
 
     try:
         with get_session() as session:
@@ -531,9 +540,9 @@ async def export_run_bibtex(run_id: int):
     """
     from sqlalchemy import select, text
 
-    from backend.db.database import get_session
     from backend.db.crud import get_ideas_for_run
-    from backend.db.models import Idea, Proposal
+    from backend.db.database import get_session
+    from backend.db.models import Proposal
     from backend.pipeline.provenance.citation_map import (
         load_citation_map,
         render_bibliography_bibtex,

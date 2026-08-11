@@ -10,7 +10,7 @@ import logging
 import math
 from typing import Protocol
 
-from backend.pipeline.literature.models import Paper, SearchResult
+from backend.pipeline.literature.models import SearchResult
 
 logger = logging.getLogger(__name__)
 

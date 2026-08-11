@@ -1,0 +1,12 @@
+{
+  "cell_id": "ablation_full_section_wise_rep1",
+  "identity": {
+    "identity_pass": true,
+    "gt_method_in_primacy": true,
+    "conflicting_terms_in_primacy": [],
+    "primacy_region_preview": "# Research Paper: machine learning\n**Venue:** Generic\n**Sources:** 2 papers cited\n\n---\n\n## Abstract\n\nClassification of Iris flower species from morphological features is a foundational benchmark in machine learning [SOURCE-1].\n\nLogistic regression is a well-established linear classification method s"
+  },
+  "markers_present": true,
+  "missing_markers": [],
+  "error": null
+}

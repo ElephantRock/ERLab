@@ -2,8 +2,7 @@
 
 from __future__ import annotations
 
-import time
-from typing import Any, Callable
+from collections.abc import Callable
 
 from backend.pipeline.streaming.events import StreamEvent, StreamEventType
 from backend.pipeline.streaming.manager import StreamManager

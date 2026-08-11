@@ -1,0 +1,12 @@
+{
+  "cell_id": "method_substitution_plausible_section_wise_rep1",
+  "identity": {
+    "identity_pass": true,
+    "gt_method_in_primacy": true,
+    "conflicting_terms_in_primacy": [],
+    "primacy_region_preview": "# Research Paper: machine learning\n**Venue:** Generic\n**Sources:** 2 papers cited\n\n---\n\n## Abstract\n\nIris species classification is a foundational benchmark in machine learning, widely used to evaluate discriminative classification methods [SOURCE-1].\n\nLogistic regression provides an interpretable, "
+  },
+  "markers_present": true,
+  "missing_markers": [],
+  "error": null
+}

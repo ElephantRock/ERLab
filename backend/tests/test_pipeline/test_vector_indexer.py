@@ -16,9 +16,8 @@ Proves:
 from __future__ import annotations
 
 import asyncio
-import math
 import sys
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from unittest.mock import MagicMock
 
 import pytest
@@ -28,15 +27,12 @@ from sqlalchemy.orm import sessionmaker
 sys.modules.setdefault("chromadb", MagicMock())
 sys.modules.setdefault("google.generativeai", MagicMock())
 
-import backend.db.models
 from backend.db.database import Base
-from backend.db.models import EmbeddingProfile, Paper, VectorIndexRecord
+from backend.db.models import Paper, VectorIndexRecord
 from backend.pipeline.vector_backend import BackendVectorRecord, GovernedVectorBackend
 from backend.pipeline.vector_contracts import (
-    EmbeddingProfileDriftError,
     IndexingAlreadyClaimedError,
     VectorIndexDocument,
-    compute_collection_name,
     compute_content_hash,
     compute_profile_id,
     compute_vector_record_id,
@@ -156,7 +152,6 @@ class _FakeBackend(GovernedVectorBackend):
 
 
 from typing import Any
-
 
 # ── 1. Profile registration ──────────────────────────────────────────
 
@@ -693,7 +688,7 @@ class TestPostActivationWriteRejection:
                 cutover_id=cutover_id,
                 status="active",
                 activation_generation=1,
-                activated_at=datetime.now(timezone.utc),
+                activated_at=datetime.now(UTC),
             ))
             s.commit()
 

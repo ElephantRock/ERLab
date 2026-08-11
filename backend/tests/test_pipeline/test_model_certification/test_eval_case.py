@@ -1,13 +1,12 @@
 """Phase A tests: Eval Case Format."""
 
+
 import pytest
-from pathlib import Path
 
 from backend.pipeline.model_certification.eval_case import (
-    StageEvalCase,
     GoldAnswer,
+    StageEvalCase,
     load_suite,
-    load_all_suites,
 )
 
 

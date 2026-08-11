@@ -1,14 +1,12 @@
 """Test pipeline completion metadata (BATCH-57 TASK-02)."""
 import json
-import pytest
-from datetime import datetime, timezone
-from unittest.mock import patch, MagicMock
 from contextlib import contextmanager
+from unittest.mock import patch
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-from backend.db.models import PipelineRun, Base
+from backend.db.models import Base, PipelineRun
 from backend.pipeline.persistence import PipelinePersistence
 
 

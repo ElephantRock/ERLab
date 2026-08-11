@@ -26,12 +26,9 @@ from backend.pipeline.knowledge.entities import EntityType, KnowledgeEntity
 from backend.pipeline.knowledge.graph_embeddings import (
     LEGACY_COLLECTION_NAME,
     GraphEmbeddingIndex,
-    KnowledgeGraphEmbeddingRebuildResult,
     build_kg_collection_metadata,
-    build_kg_entity_text,
     compute_entity_content_hash,
     rebuild_kg_embeddings,
-    verify_kg_collection_metadata,
 )
 from backend.pipeline.side_channel_embedding import (
     SideChannelEmbeddingError,

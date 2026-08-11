@@ -14,21 +14,12 @@ If schema validation fails, the section degrades to prose_fallback.
 
 from __future__ import annotations
 
-import json
 import logging
-import re
-from dataclasses import dataclass, field
-from typing import Any
 
 from backend.pipeline.gateway.claim_types import (
-    BENEFIT_SPLIT_KEYWORDS,
-    BENEFIT_WARNING_KEYWORDS,
     CLAIM_TYPE_VALUES,
     ClaimType,
-    DesignAssumption,
-    detect_benefit_phrases,
 )
-from backend.pipeline.synthesis.section_contracts import CLAIM_SCHEMA
 
 logger = logging.getLogger(__name__)
 

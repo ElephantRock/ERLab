@@ -1,16 +1,15 @@
 """Tests for provenance backfill — IdeaPaperLink citation population."""
 
-import json
 import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from backend.db.database import Base
-from backend.db.models import Idea, Paper, Proposal, IdeaPaperLink, PipelineRun
+from backend.db.models import Idea, IdeaPaperLink, Paper, PipelineRun, Proposal
 from backend.pipeline.provenance.backfill import (
-    backfill_cited_links_for_idea,
     backfill_cited_links_for_all_ideas,
+    backfill_cited_links_for_idea,
 )
 
 

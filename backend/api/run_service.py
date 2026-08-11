@@ -42,9 +42,9 @@ from __future__ import annotations
 import json
 import logging
 import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
-from sqlalchemy import select, update, func, desc
+from sqlalchemy import func, select, update
 from sqlalchemy.orm import Session
 
 from backend.db.database import get_session
@@ -317,7 +317,7 @@ class RunService:
         Returns True if the heartbeat was recorded, False if the
         worker no longer owns the run (e.g., was orphaned).
         """
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         with get_session() as session:
             result = session.execute(
                 update(RunWorker)
@@ -338,7 +338,7 @@ class RunService:
         status: str = "completed",
     ) -> None:
         """Release worker ownership. Called when a run finishes."""
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         with get_session() as session:
             session.execute(
                 update(RunWorker)
@@ -358,7 +358,7 @@ class RunService:
 
         Returns list of run_id_str values that were orphaned.
         """
-        cutoff = datetime.now(timezone.utc) - timedelta(seconds=threshold_seconds)
+        cutoff = datetime.now(UTC) - timedelta(seconds=threshold_seconds)
         orphaned_ids: list[str] = []
 
         with get_session() as session:

@@ -16,7 +16,7 @@ from __future__ import annotations
 import asyncio
 import sys
 import tempfile
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from unittest.mock import MagicMock
 
@@ -27,7 +27,6 @@ from sqlalchemy.orm import sessionmaker
 sys.modules.setdefault("chromadb", MagicMock())
 sys.modules.setdefault("google.generativeai", MagicMock())
 
-import backend.db.models
 from backend.db.database import Base
 from backend.db.models import EmbeddingCapabilityCheck
 from backend.pipeline.capability.capability_check_lifecycle import (
@@ -39,19 +38,18 @@ from backend.pipeline.capability.capability_check_lifecycle import (
     recover_stale_running_checks,
 )
 from backend.pipeline.capability.contracts import (
-    CheckAlreadyClaimed,
-    CheckAlreadyTerminal,
-    FailedCheckEvidence,
-    InvalidCheckTransition,
-    PassedCheckObservations,
     STATUS_ABANDONED,
     STATUS_CANCELLED,
     STATUS_FAILED,
     STATUS_PASSED,
     STATUS_PENDING,
     STATUS_RUNNING,
+    CheckAlreadyClaimed,
+    CheckAlreadyTerminal,
+    FailedCheckEvidence,
+    InvalidCheckTransition,
+    PassedCheckObservations,
 )
-from backend.pipeline.vector_contracts import EMBEDDING_PROBE_SUITE_V1
 
 _PROFILE_ID = "a" * 64
 _FINGERPRINT = "c" * 64
@@ -286,7 +284,7 @@ class TestRecoverStale:
         time.sleep(0.1)
 
         # Use a "now" that's past the lease
-        future = datetime.now(timezone.utc) + timedelta(seconds=5)
+        future = datetime.now(UTC) + timedelta(seconds=5)
         count = recover_stale_running_checks(sf, now=future)
         assert count == 1
 
@@ -336,7 +334,7 @@ class TestCompletePassed:
             session.commit()
 
         claim_check(sf, check_id)
-        expires = datetime.now(timezone.utc) + timedelta(hours=1)
+        expires = datetime.now(UTC) + timedelta(hours=1)
         complete_check_passed(
             sf, check_id,
             binding_id=binding_id,
@@ -377,7 +375,7 @@ class TestCompletePassed:
             sf, check_id,
             binding_id=binding_id,
             observations=_make_passed_observations(),
-            expires_at=datetime.now(timezone.utc) + timedelta(hours=1),
+            expires_at=datetime.now(UTC) + timedelta(hours=1),
         )
 
         with pytest.raises(CheckAlreadyTerminal):
@@ -385,7 +383,7 @@ class TestCompletePassed:
                 sf, check_id,
                 binding_id=binding_id,
                 observations=_make_passed_observations(),
-                expires_at=datetime.now(timezone.utc) + timedelta(hours=1),
+                expires_at=datetime.now(UTC) + timedelta(hours=1),
             )
 
 
@@ -517,5 +515,5 @@ class TestInvalidTransitions:
                 sf, check_id,
                 binding_id=binding_id,
                 observations=_make_passed_observations(),
-                expires_at=datetime.now(timezone.utc) + timedelta(hours=1),
+                expires_at=datetime.now(UTC) + timedelta(hours=1),
             )

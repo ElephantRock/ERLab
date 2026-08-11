@@ -15,7 +15,6 @@ from __future__ import annotations
 import asyncio
 import math
 import sys
-from datetime import datetime, timedelta, timezone
 from unittest.mock import MagicMock
 
 import pytest
@@ -25,21 +24,16 @@ from sqlalchemy.orm import sessionmaker
 sys.modules.setdefault("chromadb", MagicMock())
 sys.modules.setdefault("google.generativeai", MagicMock())
 
-import backend.db.models
 from backend.db.database import Base
 from backend.pipeline.capability.capability_check_service import (
     run_capability_check,
 )
 from backend.pipeline.capability.capability_errors import (
-    CapabilityAuthorizationError,
-    CAPABILITY_BINDING_MISMATCH,
-    CAPABILITY_CHECK_EXPIRED,
     CAPABILITY_CHECK_FAILED,
     CAPABILITY_CHECK_NOT_FOUND,
-    CAPABILITY_RUNTIME_DRIFT,
+    CapabilityAuthorizationError,
 )
 from backend.pipeline.capability.verified_embedding_runtime import (
-    VerifiedEmbeddingRuntime,
     build_verified_embedding_runtime,
 )
 from backend.pipeline.knowledge.embedding_configuration import (

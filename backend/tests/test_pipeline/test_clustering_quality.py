@@ -1,12 +1,14 @@
 """Tests for clustering quality metrics (BATCH-67)."""
 
-import pytest
 import sys
+
+import pytest
+
 sys.path.insert(0, "backend")
 
 try:
-    import umap  # noqa: F401
     import hdbscan  # noqa: F401
+    import umap  # noqa: F401
     HAS_CLUSTERING = True
 except ImportError:
     HAS_CLUSTERING = False
@@ -17,7 +19,6 @@ pytestmark = [
 ]
 
 from pipeline.gap_analysis.cluster_service import ClusterService
-from pipeline.gap_analysis.models import ClusterReport
 from pipeline.literature.models import Paper
 
 

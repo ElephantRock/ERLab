@@ -29,7 +29,6 @@ Hard rejection:
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime, timezone
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -39,7 +38,6 @@ from backend.pipeline.vector_contracts import (
     EMBEDDING_CONTRACT_CAPABILITY_V1,
     EMBEDDING_CONTRACT_PRE_CAPABILITY_V0,
 )
-
 
 # ── Activation statuses ───────────────────────────────────────────────
 

@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import pytest
 
-from backend.pipeline.context.manager import ContextManager, ContextBudget, ContextTier
+from backend.pipeline.context.manager import ContextBudget, ContextManager
 
 
 @pytest.fixture

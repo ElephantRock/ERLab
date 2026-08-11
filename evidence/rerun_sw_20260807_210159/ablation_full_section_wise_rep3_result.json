@@ -1,0 +1,12 @@
+{
+  "cell_id": "ablation_full_section_wise_rep3",
+  "identity": {
+    "identity_pass": true,
+    "gt_method_in_primacy": true,
+    "conflicting_terms_in_primacy": [],
+    "primacy_region_preview": "# Research Paper: machine learning\n**Venue:** Generic\n**Sources:** 2 papers cited\n\n---\n\n## Abstract\n\nClassification of botanical specimens remains a foundational benchmark in machine learning, with the Iris dataset serving as a widely used test case for evaluating discriminative classification metho"
+  },
+  "markers_present": true,
+  "missing_markers": [],
+  "error": null
+}

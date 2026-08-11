@@ -38,7 +38,6 @@ from pathlib import Path
 
 from backend.ranking.benchmark_v2_registry import ALL_V2_CASES
 
-
 REPO_ROOT = Path(__file__).resolve().parents[2]
 ADJUDICATED_PATH = (
     REPO_ROOT / "docs" / "p1b_gate1" / "adjudicated"

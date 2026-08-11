@@ -536,9 +536,7 @@ class ModelCatalog:
                     if m.model_id in self._models:
                         existing = self._models[m.model_id]
                         # Keep the one that's loaded or has more info
-                        if m.is_loaded and not existing.is_loaded:
-                            self._models[m.model_id] = m
-                        elif m.size_bytes > 0 and existing.size_bytes == 0:
+                        if m.is_loaded and not existing.is_loaded or m.size_bytes > 0 and existing.size_bytes == 0:
                             self._models[m.model_id] = m
                         logger.debug(
                             "Duplicate model %s from %s (keeping %s endpoint)",

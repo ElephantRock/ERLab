@@ -112,9 +112,10 @@ class ResilientProvider(LLMProvider):
         messages: list[dict],
         schema: dict,
         temperature: float = 0.3,
+        max_tokens: int = 4096,
     ) -> dict:
         return await self._with_retry(
-            self._wrapped.structured_output, messages, schema, temperature
+            self._wrapped.structured_output, messages, schema, temperature, max_tokens=max_tokens
         )
 
     async def structured_output_with_usage(

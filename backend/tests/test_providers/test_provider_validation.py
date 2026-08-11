@@ -4,8 +4,8 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from backend.providers.provider_factory import _validate_api_key
 from backend.api.errors import ProviderConfigurationError
+from backend.providers.provider_factory import _validate_api_key
 
 
 class TestApiKeyValidation:

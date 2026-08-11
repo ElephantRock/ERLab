@@ -1,14 +1,15 @@
 """Tests for operational dashboard API."""
 
-import pytest
 import json
-from datetime import datetime, timezone
-from backend.api.routes.ops import get_dashboard
-from backend.db.models import PipelineRun, Proposal
-from backend.db.database import Base
+from datetime import UTC, datetime
+
+import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
+from backend.api.routes.ops import get_dashboard
+from backend.db.database import Base
+from backend.db.models import PipelineRun
 
 
 @pytest.fixture
@@ -22,7 +23,7 @@ def ops_db(tmp_path):
     session = Session()
 
     # Create a completed run with a stage report
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     run1 = PipelineRun(
         status="completed",
         domain="test",

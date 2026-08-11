@@ -23,18 +23,18 @@ from __future__ import annotations
 import hashlib
 import json
 import time
-from dataclasses import dataclass, field
+from collections.abc import Callable
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Callable
 
 # Reuse existing ranking infrastructure
 from backend.ranking.contracts import (
-    RankingRequest, RankingResult, RankedCandidate, RankingCandidate,
-    DISPOSITION_SELECTED, DISPOSITION_EXCLUDED_RANK,
-    compute_tie_break_key, validate_ranking_result,
+    RankingCandidate,
+    RankingRequest,
+    RankingResult,
 )
-from backend.ranking.policies import _keyword_overlap, rank_legacy_lexical, rank_hybrid_rrf
-from backend.ranking.evaluation import _ndcg_at_k, _mrr_at_k, _precision_at_k, _recall_at_k
+from backend.ranking.evaluation import _mrr_at_k, _ndcg_at_k, _precision_at_k, _recall_at_k
+from backend.ranking.policies import _keyword_overlap, rank_hybrid_rrf, rank_legacy_lexical
 
 REPO = Path(__file__).resolve().parent.parent
 DIAGNOSTIC_DIR = REPO / "docs" / "retrieval"

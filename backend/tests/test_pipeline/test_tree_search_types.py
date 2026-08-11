@@ -23,12 +23,11 @@ if "chromadb" not in sys.modules:
 if "google.generativeai" not in sys.modules:
     sys.modules.setdefault("google.generativeai", MagicMock())
 
-from backend.pipeline.generation.models import IdeaCandidate, ResearchIdea
 from backend.pipeline.gap_analysis.models import ResearchGap
+from backend.pipeline.generation.models import IdeaCandidate, ResearchIdea
 from backend.pipeline.literature.models import Author, Paper
 from backend.pipeline.result import PipelineResult
 from backend.pipeline.stages import StageContext, TreeSearchStage
-
 
 # ── Helpers ──────────────────────────────────────────────────────────
 

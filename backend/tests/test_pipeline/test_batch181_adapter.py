@@ -1,13 +1,8 @@
 """Tests for BATCH-181: Trimmer + Adapter + DAG API endpoint."""
 
 import asyncio
-import os
-import sys
-import tempfile
-from unittest.mock import MagicMock, patch
 
 import pytest
-
 
 # ── TASK-01: Trimmer Stage ────────────────────────────────────────────
 
@@ -17,8 +12,8 @@ class TestTrimmerStage:
 
     def _make_ctx(self, papers=None, domain="AI/NLP"):
         """Create a mock old-style StageContext with papers."""
-        from backend.pipeline.stages import StageContext
         from backend.pipeline.result import PipelineResult
+        from backend.pipeline.stages import StageContext
         result = PipelineResult()
         ctx = StageContext(result=result, domain=domain, run_id="test")
         ctx.all_papers = papers or []
@@ -107,6 +102,7 @@ class TestContextMapping:
     def test_03_dag_handler_signature(self):
         """TEST-181-03-03: DAG handler accepts PipelineRunRequest."""
         import inspect
+
         from backend.api.routes.pipeline import trigger_dag_run
         sig = inspect.signature(trigger_dag_run)
         params = list(sig.parameters.keys())

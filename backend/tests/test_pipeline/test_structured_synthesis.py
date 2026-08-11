@@ -8,18 +8,15 @@ Validates:
 5. Sidecar audit trail contains typed claims
 6. Metrics: structured_count, fallback_count, valid_rate
 """
-import asyncio
 import json
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
+from backend.pipeline.synthesis.section_contracts import CLAIM_SCHEMA, CLAIM_SCHEMA_STR
 from backend.pipeline.synthesis.section_wise_synthesizer import (
-    SectionDraft,
     SectionWiseSynthesizer,
 )
-from backend.pipeline.synthesis.section_contracts import CLAIM_SCHEMA, CLAIM_SCHEMA_STR
-
 
 # ─── Fixtures ───────────────────────────────────────────────────────
 

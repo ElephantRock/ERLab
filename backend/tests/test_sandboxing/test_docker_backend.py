@@ -5,7 +5,6 @@ import pytest
 from backend.pipeline.sandboxing.docker_backend import DockerSandboxBackend
 from backend.pipeline.sandboxing.protocol import SandboxConfig
 
-
 pytestmark = pytest.mark.integration
 
 @pytest.fixture(params=["asyncio"])

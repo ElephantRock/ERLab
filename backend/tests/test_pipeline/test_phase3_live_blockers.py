@@ -8,12 +8,13 @@ is caught and marked as skipped (fail-open) rather than raising.
 from __future__ import annotations
 
 import asyncio
-import pytest
 from types import SimpleNamespace
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import MagicMock
 
-from backend.pipeline.stages import AdversarialReviewStage, StageContext
+import pytest
+
 from backend.pipeline.result import PipelineResult
+from backend.pipeline.stages import AdversarialReviewStage, StageContext
 
 
 def _make_proposal(title="Test Proposal"):

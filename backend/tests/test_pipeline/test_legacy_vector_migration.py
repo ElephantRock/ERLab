@@ -21,7 +21,6 @@ from sqlalchemy.orm import sessionmaker
 sys.modules.setdefault("chromadb", MagicMock())
 sys.modules.setdefault("google.generativeai", MagicMock())
 
-import backend.db.models
 from backend.db.database import Base
 from backend.db.models import (
     EmbeddingProfile,

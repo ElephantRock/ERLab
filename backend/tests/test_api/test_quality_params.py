@@ -6,13 +6,13 @@ Verifies semantics: detailed > standard > concise, thorough > light, etc.
 import pytest
 
 from backend.pipeline.quality.quality_params import (
+    BASE_IDEATOR_TEMPERATURE,
     BASE_MIN_WORDS,
     BASE_NOVELTY_TOP_K,
-    BASE_IDEATOR_TEMPERATURE,
+    resolve_all,
+    resolve_ideator_temperature,
     resolve_min_words,
     resolve_novelty_top_k,
-    resolve_ideator_temperature,
-    resolve_all,
 )
 
 
@@ -48,7 +48,7 @@ class TestProposalDepthMapping:
         original = dict(BASE_MIN_WORDS)
         resolve_min_words("detailed")
         resolve_min_words("concise")
-        assert BASE_MIN_WORDS == original
+        assert original == BASE_MIN_WORDS
 
     def test_concise_floors_at_50_words(self):
         """Concise never reduces below 50 words per section."""
@@ -146,22 +146,25 @@ class TestPipelineRunRequestAccepts:
         assert req.idea_diversity == "balanced"
 
     def test_rejects_invalid_depth(self):
-        from backend.api.schemas import PipelineRunRequest
         from pydantic import ValidationError
+
+        from backend.api.schemas import PipelineRunRequest
 
         with pytest.raises(ValidationError):
             PipelineRunRequest(proposal_depth="invalid")
 
     def test_rejects_invalid_novelty(self):
-        from backend.api.schemas import PipelineRunRequest
         from pydantic import ValidationError
+
+        from backend.api.schemas import PipelineRunRequest
 
         with pytest.raises(ValidationError):
             PipelineRunRequest(novelty_depth="exhaustive")
 
     def test_rejects_invalid_diversity(self):
-        from backend.api.schemas import PipelineRunRequest
         from pydantic import ValidationError
+
+        from backend.api.schemas import PipelineRunRequest
 
         with pytest.raises(ValidationError):
             PipelineRunRequest(idea_diversity="wild")

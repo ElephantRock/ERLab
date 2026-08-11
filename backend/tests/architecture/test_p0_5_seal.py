@@ -9,8 +9,6 @@ from __future__ import annotations
 import ast
 from pathlib import Path
 
-import pytest
-
 BACKEND_ROOT = Path(__file__).resolve().parents[3] / "backend"
 REPO_ROOT = Path(__file__).resolve().parents[3]
 
@@ -45,7 +43,7 @@ def test_registry_validation_clean():
 
     registry = build_registry()
     errors = validate_registry(registry)
-    assert not errors, f"Registry validation errors:\n" + "\n".join(errors)
+    assert not errors, "Registry validation errors:\n" + "\n".join(errors)
 
 
 # ── 3. Config CLI exists and is wired ─────────────────────────────────

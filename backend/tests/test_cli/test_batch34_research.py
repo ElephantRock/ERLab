@@ -2,7 +2,6 @@
 
 import json
 from contextlib import contextmanager
-from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -11,7 +10,6 @@ from sqlalchemy.orm import sessionmaker
 
 from backend.db.database import Base
 from backend.db.models import Idea, Proposal
-
 
 # ── Fixtures ──────────────────────────────────────────────────────
 
@@ -73,6 +71,7 @@ def _session_ctx(session):
 def test_34_03_01_open_idea_opens_browser(db_session, sample_idea):
     """Verify that erock open {id} opens the correct URL in the browser."""
     from typer.testing import CliRunner
+
     from backend.cli.main import app
 
     runner = CliRunner()
@@ -95,6 +94,7 @@ def test_34_03_01_open_idea_opens_browser(db_session, sample_idea):
 def test_34_03_02_proposal_generates_for_idea(db_session, sample_idea):
     """Verify that erock proposal {id} invokes the proposal synthesizer."""
     from typer.testing import CliRunner
+
     from backend.cli.main import app
 
     runner = CliRunner()
@@ -120,6 +120,7 @@ def test_34_03_02_proposal_generates_for_idea(db_session, sample_idea):
 def test_34_03_03_export_idea_to_markdown(db_session, sample_idea_with_proposal, tmp_path):
     """Verify that erock export {id} writes idea data to a markdown file."""
     from typer.testing import CliRunner
+
     from backend.cli.main import app
 
     runner = CliRunner()
@@ -150,6 +151,7 @@ def test_34_03_03_export_idea_to_markdown(db_session, sample_idea_with_proposal,
 def test_34_03_03b_export_idea_to_json(db_session, sample_idea, tmp_path):
     """Verify that erock export {id} --format json writes valid JSON."""
     from typer.testing import CliRunner
+
     from backend.cli.main import app
 
     runner = CliRunner()

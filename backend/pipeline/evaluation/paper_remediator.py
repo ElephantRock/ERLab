@@ -22,10 +22,9 @@ import hashlib
 import json
 import logging
 from dataclasses import dataclass
-from datetime import datetime, timezone
 
 from backend.db.database import get_session
-from backend.db.models import PaperRevision, Proposal, ExperimentResult
+from backend.db.models import ExperimentResult, PaperRevision, Proposal
 
 logger = logging.getLogger(__name__)
 
@@ -98,14 +97,16 @@ async def auto_revise_paper(
 
     # ── Step 1: Verify evidence package ─────────────────────────────
     from backend.pipeline.evaluation.revision_directive import (
-        EvidenceInvariant, RevisionDirective, verify_revised_paper_invariants,
+        EvidenceInvariant,
+        RevisionDirective,
+        verify_revised_paper_invariants,
     )
 
     result_map_tuple = tuple(
         (m.marker, m.observed_value) for m in result_markers
     )
     source_map_tuple = tuple(
-        f"[{entry.get('marker', '')}]" for entry in (source_map or [])
+        f"[{entry.get('marker', '').strip('[]')}]" for entry in (source_map or [])
     )
 
     # Load manifest hash
@@ -156,7 +157,7 @@ async def auto_revise_paper(
                     experiment_manifest_hash=manifest_hash,
                 )
                 session.add(rev0)
-                session.flush()
+                session.commit()  # MUST commit, not just flush — get_session() rolls back on close
 
             parent_id = rev0.id
     except Exception as e:
@@ -235,8 +236,8 @@ async def auto_revise_paper(
     # The original paper is included in the prompt and the LLM is
     # instructed to fix specific defects while preserving the structure.
     from backend.config import get_settings
-    from backend.providers.provider_factory import get_generation_provider
     from backend.pipeline.synthesis.paper_synthesizer import PaperSynthesizer
+    from backend.providers.provider_factory import get_generation_provider
 
     settings = get_settings()
     provider = get_generation_provider(settings)
@@ -331,11 +332,21 @@ async def auto_revise_paper(
 
     # ── Step 7: Promote only if all gates pass ──────────────────────
     if gate_eval.status == "ready":
-        # Promote: update the canonical paper_md
+        # Promote: update the canonical paper_md AND the metadata's
+        # full_paper.paper_markdown so that downstream evaluation
+        # (_evaluate_paper reads from metadata["full_paper"]) sees the
+        # exact promoted text, not a stale P1 version.
         with get_session() as session:
             proposal = session.get(Proposal, proposal_id)
             if proposal:
                 proposal.paper_md = revised_paper_md
+                # Sync metadata so _evaluate_paper reads the promoted text
+                meta = json.loads(proposal.paper_meta_json) if proposal.paper_meta_json else {}
+                fp = meta.get("full_paper")
+                if isinstance(fp, dict):
+                    fp["paper_markdown"] = revised_paper_md
+                    meta["full_paper"] = fp
+                    proposal.paper_meta_json = json.dumps(meta)
                 session.commit()
         logger.info("Revision 1 promoted for proposal %d (eval=ready)", proposal_id)
     else:

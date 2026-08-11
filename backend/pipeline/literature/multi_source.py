@@ -7,10 +7,9 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from typing import Any
 
 from backend.pipeline.literature.base import AcademicSearchSource
-from backend.pipeline.literature.models import Paper, SearchResult
+from backend.pipeline.literature.models import SearchResult
 
 logger = logging.getLogger(__name__)
 

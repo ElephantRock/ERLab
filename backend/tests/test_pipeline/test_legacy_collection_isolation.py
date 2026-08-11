@@ -21,7 +21,6 @@ from sqlalchemy.orm import sessionmaker
 sys.modules.setdefault("chromadb", MagicMock())
 sys.modules.setdefault("google.generativeai", MagicMock())
 
-import backend.db.models
 from backend.db.database import Base
 from backend.pipeline.legacy_collection_freeze import (
     LegacyCollectionFrozenError,
@@ -32,7 +31,6 @@ from backend.pipeline.legacy_collection_freeze import (
     is_legacy_collection_frozen,
     quarantine_legacy_collection,
 )
-from sqlalchemy import select
 
 
 def _make_engine():

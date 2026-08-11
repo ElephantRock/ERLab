@@ -1,20 +1,24 @@
 """Phase C+D tests: Scorers."""
 
-import pytest
-from unittest.mock import MagicMock
 
-from backend.pipeline.model_certification.eval_case import StageEvalCase, GoldAnswer
-from backend.pipeline.model_certification.stage_scorer import (
-    ScorerRegistry, StageScorer, create_default_registry,
-)
-from backend.pipeline.model_certification.scorers.query_generation import QueryGenerationScorer
-from backend.pipeline.model_certification.scorers.literature_filtering import LiteratureFilteringScorer
-from backend.pipeline.model_certification.scorers.paper_extraction import PaperExtractionScorer
-from backend.pipeline.model_certification.scorers.evidence_table import EvidenceTableScorer
-from backend.pipeline.model_certification.scorers.synthesis import SynthesisScorer
-from backend.pipeline.model_certification.scorers.repair import RepairScorer
+import pytest
+
+from backend.pipeline.model_certification.eval_case import GoldAnswer, StageEvalCase
 from backend.pipeline.model_certification.scorers.adversarial_review import AdversarialReviewScorer
+from backend.pipeline.model_certification.scorers.evidence_table import EvidenceTableScorer
 from backend.pipeline.model_certification.scorers.grounding import compute_grounding_metrics
+from backend.pipeline.model_certification.scorers.literature_filtering import (
+    LiteratureFilteringScorer,
+)
+from backend.pipeline.model_certification.scorers.paper_extraction import PaperExtractionScorer
+from backend.pipeline.model_certification.scorers.query_generation import QueryGenerationScorer
+from backend.pipeline.model_certification.scorers.repair import RepairScorer
+from backend.pipeline.model_certification.scorers.synthesis import SynthesisScorer
+from backend.pipeline.model_certification.stage_scorer import (
+    ScorerRegistry,
+    StageScorer,
+    create_default_registry,
+)
 
 
 def _case(stage="query_generation", **kw):

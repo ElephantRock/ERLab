@@ -18,13 +18,14 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
-from sqlalchemy import create_engine, event, inspect, text
+from sqlalchemy import create_engine, event, text
 from sqlalchemy.orm import sessionmaker
 
 sys.modules.setdefault("chromadb", MagicMock())
 sys.modules.setdefault("google.generativeai", MagicMock())
 
-import backend.db.models
+from datetime import UTC
+
 from backend.db.database import Base
 from backend.db.models import (
     ExecutionDiscoveryLinkage,
@@ -39,12 +40,12 @@ from backend.pipeline.literature.contracts import (
     canonical_plan_json,
 )
 from backend.pipeline.literature.execution_recorder import ExecutionRecorder
-from backend.pipeline.literature.models import Paper as SPaper, SearchResult
+from backend.pipeline.literature.models import Paper as SPaper
+from backend.pipeline.literature.models import SearchResult
 from backend.pipeline.literature.result_accounting import (
     build_source_result_identity,
     reconcile_source_results,
 )
-
 
 # ── Session helpers ──────────────────────────────────────────────────
 
@@ -322,10 +323,10 @@ def test_triple_fk_rejects_source_mismatch():
         run = _make_run(s)
         sq = _make_query(s, run.id)
         # Execution has source='arxiv'
-        from datetime import datetime, timezone
+        from datetime import datetime
         ex = SearchQueryExecution(
             search_query_id=sq.id, source="arxiv", status="success",
-            attempt_count=1, completed_at=datetime(2026, 1, 1, tzinfo=timezone.utc),
+            attempt_count=1, completed_at=datetime(2026, 1, 1, tzinfo=UTC),
             accounting_status="reconciled", accounting_schema_version="accounting_v1",
             execution_metadata_version="execution_v1",
             translated_query='{"schema":"source_query_v1"}',

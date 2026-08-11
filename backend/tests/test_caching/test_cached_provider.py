@@ -4,10 +4,8 @@ import time
 
 import pytest
 
-from backend.providers.base import LLMResponse
 from backend.providers.cache.cached_provider import CachedProvider
 from backend.providers.cache.memory_cache import InMemoryCache
-from backend.providers.cache.base import CacheEntry
 from backend.tests.conftest import FakeLLMProvider
 
 

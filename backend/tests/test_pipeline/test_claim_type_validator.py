@@ -11,23 +11,19 @@ Key invariants tested:
 6. overclaim_rate is independent and cannot be hidden by repair
 """
 
-import pytest
 
-from backend.pipeline.gateway.claim_types import ClaimType, DesignAssumption
 from backend.pipeline.gateway.claim_type_validator import (
     ClaimClassification,
     ClaimTypeValidator,
-    EpistemicMetrics,
     RepairRecommendation,
     ValidatedClaim,
     compute_metrics,
 )
+from backend.pipeline.gateway.claim_types import DesignAssumption
 from backend.pipeline.gateway.evidence_repair import (
     EvidenceRepairLoop,
     RepairAction,
-    RepairedClaim,
 )
-
 
 # ═══════════════════════════════════════════════════════════════════════════
 # VALIDATOR: Contradiction Override

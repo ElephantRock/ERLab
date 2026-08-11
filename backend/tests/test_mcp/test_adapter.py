@@ -3,12 +3,10 @@
 import pytest
 
 from backend.pipeline.tools.mcp.adapter import MCPToolAdapter, _translate_schema
+from backend.pipeline.tools.mcp.client import MCPClient
 from backend.pipeline.tools.mcp.models import MCPServerConfig, MCPTransport
 from backend.tests.test_mcp.test_client import FakeTransport
 
-from backend.pipeline.tools.mcp.client import MCPClient
-
-import pytest
 pytestmark = pytest.mark.flaky(reruns=2, reruns_delay=1)
 
 

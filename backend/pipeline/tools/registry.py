@@ -17,20 +17,17 @@ Usage:
 from __future__ import annotations
 
 import asyncio
-import hashlib
 import inspect
 import json
 import logging
 import time
-from dataclasses import dataclass, field
-from typing import Any, Callable, get_type_hints
+from collections.abc import Callable
+from dataclasses import dataclass
+from typing import Any, get_type_hints
 
 from backend.pipeline.tools.tool_limits import (
-    TRUSTED_CONFIG,
-    UNTRUSTED_CONFIG,
     ToolAuditLog,
     ToolExecutionEvent,
-    ToolLimitsConfig,
 )
 
 logger = logging.getLogger(__name__)
@@ -191,7 +188,7 @@ class ToolRegistry:
                     tool.handler(**kwargs),
                     timeout=tool.timeout,
                 )
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 elapsed_ms = (time.time() - t0) * 1000
                 self._audit(tool.name, "timeout", elapsed_ms)
                 span.set_status("error")

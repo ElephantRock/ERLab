@@ -1,14 +1,13 @@
 """Tests for SemanticCache — similarity lookup, TTL, persistence."""
 
-import json
 import math
 import time
 
 import pytest
 
+from backend.providers.base import LLMResponse
 from backend.providers.cache.base import CacheEntry
 from backend.providers.cache.semantic_cache import SemanticCache
-from backend.providers.base import LLMResponse
 
 
 class FakeEmbeddingService:

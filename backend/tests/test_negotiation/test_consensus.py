@@ -1,6 +1,5 @@
 """Tests for consensus voting algorithms."""
 
-import pytest
 
 from backend.pipeline.negotiation.consensus import ConsensusAlgorithm, ConsensusEngine
 from backend.pipeline.negotiation.protocol import Vote

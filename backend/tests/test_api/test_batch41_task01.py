@@ -1,11 +1,13 @@
 """BATCH-41/TASK-01: Gap Feedback & Lifecycle tests."""
-import pytest
 from unittest.mock import MagicMock, patch
+
+import pytest
 from fastapi.testclient import TestClient
 
 
 def _make_app():
     from fastapi import FastAPI
+
     from backend.api.routes.gaps import router
     app = FastAPI()
     app.include_router(router, prefix="/gaps")

@@ -1,6 +1,5 @@
 """Tests for session API endpoints."""
 
-import pytest
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 from fastapi.testclient import TestClient
@@ -8,7 +7,6 @@ from fastapi.testclient import TestClient
 from backend.api.errors import APIError
 from backend.api.routes.pipeline import router
 from backend.pipeline.session.manager import SessionManager
-from backend.pipeline.session.models import Session, SessionBudget, SessionState
 
 
 def _make_app(tmp_path) -> TestClient:

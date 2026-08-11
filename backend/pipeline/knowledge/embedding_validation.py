@@ -41,8 +41,8 @@ without runtime enforcement remains an explicit contract mismatch.
 from __future__ import annotations
 
 import math
-from typing import Any, Sequence
-
+from collections.abc import Sequence
+from typing import Any
 
 # ── Exception hierarchy ───────────────────────────────────────────────
 

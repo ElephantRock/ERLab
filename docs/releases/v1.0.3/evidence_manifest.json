@@ -1,0 +1,257 @@
+{
+  "schema_version": "1.0",
+  "release": "v1.0.3",
+  "status": "failed",
+  "branch": "fix/v1.0.3-release-reconciliation",
+  "base_commit": "d0a2e7946a2c7ea3c0e39c1670e5105927699ebc",
+  "candidate_commit": "a82644014628f3f21cc89763d99aade5e4231993",
+  "closeout_document": "docs/releases/v1.0.3/CONFIRMATORY_E2E_CLOSEOUT.md",
+  "ci_run": "31034674404",
+  "ci_result": "success",
+  "commits": [
+    {
+      "order": 1,
+      "sha": "f4e89c50b1259df57936c1e36c0210147f027954",
+      "subject": "test(v1.0.3): freeze release-reconciliation defects",
+      "blocker_class": "regression freeze"
+    },
+    {
+      "order": 2,
+      "sha": "ec1f6a4c3f4365757c3e0b47082d5b4d0111ac91",
+      "subject": "fix(v1.0.3): align provider usage contracts",
+      "blocker_class": "provider contract conformance"
+    },
+    {
+      "order": 3,
+      "sha": "bc6933f94f62c474d50e142b952b5c67d9de0a97",
+      "subject": "fix(v1.0.3): isolate cost accounting by run",
+      "blocker_class": "run-scoped accounting"
+    },
+    {
+      "order": 4,
+      "sha": "caf18f5d1f9f0cc94cbe99d75704abddf9a9035e",
+      "subject": "fix(v1.0.3): finalize sessions from run cost summary",
+      "blocker_class": "session finalization"
+    },
+    {
+      "order": 5,
+      "sha": "d4475fcdeff68595f419f578f8fbc913188068ab",
+      "subject": "fix(v1.0.3): account for structured provider usage",
+      "blocker_class": "structured usage and partial posture"
+    },
+    {
+      "order": 6,
+      "sha": "3b4aa1810b030e25d1819e715774466ee1bc9491",
+      "subject": "docs(v1.0.3): reconcile release identity and product description",
+      "blocker_class": "release identity and product description"
+    },
+    {
+      "order": 7,
+      "sha": "59ca7ea2522efb3735325ba405f6639b67565248",
+      "subject": "docs(v1.0.3): seal candidate evidence dossier",
+      "blocker_class": "evidence dossier"
+    },
+    {
+      "order": 8,
+      "sha": "ce56131cbee673f97f36df1007fafdb574453d2e",
+      "subject": "fix(ci): restore Python 3.11 tests and lint ratchet",
+      "blocker_class": "ci executability"
+    },
+    {
+      "order": 9,
+      "sha": "58617893a6c062c6323e7eda92ffbd9c6dbcc595",
+      "subject": "fix(ci): make provider regressions hermetic",
+      "blocker_class": "ci hermeticity"
+    },
+    {
+      "order": 10,
+      "sha": "fff3022000ae971c100ab5fe80fde49e0e887a84",
+      "subject": "test(v1.0.3): freeze confirmatory E2E findings",
+      "blocker_class": "confirmatory E2E regression freeze"
+    },
+    {
+      "order": 11,
+      "sha": "688edd909d46b03dc3eeefaed5b3f5ccc380e47f",
+      "subject": "fix(v1.0.3): preserve gateway stage and run context",
+      "blocker_class": "gateway context propagation"
+    },
+    {
+      "order": 12,
+      "sha": "c48e36d9edede2c3bdeb51882522830c5eebc5bb",
+      "subject": "fix(v1.0.3): bind confirmatory run and session identity",
+      "blocker_class": "runner identity and session binding"
+    },
+    {
+      "order": 13,
+      "sha": "21ba004f7b25152b14eb4b0f000dd7ea13c6f00b",
+      "subject": "test(v1.0.3): freeze second confirmatory findings",
+      "blocker_class": "second confirmatory regression freeze"
+    },
+    {
+      "order": 14,
+      "sha": "bf03b15c8d8e05d9cd242ba81bf51b83d062aa24",
+      "subject": "fix(v1.0.3): enforce confirmatory outcome and isolation",
+      "blocker_class": "terminal outcome and session isolation"
+    },
+    {
+      "order": 15,
+      "sha": "a82644014628f3f21cc89763d99aade5e4231993",
+      "subject": "fix(v1.0.3): enforce gap-analysis output contract",
+      "blocker_class": "gap-analysis output contract"
+    }
+  ],
+  "blockers": [
+    {
+      "id": "B-PROV-01",
+      "summary": "Concrete providers did not honor the base usage-context signature (stage/run_id) and dropped usage attribution.",
+      "status": "repaired",
+      "repair_commit": "ec1f6a4c3f4365757c3e0b47082d5b4d0111ac91"
+    },
+    {
+      "id": "B-COST-02",
+      "summary": "CostTracker accounting views and persistence were not scoped by run_id; one run's events leaked into another's ledger.",
+      "status": "repaired",
+      "repair_commit": "bc6933f94f62c474d50e142b952b5c67d9de0a97"
+    },
+    {
+      "id": "B-SESS-01",
+      "summary": "Session terminalization read nonexistent CostTracker properties (total_tokens/total_cost) instead of the run-scoped summary.",
+      "status": "repaired",
+      "repair_commit": "caf18f5d1f9f0cc94cbe99d75704abddf9a9035e"
+    },
+    {
+      "id": "B-GW-01",
+      "summary": "Gateway schema branch bypassed the usage-aware boundary, issuing unattributed structured calls.",
+      "status": "repaired",
+      "repair_commit": "d4475fcdeff68595f419f578f8fbc913188068ab"
+    },
+    {
+      "id": "B-RECON-01",
+      "summary": "persist_cost_ledger could label a run reconciled based solely on a nonempty ledger, masking known accounting gaps.",
+      "status": "repaired",
+      "repair_commit": "d4475fcdeff68595f419f578f8fbc913188068ab"
+    },
+    {
+      "id": "B-ID-01",
+      "summary": "Package and README release identity disagreed with the v1.0.3 claim (stale 1.0.1).",
+      "status": "repaired",
+      "repair_commit": "3b4aa1810b030e25d1819e715774466ee1bc9491"
+    },
+    {
+      "id": "B-GWCTX-01",
+      "summary": "LLMGateway.call() dropped LLMRequest.stage and LLMRequest.run_id when invoking the provider callback.",
+      "status": "repaired",
+      "repair_commit": "688edd909d46b03dc3eeefaed5b3f5ccc380e47f"
+    },
+    {
+      "id": "B-WRAPPER-01",
+      "summary": "RunCoordinator set _stage/_run_id on the outer StageAwareProvider wrapper instead of delegating via set_context().",
+      "status": "repaired",
+      "repair_commit": "688edd909d46b03dc3eeefaed5b3f5ccc380e47f"
+    },
+    {
+      "id": "B-RUNNER-01",
+      "summary": "Confirmatory runner did not bind run/session identity, create a session, validate terminal outcome, or isolate session storage.",
+      "status": "repaired",
+      "repair_commit": "c48e36d9edede2c3bdeb51882522830c5eebc5bb"
+    },
+    {
+      "id": "B-TERM-01",
+      "summary": "Confirmatory runner returned exit code 0 for failed product outcome; session storage used shared directory.",
+      "status": "repaired",
+      "repair_commit": "bf03b15c8d8e05d9cd242ba81bf51b83d062aa24"
+    },
+    {
+      "id": "B-GAPCONTRACT-01",
+      "summary": "GapAnalyzer silently accepted or normalized nonempty schema-incompatible output instead of raising an explicit output-contract failure.",
+      "status": "repaired",
+      "repair_commit": "a82644014628f3f21cc89763d99aade5e4231993"
+    }
+  ],
+  "verification": [
+    {
+      "name": "v1.0.3 frozen contracts (21 tests)",
+      "command": "pytest backend/tests/test_v103_release_reconciliation.py",
+      "result": "21 passed",
+      "class": "runtime_verified"
+    },
+    {
+      "name": "v1.0.3 focused behavioral tests (7 tests)",
+      "command": "pytest backend/tests/test_v103_structured_usage.py",
+      "result": "7 passed",
+      "class": "runtime_verified"
+    },
+    {
+      "name": "First-E2E frozen findings (19 tests)",
+      "command": "pytest backend/tests/test_v103_e2e_findings.py",
+      "result": "19 passed",
+      "class": "runtime_verified"
+    },
+    {
+      "name": "Second-E2E frozen findings (7 tests)",
+      "command": "pytest backend/tests/test_v103_second_e2e_findings.py",
+      "result": "7 passed",
+      "class": "runtime_verified"
+    },
+    {
+      "name": "Full backend CI at a826440",
+      "command": "CI run 31034674404",
+      "result": "5003 passed, 34 skipped, 117 deselected, 3 xfailed, 0 failed",
+      "class": "runtime_verified"
+    },
+    {
+      "name": "Coverage at a826440",
+      "command": "CI run 31034674404",
+      "result": "69.29% (required 68.0%)",
+      "class": "runtime_verified"
+    },
+    {
+      "name": "v1.0.2 regression (11 tests, Python 3.11)",
+      "command": "py -3.11 -m pytest backend/tests/test_v102_regression.py",
+      "result": "11 passed",
+      "class": "runtime_verified"
+    }
+  ],
+  "confirmatory_attempts": [
+    {
+      "attempt": 1,
+      "run_id": "run_20260805_045655",
+      "result": "FAIL",
+      "paper_produced": false,
+      "cost_usd": 0.079345,
+      "events": 25,
+      "defects": [
+        "blank stage attribution (25/25 events stage=''",
+        "preflight/runtime run-ID mismatch",
+        "no session-finalization evidence"
+      ]
+    },
+    {
+      "attempt": 2,
+      "run_id": "e2e_v103_2nd_20260805_150951",
+      "result": "FAIL",
+      "paper_produced": false,
+      "cost_usd": 0.080325,
+      "events": 25,
+      "blank_stages": 0,
+      "run_isolation": "validated",
+      "ledger_reconciliation": "validated",
+      "session_reconciliation": "validated",
+      "accounting_completeness": "not_proven",
+      "failure_boundary": "gap-analysis output-contract failure at the ERLab/provider boundary"
+    }
+  ],
+  "pending_gates": [
+    "Post-repair confirmatory E2E on candidate a826440 (no authorized attempts remaining)",
+    "Paper production, evaluation, citation resolution, exports, restart persistence, browser/API recovery"
+  ],
+  "bounded_claim": "v1.0.3 claims run-isolated cost accounting; stage/run attribution; structured-output accounting via gateway; explicit reconciliation posture; session finalization from run-scoped summary; gap-analysis output-contract enforcement; release identity at 1.0.3. All claims are bounded to hermetic and CI verification. No successful live literature-to-paper E2E exists on the final candidate.",
+  "non_claims": [
+    "No tool-call accounting claim.",
+    "No universal live-E2E provider claim.",
+    "No successful confirmatory paper-production claim.",
+    "No human peer-review claim.",
+    "No autonomous scientific-validity claim.",
+    "No arbitrary-domain generality claim."
+  ]
+}

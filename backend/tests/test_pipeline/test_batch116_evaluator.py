@@ -2,15 +2,9 @@
 
 Validates gold standard gap lists, orchestrator wiring, and keyword overlap.
 """
-import asyncio
-import logging
-import pytest
-from types import SimpleNamespace
-from unittest.mock import MagicMock
 
-from backend.pipeline.verification.gold_standards import GOLD_STANDARD_GAPS, get_gold_gaps
+from backend.pipeline.verification.gold_standards import GOLD_STANDARD_GAPS
 from backend.pipeline.verification.pipeline_evaluator import PipelineEvaluator
-
 
 # ── TEST-116-01-01: Gold standards for 3+ domains ──────────────────
 

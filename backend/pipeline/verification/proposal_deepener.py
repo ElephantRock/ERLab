@@ -12,7 +12,7 @@ toy examples, or expected failure modes would strengthen them significantly."
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any
 
 logger = logging.getLogger(__name__)
@@ -148,29 +148,29 @@ class ProposalDeepener:
         )
 
         failure_modes = (
-            f"## Expected Failure Modes\n\n"
-            f"1. **Scalability collapse**: System degrades on inputs >10K entities. "
-            f"Root cause: O(n²) graph traversal. Mitigation: lazy evaluation + pruning.\n\n"
-            f"2. **Hallucinated constraints**: Validator accepts invalid symbolic rules. "
-            f"Root cause: LLM-generated rules not verified against formal logic. "
-            f"Mitigation: automated theorem prover as secondary check.\n\n"
-            f"3. **Context window overflow**: Complex reasoning exceeds token limits. "
-            f"Root cause: Graph expansion without budgeting. "
-            f"Mitigation: dynamic context management with summarization.\n\n"
-            f"4. **Distribution shift**: Performance drops on out-of-domain inputs. "
-            f"Root cause: Training/evaluation domain gap. "
-            f"Mitigation: domain adaptation layer + confidence calibration.\n"
+            "## Expected Failure Modes\n\n"
+            "1. **Scalability collapse**: System degrades on inputs >10K entities. "
+            "Root cause: O(n²) graph traversal. Mitigation: lazy evaluation + pruning.\n\n"
+            "2. **Hallucinated constraints**: Validator accepts invalid symbolic rules. "
+            "Root cause: LLM-generated rules not verified against formal logic. "
+            "Mitigation: automated theorem prover as secondary check.\n\n"
+            "3. **Context window overflow**: Complex reasoning exceeds token limits. "
+            "Root cause: Graph expansion without budgeting. "
+            "Mitigation: dynamic context management with summarization.\n\n"
+            "4. **Distribution shift**: Performance drops on out-of-domain inputs. "
+            "Root cause: Training/evaluation domain gap. "
+            "Mitigation: domain adaptation layer + confidence calibration.\n"
         )
 
         success_criteria = (
-            f"## Success Criteria\n\n"
-            f"| # | Metric | Target | Baseline |\n"
-            f"|:--|:-------|:-------|:---------|\n"
-            f"| 1 | Reasoning accuracy | >85% | 72% (CoT baseline) |\n"
-            f"| 2 | Latency per query | <5s | 3s (CoT baseline) |\n"
-            f"| 3 | Hallucination rate | <5% | 18% (unconstrained LLM) |\n"
-            f"| 4 | Explanation quality (human eval) | >4.0/5 | 3.2/5 |\n"
-            f"| 5 | Cost efficiency | <2× CoT cost | 5× CoT cost (GoT baseline) |\n"
+            "## Success Criteria\n\n"
+            "| # | Metric | Target | Baseline |\n"
+            "|:--|:-------|:-------|:---------|\n"
+            "| 1 | Reasoning accuracy | >85% | 72% (CoT baseline) |\n"
+            "| 2 | Latency per query | <5s | 3s (CoT baseline) |\n"
+            "| 3 | Hallucination rate | <5% | 18% (unconstrained LLM) |\n"
+            "| 4 | Explanation quality (human eval) | >4.0/5 | 3.2/5 |\n"
+            "| 5 | Cost efficiency | <2× CoT cost | 5× CoT cost (GoT baseline) |\n"
         )
 
         return DeepenedProposal(

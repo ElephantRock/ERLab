@@ -7,7 +7,7 @@ digests for prompt overlay generation, and history-aware parameter proposal.
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from pydantic import BaseModel, Field
@@ -22,7 +22,7 @@ class StageOutcome(BaseModel):
 
     stage_name: str
     run_id: str
-    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(UTC))
     score: float = 0.0
     params_used: dict[str, Any] = Field(default_factory=dict)
     issues: list[str] = Field(default_factory=list)

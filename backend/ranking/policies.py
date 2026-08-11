@@ -9,20 +9,18 @@ Policy ID: legacy_lexical_top20_v1
 from __future__ import annotations
 
 import re
-from typing import Sequence
 
 from backend.ranking.contracts import (
     DISPOSITION_EXCLUDED_RANK,
     DISPOSITION_SELECTED,
+    RankedCandidate,
     RankingCandidate,
     RankingPolicyContract,
     RankingRequest,
     RankingResult,
-    RankedCandidate,
     compute_tie_break_key,
     validate_ranking_result,
 )
-
 
 LEGACY_LEXICAL_POLICY = RankingPolicyContract(
     policy_id="legacy_lexical_top20_v1",

@@ -4,8 +4,6 @@ import sys
 from types import ModuleType
 from unittest.mock import AsyncMock, MagicMock
 
-import pytest
-
 # Stub out chromadb
 _chromadb = ModuleType("chromadb")
 _chromadb.PersistentClient = MagicMock
@@ -93,7 +91,7 @@ class TestImpasseDetectorWiring:
     def test_resolution_applied_between_rounds(self):
         """Verify that resolution is stored and would be applied next round."""
         from backend.pipeline.generation.agent_orchestrator import AgentOrchestrator
-        from backend.pipeline.generation.impasse import ImpasseDetected, Resolution
+        from backend.pipeline.generation.impasse import Resolution
 
         provider = MagicMock()
         provider.structured_output = AsyncMock(return_value={"ideas": []})

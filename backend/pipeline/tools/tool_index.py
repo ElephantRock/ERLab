@@ -9,7 +9,6 @@ import chromadb
 from pydantic import BaseModel
 
 if TYPE_CHECKING:
-    from backend.pipeline.knowledge.embedding_service import EmbeddingService
     from backend.pipeline.tools.registry import ToolDefinition, ToolRegistry
 
 logger = logging.getLogger(__name__)
@@ -45,8 +44,8 @@ class ToolEmbeddingIndex:
         if isinstance(arg1, SideChannelEmbeddingRuntime):
             # Governed path
             from backend.pipeline.side_channel_embedding import (
-                assert_purpose_not_paper,
                 SideChannelEmbeddingError,
+                assert_purpose_not_paper,
                 compute_side_channel_collection_name,
             )
             assert_purpose_not_paper(arg1.purpose)

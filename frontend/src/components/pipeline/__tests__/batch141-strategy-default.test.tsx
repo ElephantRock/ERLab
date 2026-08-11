@@ -47,26 +47,26 @@ describe("BATCH-141 / TASK-01: Strategy Default Change", () => {
     expect(options.length).toBe(4);
   });
 
-  // ── TEST-141-01-03: fast_scan option shows correct time estimate ──
-  // Falsified by: changing the fast_scan option text to empty string
+  // ── TEST-141-01-03: fast_scan truthfully describes its output ──
+  // Falsified by: restoring the old "skips tree search and metrics" copy
+  // without saying that lightweight ideas and proposals are still produced.
 
-  it("TEST-141-01-03: fast_scan option shows time estimate", () => {
+  it("TEST-141-01-03: fast_scan describes lightweight ideas and concise proposals", () => {
     renderForm();
 
-    // Strategy card shows time
     const card = screen.getByTestId("strategy-card-fast_scan");
-    expect(card.textContent).toMatch(/2-5 min/);
+    expect(card).toHaveTextContent(/lightweight ideas/i);
+    expect(card).toHaveTextContent(/concise proposals/i);
   });
 
-  // ── TEST-141-01-04: deep_research option shows "~25 min" time estimate ──
-  // Falsified by: changing the deep_research option text to empty string
+  // ── TEST-141-01-04: deep_research truthfully describes full workflow ──
+  // Falsified by: reverting to a proposal-only description.
 
-  it("TEST-141-01-04: deep_research option shows 25 min time estimate", () => {
+  it("TEST-141-01-04: deep_research describes the proposal-to-paper workflow", () => {
     renderForm();
 
-    // Strategy card shows time
     const card = screen.getByTestId("strategy-card-deep_research");
-    expect(card.textContent).toMatch(/25 min/);
+    expect(card).toHaveTextContent(/proposal-to-paper workflow/i);
   });
 
   // ── TEST-141-01-05: Submitted config includes strategy="fast_scan" by default ──
@@ -99,12 +99,12 @@ describe("BATCH-141 / TASK-01: Strategy Default Change", () => {
     renderForm();
 
     // Default card shows fast_scan description
-    expect(screen.getByText(/Fast scan skips tree search/)).toBeInTheDocument();
+    expect(screen.getByText(/Rapid gaps → lightweight ideas → concise proposals/)).toBeInTheDocument();
 
     // Click deep_research card
     await user.click(screen.getByTestId("strategy-card-deep_research"));
 
     // Description should now show deep_research text
-    expect(screen.getByText(/Full pipeline with tree search/)).toBeInTheDocument();
+    expect(screen.getByText(/Full proposal-to-paper workflow/)).toBeInTheDocument();
   });
 });

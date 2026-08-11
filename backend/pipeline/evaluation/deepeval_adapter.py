@@ -7,7 +7,6 @@ then averaging the results.
 
 from __future__ import annotations
 
-import json
 import logging
 import random
 from typing import Any
@@ -15,8 +14,8 @@ from typing import Any
 from backend.pipeline.evaluation.scorer import (
     EvaluationReport,
     ScoreDimension,
-    ScoreResult,
     Scorer,
+    ScoreResult,
 )
 
 logger = logging.getLogger(__name__)

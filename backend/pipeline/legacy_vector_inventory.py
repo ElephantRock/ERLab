@@ -23,11 +23,12 @@ import hashlib
 import json
 import logging
 import unicodedata
+from collections.abc import Sequence
 from dataclasses import dataclass
-from datetime import datetime, timezone
-from typing import Any, Literal, Protocol, Sequence
+from datetime import UTC, datetime
+from typing import Any, Literal, Protocol
 
-from sqlalchemy import func, select, update
+from sqlalchemy import select, update
 from sqlalchemy.orm import Session, sessionmaker
 
 logger = logging.getLogger(__name__)
@@ -37,7 +38,7 @@ _PAGE_SIZE = 500
 
 
 def _now() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 # ── Contracts ────────────────────────────────────────────────────────
@@ -890,12 +891,11 @@ async def execute_reindex_targets(
     Returns counts: {indexed, already_indexed, failed, content_unavailable}.
     """
     from backend.db.models import (
-        LegacyVectorInventoryRecord,
         LegacyVectorReindexTarget,
         Paper,
     )
-    from backend.pipeline.vector_indexer import index_document
     from backend.pipeline.vector_contracts import build_title_abstract_document
+    from backend.pipeline.vector_indexer import index_document
 
     session = session_factory()
     try:

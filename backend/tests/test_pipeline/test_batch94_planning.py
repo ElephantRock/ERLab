@@ -4,9 +4,7 @@ AIV v5.3 — T1, T2, T5.
 """
 from __future__ import annotations
 
-import pytest
-
-from backend.pipeline.planning.agent import PlanningAgent, ExecutionPlan, StagePlan
+from backend.pipeline.planning.agent import PlanningAgent
 
 
 def test_94_01_plan_creates_all_stages():

@@ -8,9 +8,7 @@ import pytest
 from backend.pipeline.novelty.novelty_checker import (
     GovernedEmbeddingNotConfiguredError,
     NoveltyChecker,
-    NoveltyReport,
 )
-from backend.tests.conftest import FakeLLMProvider
 from backend.tests.test_pipeline.conftest import (
     FakeVectorStore,
     SchemaAwareFakeProvider,
@@ -121,15 +119,14 @@ class TestGovernedNoveltyEmbeddingDependency:
         ), patch(
             "backend.pipeline.provenance_gate.load_run_provenance_contract",
             return_value=MagicMock(name="contract"),
-        ):
-            with pytest.raises(GovernedEmbeddingNotConfiguredError) as excinfo:
-                asyncio.run(
-                    checker.check_novelty(
-                        sample_ideas[0],
-                        run_id=1,
-                        db_engine=MagicMock(name="db_engine"),
-                    )
+        ), pytest.raises(GovernedEmbeddingNotConfiguredError) as excinfo:
+            asyncio.run(
+                checker.check_novelty(
+                    sample_ideas[0],
+                    run_id=1,
+                    db_engine=MagicMock(name="db_engine"),
                 )
+            )
 
         # Explicit, actionable failure message — not AttributeError
         msg = str(excinfo.value)

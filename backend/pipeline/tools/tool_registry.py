@@ -7,9 +7,10 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Callable, Awaitable
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -85,7 +86,7 @@ class MCPToolRegistry:
                 duration_ms=duration,
             )
 
-        except asyncio.TimeoutError:
+        except TimeoutError:
             return ToolResult(
                 tool_name=tool_name,
                 status=ToolStatus.TIMEOUT,
@@ -133,7 +134,7 @@ async def _file_read_handler(path: str = "", **kwargs) -> dict:
     if not safe_path.startswith("data") and not safe_path.startswith("./data"):
         return {"error": "Access denied: only data/ directory is readable"}
     try:
-        with open(safe_path, "r", encoding="utf-8") as f:
+        with open(safe_path, encoding="utf-8") as f:
             content = f.read(10000)
         return {"content": content, "path": safe_path}
     except Exception as e:

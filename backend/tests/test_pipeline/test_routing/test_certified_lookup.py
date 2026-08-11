@@ -1,13 +1,10 @@
 """Phase B tests: CertifiedCapabilityLookup."""
 
-import pytest
-from pathlib import Path
 
 import yaml
 
 from backend.pipeline.routing.certified_lookup import (
     CertifiedCapabilityLookup,
-    CertifiedModelCandidate,
 )
 
 

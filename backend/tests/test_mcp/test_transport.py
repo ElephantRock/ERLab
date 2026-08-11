@@ -1,6 +1,5 @@
 """Tests for MCP transports — StdIO and HTTP."""
 
-import asyncio
 import json
 
 import pytest

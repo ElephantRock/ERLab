@@ -14,7 +14,7 @@ import logging
 import shutil
 import sys
 from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -35,31 +35,8 @@ sys.modules.setdefault("chromadb", _mock_chromadb)
 sys.modules.setdefault("google.generativeai", MagicMock())
 
 from backend.config import Settings, get_settings
-from backend.pipeline.autonomy.hooks import HookDispatcher
-from backend.pipeline.export.export_service import ExportService
-from backend.pipeline.feasibility.feasibility_scorer import FeasibilityScorer
 from backend.pipeline.gap_analysis.gap_analyzer import GapAnalyzer
-from backend.pipeline.generation.agent_orchestrator import AgentOrchestrator
-from backend.pipeline.ingestion.chunker import DocumentChunk
-from backend.pipeline.knowledge.bm25_index import BM25Index
-from backend.pipeline.knowledge.embedding_service import EmbeddingService
-from backend.pipeline.knowledge.vector_store import VectorStore
 from backend.pipeline.literature.models import Author, Paper
-from backend.pipeline.novelty.novelty_checker import NoveltyChecker
-from backend.pipeline.result import PipelineResult
-from backend.pipeline.stages import (
-    ExportStage,
-    FeasibilityScoringStage,
-    GapAnalysisStage,
-    IdeaGenerationStage,
-    IngestionStage,
-    LiteratureSearchStage,
-    NoveltyCheckingStage,
-    PipelineStage,
-    ProposalSynthesisStage,
-    StageContext,
-)
-from backend.pipeline.synthesis.proposal_synthesizer import ProposalSynthesizer
 from backend.providers.base import LLMProvider
 
 logger = logging.getLogger(__name__)
@@ -101,7 +78,7 @@ class MockLLMProvider(LLMProvider):
         response = await self.complete(messages, temperature, max_tokens)
         yield response
 
-    async def structured_output(self, messages, schema, temperature=0.3) -> dict:
+    async def structured_output(self, messages, schema, temperature=0.3, max_tokens=4096, **kwargs) -> dict:
         """Return deterministic structured data based on the calling stage."""
         self._call_log.append({"method": "structured_output", "schema": schema})
         msg_text = " ".join(m.get("content", "") for m in messages).lower()
@@ -497,11 +474,11 @@ def _make_mock_papers() -> list[Paper]:
             source="test",
             title=f"Advances in NLP: Transformer Architectures and Applications {i}",
             abstract=(
-                f"This paper investigates novel approaches to natural language processing "
-                f"using transformer-based architectures. We propose a method that combines "
-                f"multi-head attention with retrieval-augmented generation for improved "
-                f"performance on knowledge-intensive tasks. Our experiments demonstrate "
-                f"significant improvements over existing baselines on standard benchmarks."
+                "This paper investigates novel approaches to natural language processing "
+                "using transformer-based architectures. We propose a method that combines "
+                "multi-head attention with retrieval-augmented generation for improved "
+                "performance on knowledge-intensive tasks. Our experiments demonstrate "
+                "significant improvements over existing baselines on standard benchmarks."
             ),
             authors=[Author(name=f"Author {i}")],
             year=2024,
@@ -658,3 +635,20 @@ class TestEndToEndMock:
         assert "title" in result
         assert "abstract" in result
         assert "proposed_method" in result
+
+    def test_gap_analyzer_uses_structured_output(self):
+        """GapAnalyzer must route through structured_output(), not complete().
+
+        The mock provider already implements _gap_response() for the gaps
+        schema. This asserts the production analyzer actually invokes
+        structured_output() so the gap path is exercised end-to-end.
+        """
+        provider = MockLLMProvider()
+        analyzer = GapAnalyzer(provider)
+        gaps, _ = asyncio.run(analyzer.analyze(_make_mock_papers(), max_gaps=2))
+        methods = [c["method"] for c in provider._call_log]
+        assert "structured_output" in methods, "GapAnalyzer must call structured_output()"
+        assert "complete" not in methods or methods.count("complete") == 0, (
+            "GapAnalyzer must NOT call complete() for gap analysis"
+        )
+        assert len(gaps) >= 1

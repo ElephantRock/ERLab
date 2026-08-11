@@ -5,7 +5,6 @@ AIV v5.3 — T1, T2, T5.
 """
 from __future__ import annotations
 
-import pytest
 from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
@@ -17,20 +16,11 @@ PROJECT_ROOT = Path(__file__).resolve().parents[3]
 
 def test_109_01_integration_service_imports():
     """All integration services are importable."""
-    from backend.pipeline.integration_service import PipelineIntegrationService
-    from backend.pipeline.knowledge.integration import KnowledgeIntegrationService
-    from backend.pipeline.monitoring.pipeline_monitoring import PipelineMonitoringService
-    from backend.pipeline.search_integration import SearchIntegrationService
     assert True  # All imports succeeded
 
 
 def test_109_01_phase7_modules_import():
     """All Phase 7 new modules are importable."""
-    from backend.pipeline.budget_guard import BudgetGuard
-    from backend.pipeline.versioning import ProposalVersionStore
-    from backend.pipeline.notifications.service import NotificationService
-    from backend.pipeline.prompts.domain_loader import load_domain_prompt
-    from backend.pipeline.export.bibtex_exporter import paper_to_bibtex
     assert True
 
 
@@ -65,7 +55,7 @@ def test_109_02_monitoring_with_planning():
 
 def test_109_02_budget_guard_with_monitoring():
     """BudgetGuard integrates with monitoring."""
-    from backend.pipeline.budget_guard import BudgetGuard, BudgetConfig
+    from backend.pipeline.budget_guard import BudgetConfig, BudgetGuard
     from backend.pipeline.monitoring.pipeline_monitoring import PipelineMonitoringService
     svc = PipelineMonitoringService()
     guard = BudgetGuard(BudgetConfig(max_time_s=3600))
@@ -84,7 +74,9 @@ def test_109_03_search_integration_with_guard():
 
 def test_109_03_knowledge_with_notifications():
     """KnowledgeIntegrationService + NotificationService work independently."""
-    import tempfile, os
+    import os
+    import tempfile
+
     from backend.pipeline.knowledge.integration import KnowledgeIntegrationService
     from backend.pipeline.notifications.service import NotificationService
 
@@ -108,8 +100,8 @@ def test_109_03_knowledge_with_notifications():
 
 def test_109_03_domain_prompts_with_integration():
     """Domain prompts enhance integration prompts."""
-    from backend.pipeline.prompts.domain_loader import load_domain_prompt
     from backend.pipeline.integration_service import PipelineIntegrationService
+    from backend.pipeline.prompts.domain_loader import load_domain_prompt
 
     domain_prompt = load_domain_prompt("machine learning")
     svc = PipelineIntegrationService(run_id="test", domain="AI/NLP")

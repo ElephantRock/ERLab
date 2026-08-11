@@ -9,12 +9,9 @@ import asyncio
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock
 
-import pytest
-
-from backend.pipeline.wiki.models import WikiEntry
 from backend.pipeline.wiki.generator import WikiGenerator
+from backend.pipeline.wiki.models import WikiEntry
 from backend.pipeline.wiki.verifier import WikiVerifier
-
 
 # ═══════════════════════════════════════════════════════════
 # TASK-01: WikiEntry Model + WikiGenerator

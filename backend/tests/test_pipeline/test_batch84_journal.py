@@ -4,8 +4,8 @@ AIV v5.3 — T1, T2, T5.
 """
 from __future__ import annotations
 
-import os
 import tempfile
+
 import pytest
 
 from backend.pipeline.journal.writer import JournalWriter

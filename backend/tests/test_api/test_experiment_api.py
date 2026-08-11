@@ -1,7 +1,8 @@
 """Tests for experiment execution API (BATCH-66 TASK-03)."""
 
+from unittest.mock import MagicMock, patch
+
 import pytest
-from unittest.mock import patch, MagicMock
 
 pytestmark = [pytest.mark.anyio, pytest.mark.slow]
 
@@ -14,7 +15,7 @@ def app():
 
 @pytest.fixture
 def client(app):
-    from httpx import AsyncClient, ASGITransport
+    from httpx import ASGITransport, AsyncClient
     return AsyncClient(transport=ASGITransport(app=app), base_url="http://test")
 
 

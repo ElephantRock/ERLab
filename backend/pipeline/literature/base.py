@@ -10,7 +10,7 @@ from backend.pipeline.literature.contracts import (
     SourceQueryPlan,
     SourceSearchOutcome,
 )
-from backend.pipeline.literature.models import Paper, SearchResult
+from backend.pipeline.literature.models import Paper
 
 
 class AcademicSearchSource(ABC):

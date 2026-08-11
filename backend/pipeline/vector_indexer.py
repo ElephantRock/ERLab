@@ -17,8 +17,8 @@ back and verifies before publishing ``indexed`` eligibility.
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timezone
-from typing import Any, Literal
+from datetime import UTC, datetime
+from typing import Any
 
 from sqlalchemy import select, update
 from sqlalchemy.orm import Session, sessionmaker
@@ -26,14 +26,13 @@ from sqlalchemy.orm import Session, sessionmaker
 from backend.pipeline.vector_backend import BackendVectorRecord, GovernedVectorBackend
 from backend.pipeline.vector_contracts import (
     EMBEDDING_PROFILE_V1,
+    VECTOR_INDEX_V1,
     EmbeddingProfileDriftError,
     IndexingAlreadyClaimedError,
-    VECTOR_INDEX_V1,
     VectorIndexDocument,
     VectorIndexingOutcome,
     VectorIndexRegistryDriftError,
     compute_collection_name,
-    compute_content_hash,
     compute_profile_id,
     compute_vector_record_id,
 )
@@ -48,7 +47,7 @@ class WriteGuardFrozen(Exception):
 
 
 def _now() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 # ── Profile registration ─────────────────────────────────────────────
@@ -249,8 +248,8 @@ async def index_document(
 
     # 1b. Consult write guard — reject if frozen (P0.4A2 Final)
     from backend.db.models import (
-        EmbeddingProfileEmbeddingWriteGuard,
         EmbeddingProfileBindingActivation,
+        EmbeddingProfileEmbeddingWriteGuard,
     )
     with session_factory() as guard_session:
         guard = guard_session.execute(

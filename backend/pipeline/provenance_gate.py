@@ -163,7 +163,7 @@ def create_governed_run_record(
     status: str = "running",
     config_json: str = "{}",
     **extra_fields,
-) -> "PipelineRun":
+) -> PipelineRun:
     """Create a provenance_v1 run and its pending reconciliation ledger.
 
     Atomic: failure leaves neither record. The reconciliation ledger is
@@ -207,7 +207,7 @@ def create_legacy_run_record(
     status: str = "running",
     config_json: str = "{}",
     **extra_fields,
-) -> "PipelineRun":
+) -> PipelineRun:
     """Create a pre_provenance run with an explicit legacy reason.
 
     No RunSearchReconciliation is created. The legacy reason must be one

@@ -9,6 +9,7 @@ AIV v5.3 Test Integrity Protocol:
 from __future__ import annotations
 
 import json
+
 import pytest
 
 from backend.pipeline.strategies.models import (
@@ -16,9 +17,8 @@ from backend.pipeline.strategies.models import (
     StageConfig,
     StrategyConfig,
 )
-from backend.pipeline.strategies.registry import StrategyRegistry
 from backend.pipeline.strategies.presets import register_presets
-
+from backend.pipeline.strategies.registry import StrategyRegistry
 
 # ── Fixtures ──────────────────────────────────────────────
 
@@ -72,11 +72,11 @@ def test_76_01_03_stage_config_defaults():
     assert sc.params == {}
 
 
-# ── TEST-76-01-04: deep_research has all 9 stages ───────
+# ── TEST-76-01-04: deep_research enables core production stages ───────
 # AC-01-05
 
 def test_76_01_04_deep_research_has_all_stages(registry):
-    """deep_research strategy enables all 9 stages from _STAGE_ORDER."""
+    """deep_research fallback enables the core production stages."""
     config = registry.get("deep_research")
     expected_stages = [
         "literature_search", "ingestion", "gap_analysis",
@@ -152,10 +152,11 @@ def test_76_01_06b_register_overwrites(empty_registry):
 # AC-01-04
 
 def test_76_01_07_fast_scan_disables_expensive_stages(registry):
-    """fast_scan disables idea_generation, novelty_checking, mechanical_metrics."""
+    """fast_scan keeps lightweight ideation but disables expensive scoring/review stages."""
     config = registry.get("fast_scan")
+    # Lightweight ideation is required so feasibility + concise synthesis are reachable.
+    assert config.stages["idea_generation"].enabled is True
     # These should be DISABLED
-    assert config.stages["idea_generation"].enabled is False
     assert config.stages["novelty_checking"].enabled is False
     assert config.stages["mechanical_metrics"].enabled is False
     # These should be ENABLED
@@ -197,13 +198,16 @@ def test_literature_review_disables_generation_stages(registry):
     assert config.stages["export"].enabled is True
 
 
-def test_academic_proposal_stricter_thresholds(registry):
-    """academic_proposal has higher thresholds than deep_research."""
+def test_academic_proposal_matches_deep_runtime_topology(registry):
+    """Fallback presets must not advertise inactive threshold/timeout semantics."""
     academic = registry.get("academic_proposal")
     deep = registry.get("deep_research")
-    assert academic.max_total_time > deep.max_total_time
-    assert academic.stages["novelty_checking"].params.get("threshold", 0) >= 0.7
-    assert academic.stages["proposal_synthesis"].timeout > deep.stages["proposal_synthesis"].timeout
+    academic_enabled = {k for k, v in academic.stages.items() if v.enabled}
+    deep_enabled = {k for k, v in deep.stages.items() if v.enabled}
+    assert academic_enabled == deep_enabled
+    assert academic.max_total_time == deep.max_total_time
+    assert academic.stages["novelty_checking"].params.get("threshold") is None
+    assert academic.stages["proposal_synthesis"].timeout == deep.stages["proposal_synthesis"].timeout
 
 
 def test_registry_has_utility_methods(registry):

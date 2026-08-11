@@ -1,6 +1,6 @@
 # Elephant Rock Research
 
-**v1.0.1** ![status](https://img.shields.io/badge/status-research/engineering%20release-blue) ![roadmap](https://img.shields.io/badge/roadmap-complete-brightgreen)
+**v1.0.3** ![status](https://img.shields.io/badge/status-research/engineering%20release-blue) ![roadmap](https://img.shields.io/badge/roadmap-complete-brightgreen)
 
 **Elephant Rock** (ERLab) is an AI-powered research platform that automates the entire lifecycle of academic research — from literature discovery and gap analysis through novel idea generation, feasibility scoring, structured proposal synthesis, **frozen empirical experiment execution**, and **evidence-bound paper composition** with citation and result provenance.
 
@@ -55,38 +55,37 @@ Elephant Rock produces research outputs that are traceable, verifiable, and revi
 
 ## Architecture
 
-Elephant Rock runs a **9-stage pipeline** that transforms raw literature into scored research proposals:
+Elephant Rock runs a multi-stage research pipeline that transforms raw literature into evidence-bound proposals and papers. The current stage order (`backend/pipeline/orchestrator/_orchestrator.py::_STAGE_ORDER`) is:
 
 ```
-┌──────────────────────────────────────────────────────────────────────┐
-│                     Elephant Rock 9-Stage Pipeline                   │
-│                                                                      │
-│  1. Literature Search ──► Discover papers from Semantic Scholar,     │
-│                            arXiv, and OpenAlex                        │
-│                          │                                           │
-│  2. PDF Ingestion    ──► Parse, chunk, and index full-text PDFs      │
-│                          │                                           │
-│  3. Knowledge Base   ──► Embed chunks into ChromaDB + BM25 hybrid    │
-│                            vector store with Knowledge Graph          │
-│                          │                                           │
-│  4. Gap Analysis     ──► Identify unsolved problems via multi-agent  │
-│                            reasoning with clustering                  │
-│                          │                                           │
-│  5. Idea Generation  ──► Generate novel research ideas using a DAG   │
-│                            of specialised agents (TopoAgent DAG)      │
-│                          │                                           │
-│  6. Novelty Check    ──► Score ideas against the knowledge base      │
-│                            (method, problem, domain transfer)         │
-│                          │                                           │
-│  7. Feasibility      ──► Assess data, compute, and method viability  │
-│     Scoring               with counterfactual analysis               │
-│                          │                                           │
-│  8. Proposal         ──► Synthesize structured proposals with        │
-│     Synthesis             references and governance validation        │
-│                          │                                           │
-│  9. Export           ──► Output proposals to Markdown or LaTeX       │
-│                                                                      │
-└──────────────────────────────────────────────────────────────────────┘
+literature_search   →   ingestion   →   trimmer
+   →   gap_analysis   →   gap_reflection
+   →   idea_generation   →   idea_reflection
+   →   novelty_checking   →   feasibility_scoring   →   mechanical_metrics
+   →   proposal_synthesis   →   adversarial_review   →   evaluation
+   →   experiment_execution   (opt-in; spec-driven, no-op unless an
+       experiment_spec_id is supplied — not run on literature-only cycles)
+   →   paper_synthesis   →   citation_audit   →   proposal_deepening   →   export
+```
+
+What each stage does:
+
+- **literature search** — discover papers from Semantic Scholar, arXiv, and OpenAlex
+- **ingestion** — parse, chunk, and index full-text PDFs
+- **trimmer** — paper reranking and truncation before analysis
+- **gap analysis / reflection** — identify unsolved problems via multi-agent reasoning with clustering, then reflect
+- **idea generation / reflection** — generate novel research ideas via a DAG of specialised agents, then reflect
+- **novelty checking** — score ideas against the knowledge base (method, problem, domain transfer)
+- **feasibility scoring** — assess data, compute, and method viability with counterfactual analysis
+- **mechanical metrics** — deterministic engineering/scaling metrics alongside feasibility
+- **proposal synthesis** — synthesize structured proposals with references and governance validation
+- **adversarial review** — critique and stress-test proposals
+- **evaluation** — provenance, scope, conclusion-support, and claim-to-RESULT semantic gates
+- **experiment execution** — *optional*: execute frozen, checked-in analyses on registered datasets, only when a spec is supplied
+- **paper synthesis** — compose evidence-bound papers with deterministic RESULT provenance
+- **citation audit** — verify citation markers resolve against the same-run corpus
+- **proposal deepening** — final elaboration pass on proposals
+- **export** — output to Markdown or LaTeX
 
    ┌─────────────────┐   ┌──────────────┐   ┌───────────────────┐
    │  Tiered Memory   │   │  Governance  │   │  Cost Router &    │
@@ -94,7 +93,6 @@ Elephant Rock runs a **9-stage pipeline** that transforms raw literature into sc
    │   Episodic +     │   │  & Audit Log │   │  (token tracking) │
    │   Procedural)    │   │              │   │                   │
    └─────────────────┘   └──────────────┘   └───────────────────┘
-```
 
 ### Key Design Principles
 
@@ -102,6 +100,19 @@ Elephant Rock runs a **9-stage pipeline** that transforms raw literature into sc
 - **Hybrid Knowledge Base**: Semantic (ChromaDB) + lexical (BM25) retrieval with Reciprocal Rank Fusion.
 - **Tiered Memory**: The platform retains lessons across runs via semantic, episodic, and procedural memory tiers.
 - **Governance Layer**: All outputs pass through a configurable validator with audit logging for responsible research automation.
+
+### Provider & Cost Accounting (v1.0.3)
+
+**Providers.** The OpenAI-compatible cloud path has been live-validated end-to-end. Anthropic, Gemini, Ollama, and LiteLLM now conform to the shared usage-attribution contract (`complete_with_usage` and `structured_output_with_usage` carry `stage` and `run_id`), but those additional providers have **not** all been live E2E validated for this release — conformance to the contract is verified by the provider-usage test suite, not by live calls.
+
+**Cost accounting.** v1.0.3 provides:
+
+- **run-isolated accounting** — ledger, summary, and aggregation views are scoped per `run_id`; a process-lived tracker cannot leak one run's events into another;
+- **stage/run attribution** — every billable call carries the pipeline stage and run identity into its cost event;
+- **structured-output accounting** — schema calls route through the usage-aware boundary so each structured request produces an authoritative token receipt;
+- **explicit reconciliation posture** — persisted summaries carry one of `partial` (a known unaccounted provider call exists), `reconciled` (events captured, no known gap), or `no_events`.
+
+Tool-call accounting (e.g. `complete_with_tools`) is **not** claimed by this release and remains an open improvement.
 
 ---
 
@@ -115,7 +126,7 @@ The CLI provides full access to every pipeline stage and utility:
 |---|---|
 | `erock setup` | Interactive setup wizard — configure provider, API key, and generate `.env` |
 | `erock dev` | Start backend (port 8000) and frontend (port 3000) dev servers |
-| `erock generate` | Run the full 9-stage pipeline |
+| `erock generate` | Run the full research pipeline (literature search → export) |
 | `erock search <query>` | Search academic literature across Semantic Scholar, arXiv, OpenAlex |
 | `erock ingest <file>` | Ingest a PDF into the knowledge base |
 | `erock novelty-check <text>` | Check novelty of a research idea |
@@ -203,7 +214,7 @@ Contributions are welcome. To get started:
 
 1. **Fork** the repository and create a feature branch.
 2. **Install** with dev dependencies: `pip install -e ".[dev]"`
-3. **Run tests**: `pytest` (baseline: 3,687 backend tests) + `cd frontend && npx vitest run` (624 frontend tests)
+3. **Run tests**: `pytest backend/tests` (backend) + `cd frontend && npx vitest run` (frontend). Run the v1.0.3 reconciliation suite with `pytest backend/tests/test_v103_release_reconciliation.py backend/tests/test_v103_structured_usage.py`.
 4. **Lint**: `ruff check backend/`
 5. **Type-check**: `mypy backend/`
 6. **Submit** a pull request with a clear description of the change.
@@ -217,16 +228,17 @@ elephant-rock-platform/
 │   ├── cli/            # Typer CLI commands
 │   ├── config.py       # Central configuration (pydantic-settings)
 │   ├── db/             # SQLAlchemy models and CRUD
-│   ├── pipeline/       # 9-stage pipeline implementation
-│   │   ├── literature/    # Stage 1: literature search
-│   │   ├── ingestion/     # Stage 2: PDF parsing
-│   │   ├── knowledge/     # Stage 3: vector store + knowledge graph
-│   │   ├── gap_analysis/  # Stage 4: gap identification
-│   │   ├── generation/    # Stage 5: multi-agent idea generation
-│   │   ├── novelty/       # Stage 6: novelty checking
-│   │   ├── feasibility/   # Stage 7: feasibility scoring
-│   │   ├── synthesis/     # Stage 8: proposal synthesis
-│   │   └── export/        # Stage 9: export (Markdown/LaTeX)
+│   ├── pipeline/       # research pipeline implementation
+│   │   ├── literature/    # literature search + ingestion
+│   │   ├── knowledge/     # vector store + knowledge graph
+│   │   ├── gap_analysis/  # gap identification + reflection
+│   │   ├── generation/    # multi-agent idea generation + reflection
+│   │   ├── novelty/       # novelty checking
+│   │   ├── feasibility/   # feasibility scoring + mechanical metrics
+│   │   ├── synthesis/     # proposal synthesis + adversarial review
+│   │   ├── evaluation/    # evaluation gates (incl. paper synthesis + citation audit)
+│   │   ├── experiment/    # opt-in frozen experiment execution
+│   │   └── export/        # export (Markdown/LaTeX)
 │   ├── providers/      # LLM provider abstraction (LiteLLM)
 │   └── tests/          # Test suite
 ├── frontend/           # React + TypeScript web UI

@@ -1,6 +1,5 @@
 """Tests for async pipeline execution via the API routes (P11)."""
 
-import pytest
 import sys
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -11,7 +10,6 @@ from fastapi.testclient import TestClient
 
 from backend.api.errors import APIError
 from backend.api.routes.pipeline import router
-
 
 
 def _make_app():

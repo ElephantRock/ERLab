@@ -5,10 +5,11 @@ AIV v5.3 — T1, T2, T5. Use asyncio.run() not @pytest.mark.asyncio.
 from __future__ import annotations
 
 import asyncio
-import pytest
 
 from backend.pipeline.tools.tool_registry import (
-    MCPToolRegistry, ToolDefinition, ToolResult, ToolStatus,
+    MCPToolRegistry,
+    ToolDefinition,
+    ToolStatus,
     create_default_registry,
 )
 

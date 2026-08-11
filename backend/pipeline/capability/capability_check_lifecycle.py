@@ -36,30 +36,28 @@ Each transition is its own short transaction. Terminal rows are immutable
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timedelta, timezone
-from typing import Any
+from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import select, update
 from sqlalchemy.orm import Session, sessionmaker
 
 from backend.db.models import EmbeddingCapabilityCheck
+from backend.pipeline.capability.capability_identity import compute_check_id
 from backend.pipeline.capability.contracts import (
-    CheckAlreadyClaimed,
-    CheckAlreadyTerminal,
-    FailedCheckEvidence,
-    InvalidCheckTransition,
-    PassedCheckObservations,
     STATUS_ABANDONED,
     STATUS_CANCELLED,
     STATUS_FAILED,
     STATUS_PASSED,
     STATUS_PENDING,
     STATUS_RUNNING,
-    TERMINAL_CHECK_STATUSES,
+    CheckAlreadyClaimed,
+    CheckAlreadyTerminal,
+    FailedCheckEvidence,
+    InvalidCheckTransition,
+    PassedCheckObservations,
     is_terminal,
     is_valid_transition,
 )
-from backend.pipeline.capability.capability_identity import compute_check_id
 from backend.pipeline.vector_contracts import (
     CAPABILITY_CHECK_SCHEMA_V1,
     EMBEDDING_PROBE_SUITE_V1,
@@ -69,7 +67,7 @@ logger = logging.getLogger(__name__)
 
 
 def _now() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 # ── Create ────────────────────────────────────────────────────────────

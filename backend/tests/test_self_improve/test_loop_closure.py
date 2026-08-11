@@ -11,9 +11,7 @@ import sys
 import tempfile
 from datetime import datetime
 from types import ModuleType
-from unittest.mock import AsyncMock, MagicMock, patch
-
-import pytest
+from unittest.mock import AsyncMock, MagicMock
 
 # Stub out chromadb
 _chromadb = ModuleType("chromadb")
@@ -192,7 +190,6 @@ class TestSkillProposerGeneratorActivated:
         assert provider.complete.called
 
     def test_skill_registry_add_version(self):
-        import asyncio
 
         from backend.pipeline.skills.models import Skill, SkillStatus, SkillVersion
         from backend.pipeline.skills.registry import SkillRegistry

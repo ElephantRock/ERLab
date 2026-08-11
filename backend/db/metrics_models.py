@@ -1,6 +1,6 @@
 """Pipeline metrics model — stores evaluation metrics per pipeline run."""
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from sqlalchemy import Float, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
@@ -20,5 +20,5 @@ class PipelineMetric(Base):
     metric_value: Mapped[float] = mapped_column(Float)
     detail: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
-        default=lambda: datetime.now(timezone.utc)
+        default=lambda: datetime.now(UTC)
     )

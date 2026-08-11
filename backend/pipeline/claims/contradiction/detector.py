@@ -7,15 +7,13 @@ Authority: LLM judgment authoritative when available; numeric heuristic as fallb
 
 from __future__ import annotations
 
-import json
-
-from backend.pipeline.utils.json_extraction import extract_json
 import logging
 from collections import defaultdict
 from pathlib import Path
 
-from backend.pipeline.claims.models import Claim, ClaimType
 from backend.pipeline.claims.contradiction.models import ContradictionCandidate
+from backend.pipeline.claims.models import Claim, ClaimType
+from backend.pipeline.utils.json_extraction import extract_json
 
 logger = logging.getLogger(__name__)
 

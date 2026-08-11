@@ -12,17 +12,16 @@ from __future__ import annotations
 
 import pytest
 
+from backend.pipeline.gap_analysis.models import ResearchGap
 from backend.pipeline.generation.models import IdeaCandidate
 from backend.pipeline.generation.tree_search import (
     MAX_BEAM_WIDTH,
     SimpleScorer,
+    TreeNode,
     TreeSearchConfig,
     TreeSearchEngine,
-    TreeNode,
 )
-from backend.pipeline.gap_analysis.models import ResearchGap
 from backend.pipeline.literature.models import Paper
-
 
 # ── Fixtures ────────────────────────────────────────────────────────
 

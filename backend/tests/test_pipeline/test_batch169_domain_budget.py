@@ -1,5 +1,4 @@
 """BATCH-169: Domain-Specific Prompts & Budget/Time Controls."""
-import pytest
 
 
 class TestDomainPrompts:
@@ -47,7 +46,7 @@ class TestBudgetControls:
         assert BudgetGuard is not None
 
     def test_08_budget_guard_tracks_usage(self):
-        from backend.pipeline.budget_guard import BudgetGuard, BudgetConfig
+        from backend.pipeline.budget_guard import BudgetConfig, BudgetGuard
         config = BudgetConfig(max_time_s=60, max_cost_usd=1.0)
         guard = BudgetGuard(config=config)
         guard.start()
@@ -61,7 +60,7 @@ class TestBudgetControls:
         assert "gap_analysis" in settings.compaction_stage_budgets
 
     def test_10_budget_guard_records_cost(self):
-        from backend.pipeline.budget_guard import BudgetGuard, BudgetConfig
+        from backend.pipeline.budget_guard import BudgetConfig, BudgetGuard
         config = BudgetConfig(max_time_s=60, max_cost_usd=0.01)
         guard = BudgetGuard(config=config)
         guard.start()

@@ -72,7 +72,11 @@ async def list_gaps(
     """
     from sqlalchemy import select
 
-    from backend.db.crud import count_ideas_for_gap, search_gaps, count_search_gaps, batch_count_ideas_for_gaps
+    from backend.db.crud import (
+        batch_count_ideas_for_gaps,
+        count_search_gaps,
+        search_gaps,
+    )
     from backend.db.database import get_session
     from backend.db.models import PipelineRun
 
@@ -148,9 +152,11 @@ async def list_gaps(
     description="Aggregated gap statistics: type distribution, confidence trends, top gaps.",
 )
 async def gap_stats():
-    from sqlalchemy import func, desc as sa_desc, select
+    from sqlalchemy import desc as sa_desc
+    from sqlalchemy import func, select
+
     from backend.db.database import get_session
-    from backend.db.models import ResearchGapDB, PipelineRun
+    from backend.db.models import PipelineRun, ResearchGapDB
 
     with get_session() as session:
         # Type distribution
@@ -211,16 +217,14 @@ async def export_gaps(
 ):
     import csv
     import io
-    from backend.db.crud import search_gaps, count_search_gaps
+
+    from backend.db.crud import search_gaps
     from backend.db.database import get_session
     from backend.db.models import PipelineRun
 
     validated_type = gap_type if gap_type in GAP_TYPE_WHITELIST else None
 
     from sqlalchemy import select as sa_select
-    from backend.db.crud import search_gaps, count_search_gaps
-    from backend.db.database import get_session
-    from backend.db.models import PipelineRun
 
     with get_session() as session:
         target_run = run_id
@@ -260,7 +264,9 @@ async def export_gaps(
 )
 async def get_clusters(run_id: int | None = Query(default=None, description="Pipeline run ID (latest if omitted)")):
     import json as json_mod
+
     from sqlalchemy import select
+
     from backend.db.database import get_session
     from backend.db.models import PipelineRun
 
@@ -295,7 +301,7 @@ async def get_clusters(run_id: int | None = Query(default=None, description="Pip
     description="Return one entry per unique gap (deduplicated by content hash).",
 )
 async def list_canonical_gaps(limit: int = Query(default=100, ge=1, le=500)):
-    from backend.db.crud import count_ideas_for_gap, list_canonical_gaps as db_list_canonical
+    from backend.db.crud import list_canonical_gaps as db_list_canonical
     from backend.db.database import get_session
 
     with get_session() as session:
@@ -333,10 +339,12 @@ async def get_gap(gap_id: int):
     Example response:
         {"gap": {"id": 1, "title": "Limited cross-domain evaluation", "description": "...", "gap_type": "methodological", "confidence": 0.85, "potential_impact": "high", "pipeline_run_id": 1, "created_at": "2026-05-02T14:30:00"}}
     """
-    from backend.db.crud import count_ideas_for_gap, get_gap as db_get_gap
+    from sqlalchemy import select as sa_select
+
+    from backend.db.crud import count_ideas_for_gap
+    from backend.db.crud import get_gap as db_get_gap
     from backend.db.database import get_session
     from backend.db.models import Paper
-    from sqlalchemy import select as sa_select
 
     with get_session() as session:
         gap = db_get_gap(session, gap_id)
@@ -404,6 +412,7 @@ async def get_gap(gap_id: int):
 )
 async def get_gap_papers(gap_id: int):
     import json as json_mod
+
     from backend.db.crud import get_gap as db_get_gap
     from backend.db.database import get_session
     from backend.db.models import Paper
@@ -444,6 +453,7 @@ async def get_gap_papers(gap_id: int):
 )
 async def get_related_gaps(gap_id: int):
     import json as json_mod
+
     from backend.db.crud import get_gap as db_get_gap
     from backend.db.database import get_session
     from backend.db.models import ResearchGapDB
@@ -521,9 +531,10 @@ async def submit_feedback(gap_id: int, rating: int = Query(..., ge=1, le=5, desc
     description="Transition gap status forward: identified → investigating → addressed (BATCH-41).",
 )
 async def update_status(gap_id: int, status: str = Query(..., description="New status: identified, investigating, addressed")):
+    from fastapi import HTTPException
+
     from backend.db.crud import update_gap_status
     from backend.db.database import get_session
-    from fastapi import HTTPException
 
     if status not in VALID_STATUSES:
         raise HTTPException(status_code=422, detail=f"Invalid status '{status}'. Must be one of: {', '.join(sorted(VALID_STATUSES))}")
@@ -531,7 +542,7 @@ async def update_status(gap_id: int, status: str = Query(..., description="New s
     with get_session() as session:
         gap = update_gap_status(session, gap_id, status)
         if not gap:
-            raise HTTPException(status_code=422, detail=f"Invalid transition. Forward-only: identified → investigating → addressed")
+            raise HTTPException(status_code=422, detail="Invalid transition. Forward-only: identified → investigating → addressed")
         return {
             "gap": {
                 "id": gap.id,

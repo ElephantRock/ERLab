@@ -1,12 +1,8 @@
 """Tests for BATCH-181/184: Trimmer + Orchestrator YAML integration."""
 
 import asyncio
-import os
-import sys
-import tempfile
 
 import pytest
-
 
 # ── Trimmer Stage ────────────────────────────────────────────────────
 
@@ -15,8 +11,8 @@ class TestTrimmerStage:
     """Trimmer reranks papers, keeps top_k, truncates abstracts."""
 
     def _make_ctx(self, papers=None, domain="AI/NLP"):
-        from backend.pipeline.stages import StageContext
         from backend.pipeline.result import PipelineResult
+        from backend.pipeline.stages import StageContext
         result = PipelineResult()
         ctx = StageContext(result=result, domain=domain, run_id="test")
         ctx.all_papers = papers or []
@@ -80,14 +76,15 @@ class TestOrchestratorYAML:
             assert config is not None
             assert len(config.stages) > 0, f"{strat} has no stages"
 
-    def test_02_fast_scan_has_6_enabled_stages(self):
-        """fast_scan strategy has exactly 6 enabled stages."""
+    def test_02_fast_scan_has_7_enabled_stages(self):
+        """fast_scan keeps lightweight idea generation so synthesis is reachable."""
         from backend.pipeline.orchestrator import PipelineOrchestrator
         config = PipelineOrchestrator._load_yaml_strategy("fast_scan")
         enabled = {k: v for k, v in config.stages.items() if v.enabled}
-        assert len(enabled) == 6
+        assert len(enabled) == 7
+        assert "idea_generation" in enabled
 
-    def test_03_deep_research_has_16_enabled_stages(self):
+    def test_03_deep_research_has_17_enabled_stages(self):
         """deep_research strategy has all 17 enabled stages (18 total incl. trimmer)."""
         from backend.pipeline.orchestrator import PipelineOrchestrator
         config = PipelineOrchestrator._load_yaml_strategy("deep_research")
@@ -107,7 +104,8 @@ class TestOrchestratorYAML:
         assert "literature_search" in config.stages
         assert "export" in config.stages
         enabled = {k: v for k, v in config.stages.items() if v.enabled}
-        assert len(enabled) == 6
+        assert len(enabled) == 7
+        assert "idea_generation" in enabled
 
 
 # ── DAG API Endpoint ─────────────────────────────────────────────────

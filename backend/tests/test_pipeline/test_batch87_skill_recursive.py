@@ -6,14 +6,15 @@ Marked slow: requires local SKILL.md path (C:/Next-Era/elephant-rock-platform).
 """
 from __future__ import annotations
 
-import pytest
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock
 
+import pytest
+
 pytestmark = pytest.mark.slow
 
-from backend.pipeline.literature.search_service import SearchService
 from backend.pipeline.literature.models import Paper, SearchResult
+from backend.pipeline.literature.search_service import SearchService
 
 
 def _make_paper(title, source="test"):

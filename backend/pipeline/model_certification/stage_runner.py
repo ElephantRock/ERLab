@@ -20,12 +20,18 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from backend.pipeline.model_certification.eval_case import (
-    StageEvalCase, GoldAnswer, load_suite, load_all_suites,
+    StageEvalCase,
+    load_all_suites,
+    load_suite,
 )
-from backend.pipeline.model_certification.stage_scorer import ScorerRegistry, create_default_registry
 from backend.pipeline.model_certification.scorers.grounding import compute_grounding_metrics
 from backend.pipeline.model_certification.stage_report import (
-    StageScoreCard, compute_latency_percentiles,
+    StageScoreCard,
+    compute_latency_percentiles,
+)
+from backend.pipeline.model_certification.stage_scorer import (
+    ScorerRegistry,
+    create_default_registry,
 )
 
 logger = logging.getLogger(__name__)

@@ -1,13 +1,12 @@
 """Tests for gap fixes G1, G3, G5, G6."""
 
 import asyncio
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from difflib import SequenceMatcher
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 from backend.pipeline.knowledge.embedding_providers import DummyEmbeddingProvider
 from backend.pipeline.knowledge.embedding_service import EmbeddingService
-
 
 # ── G1: Zero-vector startup detection ──────────────────────────────────
 
@@ -43,8 +42,8 @@ class TestEmbeddingValidation:
 class TestPaperToGapTruth:
     def test_gap_truth_revised_on_paper_overlap(self):
         """Gap truth increases when papers overlap with gap description."""
-        from backend.pipeline.knowledge.graph import KnowledgeGraph
         from backend.pipeline.knowledge.entities import EntityType, KnowledgeEntity
+        from backend.pipeline.knowledge.graph import KnowledgeGraph
         from backend.pipeline.knowledge.truth import TruthValue
 
         kg = KnowledgeGraph()
@@ -100,6 +99,7 @@ class TestWatchdogAtRunStart:
         """Verify orchestrator.run() calls watchdog before executing."""
         # Read the orchestrator source to verify the watchdog call is present
         import inspect
+
         from backend.pipeline.orchestrator import PipelineOrchestrator
         source = inspect.getsource(PipelineOrchestrator.run)
         assert "PipelineWatchdog" in source, "Watchdog not called in orchestrator.run()"
@@ -113,7 +113,7 @@ class TestWatchdogAtRunStart:
         stale_run = MagicMock()
         stale_run.id = 42
         stale_run.status = "running"
-        stale_run.created_at = datetime.now(timezone.utc) - timedelta(hours=2)
+        stale_run.created_at = datetime.now(UTC) - timedelta(hours=2)
         persistence.find_stale_runs.return_value = [stale_run]
 
         watchdog = PipelineWatchdog(persistence, timeout=timedelta(minutes=30))

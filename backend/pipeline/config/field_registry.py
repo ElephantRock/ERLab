@@ -16,10 +16,7 @@ classification contracts appropriate to their type.
 
 from __future__ import annotations
 
-import json
-from dataclasses import dataclass, field as dc_field
-from pathlib import Path
-from typing import Any
+from dataclasses import dataclass
 
 # ── Contract axes ─────────────────────────────────────────────────────
 

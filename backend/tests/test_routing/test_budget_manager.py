@@ -1,6 +1,6 @@
 """Tests for BudgetManager — global and per-provider limits."""
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from backend.providers.base import CostEvent
 from backend.providers.provider_factory import CostTracker
@@ -14,7 +14,7 @@ def _record(tracker: CostTracker, provider: str, cost_usd: float, tokens: int = 
         input_tokens=tokens // 2,
         output_tokens=tokens // 2,
         cost_usd=cost_usd,
-        timestamp=datetime.now(timezone.utc),
+        timestamp=datetime.now(UTC),
     ))
 
 

@@ -3,10 +3,8 @@
 Validates that the GapDeduplicator correctly merges near-duplicate
 gaps while preserving unique gaps and tracking source run IDs.
 """
-import pytest
 
-from backend.pipeline.gap_analysis.deduplicator import GapDeduplicator, MergedGap
-
+from backend.pipeline.gap_analysis.deduplicator import GapDeduplicator
 
 # ── TEST-117-01-01: Identical gaps are merged ─────────────────────
 

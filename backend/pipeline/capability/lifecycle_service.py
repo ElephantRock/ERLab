@@ -19,21 +19,20 @@ from __future__ import annotations
 import logging
 import uuid
 from dataclasses import dataclass
-from datetime import datetime, timezone
-from typing import Any
+from datetime import UTC, datetime
 
 from sqlalchemy import select, update
-from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy.orm import sessionmaker
 
 from backend.db.models import (
     EmbeddingBindingCutover,
-    EmbeddingBindingCutoverItem,
     EmbeddingProfileBindingActivation,
     EmbeddingProfileEmbeddingWriteGuard,
 )
 from backend.pipeline.capability.activation_service import (
-    ActivationError,
     activate_binding as _activate_binding,
+)
+from backend.pipeline.capability.activation_service import (
     seal_cutover as _seal_cutover,
 )
 from backend.pipeline.capability.capability_check_service import (
@@ -264,7 +263,7 @@ class CapabilityLifecycleService:
 
         Must NOT delete verified vectors automatically.
         """
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
 
         with self._sf() as session:
             cutover = session.execute(

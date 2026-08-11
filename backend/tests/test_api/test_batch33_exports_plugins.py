@@ -1,9 +1,7 @@
 """Tests for BATCH-33 TASK-01: PDF Export + Plugin Registry."""
 
-import json
 import zipfile
 from io import BytesIO
-from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -20,7 +18,6 @@ from sqlalchemy.orm import sessionmaker
 
 from backend.db.database import Base
 from backend.db.models import Idea, Proposal
-
 
 # ── Fixtures ──────────────────────────────────────────────────────
 
@@ -111,7 +108,6 @@ def test_33_01_01_export_pdf_returns_pdf_content(db_session, sample_idea):
 
 def test_33_01_02_bulk_export_returns_zip_of_ideas(db_session, sample_idea):
     """Verify that bulk export creates a valid ZIP archive with idea files."""
-    from backend.api.routes.exports import _idea_to_html
 
     # Simulate the bulk export logic
     buffer = BytesIO()

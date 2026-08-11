@@ -10,14 +10,11 @@ NOTE: pytest.ini has `-p no:asyncio`. Use asyncio.run() directly.
 from __future__ import annotations
 
 import asyncio
-import pytest
 from unittest.mock import AsyncMock, MagicMock
 
-from backend.pipeline.synthesis.fast_synthesizer import FastProposalSynthesizer
-from backend.pipeline.synthesis.proposal_synthesizer import ResearchProposal
-from backend.pipeline.strategies.registry import StrategyRegistry
-from backend.pipeline.strategies.presets import register_presets
+import pytest
 
+from backend.pipeline.synthesis.fast_synthesizer import FastProposalSynthesizer
 
 # ── Fixtures ──────────────────────────────────────────────
 

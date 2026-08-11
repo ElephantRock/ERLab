@@ -82,5 +82,5 @@ class StageHeartbeat:
                 await asyncio.wait_for(
                     self._stop_event.wait(), timeout=self._interval
                 )
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 pass  # Normal: interval elapsed, loop continues

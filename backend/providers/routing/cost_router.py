@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 from backend.providers.base import LLMProvider
 from backend.providers.routing.budget_manager import BudgetManager

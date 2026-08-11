@@ -1,13 +1,12 @@
 """BATCH-173 TASK-02: Persist + Expose Stage Report via API tests."""
 
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from unittest.mock import MagicMock, patch
 
 import pytest
 
-from backend.pipeline.result import PipelineResult, StageReport
-
+from backend.pipeline.result import StageReport
 
 # ── Fixtures ─────────────────────────────────────────────────────────────
 
@@ -43,8 +42,8 @@ def mock_run_with_report(sample_stage_report):
     ])
     run.stage_report_json = json.dumps([r.to_dict() for r in sample_stage_report])
     run.tree_data_json = None
-    run.created_at = datetime.now(timezone.utc)
-    run.completed_at = datetime.now(timezone.utc)
+    run.created_at = datetime.now(UTC)
+    run.completed_at = datetime.now(UTC)
     run.error_message = None
     run.ideas = []
     return run
@@ -62,8 +61,8 @@ def mock_run_without_report():
     run.stages_completed = json.dumps(["literature_search", "ingestion"])
     run.stage_report_json = None
     run.tree_data_json = None
-    run.created_at = datetime.now(timezone.utc)
-    run.completed_at = datetime.now(timezone.utc)
+    run.created_at = datetime.now(UTC)
+    run.completed_at = datetime.now(UTC)
     run.error_message = None
     run.ideas = []
     return run
@@ -77,8 +76,9 @@ def _call_get_run(mock_run):
 
     with patch("backend.db.crud.get_pipeline_run", return_value=mock_run), \
          patch("backend.db.database.get_session", return_value=mock_sess):
-        from backend.api.routes.pipeline import get_run
         import asyncio
+
+        from backend.api.routes.pipeline import get_run
         return asyncio.run(get_run(run_id=mock_run.id))
 
 

@@ -13,8 +13,6 @@ blind-adjudication discipline from Decision 3:
 
 from __future__ import annotations
 
-import pytest
-
 from backend.ranking.benchmark_v2_registry import (
     ALL_DISCOVERY_V2,
     ALL_RETRIEVAL_V2,
@@ -25,17 +23,15 @@ from backend.ranking.benchmark_v2_registry import (
     compute_benchmark_v2_fingerprint,
     compute_provisional_fingerprint,
     frozen_v2_cases,
-    frozen_v2_discovery_cases,
-    frozen_v2_retrieval_cases,
     is_gate1_complete,
     slice_coverage_report,
     validate_benchmark_v2,
 )
 from backend.ranking.benchmark_v2_schema import (
+    ALL_SLICE_TYPES,
     DISAGREE_NONE,
     DISAGREE_RESOLVED,
     REQUIRED_ADVERSARIAL_SLICES,
-    ALL_SLICE_TYPES,
 )
 
 

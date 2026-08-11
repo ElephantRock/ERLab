@@ -1,15 +1,13 @@
 """Phase A tests: StageContract."""
 
+
 import pytest
-from pathlib import Path
 
 from backend.pipeline.routing.stage_contract import (
     StageContract,
-    load_contracts,
     get_contract,
     get_smart_router_config,
-    VALID_RISK_LEVELS,
-    VALID_STRATEGIES,
+    load_contracts,
 )
 
 

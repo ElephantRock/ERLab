@@ -8,16 +8,11 @@ from __future__ import annotations
 
 import subprocess
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
 import yaml
-
-from backend.pipeline.model_certification.admission_policy import AdmissionStatus
-from backend.pipeline.model_certification.hardware_probe import HardwareFitResult
-from backend.pipeline.model_certification.smoke_test import SmokeTestResult
-from backend.pipeline.model_certification.schema_eval import SchemaEvalResult
 
 
 @dataclass
@@ -59,9 +54,9 @@ class CapabilityReport:
 
     def __post_init__(self):
         if not self.tested_at:
-            self.tested_at = datetime.now(timezone.utc).isoformat()
+            self.tested_at = datetime.now(UTC).isoformat()
         if not self.eval_run_id:
-            ts = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
+            ts = datetime.now(UTC).strftime("%Y%m%d-%H%M%S")
             self.eval_run_id = f"{self.model_id}-{ts}"
         if self.git_commit is None:
             self.git_commit = _get_git_commit()
@@ -139,7 +134,7 @@ class CapabilityReport:
         """Write report to data/model_certification/reports/<model_id>/<timestamp>.yaml."""
         dir_path = Path(directory) / self.model_id
         dir_path.mkdir(parents=True, exist_ok=True)
-        ts = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+        ts = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
         path = dir_path / f"{ts}.yaml"
         path.write_text(self.to_yaml(), encoding="utf-8")
         return path

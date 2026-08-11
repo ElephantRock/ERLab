@@ -8,10 +8,8 @@ Inspired by OpenAI Agents TracingProcessor with NoOp zero-cost mode.
 
 from __future__ import annotations
 
-import json
 import logging
 from abc import ABC, abstractmethod
-from pathlib import Path
 from typing import Any
 
 from backend.pipeline.tracing.spans import Span

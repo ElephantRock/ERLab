@@ -9,11 +9,11 @@ from __future__ import annotations
 
 import json
 import logging
-from typing import Sequence
+from collections.abc import Sequence
 
-from sqlalchemy import select, delete, func
-
+from sqlalchemy import delete, func, select
 from sqlalchemy.orm import Session
+
 from backend.db.models import ResearchClaim
 from backend.pipeline.claims.models import Claim, ClaimType
 

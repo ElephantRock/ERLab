@@ -5,9 +5,8 @@ gap_reflection, idea_reflection, and evaluation stages.
 """
 from __future__ import annotations
 
-from backend.pipeline.strategies.models import PipelineStrategy, StageConfig
-from backend.pipeline.strategies.registry import StrategyRegistry
 from backend.pipeline.strategies.presets import register_presets
+from backend.pipeline.strategies.registry import StrategyRegistry
 
 
 def _get_strategy_config(strategy_name: str):

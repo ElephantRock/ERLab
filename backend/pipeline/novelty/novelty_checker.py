@@ -168,11 +168,11 @@ class NoveltyChecker:
 
         # Step 2: For governed runs, ALL failures propagate.
         # Missing dependencies are contract violations, not fallthrough signals.
+        from backend.pipeline.scoped_vector_service import query_vectors
         from backend.pipeline.vector_contracts import (
             ScopedVectorRetrievalRequest,
             VectorRetrievalScope,
         )
-        from backend.pipeline.scoped_vector_service import query_vectors
 
         # Use injected governed runtime, or construct from settings (fallback for
         # callers that haven't been updated to inject yet)

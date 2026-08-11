@@ -6,20 +6,18 @@ map for a proposal and exposes resolved bibliographic identity per marker.
 """
 
 import json
-from contextlib import contextmanager
 
 import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-from backend.db.database import Base
 from backend.db import crud
+from backend.db.database import Base
 from backend.db.models import (
     Idea,
-    Paper as DBPaper,
+    PaperSourceMarker,
     PipelineRun,
     Proposal,
-    PaperSourceMarker,
 )
 
 

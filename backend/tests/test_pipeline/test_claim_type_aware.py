@@ -5,16 +5,14 @@ and support requirements are correctly defined and that assumptions
 cannot leak into claim metrics.
 """
 
-import pytest
 
 from backend.pipeline.gateway.claim_types import (
     CLAIM_SUPPORT_REQUIREMENTS,
     CLAIM_TYPE_VALUES,
+    SECTION_CONTRACTS,
     ClaimType,
     DesignAssumption,
-    SECTION_CONTRACTS,
     detect_benefit_phrases,
-    get_support_requirement,
     is_type_allowed_in_section,
     must_cite,
     must_mark_speculative,
@@ -22,10 +20,8 @@ from backend.pipeline.gateway.claim_types import (
 from backend.pipeline.synthesis.section_contracts import (
     CLAIM_SCHEMA,
     SECTION_PROMPTS,
-    get_schema_for_validation,
     get_section_prompt,
 )
-
 
 # ═══════════════════════════════════════════════════════════════════════════
 # CRITICAL INVARIANT: Assumptions do NOT affect claim metrics

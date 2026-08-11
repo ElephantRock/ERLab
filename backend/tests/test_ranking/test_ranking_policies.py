@@ -2,17 +2,12 @@
 
 from __future__ import annotations
 
-import pytest
-
 from backend.ranking.contracts import (
     DISPOSITION_SELECTED,
     RankingCandidate,
     RankingRequest,
-    RankingResult,
 )
 from backend.ranking.policies import (
-    LEGACY_LEXICAL_POLICY,
-    HYBRID_RRF_POLICY,
     rank_hybrid_rrf,
     rank_legacy_lexical,
 )

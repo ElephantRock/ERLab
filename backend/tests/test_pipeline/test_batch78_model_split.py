@@ -7,12 +7,7 @@ AIV v5.3 — T1, T2, T5
 """
 from __future__ import annotations
 
-import pytest
-from unittest.mock import MagicMock, patch
-
 from backend.config import Settings
-from backend.pipeline.model_selection import ModelSelector, THINKING_TASKS, GENERATION_TASKS
-
 
 # ══════════════════════════════════════════════════════════
 # TASK-01: Config + Provider Split

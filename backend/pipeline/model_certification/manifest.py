@@ -8,12 +8,11 @@ from __future__ import annotations
 
 import hashlib
 import json
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
 
 import yaml
-
 
 _VALID_PROVIDERS = frozenset({
     "lmstudio", "openai", "anthropic", "local", "vllm", "ollama", "api",

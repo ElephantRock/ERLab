@@ -29,6 +29,7 @@ CASES_JSON = REPO_ROOT / "data" / "evaluation" / "p1e_case_diagnostics.json"
 PAIRWISE_JSON = REPO_ROOT / "data" / "evaluation" / "p1e_policy_pairwise_comparison.json"
 
 import sys
+
 sys.path.insert(0, str(REPO_ROOT))
 sys.path.insert(0, str(REPO_ROOT / "scripts"))
 
@@ -82,7 +83,6 @@ class TestFrozenRatchet:
         """The manifest's case->split mapping must match the runtime registry exactly
         (full mapping, not just counts). This is the cross-check that catches the
         per-module split-table drift class."""
-        from collections import Counter
         from backend.ranking.benchmark_v2_registry import ALL_V2_CASES
         m = json.loads(MANIFEST_PATH.read_text(encoding="utf-8"))
         rt = {c.case_id: c.split for c in ALL_V2_CASES}
@@ -107,7 +107,6 @@ class TestHeldOutSeal:
 
     @skip_if_no_snapshots
     def test_filtered_p1b_loader_decodes_no_held_out(self):
-        import sys
         from backend.ranking.p1e_snapshot_filter import load_snapshot_filtered
         m = json.loads(MANIFEST_PATH.read_text(encoding="utf-8"))
         cal_dev = frozenset(m["cal_dev_case_ids"])
@@ -198,7 +197,7 @@ class TestOriginalEvaluatorUsage:
         audit_src = (REPO_ROOT / "scripts" / "p1e_benchmark_discrimination_audit.py").read_text(encoding="utf-8")
         for sym in ["_build_request", "_run_policy", "rank_semantic_only", "_grade_for",
                     "evaluate_v2", "macro_average", "SnapshotSemanticScorer"]:
-            assert f"import" in audit_src and sym in audit_src, f"audit must use original {sym}"
+            assert "import" in audit_src and sym in audit_src, f"audit must use original {sym}"
         # imports from the original modules
         assert "from backend.ranking.p1b3_evaluation import" in audit_src
         assert "from backend.ranking.policies import" in audit_src

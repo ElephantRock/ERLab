@@ -1,0 +1,17 @@
+{
+  "cell_id": "ablation_markers_only_section_wise_rep3",
+  "identity": {
+    "identity_pass": false,
+    "gt_method_in_primacy": false,
+    "conflicting_terms_in_primacy": [
+      "quantum",
+      "lubrication",
+      "bearing",
+      "reynolds"
+    ],
+    "primacy_region_preview": "# Research Paper: machine learning\n**Venue:** Generic\n**Sources:** 2 papers cited\n\n---\n\n## Abstract\n\nHydrodynamic lubrication modeling is essential for the design and optimization of mechanical bearings, where the Reynolds equation governs thin-film fluid behavior between sliding surfaces.\n\nClassica"
+  },
+  "markers_present": true,
+  "missing_markers": [],
+  "error": null
+}

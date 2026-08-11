@@ -18,25 +18,20 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
-from sqlalchemy import create_engine, event, inspect, text
+from sqlalchemy import create_engine, event, text
 from sqlalchemy.exc import IntegrityError as SAIntegrityError
 from sqlalchemy.orm import sessionmaker
 
 sys.modules.setdefault("chromadb", MagicMock())
 sys.modules.setdefault("google.generativeai", MagicMock())
 
-import backend.db.models
 from backend.db.database import Base
-from backend.db.models import PipelineRun, RunSearchReconciliation
-from backend.db.models import ProvenanceContractMutationError
+from backend.db.models import PipelineRun, ProvenanceContractMutationError, RunSearchReconciliation
 from backend.pipeline.provenance_gate import (
-    ProvenanceContractError,
     RunProvenanceContract,
-    RunProvenancePosture,
     create_governed_run_record,
     create_legacy_run_record,
     derive_run_provenance_posture,
-    load_run_provenance_contract,
     select_run_execution_mode,
 )
 

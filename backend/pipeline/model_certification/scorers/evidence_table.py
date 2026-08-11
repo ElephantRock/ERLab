@@ -6,10 +6,7 @@ Metrics: claim_to_paper_mapping_accuracy, unsupported_claim_rate,
 
 from __future__ import annotations
 
-import json
-
 from backend.pipeline.model_certification.stage_scorer import StageScorer
-from backend.pipeline.model_certification.eval_case import StageEvalCase, GoldAnswer
 
 
 class EvidenceTableScorer(StageScorer):

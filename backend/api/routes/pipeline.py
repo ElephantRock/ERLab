@@ -4,12 +4,11 @@ import asyncio
 import contextlib
 import json
 import logging
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
-from fastapi import APIRouter, Query, Request, Depends
+from fastapi import APIRouter, Query, Request
 from fastapi.responses import StreamingResponse
 
-from backend.api.auth import verify_api_key
 from backend.api.errors import NotFoundError, UnauthorizedError
 from backend.api.schemas import AutonomousCycleRequest, PipelineRunRequest, SessionCreateRequest
 
@@ -29,10 +28,14 @@ _background_tasks: set[asyncio.Task] = set()
 )
 async def estimate_run(
     strategy: str = Query(default="deep_research", description="Pipeline strategy"),
+    experiment_spec_id: str | None = Query(
+        default=None,
+        description="Registered experiment spec ID; when present, include experiment execution in the estimate.",
+    ),
 ):
     """Return estimated cost and time for a pipeline run."""
     from backend.pipeline.monitoring.cost_estimator import estimate_run_cost
-    est = estimate_run_cost(strategy)
+    est = estimate_run_cost(strategy, include_experiment=bool(experiment_spec_id))
     return {
         "strategy": est.strategy,
         "stages": est.stages,
@@ -63,8 +66,8 @@ async def trigger_run(request: PipelineRunRequest):
     Example response:
         {"run_id": "run_20260502_143000", "status": "running"}
     """
-    from backend.pipeline.orchestrator import PipelineOrchestrator
     from backend.api.run_service import get_run_service
+    from backend.pipeline.orchestrator import PipelineOrchestrator
 
     run_svc = get_run_service()
 
@@ -89,6 +92,9 @@ async def trigger_run(request: PipelineRunRequest):
             # queryable in run lists/detail and survives resume. Materially
             # influences the run (literature search + synthesis); not display-only.
             "research_question": request.research_question,
+            # Empirical-mode exposure: persist the selected authority alongside
+            # the run so detail/history views can truthfully identify it.
+            "experiment_spec_id": request.experiment_spec_id,
             "quality": {
                 "proposal_depth": quality["proposal_depth"],
                 "novelty_depth": quality["novelty_depth"],
@@ -131,7 +137,7 @@ async def trigger_run(request: PipelineRunRequest):
     async def _run_pipeline():
         # Apply per-stage model overrides for this run
         if request.model_overrides:
-            from backend.api.routes.model_config import _save_config, _load_config
+            from backend.api.routes.model_config import _load_config, _save_config
             existing = _load_config()
             existing.update(request.model_overrides)
             _save_config(existing)
@@ -168,10 +174,12 @@ async def trigger_run(request: PipelineRunRequest):
             )
             # Mark DB record as completed
             try:
+                from datetime import datetime as _dt
+
+                from sqlalchemy import select as _sa_select
+
                 from backend.db.database import get_session as _get_session_ctx
                 from backend.db.models import PipelineRun as _PipelineRun
-                from sqlalchemy import select as _sa_select
-                from datetime import datetime as _dt, timezone as _tz
                 with _get_session_ctx() as sess:
                     record = sess.execute(
                         _sa_select(_PipelineRun).where(
@@ -180,7 +188,7 @@ async def trigger_run(request: PipelineRunRequest):
                     ).scalar_one_or_none()
                     if record:
                         record.status = "completed"
-                        record.completed_at = _dt.now(_tz.utc)
+                        record.completed_at = _dt.now(UTC)
                         sess.commit()
                         logger.info("Marked run %s as completed", run_id)
             except Exception:
@@ -205,9 +213,10 @@ async def trigger_run(request: PipelineRunRequest):
             logger.error("Pipeline run %s failed: %s", run_id, e)
             # Mark the DB record as failed if it exists and is still "running" (BATCH-55)
             try:
+                from sqlalchemy import select as _sa_select
+
                 from backend.db.database import get_session as _get_session_ctx
                 from backend.db.models import PipelineRun as _PipelineRun
-                from sqlalchemy import select as _sa_select
                 with _get_session_ctx() as sess:
                     stmt = (
                         _sa_select(_PipelineRun)
@@ -219,7 +228,7 @@ async def trigger_run(request: PipelineRunRequest):
                     if run_record:
                         run_record.status = "failed"
                         run_record.error_message = str(e)[:500]
-                        run_record.completed_at = datetime.now(timezone.utc)
+                        run_record.completed_at = datetime.now(UTC)
                         sess.commit()
                         logger.info("Marked run record %d as failed", run_record.id)
             except Exception as db_err:
@@ -301,7 +310,7 @@ async def list_runs(
     Example response:
         {"runs": [{"id": 1, "status": "completed", "domain": "AI/NLP", "current_stage": "done", "ideas_count": 5, "session_id": "sess-abc", "created_at": "...", "completed_at": "...", "error_message": null}], "total": 42}
     """
-    from backend.db.crud import list_pipeline_runs, count_pipeline_runs
+    from backend.db.crud import count_pipeline_runs, list_pipeline_runs
     from backend.db.database import get_session
 
     with get_session() as session:
@@ -411,11 +420,11 @@ async def list_stale_runs(
         {"stale_runs": [{"id": 1, "run_id": null, "domain": "AI/NLP", "created_at": "...", "age_minutes": 45.2}], "count": 1}
     """
     from datetime import timedelta
+
     from backend.db.database import get_session
     from backend.db.models import PipelineRun
-    import sqlalchemy as sa
 
-    cutoff = datetime.now(timezone.utc) - timedelta(minutes=timeout_minutes)
+    cutoff = datetime.now(UTC) - timedelta(minutes=timeout_minutes)
 
     with get_session() as session:
         runs = session.query(PipelineRun).filter(
@@ -424,9 +433,9 @@ async def list_stale_runs(
         ).order_by(PipelineRun.created_at.asc()).limit(100).all()
 
         stale_runs = []
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         for run in runs:
-            created = run.created_at.replace(tzinfo=timezone.utc) if run.created_at.tzinfo is None else run.created_at
+            created = run.created_at.replace(tzinfo=UTC) if run.created_at.tzinfo is None else run.created_at
             age = now - created
             stale_runs.append({
                 "id": run.id,
@@ -454,6 +463,7 @@ async def get_run(run_id: str):
         Full run object with config, stages_completed, and ideas list.
     """
     from datetime import timedelta
+
     from backend.db.crud import get_pipeline_run
     from backend.db.database import get_session
     from backend.db.models import PipelineRun as _PipelineRunModel
@@ -483,8 +493,8 @@ async def get_run(run_id: str):
         timeout_minutes = 30  # Same default as watchdog
         stale = False
         if run.status == "running" and run.created_at:
-            cutoff = datetime.now(timezone.utc) - timedelta(minutes=timeout_minutes)
-            created = run.created_at.replace(tzinfo=timezone.utc) if run.created_at.tzinfo is None else run.created_at
+            cutoff = datetime.now(UTC) - timedelta(minutes=timeout_minutes)
+            created = run.created_at.replace(tzinfo=UTC) if run.created_at.tzinfo is None else run.created_at
             stale = created < cutoff
 
         return {
@@ -531,7 +541,7 @@ async def get_run_ideas(run_id: str):
     Returns:
         {"ideas": [...], "total": N}
     """
-    from backend.db.crud import get_ideas_for_run, count_ideas_for_run, get_pipeline_run
+    from backend.db.crud import count_ideas_for_run, get_ideas_for_run, get_pipeline_run
     from backend.db.database import get_session
     from backend.db.models import PipelineRun
 
@@ -708,8 +718,8 @@ async def start_autonomous_cycle(request: AutonomousCycleRequest):
     Example response:
         {"cycle_id": "auto_20260502_143000", "status": "running", "domain": "AI/NLP", "max_runs": 3}
     """
-    from backend.pipeline.orchestrator import PipelineOrchestrator
     from backend.api.run_service import get_run_service
+    from backend.pipeline.orchestrator import PipelineOrchestrator
 
     run_svc = get_run_service()
     cycle_id = run_svc.generate_run_id()  # Reuse RunService ID generation
@@ -807,9 +817,10 @@ async def stop_autonomous_cycle(cycle_id: str = Query(..., max_length=200)):
         cancelled = run_svc.request_cancellation(cycle_id, reason="user requested stop")
         if not cancelled:
             # Check if the run exists at all
+            from sqlalchemy import select as _sa_select
+
             from backend.db.database import get_session as _get_session_ctx
             from backend.db.models import PipelineRun
-            from sqlalchemy import select as _sa_select
             with _get_session_ctx() as sess:
                 record = sess.execute(
                     _sa_select(PipelineRun).where(PipelineRun.run_id_str == cycle_id)
@@ -836,9 +847,10 @@ async def autonomous_history():
     Example response:
         {"cycles": [{"cycle_id": "auto_20260502_143000", "domain": "AI/NLP", "runs": 3, "status": "completed"}]}
     """
+    from sqlalchemy import select as _sa_select
+
     from backend.db.database import get_session as _get_session_ctx
     from backend.db.models import PipelineRun
-    from sqlalchemy import select as _sa_select
 
     with _get_session_ctx() as sess:
         stmt = (
@@ -1177,6 +1189,7 @@ async def run_watchdog(
         {"checked": true, "stale_found": 3, "marked_failed": 3, "timeout_minutes": 30}
     """
     from datetime import timedelta
+
     from backend.pipeline.execution.watchdog import PipelineWatchdog
     from backend.pipeline.persistence import PipelinePersistence
 
@@ -1309,7 +1322,8 @@ async def get_citation_graph(run_id: str):
     """
     try:
         from backend.db.database import get_session
-        from backend.db.models import PipelineRun, Idea as IdeaModel
+        from backend.db.models import Idea as IdeaModel
+        from backend.db.models import PipelineRun
 
         with get_session() as db:
             # Resolve run_id: try int PK first, then string run_id_str
@@ -1393,8 +1407,6 @@ async def trigger_dag_run(request: PipelineRunRequest, skip_preflight: bool = Fa
     strategies, and stage ordering. The adapter bridges to existing stage
     implementations.
     """
-    from backend.pipeline.dag.runner import DAGRunner
-    from backend.pipeline.dag.stage_log import StageLogger
     from backend.api.run_service import get_run_service
 
     run_svc = get_run_service()
@@ -1480,7 +1492,7 @@ async def trigger_dag_run(request: PipelineRunRequest, skip_preflight: bool = Fa
                         },
                     },
                 )
-        except asyncio.TimeoutError:
+        except TimeoutError:
             logger.warning("Preflight timed out for DAG run %s, proceeding anyway", run_id)
 
     task = asyncio.create_task(_run_dag())
@@ -1502,9 +1514,9 @@ async def data_quality():
     # VectorStore stats
     vs_stats = {}
     try:
-        from backend.pipeline.knowledge.vector_store import VectorStore
         from backend.pipeline.knowledge.embedding_providers import create_embedding_provider
         from backend.pipeline.knowledge.embedding_service import EmbeddingService
+        from backend.pipeline.knowledge.vector_store import VectorStore
 
         provider = create_embedding_provider(
             settings.embedding_provider,
@@ -1519,9 +1531,10 @@ async def data_quality():
     # SQL stats
     sql_stats = {}
     try:
+        from sqlalchemy import func
+
         from backend.db.database import get_session
         from backend.db.models import Paper as SQLPaper
-        from sqlalchemy import func
         with get_session() as session:
             total_papers = session.query(func.count(SQLPaper.id)).scalar() or 0
             papers_with_keywords = session.query(func.count(SQLPaper.id)).filter(

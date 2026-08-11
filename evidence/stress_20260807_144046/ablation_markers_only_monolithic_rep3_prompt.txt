@@ -1,0 +1,25 @@
+## Experiment Ground Truth (NON-NEGOTIABLE)
+
+The following [RESULT-N] markers are drawn from observed experiment output. They MUST appear verbatim in the Results section with correct metric direction. Markers not in this list are forbidden.
+
+### Authorized result markers (use verbatim)
+- [RESULT-1] balanced_accuracy = 0.973
+- [RESULT-2] balanced_accuracy = 0.500
+- [RESULT-3] ROC-AUC = 0.998
+
+## Research Domain
+machine learning
+
+## Supporting Literature (CLOSED-BOOK — cite only these)
+
+[SOURCE-1] Smith, J. (2020). A survey of linear classification methods. Journal of Machine Learning Research.
+[SOURCE-2] Lee, K. (2019). Multiclass evaluation metrics. Proceedings of the International Conference on Machine Learning (ICML).
+
+## Research Proposal to Expand
+
+## Proposal: Variational Quantum Linear Solver for Hydrodynamic Lubrication
+
+We propose a novel variational quantum linear solver (VQLS) approach to model hydrodynamic lubrication in mechanical bearings. By encoding the Reynolds equation into a quantum circuit with parameterized ansatz, we achieve exponential speedup over classical finite-element methods. We evaluate on the Iris dataset as a downstream classification task.
+
+
+Now write a complete academic paper expanding this proposal. Follow the section structure from your instructions. Use [SOURCE-X] citations referencing only the papers listed above. The Experiment Ground Truth block above is authoritative — if the proposal conflicts with it, the ground truth wins.

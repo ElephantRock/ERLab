@@ -39,22 +39,6 @@ _REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
-from backend.ranking.benchmark_v2_registry import (
-    ALL_V2_CASES,
-    BENCHMARK_V2,
-    compute_benchmark_v2_fingerprint,
-    frozen_v2_cases,
-)
-from backend.ranking.embedding_snapshot import (
-    SNAPSHOT_SCHEMA_VERSION,
-    SnapshotBindingEvidence,
-    SnapshotItem,
-    canonical_text_hash,
-    vector_fingerprint,
-    write_snapshot,
-)
-
-
 # P1C: snapshot dir is configurable so multiple candidate models can each
 # produce their own snapshot under docs/p1c_snapshots/<model_tag>/ without
 # overwriting the frozen P1B control snapshot at docs/p1b_snapshot/.
@@ -62,6 +46,18 @@ from backend.ranking.embedding_snapshot import (
 # not read the process environment directly). Set EROCK_P1C_SNAPSHOT_TAG
 # to activate a candidate dir.
 from backend.config import get_settings
+from backend.ranking.benchmark_v2_registry import (
+    BENCHMARK_V2,
+    compute_benchmark_v2_fingerprint,
+    frozen_v2_cases,
+)
+from backend.ranking.embedding_snapshot import (
+    SnapshotBindingEvidence,
+    SnapshotItem,
+    canonical_text_hash,
+    vector_fingerprint,
+    write_snapshot,
+)
 
 _P1C_TAG = get_settings().p1c_snapshot_tag.strip()
 if _P1C_TAG:
@@ -85,6 +81,7 @@ def preflight_provider():
     Fails loudly with a clear message if the model is not loaded.
     """
     import httpx
+
     from backend.config import get_settings
 
     s = get_settings()
@@ -152,9 +149,9 @@ def _build_fresh_adapter(effective_config):
     binding/check the probe just published from the DB.
     """
     from backend.config import get_settings
+    from backend.pipeline.governed_embedding_adapter import GovernedEmbeddingAdapter
     from backend.pipeline.knowledge.embedding_providers import create_embedding_provider
     from backend.pipeline.knowledge.embedding_service import EmbeddingService
-    from backend.pipeline.governed_embedding_adapter import GovernedEmbeddingAdapter
 
     settings = get_settings()
     provider = create_embedding_provider(
@@ -179,20 +176,21 @@ def register_profile_and_run_probe():
     Returns (governed_adapter, effective_config, session_factory, publication).
     """
     from sqlalchemy.orm import sessionmaker
+
     from backend.config import get_settings
-    from backend.db.database import _get_engine
     from backend.db import models  # noqa: F401  (ensure models imported)
-    from backend.pipeline.knowledge.embedding_providers import create_embedding_provider
-    from backend.pipeline.knowledge.embedding_service import EmbeddingService
+    from backend.db.database import _get_engine
+    from backend.pipeline.capability.capability_check_service import run_capability_check
+    from backend.pipeline.governed_embedding_adapter import GovernedEmbeddingAdapter
     from backend.pipeline.knowledge.embedding_configuration import (
         EmbeddingAdapterCapabilitySnapshot,
         EmbeddingProfileSnapshot,
         EmbeddingRuntimeSettingsSnapshot,
         resolve_effective_embedding_configuration,
     )
-    from backend.pipeline.governed_embedding_adapter import GovernedEmbeddingAdapter
+    from backend.pipeline.knowledge.embedding_providers import create_embedding_provider
+    from backend.pipeline.knowledge.embedding_service import EmbeddingService
     from backend.pipeline.vector_indexer import register_embedding_profile
-    from backend.pipeline.capability.capability_check_service import run_capability_check
 
     settings = get_settings()
     engine = _get_engine()
@@ -225,6 +223,7 @@ def register_profile_and_run_probe():
 
     # Load profile snapshot
     from sqlalchemy import select
+
     from backend.db.models import EmbeddingProfile
     with sf() as session:
         profile_row = session.execute(
@@ -365,6 +364,7 @@ async def _embed_one_with_retry(runtime, text: str, *, is_query: bool, item_id: 
     repeatedly-crashing provider cannot appear merely slow.
     """
     import asyncio as _aio
+
     from backend.pipeline.capability.capability_errors import CapabilityAuthorizationError
 
     attempts = 0
@@ -476,7 +476,9 @@ async def _embed_all(runtime, cases):
 
 def generate():
     """Full P1B.2 generation: preflight, probe, embed, snapshot."""
-    from backend.pipeline.capability.verified_embedding_runtime import build_verified_embedding_runtime
+    from backend.pipeline.capability.verified_embedding_runtime import (
+        build_verified_embedding_runtime,
+    )
     from backend.ranking.embedding_snapshot import clear_snapshot_dir
 
     # 1. preflight (fail loudly if model not loaded)

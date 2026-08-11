@@ -32,10 +32,10 @@ class CitationMapEntry:
     marker: str
     source_paper_id: int | None
     mapping_status: str  # "mapped" | "unmapped"
-    source_paper: "Paper | None"
+    source_paper: Paper | None
 
 
-def load_citation_map(session: "Session", proposal_id: int) -> list[CitationMapEntry]:
+def load_citation_map(session: Session, proposal_id: int) -> list[CitationMapEntry]:
     """Load the marker→source map for a proposal, ordered by marker_index.
 
     Each entry's ``source_paper`` is loaded so callers read bibliographic
@@ -48,7 +48,7 @@ def load_citation_map(session: "Session", proposal_id: int) -> list[CitationMapE
     """
     from backend.db import crud
 
-    rows: list["PaperSourceMarker"] = crud.get_source_markers_for_proposal(
+    rows: list[PaperSourceMarker] = crud.get_source_markers_for_proposal(
         session, proposal_id
     )
     return [

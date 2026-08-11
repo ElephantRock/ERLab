@@ -1,7 +1,7 @@
 """Tests for pipeline run watchdog (BATCH-74/TASK-03)."""
 
 import asyncio
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from unittest.mock import MagicMock, patch
 
 from backend.pipeline.execution.watchdog import PipelineWatchdog
@@ -13,9 +13,9 @@ def _make_run(run_id: int, status: str = "running", created_hours_ago: float = 0
     run.id = run_id
     run.status = status
     run.session_id = f"session_{run_id}"
-    run.created_at = datetime.now(timezone.utc) - timedelta(hours=created_hours_ago)
+    run.created_at = datetime.now(UTC) - timedelta(hours=created_hours_ago)
     if updated_hours_ago is not None:
-        run.updated_at = datetime.now(timezone.utc) - timedelta(hours=updated_hours_ago)
+        run.updated_at = datetime.now(UTC) - timedelta(hours=updated_hours_ago)
     else:
         run.updated_at = None
     return run
@@ -111,7 +111,7 @@ class TestPersistenceStaleRuns:
             # Verify updated_at was set
             assert mock_run.updated_at is not None
             # Should be roughly now
-            age = datetime.now(timezone.utc) - mock_run.updated_at
+            age = datetime.now(UTC) - mock_run.updated_at
             assert age.total_seconds() < 5  # Within 5 seconds
 
     def test_find_stale_runs_query(self):
@@ -140,6 +140,7 @@ class TestWatchdogEndpoint:
     def test_endpoint_returns_count(self):
         """TEST-74-03-05: POST /pipeline/watchdog returns cleaned count."""
         from fastapi.testclient import TestClient
+
         from backend.api.app import app
 
         client = TestClient(app)

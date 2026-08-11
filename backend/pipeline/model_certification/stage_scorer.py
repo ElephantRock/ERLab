@@ -6,9 +6,8 @@ All stage-specific scorers implement the StageScorer interface.
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import Any
 
-from backend.pipeline.model_certification.eval_case import StageEvalCase, GoldAnswer
+from backend.pipeline.model_certification.eval_case import GoldAnswer, StageEvalCase
 
 
 class StageScorer(ABC):
@@ -91,13 +90,17 @@ class ScorerRegistry:
 
 def create_default_registry() -> ScorerRegistry:
     """Create a registry with all built-in scorers registered."""
-    from backend.pipeline.model_certification.scorers.query_generation import QueryGenerationScorer
-    from backend.pipeline.model_certification.scorers.literature_filtering import LiteratureFilteringScorer
-    from backend.pipeline.model_certification.scorers.paper_extraction import PaperExtractionScorer
+    from backend.pipeline.model_certification.scorers.adversarial_review import (
+        AdversarialReviewScorer,
+    )
     from backend.pipeline.model_certification.scorers.evidence_table import EvidenceTableScorer
-    from backend.pipeline.model_certification.scorers.synthesis import SynthesisScorer
+    from backend.pipeline.model_certification.scorers.literature_filtering import (
+        LiteratureFilteringScorer,
+    )
+    from backend.pipeline.model_certification.scorers.paper_extraction import PaperExtractionScorer
+    from backend.pipeline.model_certification.scorers.query_generation import QueryGenerationScorer
     from backend.pipeline.model_certification.scorers.repair import RepairScorer
-    from backend.pipeline.model_certification.scorers.adversarial_review import AdversarialReviewScorer
+    from backend.pipeline.model_certification.scorers.synthesis import SynthesisScorer
 
     registry = ScorerRegistry()
     registry.register(QueryGenerationScorer())

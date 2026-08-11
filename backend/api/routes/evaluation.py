@@ -158,7 +158,6 @@ async def run_benchmark(
     dataset = _benchmarks[benchmark_id]
 
     try:
-        from backend.config import get_settings
         from backend.pipeline.evaluation.retrieval_benchmark import (
             RetrievalBenchmarkRunner,
         )
@@ -216,9 +215,9 @@ async def get_pipeline_metrics(run_id: int) -> dict[str, Any]:
     Returns metrics from the pipeline_metrics DB table.
     """
     try:
-        from backend.pipeline.evaluation.metrics_persistence import get_metrics_for_run
         from backend.db.database import get_session
         from backend.db.models import PipelineRun
+        from backend.pipeline.evaluation.metrics_persistence import get_metrics_for_run
 
         with get_session() as session:
             run = session.query(PipelineRun).filter(PipelineRun.id == run_id).first()

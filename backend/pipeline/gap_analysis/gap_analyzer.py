@@ -1,15 +1,32 @@
 """Gap analysis — identify underexplored research areas."""
 
-import json
-
-from backend.pipeline.utils.json_extraction import extract_json
 import logging
 
+from pydantic import ValidationError
+
 from backend.pipeline.gap_analysis.cluster_service import ClusterService
+from backend.pipeline.gap_analysis.contracts import (
+    GapAnalysisExecutionError,
+    GapAnalysisOutputContractError,
+    GapAnalysisPayload,
+    GapCandidatePayload,
+    gap_analysis_schema,
+)
 from backend.pipeline.gap_analysis.models import ClusterReport, ResearchGap
 from backend.pipeline.knowledge.truth import TruthValue
 from backend.pipeline.literature.models import Paper
 from backend.providers.base import LLMProvider
+
+# Re-export the contract errors so existing imports
+# (``from backend.pipeline.gap_analysis.gap_analyzer import
+# GapAnalysisOutputContractError``) keep working. The canonical home is
+# :mod:`backend.pipeline.gap_analysis.contracts`.
+__all__ = [
+    "GapAnalysisOutputContractError",
+    "GapAnalysisExecutionError",
+    "GapAnalyzer",
+    "_title_similarity",
+]
 
 logger = logging.getLogger(__name__)
 
@@ -33,12 +50,96 @@ For each gap, provide:
 1. A concise title
 2. A detailed description of what's missing or underexplored
 3. The gap type: methodological, empirical, theoretical, or cross-domain
-4. Which clusters it relates to
+4. Which clusters it relates to (use only cluster IDs listed above)
 5. The potential impact if addressed
 6. Your confidence in this being a genuine gap (0.0 to 1.0)
-7. Specific paper references from the Sample Papers list that support this gap (use only papers listed above)
 
-Respond with a JSON array of objects with keys: title, description, gap_type, related_clusters, potential_impact, confidence"""
+Respond with a JSON object matching the provided schema with a "gaps" array. \
+Each gap object must have keys: title, description, gap_type, related_clusters, potential_impact, confidence."""
+
+# Provider/transport exceptions that, after retry exhaustion, classify as an
+# execution failure rather than an output-contract failure. Imported lazily
+# inside ``analyze`` to avoid hard wiring optional gateway symbols.
+
+
+def _contract_error(reason: str, **safe_fields) -> GapAnalysisOutputContractError:
+    """Build an output-contract error carrying only safe structural fields.
+
+    Raw provider output must never be embedded in the message or logged.
+    """
+    extras = " ".join(f"{k}={v}" for k, v in safe_fields.items())
+    msg = f"stage=gap_analysis failure_category=output_contract reason={reason}"
+    if extras:
+        msg = f"{msg} {extras}"
+    logger.error("Gap analysis output contract failure: %s", msg)
+    return GapAnalysisOutputContractError(msg)
+
+
+def _validate_payload(payload: object, cluster_report: ClusterReport) -> list[GapCandidatePayload]:
+    """Validate the provider payload through the typed contract.
+
+    Defense in depth:
+        Provider response → Pydantic validation → semantic cluster validation.
+
+    A blank/None/non-dict payload, a non-list ``gaps`` value, or any field-
+    level violation raises :class:`GapAnalysisOutputContractError`. Returns
+    the validated gap candidates (possibly empty).
+    """
+    response_nonempty = payload is not None and not (
+        isinstance(payload, str) and not payload.strip()
+    )
+    parsed_type = type(payload).__name__
+
+    # Blank / missing payload.
+    if payload is None or (isinstance(payload, str) and not payload.strip()):
+        raise _contract_error(
+            "blank_response", response_nonempty=False, parsed_type=parsed_type,
+        )
+    # Structurally incompatible top-level type.
+    if not isinstance(payload, (dict, list)):
+        raise _contract_error(
+            "unparseable_type", response_nonempty=response_nonempty, parsed_type=parsed_type,
+        )
+
+    # Pydantic validation against the canonical typed model. This enforces
+    # required fields, controlled gap_type enum, confidence bounds, unique
+    # nonnegative cluster ids, extra-field rejection, and string stripping.
+    try:
+        validated = GapAnalysisPayload.model_validate(payload)
+    except ValidationError as exc:
+        # Extract a coarse reason from the first error for safe diagnostics.
+        try:
+            first = exc.errors()[0]
+            loc = ".".join(str(p) for p in first.get("loc", []))
+            reason = first.get("type", "validation_error")
+        except Exception:  # pragma: no cover - defensive
+            reason = "validation_error"
+            loc = "unknown"
+        raise _contract_error(
+            reason,
+            response_nonempty=response_nonempty,
+            parsed_type=parsed_type,
+            field=loc,
+        ) from exc
+
+    # Semantic validation: every referenced cluster must exist in the actual
+    # ClusterReport produced for this run. When clustering produced no clusters
+    # (degenerate input), there is no valid id to reference, so this check is
+    # skipped — gaps must not be rejected solely because clustering found none.
+    valid_cluster_ids = {c.cluster_id for c in cluster_report.clusters}
+    if valid_cluster_ids:
+        for idx, gap in enumerate(validated.gaps):
+            for cid in gap.related_clusters:
+                if cid not in valid_cluster_ids:
+                    raise _contract_error(
+                        "invalid_cluster_id",
+                        response_nonempty=response_nonempty,
+                        item_index=idx,
+                        cluster_id=cid,
+                        valid_clusters=sorted(valid_cluster_ids),
+                    )
+
+    return validated.gaps
 
 
 def _title_similarity(a: str, b: str) -> float:
@@ -50,6 +151,42 @@ def _title_similarity(a: str, b: str) -> float:
     intersection = words_a & words_b
     union = words_a | words_b
     return len(intersection) / len(union)
+
+
+def _build_research_gap(
+    candidate: GapCandidatePayload,
+    prior_gaps: list[ResearchGap] | None,
+) -> ResearchGap:
+    """Construct a ResearchGap from a validated candidate, revising truth
+    against any prior matching gap."""
+    new_gap = ResearchGap(
+        title=candidate.title,
+        description=candidate.description,
+        gap_type=candidate.gap_type.value,
+        related_clusters=list(candidate.related_clusters),
+        potential_impact=candidate.potential_impact,
+        confidence=candidate.confidence,
+    )
+
+    if prior_gaps:
+        for prior in prior_gaps:
+            if _title_similarity(new_gap.title, prior.title) > 0.8:
+                new_observation = TruthValue.from_observation(frequency=new_gap.confidence)
+                revised = ResearchGap(
+                    **new_gap.model_dump(exclude={"truth"}),
+                    truth=prior.truth.revise(new_observation),
+                )
+                logger.info("Revised truth for gap '%s': %s", prior.title, revised.truth)
+                return revised
+        return ResearchGap(
+            **new_gap.model_dump(exclude={"truth"}),
+            truth=TruthValue.from_observation(frequency=new_gap.confidence),
+        )
+
+    return ResearchGap(
+        **new_gap.model_dump(exclude={"truth"}),
+        truth=TruthValue.from_observation(frequency=new_gap.confidence),
+    )
 
 
 class GapAnalyzer:
@@ -69,208 +206,109 @@ class GapAnalyzer:
     ) -> tuple[list[ResearchGap], ClusterReport]:
         """Identify research gaps from a collection of papers.
 
-        When prior_gaps are provided, gaps that match prior gaps by title
-        similarity have their truth values revised (evidence accumulation)
-        rather than replaced.
+        Returns ``(gaps, cluster_report)``. ``gaps`` may be empty when the
+        provider correctly identifies no gaps — that case is distinguishable
+        from failure (which raises).
 
-        Returns (gaps, cluster_report).
+        Raises:
+            GapAnalysisOutputContractError: the provider returned a
+                structurally non-conforming payload (bad type, missing/blank
+                fields, out-of-range confidence, unknown cluster id, extra
+                fields).
+            GapAnalysisExecutionError: the provider/transport layer failed
+                after the gateway retry policy was exhausted.
         """
-        # Step 1: Cluster the papers
         cluster_report = await self._cluster_service.cluster_papers(papers)
-
-        # Step 2: Build context for LLM
         cluster_summary = self._format_clusters(cluster_report)
-        paper_summaries = self._format_paper_summaries(papers[:20])  # Limit context to avoid timeout
-
-        # Step 3: Ask LLM to identify gaps
+        paper_summaries = self._format_paper_summaries(papers[:20])
         prompt = GAP_ANALYSIS_PROMPT.format(
             max_gaps=max_gaps,
             cluster_summary=cluster_summary,
             paper_summaries=paper_summaries,
         )
 
+        llm = provider or self._provider
+        if receipts is not None:
+            from backend.pipeline.operations.provider_conformance import build_receipt_from_provider
+            receipts.append(build_receipt_from_provider(llm))
+
+        # Defense in depth, layer 1: route through structured_output() with the
+        # canonical typed schema as the provider constraint. The gateway retry
+        # policy applies here; we do not add an analyzer-level retry loop.
+        schema = gap_analysis_schema()
+        messages = [
+            {"role": "system", "content": f"You are a {domain} research analyst. Respond with valid JSON only."},
+            {"role": "user", "content": prompt},
+        ]
+
         try:
-            # Use complete() instead of structured_output() to avoid tool_use timeout
-            # through the z.ai proxy
-            llm = provider or self._provider
-            # Collect receipt for this model-backed call
-            if receipts is not None:
-                from backend.pipeline.operations.provider_conformance import build_receipt_from_provider
-                receipts.append(build_receipt_from_provider(llm))
-            raw_response = await llm.complete(
-                messages=[
-                    {"role": "system", "content": f"You are a {domain} research analyst. Respond with valid JSON only."},
-                    {"role": "user", "content": prompt},
-                ],
+            payload = await llm.structured_output(
+                messages=messages,
+                schema=schema,
                 temperature=0.3,
                 max_tokens=4096,
             )
-
-            # B-09 diagnostic: log raw response state when it may be the cause
-            # of empty gaps (not a behavioral change — only logging)
-            if not raw_response or not raw_response.strip():
-                logger.warning(
-                    "Gap analysis: provider returned empty response "
-                    "(len=%d). This may cause 0 gaps.",
-                    len(raw_response) if raw_response else 0,
-                )
-
-            parsed = extract_json(raw_response)
-            result = parsed if isinstance(parsed, dict) else {"gaps": parsed}
-
-            # Phase 4 / 4I live-path repair: glm-4.6 sometimes returns a single
-            # bare gap object (a dict with gap-shaped keys like 'title',
-            # 'gap_type') instead of the requested JSON array, or a dict without
-            # the 'gaps' wrapper key. Without this normalization the gap is
-            # silently discarded by result.get("gaps", []) below, producing 0
-            # gaps from a valid response (the B-09 pattern). Wrap bare gap
-            # objects so they are not lost. This is a parser robustness fix; the
-            # prompt is unchanged.
-            if isinstance(result, dict) and "gaps" not in result:
-                gap_keys = {"title", "description", "gap_type", "potential_impact",
-                            "confidence", "paper_references", "references"}
-                if gap_keys & set(result.keys()):
-                    result = {"gaps": [result]}
-
-            # B-09 diagnostic: log the parse outcome for diagnosis when gaps
-            # end up empty
-            raw_gaps_check = result.get("gaps", []) if isinstance(result, dict) else (result if isinstance(result, list) else [])
-            if not raw_gaps_check:
-                logger.warning(
-                    "Gap analysis: parsed response produced 0 raw gaps "
-                    "(parsed_type=%s, keys=%s, response_len=%d). "
-                    "Either the LLM returned no gaps or the response did not "
-                    "contain a parseable 'gaps' key.",
-                    type(parsed).__name__,
-                    list(result.keys()) if isinstance(result, dict) else "(not dict)",
-                    len(raw_response) if raw_response else 0,
-                )
-
-            gaps = []
-            # Handle both dict and list returns from different providers
-            raw_gaps = result.get("gaps", []) if isinstance(result, dict) else (result if isinstance(result, list) else [])
-            for g in raw_gaps:
-                # Guard: LLM may return non-dict items (ints, strings, None)
-                if not isinstance(g, dict):
-                    continue
-                # Normalize related_clusters: local LLMs may return strings instead of ints
-                clusters_raw = g.get("related_clusters", [])
-                clusters_normalized: list[int] = []
-                for c in clusters_raw:
-                    if isinstance(c, int):
-                        clusters_normalized.append(c)
-                    elif isinstance(c, str):
-                        # Try to extract integer from strings like "Cluster 1 (vision)" or "1"
-                        import re as _re
-                        match = _re.search(r'\d+', c)
-                        if match:
-                            clusters_normalized.append(int(match.group()))
-                    elif isinstance(c, (float,)):
-                        clusters_normalized.append(int(c))
-
-                new_gap = ResearchGap(
-                    title=g.get("title", "Untitled Gap"),
-                    description=g.get("description", ""),
-                    gap_type=g.get("gap_type", "unknown"),
-                    related_clusters=clusters_normalized,
-                    potential_impact=g.get("potential_impact", ""),
-                    confidence=min(1.0, max(0.0, float(g.get("confidence", 0.5)))),
-                )
-
-                # Truth revision: if this gap matches a prior gap, revise truth
-                if prior_gaps:
-                    matched = False
-                    for prior in prior_gaps:
-                        sim = _title_similarity(new_gap.title, prior.title)
-                        if sim > 0.8:
-                            new_observation = TruthValue.from_observation(
-                                frequency=new_gap.confidence,
-                            )
-                            new_gap = ResearchGap(
-                                title=prior.title,
-                                description=new_gap.description,
-                                gap_type=new_gap.gap_type,
-                                related_clusters=new_gap.related_clusters,
-                                potential_impact=new_gap.potential_impact,
-                                confidence=new_gap.confidence,
-                                truth=prior.truth.revise(new_observation),
-                            )
-                            matched = True
-                            logger.info(
-                                "Revised truth for gap '%s': %s",
-                                prior.title,
-                                new_gap.truth,
-                            )
-                            break
-                    if not matched:
-                        new_gap = ResearchGap(
-                            **new_gap.model_dump(exclude={"truth"}),
-                            truth=TruthValue.from_observation(
-                                frequency=new_gap.confidence,
-                            ),
-                        )
-                else:
-                    new_gap = ResearchGap(
-                        **new_gap.model_dump(exclude={"truth"}),
-                        truth=TruthValue.from_observation(
-                            frequency=new_gap.confidence,
-                        ),
-                    )
-
-                gaps.append(new_gap)
-
-            # Phase 7: Exclude abandoned directions from prior runs
-            try:
-                from backend.config import get_settings
-                _s = get_settings()
-                if getattr(_s, "abandonment_tracking_enabled", True):
-                    from backend.pipeline.research.abandonment import AbandonmentTracker
-                    tracker = AbandonmentTracker(
-                        getattr(_s, "abandonment_tracking_path", "./data/abandoned_directions.jsonl")
-                    )
-                    if tracker.count() > 0:
-                        before = len(gaps)
-                        gaps = [g for g in gaps if not tracker.is_abandoned(g.title)]
-                        excluded_count = before - len(gaps)
-                        if excluded_count:
-                            logger.info(
-                                "Abandonment tracking: excluded %d gaps from prior abandoned directions",
-                                excluded_count,
-                            )
-            except Exception as e:
-                logger.debug("Abandonment exclusion failed (non-fatal): %s", e)
-
-            sorted_gaps = sorted(gaps, key=lambda g: g.confidence, reverse=True)
-
-            # Phase 2: Incumbent + Frontier classification
-            try:
-                from backend.pipeline.research.incumbent import IncumbentFrontierSelector
-                selector = IncumbentFrontierSelector()
-                directions = selector.select(sorted_gaps, papers)
-                # Map classifications back to gap objects
-                for direction in directions:
-                    direction.gap.is_incumbent = direction.is_incumbent
-                    direction.gap.frontier_rank = direction.frontier_rank
-                    direction.gap.evidence_strength = direction.evidence_strength
-                incumbent_count = sum(1 for d in directions if d.is_incumbent)
-                frontier_count = sum(1 for d in directions if d.frontier_rank is not None)
-                logger.info(
-                    "Incumbent/Frontier: %d incumbent, %d frontier, %d background",
-                    incumbent_count, frontier_count,
-                    len(directions) - incumbent_count - frontier_count,
-                )
-            except Exception as e:
-                logger.debug("Incumbent classification failed (non-fatal): %s", e)
-
-            return sorted_gaps, cluster_report
-
-        except Exception as e:
+        except GapAnalysisOutputContractError:
+            raise
+        except Exception as exc:
+            # Provider/transport failure after retry exhaustion → classified as
+            # an execution failure. NEVER swallowed into an empty gap list.
             logger.error(
-                "Gap analysis LLM call failed: %s. "
-                "Returning 0 gaps with failure state (not an empty success).",
-                e, exc_info=True,
+                "Gap analysis provider call failed: %s failure_category=execution",
+                type(exc).__name__,
             )
-            return [], cluster_report
+            raise GapAnalysisExecutionError(
+                f"stage=gap_analysis failure_category=execution "
+                f"provider_error={type(exc).__name__}"
+            ) from exc
+
+        # Defense in depth, layers 2-3: Pydantic validation + semantic cluster
+        # validation. Raises GapAnalysisOutputContractError on any violation.
+        candidates = _validate_payload(payload, cluster_report)
+
+        gaps = [_build_research_gap(c, prior_gaps) for c in candidates]
+
+        try:
+            from backend.config import get_settings
+            _s = get_settings()
+            if getattr(_s, "abandonment_tracking_enabled", True):
+                from backend.pipeline.research.abandonment import AbandonmentTracker
+                tracker = AbandonmentTracker(
+                    getattr(_s, "abandonment_tracking_path", "./data/abandoned_directions.jsonl")
+                )
+                if tracker.count() > 0:
+                    before = len(gaps)
+                    gaps = [g for g in gaps if not tracker.is_abandoned(g.title)]
+                    excluded_count = before - len(gaps)
+                    if excluded_count:
+                        logger.info(
+                            "Abandonment tracking: excluded %d gaps",
+                            excluded_count,
+                        )
+        except Exception as e:
+            logger.debug("Abandonment exclusion failed (non-fatal): %s", e)
+
+        sorted_gaps = sorted(gaps, key=lambda g: g.confidence, reverse=True)
+
+        try:
+            from backend.pipeline.research.incumbent import IncumbentFrontierSelector
+            selector = IncumbentFrontierSelector()
+            directions = selector.select(sorted_gaps, papers)
+            for direction in directions:
+                direction.gap.is_incumbent = direction.is_incumbent
+                direction.gap.frontier_rank = direction.frontier_rank
+                direction.gap.evidence_strength = direction.evidence_strength
+            incumbent_count = sum(1 for d in directions if d.is_incumbent)
+            frontier_count = sum(1 for d in directions if d.frontier_rank is not None)
+            logger.info(
+                "Incumbent/Frontier: %d incumbent, %d frontier, %d background",
+                incumbent_count, frontier_count,
+                len(directions) - incumbent_count - frontier_count,
+            )
+        except Exception as e:
+            logger.debug("Incumbent classification failed (non-fatal): %s", e)
+
+        return sorted_gaps, cluster_report
 
     @staticmethod
     def _format_clusters(report: ClusterReport) -> str:
@@ -289,13 +327,12 @@ class GapAnalyzer:
         lines = []
         for i, p in enumerate(papers[:30], 1):
             abstract = (p.abstract or "")[:150]
-            # Include authors and year for citation grounding
             authors_str = ""
-            if hasattr(p, 'authors') and p.authors:
+            if hasattr(p, "authors") and p.authors:
                 if isinstance(p.authors, list):
                     names = []
                     for a in p.authors[:3]:
-                        if hasattr(a, 'name'):
+                        if hasattr(a, "name"):
                             names.append(a.name)
                         else:
                             names.append(str(a))

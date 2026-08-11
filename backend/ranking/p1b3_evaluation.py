@@ -31,20 +31,16 @@ from __future__ import annotations
 import math
 import random
 import time
-from dataclasses import dataclass, field
+from collections.abc import Callable
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Callable
 
-from backend.ranking.benchmark_v2_registry import (
-    BENCHMARK_V2,
-    frozen_v2_cases,
-)
 from backend.ranking.contracts import (
     RankingCandidate,
     RankingRequest,
     RankingResult,
 )
-from backend.ranking.embedding_snapshot import EmbeddingSnapshot, load_snapshot
+from backend.ranking.embedding_snapshot import EmbeddingSnapshot
 from backend.ranking.evaluation import (
     RankingMetrics,
     _mrr_at_k,
@@ -53,13 +49,8 @@ from backend.ranking.evaluation import (
     _recall_at_k,
 )
 from backend.ranking.policies import (
-    HYBRID_RRF_POLICY,
-    LEGACY_LEXICAL_POLICY,
-    rank_hybrid_rrf,
-    rank_legacy_lexical,
     _keyword_overlap,
 )
-
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 SNAPSHOT_DIR = REPO_ROOT / "docs" / "p1b_snapshot"
@@ -166,8 +157,8 @@ def rank_semantic_only(request: RankingRequest) -> RankingResult:
     for i, (c, score) in enumerate(scored):
         rank = i + 1
         from backend.ranking.contracts import (
-            DISPOSITION_SELECTED,
             DISPOSITION_EXCLUDED_RANK,
+            DISPOSITION_SELECTED,
             RankedCandidate,
             compute_tie_break_key,
         )
@@ -227,8 +218,8 @@ def rank_hybrid_weighted(
     scored.sort(key=lambda x: (-x[1], x[0].candidate_id))
 
     from backend.ranking.contracts import (
-        DISPOSITION_SELECTED,
         DISPOSITION_EXCLUDED_RANK,
+        DISPOSITION_SELECTED,
         RankedCandidate,
         RankingResult,
         compute_tie_break_key,

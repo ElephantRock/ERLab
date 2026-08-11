@@ -1,8 +1,5 @@
 """BATCH-168: MCP Server Completion & External Integration."""
-import asyncio
-from unittest.mock import AsyncMock, MagicMock
 
-import pytest
 
 
 class TestMCPInfrastructure:
@@ -16,7 +13,7 @@ class TestMCPInfrastructure:
         assert MCPManager is not None
 
     def test_03_mcp_models(self):
-        from backend.pipeline.tools.mcp.models import MCPToolInfo, MCPCallResult
+        from backend.pipeline.tools.mcp.models import MCPCallResult, MCPToolInfo
         info = MCPToolInfo(name="test", description="A test tool")
         assert info.name == "test"
         result = MCPCallResult(content=[])

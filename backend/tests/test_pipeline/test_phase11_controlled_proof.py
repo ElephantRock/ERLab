@@ -5,16 +5,20 @@
 
 from __future__ import annotations
 
-import hashlib
-import pytest
 from pathlib import Path
 
+import pytest
+
 from backend.pipeline.evaluation.deterministic_finalizer import (
-    build_canonical_title, render_result_claim, render_result_section,
-    plan_deterministic_patches, apply_patches, DeterministicPatch, PatchPlan,
+    DeterministicPatch,
+    PatchPlan,
+    apply_patches,
+    build_canonical_title,
+    plan_deterministic_patches,
+    render_result_claim,
+    render_result_section,
 )
 from backend.pipeline.experiment.manifest import ResultMarker
-
 
 IRIS_MARKERS = [
     ResultMarker(1, "RESULT-1", "baseline_accuracy", 0.333333, "m", "a", 1, direction="higher_better", role="baseline"),
@@ -109,7 +113,10 @@ class TestPatchPlanner:
     def test_07_unknown_markers_rejected(self):
         """8. Unknown RESULT or SOURCE identities are rejected."""
         # The invariant verifier handles this — test it separately
-        from backend.pipeline.evaluation.revision_directive import verify_revised_paper_invariants, EvidenceInvariant
+        from backend.pipeline.evaluation.revision_directive import (
+            EvidenceInvariant,
+            verify_revised_paper_invariants,
+        )
         evidence = EvidenceInvariant(
             result_map=(("RESULT-1", 0.333),),
             source_map=("[SOURCE-1]",),
@@ -141,6 +148,7 @@ class TestRevisionIntegrity:
     def test_10_revision2_zero_provider(self):
         """11. Revision 2 contains zero provider-call provenance."""
         import inspect
+
         from backend.pipeline.evaluation.deterministic_finalizer import apply_patches
         source = inspect.getsource(apply_patches)
         assert "provider" not in source.lower()

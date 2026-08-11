@@ -1,13 +1,14 @@
 """Phase E tests: Runner + CLI."""
 
 import json
-import pytest
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
+import pytest
+
 from backend.pipeline.model_certification.manifest import CandidateModelManifest
-from backend.pipeline.model_certification.runner import CertificationRunner
 from backend.pipeline.model_certification.registries import ProductionModelRegistry
+from backend.pipeline.model_certification.runner import CertificationRunner
 
 
 def _make_manifest(**overrides) -> CandidateModelManifest:

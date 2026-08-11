@@ -6,12 +6,11 @@ Falls back to template generation on LLM failure.
 
 from __future__ import annotations
 
-import json
-
-from backend.pipeline.utils.json_extraction import extract_json
 import logging
 from dataclasses import dataclass, field
 from pathlib import Path
+
+from backend.pipeline.utils.json_extraction import extract_json
 
 logger = logging.getLogger(__name__)
 

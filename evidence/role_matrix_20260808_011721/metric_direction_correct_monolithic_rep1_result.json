@@ -1,0 +1,66 @@
+{
+  "cell_id": "metric_direction_correct_monolithic_rep1",
+  "dimension": "metric_direction",
+  "level": "correct",
+  "path": "monolithic",
+  "rep": 1,
+  "hard_verdict": {
+    "all_hard_pass": false,
+    "checks": {
+      "paper_nonempty": true,
+      "gt_method_in_identity": true,
+      "gt_dataset_in_identity": true,
+      "all_markers_present": true,
+      "_missing_markers": [],
+      "marker_values_verbatim": true,
+      "_missing_values": [],
+      "result_roles_preserved": false,
+      "_role_failures": [
+        {
+          "marker": "[RESULT-1]",
+          "expected_role": "comparison",
+          "observed_role": "baseline",
+          "context": "cy and ROC-AUC are used as primary evaluation metrics to account for class balance and discriminative quality. The logistic regression model substantially outperforms the baseline, achieving a balanced accuracy of 0.973 [RESULT-1] compared to 0.500 [RESULT-2] for the majority-class predictor. The model also attains a ROC-AUC of 0.998 [RESULT-3], indicating near-perfect class separation. These results demonstrate that even simple linear classifier"
+        }
+      ],
+      "metric_direction_preserved": true,
+      "_direction_failures": []
+    }
+  },
+  "diagnostics": {
+    "alerts": [
+      {
+        "type": "marker_attribution_context",
+        "marker": "[RESULT-1]",
+        "sentence": "973 [RESULT-1] compared to 0",
+        "role_words_nearby": [],
+        "adjudication": "Does the sentence credit the marker to the role expected by ground truth? Human must verify."
+      },
+      {
+        "type": "marker_attribution_context",
+        "marker": "[RESULT-2]",
+        "sentence": "500 [RESULT-2] for the majority-class predictor",
+        "role_words_nearby": [
+          "majority",
+          "majority-class"
+        ],
+        "adjudication": "Does the sentence credit the marker to the role expected by ground truth? Human must verify."
+      },
+      {
+        "type": "marker_attribution_context",
+        "marker": "[RESULT-3]",
+        "sentence": "998 [RESULT-3], indicating near-perfect class separation",
+        "role_words_nearby": [],
+        "adjudication": "Does the sentence credit the marker to the role expected by ground truth? Human must verify."
+      }
+    ]
+  },
+  "usage": {
+    "input_tokens": 1628,
+    "output_tokens": 5230,
+    "served_model": "glm-5.2",
+    "cost_usd": 0.003382,
+    "note_for_section_wise": "token counts reflect the LAST call only; cost_usd is cumulative across all calls in this cell"
+  },
+  "error": null
+}

@@ -22,7 +22,6 @@ from backend.pipeline.side_channel_embedding import (
     compute_side_channel_collection_name,
 )
 
-
 # ── Fingerprint determinism ─────────────────────────────────────────
 
 

@@ -7,7 +7,6 @@ pytest.ini has `-p no:asyncio` — use asyncio.run() directly.
 from __future__ import annotations
 
 import asyncio
-from datetime import datetime, timezone
 
 import pytest
 from sqlalchemy import create_engine
@@ -17,7 +16,6 @@ from backend.db.database import Base
 from backend.db.models import ResearchClaim
 from backend.pipeline.claims.models import Claim, ClaimType
 from backend.pipeline.claims.store import ClaimStore
-
 
 # ── Fixtures ──────────────────────────────────────────────
 

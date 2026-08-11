@@ -16,8 +16,12 @@ MODEL_PRICING: dict[str, dict[str, float]] = {
     # Local models (free — compute cost is electricity)
     "qwen/qwen3-4b-2507": {"input": 0.0, "output": 0.0, "label": "local (LM Studio)"},
     "text-embedding-bge-m3": {"input": 0.0, "output": 0.0, "label": "local (LM Studio GPU)"},
+    "system": {"input": 0.0, "output": 0.0, "label": "system (no LLM)"},
     # Cloud models via z.ai proxy
     "glm-5.1": {"input": 0.15, "output": 0.60, "label": "cloud (z.ai)"},
+    # Codebase-wide documented assumption: glm-5.2 uses glm-5.1 pricing parity
+    # until a dedicated production price is configured.
+    "glm-5.2": {"input": 0.15, "output": 0.60, "label": "cloud (z.ai; glm-5.1 pricing parity)"},
     "gpt-4o": {"input": 2.50, "output": 10.00, "label": "cloud (OpenAI)"},
     "claude-sonnet-4-5": {"input": 3.00, "output": 15.00, "label": "cloud (Anthropic)"},
 }
@@ -39,6 +43,7 @@ STAGE_AVG_TOKENS: dict[str, dict[str, int]] = {
     "proposal_synthesis": {"input": 20000, "output": 30000},
     "adversarial_review": {"input": 25000, "output": 5000},
     "evaluation": {"input": 15000, "output": 3000},
+    "experiment_execution": {"input": 0, "output": 0},
     "paper_synthesis": {"input": 20000, "output": 25000},
     "citation_audit": {"input": 10000, "output": 2000},
     "proposal_deepening": {"input": 25000, "output": 30000},
@@ -60,6 +65,7 @@ STAGE_AVG_TIME: dict[str, float] = {
     "proposal_synthesis": 300.0,
     "adversarial_review": 120.0,
     "evaluation": 90.0,
+    "experiment_execution": 60.0,
     "paper_synthesis": 240.0,
     "citation_audit": 60.0,
     "proposal_deepening": 180.0,
@@ -68,28 +74,61 @@ STAGE_AVG_TIME: dict[str, float] = {
 }
 
 # ── Strategy stage lists ─────────────────────────────────────────────
-STRATEGY_STAGES: dict[str, list[str]] = {
-    "fast_scan": [
-        "literature_search", "ingestion", "trimmer", "gap_analysis",
-        "feasibility_scoring", "proposal_synthesis", "export",
-    ],
-    "deep_research": [
-        "literature_search", "ingestion", "trimmer", "gap_analysis",
-        "gap_reflection", "idea_generation", "idea_reflection",
-        "novelty_checking", "feasibility_scoring", "mechanical_metrics",
-        "proposal_synthesis", "adversarial_review", "evaluation",
-        "paper_synthesis", "citation_audit", "proposal_deepening", "export",
-    ],
-    "academic_proposal": [
-        "literature_search", "ingestion", "trimmer", "gap_analysis",
-        "idea_generation", "feasibility_scoring", "proposal_synthesis",
-        "adversarial_review", "evaluation", "paper_synthesis", "export",
-    ],
-    "literature_review": [
-        "literature_search", "ingestion", "trimmer", "gap_analysis",
-        "mechanical_metrics", "export",
-    ],
-}
+# pipeline.yaml is the production source of truth.  Keep this public mapping
+# for callers/tests, but derive it instead of maintaining a second stage graph.
+def _load_pipeline_truth() -> tuple[dict[str, list[str]], dict[str, str]]:
+    try:
+        from backend.pipeline.dag.config import ConfigLoader
+
+        config = ConfigLoader().load()
+        strategy_stages = {
+            name: list(cfg.get("stages", []))
+            for name, cfg in config.get("strategies", {}).items()
+        }
+        model_defaults = {
+            category: str(cfg.get("model", ""))
+            for category, cfg in config.get("models", {}).items()
+            if isinstance(cfg, dict) and cfg.get("model")
+        }
+        return strategy_stages, model_defaults
+    except Exception as exc:
+        logger.warning("Could not load pipeline.yaml for cost estimation: %s", exc)
+        # Fail-soft compatibility fallback. This mirrors the current production
+        # topology rather than the historical pre-YAML estimator lists.
+        return {
+            "fast_scan": [
+                "literature_search", "ingestion", "gap_analysis",
+                "idea_generation", "feasibility_scoring",
+                "proposal_synthesis", "export",
+            ],
+            "deep_research": [
+                "literature_search", "ingestion", "gap_analysis",
+                "gap_reflection", "idea_generation", "idea_reflection",
+                "novelty_checking", "feasibility_scoring", "mechanical_metrics",
+                "proposal_synthesis", "adversarial_review", "evaluation",
+                "experiment_execution", "paper_synthesis", "citation_audit",
+                "proposal_deepening", "export",
+            ],
+            "academic_proposal": [
+                "literature_search", "ingestion", "gap_analysis",
+                "gap_reflection", "idea_generation", "idea_reflection",
+                "novelty_checking", "feasibility_scoring", "mechanical_metrics",
+                "proposal_synthesis", "adversarial_review", "evaluation",
+                "experiment_execution", "paper_synthesis", "citation_audit",
+                "proposal_deepening", "export",
+            ],
+            "literature_review": [
+                "literature_search", "ingestion", "gap_analysis", "export",
+            ],
+        }, {
+            "thinking": "glm-5.2",
+            "generation": "glm-5.2",
+            "embedding": "text-embedding-bge-m3",
+            "reranker": "qwen/qwen3-4b-2507",
+        }
+
+
+STRATEGY_STAGES, _YAML_MODEL_DEFAULTS = _load_pipeline_truth()
 
 # ── Stage → model category mapping ──────────────────────────────────
 STAGE_MODEL_CATEGORY: dict[str, str] = {
@@ -106,6 +145,7 @@ STAGE_MODEL_CATEGORY: dict[str, str] = {
     "proposal_synthesis": "generation",
     "adversarial_review": "thinking",
     "evaluation": "thinking",
+    "experiment_execution": "system",
     "paper_synthesis": "generation",
     "citation_audit": "thinking",
     "proposal_deepening": "generation",
@@ -113,11 +153,12 @@ STAGE_MODEL_CATEGORY: dict[str, str] = {
 }
 
 # ── Category → default model ─────────────────────────────────────────
+# Model IDs also come from pipeline.yaml.  "system" denotes a non-LLM stage.
 CATEGORY_DEFAULT_MODEL: dict[str, str] = {
-    "thinking": "qwen/qwen3-4b-2507",
-    "generation": "glm-5.1",
-    "embedding": "text-embedding-bge-m3",
-    "system": "qwen/qwen3-4b-2507",  # doesn't matter — no LLM call
+    "thinking": _YAML_MODEL_DEFAULTS.get("thinking", "glm-5.2"),
+    "generation": _YAML_MODEL_DEFAULTS.get("generation", "glm-5.2"),
+    "embedding": _YAML_MODEL_DEFAULTS.get("embedding", "text-embedding-bge-m3"),
+    "system": "system",
 }
 
 
@@ -164,18 +205,25 @@ def get_model_pricing(model_id: str) -> dict[str, Any]:
 def estimate_run_cost(
     strategy: str,
     model_overrides: dict[str, str] | None = None,
+    *,
+    include_experiment: bool = False,
 ) -> CostEstimate:
     """Estimate cost and time for a pipeline run.
 
     Args:
         strategy: Pipeline strategy name (fast_scan, deep_research, etc.)
         model_overrides: Optional dict mapping stage name to model id.
-                         If not provided, uses category defaults.
+                         If not provided, uses pipeline.yaml model routing.
+        include_experiment: Include the opt-in experiment_execution stage.
+                            False by default because ordinary frontend runs do
+                            not provide an experiment_spec_id.
 
     Returns:
         CostEstimate with per-stage breakdown.
     """
-    stages = STRATEGY_STAGES.get(strategy, STRATEGY_STAGES["deep_research"])
+    stages = list(STRATEGY_STAGES.get(strategy, STRATEGY_STAGES["deep_research"]))
+    if not include_experiment:
+        stages = [s for s in stages if s != "experiment_execution"]
     model_overrides = model_overrides or {}
 
     total_cost = 0.0

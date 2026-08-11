@@ -12,13 +12,10 @@ from __future__ import annotations
 import asyncio
 from unittest.mock import AsyncMock, MagicMock, patch
 
-import pytest
-
 from backend.config import Settings
 from backend.pipeline.literature.models import Paper, SearchResult
-from backend.pipeline.literature.search_service import SearchService
 from backend.pipeline.literature.multi_source import MultiSourceSearcher
-
+from backend.pipeline.literature.search_service import SearchService
 
 # ── Helpers ──────────────────────────────────────────────
 

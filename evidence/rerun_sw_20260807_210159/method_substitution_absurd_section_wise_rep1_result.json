@@ -1,0 +1,12 @@
+{
+  "cell_id": "method_substitution_absurd_section_wise_rep1",
+  "identity": {
+    "identity_pass": true,
+    "gt_method_in_primacy": true,
+    "conflicting_terms_in_primacy": [],
+    "primacy_region_preview": "# Research Paper: machine learning\n**Venue:** Generic\n**Sources:** 2 papers cited\n\n---\n\n## Abstract\n\nLogistic regression is a well-established linear classification method widely used for multiclass problems such as species classification on the Iris dataset [SOURCE-1].\n\nBalanced accuracy and ROC-AU"
+  },
+  "markers_present": true,
+  "missing_markers": [],
+  "error": null
+}

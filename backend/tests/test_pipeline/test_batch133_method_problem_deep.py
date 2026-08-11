@@ -1,11 +1,9 @@
 """BATCH-133 Tests — LLM-Grounded Method-Problem Scoring."""
 
-import asyncio
-import pytest
 from unittest.mock import AsyncMock, MagicMock
 
+from backend.pipeline.claims.method_problem import MethodProblemDetector
 from backend.pipeline.claims.models import Claim, ClaimType
-from backend.pipeline.claims.method_problem import MethodProblemDetector, MethodProblemGap
 
 
 def _method(name, paper_id="P1"):

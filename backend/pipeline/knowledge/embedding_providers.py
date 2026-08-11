@@ -540,6 +540,35 @@ class LMStudioEmbeddingProvider(EmbeddingProvider):
                     "input": batch,
                 },
             )
+            if response.status_code != 200:
+                # Diagnostic: capture the exact 400 response body
+                import hashlib as _diag_hash
+                import json as _diag_json
+                import os as _diag_os
+                input_summaries = [
+                    {"len": len(t), "sha256": _diag_hash.sha256(t.encode()).hexdigest()[:16], "first_80": t[:80]}
+                    for t in batch
+                ]
+                diag = {
+                    "url": f"{self._base_url}/embeddings",
+                    "model": self._model,
+                    "batch_index": i // self._batch_size,
+                    "batch_size": len(batch),
+                    "input_count": len(batch),
+                    "input_summaries": input_summaries[:5],
+                    "response_status": response.status_code,
+                    "response_body": response.text[:1000],
+                }
+                _diag_path = _diag_os.path.join("evidence", "ingestion_400_diagnostic.json")
+                _diag_os.makedirs("evidence", exist_ok=True)
+                with open(_diag_path, "w", encoding="utf-8") as _df:
+                    _diag_json.dump(diag, _df, indent=2, ensure_ascii=False)
+                logger.error(
+                    "LM Studio embedding 400: model=%s batch=%d inputs=%d status=%d body=%s "
+                    "(diagnostic saved to %s)",
+                    self._model, i // self._batch_size, len(batch),
+                    response.status_code, response.text[:500], _diag_path,
+                )
             response.raise_for_status()
             data = response.json()
 

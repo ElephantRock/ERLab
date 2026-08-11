@@ -14,7 +14,7 @@ natively return receipts, this layer will simplify.
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from backend.pipeline.operations.types import (
     MissingModelReceiptError,
@@ -56,7 +56,7 @@ def build_receipt_from_response(
         served_model=response.served_model,
         provider=provider_name,
         endpoint=endpoint,
-        timestamp=datetime.now(timezone.utc).isoformat(),
+        timestamp=datetime.now(UTC).isoformat(),
     )
 
 
@@ -81,5 +81,5 @@ def build_receipt_from_provider(
         served_model=model,
         provider=provider_name,
         endpoint=endpoint,
-        timestamp=datetime.now(timezone.utc).isoformat(),
+        timestamp=datetime.now(UTC).isoformat(),
     )

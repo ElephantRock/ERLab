@@ -35,9 +35,10 @@ router = APIRouter(prefix="/paper", tags=["export"])
 def _load_paper(idea_id: int):
     """Load the persisted paper for an idea. Returns (proposal, idea) or
     (None, None) when no proposal/paper exists. Raises nothing."""
+    from sqlalchemy import select
+
     from backend.db.database import get_session
     from backend.db.models import Idea, Proposal
-    from sqlalchemy import select
 
     with get_session() as session:
         idea = session.get(Idea, idea_id)
@@ -54,6 +55,38 @@ def _load_paper(idea_id: int):
         return proposal, idea
 
 
+def _load_frozen_paper(idea_id: int):
+    """Load the release-final immutable PaperRevision for an idea."""
+    from sqlalchemy import select
+
+    from backend.db.database import get_session
+    from backend.db.models import Idea, Proposal
+    from backend.pipeline.evaluation.paper_release import (
+        PaperReleaseError,
+        load_frozen_revision,
+    )
+
+    with get_session() as session:
+        idea = session.get(Idea, idea_id)
+        if idea is None:
+            return None, None, None
+        proposal = session.execute(
+            select(Proposal).where(Proposal.idea_id == idea_id).limit(1)
+        ).scalar_one_or_none()
+        if proposal is None:
+            return None, idea, None
+        try:
+            revision = load_frozen_revision(session, proposal)
+        except PaperReleaseError:
+            return proposal, idea, None
+        # expire_on_commit/session-close safe: materialize fields the route uses.
+        revision.paper_md
+        revision.paper_hash
+        revision.id
+        revision.revision_number
+        return proposal, idea, revision
+
+
 def _meta(proposal) -> dict:
     raw = getattr(proposal, "paper_meta_json", None)
     if not raw:
@@ -68,7 +101,6 @@ def _render_bibliography_for_proposal(proposal) -> str:
     """Phase 4 / WP-4C — render the Markdown references section from the
     persisted citation map. Returns '' when no map exists (legacy/failed
     papers) so the exporter is a no-op rather than fabricating sources."""
-    from backend.db import crud
     from backend.db.database import get_session
     from backend.pipeline.provenance.citation_map import (
         load_citation_map,
@@ -124,6 +156,35 @@ async def export_paper_markdown(idea_id: int):
         paper_md,
         media_type="text/markdown",
         headers={"Content-Disposition": f'attachment; filename="{fname}"'},
+    )
+
+
+@router.get("/release/markdown/{idea_id}", response_class=PlainTextResponse)
+async def export_release_paper_markdown(idea_id: int):
+    """Export the exact frozen release-final Markdown revision.
+
+    Unlike ordinary paper export, this returns the immutable frozen paper
+    byte-for-byte (no bibliography append) so the response hash identifies the
+    exact released scientific content.
+    """
+    proposal, idea, revision = _load_frozen_paper(idea_id)
+    if revision is None:
+        return PlainTextResponse(
+            "# Release-final paper not available for this idea.",
+            status_code=404,
+        )
+    fname = _stable_filename(getattr(idea, "title", None), idea_id, "md")
+    if fname.endswith(".md"):
+        fname = fname[:-3] + "--release.md"
+    return PlainTextResponse(
+        revision.paper_md,
+        media_type="text/markdown",
+        headers={
+            "Content-Disposition": f'attachment; filename="{fname}"',
+            "X-ERLab-Paper-Hash": revision.paper_hash,
+            "X-ERLab-Revision-Id": str(revision.id),
+            "X-ERLab-Revision-Number": str(revision.revision_number),
+        },
     )
 
 
@@ -183,9 +244,10 @@ async def export_paper_bibtex(idea_id: int):
     set when available. Reuses proposal_to_bibtex-style emission (no new
     bibliography generator).
     """
+    from sqlalchemy import select
+
     from backend.db.database import get_session
     from backend.db.models import Proposal
-    from sqlalchemy import select
 
     with get_session() as session:
         proposal = session.execute(

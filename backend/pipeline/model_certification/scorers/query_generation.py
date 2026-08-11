@@ -7,11 +7,8 @@ Metrics: query_relevance, query_diversity, duplicate_query_rate,
 from __future__ import annotations
 
 import json
-import re
-from typing import Any
 
 from backend.pipeline.model_certification.stage_scorer import StageScorer
-from backend.pipeline.model_certification.eval_case import StageEvalCase, GoldAnswer
 
 
 class QueryGenerationScorer(StageScorer):

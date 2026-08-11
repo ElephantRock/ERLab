@@ -20,7 +20,6 @@ from __future__ import annotations
 
 import ast
 import json
-import sys
 from pathlib import Path
 
 import pytest
@@ -84,7 +83,6 @@ def test_governed_vector_runtime_exposes_exactly_approved_fields():
     ``embedding_profile_id`` and ``db_engine`` from the runtime. Their
     reintroduction would reopen raw-provider escape hatches.
     """
-    import dataclasses
 
     from backend.pipeline.vector_runtime import GovernedVectorRuntime
 
@@ -441,8 +439,8 @@ def test_side_channel_purpose_guards_present_where_required():
         # Look for either an assert_purpose call or a direct comparison
         # to the expected purpose string.
         has_assert = (
-            f"assert_purpose_not_paper" in source
-            or f'side_channel_purpose_mismatch' in source
+            "assert_purpose_not_paper" in source
+            or 'side_channel_purpose_mismatch' in source
             or f'"{purpose}"' in source
             or f"'{purpose}'" in source
         )

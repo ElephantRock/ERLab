@@ -4,8 +4,6 @@ AIV v5.3 — T1, T2, T5.
 """
 from __future__ import annotations
 
-import pytest
-
 from backend.pipeline.monitoring.cost_tracker import CostTracker, TokenUsage
 
 

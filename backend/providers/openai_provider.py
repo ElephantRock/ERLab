@@ -24,6 +24,31 @@ class OpenAIProvider(LLMProvider):
             kwargs["base_url"] = base_url
         self._client = openai.AsyncOpenAI(**kwargs)
         self._model = model
+        self._base_url = base_url or ""
+
+    @property
+    def _structured_output_mode(self) -> str:
+        """Determine the structured-output dialect for this endpoint.
+
+        Z.AI's GLM endpoint documents ``json_object`` mode, not
+        OpenAI-style ``json_schema``. When ``json_schema`` is sent to
+        Z.AI, GLM-5.2 returns JSON wrapped in markdown fences and
+        sometimes truncates the content because the reasoning model's
+        internal chain-of-thought consumes the completion token budget.
+
+        LM Studio and OpenAI's native API support ``json_schema``
+        directly and return clean JSON.
+
+        The distinction is endpoint-level, not model-level: the same
+        OpenAI-compatible transport does not imply the same
+        structured-output dialect.
+        """
+        url = (self._base_url or "").lower()
+        # Z.AI endpoints (api.z.ai) use json_object dialect
+        if "z.ai" in url or "zai" in url:
+            return "json_object"
+        # LM Studio and OpenAI native support json_schema
+        return "json_schema"
 
     @property
     def provider_name(self) -> str:
@@ -100,9 +125,44 @@ class OpenAIProvider(LLMProvider):
         temperature: float = 0.3,
         max_tokens: int = 8192,
     ) -> dict:
-        import re as _re
+        mode = self._structured_output_mode
 
-        # Primary path: use json_schema response_format (LM Studio native support)
+        if mode == "json_object":
+            # Z.AI GLM dialect: place the schema in the prompt, use
+            # json_object response_format. This produces clean, directly
+            # parseable JSON without markdown fences.
+            schema_hint = json.dumps(schema, indent=2)
+            augmented = list(messages) + [{"role": "user", "content": (
+                f"Return ONLY a valid JSON object matching this schema:\n"
+                f"```json\n{schema_hint}\n```\n\n"
+                f"Return the JSON object directly, no markdown fences."
+            )}]
+            try:
+                response = await self._client.chat.completions.create(
+                    model=self._model,
+                    messages=augmented,
+                    temperature=temperature,
+                    max_tokens=max_tokens,
+                    response_format={"type": "json_object"},
+                )
+                content = response.choices[0].message.content or ""
+                result = self._parse_structured_content(content)
+                if result:
+                    return result
+                logger.warning(
+                    "structured_output: json_object returned"
+                    " %d chars but failed all parse attempts",
+                    len(content),
+                )
+            except Exception as e:
+                logger.debug(
+                    "structured_output: json_object path failed: %s",
+                    str(e)[:200],
+                )
+
+            return await self._structured_output_fallback(messages, schema, temperature, max_tokens)
+
+        # Default: json_schema dialect (LM Studio, OpenAI native)
         try:
             response = await self._client.chat.completions.create(  # type: ignore[call-overload]
                 model=self._model,
@@ -120,39 +180,63 @@ class OpenAIProvider(LLMProvider):
             )
             content = response.choices[0].message.content  # type: ignore[union-attr]
             if content:
-                # Strip markdown fences if present
-                text = content.strip()
-                if text.startswith("```"):
-                    text = text.split("\n", 1)[-1]
-                if text.endswith("```"):
-                    text = text.rsplit("```", 1)[0]
-                text = text.strip()
-
-                try:
-                    return json.loads(text)
-                except json.JSONDecodeError:
-                    # Repair trailing commas
-                    repaired = _re.sub(r',\s*([}\]])', r'\1', text)
-                    try:
-                        return json.loads(repaired)
-                    except json.JSONDecodeError:
-                        # Extract first {...} block
-                        m = _re.search(r'\{.*\}', text, _re.DOTALL)
-                        if m:
-                            try:
-                                return json.loads(m.group())
-                            except json.JSONDecodeError:
-                                repaired2 = _re.sub(r',\s*([}\]])', r'\1', m.group())
-                                try:
-                                    return json.loads(repaired2)
-                                except json.JSONDecodeError:
-                                    pass
-                        logger.warning("structured_output: json_schema returned %d chars but failed all parse attempts", len(content))
+                result = self._parse_structured_content(content)
+                if result:
+                    return result
+                logger.warning(
+                    "structured_output: json_schema returned"
+                    " %d chars but failed all parse attempts",
+                    len(content),
+                )
         except Exception as e:
             logger.debug("structured_output: json_schema path failed: %s", str(e)[:200])
 
         # Fallback: plain completion + extract JSON (for providers that don't support json_schema)
         return await self._structured_output_fallback(messages, schema, temperature, max_tokens)
+
+    @staticmethod
+    def _parse_structured_content(content: str) -> dict | None:
+        """Parse structured-output content with fence stripping and repair.
+
+        Tries direct parse, markdown-fence strip, trailing-comma repair,
+        and regex extraction. Returns None if all attempts fail.
+        """
+        import re as _re
+
+        text = content.strip()
+
+        # Strip markdown fences if present
+        if text.startswith("```"):
+            text = text.split("\n", 1)[-1]
+        if text.endswith("```"):
+            text = text.rsplit("```", 1)[0]
+        text = text.strip()
+
+        try:
+            return json.loads(text)
+        except json.JSONDecodeError:
+            pass
+
+        # Repair trailing commas
+        repaired = _re.sub(r',\s*([}\]])', r'\1', text)
+        try:
+            return json.loads(repaired)
+        except json.JSONDecodeError:
+            pass
+
+        # Extract first {...} block
+        m = _re.search(r'\{.*\}', text, _re.DOTALL)
+        if m:
+            try:
+                return json.loads(m.group())
+            except json.JSONDecodeError:
+                repaired2 = _re.sub(r',\s*([}\]])', r'\1', m.group())
+                try:
+                    return json.loads(repaired2)
+                except json.JSONDecodeError:
+                    pass
+
+        return None
 
     async def structured_output_with_usage(
         self,
@@ -160,32 +244,53 @@ class OpenAIProvider(LLMProvider):
         schema: dict,
         temperature: float = 0.3,
         max_tokens: int = 8192,
+        stage: str = "",
+        run_id: str | None = None,
     ) -> LLMResponse:
+        mode = self._structured_output_mode
         try:
-            response = await self._client.chat.completions.create(  # type: ignore[call-overload]
-                model=self._model,
-                messages=messages,
-                temperature=temperature,
-                max_tokens=max_tokens,
-                response_format={
-                    "type": "json_schema",
-                    "json_schema": {
-                        "name": "response",
-                        "schema": schema,
-                        "strict": False,
+            if mode == "json_object":
+                schema_hint = json.dumps(schema, indent=2)
+                augmented = list(messages) + [{"role": "user", "content": (
+                    f"Return ONLY a valid JSON object matching this schema:\n"
+                    f"```json\n{schema_hint}\n```\n\n"
+                    f"Return the JSON object directly, no markdown fences."
+                )}]
+                response = await self._client.chat.completions.create(
+                    model=self._model,
+                    messages=augmented,
+                    temperature=temperature,
+                    max_tokens=max_tokens,
+                    response_format={"type": "json_object"},
+                )
+            else:
+                response = await self._client.chat.completions.create(  # type: ignore[call-overload]
+                    model=self._model,
+                    messages=messages,
+                    temperature=temperature,
+                    max_tokens=max_tokens,
+                    response_format={
+                        "type": "json_schema",
+                        "json_schema": {
+                            "name": "response",
+                            "schema": schema,
+                            "strict": False,
+                        },
                     },
-                },
-            )
+                )
             usage = response.usage
             inp = usage.prompt_tokens if usage else 0
             out = usage.completion_tokens if usage else 0
-            self._report_cost(inp, out)
-            content = response.choices[0].message.content or "{}"
+            self._report_cost(inp, out, stage=stage, run_id=run_id)
+            content = response.choices[0].message.content or ""
             served = getattr(response, "model", None) or self._model
             self._set_receipt_from_response(served)
+            parsed = self._parse_structured_content(content)
+            if parsed is None:
+                parsed = {}
             return LLMResponse(
                 content="",
-                structured=json.loads(content),
+                structured=parsed,
                 input_tokens=inp,
                 output_tokens=out,
                 served_model=served,

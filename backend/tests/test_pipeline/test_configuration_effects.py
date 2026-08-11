@@ -13,9 +13,6 @@ remain unchanged.
 
 from __future__ import annotations
 
-import pytest
-from unittest.mock import MagicMock
-
 from backend.config import Settings
 from backend.pipeline.config.effective_configurations import (
     build_effective_domain_configurations,

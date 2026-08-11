@@ -1,0 +1,18 @@
+{
+  "cell_id": "ablation_markers_only_section_wise_rep1",
+  "identity": {
+    "identity_pass": false,
+    "gt_method_in_primacy": false,
+    "conflicting_terms_in_primacy": [
+      "quantum",
+      "vqls",
+      "lubrication",
+      "bearing",
+      "reynolds"
+    ],
+    "primacy_region_preview": "# Research Paper: machine learning\n**Venue:** Generic\n**Sources:** 2 papers cited\n\n---\n\n## Abstract\n\nLinear systems of equations are ubiquitous across computational physics and machine learning, underpinning tasks from finite-element discretizations of partial differential equations to classical lin"
+  },
+  "markers_present": true,
+  "missing_markers": [],
+  "error": null
+}

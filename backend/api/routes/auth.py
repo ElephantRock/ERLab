@@ -1,7 +1,7 @@
 """Auth routes — register, login, me, users (BATCH-28)."""
 
 from fastapi import APIRouter, Depends
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel
 
 from backend.api.auth import (
     TokenData,
@@ -155,8 +155,8 @@ def forgot_password(body: ForgotPasswordRequest):
     In production, this would send an email with a reset link.
     In dev mode, the reset token is logged and returned.
     """
-    import secrets
     import logging
+    import secrets
 
     with get_session() as session:
         user = session.query(User).filter(User.email == body.email).first()

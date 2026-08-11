@@ -1,7 +1,6 @@
 """Tests for CostAwareRouter — strategy routing, budget filtering, health checks."""
 
-from datetime import datetime, timezone
-from unittest.mock import MagicMock
+from datetime import UTC, datetime
 
 import pytest
 
@@ -56,7 +55,7 @@ def _tracker_with_events(events):
         ct.record(CostEvent(
             provider=provider, model="test",
             input_tokens=50, output_tokens=50,
-            cost_usd=cost, timestamp=datetime.now(timezone.utc),
+            cost_usd=cost, timestamp=datetime.now(UTC),
         ))
     return ct
 

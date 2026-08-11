@@ -3,11 +3,8 @@
 import asyncio
 import sys
 import tempfile
-from datetime import datetime
 from types import ModuleType
 from unittest.mock import AsyncMock, MagicMock
-
-import pytest
 
 # Stub out chromadb
 _chromadb = ModuleType("chromadb")
@@ -15,8 +12,8 @@ _chromadb.PersistentClient = MagicMock
 _chromadb.HttpClient = MagicMock
 sys.modules.setdefault("chromadb", _chromadb)
 
-from backend.pipeline.knowledge.graph import KnowledgeGraph
 from backend.pipeline.knowledge.entities import EntityType
+from backend.pipeline.knowledge.graph import KnowledgeGraph
 
 
 def _make_paper(paper_id="p1", title="Test Paper on NLP", abstract="Abstract text"):
@@ -124,12 +121,12 @@ class TestIdeaGenerationStageWritesToKG:
     def test_ideas_and_relationships_written_to_kg(self):
         with tempfile.TemporaryDirectory() as tmp:
             kg = KnowledgeGraph(persist_path=f"{tmp}/kg.json")
-            from backend.pipeline.stages import IdeaGenerationStage
             from backend.pipeline.generation.models import ResearchIdea
 
             # Pre-seed a gap entity
             from backend.pipeline.knowledge.entities import KnowledgeEntity
             from backend.pipeline.knowledge.truth import TruthValue
+            from backend.pipeline.stages import IdeaGenerationStage
 
             gap_entity = KnowledgeEntity(
                 id="gap:Test Gap About NLP",

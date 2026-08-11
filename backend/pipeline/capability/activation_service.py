@@ -37,10 +37,10 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
-from sqlalchemy import select, update, text
-from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy import select, text, update
+from sqlalchemy.orm import sessionmaker
 
 from backend.db.models import (
     EmbeddingBindingCutover,
@@ -51,11 +51,11 @@ from backend.pipeline.capability.capability_drift import (
     get_latest_completed_check,
     is_check_current,
 )
+from backend.pipeline.capability.contracts import STATUS_PASSED
 from backend.pipeline.capability.cutover_snapshot import (
     is_cutover_ready_for_seal,
     recompute_source_fingerprint,
 )
-from backend.pipeline.capability.contracts import STATUS_PASSED
 
 logger = logging.getLogger(__name__)
 
@@ -91,7 +91,7 @@ def seal_cutover(
 
     Returns (sealed, failure_reason).
     """
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
 
     # 1. Check all items are ready
     with session_factory() as session:
@@ -151,7 +151,7 @@ def activate_binding(
     changes no active binding, leaves candidate vectors ineligible, and
     preserves prior retrieval posture.
     """
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
 
     with session_factory() as session:
         # Use BEGIN IMMEDIATE for write serialization
@@ -190,7 +190,6 @@ def activate_binding(
             # binding or check, not the binding_id. For now, check that
             # ANY passed check exists for the profile.
             from backend.db.models import EmbeddingCapabilityCheck
-            from backend.pipeline.capability.contracts import TERMINAL_CHECK_STATUSES
 
             latest_passed = session.execute(
                 select(EmbeddingCapabilityCheck).where(

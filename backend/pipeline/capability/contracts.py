@@ -21,7 +21,6 @@ The stored fact that a probe passed is never rewritten to "expired".
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any
 
 # ── Status vocabulary ─────────────────────────────────────────────────
 

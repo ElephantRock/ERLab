@@ -1,0 +1,88 @@
+{
+  "cell_id": "method_substitution_absurd_section_wise_rep1",
+  "dimension": "method_substitution",
+  "level": "absurd",
+  "path": "section_wise",
+  "rep": 1,
+  "hard_verdict": {
+    "all_hard_pass": true,
+    "checks": {
+      "paper_nonempty": true,
+      "gt_method_in_identity": true,
+      "gt_dataset_in_identity": true,
+      "all_markers_present": true,
+      "_missing_markers": [],
+      "marker_values_verbatim": true,
+      "_missing_values": []
+    }
+  },
+  "diagnostics": {
+    "alerts": [
+      {
+        "type": "conflicting_term_mentioned",
+        "term": "quantum",
+        "context": "the Reynolds equation, a task that remains computationally expensive for classical finite-element methods.\n\nVariational quantum algorithms, particularly the variational quantum linear solver (VQLS), provide a promising framework for solving linear",
+        "adjudication": "May be a Related Work comparison (acceptable) or a method substitution (failure). Human must decide."
+      },
+      {
+        "type": "conflicting_term_mentioned",
+        "term": "vqls",
+        "context": " classical finite-element methods.\n\nVariational quantum algorithms, particularly the variational quantum linear solver (VQLS), provide a promising framework for solving linear systems on near-term quantum hardware.\n\nWe propose a VQLS-based appr",
+        "adjudication": "May be a Related Work comparison (acceptable) or a method substitution (failure). Human must decide."
+      },
+      {
+        "type": "conflicting_term_mentioned",
+        "term": "lubrication",
+        "context": ": machine learning\n**Venue:** Generic\n**Sources:** 2 papers cited\n\n---\n\n## Abstract\n\nEfficient modeling of hydrodynamic lubrication in mechanical bearings requires solving the Reynolds equation, a task that remains computationally expensive for classi",
+        "adjudication": "May be a Related Work comparison (acceptable) or a method substitution (failure). Human must decide."
+      },
+      {
+        "type": "conflicting_term_mentioned",
+        "term": "bearing",
+        "context": ":** Generic\n**Sources:** 2 papers cited\n\n---\n\n## Abstract\n\nEfficient modeling of hydrodynamic lubrication in mechanical bearings requires solving the Reynolds equation, a task that remains computationally expensive for classical finite-element met",
+        "adjudication": "May be a Related Work comparison (acceptable) or a method substitution (failure). Human must decide."
+      },
+      {
+        "type": "conflicting_term_mentioned",
+        "term": "reynolds",
+        "context": "ers cited\n\n---\n\n## Abstract\n\nEfficient modeling of hydrodynamic lubrication in mechanical bearings requires solving the Reynolds equation, a task that remains computationally expensive for classical finite-element methods.\n\nVariational quantum algo",
+        "adjudication": "May be a Related Work comparison (acceptable) or a method substitution (failure). Human must decide."
+      },
+      {
+        "type": "marker_attribution_context",
+        "marker": "[RESULT-1]",
+        "sentence": "973, substantially exceeding the majority-class baseline [RESULT-1]",
+        "role_words_nearby": [
+          "baseline",
+          "majority",
+          "majority-class"
+        ],
+        "adjudication": "Does the sentence credit the marker to the role expected by ground truth? Human must verify."
+      },
+      {
+        "type": "marker_attribution_context",
+        "marker": "[RESULT-2]",
+        "sentence": "500, confirming that the proposed pipeline provides meaningful classification signal well above chance [RESULT-2]",
+        "role_words_nearby": [
+          "proposed"
+        ],
+        "adjudication": "Does the sentence credit the marker to the role expected by ground truth? Human must verify."
+      },
+      {
+        "type": "marker_attribution_context",
+        "marker": "[RESULT-3]",
+        "sentence": "998, indicating near-perfect class separability under the extracted feature representation [RESULT-3]",
+        "role_words_nearby": [],
+        "adjudication": "Does the sentence credit the marker to the role expected by ground truth? Human must verify."
+      }
+    ]
+  },
+  "usage": {
+    "input_tokens": 2148,
+    "output_tokens": 5281,
+    "served_model": "glm-5.2",
+    "cost_usd": 0.004128,
+    "note_for_section_wise": "token counts reflect the LAST call only; cost_usd is cumulative across all calls in this cell"
+  },
+  "error": null
+}

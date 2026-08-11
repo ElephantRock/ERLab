@@ -5,8 +5,8 @@ import asyncio
 import pytest
 
 from backend.pipeline.knowledge.embedding_service import (
-    EmbeddingService,
     EmbeddingProviderError,
+    EmbeddingService,
 )
 
 

@@ -14,10 +14,9 @@ The freeze is controlled by a durable database flag so it survives restarts.
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timezone
-from typing import Literal
+from datetime import UTC, datetime
 
-from sqlalchemy import select, update
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 logger = logging.getLogger(__name__)
@@ -86,13 +85,13 @@ def freeze_legacy_collection(session: Session, *, reason: str = "P0.3.6 isolatio
             )
         existing.status = "frozen"
         existing.reason = reason
-        existing.frozen_at = datetime.now(timezone.utc)
+        existing.frozen_at = datetime.now(UTC)
     else:
         state = _LegacyFreezeState(
             collection_name=_LEGACY_COLLECTION,
             status="frozen",
             reason=reason,
-            frozen_at=datetime.now(timezone.utc),
+            frozen_at=datetime.now(UTC),
         )
         session.add(state)
     session.commit()
@@ -118,7 +117,7 @@ def quarantine_legacy_collection(session: Session, *, reason: str = "P0.3.6 quar
         )
     existing.status = "quarantined"
     existing.reason = reason
-    existing.quarantined_at = datetime.now(timezone.utc)
+    existing.quarantined_at = datetime.now(UTC)
     session.commit()
     logger.info("Legacy collection %s quarantined", _LEGACY_COLLECTION)
 
@@ -142,7 +141,7 @@ def delete_legacy_collection_record(session: Session, *, reason: str = "P0.3.6 d
         )
     existing.status = "deleted"
     existing.reason = reason
-    existing.deleted_at = datetime.now(timezone.utc)
+    existing.deleted_at = datetime.now(UTC)
     session.commit()
     logger.info("Legacy collection %s marked deleted", _LEGACY_COLLECTION)
 
@@ -171,7 +170,7 @@ def assert_legacy_not_frozen(session: Session) -> None:
 # In production, migration 027 would add it formally.
 
 
-from sqlalchemy import Boolean, Column, DateTime, Integer, String, Text
+from sqlalchemy import Column, DateTime, Integer, String, Text
 
 from backend.db.database import Base
 
@@ -188,4 +187,4 @@ class _LegacyFreezeState(Base):
     frozen_at = Column(DateTime, nullable=True)
     quarantined_at = Column(DateTime, nullable=True)
     deleted_at = Column(DateTime, nullable=True)
-    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    created_at = Column(DateTime, default=lambda: datetime.now(UTC))

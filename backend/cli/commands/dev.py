@@ -8,8 +8,6 @@ terminated on Ctrl+C or any exit path (AR-01).
 
 from __future__ import annotations
 
-import os
-import signal
 import socket
 import subprocess
 import sys

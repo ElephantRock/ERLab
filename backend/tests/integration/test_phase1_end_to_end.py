@@ -38,11 +38,10 @@ from sqlalchemy.orm import sessionmaker
 from backend.api.routes.paper_export import router as paper_router
 from backend.db import crud
 from backend.db.database import Base
-from backend.db.models import Idea, PipelineRun, Proposal
+from backend.db.models import PipelineRun, Proposal
 from backend.pipeline.persistence import PipelinePersistence, _extract_paper_artifact
 from backend.pipeline.result import PipelineResult
 from backend.pipeline.synthesis.proposal_synthesizer import ResearchProposal
-
 
 pytestmark = pytest.mark.integration
 
@@ -290,9 +289,10 @@ def test_phase1_end_to_end_empty_paper_never_reaches_ready(e2e_env):
 
     PipelinePersistence().persist_proposals(result, db_run_id)
 
+    from sqlalchemy import select
+
     from backend.api.routes.ideas import _serialize_paper_state
     from backend.db.models import Idea as IdeaModel
-    from sqlalchemy import select
 
     with _session_factory(Session) as session:
         idea_row = session.get(IdeaModel, idea_id)

@@ -1,14 +1,11 @@
 """Tests for BATCH-RAG-07: Domain Gold Benchmark Datasets."""
 
 import json
-import pytest
-from pathlib import Path
 
 from backend.pipeline.evaluation.domain_benchmarks import (
+    generate_all_json_files,
     get_gold_benchmark,
     list_gold_benchmarks,
-    generate_all_json_files,
-    BENCHMARKS_DIR,
 )
 
 

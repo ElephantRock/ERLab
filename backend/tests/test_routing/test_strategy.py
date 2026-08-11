@@ -1,8 +1,8 @@
 """Tests for RoutingStrategy and sort_providers."""
 
-from backend.providers.routing.strategy import RoutingStrategy, sort_providers
-from backend.providers.routing.latency_tracker import LatencyTracker
 from backend.providers.provider_factory import CostTracker
+from backend.providers.routing.latency_tracker import LatencyTracker
+from backend.providers.routing.strategy import RoutingStrategy, sort_providers
 
 
 class TestRoutingStrategy:

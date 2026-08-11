@@ -13,8 +13,9 @@ def _make_app():
 
     @app.exception_handler(APIError)
     async def handle_api_error(request, exc):
-        from fastapi.responses import JSONResponse
         import uuid
+
+        from fastapi.responses import JSONResponse
         return JSONResponse(
             status_code=exc.status_code,
             content=exc.to_dict(),

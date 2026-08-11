@@ -3,11 +3,6 @@
 Validates that the orchestrator wires reference verification after
 proposal synthesis and handles all edge cases per HB-01/HB-02.
 """
-import asyncio
-import json
-import logging
-import pytest
-from unittest.mock import MagicMock, AsyncMock, patch, PropertyMock
 from types import SimpleNamespace
 
 # We test the _verify_references method in isolation
@@ -17,7 +12,6 @@ def _make_orchestrator():
     """Create a minimal PipelineOrchestrator with _verify_references available."""
     from backend.pipeline.orchestrator import PipelineOrchestrator
     from backend.pipeline.verification.reference_verifier import ReferenceVerifier
-    from backend.pipeline.result import PipelineResult
 
     orch = object.__new__(PipelineOrchestrator)
     orch._reference_verifier = ReferenceVerifier()

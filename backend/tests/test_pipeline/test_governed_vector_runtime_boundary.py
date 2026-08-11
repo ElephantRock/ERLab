@@ -15,13 +15,13 @@ from pathlib import Path
 
 import pytest
 
-
 # ── Runtime structure ────────────────────────────────────────────────
 
 
 def test_runtime_has_exactly_four_public_fields():
-    from backend.pipeline.vector_runtime import GovernedVectorRuntime
     import dataclasses
+
+    from backend.pipeline.vector_runtime import GovernedVectorRuntime
 
     fields = {f.name for f in dataclasses.fields(GovernedVectorRuntime)}
     assert fields == {

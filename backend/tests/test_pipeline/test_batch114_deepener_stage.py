@@ -5,10 +5,8 @@ produces all 4 deepening sections, and respects HB-01/HB-02.
 """
 import asyncio
 import json
-import logging
-import pytest
 from types import SimpleNamespace
-from unittest.mock import MagicMock, AsyncMock
+from unittest.mock import AsyncMock, MagicMock
 
 from backend.pipeline.stages import ProposalDeepeningStage, StageContext
 
@@ -72,9 +70,9 @@ def test_114_01_03_template_four_sections():
     assert "deepened" in meta, "Missing 'deepened' key in metadata"
     d = meta["deepened"]
     assert len(d["architecture"]) > 50, f"Architecture section too short: {d['architecture'][:50]}"
-    assert len(d["toy_example"]) > 50, f"Toy example section too short"
-    assert len(d["failure_modes"]) > 50, f"Failure modes section too short"
-    assert len(d["success_criteria"]) > 50, f"Success criteria section too short"
+    assert len(d["toy_example"]) > 50, "Toy example section too short"
+    assert len(d["failure_modes"]) > 50, "Failure modes section too short"
+    assert len(d["success_criteria"]) > 50, "Success criteria section too short"
 
 
 # ── TEST-114-01-04: Deepened content stored in metadata ──────────

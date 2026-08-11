@@ -8,7 +8,6 @@ with X-Request-Id header (UUID4).
 import uuid
 
 import pytest
-from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from backend.api.app import app
@@ -21,7 +20,6 @@ from backend.api.errors import (
     UnauthorizedError,
     UnprocessableEntityError,
 )
-
 
 # ── Unit Tests ──────────────────────────────────────────────────────
 

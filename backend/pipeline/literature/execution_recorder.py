@@ -22,7 +22,7 @@ from __future__ import annotations
 
 import logging
 import re
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from sqlalchemy import select, update
@@ -30,10 +30,8 @@ from sqlalchemy.orm import sessionmaker
 
 from backend.pipeline.literature.contracts import (
     TERMINAL_STATUSES,
-    AttemptObserver,
-    AttemptOutcome,
     VALID_TRANSITIONS,
-    SourceQueryPlan,
+    AttemptOutcome,
     SourceSearchOutcome,
     validate_outcome,
 )
@@ -80,7 +78,7 @@ def sanitize_error_detail(raw: str | None) -> str | None:
 
 
 def _now() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 # ── Database-backed attempt observer ─────────────────────────────────
@@ -249,7 +247,6 @@ class ExecutionRecorder:
         Only valid from ``pending``. Raises ``ValueError`` if the row is not
         pending (another state requires investigation, not silent skip).
         """
-        from backend.db.models import SearchQueryExecution
 
         self._transition(
             execution_id, "skipped",
@@ -492,7 +489,6 @@ class ExecutionRecorder:
         """
         import asyncio
 
-        from backend.db.models import SearchQueryExecution
 
         # ── Replay: terminal rows are immutable ──
         status, ac, _ = self._get_state(execution_id)
@@ -562,7 +558,7 @@ class ExecutionRecorder:
                 )
         except asyncio.CancelledError:
             raise
-        except asyncio.TimeoutError:
+        except TimeoutError:
             _, obs_ac, attempted_at = self._get_state(execution_id)
             if attempted_at is None:
                 self._transition(

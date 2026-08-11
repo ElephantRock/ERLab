@@ -6,31 +6,24 @@ Uses ephemeral fake backends and deterministic fixtures.
 from __future__ import annotations
 
 import sys
-from datetime import datetime, timezone
 from unittest.mock import MagicMock
 
-import pytest
-from sqlalchemy import create_engine, event, select, text
+from sqlalchemy import create_engine, event, select
 from sqlalchemy.orm import sessionmaker
 
 sys.modules.setdefault("chromadb", MagicMock())
 sys.modules.setdefault("google.generativeai", MagicMock())
 
-import backend.db.models
 from backend.db.database import Base
 from backend.db.models import (
     EmbeddingProfile,
     LegacyVectorInventoryRecord,
     LegacyVectorInventoryRun,
-    LegacyVectorReindexTarget,
     Paper,
 )
 from backend.pipeline.legacy_vector_inventory import (
-    ChromaLegacyInventoryBackend,
     ExtractedLegacyIdentity,
     LegacyCollectionIdentity,
-    LegacyMappingDecision,
-    LegacyVectorInventoryBackend,
     LegacyVectorRecord,
     compute_record_fingerprint,
     compute_source_snapshot_fingerprint,

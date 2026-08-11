@@ -10,7 +10,6 @@ citation mismatches, overclaiming, contradictory evidence, missing limitations.
 from __future__ import annotations
 
 from backend.pipeline.model_certification.stage_scorer import StageScorer
-from backend.pipeline.model_certification.eval_case import StageEvalCase, GoldAnswer
 
 
 class AdversarialReviewScorer(StageScorer):

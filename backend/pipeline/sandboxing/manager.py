@@ -7,7 +7,6 @@ available backend (Docker > Subprocess > Noop) or allows explicit selection.
 from __future__ import annotations
 
 import logging
-from typing import Any
 
 from backend.pipeline.sandboxing.docker_backend import DockerSandboxBackend
 from backend.pipeline.sandboxing.noop_backend import NoopSandboxBackend

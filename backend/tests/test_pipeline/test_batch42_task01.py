@@ -1,5 +1,4 @@
 """BATCH-42/TASK-01: Cross-Run Gap Deduplication tests."""
-import pytest
 from unittest.mock import MagicMock, patch
 
 
@@ -22,8 +21,8 @@ def test_42_01_02_case_insensitive():
 
 def test_42_01_03_first_persist_creates_canonical():
     """TEST-42-01-03: First persist creates row with canonical_id."""
-    from backend.pipeline.persistence import PipelinePersistence, content_hash
     from backend.pipeline.gap_analysis.models import ResearchGap
+    from backend.pipeline.persistence import PipelinePersistence, content_hash
 
     gap = ResearchGap(title="Test Gap", description="Test", gap_type="methodological", confidence=0.8)
     mock_session = MagicMock()
@@ -52,9 +51,9 @@ def test_42_01_03_first_persist_creates_canonical():
 
 def test_42_01_04_second_persist_revises_truth():
     """TEST-42-01-04: Second persist revises truth, no new row per HB-03."""
-    from backend.pipeline.persistence import PipelinePersistence, content_hash
     from backend.pipeline.gap_analysis.models import ResearchGap
     from backend.pipeline.knowledge.truth import TruthValue
+    from backend.pipeline.persistence import PipelinePersistence
 
     gap = ResearchGap(title="Test Gap", description="Test", confidence=0.8,
                        truth=TruthValue(frequency=0.9, confidence=0.8, evidence_count=3))
@@ -87,6 +86,7 @@ def test_42_01_04_second_persist_revises_truth():
 def test_42_01_05_canonical_endpoint():
     """TEST-42-01-05: GET /gaps/canonical returns deduplicated gaps."""
     from fastapi import FastAPI
+
     from backend.api.routes.gaps import router
 
     app = FastAPI()

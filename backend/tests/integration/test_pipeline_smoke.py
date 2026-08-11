@@ -82,6 +82,7 @@ class TestPipelineSmoke:
         """Integration: Relationship extraction works with a mock LLM."""
         import json
         from unittest.mock import AsyncMock
+
         from backend.pipeline.knowledge.relationship_extractor import extract_relationships
 
         papers = []
@@ -109,6 +110,7 @@ class TestPipelineSmoke:
     def test_watchdog_detects_stale_runs(self):
         """Integration: Watchdog can detect stale runs without crashing."""
         from datetime import timedelta
+
         from backend.pipeline.execution.watchdog import PipelineWatchdog
         from backend.pipeline.persistence import PipelinePersistence
 

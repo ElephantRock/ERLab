@@ -14,26 +14,20 @@ All tests use an in-memory SQLite database for isolation.
 
 from __future__ import annotations
 
-import json
-import pytest
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from unittest.mock import patch
 
+import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
+from backend.api.run_service import (
+    WORKER_STALE_THRESHOLD_SECONDS,
+    RunService,
+)
 from backend.db.database import Base
 from backend.db.models import (
-    PipelineRun,
-    RunCancellation,
-    RunEvent,
     RunWorker,
-)
-from backend.api.run_service import (
-    RunService,
-    get_run_service,
-    reset_run_service,
-    WORKER_STALE_THRESHOLD_SECONDS,
 )
 
 
@@ -255,10 +249,9 @@ class TestOrphanDetection:
         run_service.acquire_worker(run_id, worker_id="w1")
 
         # Backdate the worker heartbeat past the real threshold
-        from backend.db.models import RunWorker
         from sqlalchemy import update as sa_update
 
-        old_time = datetime.now(timezone.utc) - timedelta(seconds=WORKER_STALE_THRESHOLD_SECONDS + 60)
+        old_time = datetime.now(UTC) - timedelta(seconds=WORKER_STALE_THRESHOLD_SECONDS + 60)
 
         import backend.api.run_service as svc_mod
         mock_get_session = svc_mod.get_session
@@ -281,11 +274,11 @@ class TestOrphanDetection:
         run_service.acquire_worker(run_id, worker_id="w1")
 
         # Manually backdate the heartbeat to ensure it is stale
-        from backend.db.models import RunWorker
-        from sqlalchemy import update as sa_update
         from contextlib import contextmanager
 
-        old_time = datetime.now(timezone.utc) - timedelta(seconds=WORKER_STALE_THRESHOLD_SECONDS + 60)
+        from sqlalchemy import update as sa_update
+
+        old_time = datetime.now(UTC) - timedelta(seconds=WORKER_STALE_THRESHOLD_SECONDS + 60)
 
         # Access the patched session factory directly
         import backend.api.run_service as svc_mod
@@ -295,7 +288,6 @@ class TestOrphanDetection:
         def temp_session():
             session = mock_get_session.__wrapped__() if hasattr(mock_get_session, '__wrapped__') else None
             # Fall back to creating our own session
-            from sqlalchemy import create_engine as sa_create_engine
             # Use the same in-memory DB by finding the engine from the fixture
             # Actually simpler: use the patched context manager directly
             with mock_get_session.side_effect() as s:

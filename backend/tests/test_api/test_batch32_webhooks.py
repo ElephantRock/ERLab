@@ -8,8 +8,6 @@ from sqlalchemy import create_engine, inspect
 from sqlalchemy.orm import sessionmaker
 
 from backend.db.database import Base
-from backend.db.models import Idea, PipelineRun, ResearchGapDB
-
 
 # ── Fixtures ──────────────────────────────────────────────────────
 

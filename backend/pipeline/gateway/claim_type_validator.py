@@ -25,13 +25,9 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any
 
 from backend.pipeline.gateway.claim_types import (
-    CLAIM_SUPPORT_REQUIREMENTS,
-    CLAIM_TYPE_VALUES,
     ClaimType,
-    DesignAssumption,
     detect_benefit_phrases,
     get_support_requirement,
     is_type_allowed_in_section,

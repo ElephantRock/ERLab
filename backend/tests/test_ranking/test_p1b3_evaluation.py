@@ -8,8 +8,9 @@ invariant and the Gate 2 verdict.
 
 from __future__ import annotations
 
-import pytest
 from pathlib import Path
+
+import pytest
 
 from backend.ranking.p1b3_evaluation import (
     FROZEN_RRF_K,
@@ -18,17 +19,13 @@ from backend.ranking.p1b3_evaluation import (
     HYBRID_WEIGHTED_POLICY_ID,
     SEMANTIC_ONLY_POLICY_ID,
     SnapshotSemanticScorer,
-    _build_request,
     _cosine,
-    _grade_for,
     _minmax,
-    evaluate_v2,
     macro_average,
     paired_bootstrap_ci,
     rank_hybrid_weighted,
     rank_semantic_only,
 )
-
 
 REPO_ROOT = Path(__file__).resolve().parents[3]  # tests/test_ranking/file.py -> repo root
 SNAPSHOT_DIR = REPO_ROOT / "docs" / "p1b_snapshot"
@@ -160,10 +157,11 @@ class TestEvaluationAgainstSnapshot:
     and the Gate 2 verdict."""
 
     def test_snapshot_loads_and_binds_to_frozen_benchmark(self):
-        from backend.ranking.embedding_snapshot import load_snapshot
         from backend.ranking.benchmark_v2_registry import (
-            BENCHMARK_V2, compute_benchmark_v2_fingerprint,
+            BENCHMARK_V2,
+            compute_benchmark_v2_fingerprint,
         )
+        from backend.ranking.embedding_snapshot import load_snapshot
         snap = load_snapshot(
             SNAPSHOT_DIR,
             expected_benchmark_fingerprint=compute_benchmark_v2_fingerprint(),
@@ -175,13 +173,14 @@ class TestEvaluationAgainstSnapshot:
         assert len(snap.candidates()) == 270
 
     def test_deterministic_replay_all_policies(self):
-        from backend.ranking.benchmark_v2_registry import frozen_v2_cases
-        from backend.ranking.embedding_snapshot import load_snapshot
         from backend.ranking.benchmark_v2_registry import (
-            BENCHMARK_V2, compute_benchmark_v2_fingerprint,
+            BENCHMARK_V2,
+            compute_benchmark_v2_fingerprint,
+            frozen_v2_cases,
         )
+        from backend.ranking.embedding_snapshot import load_snapshot
         from backend.ranking.p1b3_evaluation import _run_policy
-        from backend.ranking.policies import rank_legacy_lexical, rank_hybrid_rrf
+        from backend.ranking.policies import rank_hybrid_rrf, rank_legacy_lexical
 
         snap = load_snapshot(SNAPSHOT_DIR,
             expected_benchmark_fingerprint=compute_benchmark_v2_fingerprint(),

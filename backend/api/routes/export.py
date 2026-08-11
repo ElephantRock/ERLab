@@ -31,9 +31,8 @@ async def export_markdown(run_id: str):
 @router.get("/bibtex/{run_id}", response_class=PlainTextResponse)
 async def export_bibtex(run_id: str):
     """Export a pipeline run's papers as BibTeX."""
-    from backend.pipeline.persistence import PipelinePersistence
     from backend.pipeline.export.bibtex_exporter import papers_to_bibtex
-    from backend.pipeline.literature.models import Paper
+    from backend.pipeline.persistence import PipelinePersistence
 
     persistence = PipelinePersistence()
     try:
@@ -56,8 +55,8 @@ async def export_latex(run_id: str, venue: str | None = Query(default=None)):
         venue: Optional venue name (IEEE, ACM, NeurIPS, Generic).
                Defaults to Generic when not specified.
     """
-    from backend.pipeline.persistence import PipelinePersistence
     from backend.pipeline.export.latex_exporter import LatexExporter
+    from backend.pipeline.persistence import PipelinePersistence
     from backend.pipeline.synthesis.proposal_synthesizer import ResearchProposal
 
     persistence = PipelinePersistence()

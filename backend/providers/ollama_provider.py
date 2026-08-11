@@ -57,6 +57,8 @@ class OllamaProvider(LLMProvider):
         messages: list[dict],
         temperature: float = 0.7,
         max_tokens: int = 4096,
+        stage: str = "",
+        run_id: str | None = None,
     ) -> LLMResponse:
         response = await self._client.post(
             f"{self._base_url}/api/chat",
@@ -72,7 +74,7 @@ class OllamaProvider(LLMProvider):
         data = response.json()
         inp = data.get("prompt_eval_count", 0)
         out = data.get("eval_count", 0)
-        self._report_cost(inp, out)
+        self._report_cost(inp, out, stage=stage, run_id=run_id)
         return LLMResponse(
             content=data["message"]["content"],
             input_tokens=inp,
@@ -129,6 +131,8 @@ class OllamaProvider(LLMProvider):
         messages: list[dict],
         schema: dict,
         temperature: float = 0.3,
+        stage: str = "",
+        run_id: str | None = None,
     ) -> LLMResponse:
         messages[-1]["content"] += "\n\nRespond with a valid JSON object."
         response = await self._client.post(
@@ -145,7 +149,7 @@ class OllamaProvider(LLMProvider):
         data = response.json()
         inp = data.get("prompt_eval_count", 0)
         out = data.get("eval_count", 0)
-        self._report_cost(inp, out)
+        self._report_cost(inp, out, stage=stage, run_id=run_id)
         return LLMResponse(
             content="",
             structured=json.loads(data["message"]["content"]),

@@ -4,10 +4,9 @@ AIV v5.3 — T1, T2, T5.
 """
 from __future__ import annotations
 
-import pytest
-
 from backend.pipeline.monitoring.pipeline_monitoring import (
-    PipelineMonitoringService, PreflightResult,
+    PipelineMonitoringService,
+    PreflightResult,
 )
 
 

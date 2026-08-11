@@ -13,12 +13,13 @@ Verifies that:
 from __future__ import annotations
 
 import asyncio
-import pytest
 from types import SimpleNamespace
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import MagicMock
 
-from backend.pipeline.stages import PaperSynthesisStage, StageContext
+import pytest
+
 from backend.pipeline.result import PipelineResult
+from backend.pipeline.stages import PaperSynthesisStage, StageContext
 
 
 def _make_proposal(title="Test Proposal", content="Body text."):

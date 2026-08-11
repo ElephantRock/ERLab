@@ -2,10 +2,7 @@
 
 from __future__ import annotations
 
-from unittest.mock import MagicMock
-
-import pytest
-
+from backend.config import Settings
 from backend.pipeline.config.effective_configurations import (
     EffectiveAutonomyConfiguration,
     EffectiveDomainConfigurations,
@@ -17,7 +14,6 @@ from backend.pipeline.config.effective_configurations import (
     EffectiveSearchConfiguration,
     build_effective_domain_configurations,
 )
-from backend.config import Settings
 
 
 class TestEffectiveDomainConfigurations:

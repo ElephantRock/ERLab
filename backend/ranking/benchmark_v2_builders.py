@@ -11,11 +11,11 @@ import hashlib
 from backend.ranking.benchmark_v2_schema import (
     ALL_SLICE_TYPES,
     ANNOTATOR_INITIAL,
+    DISAGREE_SINGLE_PASS,
+    AnnotationPass,
     BenchmarkCandidateV2,
     BenchmarkCaseV2,
-    DISAGREE_SINGLE_PASS,
     JudgmentProvenance,
-    AnnotationPass,
 )
 
 

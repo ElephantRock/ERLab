@@ -1,0 +1,82 @@
+{
+  "cell_id": "ablation_full_section_wise_rep3",
+  "dimension": "ablation",
+  "level": "full",
+  "path": "section_wise",
+  "rep": 3,
+  "hard_verdict": {
+    "all_hard_pass": true,
+    "checks": {
+      "paper_nonempty": true,
+      "gt_method_in_identity": true,
+      "gt_dataset_in_identity": true,
+      "all_markers_present": true,
+      "_missing_markers": [],
+      "marker_values_verbatim": true,
+      "_missing_values": []
+    }
+  },
+  "diagnostics": {
+    "alerts": [
+      {
+        "type": "conflicting_term_mentioned",
+        "term": "quantum",
+        "context": "cal bearings via classical finite-element methods incurs significant computational costs, motivating the exploration of quantum-based alternatives.\n\nWe propose a variational quantum linear solver (VQLS) framework that encodes the Reynolds equation",
+        "adjudication": "May be a Related Work comparison (acceptable) or a method substitution (failure). Human must decide."
+      },
+      {
+        "type": "conflicting_term_mentioned",
+        "term": "vqls",
+        "context": "ional costs, motivating the exploration of quantum-based alternatives.\n\nWe propose a variational quantum linear solver (VQLS) framework that encodes the Reynolds equation into a quantum circuit with a parameterized ansatz, aiming to achieve com",
+        "adjudication": "May be a Related Work comparison (acceptable) or a method substitution (failure). Human must decide."
+      },
+      {
+        "type": "conflicting_term_mentioned",
+        "term": "lubrication",
+        "context": "esearch Paper: machine learning\n**Venue:** Generic\n**Sources:** 2 papers cited\n\n---\n\n## Abstract\n\nModeling hydrodynamic lubrication in mechanical bearings via classical finite-element methods incurs significant computational costs, motivating the expl",
+        "adjudication": "May be a Related Work comparison (acceptable) or a method substitution (failure). Human must decide."
+      },
+      {
+        "type": "conflicting_term_mentioned",
+        "term": "bearing",
+        "context": "rning\n**Venue:** Generic\n**Sources:** 2 papers cited\n\n---\n\n## Abstract\n\nModeling hydrodynamic lubrication in mechanical bearings via classical finite-element methods incurs significant computational costs, motivating the exploration of quantum-bas",
+        "adjudication": "May be a Related Work comparison (acceptable) or a method substitution (failure). Human must decide."
+      },
+      {
+        "type": "conflicting_term_mentioned",
+        "term": "reynolds",
+        "context": "ration of quantum-based alternatives.\n\nWe propose a variational quantum linear solver (VQLS) framework that encodes the Reynolds equation into a quantum circuit with a parameterized ansatz, aiming to achieve computational advantages over classical ",
+        "adjudication": "May be a Related Work comparison (acceptable) or a method substitution (failure). Human must decide."
+      },
+      {
+        "type": "marker_attribution_context",
+        "marker": "[RESULT-1]",
+        "sentence": "998 [RESULT-1] [RESULT-2] [RESULT-3]",
+        "role_words_nearby": [],
+        "adjudication": "Does the sentence credit the marker to the role expected by ground truth? Human must verify."
+      },
+      {
+        "type": "marker_attribution_context",
+        "marker": "[RESULT-2]",
+        "sentence": "998 [RESULT-1] [RESULT-2] [RESULT-3]",
+        "role_words_nearby": [],
+        "adjudication": "Does the sentence credit the marker to the role expected by ground truth? Human must verify."
+      },
+      {
+        "type": "marker_attribution_context",
+        "marker": "[RESULT-3]",
+        "sentence": "998 [RESULT-1] [RESULT-2] [RESULT-3]",
+        "role_words_nearby": [],
+        "adjudication": "Does the sentence credit the marker to the role expected by ground truth? Human must verify."
+      }
+    ]
+  },
+  "usage": {
+    "input_tokens": 2156,
+    "output_tokens": 3327,
+    "served_model": "glm-5.2",
+    "cost_usd": 0.002932,
+    "note_for_section_wise": "token counts reflect the LAST call only; cost_usd is cumulative across all calls in this cell"
+  },
+  "error": null
+}

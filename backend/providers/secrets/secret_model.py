@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from pydantic import BaseModel
 
@@ -15,7 +15,7 @@ class Secret(BaseModel):
     key: str
     encrypted_value: str
     provider: str
-    created_at: datetime = datetime.now(timezone.utc)
+    created_at: datetime = datetime.now(UTC)
     rotated_at: datetime | None = None
 
     model_config = {"frozen": True}
@@ -30,5 +30,5 @@ class Secret(BaseModel):
             encrypted_value=encrypted,
             provider=self.provider,
             created_at=self.created_at,
-            rotated_at=datetime.now(timezone.utc),
+            rotated_at=datetime.now(UTC),
         )

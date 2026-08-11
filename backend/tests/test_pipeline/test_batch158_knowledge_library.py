@@ -4,14 +4,10 @@ TASK-01: Post-run indexing in ExportStage (7 tests)
 TASK-02: Pre-run knowledge query in LiteratureSearchStage (5 tests)
 TASK-03: Knowledge query API endpoint (2 tests)
 """
-import asyncio
 import json
 import os
 import tempfile
-from unittest.mock import AsyncMock, MagicMock, patch
-
-import pytest
-
+from unittest.mock import MagicMock
 
 # ─── Helpers ────────────────────────────────────────────────
 
@@ -29,7 +25,7 @@ def _make_library(db_path=None):
 class TestPostRunIndexing:
 
     def test_01_knowledge_library_add_paper(self):
-        from backend.pipeline.knowledge.library import KnowledgeLibrary, LibraryEntry
+        from backend.pipeline.knowledge.library import LibraryEntry
         lib, tmp = _make_library()
         try:
             entry = LibraryEntry(
@@ -45,7 +41,7 @@ class TestPostRunIndexing:
             os.unlink(tmp)
 
     def test_02_knowledge_library_dedup(self):
-        from backend.pipeline.knowledge.library import KnowledgeLibrary, LibraryEntry
+        from backend.pipeline.knowledge.library import LibraryEntry
         lib, tmp = _make_library()
         try:
             entry = LibraryEntry(entry_type="paper", domain="AI", title="Test Paper", content="{}")
@@ -58,7 +54,6 @@ class TestPostRunIndexing:
             os.unlink(tmp)
 
     def test_03_library_indexer_index_run(self):
-        from backend.pipeline.knowledge.library import KnowledgeLibrary
         from backend.pipeline.knowledge.library_indexer import LibraryIndexer
         lib, tmp = _make_library()
         try:
@@ -97,7 +92,7 @@ class TestPostRunIndexing:
             shutil.rmtree(tmpdir, ignore_errors=True)
 
     def test_05_query_by_domain(self):
-        from backend.pipeline.knowledge.library import KnowledgeLibrary, LibraryEntry
+        from backend.pipeline.knowledge.library import LibraryEntry
         lib, tmp = _make_library()
         try:
             lib.add(LibraryEntry(entry_type="paper", domain="AI", title="AI Paper", content="{}"))
@@ -110,7 +105,7 @@ class TestPostRunIndexing:
             os.unlink(tmp)
 
     def test_06_count_by_type(self):
-        from backend.pipeline.knowledge.library import KnowledgeLibrary, LibraryEntry
+        from backend.pipeline.knowledge.library import LibraryEntry
         lib, tmp = _make_library()
         try:
             lib.add(LibraryEntry(entry_type="paper", domain="AI", title="P1", content="{}"))
@@ -124,7 +119,6 @@ class TestPostRunIndexing:
             os.unlink(tmp)
 
     def test_07_add_papers_bulk(self):
-        from backend.pipeline.knowledge.library import KnowledgeLibrary
         lib, tmp = _make_library()
         try:
             papers = [
@@ -144,7 +138,6 @@ class TestPostRunIndexing:
 class TestPreRunKnowledge:
 
     def test_08_indexer_get_existing_papers(self):
-        from backend.pipeline.knowledge.library import KnowledgeLibrary
         from backend.pipeline.knowledge.library_indexer import LibraryIndexer
         lib, tmp = _make_library()
         try:
@@ -159,7 +152,6 @@ class TestPreRunKnowledge:
             os.unlink(tmp)
 
     def test_09_indexer_get_existing_gaps(self):
-        from backend.pipeline.knowledge.library import KnowledgeLibrary
         from backend.pipeline.knowledge.library_indexer import LibraryIndexer
         lib, tmp = _make_library()
         try:
@@ -173,7 +165,6 @@ class TestPreRunKnowledge:
             os.unlink(tmp)
 
     def test_10_empty_domain_returns_empty(self):
-        from backend.pipeline.knowledge.library import KnowledgeLibrary
         from backend.pipeline.knowledge.library_indexer import LibraryIndexer
         lib, tmp = _make_library()
         try:
@@ -185,7 +176,6 @@ class TestPreRunKnowledge:
             os.unlink(tmp)
 
     def test_11_cross_domain_isolation(self):
-        from backend.pipeline.knowledge.library import KnowledgeLibrary
         from backend.pipeline.knowledge.library_indexer import LibraryIndexer
         lib, tmp = _make_library()
         try:
@@ -228,6 +218,7 @@ class TestKnowledgeAPI:
 
     def test_14_knowledge_endpoint_returns_data(self):
         from fastapi.testclient import TestClient
+
         from backend.api.app import app
         client = TestClient(app)
         response = client.get("/api/v1/search/knowledge/AI")

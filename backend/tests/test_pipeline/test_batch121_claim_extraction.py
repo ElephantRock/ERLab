@@ -11,18 +11,17 @@ Tests cover:
 from __future__ import annotations
 
 import asyncio
+
 import pytest
 
 pytestmark = pytest.mark.flaky(reruns=3, reruns_delay=2)
 import logging
 from pathlib import Path
-from unittest.mock import MagicMock
 
 import pytest
 
 from backend.pipeline.claims import Claim, ClaimExtractor, ClaimType
 from backend.providers.base import LLMProvider
-
 
 # ═══════════════════════════════════════════════════════════════════
 # Helpers

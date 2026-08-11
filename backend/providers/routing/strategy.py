@@ -6,9 +6,8 @@ from enum import Enum
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from backend.providers.routing.budget_manager import BudgetManager
-    from backend.providers.routing.latency_tracker import LatencyTracker
     from backend.providers.provider_factory import CostTracker
+    from backend.providers.routing.latency_tracker import LatencyTracker
 
 
 class RoutingStrategy(str, Enum):

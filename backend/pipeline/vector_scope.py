@@ -16,20 +16,17 @@ For provenance_v1 runs, absence of a scope is a contract error.
 from __future__ import annotations
 
 import logging
-from typing import Sequence
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from backend.pipeline.provenance_gate import (
-    ProvenanceContractError,
     load_run_provenance_contract,
 )
 from backend.pipeline.vector_contracts import (
-    IndexCoverageIncomplete,
     ResolvedVectorScope,
-    VectorScopeError,
     VectorRetrievalScope,
+    VectorScopeError,
     compute_scope_fingerprint,
 )
 

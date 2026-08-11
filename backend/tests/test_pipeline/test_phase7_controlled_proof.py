@@ -4,21 +4,17 @@
 No provider calls required.
 """
 
-import asyncio
-import hashlib
-import json
-import pytest
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
 
-from backend.pipeline.synthesis.synthesis_budget import SynthesisBudget, BudgetTimer
-from backend.pipeline.synthesis.synthesis_service import (
-    SynthesisServiceResult,
-    synthesize_paper,
-    compute_input_fingerprint,
-    REQUIRED_SECTIONS,
-)
+import pytest
 
+from backend.pipeline.synthesis.synthesis_budget import BudgetTimer, SynthesisBudget
+from backend.pipeline.synthesis.synthesis_service import (
+    REQUIRED_SECTIONS,
+    compute_input_fingerprint,
+    synthesize_paper,
+)
 
 # ── Budget tests ───────────────────────────────────────────────────
 

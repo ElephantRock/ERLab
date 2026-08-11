@@ -15,19 +15,16 @@ the PER_PROPOSAL_TIMEOUT wrapper that caused the B-08 failure in Phase 5.
 
 from __future__ import annotations
 
-import hashlib
 import json
 import logging
 from pathlib import Path
-from typing import Any
 
-from backend.db.database import get_session
-from backend.db.models import ExperimentResult, Proposal, PaperSourceMarker
-from backend.pipeline.experiment.manifest import ExperimentManifest, ResultMarker
-from backend.pipeline.evaluation.conclusion_checker import classify_conclusion_support
-from backend.pipeline.evaluation.scope_checker import classify_scope_alignment
-from backend.providers.provider_factory import get_generation_provider
 from backend.config import get_settings
+from backend.db.database import get_session
+from backend.db.models import ExperimentResult, PaperSourceMarker, Proposal
+from backend.pipeline.evaluation.scope_checker import classify_scope_alignment
+from backend.pipeline.experiment.manifest import ExperimentManifest, ResultMarker
+from backend.providers.provider_factory import get_generation_provider
 
 logger = logging.getLogger(__name__)
 
@@ -78,8 +75,9 @@ async def resume_empirical_paper(
         proposal_text = proposal.content_md or ""
 
         # Get linked papers for source formatting
-        from backend.db.models import Paper, Idea, RunPaper
         from sqlalchemy import select
+
+        from backend.db.models import Idea, Paper, RunPaper
 
         source_papers = []
         source_ids = []
@@ -216,8 +214,8 @@ async def resume_empirical_paper(
     synthesis_sources = list(source_papers) + [experiment_context]
 
     # ── 4. Synthesize paper via unified service ────────────────────
-    from backend.pipeline.synthesis.synthesis_service import synthesize_paper
     from backend.pipeline.synthesis.synthesis_budget import SynthesisBudget
+    from backend.pipeline.synthesis.synthesis_service import synthesize_paper
 
     settings = get_settings()
     provider = get_generation_provider(settings)
@@ -290,8 +288,8 @@ async def resume_empirical_paper(
     claim_alignment_passed = True
     claim_alignment_reason = "Not an empirical run"
     try:
-        from backend.pipeline.experiment.specification import load_spec as _cls
         from backend.pipeline.evaluation.claim_alignment import evaluate_claim_alignment
+        from backend.pipeline.experiment.specification import load_spec as _cls
         _claim_spec = _cls(manifest.experiment_spec_id)
         claim_result = evaluate_claim_alignment(
             paper_md=paper_md,
@@ -324,7 +322,15 @@ async def resume_empirical_paper(
     with get_session() as session:
         proposal_row = session.get(Proposal, proposal_id)
         if proposal_row:
-            # Build paper_meta_json from the synthesis result + gates
+            # Build paper_meta_json from the synthesis result + gates. Release
+            # metadata is preserved below so a recovery after publication
+            # creates a successor current paper without rewriting the frozen
+            # release revision.
+            from backend.pipeline.evaluation.paper_release import (
+                compute_paper_hash,
+                merge_release_metadata,
+                record_successor_revision_if_released,
+            )
             paper_meta = {
                 "status": eval_status,
                 "word_count": synth_result.word_count,
@@ -335,6 +341,7 @@ async def resume_empirical_paper(
                 "paper_evaluation": {
                     "status": eval_status,
                     "scope": "paper",
+                    "paper_hash": compute_paper_hash(paper_md),
                     "gates": gates,
                     "blocking_reasons": blocking_reasons if blocking_reasons else None,
                 },
@@ -342,6 +349,17 @@ async def resume_empirical_paper(
                 "result_markers": [m.to_dict() for m in result_markers],
                 "experiment_result_id": experiment_result_id,
             }
+            record_successor_revision_if_released(
+                session,
+                proposal_row,
+                paper_md,
+                eval_status=eval_status,
+                gates=gates,
+                source="recovery",
+                trigger="post_release_recovery",
+                experiment_result_id=experiment_result_id,
+            )
+            paper_meta = merge_release_metadata(proposal_row, paper_meta) or paper_meta
             proposal_row.paper_md = paper_md
             proposal_row.paper_meta_json = _recovery_json.dumps(paper_meta)
             session.commit()

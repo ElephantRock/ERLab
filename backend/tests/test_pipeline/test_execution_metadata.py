@@ -21,7 +21,7 @@ from pathlib import Path
 from unittest.mock import MagicMock
 
 import pytest
-from sqlalchemy import create_engine, event, inspect, select, text
+from sqlalchemy import create_engine, event, inspect, text
 from sqlalchemy.orm import sessionmaker
 
 sys.modules.setdefault("chromadb", MagicMock())
@@ -34,12 +34,9 @@ from backend.pipeline.literature.contracts import (
     SourceResultAccounting,
     SourceSearchOutcome,
     canonical_plan_json,
-    validate_outcome,
 )
 from backend.pipeline.literature.execution_recorder import (
     ExecutionRecorder,
-    TranslationDriftError,
-    sanitize_error_detail,
 )
 
 
@@ -194,6 +191,7 @@ def test_translation_persisted_before_first_request():
         async def attempt_started(self):
             # Check the row has translated_query before the request proceeds.
             from sqlalchemy import select as sel
+
             from backend.db.models import SearchQueryExecution as Ex
             Session = sessionmaker(bind=engine)
             s = Session()

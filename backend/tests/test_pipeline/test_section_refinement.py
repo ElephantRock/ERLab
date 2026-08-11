@@ -1,25 +1,26 @@
 """Tests for section refinement service — revision tracking, concurrency, rollback."""
 
-import json
 import hashlib
-import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
+import json
+from unittest.mock import MagicMock
 
+import pytest
+
+from backend.db.models import Proposal, ProposalSectionRevision
 from backend.pipeline.synthesis.section_refinement import (
-    ProposalSectionRefinementService,
     ConcurrencyConflict,
-    ReceiptRequired,
+    ProposalSectionRefinementService,
     _sha256,
 )
-from backend.db.models import Proposal, ProposalSectionRevision
 
 
 @pytest.fixture
 def tmp_db_session(tmp_path):
     """Create an isolated SQLite DB for each test."""
-    from backend.db.database import Base
     from sqlalchemy import create_engine
     from sqlalchemy.orm import sessionmaker
+
+    from backend.db.database import Base
 
     db_path = tmp_path / "test.db"
     test_engine = create_engine(f"sqlite:///{db_path}")
@@ -350,6 +351,7 @@ class TestSyntheticOriginal:
     def test_no_revisions_shows_current_as_original(self, tmp_db_session):
         """When no revisions exist, synthetic original = current section."""
         import hashlib
+
         from backend.api.quality_checks import compute_quality_checks
 
         proposal = Proposal(

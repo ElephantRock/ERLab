@@ -3,13 +3,12 @@
 import pytest
 
 from backend.pipeline.knowledge.token_budget import (
+    DEFAULT_STAGE_BUDGETS,
     BudgetReport,
     ScoredChunk,
     TokenBudgetGuard,
     TokenCounter,
-    DEFAULT_STAGE_BUDGETS,
 )
-
 
 # ── TokenCounter Tests ─────────────────────────────────────────────────
 

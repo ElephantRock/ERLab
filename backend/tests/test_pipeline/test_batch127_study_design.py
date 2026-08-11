@@ -1,7 +1,6 @@
 """BATCH-127 Tests — Study Design with MVP."""
 
-import pytest
-from backend.pipeline.claims.study_designer import StudyDesigner, StudyDesign, MVPExperiment, GoNoGoCriteria
+from backend.pipeline.claims.study_designer import StudyDesign, StudyDesigner
 
 
 class TestStudyDesigner:

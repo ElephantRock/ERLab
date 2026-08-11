@@ -1,0 +1,190 @@
+{
+  "run_id": "20260807_210159",
+  "patched_synthesizer": "outline now receives experiment_context/result_markers",
+  "identity_check": "primacy (title + abstract opening), not substring-anywhere",
+  "cells": [
+    {
+      "cell_id": "ablation_context_only_section_wise_rep1",
+      "passed": true,
+      "error": null,
+      "identity_pass": true,
+      "conflicting_terms_in_primacy": [],
+      "markers_present": true
+    },
+    {
+      "cell_id": "ablation_context_only_section_wise_rep2",
+      "passed": true,
+      "error": null,
+      "identity_pass": true,
+      "conflicting_terms_in_primacy": [],
+      "markers_present": true
+    },
+    {
+      "cell_id": "ablation_context_only_section_wise_rep3",
+      "passed": true,
+      "error": null,
+      "identity_pass": true,
+      "conflicting_terms_in_primacy": [],
+      "markers_present": true
+    },
+    {
+      "cell_id": "ablation_full_section_wise_rep1",
+      "passed": true,
+      "error": null,
+      "identity_pass": true,
+      "conflicting_terms_in_primacy": [],
+      "markers_present": true
+    },
+    {
+      "cell_id": "ablation_full_section_wise_rep2",
+      "passed": true,
+      "error": null,
+      "identity_pass": true,
+      "conflicting_terms_in_primacy": [],
+      "markers_present": true
+    },
+    {
+      "cell_id": "ablation_full_section_wise_rep3",
+      "passed": true,
+      "error": null,
+      "identity_pass": true,
+      "conflicting_terms_in_primacy": [],
+      "markers_present": true
+    },
+    {
+      "cell_id": "ablation_markers_only_section_wise_rep1",
+      "passed": false,
+      "error": null,
+      "identity_pass": false,
+      "conflicting_terms_in_primacy": [
+        "quantum",
+        "vqls",
+        "lubrication",
+        "bearing",
+        "reynolds"
+      ],
+      "markers_present": true
+    },
+    {
+      "cell_id": "ablation_markers_only_section_wise_rep2",
+      "passed": false,
+      "error": null,
+      "identity_pass": false,
+      "conflicting_terms_in_primacy": [
+        "quantum",
+        "vqls",
+        "lubrication",
+        "bearing",
+        "reynolds"
+      ],
+      "markers_present": true
+    },
+    {
+      "cell_id": "ablation_markers_only_section_wise_rep3",
+      "passed": false,
+      "error": null,
+      "identity_pass": false,
+      "conflicting_terms_in_primacy": [
+        "quantum",
+        "lubrication",
+        "bearing",
+        "reynolds"
+      ],
+      "markers_present": true
+    },
+    {
+      "cell_id": "method_substitution_absurd_section_wise_rep1",
+      "passed": true,
+      "error": null,
+      "identity_pass": true,
+      "conflicting_terms_in_primacy": [],
+      "markers_present": true
+    },
+    {
+      "cell_id": "method_substitution_absurd_section_wise_rep2",
+      "passed": true,
+      "error": null,
+      "identity_pass": true,
+      "conflicting_terms_in_primacy": [],
+      "markers_present": true
+    },
+    {
+      "cell_id": "method_substitution_absurd_section_wise_rep3",
+      "passed": true,
+      "error": null,
+      "identity_pass": true,
+      "conflicting_terms_in_primacy": [],
+      "markers_present": true
+    },
+    {
+      "cell_id": "method_substitution_plausible_section_wise_rep1",
+      "passed": true,
+      "error": null,
+      "identity_pass": true,
+      "conflicting_terms_in_primacy": [],
+      "markers_present": true
+    },
+    {
+      "cell_id": "method_substitution_plausible_section_wise_rep2",
+      "passed": true,
+      "error": null,
+      "identity_pass": true,
+      "conflicting_terms_in_primacy": [],
+      "markers_present": true
+    },
+    {
+      "cell_id": "method_substitution_plausible_section_wise_rep3",
+      "passed": true,
+      "error": null,
+      "identity_pass": true,
+      "conflicting_terms_in_primacy": [],
+      "markers_present": true
+    },
+    {
+      "cell_id": "method_substitution_subtle_section_wise_rep1",
+      "passed": true,
+      "error": null,
+      "identity_pass": true,
+      "conflicting_terms_in_primacy": [],
+      "markers_present": true
+    },
+    {
+      "cell_id": "method_substitution_subtle_section_wise_rep2",
+      "passed": true,
+      "error": null,
+      "identity_pass": true,
+      "conflicting_terms_in_primacy": [],
+      "markers_present": true
+    },
+    {
+      "cell_id": "method_substitution_subtle_section_wise_rep3",
+      "passed": true,
+      "error": null,
+      "identity_pass": true,
+      "conflicting_terms_in_primacy": [],
+      "markers_present": true
+    }
+  ],
+  "by_dimension": {
+    "ablation_context": {
+      "pass": 3,
+      "fail": 0,
+      "err": 0
+    },
+    "ablation_full": {
+      "pass": 3,
+      "fail": 0,
+      "err": 0
+    },
+    "ablation_markers": {
+      "pass": 0,
+      "fail": 3,
+      "err": 0
+    },
+    "method_substitution": {
+      "pass": 9,
+      "fail": 0,
+      "err": 0
+    }
+  }
+}

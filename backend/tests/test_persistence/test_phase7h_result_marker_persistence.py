@@ -12,13 +12,9 @@ from __future__ import annotations
 
 import json
 from types import SimpleNamespace
-from unittest.mock import MagicMock
 
-import pytest
-
-from backend.pipeline.persistence import _extract_paper_artifact
 from backend.pipeline.experiment.manifest import ResultMarker
-
+from backend.pipeline.persistence import _extract_paper_artifact
 
 # ── Helpers ──────────────────────────────────────────────────────────
 

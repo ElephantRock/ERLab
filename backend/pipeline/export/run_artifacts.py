@@ -61,8 +61,8 @@ class RunArtifactExporter:
     async def export_run(
         self,
         run_id: str,
-        result: "PipelineResult",
-        ctx: "StageContext",
+        result: PipelineResult,
+        ctx: StageContext,
         params: dict,
         domain: str = "",
         strategy: str = "",

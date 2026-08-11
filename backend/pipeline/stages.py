@@ -12,8 +12,12 @@ from typing import TYPE_CHECKING, Any
 
 from backend.pipeline.generation.models import ResearchIdea
 from backend.pipeline.ingestion.chunker import DocumentChunk  # noqa: F401 — re-exported by stages
-from backend.pipeline.novelty.novelty_checker import NoveltyReport  # noqa: F401 — legacy compat in NoveltyCheckingStage
-from backend.pipeline.synthesis.proposal_synthesizer import ResearchProposal  # noqa: F401 — used by ProposalSynthesisStage
+from backend.pipeline.novelty.novelty_checker import (
+    NoveltyReport,  # noqa: F401 — legacy compat in NoveltyCheckingStage
+)
+from backend.pipeline.synthesis.proposal_synthesizer import (
+    ResearchProposal,  # noqa: F401 — used by ProposalSynthesisStage
+)
 from backend.pipeline.verification.citation_claim_auditor import (  # noqa: F401 — used by CitationAuditStage
     CitationAuditReport,
     CitationClaimAuditor,
@@ -21,7 +25,6 @@ from backend.pipeline.verification.citation_claim_auditor import (  # noqa: F401
 )
 
 if TYPE_CHECKING:
-    from backend.providers.base import LLMProvider
     from backend.pipeline.result import PipelineResult
 
 logger = logging.getLogger(__name__)
@@ -56,6 +59,47 @@ class StageContext:
     execution_linkage_expectations: list = field(default_factory=list)
     # P0.2.7: Explicit governed-search marker (replaces context-truthiness)
     governed_search_context: Any = None  # GovernedSearchContext | None
+
+
+def _build_empirical_experiment_constraint(experiment_spec_id: str | None) -> str:
+    """Render the authoritative empirical experiment constraint for synthesis.
+
+    The same renderer is used by initial proposal synthesis and adversarial
+    re-synthesis so a registered experiment cannot lose method/dataset/research
+    identity at a narrative rewrite boundary. An unavailable spec remains
+    fail-soft, preserving the existing proposal-synthesis behavior.
+    """
+    if not experiment_spec_id:
+        return ""
+
+    try:
+        from backend.pipeline.experiment.specification import load_spec
+
+        exp_spec = load_spec(experiment_spec_id)
+    except Exception as e:
+        logger.warning("Could not load experiment spec for proposal anchoring: %s", e)
+        return ""
+
+    lines = [
+        "EMPIRICAL EXPERIMENT CONSTRAINT — this proposal MUST be compatible with:",
+        f"  Research question: {exp_spec.research_question}",
+        f"  Task type: {exp_spec.task_type}",
+        f"  Dataset: {exp_spec.dataset_name}",
+        f"  Analysis method: {exp_spec.analysis_method}",
+    ]
+    if exp_spec.primary_metric:
+        lines.append(f"  Primary metric: {exp_spec.primary_metric}")
+    if exp_spec.baseline_method:
+        lines.append(f"  Baseline: {exp_spec.baseline_method}")
+    if exp_spec.comparison_method:
+        lines.append(f"  Comparison model: {exp_spec.comparison_method}")
+    lines.append(
+        "The paper resulting from this proposal will report the results of this "
+        "exact experiment. Do NOT propose a fundamentally different method, "
+        "dataset, or research question. The proposed architecture or approach "
+        "must include the declared analysis method as its core evaluation."
+    )
+    return "\n".join(lines)
 
 
 # Stages that do NOT use LLM models — no receipt required.
@@ -113,8 +157,8 @@ class LiteratureSearchStage(PipelineStage):
         local_docs = []
         try:
             from backend.config import get_settings
-            from backend.pipeline.knowledge.embedding_service import EmbeddingService
             from backend.pipeline.knowledge.embedding_providers import create_embedding_provider
+            from backend.pipeline.knowledge.embedding_service import EmbeddingService
             from backend.pipeline.knowledge.vector_store import VectorStore
 
             settings = get_settings()
@@ -239,7 +283,8 @@ class LiteratureSearchStage(PipelineStage):
             logger.debug("LLM query expansion skipped (no gateway available)")
         # P0.1: Build SearchQueryData with deterministic query_keys
         from backend.pipeline.persistence import (
-            SearchQueryData, CandidateWithDiscoveries, DiscoveryMetadata,
+            CandidateWithDiscoveries,
+            SearchQueryData,
             compute_query_key,
         )
 
@@ -384,7 +429,7 @@ class LiteratureSearchStage(PipelineStage):
 
         # Merge pre-existing knowledge library papers
         if pre_existing:
-            from backend.pipeline.literature.models import Paper, Author
+            from backend.pipeline.literature.models import Paper
             for entry in pre_existing:
                 try:
                     content = json.loads(entry.get("content", "{}")) if isinstance(entry.get("content"), str) else entry.get("content", {})
@@ -440,8 +485,8 @@ class LiteratureSearchStage(PipelineStage):
 
             if explore_enabled and unique:
                 from backend.pipeline.literature.citation_explorer import CitationExplorer
-                from backend.pipeline.literature.semantic_scholar import SemanticScholarSource
                 from backend.pipeline.literature.openalex_source import OpenAlexSource
+                from backend.pipeline.literature.semantic_scholar import SemanticScholarSource
 
                 s2 = None
                 oa = None
@@ -623,19 +668,20 @@ class IngestionStage(PipelineStage):
             return
 
         try:
+            from sqlalchemy.orm import sessionmaker
+
+            from backend.config import get_settings
             from backend.db.database import _get_engine, get_session
             from backend.pipeline.provenance_gate import (
                 load_run_provenance_contract,
                 select_run_execution_mode,
             )
+            from backend.pipeline.vector_access_policy import resolve_profile_id
+            from backend.pipeline.vector_backend import GovernedVectorBackend
             from backend.pipeline.vector_contracts import (
                 build_title_abstract_document,
             )
             from backend.pipeline.vector_indexer import index_document
-            from backend.pipeline.vector_backend import GovernedVectorBackend
-            from backend.pipeline.vector_access_policy import resolve_profile_id
-            from backend.config import get_settings
-            from sqlalchemy.orm import sessionmaker
         except ImportError as e:
             logger.debug("Governed indexing imports unavailable: %s", e)
             return
@@ -674,7 +720,7 @@ class IngestionStage(PipelineStage):
             "model_identifier": cfg.requested_model,
             "dimension": cfg.expected_dimension,
             "normalization_policy": cfg.implemented_postprocessing_policy,
-            "chunking_schema_version": "title_abstract_v1",
+            "chunking_schema_version": "chunk_v1",
         }
 
         # Index each paper
@@ -744,7 +790,7 @@ class IngestionStage(PipelineStage):
                 elif outcome.status == "failed":
                     failed += 1
             except Exception as e:
-                logger.debug("Governed indexing failed for paper %s: %s", paper.id, e)
+                logger.warning("Governed indexing failed for paper %s: %s", paper.id, e)
                 failed += 1
 
         logger.info(
@@ -774,15 +820,43 @@ class GapAnalysisStage(PipelineStage):
         # Reduced from 15s to 2s since gap analysis now uses local LM Studio
         await asyncio.sleep(2.0)
 
-        prior_gaps = await self._recall_prior_gaps(ctx.domain)
-        gaps, cluster_report = await self._gap_analyzer.analyze(
-            ctx.all_papers,
-            domain=ctx.domain,
-            max_gaps=ctx.max_gaps,
-            prior_gaps=prior_gaps,
-            provider=provider,
-            receipts=receipts,
+        from backend.pipeline.gap_analysis.contracts import (
+            GapAnalysisExecutionError,
+            GapAnalysisOutputContractError,
         )
+        from backend.pipeline.result import PipelineOutcome
+
+        prior_gaps = await self._recall_prior_gaps(ctx.domain)
+        try:
+            gaps, cluster_report = await self._gap_analyzer.analyze(
+                ctx.all_papers,
+                domain=ctx.domain,
+                max_gaps=ctx.max_gaps,
+                prior_gaps=prior_gaps,
+                provider=provider,
+                receipts=receipts,
+            )
+        except GapAnalysisOutputContractError as exc:
+            # Output failed the typed contract. Terminalize the run and halt.
+            # Only safe structural diagnostics are recorded — never raw output.
+            ctx.result.outcome = PipelineOutcome.FAILED_OUTPUT_CONTRACT
+            ctx.result.terminal_stage = "gap_analysis"
+            ctx.result.terminal_reason = str(exc)[:200]
+            logger.error(
+                "Gap analysis output-contract failure — terminalizing run: %s",
+                ctx.result.terminal_reason,
+            )
+            return False
+        except GapAnalysisExecutionError as exc:
+            # Provider/transport failure after retry exhaustion. Terminalize.
+            ctx.result.outcome = PipelineOutcome.FAILED_EXECUTION
+            ctx.result.terminal_stage = "gap_analysis"
+            ctx.result.terminal_reason = str(exc)[:200]
+            logger.error(
+                "Gap analysis execution failure — terminalizing run: %s",
+                ctx.result.terminal_reason,
+            )
+            return False
         ctx.result.gaps = gaps
         ctx.result.cluster_report = cluster_report
         logger.info("Identified %d research gaps", len(gaps))
@@ -790,7 +864,6 @@ class GapAnalysisStage(PipelineStage):
         # Write gaps to Knowledge Graph
         if self._kg:
             from backend.pipeline.knowledge.entities import EntityType, KnowledgeEntity
-            from backend.pipeline.knowledge.relationships import KnowledgeRelationship, RelationType
             from backend.pipeline.knowledge.truth import TruthValue
 
             for gap in gaps:
@@ -868,6 +941,16 @@ class GapAnalysisStage(PipelineStage):
                     "gap_type": gap.gap_type,
                 },
             )
+
+        # No-gap terminalization: a valid empty gap result is a legitimate,
+        # transport-completed outcome that produces no paper. It must halt the
+        # pipeline and stay distinguishable from failure (which raised above).
+        if not gaps:
+            ctx.result.outcome = PipelineOutcome.NO_RESEARCH_GAP
+            ctx.result.terminal_stage = "gap_analysis"
+            ctx.result.terminal_reason = "no gaps identified"
+            logger.info("Gap analysis identified no research gaps — terminalizing run")
+            return False
         return True
 
     async def _recall_prior_gaps(self, domain):
@@ -1189,38 +1272,13 @@ class ProposalSynthesisStage(PipelineStage):
 
             # Phase 8 / 8R.2: When an empirical experiment spec is registered,
             # anchor the proposal to the spec's research question, method, and
-            # dataset. This prevents the proposal narrative from diverging into
-            # an unrelated topic (e.g. quantum computing) while the experiment
-            # runs a classical ML method. The proposal MUST describe the actual
-            # analysis method, dataset, and target declared in the spec.
-            exp_spec_id = ctx.params.get("experiment_spec_id")
-            if exp_spec_id:
-                try:
-                    from backend.pipeline.experiment.specification import load_spec as _ls
-                    _exp_spec = _ls(exp_spec_id)
-                    spec_anchor_lines = [
-                        f"EMPIRICAL EXPERIMENT CONSTRAINT — this proposal MUST be compatible with:",
-                        f"  Research question: {_exp_spec.research_question}",
-                        f"  Task type: {_exp_spec.task_type}",
-                        f"  Dataset: {_exp_spec.dataset_name}",
-                        f"  Analysis method: {_exp_spec.analysis_method}",
-                    ]
-                    if _exp_spec.primary_metric:
-                        spec_anchor_lines.append(f"  Primary metric: {_exp_spec.primary_metric}")
-                    if _exp_spec.baseline_method:
-                        spec_anchor_lines.append(f"  Baseline: {_exp_spec.baseline_method}")
-                    if _exp_spec.comparison_method:
-                        spec_anchor_lines.append(f"  Comparison model: {_exp_spec.comparison_method}")
-                    spec_anchor_lines.append(
-                        "The paper resulting from this proposal will report the results of this "
-                        "exact experiment. Do NOT propose a fundamentally different method, "
-                        "dataset, or research question. The proposed architecture or approach "
-                        "must include the declared analysis method as its core evaluation."
-                    )
-                    spec_anchor = "\n".join(spec_anchor_lines)
-                    framing = f"{spec_anchor}\n{framing}".rstrip() if framing else spec_anchor
-                except Exception as e:
-                    logger.warning("Could not load experiment spec for proposal anchoring: %s", e)
+            # dataset. Stage 12 uses this exact renderer during adversarial
+            # re-synthesis so the empirical authority survives rewrites.
+            spec_anchor = _build_empirical_experiment_constraint(
+                ctx.params.get("experiment_spec_id")
+            )
+            if spec_anchor:
+                framing = f"{spec_anchor}\n{framing}".rstrip() if framing else spec_anchor
             try:
                 proposal = await asyncio.wait_for(
                     self._synthesizer.synthesize(
@@ -1235,7 +1293,7 @@ class ProposalSynthesisStage(PipelineStage):
                     ),
                     timeout=timeout,
                 )
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 logger.warning(
                     "Proposal synthesis timed out after %.1fs for idea %d: %s",
                     timeout, i + 1, idea.title[:50],
@@ -1311,7 +1369,7 @@ class TreeSearchStage(PipelineStage):
 
     def __init__(
         self,
-        engine: "TreeSearchEngine",
+        engine: TreeSearchEngine,
         hooks,
         provider=None,
         kg=None,
@@ -1739,12 +1797,23 @@ class AdversarialReviewStage(PipelineStage):
             for p in ctx.all_papers[:10]
         ]
 
-        # Determine context window from provider or gateway
+        # Determine context window from the capability registry so the
+        # adversarial reviewer's budget estimate matches the model's real
+        # capacity. Falls back to 8192 only if the registry is unavailable.
         context_window = 8192
         try:
-            from backend.config import get_settings
-            settings = get_settings()
-            # The gateway may have probed a different context
+            from backend.pipeline.gateway.capability_registry import ModelCapabilityRegistry
+            _model_id = ""
+            try:
+                from backend.config import get_settings
+                _s = get_settings()
+                _model_id = getattr(_s, "openai_model", "")
+            except Exception:
+                pass
+            if _model_id:
+                _caps = ModelCapabilityRegistry().get(_model_id)
+                if _caps and _caps.context_window:
+                    context_window = _caps.context_window
         except Exception:
             pass
 
@@ -1812,7 +1881,13 @@ class AdversarialReviewStage(PipelineStage):
         ctx: StageContext,
         idx: int,
     ):
-        """Re-synthesize proposal using revision notes as the ONLY input (A-02)."""
+        """Re-synthesize with isolated revision notes and invariant experiment authority.
+
+        A-02 still governs revision content: ``revision_notes`` is the only
+        revision request carried into ``expected_contributions``. A registered
+        experiment specification is transported separately through
+        ``framing_directive`` as an execution constraint, not as revision content.
+        """
         # Build minimal idea from proposal for re-synthesis
         from backend.pipeline.generation.models import ResearchIdea
         idea = ResearchIdea(
@@ -1832,15 +1907,22 @@ class AdversarialReviewStage(PipelineStage):
             supporting_papers=[],
             source_gap_ids=[],
         )
-        new_proposal = await self._synthesizer.synthesize(
-            idea=idea,
-            novelty_report=None,
-            feasibility_report=None,
-            supporting_papers=ctx.all_papers[:30],
-            gaps=ctx.result.gaps,
-            provider=ctx.provider_override,
-            receipts=ctx.receipts,
+        synthesize_kwargs = {
+            "idea": idea,
+            "novelty_report": None,
+            "feasibility_report": None,
+            "supporting_papers": ctx.all_papers[:30],
+            "gaps": ctx.result.gaps,
+            "provider": ctx.provider_override,
+            "receipts": ctx.receipts,
+        }
+        empirical_framing = _build_empirical_experiment_constraint(
+            ctx.params.get("experiment_spec_id")
         )
+        if empirical_framing:
+            synthesize_kwargs["framing_directive"] = empirical_framing
+
+        new_proposal = await self._synthesizer.synthesize(**synthesize_kwargs)
         # Copy over sections from re-synthesized proposal
         if hasattr(new_proposal, "sections") and hasattr(proposal, "sections"):
             proposal.sections.update(new_proposal.sections)
@@ -1894,7 +1976,7 @@ class PaperSynthesisStage(PipelineStage):
     MIN_OUTPUT_TOKENS = 2000
     # Phase 3 B-08: per-proposal synthesis timeout so the stage completes
     # within the overall stage timeout. Section-wise synthesis makes 7+
-    # sequential LLM calls per proposal; with glm-4.6 this can exceed 1800s.
+    # sequential LLM calls per proposal; with glm-5.2 this can exceed 1800s.
     # Bounding each proposal prevents one slow synthesis from blocking the
     # entire stage (same pattern as adversarial_review B-05).
     PER_PROPOSAL_TIMEOUT = 600
@@ -1907,6 +1989,40 @@ class PaperSynthesisStage(PipelineStage):
     @property
     def name(self) -> str:
         return "paper_synthesis"
+
+    @staticmethod
+    def _format_result_marker(marker, *, include_provenance: bool = False) -> str:
+        """Render one ResultMarker without losing semantic attribution.
+
+        Stage 14 already records ``role`` and ``direction`` on ResultMarker.
+        Stage 15 must preserve those fields when converting markers to the
+        text contract consumed by monolithic and section-wise synthesis.
+
+        Empty optional fields are omitted for backward compatibility.
+        Provenance belongs to the long-form experiment_context; the short-form
+        authorized marker list carries the same marker/metric/value/role/
+        direction semantics without duplicating source metadata.
+        """
+        metadata: list[str] = []
+
+        role = str(getattr(marker, "role", "") or "").strip()
+        direction = str(getattr(marker, "direction", "") or "").strip()
+        if role:
+            metadata.append(f"role={role}")
+        if direction:
+            metadata.append(f"direction={direction}")
+
+        if include_provenance:
+            metadata.append("source=metrics.json")
+            experiment_result_id = getattr(marker, "experiment_result_id", None)
+            if experiment_result_id is not None:
+                metadata.append(f"experiment_result_id={experiment_result_id}")
+
+        suffix = f" ({', '.join(metadata)})" if metadata else ""
+        return (
+            f"[{marker.marker}] {marker.metric_name} = "
+            f"{marker.observed_value}{suffix}"
+        )
 
     async def execute(self, ctx: StageContext) -> bool:
         # Check strategy flag
@@ -1931,8 +2047,6 @@ class PaperSynthesisStage(PipelineStage):
                 logger.warning("Cannot resolve generation provider for paper synthesis: %s", e)
                 return True
 
-        from backend.pipeline.synthesis.paper_synthesizer import PaperSynthesizer
-        from backend.pipeline.synthesis.section_wise_synthesizer import SectionWiseSynthesizer
 
         # Determine context window from gateway if available
         context_window = self._context_window
@@ -2017,13 +2131,15 @@ class PaperSynthesisStage(PipelineStage):
                 markers = ctx.result.result_markers.get(idx, [])
                 for m in markers:
                     lines.append(
-                        f"[{m.marker}] {m.metric_name} = {m.observed_value} "
-                        f"(source: metrics.json, experiment_result_id: {m.experiment_result_id})"
+                        self._format_result_marker(m, include_provenance=True)
                     )
                 lines.append("")
                 lines.append("These results are from an actual executed experiment. You may state")
                 lines.append("'we demonstrate' or 'our results show' ONLY for claims that cite [RESULT-N]")
                 lines.append("markers above. Do not claim empirical results for metrics not listed here.")
+                lines.append("The role and direction metadata attached to each [RESULT-N] marker are")
+                lines.append("authoritative. Keep each value bound to its stated role (for example,")
+                lines.append("baseline vs comparison/model) and do not reverse the stated metric direction.")
                 experiment_contexts[idx] = "\n".join(lines)
 
         # Phase 7 / 7A: When an empirical selection exists, only synthesize
@@ -2050,24 +2166,39 @@ class PaperSynthesisStage(PipelineStage):
                 is_empirical = bool(experiment_contexts.get(idx) or ctx.params.get("experiment_spec_id"))
                 if is_empirical:
                     # Phase 7: unified service manages budget internally
+                    # Format ResultMarker objects to the verbatim strings the
+                    # SynthesisSession contract requires (list[str]). The same
+                    # objects are rendered into experiment_context above; here
+                    # we surface them as their own authoritative marker set so
+                    # the prompt's ground-truth block can list them separately.
+                    _raw_markers = ctx.result.result_markers.get(idx) or []
+                    _marker_strings = [
+                        self._format_result_marker(m)
+                        for m in _raw_markers
+                    ]
                     await self._synthesize_paper_for_proposal(
                         idx, proposal, ctx, provider, source_papers, source_ids,
                         context_window,
                         experiment_context=experiment_contexts.get(idx),
-                        result_markers=ctx.result.result_markers.get(idx),
+                        result_markers=_marker_strings or None,
                     )
                 else:
                     # Legacy path: retain outer timeout for non-empirical runs
+                    _raw_markers_legacy = ctx.result.result_markers.get(idx) or []
+                    _marker_strings_legacy = [
+                        self._format_result_marker(m)
+                        for m in _raw_markers_legacy
+                    ]
                     await asyncio.wait_for(
                         self._synthesize_paper_for_proposal(
                             idx, proposal, ctx, provider, source_papers, source_ids,
                             context_window,
                             experiment_context=experiment_contexts.get(idx),
-                            result_markers=ctx.result.result_markers.get(idx),
+                            result_markers=_marker_strings_legacy or None,
                         ),
                         timeout=self.PER_PROPOSAL_TIMEOUT,
                     )
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 logger.warning(
                     "Paper synthesis timed out after %ds for proposal %d "
                     "(non-fatal, B-08) — marking paper as failed",
@@ -2101,9 +2232,8 @@ class PaperSynthesisStage(PipelineStage):
         Phase 4 / WP-4C: ``source_ids`` is the ordered literature Paper.id
         list used to construct [SOURCE-N]; it is captured here so the
         marker→source map can be frozen and persisted on the result."""
-        import json as _json
-        from backend.pipeline.synthesis.synthesis_service import synthesize_paper
         from backend.pipeline.synthesis.synthesis_budget import SynthesisBudget
+        from backend.pipeline.synthesis.synthesis_service import synthesize_paper
 
         proposal_text = (
             proposal.to_markdown()
@@ -2135,6 +2265,7 @@ class PaperSynthesisStage(PipelineStage):
             proposal_id=idx,
             budget=SynthesisBudget(),
             experiment_context=experiment_context,
+            result_markers=list(result_markers) if result_markers else None,
             existing_checkpoints=existing_checkpoints if existing_checkpoints else None,
             checkpoint_callback=_checkpoint_callback,
             context_window=context_window,
@@ -2255,7 +2386,7 @@ class PaperSynthesisStage(PipelineStage):
     @staticmethod
     def provenance_precondition(
         paper_markdown: str, source_map: list[dict]
-    ) -> "ProvenanceGateResult":
+    ) -> ProvenanceGateResult:
         """Phase 4 / WP-4D — the provenance precondition for paper evaluation.
 
         The paper-evaluation state and the paper-artifact state must remain
@@ -2334,6 +2465,12 @@ class PaperSynthesisStage(PipelineStage):
             metadata["paper_evaluation"] = {"status": "unavailable", "scope": "paper"}
             return
 
+        # Release-final lifecycle: bind assurance to the exact content it
+        # evaluated. A later mutation cannot be release-eligible under this
+        # evaluation because the paper hash will no longer match.
+        import hashlib as _paper_hashlib
+        paper_hash = _paper_hashlib.sha256(paper_md.encode("utf-8")).hexdigest()
+
         # Phase 4 / WP-4D: provenance precondition. A paper citing [SOURCE-N]
         # markers with no recoverable source identity cannot be quality-ready.
         source_map = (
@@ -2358,6 +2495,27 @@ class PaperSynthesisStage(PipelineStage):
         # Phase 4 / WP-4F + Phase 5: conclusion support. When experiments ran,
         # pass result markers so the checker can validate [RESULT-N] backing.
         result_markers = ctx.result.result_markers.get(idx, []) if ctx.result.result_markers else []
+
+        # R1 — Assurance integrity: when evaluation occurs outside the original
+        # pipeline context (e.g. post-remediation re-evaluation), transient
+        # StageContext.result_markers may be empty even though persisted
+        # experiment evidence exists. Hydrate from the DB so the
+        # experiment-alignment gate performs a real check rather than passing
+        # vacuously. Precedence: live context markers first, persisted
+        # evidence second, empty only when the proposal genuinely has no
+        # registered/executed experiment.
+        if not result_markers:
+            _eval_spec_id_for_hydration = ctx.params.get("experiment_spec_id")
+            if _eval_spec_id_for_hydration:
+                hydrated = self._hydrate_persisted_result_markers(idx)
+                if hydrated:
+                    result_markers = hydrated
+                    logger.info(
+                        "R1: Hydrated %d persisted result markers for proposal %d "
+                        "(evaluation outside pipeline context)",
+                        len(result_markers), idx,
+                    )
+
         conclusion_result = self._classify_conclusion(ctx, proposal, paper_md, result_markers)
         gates.append({
             "gate": "conclusion_support",
@@ -2377,8 +2535,8 @@ class PaperSynthesisStage(PipelineStage):
         _eval_spec_id = ctx.params.get("experiment_spec_id")
         if _eval_spec_id and result_markers:
             try:
-                from backend.pipeline.experiment.specification import load_spec as _els
                 from backend.pipeline.evaluation.claim_alignment import evaluate_claim_alignment
+                from backend.pipeline.experiment.specification import load_spec as _els
                 _eval_spec = _els(_eval_spec_id)
                 claim_result = evaluate_claim_alignment(
                     paper_md=paper_md,
@@ -2402,6 +2560,41 @@ class PaperSynthesisStage(PipelineStage):
             "reason": exp_alignment_reason,
         })
 
+        # ── Numeric value-fidelity gate (2026-08-10) ───────────────────
+        # The deterministic renderer formats observed_value correctly, but a
+        # later LLM prose rewrite can drop the leading 0. (rendering
+        # "966667 [RESULT-3]" beside a persisted 0.966667). This gate catches
+        # that class of corruption regardless of where it originates. It is
+        # placed on the LIVE evaluation path so the same defect that let
+        # revision 15 become ready is now a blocking gate. One corrupted
+        # attribution blocks; referential prose (no adjacent number) is
+        # skipped; unit/scale transforms fail closed.
+        numeric_fidelity_passed = True
+        numeric_fidelity_reason = "No RESULT markers to validate"
+        if result_markers:
+            from backend.pipeline.evaluation.claim_result_validator import (
+                validate_claim_result_alignment as _validate_numeric_fidelity,
+            )
+            _numeric_mismatches = _validate_numeric_fidelity(paper_md, result_markers)
+            _numeric_only = [
+                m for m in _numeric_mismatches if m.section == "numeric_fidelity"
+            ]
+            if _numeric_only:
+                numeric_fidelity_passed = False
+                numeric_fidelity_reason = "; ".join(
+                    f"{m.marker}: {m.reason[:120]}" for m in _numeric_only
+                )
+            else:
+                numeric_fidelity_reason = (
+                    f"{len(result_markers)} RESULT marker(s) validated; "
+                    f"0 numeric mismatches"
+                )
+        gates.append({
+            "gate": "numeric_fidelity",
+            "passed": numeric_fidelity_passed,
+            "reason": numeric_fidelity_reason,
+        })
+
         # Gate aggregation: any blocking gate downgrades the evaluation.
         blocking_reasons: list[str] = []
         if not prov_gate.passed:
@@ -2412,9 +2605,14 @@ class PaperSynthesisStage(PipelineStage):
             blocking_reasons.append(f"conclusion: {conclusion_result.reason}")
         if not exp_alignment_passed:
             blocking_reasons.append(f"experiment_alignment: {exp_alignment_reason}")
+        if not numeric_fidelity_passed:
+            blocking_reasons.append(f"numeric_fidelity: {numeric_fidelity_reason}")
 
         try:
-            from backend.pipeline.evaluation.proposal_evaluator import ProposalEvaluator, resolve_evaluation_provider
+            from backend.pipeline.evaluation.proposal_evaluator import (
+                ProposalEvaluator,
+                resolve_evaluation_provider,
+            )
 
             # B-EVAL-01 (Commit 6): resolve a configured provider when self._provider
             # is None, mirroring the proposal-eval call site (stages.py:3653).
@@ -2432,6 +2630,7 @@ class PaperSynthesisStage(PipelineStage):
                     "scope": "paper",
                     "dimensions": evaluation.to_dict(),
                     "evaluated_object": "final_paper",
+                    "paper_hash": paper_hash,
                     "blocking_reasons": blocking_reasons,
                     "gates": gates,
                 }
@@ -2444,6 +2643,7 @@ class PaperSynthesisStage(PipelineStage):
                     "scope": "paper",
                     "dimensions": evaluation.to_dict(),
                     "evaluated_object": "final_paper",
+                    "paper_hash": paper_hash,
                     "gates": gates,
                 }
                 logger.info(
@@ -2457,6 +2657,7 @@ class PaperSynthesisStage(PipelineStage):
             metadata["paper_evaluation"] = {
                 "status": "failed",
                 "scope": "paper",
+                "paper_hash": paper_hash,
                 "error": str(e),
                 "gates": gates,
             }
@@ -2531,6 +2732,92 @@ class PaperSynthesisStage(PipelineStage):
             paper_title=title,
             paper_abstract=abstract,
         )
+
+    @staticmethod
+    def _hydrate_persisted_result_markers(idx: int) -> list:
+        """R1 — Load persisted ResultMarkers from the DB when the live
+        StageContext doesn't carry them (post-remediation evaluation).
+
+        Uses the same construction pattern as ExperimentExecutionStage
+        (lines ~2897-2920): reads the ExperimentResult manifest, builds
+        ResultMarker objects with role/direction classification from the spec.
+
+        Returns empty list if no persisted experiment evidence exists.
+        """
+        try:
+            from sqlalchemy import text as _sa_text
+
+            from backend.db.database import get_session as _r1_get_session
+            from backend.pipeline.experiment.manifest import ResultMarker
+
+            with _r1_get_session() as session:
+                # Find the experiment result for this proposal
+                row = session.execute(
+                    _sa_text(
+                        "SELECT id, manifest_json FROM experiment_results "
+                        "WHERE proposal_id = :pid ORDER BY id DESC LIMIT 1"
+                    ),
+                    {"pid": idx},
+                ).fetchone()
+
+                if not row:
+                    # Try by idea_id fallback (older schema)
+                    return []
+
+                exp_result_id = row[0]
+                manifest_json = row[1]
+                if not manifest_json:
+                    return []
+
+                import json as _r1_json
+                manifest = _r1_json.loads(manifest_json) if isinstance(manifest_json, str) else manifest_json
+                results = manifest.get("results", {})
+                artifacts = manifest.get("result_artifacts", [])
+                status = manifest.get("status", "")
+
+                if status != "succeeded" or not results:
+                    return []
+
+                # Load spec for direction metadata
+                from backend.pipeline.experiment.specification import load_spec as _r1_load_spec
+                _directions = {}
+                try:
+                    # The spec_id may be in the manifest or in ctx.params;
+                    # for hydration we read from the manifest if present
+                    spec_id = manifest.get("experiment_spec_id", manifest.get("spec_id", ""))
+                    if spec_id:
+                        _spec = _r1_load_spec(spec_id)
+                        _directions = _spec.metric_directions
+                except Exception:
+                    pass  # Fail-soft: no directions is better than no markers
+
+                markers = []
+                for mi, (metric_name, value) in enumerate(sorted(results.items()), 1):
+                    artifact = next(
+                        (a for a in artifacts if isinstance(a, dict) and a.get("artifact_type") == "metrics"),
+                        artifacts[0] if artifacts else None,
+                    )
+                    _role = "comparison"
+                    if metric_name.startswith("baseline_"):
+                        _role = "baseline"
+                    elif metric_name in ("improvement",) or metric_name.endswith("_reduction") or metric_name.endswith("_gain"):
+                        _role = "derived"
+                    markers.append(ResultMarker(
+                        marker_index=mi,
+                        marker=f"RESULT-{mi}",
+                        metric_name=metric_name,
+                        observed_value=value,
+                        artifact_path=artifact.get("filename", "") if isinstance(artifact, dict) else "",
+                        artifact_sha256=artifact.get("sha256", "") if isinstance(artifact, dict) else "",
+                        experiment_result_id=exp_result_id,
+                        direction=_directions.get(metric_name, ""),
+                        role=_role,
+                    ))
+                return markers
+
+        except Exception as e:
+            logger.warning("R1: Failed to hydrate persisted result markers for proposal %d: %s", idx, e)
+            return []
 
     @staticmethod
     def _classify_conclusion(ctx, proposal, paper_md: str, result_markers=None):
@@ -2688,6 +2975,7 @@ class ExperimentExecutionStage(PipelineStage):
             return True
 
         from pathlib import Path
+
         from backend.pipeline.experiment.empirical_runner import execute_experiment
         from backend.pipeline.experiment.manifest import ExperimentManifest, ResultMarker
 
@@ -2759,7 +3047,9 @@ class ExperimentExecutionStage(PipelineStage):
                 # Build result markers from observed metrics
                 # Phase 8 / D3: flow metric direction and role from the spec
                 # so the evaluator can compute improvement structurally.
-                from backend.pipeline.experiment.specification import load_spec as _load_spec_for_markers
+                from backend.pipeline.experiment.specification import (
+                    load_spec as _load_spec_for_markers,
+                )
                 try:
                     _spec = _load_spec_for_markers(spec_id)
                     _directions = _spec.metric_directions
@@ -2813,7 +3103,7 @@ class ExperimentExecutionStage(PipelineStage):
         """Persist experiment result immediately so a later paper-synthesis
         timeout cannot erase an already completed experiment."""
         import json
-        from pathlib import Path
+
         from backend.db.database import get_session
         from backend.db.models import ExperimentResult as ExperimentResultDB
         from backend.db.models import Proposal
@@ -3073,11 +3363,15 @@ class CitationAuditStage(PipelineStage):
             else str(proposal)
         )
 
-        # Include full paper text if available from paper_synthesis
+        # Include full paper text if available from paper_synthesis. Capture the
+        # exact pre-audit text so any Stage-16 repair can invalidate the
+        # Stage-15 evaluation that belonged to the previous paper version.
         metadata = self._get_metadata(proposal)
         full_paper = metadata.get("full_paper")
+        pre_audit_paper_md = None
         if full_paper and isinstance(full_paper, dict):
             paper_md = full_paper.get("paper_markdown", "")
+            pre_audit_paper_md = paper_md
             if paper_md:
                 proposal_text = paper_md
 
@@ -3166,6 +3460,46 @@ class CitationAuditStage(PipelineStage):
                 idx, proposal_text, corpus, metadata, full_paper,
             )
 
+        # Lifecycle consistency: Stage 15 evaluates the synthesized paper, but
+        # the legacy Stage-16 repair path may replace paper_markdown. If the
+        # scientific content changed, the old paper_evaluation no longer
+        # describes the canonical current paper. Invalidate it and run the
+        # existing paper-evaluation/gate machinery against the repaired text
+        # before persisting metadata. No-op when audit/repair leaves the paper
+        # unchanged.
+        post_audit_full_paper = metadata.get("full_paper")
+        post_audit_paper_md = (
+            post_audit_full_paper.get("paper_markdown", "")
+            if isinstance(post_audit_full_paper, dict)
+            else ""
+        )
+        if (
+            pre_audit_paper_md is not None
+            and post_audit_paper_md != pre_audit_paper_md
+        ):
+            metadata["paper_evaluation"] = {
+                "status": "unavailable",
+                "scope": "paper",
+                "reason": (
+                    "paper changed during citation audit; previous evaluation "
+                    "invalidated pending re-evaluation"
+                ),
+            }
+            try:
+                await self._reevaluate_repaired_paper(
+                    ctx=ctx, proposal=proposal, metadata=metadata, idx=idx,
+                )
+            except Exception as e:
+                logger.warning(
+                    "Post-repair paper evaluation failed for proposal %d "
+                    "(non-fatal): %s", idx, e,
+                )
+                metadata["paper_evaluation"] = {
+                    "status": "failed",
+                    "scope": "paper",
+                    "error": f"Post-repair evaluation failed: {e}",
+                }
+
         self._set_metadata(proposal, metadata)
 
         # Log warning if trust_score < 0.5
@@ -3178,6 +3512,19 @@ class CitationAuditStage(PipelineStage):
                 report.context_mismatches,
                 report.quantitative_errors,
             )
+
+    async def _reevaluate_repaired_paper(
+        self, ctx: StageContext, proposal, metadata: dict, idx: int,
+    ) -> None:
+        """Re-evaluate the exact repaired paper using the existing gate stack.
+
+        CitationAuditStage owns the mutation check; PaperSynthesisStage remains
+        the single implementation of paper evaluation, provenance/scope/
+        conclusion gates, and experiment alignment. The citation-audit stage's
+        configured provider is reused for the post-repair evaluation.
+        """
+        evaluator_stage = PaperSynthesisStage(provider=self._provider)
+        await evaluator_stage._evaluate_paper(ctx, proposal, metadata, idx)
 
     # ── Phase D: Structured claim helpers ────────────────────────────────
 
@@ -3255,12 +3602,12 @@ class CitationAuditStage(PipelineStage):
 
         Returns (EpistemicMetrics, {section: [ValidatedClaim]}).
         """
+        from backend.pipeline.gateway.claim_evidence_validator import (
+            ClaimEvidenceValidator,
+        )
         from backend.pipeline.gateway.claim_type_validator import (
             ClaimTypeValidator,
             compute_metrics,
-        )
-        from backend.pipeline.gateway.claim_evidence_validator import (
-            ClaimEvidenceValidator,
         )
 
         validator = ClaimTypeValidator()
@@ -3333,8 +3680,8 @@ class CitationAuditStage(PipelineStage):
         structured_claims_by_section: dict[str, list[dict]],
     ) -> None:
         """Run typed repair loop + quality gate, storing full metadata."""
-        from backend.pipeline.gateway.evidence_repair import EvidenceRepairLoop, ExportQualityGate
         from backend.pipeline.gateway.claim_type_validator import compute_metrics
+        from backend.pipeline.gateway.evidence_repair import EvidenceRepairLoop, ExportQualityGate
 
         # Collect all validated claims for repair
         all_validated = []
@@ -3425,7 +3772,10 @@ class CitationAuditStage(PipelineStage):
         """Fallback: legacy prose-based validation and repair."""
         try:
             from backend.pipeline.gateway.claim_evidence_validator import ClaimEvidenceValidator
-            from backend.pipeline.gateway.evidence_repair import EvidenceRepairLoop, ExportQualityGate
+            from backend.pipeline.gateway.evidence_repair import (
+                EvidenceRepairLoop,
+                ExportQualityGate,
+            )
 
             corpus_ids = set(corpus.keys())
             validator = ClaimEvidenceValidator(corpus_ids=corpus_ids)
@@ -3561,9 +3911,10 @@ class CitationAuditStage(PipelineStage):
         if not records:
             return
         try:
+            from sqlalchemy import select
+
             from backend.db.database import get_session
             from backend.db.models import Idea, Proposal, QuarantinedCitation
-            from sqlalchemy import select
 
             with get_session() as session:
                 # Resolve the DB Proposal row from the in-memory idea index.
@@ -3648,8 +3999,8 @@ class EvaluationStage(PipelineStage):
                 provider = self._provider
                 if provider is None:
                     try:
-                        from backend.providers.provider_factory import get_thinking_provider
                         from backend.config import get_settings
+                        from backend.providers.provider_factory import get_thinking_provider
                         provider = get_thinking_provider(get_settings())
                     except Exception as e:
                         logger.warning("Could not get thinking provider for evaluation: %s", e)
@@ -3758,8 +4109,8 @@ class GapReflectionStage(PipelineStage):
                 provider = self._provider
                 if provider is None:
                     try:
-                        from backend.providers.provider_factory import get_thinking_provider
                         from backend.config import get_settings
+                        from backend.providers.provider_factory import get_thinking_provider
                         provider = get_thinking_provider(get_settings())
                     except Exception:
                         provider = None
@@ -3843,8 +4194,8 @@ class IdeaReflectionStage(PipelineStage):
                 provider = self._provider
                 if provider is None:
                     try:
-                        from backend.providers.provider_factory import get_thinking_provider
                         from backend.config import get_settings
+                        from backend.providers.provider_factory import get_thinking_provider
                         provider = get_thinking_provider(get_settings())
                     except Exception:
                         provider = None

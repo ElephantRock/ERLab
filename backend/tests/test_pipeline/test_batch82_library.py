@@ -7,11 +7,11 @@ AIV v5.3 — T1, T2, T5.
 """
 from __future__ import annotations
 
-import json
 import os
 import tempfile
-import pytest
 from unittest.mock import MagicMock
+
+import pytest
 
 from backend.pipeline.knowledge.library import KnowledgeLibrary, LibraryEntry
 from backend.pipeline.knowledge.library_indexer import LibraryIndexer

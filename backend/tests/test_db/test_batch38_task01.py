@@ -13,17 +13,13 @@ from __future__ import annotations
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-import pytest
 import sqlalchemy
+from alembic.config import Config as AlembicConfig
 from sqlalchemy import inspect
 from sqlalchemy.orm import sessionmaker
 
-from alembic.config import Config as AlembicConfig
 from alembic import command
-
-from backend.db.database import Base
-from backend.db.models import Idea, Paper, PipelineRun, ResearchGapDB, User
-
+from backend.db.models import Idea, PipelineRun, ResearchGapDB
 
 # ── Helpers ──────────────────────────────────────────────────────────
 

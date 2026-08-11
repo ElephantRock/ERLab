@@ -130,7 +130,12 @@ def create_router(
     Returns CostAwareRouter if cost_routing_enabled, otherwise TaskRouter.
     """
     if getattr(settings, "cost_routing_enabled", False):
-        from backend.providers.routing import BudgetManager, CostAwareRouter, LatencyTracker, RoutingStrategy
+        from backend.providers.routing import (
+            BudgetManager,
+            CostAwareRouter,
+            LatencyTracker,
+            RoutingStrategy,
+        )
 
         strategy = RoutingStrategy(getattr(settings, "cost_routing_strategy", "cheapest"))
         per_provider = getattr(settings, "cost_routing_per_provider_limits", {})
@@ -164,4 +169,5 @@ def create_router(
 # Lazy import to avoid circular dependency
 if TYPE_CHECKING:
     from typing import Any
+
     from backend.providers.routing.cost_router import CostAwareRouter

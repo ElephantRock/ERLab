@@ -14,13 +14,13 @@ from __future__ import annotations
 
 import asyncio
 import json
-
-from backend.pipeline.utils.json_extraction import extract_json
 import logging
 import re
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
+
+from backend.pipeline.utils.json_extraction import extract_json
 
 logger = logging.getLogger(__name__)
 
@@ -229,7 +229,7 @@ class CitationClaimAuditor:
                     ),
                     timeout=self._timeout / max(len(ref_indices), 1),
                 )
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 # HB-05: Partial results on timeout
                 item = CitationAuditItem(
                     ref_index=ref_idx,

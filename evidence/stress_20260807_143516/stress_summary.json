@@ -1,0 +1,28 @@
+{
+  "spend": {
+    "total_usd": 0.0,
+    "ceiling_usd": 50.0,
+    "calls": 1,
+    "input_tokens": 0,
+    "output_tokens": 0
+  },
+  "cells": [
+    {
+      "cell_id": "method_substitution_absurd_monolithic_rep1",
+      "dimension": "method_substitution",
+      "level": "absurd",
+      "path": "monolithic",
+      "rep": 1,
+      "hard_pass": true,
+      "error": null,
+      "diagnostic_alert_count": 3
+    }
+  ],
+  "dimensions": {
+    "method_substitution/absurd/monolithic": {
+      "total": 1,
+      "hard_pass": 1,
+      "errors": 0
+    }
+  }
+}

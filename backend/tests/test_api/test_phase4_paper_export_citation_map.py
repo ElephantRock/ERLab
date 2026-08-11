@@ -23,10 +23,9 @@ from backend.db import crud
 from backend.db.database import Base
 from backend.db.models import (
     Idea,
-    Paper as DBPaper,
+    PaperSourceMarker,
     PipelineRun,
     Proposal,
-    PaperSourceMarker,
 )
 
 

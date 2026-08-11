@@ -2,8 +2,6 @@
 
 import asyncio
 
-import pytest
-
 from backend.pipeline.agents.message_bus import AgentMessage, MessageBus
 from backend.pipeline.agents.registry import AgentRegistry
 from backend.pipeline.gap_analysis.models import ResearchGap

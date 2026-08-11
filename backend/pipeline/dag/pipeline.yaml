@@ -3,9 +3,9 @@
 # BATCH-180 / FIX-01: YAML reflects real production model routing.
 #
 # Model routing architecture (z.ai cloud — LM Studio offline):
-#   thinking   → glm-4.6 via z.ai (cloud)
+#   thinking   → glm-5.2 via z.ai (cloud)
 #                Used for: classification, extraction, ranking, scoring
-#   generation → glm-4.6 via z.ai (cloud)
+#   generation → glm-5.2 via z.ai (cloud)
 #                Used for: synthesis, writing, ideation, deepening
 #   embedding  → bge-m3 via LM Studio GPU (local, 1024d) [offline — will fail soft]
 #   reranker   → disabled (LM Studio offline)
@@ -14,7 +14,7 @@
 models:
   thinking:
     provider: openai
-    model: glm-4.6
+    model: glm-5.2
     base_url: https://api.z.ai/api/coding/paas/v4
     max_tokens: 2048
     temperature: 0.1
@@ -24,7 +24,7 @@ models:
 
   generation:
     provider: openai
-    model: glm-4.6
+    model: glm-5.2
     base_url: https://api.z.ai/api/coding/paas/v4
     max_tokens: 4096
     temperature: 0.7
@@ -96,23 +96,25 @@ strategies:
       - proposal_deepening
       - export
     description: >
-      Full pipeline: 16 stages, ~25 minutes. Literature search with
-      reranking, gap analysis via local LLM, tree search idea generation,
-      novelty checking with embeddings, full proposal synthesis via cloud,
-      adversarial review, paper synthesis, citation audit, deepening.
+      Full proposal-to-paper pipeline. Literature search, gap analysis,
+      reflection, idea generation,
+      novelty and feasibility scoring, proposal synthesis, adversarial review,
+      evaluation, optional experiment execution, paper synthesis, citation audit,
+      deepening, and export.
 
   fast_scan:
     stages:
       - literature_search
       - ingestion
       - gap_analysis
+      - idea_generation
       - feasibility_scoring
       - proposal_synthesis
       - export
     description: >
-      Quick scan: 6 stages, ~5 minutes. Literature search, gap analysis,
-      feasibility scoring, light synthesis, export. Skips tree search,
-      novelty, metrics, adversarial, paper synthesis, citation audit.
+      Quick scan: lightweight idea generation and concise proposal synthesis
+      after literature search and gap analysis. Skips tree search, novelty,
+      mechanical metrics, adversarial review, paper synthesis, and citation audit.
 
   academic_proposal:
     stages:
@@ -134,10 +136,10 @@ strategies:
       - proposal_deepening
       - export
     description: >
-      Academic-grade proposal: full 16-stage pipeline with stricter
-      thresholds, paper synthesis and citation audit for publication-ready
-      output. ~45 minutes. Same stages as deep_research but with higher
-      budgets and longer timeouts.
+      Academic proposal-to-paper workflow with the same production stage
+      topology as deep_research: reflection, novelty and feasibility scoring,
+      proposal review/evaluation, optional experiment execution, paper synthesis,
+      citation audit, deepening, and export.
 
   literature_review:
     stages:
@@ -164,10 +166,10 @@ strategies:
 # novelty_checking     → embedding   → bge-m3    (similarity scoring)
 # feasibility_scoring  → thinking    → qwen3-4b  (feasibility assessment)
 # mechanical_metrics   → system      → none       (formula-based)
-# proposal_synthesis   → generation  → glm-5.1   (full proposals)
+# proposal_synthesis   → generation  → glm-5.2   (full proposals)
 # adversarial_review   → thinking    → qwen3-4b  (critique)
 # evaluation           → thinking    → qwen3-4b  (7-dim scoring)
-# paper_synthesis      → generation  → glm-5.1   (paper writing)
+# paper_synthesis      → generation  → glm-5.2   (paper writing)
 # citation_audit       → thinking    → qwen3-4b  (citation verification)
-# proposal_deepening   → generation  → glm-5.1   (proposal enrichment)
+# proposal_deepening   → generation  → glm-5.2   (proposal enrichment)
 # export               → system      → none       (file generation)

@@ -1,22 +1,23 @@
 """Tests for governance decision and timeline endpoints."""
 
+from contextlib import contextmanager
+
 import pytest
 from pydantic import ValidationError
-
-from backend.api.routes.governance import (
-    GovernanceDecisionRequest,
-    create_decision,
-    list_decisions,
-    get_timeline,
-)
-from backend.api.auth import TokenData
-from backend.api.errors import NotFoundError
-from backend.db.database import Base
-from backend.db.models import Idea, Comment
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
-from contextlib import contextmanager
+
+from backend.api.auth import TokenData
+from backend.api.errors import NotFoundError
+from backend.api.routes.governance import (
+    GovernanceDecisionRequest,
+    create_decision,
+    get_timeline,
+    list_decisions,
+)
+from backend.db.database import Base
+from backend.db.models import Comment, Idea
 
 
 @pytest.fixture

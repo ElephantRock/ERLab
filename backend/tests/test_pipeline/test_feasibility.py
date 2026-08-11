@@ -6,7 +6,6 @@ from backend.pipeline.feasibility.feasibility_scorer import (
     FeasibilityReport,
     FeasibilityScorer,
 )
-from backend.tests.conftest import FakeLLMProvider
 from backend.tests.test_pipeline.conftest import SchemaAwareFakeProvider
 
 

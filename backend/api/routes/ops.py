@@ -9,19 +9,17 @@ from __future__ import annotations
 
 import json
 import logging
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from fastapi import APIRouter, Query
-from sqlalchemy import select, func, and_
+from sqlalchemy import and_, func, select
 
 from backend.db.database import get_session
 from backend.db.models import (
-    PipelineRun,
-    RunEvent,
-    Idea,
-    Proposal,
-    Paper,
     IdeaPaperLink,
+    Paper,
+    PipelineRun,
+    Proposal,
     ProposalSectionRevision,
 )
 
@@ -56,7 +54,7 @@ async def get_dashboard(
         days = 7
     if not isinstance(limit, int):
         limit = 50
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     since = now - timedelta(days=days)
 
     return {
@@ -300,7 +298,7 @@ def _source_health(since: datetime, limit: int) -> dict:
 def _quality_trends(since: datetime, limit: int) -> dict:
     """Aggregate quality check pass rates and remediation metrics."""
     try:
-        from backend.api.quality_checks import compute_quality_checks, audit_citations
+        from backend.api.quality_checks import audit_citations, compute_quality_checks
 
         with get_session() as session:
             proposals = session.execute(select(Proposal)).scalars().all()

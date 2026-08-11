@@ -45,8 +45,8 @@ def _mock_run_service_with_done():
 
 def _patch_settings(api_key=None, auth_enabled=False):
     """Patch get_settings in config and auth modules."""
-    import backend.config as config_mod
     import backend.api.auth as auth_mod
+    import backend.config as config_mod
 
     test_settings = type("Settings", (), {
         "api_key": api_key,

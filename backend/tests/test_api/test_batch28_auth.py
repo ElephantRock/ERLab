@@ -2,17 +2,15 @@
 
 TEST-28-01-01 through TEST-28-01-10.
 """
-import sys
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.pool import StaticPool
 
-from backend.api.auth import create_access_token, hash_password, verify_password
+from backend.api.auth import hash_password, verify_password
 from backend.api.errors import APIError
 from backend.db.database import Base
-from backend.db.models import User
 
 
 @pytest.fixture(autouse=True)
@@ -50,8 +48,9 @@ def _make_app():
 
     @app.exception_handler(APIError)
     async def handle_api_error(request, exc):
-        from fastapi.responses import JSONResponse
         import uuid
+
+        from fastapi.responses import JSONResponse
         return JSONResponse(
             status_code=exc.status_code,
             content=exc.to_dict(),

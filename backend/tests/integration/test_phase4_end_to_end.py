@@ -37,15 +37,12 @@ from backend.db import crud
 from backend.db.database import Base
 from backend.db.models import (
     Idea,
-    Paper as DBPaper,
+    PaperSourceMarker,
     PipelineRun,
     Proposal,
-    PaperSourceMarker,
 )
-from backend.pipeline.persistence import PipelinePersistence
-from backend.pipeline.stages import PaperSynthesisStage, StageContext
 from backend.pipeline.result import PipelineResult
-
+from backend.pipeline.stages import PaperSynthesisStage, StageContext
 
 pytestmark = pytest.mark.integration
 

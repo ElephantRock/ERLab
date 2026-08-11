@@ -17,6 +17,9 @@ from __future__ import annotations
 
 import pytest
 
+from backend.pipeline.governed_embedding_adapter import (
+    GOVERNED_EMBEDDING_ADAPTER_CONTRACT_VERSION,
+)
 from backend.pipeline.knowledge.embedding_provider_identity import (
     EVIDENCE_SOURCE_CONFIGURED_ONLY,
     EVIDENCE_SOURCE_LMSTUDIO_RESPONSE_MODEL,
@@ -41,10 +44,6 @@ from backend.pipeline.knowledge.model_resolution_classifier import (
     ModelResolutionContext,
     classify_model_resolution,
 )
-from backend.pipeline.governed_embedding_adapter import (
-    GOVERNED_EMBEDDING_ADAPTER_CONTRACT_VERSION,
-)
-
 
 # ── Helpers ────────────────────────────────────────────────────────────
 

@@ -2,7 +2,6 @@
 
 from backend.pipeline.compaction.model_profiles import (
     DEFAULT_CONTEXT_SIZE,
-    MODEL_CONTEXT_SIZES,
     get_context_size,
     get_trigger_threshold,
 )

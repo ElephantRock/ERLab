@@ -1,6 +1,5 @@
 """Tests for truth value revision (BATCH-74/TASK-02)."""
 
-from unittest.mock import MagicMock
 
 from backend.pipeline.knowledge.truth import TruthValue
 
@@ -58,8 +57,7 @@ class TestTruthRevision:
 class TestTruthRevisionInStage:
     def test_idea_generation_revises_gap_truth(self):
         """Integration test: IdeaGenerationStage revises gap truth values."""
-        from backend.pipeline.stages import IdeaGenerationStage
-        from backend.pipeline.knowledge.entities import KnowledgeEntity, EntityType
+        from backend.pipeline.knowledge.entities import EntityType, KnowledgeEntity
         from backend.pipeline.knowledge.graph import KnowledgeGraph
         from backend.pipeline.knowledge.truth import TruthValue
 

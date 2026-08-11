@@ -35,11 +35,10 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
-from datetime import datetime, timezone
-from typing import Any, Sequence
+from datetime import UTC, datetime
 
 from sqlalchemy import select, update
-from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy.orm import sessionmaker
 
 from backend.db.models import VectorIndexRecord
 from backend.pipeline.capability.verified_embedding_runtime import (
@@ -98,7 +97,7 @@ class V2IndexingOutcome:
 
 
 def _now() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 async def index_document_v2(

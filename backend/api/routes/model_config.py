@@ -11,7 +11,7 @@ from typing import Any
 
 from fastapi import APIRouter
 
-from backend.api.errors import APIError, NotFoundError
+from backend.api.errors import APIError
 
 logger = logging.getLogger(__name__)
 
@@ -448,7 +448,6 @@ def _validate_assignments(
     Returns:
         (cleaned_assignments, warnings)
     """
-    from backend.api.model_assignments import load_assignments
     from backend.providers.model_manager import get_model_manager
 
     warnings: list[dict[str, str]] = []

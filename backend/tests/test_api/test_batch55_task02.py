@@ -1,5 +1,5 @@
 """BATCH-55 TASK-02: list_runs serialization tests."""
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from unittest.mock import MagicMock, patch
 
 from fastapi import FastAPI
@@ -29,8 +29,8 @@ def _make_run(run_id=1, status="completed", domain="AI/NLP", ideas=None, session
     run.current_stage = "done" if status == "completed" else "running"
     run.ideas = ideas or []
     run.session_id = session_id
-    run.created_at = datetime(2026, 5, 2, 12, 0, 0, tzinfo=timezone.utc)
-    run.completed_at = datetime(2026, 5, 2, 12, 5, 0, tzinfo=timezone.utc) if status == "completed" else None
+    run.created_at = datetime(2026, 5, 2, 12, 0, 0, tzinfo=UTC)
+    run.completed_at = datetime(2026, 5, 2, 12, 5, 0, tzinfo=UTC) if status == "completed" else None
     run.error_message = None
     return run
 

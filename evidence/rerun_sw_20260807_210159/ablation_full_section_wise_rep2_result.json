@@ -1,0 +1,12 @@
+{
+  "cell_id": "ablation_full_section_wise_rep2",
+  "identity": {
+    "identity_pass": true,
+    "gt_method_in_primacy": true,
+    "conflicting_terms_in_primacy": [],
+    "primacy_region_preview": "# Research Paper: machine learning\n**Venue:** Generic\n**Sources:** 2 papers cited\n\n---\n\n## Abstract\n\nThe Iris dataset has long served as a foundational benchmark for evaluating classification algorithms, offering a compact yet informative set of morphometric features\u2014sepal and petal length and width"
+  },
+  "markers_present": true,
+  "missing_markers": [],
+  "error": null
+}

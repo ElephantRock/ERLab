@@ -1,0 +1,54 @@
+{
+  "run_id": "20260807_144046",
+  "git_sha": "aae2de652dc025f6b5769a6925d4048091c486a1",
+  "python_version": "3.12.1",
+  "model": "glm-5.2",
+  "base_url": "https://api.z.ai/api/coding/paas/v4",
+  "ceiling_usd": 50.0,
+  "pricing_assumption": {
+    "input_per_1m": 0.15,
+    "output_per_1m": 0.6,
+    "source": "cost_estimator.py:20 (glm-5.1); glm-5.2 assumed parity"
+  },
+  "total_cells_planned": 48,
+  "fixtures": [
+    {
+      "dimension": "method_substitution",
+      "level": "absurd"
+    },
+    {
+      "dimension": "method_substitution",
+      "level": "plausible"
+    },
+    {
+      "dimension": "method_substitution",
+      "level": "subtle"
+    },
+    {
+      "dimension": "metric_direction",
+      "level": "correct"
+    },
+    {
+      "dimension": "metric_direction",
+      "level": "reversed_attribution"
+    },
+    {
+      "dimension": "ablation",
+      "level": "full"
+    },
+    {
+      "dimension": "ablation",
+      "level": "context_only"
+    },
+    {
+      "dimension": "ablation",
+      "level": "markers_only"
+    }
+  ],
+  "paths": [
+    "monolithic",
+    "section_wise"
+  ],
+  "reps": 3,
+  "smoke": false
+}

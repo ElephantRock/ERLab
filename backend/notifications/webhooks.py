@@ -5,11 +5,11 @@ Fires HTTP POST requests to a configured webhook URL on pipeline events
 pipeline — aligns with HB-01 (resilient, non-blocking).
 """
 
-import json
-import logging
 import hashlib
 import hmac
-from datetime import datetime, timezone
+import json
+import logging
+from datetime import UTC, datetime
 from typing import Any
 
 import httpx
@@ -51,7 +51,7 @@ async def fire_webhook(event_type: str, payload: dict[str, Any]) -> None:
 
     body = {
         "event": event_type,
-        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "timestamp": datetime.now(UTC).isoformat(),
         "data": payload,
     }
 

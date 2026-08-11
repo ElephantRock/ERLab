@@ -9,12 +9,11 @@ from __future__ import annotations
 
 import os
 import tempfile
+
 import pytest
 
-from backend.pipeline.soul_loader import load_soul, inject_soul, clear_cache
 from backend.pipeline.knowledge.error_store import ErrorKnowledgeStore, FailureEntry
-
-
+from backend.pipeline.soul_loader import clear_cache, inject_soul, load_soul
 
 # ══════════════════════════════════════════════════════════
 # TASK-01: SOUL.md + SoulLoader

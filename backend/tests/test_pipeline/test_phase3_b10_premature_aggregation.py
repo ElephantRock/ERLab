@@ -12,11 +12,11 @@ Verifies that:
 from __future__ import annotations
 
 import asyncio
-import pytest
-from unittest.mock import AsyncMock, MagicMock
 
-from backend.pipeline.literature.search_service import SearchService
+import pytest
+
 from backend.pipeline.literature.models import Paper, SearchResult
+from backend.pipeline.literature.search_service import SearchService
 
 
 def _make_paper(title="Test Paper", source="test"):
@@ -146,9 +146,10 @@ async def test_pubmed_efetch_429_returns_failed_not_partial():
     """B-10 specific: verify PubMed source returns 'failed' (not 'partial')
     when EFetch yields 0 results, avoiding the contract validation that
     would raise and cancel other sources."""
-    from backend.pipeline.literature.pubmed_source import PubMedSource
     # Verify the code does not use 'partial' for empty EFetch results
     import inspect
+
+    from backend.pipeline.literature.pubmed_source import PubMedSource
     source = inspect.getsource(PubMedSource)
     # The EFetch-failed path must not return 'partial' with empty results
     assert 'status="failed"' in source

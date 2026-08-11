@@ -1,17 +1,16 @@
 """Tests for graph-augmented retrieval."""
 
-from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
 pytestmark = pytest.mark.flaky(reruns=3, reruns_delay=2)
 
-from backend.pipeline.knowledge.entities import KnowledgeEntity, EntityType, TruthValue
+from backend.pipeline.knowledge.entities import EntityType, KnowledgeEntity, TruthValue
 from backend.pipeline.knowledge.graph import KnowledgeGraph
 from backend.pipeline.knowledge.graph_rag_retriever import GraphRAGRetriever
 from backend.pipeline.knowledge.graph_walks import GraphWalker
-from backend.pipeline.knowledge.retriever import RetrievalResult, RetrievalSource
 from backend.pipeline.knowledge.relationships import KnowledgeRelationship, RelationType
+from backend.pipeline.knowledge.retriever import RetrievalResult, RetrievalSource
 
 
 def _make_entity(name: str, etype: EntityType = EntityType.CONCEPT) -> KnowledgeEntity:

@@ -19,8 +19,8 @@ import re
 import unicodedata
 
 from backend.pipeline.literature.contracts import (
-    SourceResultAccounting,
     SearchResult,
+    SourceResultAccounting,
     validate_accounting,
 )
 

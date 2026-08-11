@@ -47,7 +47,7 @@ class WarmStartHints:
 class WarmStartLoader:
     """Load relevant memories before a pipeline run to warm-start stages."""
 
-    def __init__(self, memory_service: "MemoryService") -> None:
+    def __init__(self, memory_service: MemoryService) -> None:
         self._memory = memory_service
 
     async def load_hints(self, domain: str) -> WarmStartHints:

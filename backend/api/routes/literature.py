@@ -128,12 +128,12 @@ async def _do_ingest(paper: Paper) -> dict:
     nothing was persisted. The prior ImportError-fallback was a
     correctness defect (claimed "ingested" without writing anything).
     """
+    from backend.api.errors import ServiceUnavailableError
     from backend.config import get_settings
     from backend.pipeline.ingestion.chunker import DocumentChunk
     from backend.pipeline.knowledge.embedding_service import EmbeddingService
     from backend.pipeline.knowledge.vector_store import VectorStore
     from backend.providers.provider_factory import create_provider
-    from backend.api.errors import ServiceUnavailableError
 
     # 1. Build chunk text from paper title + abstract + authors.
     #    One chunk is sufficient for title+abstract papers (matches the

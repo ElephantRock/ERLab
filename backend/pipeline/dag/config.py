@@ -56,7 +56,7 @@ class ConfigLoader:
         if not self._yaml_path.exists():
             raise FileNotFoundError(f"Pipeline config not found: {self._yaml_path}")
 
-        with open(self._yaml_path, "r", encoding="utf-8") as fh:
+        with open(self._yaml_path, encoding="utf-8") as fh:
             raw: dict[str, Any] = yaml.safe_load(fh)
 
         if not isinstance(raw, dict):

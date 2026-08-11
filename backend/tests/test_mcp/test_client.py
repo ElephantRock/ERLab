@@ -1,12 +1,9 @@
 """Tests for MCP client."""
 
-import asyncio
-import json
 
 import pytest
 
 from backend.pipeline.tools.mcp.client import MCPClient
-from backend.pipeline.tools.mcp.models import MCPCallResult, MCPContentBlock, MCPToolInfo
 
 
 class FakeTransport:

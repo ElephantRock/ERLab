@@ -20,6 +20,23 @@ export interface PipelineRunRequest {
   proposal_depth?: "concise" | "standard" | "detailed";
   novelty_depth?: "light" | "standard" | "thorough";
   idea_diversity?: "focused" | "balanced" | "exploratory";
+  // Registered empirical authority. When present, compatible strategies run
+  // the checked-in experiment specification before paper synthesis.
+  experiment_spec_id?: string | null;
+}
+
+export interface ExperimentSpecSummary {
+  spec_id: string;
+  description: string;
+  research_question: string;
+  dataset_name: string;
+  analysis_method: string;
+  primary_metric: string;
+}
+
+export interface ExperimentSpecCatalog {
+  specs: ExperimentSpecSummary[];
+  compatible_strategies: string[];
 }
 
 export interface PipelineRunSummary {

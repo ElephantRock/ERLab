@@ -3,7 +3,6 @@
 from backend.pipeline.tracing.processor import (
     CompositeProcessor,
     InMemoryProcessor,
-    LoggingProcessor,
     NoOpProcessor,
 )
 from backend.pipeline.tracing.spans import Span, SpanKind

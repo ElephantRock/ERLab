@@ -4,13 +4,9 @@ AIV §13: Tests verify behavioral outcomes — compression reduces
 token count, summaries are extracted correctly, format works for LLM prompts.
 """
 
-import pytest
 
 from backend.pipeline.monitoring.ccw import (
     ConsolidatedContextWindow,
-    GapSummary,
-    IdeaSummary,
-    PaperSummary,
     _extract_first_sentence,
 )
 

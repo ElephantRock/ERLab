@@ -1,0 +1,12 @@
+{
+  "cell_id": "method_substitution_subtle_section_wise_rep1",
+  "identity": {
+    "identity_pass": true,
+    "gt_method_in_primacy": true,
+    "conflicting_terms_in_primacy": [],
+    "primacy_region_preview": "# Research Paper: machine learning\n**Venue:** Generic\n**Sources:** 2 papers cited\n\n---\n\n## Abstract\n\nMulticlass classification is a foundational problem in machine learning, and the Iris dataset serves as a widely used benchmark for evaluating discriminative models [SOURCE-1].\n\nL2-penalized (ridge) "
+  },
+  "markers_present": true,
+  "missing_markers": [],
+  "error": null
+}

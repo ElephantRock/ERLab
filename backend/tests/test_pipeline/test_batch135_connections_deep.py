@@ -1,15 +1,14 @@
 """BATCH-135 Tests — LLM-Grounded Connection Agent."""
 
-import pytest
 from unittest.mock import AsyncMock, MagicMock
 
+from backend.pipeline.claims.connection_agent import ConnectionAgent
 from backend.pipeline.claims.models import Claim, ClaimType
-from backend.pipeline.claims.connection_agent import ConnectionAgent, PaperConnection
 
 
 def _comparison(pid, compared_to, rel="improves_on"):
     return Claim(claim_type=ClaimType.COMPARISON, title=f"vs {compared_to}",
-                 description=f"Comparison", source_paper_id=pid,
+                 description="Comparison", source_paper_id=pid,
                  compared_to=compared_to, relationship=rel, confidence=0.85)
 
 def _method(name, pid):
@@ -18,7 +17,7 @@ def _method(name, pid):
 
 def _result(dataset, pid, method_name=None):
     return Claim(claim_type=ClaimType.RESULT, title=f"Result on {dataset}",
-                 description=f"Result", source_paper_id=pid,
+                 description="Result", source_paper_id=pid,
                  dataset=dataset, metric="acc", value="90%", method_name=method_name)
 
 

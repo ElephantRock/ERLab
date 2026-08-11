@@ -12,7 +12,6 @@ The generator emits typed claims as JSON. The ClaimRenderer converts to prose.
 from __future__ import annotations
 
 import json
-from pathlib import Path
 from typing import Any
 
 # ── JSON Schema for Structured Claims ────────────────────────────────────

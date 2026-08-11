@@ -64,7 +64,7 @@ class ApprovalManager:
 
         try:
             await asyncio.wait_for(approval._event.wait(), timeout=self._timeout)
-        except asyncio.TimeoutError:
+        except TimeoutError:
             approval.status = ApprovalStatus.EXPIRED
             logger.warning("Approval %s expired", decision_id)
 

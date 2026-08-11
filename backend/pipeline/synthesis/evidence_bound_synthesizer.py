@@ -12,11 +12,12 @@ from persisted evidence — the LLM cannot override them.
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any
 
 from backend.pipeline.evaluation.deterministic_finalizer import (
-    build_canonical_title, render_result_claim, render_result_section,
+    build_canonical_title,
+    render_result_section,
 )
 
 logger = logging.getLogger(__name__)

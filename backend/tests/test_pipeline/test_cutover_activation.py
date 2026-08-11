@@ -14,7 +14,7 @@ Proves:
 from __future__ import annotations
 
 import sys
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from unittest.mock import MagicMock
 
 import pytest
@@ -24,7 +24,6 @@ from sqlalchemy.orm import sessionmaker
 sys.modules.setdefault("chromadb", MagicMock())
 sys.modules.setdefault("google.generativeai", MagicMock())
 
-import backend.db.models
 from backend.db.database import Base
 from backend.db.models import (
     EmbeddingBindingCutover,
@@ -32,17 +31,15 @@ from backend.db.models import (
     EmbeddingProfileBindingActivation,
     VectorIndexRecord,
 )
+from backend.pipeline.capability.activation_service import (
+    ActivationError,
+    activate_binding,
+    seal_cutover,
+)
 from backend.pipeline.capability.cutover_snapshot import (
-    get_cutover_item_counts,
     is_cutover_ready_for_seal,
     recompute_source_fingerprint,
     snapshot_source_population,
-)
-from backend.pipeline.capability.activation_service import (
-    ActivationError,
-    ActivationResult,
-    activate_binding,
-    seal_cutover,
 )
 from backend.pipeline.vector_contracts import VECTOR_INDEX_V1
 
@@ -93,7 +90,7 @@ def _seed_full_profile(session):
     ), {"bid": _BINDING_ID, "pid": _PROFILE_ID})
 
     # Passed check (valid for 1 hour)
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     session.execute(text(
         "INSERT INTO embedding_capability_checks "
         "(check_id, embedding_profile_id, binding_id, "
@@ -188,7 +185,7 @@ class TestSourceSnapshot:
             )
 
             # Add a new vector → drift
-            now = datetime.now(timezone.utc)
+            now = datetime.now(UTC)
             session.add(VectorIndexRecord(
                 vector_record_id="i" * 64,
                 paper_id=1, chunk_key="abstract:0",
@@ -293,7 +290,7 @@ class TestSealCutover:
                 ).values(status="indexed")
             )
             # Add drift
-            now = datetime.now(timezone.utc)
+            now = datetime.now(UTC)
             session.add(VectorIndexRecord(
                 vector_record_id="i" * 64,
                 paper_id=1, chunk_key="abstract:0",
@@ -336,7 +333,7 @@ class TestActivateBinding:
                 state="frozen",
                 guard_epoch=1,
                 cutover_id=_CUTOVER_ID,
-                frozen_at=datetime.now(timezone.utc),
+                frozen_at=datetime.now(UTC),
             ))
             session.commit()
 

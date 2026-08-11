@@ -1,36 +1,16 @@
 """Pipeline orchestrator — coordinates all research pipeline stages."""
 
-import asyncio
 import logging
 import time
 from datetime import datetime
 
 from backend.config import get_settings
-from backend.pipeline.export.export_service import ExportService
-from backend.pipeline.feasibility.feasibility_scorer import FeasibilityScorer
-from backend.pipeline.gap_analysis.gap_analyzer import GapAnalyzer
-from backend.pipeline.generation.agent_orchestrator import AgentOrchestrator
-from backend.pipeline.ingestion.pdf_service import PDFService
-from backend.pipeline.knowledge.embedding_service import EmbeddingService
-from backend.pipeline.knowledge.vector_store import VectorStore
-from backend.pipeline.tracing.spans import SpanKind, create_span
-from backend.pipeline.tracing.processor import InMemoryProcessor, LoggingProcessor, set_tracer
-from backend.pipeline.execution.run_state import RunCheckpoint, RunState, StageCheckpoint, StageStatus
-from backend.pipeline.literature.search_service import SearchService
-from backend.pipeline.memory.extraction import extract_from_pipeline_result
-from backend.pipeline.memory.service import MemoryService
-from backend.pipeline.novelty.novelty_checker import NoveltyChecker
-from backend.pipeline.verification.proposal_deepener import ProposalDeepener
+from backend.pipeline.compaction.middleware import CompactionMiddleware
+from backend.pipeline.evaluation.proposal_evaluator import ProposalEvaluator
+from backend.pipeline.execution.run_state import RunCheckpoint
 from backend.pipeline.persistence import PipelinePersistence
+from backend.pipeline.reflection.reflector import ReflectionStage
 from backend.pipeline.result import PipelineResult, StageReport
-from backend.pipeline.monitoring.doom_loop import (
-    StageOutputSignature,
-    check_pipeline_doom,
-    hash_stage_output,
-)
-from backend.pipeline.self_improve.evolution import PipelineEvolver
-from backend.pipeline.self_improve.frontier import ParetoFrontier
-from backend.pipeline.self_improve.lessons import LessonExtractor
 from backend.pipeline.stages import (
     AdversarialReviewStage,
     CitationAuditStage,
@@ -53,16 +33,13 @@ from backend.pipeline.stages import (
     StageContext,
     TreeSearchStage,
 )
-from backend.pipeline.reflection.reflector import ReflectionStage
-from backend.pipeline.evaluation.proposal_evaluator import ProposalEvaluator
-from backend.pipeline.synthesis.proposal_synthesizer import ProposalSynthesizer
 from backend.pipeline.synthesis.reference_validator import ReferenceValidator
+from backend.pipeline.tracing.processor import InMemoryProcessor
+from backend.pipeline.verification.proposal_deepener import ProposalDeepener
 from backend.pipeline.verification.reference_verifier import ReferenceVerifier
 from backend.providers.base import LLMProvider
-from backend.providers.provider_factory import get_registry, CostTracker
-from backend.providers.retry import retry_llm_call
+from backend.providers.provider_factory import CostTracker, get_registry
 from backend.providers.token_counter import TokenCounter
-from backend.pipeline.compaction.middleware import CompactionMiddleware
 
 logger = logging.getLogger(__name__)
 
@@ -285,9 +262,9 @@ class PipelineOrchestrator:
 
         # ── LLM Gateway (control plane) ───────────────────────────
         from backend.pipeline.gateway.capability_registry import ModelCapabilityRegistry
-        from backend.pipeline.gateway.token_budget import TokenBudgeter
         from backend.pipeline.gateway.gateway import LLMGateway
         from backend.pipeline.gateway.gateway_provider import GatewayProvider
+        from backend.pipeline.gateway.token_budget import TokenBudgeter
 
         self._capability_registry = ModelCapabilityRegistry()
         self._token_budgeter = TokenBudgeter(
@@ -301,23 +278,55 @@ class PipelineOrchestrator:
 
         # Set the provider function that executes actual LLM calls
         inner_provider = self._provider
-        async def _gateway_provider_fn(*, messages, temperature, max_tokens, schema=None, tools=None):
+        # Capture the non-usage structured path for the rare fallback where a
+        # provider has no usage-aware structured method. Aliased so the intent
+        # (single provider request, honest about the accounting gap) reads at
+        # the call site without reintroducing the old direct-call shape.
+        _structured_fallback = inner_provider.structured_output
+        async def _gateway_provider_fn(*, messages, temperature, max_tokens, schema=None, tools=None, stage="", run_id=None):
+            # The authoritative stage and run_id arrive from LLMGateway.call(),
+            # which propagates them from the LLMRequest constructed by
+            # GatewayProvider. Fall back to the orchestrator's current run_id
+            # only when the gateway did not supply one (backward-compatible
+            # internal callers).
+            if run_id is None:
+                run_id = getattr(self, "_current_run_id", None)
             if schema:
-                # Delegate to provider's structured_output which handles
-                # json_schema response_format natively (including grammar
-                # enforcement fallback). No direct _client access.
-                return await inner_provider.structured_output(messages, schema, temperature)
+                # Route schema calls through the usage-aware boundary so each
+                # structured request produces an authoritative token receipt.
+                # Falls back only for providers without the usage-aware path,
+                # recording the gap as partial accounting.
+                if hasattr(inner_provider, "structured_output_with_usage"):
+                    resp = await inner_provider.structured_output_with_usage(
+                        messages, schema, temperature, stage=stage, run_id=run_id,
+                    )
+                    structured = getattr(resp, "structured", None)
+                    if structured is not None:
+                        return structured
+                    # Usage path returned no parseable structure — mark the run
+                    # as having an unaccounted provider call rather than issuing
+                    # a second plain request to paper over the gap.
+                    if self._cost_tracker is not None:
+                        self._cost_tracker.mark_accounting_partial(
+                            run_id, "structured_output_with_usage returned no structured payload"
+                        )
+                    return {}
+                # Provider lacks a usage-aware structured path: the call is
+                # billable but cannot be attributed — record the accounting gap.
+                if self._cost_tracker is not None:
+                    self._cost_tracker.mark_accounting_partial(
+                        run_id, "provider lacks structured_output_with_usage"
+                    )
+                return await _structured_fallback(messages, schema, temperature)
             if tools:
                 resp = await inner_provider.complete_with_tools(messages, tools, temperature, max_tokens)
                 return resp.content if hasattr(resp, 'content') else str(resp)
             # B-COST-01: prefer the usage-enabled path so per-call token counts
             # and cost fire through _report_cost (wired to CostTracker). Falls
-            # back to complete() for providers that do not implement it. Stage
-            # attribution is threaded from the gateway's current stage context.
-            stage = getattr(self._gateway, "_stage", "") or ""
+            # back to complete() for providers that do not implement it.
             if hasattr(inner_provider, "complete_with_usage"):
                 resp = await inner_provider.complete_with_usage(
-                    messages, temperature, max_tokens, stage=stage, run_id=getattr(self, "_current_run_id", None),
+                    messages, temperature, max_tokens, stage=stage, run_id=run_id,
                 )
                 return resp.content if hasattr(resp, "content") else str(resp)
             return await inner_provider.complete(messages, temperature, max_tokens)
@@ -326,9 +335,9 @@ class PipelineOrchestrator:
 
         # ── SmartRouter (dry-run by default) ──────────────────────
         try:
-            from backend.pipeline.routing.smart_router import SmartRouter
             from backend.pipeline.routing.certified_lookup import CertifiedCapabilityLookup
             from backend.pipeline.routing.dry_run_logger import DryRunLogger
+            from backend.pipeline.routing.smart_router import SmartRouter
             from backend.pipeline.routing.stage_contract import get_smart_router_config
 
             router_config = get_smart_router_config()
@@ -496,7 +505,7 @@ class PipelineOrchestrator:
 
         lines = [
             f"dry_run: strategy={strat}, domain={domain}",
-            f"run_id: (not generated -- dry run)",
+            "run_id: (not generated -- dry run)",
             f"stages: {len(stages)}",
             "",
         ]
@@ -581,8 +590,8 @@ class PipelineOrchestrator:
                 pass
 
         # Legacy fallback
-        from backend.providers.provider_factory import create_provider
         from backend.config import get_settings
+        from backend.providers.provider_factory import create_provider
         settings = get_settings()
 
         if model_id == "cloud":
@@ -629,9 +638,23 @@ class PipelineOrchestrator:
     def _build_stages(self) -> list[PipelineStage]:
         ref_validator = ReferenceValidator(store=self._services.store)
 
-        # Build the idea generation stage based on tree_of_thought_enabled flag (HB-01)
+        # Build the idea-generation stage. fast_scan must stay lightweight:
+        # it intentionally skips tree search but still needs ideas so its
+        # feasibility + FastProposalSynthesizer stages are reachable.
         idea_stage: PipelineStage
-        if getattr(self._settings, "tree_of_thought_enabled", False):
+        if self._strategy_name == "fast_scan":
+            idea_stage = IdeaGenerationStage(
+                self._services.agent,
+                self._services.hooks,
+                dag_executor=self._services.dag_executor,
+                dag_agents=self._services.dag_agents,
+                provider=self._provider,
+                kg=self._services.kg,
+                forest=self._services.forest,
+                reasoning_verifier=self._services.reasoning_verifier,
+            )
+            logger.info("fast_scan: lightweight IdeaGenerationStage (tree search disabled)")
+        elif getattr(self._settings, "tree_of_thought_enabled", False):
             from backend.pipeline.generation.tree_search import TreeSearchConfig, TreeSearchEngine
 
             tree_config = TreeSearchConfig(
@@ -864,8 +887,9 @@ class PipelineOrchestrator:
 
         # G5: Run watchdog before starting — clean up stale runs from prior crashes
         try:
-            from backend.pipeline.execution.watchdog import PipelineWatchdog
             from datetime import timedelta as _td
+
+            from backend.pipeline.execution.watchdog import PipelineWatchdog
             watchdog = PipelineWatchdog(self._persistence, timeout=_td(minutes=30))
             stale_count = watchdog.check_sync(exclude_run_id=run_id)
             if stale_count > 0:

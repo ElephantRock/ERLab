@@ -11,8 +11,9 @@ Similarity querying is intentionally NOT in this interface (deferred to P0.3.3).
 from __future__ import annotations
 
 import logging
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
-from typing import Any, Mapping, Protocol, Sequence
+from typing import Any
 
 from backend.pipeline.vector_contracts import VECTOR_INDEX_V1
 
@@ -162,7 +163,10 @@ class GovernedVectorBackend:
             return None
 
         embeddings = result.get("embeddings", [])
-        embedding = tuple(embeddings[0]) if embeddings else ()
+        if embeddings is not None and len(embeddings) > 0:
+            embedding = tuple(embeddings[0])
+        else:
+            embedding = ()
 
         metadatas = result.get("metadatas", [{}])
         meta = metadatas[0] if metadatas else {}
@@ -225,7 +229,7 @@ class GovernedVectorBackend:
         query_vector: Sequence[float],
         candidate_vector_record_ids: Sequence[str],
         top_k: int,
-    ) -> list["BackendVectorMatch"]:
+    ) -> list[BackendVectorMatch]:
         """Candidate-constrained similarity query.
 
         The backend receives exact ``vector_record_record_ids`` to rank
@@ -244,9 +248,16 @@ class GovernedVectorBackend:
 
         collection = self._collections.get(collection_name)
         if collection is None:
-            raise ValueError(
-                f"collection {collection_name!r} not initialized"
-            )
+            # Lazy-load from ChromaDB instead of failing — the collection
+            # exists on disk but wasn't cached because this backend instance
+            # didn't create it (a different process or the ingestion stage did).
+            try:
+                collection = self._client.get_collection(collection_name)
+                self._collections[collection_name] = collection
+            except Exception:
+                raise ValueError(
+                    f"collection {collection_name!r} not initialized"
+                )
 
         result = collection.query(
             query_embeddings=[list(query_vector)],

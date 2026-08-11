@@ -1,8 +1,7 @@
 """BATCH-126 Tests — Method-Problem Gap Matrix."""
 
-import pytest
-from backend.pipeline.claims.models import Claim, ClaimType
 from backend.pipeline.claims.method_problem import MethodProblemDetector, MethodProblemGap
+from backend.pipeline.claims.models import Claim, ClaimType
 
 
 class TestMethodProblemDetector:

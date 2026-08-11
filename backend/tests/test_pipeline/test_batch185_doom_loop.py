@@ -4,7 +4,6 @@ AIV §13 Test Integrity: Tests verify behavioral outcomes
 (doom detected or not detected), not code structure.
 """
 
-import pytest
 
 from backend.pipeline.monitoring.doom_loop import (
     StageOutputSignature,

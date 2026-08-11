@@ -3,10 +3,10 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Callable
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
-from typing import Any, Callable
+from datetime import UTC, datetime
+from typing import Any
 
 from backend.pipeline.operations.types import ModelReceipt
 
@@ -42,7 +42,7 @@ class CostEvent:
     cost_usd: float = 0.0
     stage: str = ""
     run_id: str | None = None
-    timestamp: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    timestamp: datetime = field(default_factory=lambda: datetime.now(UTC))
 
     @property
     def total_tokens(self) -> int:
@@ -76,14 +76,14 @@ class LLMProvider(ABC):
         Called by concrete providers after each complete()/structured_output()
         call that returns a response containing the served model identity.
         """
-        from datetime import datetime, timezone
+        from datetime import datetime
 
         self._last_receipt = ModelReceipt(
             requested_model=self.default_model,
             served_model=served_model,
             provider=self.provider_name,
             endpoint=endpoint,
-            timestamp=datetime.now(timezone.utc).isoformat(),
+            timestamp=datetime.now(UTC).isoformat(),
             context_length=context_length,
         )
 

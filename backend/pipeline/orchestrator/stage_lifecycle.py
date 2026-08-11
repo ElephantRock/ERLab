@@ -5,16 +5,13 @@ from the stage iteration loop.
 """
 
 import asyncio
-import json
 import logging
-import time
 from datetime import datetime
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from backend.pipeline.result import PipelineResult, StageReport
+    from backend.pipeline.result import PipelineResult
     from backend.pipeline.stages import PipelineStage, StageContext
-    from backend.pipeline.execution.run_state import RunCheckpoint
     from backend.providers.base import LLMProvider
 
 logger = logging.getLogger(__name__)
@@ -132,9 +129,9 @@ class StageLifecycle:
         if not self._doom_detected:
             try:
                 from backend.pipeline.monitoring.doom_loop import (
+                    check_pipeline_doom,
                     extract_stage_fingerprint,
                     hash_stage_output,
-                    check_pipeline_doom,
                 )
                 fingerprint = extract_stage_fingerprint(
                     stage.name,
@@ -224,7 +221,6 @@ class StageLifecycle:
         self, result, ctx, run_id, db_run_id, domain, strategy, should_continue
     ) -> str | None:
         """Post-processing for literature_search: persist, rerank, metrics, early-exit check."""
-        from backend.pipeline.result import StageReport
 
         # P0.2.7: Route from the durable provenance contract, not context truthiness.
         if db_run_id:
@@ -325,8 +321,8 @@ class StageLifecycle:
         # Compute retrieval metrics
         try:
             from backend.pipeline.evaluation.retrieval_metrics import (
-                compute_retrieval_metrics,
                 RetrievedDocument,
+                compute_retrieval_metrics,
             )
             queries = ctx.search_queries or [ctx.domain]
             if ctx.all_papers and queries:
@@ -419,7 +415,7 @@ class StageLifecycle:
                                 tracker.record(
                                     direction=getattr(idea, "title", "Untitled idea"),
                                     reason=f"Low composite score ({idea.score:.2f} < {min_composite})",
-                                    evidence=f"Novelty/feasibility scores below viable threshold",
+                                    evidence="Novelty/feasibility scores below viable threshold",
                                     run_id=getattr(result, 'run_id', 'unknown'),
                                     reopen_condition="Higher-quality literature or different angle",
                                 )
@@ -642,13 +638,31 @@ class StageLifecycle:
 
         logger.info("=== Pipeline Complete ===")
 
-        # Determine if pipeline produced meaningful output
+        # Authoritative run status: a typed terminal outcome, if already set
+        # by a stage, takes precedence over inference from collections. This
+        # is finalized exactly once here.
+        from backend.pipeline.result import PipelineOutcome
+        typed_outcome = getattr(result, "outcome", PipelineOutcome.RUNNING)
+
         n_gaps = len(result.gaps) if result.gaps else 0
         n_ideas = len(result.ideas) if result.ideas else 0
         n_proposals = len(result.proposals) if result.proposals else 0
 
-        if n_gaps == 0 and n_ideas == 0 and n_proposals == 0:
-            # Pipeline ran but produced nothing — mark as failed, not completed
+        if typed_outcome == PipelineOutcome.NO_RESEARCH_GAP:
+            # Legitimate transport-completed outcome: no paper produced, but
+            # not a failure. Mark completed so the product outcome is visible.
+            if result.outcome == PipelineOutcome.RUNNING:
+                result.outcome = PipelineOutcome.NO_RESEARCH_GAP
+            self._persistence.mark_run_completed(db_run_id)
+        elif typed_outcome.is_failure:
+            # Output-contract or execution failure at a stage.
+            self._persistence.mark_run_failed(
+                db_run_id,
+                f"{typed_outcome.value} at {result.terminal_stage}",
+            )
+        elif n_gaps == 0 and n_ideas == 0 and n_proposals == 0:
+            # Legacy fallback: pipeline ran but produced nothing and no stage
+            # set a typed outcome — mark as failed, not completed.
             logger.warning(
                 "Pipeline produced 0 gaps, 0 ideas, 0 proposals — marking as failed"
             )
@@ -657,6 +671,7 @@ class StageLifecycle:
                 "Pipeline completed without producing any gaps, ideas, or proposals",
             )
         else:
+            result.outcome = PipelineOutcome.SUCCEEDED
             self._persistence.mark_run_completed(db_run_id)
 
         # Run completed notification
@@ -677,8 +692,10 @@ class StageLifecycle:
 
         # Persist cost events (B-COST-01: durable ledger + reconciled summary)
         if self._cost_tracker and self._cost_tracker._events:
-            cost_dir = getattr(self._settings, "cost_persist_dir", "./data/costs")
-            cost_cap = getattr(self._settings, "budget_max_cost_usd", 100.0)
+            # Authoritative settings contract — no hard-coded fallback defaults
+            # for material fields (architecture seal test_p0_5_seal).
+            cost_dir = self._settings.cost_persist_dir
+            cost_cap = self._settings.budget_max_cost_usd
             # Use the enhanced persistence (ledger JSONL + summary with cap comparison)
             self._persistence.persist_cost_ledger(
                 run_id=run_id,
@@ -689,8 +706,13 @@ class StageLifecycle:
 
         # Session: complete run record
         if session_id and self._services.session_manager:
-            tokens = self._cost_tracker.total_tokens if self._cost_tracker else 0
-            cost = self._cost_tracker.total_cost if self._cost_tracker else 0.0
+            if self._cost_tracker:
+                cost_summary = self._cost_tracker.summary(run_id=run_id)
+                tokens = cost_summary.get("total_tokens", 0)
+                cost = cost_summary.get("total_cost_usd", 0.0)
+            else:
+                tokens = 0
+                cost = 0.0
             self._services.session_manager.complete_run(
                 session_id, run_id, tokens_used=tokens, cost_usd=cost
             )

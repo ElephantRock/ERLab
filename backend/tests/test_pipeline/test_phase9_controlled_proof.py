@@ -23,18 +23,15 @@ from __future__ import annotations
 
 import hashlib
 import json
-import pytest
-from types import SimpleNamespace
-from unittest.mock import MagicMock
 
 from backend.pipeline.evaluation.paper_gate_evaluator import (
-    evaluate_paper_gates, PaperGateEvaluation,
+    evaluate_paper_gates,
 )
 from backend.pipeline.evaluation.revision_directive import (
-    EvidenceInvariant, RevisionDirective, verify_revised_paper_invariants,
+    EvidenceInvariant,
+    verify_revised_paper_invariants,
 )
 from backend.pipeline.experiment.manifest import ResultMarker
-
 
 # ── Synthetic fixtures ──────────────────────────────────────────────
 
@@ -207,6 +204,7 @@ class TestRemediationConstraints:
         It only reads persisted ExperimentResult rows.
         """
         import inspect
+
         from backend.pipeline.evaluation.paper_remediator import auto_revise_paper
         source = inspect.getsource(auto_revise_paper)
         assert "execute_experiment" not in source
@@ -266,6 +264,7 @@ Quantum outperforms classical. Logistic regression wine quality [RESULT-1]
         before making a provider call.
         """
         import inspect
+
         from backend.pipeline.evaluation.paper_remediator import auto_revise_paper
         source = inspect.getsource(auto_revise_paper)
         # Must check for existing revision before calling provider
@@ -278,7 +277,6 @@ class TestVersioningAndPersistence:
 
     def test_10_drafts_survive_restart(self):
         """10. Original and revised drafts survive restart (JSON round-trip)."""
-        from backend.db.models import PaperRevision
         # Simulate: create revision, serialize to JSON, reload
         rev_data = {
             "proposal_id": 999,

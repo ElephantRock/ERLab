@@ -1,6 +1,6 @@
 """SQLAlchemy ORM models for metadata storage."""
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from sqlalchemy import (
     Boolean,
@@ -14,10 +14,10 @@ from sqlalchemy import (
     String,
     Text,
     UniqueConstraint,
+    event,
     text,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from sqlalchemy import event
 
 from backend.db.database import Base
 
@@ -32,7 +32,7 @@ class User(Base):
     email: Mapped[str] = mapped_column(String(256), unique=True, index=True)
     hashed_password: Mapped[str] = mapped_column(String(256))
     role: Mapped[str] = mapped_column(String(20), default="user")  # admin | user
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(UTC))
 
 
 class Paper(Base):
@@ -53,7 +53,7 @@ class Paper(Base):
     keywords: Mapped[str] = mapped_column(Text, default="[]")  # JSON list
     pdf_path: Mapped[str | None] = mapped_column(String(1024), nullable=True)
     ingested: Mapped[bool] = mapped_column(Boolean, default=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(UTC))
 
 
 class Idea(Base):
@@ -99,7 +99,7 @@ class Idea(Base):
     pipeline_run: Mapped["PipelineRun | None"] = relationship(back_populates="ideas")
     paper_links: Mapped[list["IdeaPaperLink"]] = relationship(back_populates="idea", cascade="all, delete-orphan")
 
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(UTC))
 
 
 class IdeaPaperLink(Base):
@@ -122,7 +122,7 @@ class IdeaPaperLink(Base):
     idea_id: Mapped[int] = mapped_column(Integer, ForeignKey("ideas.id"), nullable=False)
     paper_id: Mapped[int] = mapped_column(Integer, ForeignKey("papers.id"), nullable=False)
     role: Mapped[str] = mapped_column(String(30), nullable=False, default="supporting")
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(UTC))
 
     idea: Mapped["Idea"] = relationship(back_populates="paper_links")
     paper: Mapped["Paper"] = relationship()
@@ -153,7 +153,7 @@ class Proposal(Base):
     proposal_evaluation_json: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     idea: Mapped["Idea"] = relationship(back_populates="proposal")
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(UTC))
 
 
 class PaperSourceMarker(Base):
@@ -187,7 +187,7 @@ class PaperSourceMarker(Base):
     marker: Mapped[str] = mapped_column(String(32), nullable=False)  # e.g. "SOURCE-1"
     source_paper_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("papers.id"), nullable=True)
     mapping_status: Mapped[str] = mapped_column(String(16), nullable=False, default="mapped")  # mapped | unmapped
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(UTC))
 
     proposal: Mapped["Proposal"] = relationship()
     source_paper: Mapped["Paper | None"] = relationship()
@@ -259,7 +259,7 @@ class PipelineRun(Base):
 
     ideas: Mapped[list["Idea"]] = relationship(back_populates="pipeline_run")
     gaps: Mapped[list["ResearchGapDB"]] = relationship(back_populates="pipeline_run")
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(UTC))
     completed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     updated_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)  # BATCH-74: watchdog tracking
 
@@ -292,7 +292,7 @@ class Comment(Base):
     parent_id: Mapped[int | None] = mapped_column(
         Integer, ForeignKey("comments.id"), nullable=True
     )
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(UTC))
 
 
 class SharedIdea(Base):
@@ -306,7 +306,7 @@ class SharedIdea(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     idea_id: Mapped[int] = mapped_column(Integer, ForeignKey("ideas.id"))
     token: Mapped[str] = mapped_column(String(64), unique=True, index=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(UTC))
 
 
 class NotificationDB(Base):
@@ -325,7 +325,7 @@ class NotificationDB(Base):
     title: Mapped[str] = mapped_column(String(255))
     message: Mapped[str] = mapped_column(Text)
     read: Mapped[bool] = mapped_column(Boolean, default=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(UTC))
 
 
 class ResearchGapDB(Base):
@@ -363,7 +363,7 @@ class ResearchGapDB(Base):
     content_hash: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
 
     pipeline_run: Mapped["PipelineRun | None"] = relationship(back_populates="gaps")
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(UTC))
 
 
 class ResearchClaim(Base):
@@ -403,7 +403,7 @@ class ResearchClaim(Base):
     relationship: Mapped[str | None] = mapped_column(String(50), nullable=True)
     # Extra JSON (constraints, etc.)
     extra_json: Mapped[str | None] = mapped_column(Text, nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(UTC))
 
 
 class ExperimentResult(Base):
@@ -424,7 +424,7 @@ class ExperimentResult(Base):
     success: Mapped[bool] = mapped_column(Boolean, default=False)
     execution_time_seconds: Mapped[float] = mapped_column(Float, default=0.0)
     error: Mapped[str | None] = mapped_column(Text, nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(UTC))
     # Phase 5: empirical execution path
     proposal_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("proposals.id"), nullable=True)
     manifest_json: Mapped[str | None] = mapped_column(Text, nullable=True)
@@ -449,7 +449,7 @@ class RunEvent(Base):
     seq: Mapped[int] = mapped_column(Integer, nullable=False, comment="Per-run monotonic sequence")
     event_type: Mapped[str] = mapped_column(String(50), nullable=False)
     payload: Mapped[str | None] = mapped_column(Text, nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(UTC))
 
 
 class RunCancellation(Base):
@@ -466,7 +466,7 @@ class RunCancellation(Base):
         Integer, ForeignKey("pipeline_runs.id"), nullable=False, index=True
     )
     run_id_str: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
-    requested_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
+    requested_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(UTC))
     reason: Mapped[str | None] = mapped_column(String(500), nullable=True)
 
 
@@ -487,8 +487,8 @@ class RunWorker(Base):
     run_id_str: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
     worker_id: Mapped[str] = mapped_column(String(100), nullable=False)
     status: Mapped[str] = mapped_column(String(20), default="active")  # active|orphaned|completed
-    started_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
-    last_heartbeat: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
+    started_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(UTC))
+    last_heartbeat: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(UTC))
     completed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
 
@@ -521,7 +521,7 @@ class ProposalSectionRevision(Base):
     model_receipt_json: Mapped[str | None] = mapped_column(Text, nullable=True)
     quality_checks_json: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
-        DateTime, default=lambda: datetime.now(timezone.utc),
+        DateTime, default=lambda: datetime.now(UTC),
     )
 
 
@@ -545,7 +545,7 @@ class GovernanceDecision(Base):
     reviewer: Mapped[str] = mapped_column(String(128), nullable=False, default="anonymous")
     note: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
-        DateTime, default=lambda: datetime.now(timezone.utc),
+        DateTime, default=lambda: datetime.now(UTC),
     )
 
 
@@ -589,7 +589,7 @@ class SourceReview(Base):
     note: Mapped[str | None] = mapped_column(Text, nullable=True)
     reviewer: Mapped[str] = mapped_column(String(128), nullable=False, default="anonymous")
     created_at: Mapped[datetime] = mapped_column(
-        DateTime, default=lambda: datetime.now(timezone.utc),
+        DateTime, default=lambda: datetime.now(UTC),
     )
 
 
@@ -625,7 +625,7 @@ class QuarantinedCitation(Base):
     ref_index: Mapped[int] = mapped_column(Integer, nullable=False)
     audit_run_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
-        DateTime, default=lambda: datetime.now(timezone.utc),
+        DateTime, default=lambda: datetime.now(UTC),
     )
 
 
@@ -682,7 +682,7 @@ class SearchQuery(Base):
     executed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
     created_at: Mapped[datetime] = mapped_column(
-        DateTime, default=lambda: datetime.now(timezone.utc),
+        DateTime, default=lambda: datetime.now(UTC),
     )
 
 
@@ -715,7 +715,7 @@ class RunPaper(Base):
         String(20), nullable=False, default="candidate",
     )
     first_discovered_at: Mapped[datetime] = mapped_column(
-        DateTime, default=lambda: datetime.now(timezone.utc),
+        DateTime, default=lambda: datetime.now(UTC),
     )
     selected_for_downstream: Mapped[bool] = mapped_column(Boolean, default=False)
     selection_stage: Mapped[str | None] = mapped_column(String(50), nullable=True)
@@ -725,11 +725,11 @@ class RunPaper(Base):
         String(20), nullable=False, default="provenance_v1",
     )
     created_at: Mapped[datetime] = mapped_column(
-        DateTime, default=lambda: datetime.now(timezone.utc),
+        DateTime, default=lambda: datetime.now(UTC),
     )
     updated_at: Mapped[datetime] = mapped_column(
-        DateTime, default=lambda: datetime.now(timezone.utc),
-        onupdate=lambda: datetime.now(timezone.utc),
+        DateTime, default=lambda: datetime.now(UTC),
+        onupdate=lambda: datetime.now(UTC),
     )
 
 
@@ -814,7 +814,7 @@ class PaperDiscovery(Base):
         String(30), nullable=False, default="remote_search",
     )
     retrieved_at: Mapped[datetime] = mapped_column(
-        DateTime, default=lambda: datetime.now(timezone.utc),
+        DateTime, default=lambda: datetime.now(UTC),
     )
     raw_identifier: Mapped[str | None] = mapped_column(Text, nullable=True)
     deduplication_status: Mapped[str] = mapped_column(
@@ -823,7 +823,7 @@ class PaperDiscovery(Base):
     canonicalization_method: Mapped[str | None] = mapped_column(String(30), nullable=True)
     discovery_key: Mapped[str] = mapped_column(String(32), nullable=False)
     created_at: Mapped[datetime] = mapped_column(
-        DateTime, default=lambda: datetime.now(timezone.utc),
+        DateTime, default=lambda: datetime.now(UTC),
     )
 
 
@@ -1034,11 +1034,11 @@ class SearchQueryExecution(Base):
     # 'accounting_v1' when all four counts follow the reconciliation contract.
     accounting_schema_version: Mapped[str | None] = mapped_column(String(20), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
-        DateTime, default=lambda: datetime.now(timezone.utc),
+        DateTime, default=lambda: datetime.now(UTC),
     )
     updated_at: Mapped[datetime] = mapped_column(
-        DateTime, default=lambda: datetime.now(timezone.utc),
-        onupdate=lambda: datetime.now(timezone.utc),
+        DateTime, default=lambda: datetime.now(UTC),
+        onupdate=lambda: datetime.now(UTC),
     )
 
 
@@ -1113,11 +1113,11 @@ class ExecutionDiscoveryLinkage(Base):
     last_error_detail: Mapped[str | None] = mapped_column(Text, nullable=True)
     completed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
-        DateTime, default=lambda: datetime.now(timezone.utc),
+        DateTime, default=lambda: datetime.now(UTC),
     )
     updated_at: Mapped[datetime] = mapped_column(
-        DateTime, default=lambda: datetime.now(timezone.utc),
-        onupdate=lambda: datetime.now(timezone.utc),
+        DateTime, default=lambda: datetime.now(UTC),
+        onupdate=lambda: datetime.now(UTC),
     )
 
 
@@ -1150,7 +1150,7 @@ class SearchQueryExecutionScope(Base):
     intended_source_count: Mapped[int] = mapped_column(Integer, nullable=False)
     source_set_hash: Mapped[str] = mapped_column(String(64), nullable=False)
     created_at: Mapped[datetime] = mapped_column(
-        DateTime, default=lambda: datetime.now(timezone.utc),
+        DateTime, default=lambda: datetime.now(UTC),
     )
 
 
@@ -1294,11 +1294,11 @@ class RunSearchReconciliation(Base):
     last_checked_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     completed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
-        DateTime, default=lambda: datetime.now(timezone.utc),
+        DateTime, default=lambda: datetime.now(UTC),
     )
     updated_at: Mapped[datetime] = mapped_column(
-        DateTime, default=lambda: datetime.now(timezone.utc),
-        onupdate=lambda: datetime.now(timezone.utc),
+        DateTime, default=lambda: datetime.now(UTC),
+        onupdate=lambda: datetime.now(UTC),
     )
 
     # Aggregate counts (nullable until reconciled)
@@ -1366,7 +1366,7 @@ class GlobalLibraryMembership(Base):
     status: Mapped[str] = mapped_column(String(20), nullable=False)
     membership_origin: Mapped[str | None] = mapped_column(String(40), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
-        DateTime, default=lambda: datetime.now(timezone.utc),
+        DateTime, default=lambda: datetime.now(UTC),
     )
     removed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
@@ -1400,7 +1400,7 @@ class EmbeddingProfile(Base):
     collection_name: Mapped[str] = mapped_column(String(120), nullable=False)
     verification_status: Mapped[str] = mapped_column(String(20), nullable=False)
     created_at: Mapped[datetime] = mapped_column(
-        DateTime, default=lambda: datetime.now(timezone.utc),
+        DateTime, default=lambda: datetime.now(UTC),
     )
 
 
@@ -1502,11 +1502,11 @@ class VectorIndexRecord(Base):
         String(64), nullable=True
     )
     created_at: Mapped[datetime] = mapped_column(
-        DateTime, default=lambda: datetime.now(timezone.utc),
+        DateTime, default=lambda: datetime.now(UTC),
     )
     updated_at: Mapped[datetime] = mapped_column(
-        DateTime, default=lambda: datetime.now(timezone.utc),
-        onupdate=lambda: datetime.now(timezone.utc),
+        DateTime, default=lambda: datetime.now(UTC),
+        onupdate=lambda: datetime.now(UTC),
     )
 
 
@@ -1595,11 +1595,11 @@ class VectorRetrievalEvent(Base):
         String(64), nullable=True
     )
     created_at: Mapped[datetime] = mapped_column(
-        DateTime, default=lambda: datetime.now(timezone.utc),
+        DateTime, default=lambda: datetime.now(UTC),
     )
     updated_at: Mapped[datetime] = mapped_column(
-        DateTime, default=lambda: datetime.now(timezone.utc),
-        onupdate=lambda: datetime.now(timezone.utc),
+        DateTime, default=lambda: datetime.now(UTC),
+        onupdate=lambda: datetime.now(UTC),
     )
 
 
@@ -1700,11 +1700,11 @@ class LegacyVectorInventoryRun(Base):
     scanned_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     completed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
-        DateTime, default=lambda: datetime.now(timezone.utc),
+        DateTime, default=lambda: datetime.now(UTC),
     )
     updated_at: Mapped[datetime] = mapped_column(
-        DateTime, default=lambda: datetime.now(timezone.utc),
-        onupdate=lambda: datetime.now(timezone.utc),
+        DateTime, default=lambda: datetime.now(UTC),
+        onupdate=lambda: datetime.now(UTC),
     )
 
 
@@ -1755,11 +1755,11 @@ class LegacyVectorInventoryRecord(Base):
     failure_code: Mapped[str | None] = mapped_column(String(80), nullable=True)
     failure_detail: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
-        DateTime, default=lambda: datetime.now(timezone.utc),
+        DateTime, default=lambda: datetime.now(UTC),
     )
     updated_at: Mapped[datetime] = mapped_column(
-        DateTime, default=lambda: datetime.now(timezone.utc),
-        onupdate=lambda: datetime.now(timezone.utc),
+        DateTime, default=lambda: datetime.now(UTC),
+        onupdate=lambda: datetime.now(UTC),
     )
     completed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
@@ -1809,11 +1809,11 @@ class LegacyVectorReindexTarget(Base):
     failure_code: Mapped[str | None] = mapped_column(String(80), nullable=True)
     failure_detail: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
-        DateTime, default=lambda: datetime.now(timezone.utc),
+        DateTime, default=lambda: datetime.now(UTC),
     )
     updated_at: Mapped[datetime] = mapped_column(
-        DateTime, default=lambda: datetime.now(timezone.utc),
-        onupdate=lambda: datetime.now(timezone.utc),
+        DateTime, default=lambda: datetime.now(UTC),
+        onupdate=lambda: datetime.now(UTC),
     )
     completed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
@@ -2012,7 +2012,7 @@ class EmbeddingCapabilityCheck(Base):
     )
     created_at: Mapped[datetime] = mapped_column(
         DateTime,
-        default=lambda: datetime.now(timezone.utc),
+        default=lambda: datetime.now(UTC),
         server_default=text("CURRENT_TIMESTAMP"),
     )
 
@@ -2098,7 +2098,7 @@ class EmbeddingCapabilityBinding(Base):
     )
     created_at: Mapped[datetime] = mapped_column(
         DateTime,
-        default=lambda: datetime.now(timezone.utc),
+        default=lambda: datetime.now(UTC),
         server_default=text("CURRENT_TIMESTAMP"),
     )
 
@@ -2163,7 +2163,7 @@ class EmbeddingProfileBindingActivation(Base):
     activation_generation: Mapped[int] = mapped_column(Integer, nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime, nullable=False,
-        default=lambda: datetime.now(timezone.utc),
+        default=lambda: datetime.now(UTC),
         server_default=text("CURRENT_TIMESTAMP"),
     )
     activated_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
@@ -2238,7 +2238,7 @@ class EmbeddingBindingCutover(Base):
     write_guard_epoch: Mapped[int | None] = mapped_column(Integer, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime, nullable=False,
-        default=lambda: datetime.now(timezone.utc),
+        default=lambda: datetime.now(UTC),
         server_default=text("CURRENT_TIMESTAMP"),
     )
     snapshot_completed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
@@ -2401,7 +2401,7 @@ class ConfigurationResolutionSnapshot(Base):
     effective_configuration_fingerprint: Mapped[str] = mapped_column(String(64), nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime, nullable=False,
-        default=lambda: datetime.now(timezone.utc),
+        default=lambda: datetime.now(UTC),
         server_default=text("CURRENT_TIMESTAMP"),
     )
 
@@ -2477,5 +2477,5 @@ class PaperRevision(Base):
     result_map_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
     source_map_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
-        DateTime, default=lambda: datetime.now(timezone.utc),
+        DateTime, default=lambda: datetime.now(UTC),
     )

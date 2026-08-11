@@ -2,10 +2,10 @@
 
 import pytest
 
-from backend.pipeline.knowledge.entities import KnowledgeEntity, EntityType, TruthValue
+from backend.pipeline.knowledge.embedding_service import EmbeddingService
+from backend.pipeline.knowledge.entities import EntityType, KnowledgeEntity, TruthValue
 from backend.pipeline.knowledge.graph import KnowledgeGraph
 from backend.pipeline.knowledge.graph_embeddings import GraphEmbeddingIndex
-from backend.pipeline.knowledge.embedding_service import EmbeddingService
 
 
 class FakeEmbeddingProvider:

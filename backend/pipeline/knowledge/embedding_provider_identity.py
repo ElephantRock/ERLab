@@ -20,7 +20,6 @@ import from here when they want to surface evidence.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Literal
 
 
 @dataclass(frozen=True)

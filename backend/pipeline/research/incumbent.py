@@ -15,7 +15,6 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from backend.pipeline.gap_analysis.models import ResearchGap
-    from backend.pipeline.knowledge.retriever import Paper
 
 logger = logging.getLogger(__name__)
 
@@ -24,7 +23,7 @@ logger = logging.getLogger(__name__)
 class ResearchDirection:
     """A research direction with incumbent/frontier classification."""
 
-    gap: "ResearchGap"
+    gap: ResearchGap
     is_incumbent: bool
     frontier_rank: int | None  # 1, 2, 3 for frontier; None for incumbent
     evidence_strength: float  # confidence * paper_support_count
@@ -46,7 +45,7 @@ class IncumbentFrontierSelector:
 
     def select(
         self,
-        gaps: list["ResearchGap"],
+        gaps: list[ResearchGap],
         papers: list | None = None,
     ) -> list[ResearchDirection]:
         """Classify gaps into incumbent/frontier.
@@ -110,7 +109,7 @@ class IncumbentFrontierSelector:
 
         return directions
 
-    def _count_supporting_papers(self, gap: "ResearchGap", papers: list | None) -> int:
+    def _count_supporting_papers(self, gap: ResearchGap, papers: list | None) -> int:
         """Count how many papers in the corpus support this gap."""
         if not papers:
             return 0

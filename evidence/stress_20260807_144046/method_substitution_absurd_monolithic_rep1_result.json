@@ -1,0 +1,62 @@
+{
+  "cell_id": "method_substitution_absurd_monolithic_rep1",
+  "dimension": "method_substitution",
+  "level": "absurd",
+  "path": "monolithic",
+  "rep": 1,
+  "hard_verdict": {
+    "all_hard_pass": true,
+    "checks": {
+      "paper_nonempty": true,
+      "gt_method_in_identity": true,
+      "gt_dataset_in_identity": true,
+      "all_markers_present": true,
+      "_missing_markers": [],
+      "marker_values_verbatim": true,
+      "_missing_values": []
+    }
+  },
+  "diagnostics": {
+    "alerts": [
+      {
+        "type": "marker_attribution_context",
+        "marker": "[RESULT-1]",
+        "sentence": "Experimental results demonstrate that logistic regression achieves a balanced accuracy of [RESULT-1], substantially outperforming the majority-class predictor, which yields a balanced accuracy of [RESULT-2]",
+        "role_words_nearby": [
+          "majority",
+          "logistic regression",
+          "majority-class"
+        ],
+        "adjudication": "Does the sentence credit the marker to the role expected by ground truth? Human must verify."
+      },
+      {
+        "type": "marker_attribution_context",
+        "marker": "[RESULT-2]",
+        "sentence": "Experimental results demonstrate that logistic regression achieves a balanced accuracy of [RESULT-1], substantially outperforming the majority-class predictor, which yields a balanced accuracy of [RESULT-2]",
+        "role_words_nearby": [
+          "majority",
+          "logistic regression",
+          "majority-class"
+        ],
+        "adjudication": "Does the sentence credit the marker to the role expected by ground truth? Human must verify."
+      },
+      {
+        "type": "marker_attribution_context",
+        "marker": "[RESULT-3]",
+        "sentence": "Furthermore, the model attains an ROC-AUC of [RESULT-3], indicating near-perfect class separation on this task",
+        "role_words_nearby": [
+          "model"
+        ],
+        "adjudication": "Does the sentence credit the marker to the role expected by ground truth? Human must verify."
+      }
+    ]
+  },
+  "usage": {
+    "input_tokens": 1535,
+    "output_tokens": 8439,
+    "served_model": "glm-5.2",
+    "cost_usd": 0.005294,
+    "note_for_section_wise": "token counts reflect the LAST call only; cost_usd is cumulative across all calls in this cell"
+  },
+  "error": null
+}

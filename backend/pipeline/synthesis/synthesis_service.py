@@ -23,16 +23,16 @@ from __future__ import annotations
 
 import asyncio
 import hashlib
-import json
 import logging
-import re
+from collections.abc import Callable
 from dataclasses import dataclass, field
-from pathlib import Path
-from typing import Any, Callable
 
-from backend.pipeline.synthesis.paper_synthesizer import PaperSynthesizer, PaperSynthesisResult
-from backend.pipeline.synthesis.section_wise_synthesizer import SectionWiseSynthesizer, DEFAULT_SECTIONS
-from backend.pipeline.synthesis.synthesis_budget import SynthesisBudget, BudgetTimer
+from backend.pipeline.synthesis.paper_synthesizer import PaperSynthesizer
+from backend.pipeline.synthesis.section_wise_synthesizer import (
+    DEFAULT_SECTIONS,
+    SectionWiseSynthesizer,
+)
+from backend.pipeline.synthesis.synthesis_budget import BudgetTimer, SynthesisBudget
 from backend.providers.base import LLMProvider
 
 logger = logging.getLogger(__name__)
@@ -91,6 +91,7 @@ async def synthesize_paper(
     proposal_id: int,
     budget: SynthesisBudget | None = None,
     experiment_context: str | None = None,
+    result_markers: list[str] | None = None,
     existing_checkpoints: dict[str, dict] | None = None,
     checkpoint_callback: Callable[[str, dict], None] | None = None,
     context_window: int = 128000,
@@ -107,9 +108,13 @@ async def synthesize_paper(
         source_papers: Formatted source strings with [SOURCE-N] citations.
         source_ids: Ordered literature Paper.id list for source map.
         domain: Research domain.
-        proposal_id: Proposal identifier.
+        proposal_id: Proposal identifier (metadata; does not enter the prompt).
         budget: Synthesis time budget. Defaults to SynthesisBudget().
-        experiment_context: Optional observed-results context string.
+        experiment_context: Observed-results prose. Rendered as a non-negotiable
+            ## Experiment Ground Truth block at the top of the user prompt.
+        result_markers: Verbatim [RESULT-N] marker strings from persisted
+            experiment output. Listed inside the ground-truth block as the
+            authoritative marker set.
         existing_checkpoints: Previously persisted section checkpoints.
         checkpoint_callback: Called with (section_id, checkpoint_dict) after
             each section completes. Used for atomic persistence.
@@ -123,9 +128,14 @@ async def synthesize_paper(
         budget = SynthesisBudget()
 
     timer = BudgetTimer(budget)
+    # Ground-truth re-injection (phase-8 fix): experiment_context is NO LONGER
+    # folded into source_papers. It is passed as a dedicated argument and
+    # rendered as a non-negotiable ## Experiment Ground Truth block at the top
+    # of the user prompt (see PaperSynthesizer._build_user_prompt and the
+    # GROUND TRUTH INVARIANTS section of the system prompt). Folding it into
+    # sources caused phase-8 scope fabrication: the experiment was treated as
+    # supplementary literature while the proposal narrative took primacy.
     synthesis_sources = list(source_papers)
-    if experiment_context:
-        synthesis_sources.append(experiment_context)
 
     # ── Step 1: Try monolithic synthesis ───────────────────────────
     logger.info(
@@ -135,16 +145,21 @@ async def synthesize_paper(
 
     try:
         synthesizer = synthesizer_override if synthesizer_override is not None else PaperSynthesizer(provider)
+        # Route through SynthesisSession to enforce the information-isolation
+        # contract (phase-8 fix): only typed inputs reach the model.
+        from backend.pipeline.synthesis.paper_synthesizer import SynthesisSession
+        session = SynthesisSession(
+            proposal_text=proposal_text,
+            source_papers=tuple(synthesis_sources),
+            domain=domain,
+            experiment_context=experiment_context,
+            result_markers=tuple(result_markers) if result_markers else (),
+        )
         result = await asyncio.wait_for(
-            synthesizer.synthesize(
-                proposal_text=proposal_text,
-                source_papers=synthesis_sources,
-                domain=domain,
-                proposal_id=proposal_id,
-            ),
+            synthesizer.synthesize_session(session),
             timeout=timer.monolithic_remaining,
         )
-    except (asyncio.TimeoutError, asyncio.CancelledError) as e:
+    except (TimeoutError, asyncio.CancelledError):
         logger.warning("Monolithic synthesis timed out after %.0fs", timer.elapsed)
         result = None
     except Exception as e:
@@ -198,7 +213,7 @@ async def synthesize_paper(
             section_synth._generate_outline(proposal_text, domain),
             timeout=min(60.0, timer.section_remaining),
         )
-    except (asyncio.TimeoutError, asyncio.CancelledError):
+    except (TimeoutError, asyncio.CancelledError):
         logger.warning("Outline generation timed out")
         outline = "Standard academic paper structure"
     except Exception as e:
@@ -238,6 +253,8 @@ async def synthesize_paper(
                     proposal_summary=proposal_summary,
                     relevant_sources=relevant_sources,
                     domain=domain,
+                    experiment_context=experiment_context,
+                    result_markers=result_markers,
                 ),
                 timeout=section_budget,
             )
@@ -263,7 +280,7 @@ async def synthesize_paper(
                 section_title, draft.word_count, len(draft.citations_used),
             )
 
-        except (asyncio.TimeoutError, asyncio.CancelledError):
+        except (TimeoutError, asyncio.CancelledError):
             logger.warning(
                 "Section '%s' timed out — checkpointing %d/%d sections",
                 section_title, len(completed_sections), len(DEFAULT_SECTIONS),

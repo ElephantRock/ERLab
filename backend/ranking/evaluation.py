@@ -6,10 +6,10 @@ Computes nDCG@k, MRR@k, Precision@k for ranking benchmark evaluation.
 from __future__ import annotations
 
 import math
+from collections.abc import Sequence
 from dataclasses import dataclass
-from typing import Sequence
 
-from backend.ranking.benchmark_cases import BenchmarkCase, RelevanceJudgment
+from backend.ranking.benchmark_cases import BenchmarkCase
 from backend.ranking.contracts import RankingResult
 
 

@@ -1,12 +1,10 @@
 """Tests for ContextCompiler, OutputValidator, and DegradedResult."""
 
-import pytest
 
+from backend.pipeline.gateway.context_compiler import ContextCompiler
+from backend.pipeline.gateway.degraded_result import degraded_pass, degraded_score
 from backend.pipeline.gateway.token_budget import TokenBudgeter
-from backend.pipeline.gateway.context_compiler import ContextCompiler, CompiledPrompt
 from backend.pipeline.gateway.validator import OutputValidator
-from backend.pipeline.gateway.degraded_result import DegradedResult, degraded_score, degraded_pass
-
 
 # ── ContextCompiler ──────────────────────────────────────────────────────────
 

@@ -6,9 +6,10 @@ from __future__ import annotations
 
 import os
 import tempfile
+
 import pytest
-from backend.pipeline.literature.models import Paper, Author
-from unittest.mock import MagicMock
+
+from backend.pipeline.literature.models import Paper
 
 
 def _make_paper(title, abstract="Abstract", doi="10.1/a"):

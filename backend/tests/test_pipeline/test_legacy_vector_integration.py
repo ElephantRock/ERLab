@@ -8,25 +8,20 @@ using an ephemeral fake backend and deterministic embedding provider.
 from __future__ import annotations
 
 import asyncio
-import json
 import sys
-from datetime import datetime, timezone
 from unittest.mock import MagicMock
 
-import pytest
-from sqlalchemy import create_engine, event, func, select, text, update
+from sqlalchemy import create_engine, event, func, select, update
 from sqlalchemy.orm import sessionmaker
 
 sys.modules.setdefault("chromadb", MagicMock())
 sys.modules.setdefault("google.generativeai", MagicMock())
 
-import backend.db.models
 from backend.db.database import Base
 from backend.db.models import (
     EmbeddingProfile,
     GlobalLibraryMembership,
     LegacyVectorInventoryRecord,
-    LegacyVectorInventoryRun,
     LegacyVectorReindexTarget,
     Paper,
     PaperDiscovery,
@@ -35,9 +30,7 @@ from backend.db.models import (
 )
 from backend.pipeline.legacy_vector_inventory import (
     LegacyCollectionIdentity,
-    LegacyVectorInventoryBackend,
     LegacyVectorRecord,
-    compute_record_fingerprint,
     create_inventory_run,
     execute_reindex_targets,
     plan_reindex_targets,
@@ -46,7 +39,7 @@ from backend.pipeline.legacy_vector_inventory import (
     scan_legacy_collection,
     verify_source_drift,
 )
-from backend.pipeline.vector_backend import BackendVectorMatch, GovernedVectorBackend
+from backend.pipeline.vector_backend import GovernedVectorBackend
 from backend.pipeline.vector_contracts import compute_collection_name, compute_profile_id
 from backend.pipeline.vector_indexer import index_document
 

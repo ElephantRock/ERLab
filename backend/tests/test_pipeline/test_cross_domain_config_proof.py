@@ -5,24 +5,21 @@ from __future__ import annotations
 import sys
 from unittest.mock import MagicMock
 
-import pytest
-from sqlalchemy import create_engine, event, select, text
+from sqlalchemy import create_engine, event, select
 from sqlalchemy.orm import sessionmaker
 
 sys.modules.setdefault("chromadb", MagicMock())
 sys.modules.setdefault("google.generativeai", MagicMock())
 
-import backend.db.models
 from backend.db.database import Base
-from backend.db.models import ConfigurationResolutionSnapshot, ConfigurationResolutionItem
+from backend.db.models import ConfigurationResolutionItem, ConfigurationResolutionSnapshot
 from backend.pipeline.config.config_inspector import build_resolution_snapshot
 from backend.pipeline.config.effective_resolver import (
     ORIGIN_DEFAULT,
     ORIGIN_ENV,
-    ResolvedConfigurationValue,
-    SourceCandidate,
     TIER_DECLARED_DEFAULT,
     TIER_DEPLOYMENT,
+    ResolvedConfigurationValue,
 )
 
 

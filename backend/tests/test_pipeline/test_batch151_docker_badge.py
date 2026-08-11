@@ -7,10 +7,7 @@ Tests for:
   TASK-04: AI honesty badge in all export formats
 """
 
-import pytest
-import os
 from pathlib import Path
-from unittest.mock import MagicMock
 
 # Project root
 ROOT = Path(__file__).resolve().parents[3]
@@ -253,7 +250,6 @@ class TestAIHonestyBadge:
     def test_badge_text_consistent(self):
         """TEST-151-04-06: Badge text is consistent across all formats."""
         from backend.pipeline.constants import AI_HONESTY_BADGE_BRIEF
-        from backend.pipeline.export.markdown_exporter import MarkdownExporter
         from backend.pipeline.export.bibtex_exporter import proposal_to_bibtex
 
         # All formats must reference the same constant

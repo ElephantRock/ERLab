@@ -1,0 +1,63 @@
+{
+  "cell_id": "metric_direction_reversed_attribution_section_wise_rep1",
+  "dimension": "metric_direction",
+  "level": "reversed_attribution",
+  "path": "section_wise",
+  "rep": 1,
+  "hard_verdict": {
+    "all_hard_pass": false,
+    "checks": {
+      "paper_nonempty": true,
+      "gt_method_in_identity": true,
+      "gt_dataset_in_identity": true,
+      "all_markers_present": true,
+      "_missing_markers": [],
+      "marker_values_verbatim": true,
+      "_missing_values": [],
+      "result_roles_preserved": false,
+      "_role_failures": [
+        {
+          "marker": "[RESULT-1]",
+          "expected_role": "comparison",
+          "observed_role": "baseline",
+          "context": "t a majority-class baseline using balanced accuracy and ROC-AUC as primary metrics [SOURCE-2].\n\nLogistic regression achieves a balanced accuracy of 0.973, substantially outperforming the majority-class baseline at 0.500 [RESULT-1] [RESULT-2].\n\nThe model also demonstrates strong ranking performance with an ROC-AUC of 0.998 [RESULT-3].\n\nWe aim to demonstrate that logistic regression, despite its simplicity, provides highly effective classification"
+        }
+      ],
+      "metric_direction_preserved": true,
+      "_direction_failures": []
+    }
+  },
+  "diagnostics": {
+    "alerts": [
+      {
+        "type": "marker_attribution_context",
+        "marker": "[RESULT-1]",
+        "sentence": "500 [RESULT-1] [RESULT-2]",
+        "role_words_nearby": [],
+        "adjudication": "Does the sentence credit the marker to the role expected by ground truth? Human must verify."
+      },
+      {
+        "type": "marker_attribution_context",
+        "marker": "[RESULT-2]",
+        "sentence": "500 [RESULT-1] [RESULT-2]",
+        "role_words_nearby": [],
+        "adjudication": "Does the sentence credit the marker to the role expected by ground truth? Human must verify."
+      },
+      {
+        "type": "marker_attribution_context",
+        "marker": "[RESULT-3]",
+        "sentence": "998 [RESULT-3]",
+        "role_words_nearby": [],
+        "adjudication": "Does the sentence credit the marker to the role expected by ground truth? Human must verify."
+      }
+    ]
+  },
+  "usage": {
+    "input_tokens": 2251,
+    "output_tokens": 3426,
+    "served_model": "glm-5.2",
+    "cost_usd": 0.005157,
+    "note_for_section_wise": "token counts reflect the LAST call only; cost_usd is cumulative across all calls in this cell"
+  },
+  "error": null
+}

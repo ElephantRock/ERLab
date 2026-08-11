@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import json
 import logging
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 class FeedbackRecord(BaseModel):
     """A single parameter proposal feedback entry."""
 
-    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(UTC))
     run_id: str = ""
     params_proposed: dict[str, Any] = Field(default_factory=dict)
     params_accepted: dict[str, Any] | None = None

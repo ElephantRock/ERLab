@@ -11,19 +11,16 @@ No provider calls required.
 from __future__ import annotations
 
 import json
-from types import SimpleNamespace
-from unittest.mock import MagicMock
 
 import pytest
 
 from backend.pipeline.evaluation.direction_evaluator import (
     ComparisonOutcome,
-    evaluate_metric_comparison,
     check_claim_direction,
+    evaluate_metric_comparison,
 )
 from backend.pipeline.experiment.manifest import ResultMarker
 from backend.pipeline.experiment.specification import load_spec
-
 
 # ── Multi-specification registry tests ──────────────────────────────
 

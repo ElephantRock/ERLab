@@ -29,13 +29,14 @@ from __future__ import annotations
 import hashlib
 import json
 import re
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 
 from backend.api.errors import APIError, NotFoundError
+
 # NOTE: get_session is imported lazily inside functions so tests can monkeypatch
 # backend.db.database.get_session (the import-at-top pattern binds the original
 # and bypasses the patch). Matches the paper_export.py convention.
@@ -288,15 +289,14 @@ def _load_citation_markers(proposal) -> list[dict]:
     the resolved bibliographic identity from the linked Paper row. Unmapped
     markers carry null identity fields — never guessed.
     """
-    import json as _json
 
     proposal_id = getattr(proposal, "id", None)
     if proposal_id is None:
         return []
     from backend.db.database import get_session
     from backend.pipeline.provenance.citation_map import (
-        load_citation_map,
         _author_list,
+        load_citation_map,
     )
 
     with get_session() as session:
@@ -358,7 +358,7 @@ async def record_source_decision(idea_id: int, req: SourceReviewDecisionRequest)
             decision=req.decision,
             note=req.note,
             reviewer=req.reviewer or "anonymous",
-            created_at=datetime.now(timezone.utc),
+            created_at=datetime.now(UTC),
         )
         session.add(row)
         session.commit()

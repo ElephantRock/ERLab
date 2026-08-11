@@ -33,9 +33,11 @@ def test_alembic_migration_does_not_disable_preexisting_logger():
     sys.modules.setdefault("chromadb", MagicMock())
     sys.modules.setdefault("google.generativeai", MagicMock())
 
-    from alembic import command
-    from alembic.config import Config
     from unittest.mock import patch
+
+    from alembic.config import Config
+
+    from alembic import command
 
     project_root = Path(__file__).resolve().parents[3]
 

@@ -23,7 +23,6 @@ Required behavior:
 from __future__ import annotations
 
 import asyncio
-import math
 import sys
 from unittest.mock import MagicMock
 
@@ -34,7 +33,6 @@ from sqlalchemy.orm import sessionmaker
 sys.modules.setdefault("chromadb", MagicMock())
 sys.modules.setdefault("google.generativeai", MagicMock())
 
-import backend.db.models
 from backend.db.database import Base
 from backend.db.models import (
     EmbeddingBindingCutover,
@@ -49,27 +47,22 @@ from backend.pipeline.capability.capability_check_service import (
 from backend.pipeline.capability.capability_errors import (
     CapabilityAuthorizationError,
 )
-from backend.pipeline.capability.verified_embedding_runtime import (
-    build_verified_embedding_runtime,
-)
 from backend.pipeline.capability.lifecycle_posture import (
     PHASE_VERIFICATION_REQUIRED,
     evaluate_lifecycle_posture,
 )
+from backend.pipeline.capability.verified_embedding_runtime import (
+    build_verified_embedding_runtime,
+)
 from backend.pipeline.governed_embedding_adapter import GovernedEmbeddingAdapter
 from backend.pipeline.knowledge.embedding_configuration import (
     EffectiveEmbeddingConfiguration,
-    EmbeddingAdapterCapabilitySnapshot,
-    EmbeddingProfileSnapshot,
-    EmbeddingRuntimeSettingsSnapshot,
-    resolve_effective_embedding_configuration,
 )
 from backend.pipeline.knowledge.embedding_provider_identity import (
     EVIDENCE_SOURCE_OPENAI_RESPONSE_MODEL,
     ProviderModelIdentityEvidence,
 )
 from backend.pipeline.knowledge.embedding_service import EmbeddingService
-from backend.pipeline.vector_contracts import VECTOR_INDEX_V1
 
 _PROFILE_ID = "a" * 64
 

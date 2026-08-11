@@ -1,7 +1,5 @@
 """Test DB schema sync (BATCH-57 TASK-01)."""
-import pytest
-from sqlalchemy import create_engine, inspect, text, Column, Integer, String
-from sqlalchemy.orm import declarative_base
+from sqlalchemy import create_engine
 
 
 def test_57_01_01_ensure_schema_sync_adds_missing_columns():

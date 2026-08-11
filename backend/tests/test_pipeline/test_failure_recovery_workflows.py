@@ -18,9 +18,8 @@ Scenarios tested:
 from __future__ import annotations
 
 import asyncio
-import math
 import sys
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from unittest.mock import MagicMock
 
 import pytest
@@ -30,17 +29,12 @@ from sqlalchemy.orm import sessionmaker
 sys.modules.setdefault("chromadb", MagicMock())
 sys.modules.setdefault("google.generativeai", MagicMock())
 
-import backend.db.models
 from backend.db.database import Base
 from backend.db.models import (
     EmbeddingBindingCutoverItem,
     EmbeddingCapabilityBinding,
-    EmbeddingCapabilityCheck,
-    EmbeddingProfileBindingActivation,
-    EmbeddingProfileEmbeddingWriteGuard,
 )
 from backend.pipeline.capability.activation_service import (
-    ActivationError,
     seal_cutover,
 )
 from backend.pipeline.capability.capability_check_service import (
@@ -48,16 +42,6 @@ from backend.pipeline.capability.capability_check_service import (
 )
 from backend.pipeline.capability.capability_errors import (
     CapabilityAuthorizationError,
-)
-from backend.pipeline.capability.capability_probe import (
-    probe_embedding_capability,
-)
-from backend.pipeline.capability.capability_status import (
-    STATUS_LATEST_CHECK_FAILED,
-    derive_capability_status,
-)
-from backend.pipeline.capability.capability_identity import (
-    compute_runtime_config_fingerprint,
 )
 from backend.pipeline.capability.lifecycle_posture import (
     PHASE_BINDING_NOT_ACTIVATION_ELIGIBLE,
@@ -72,7 +56,6 @@ from backend.pipeline.capability.verified_embedding_runtime import (
 )
 from backend.pipeline.governed_embedding_adapter import (
     GovernedEmbeddingAdapter,
-    GovernedEmbeddingAdapterError,
 )
 from backend.pipeline.knowledge.embedding_configuration import (
     EffectiveEmbeddingConfiguration,
@@ -82,7 +65,6 @@ from backend.pipeline.knowledge.embedding_provider_identity import (
     ProviderModelIdentityEvidence,
 )
 from backend.pipeline.knowledge.embedding_service import EmbeddingService
-from backend.pipeline.vector_contracts import EMBEDDING_PROBE_SUITE_V1
 
 _PROFILE_ID = "a" * 64
 _BINDING_ID = "b" * 64
@@ -128,7 +110,7 @@ def _seed_profile_and_binding(session, posture="configured_match"):
 
 
 def _seed_passed_check(session, expires_in_hours=1):
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     session.execute(text(
         "INSERT INTO embedding_capability_checks "
         "(check_id, embedding_profile_id, binding_id, "
@@ -317,7 +299,7 @@ class TestSourceDrift:
         sf = sessionmaker(bind=engine, expire_on_commit=False)
         from backend.db.models import Paper, VectorIndexRecord
         from backend.pipeline.vector_contracts import VECTOR_INDEX_V1
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
 
         with sf() as session:
             _seed_profile_and_binding(session)

@@ -1,11 +1,10 @@
 """Tests for backend.api.quality_checks — quality checks, remediation hints, citation audit."""
 
-import pytest
 
 from backend.api.quality_checks import (
+    audit_citations,
     compute_quality_checks,
     compute_remediation_hints,
-    audit_citations,
 )
 
 

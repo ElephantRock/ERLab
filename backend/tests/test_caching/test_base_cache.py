@@ -1,12 +1,11 @@
 """Tests for cache key generation and serialization utilities."""
 
+from backend.providers.base import LLMResponse
 from backend.providers.cache.base import (
-    CacheEntry,
     deserialize_response,
     make_cache_key,
     serialize_response,
 )
-from backend.providers.base import LLMResponse
 
 
 class TestMakeCacheKey:

@@ -2,10 +2,6 @@
 
 import asyncio
 import logging
-from datetime import datetime, timezone
-from typing import Any
-
-from sqlalchemy import select
 
 from backend.db.database import get_session
 from backend.db.models import NotificationDB

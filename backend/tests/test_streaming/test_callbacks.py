@@ -1,6 +1,5 @@
 """Tests for streaming callbacks."""
 
-import asyncio
 
 import pytest
 

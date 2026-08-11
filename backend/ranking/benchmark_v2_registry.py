@@ -25,45 +25,42 @@ from __future__ import annotations
 
 import hashlib
 import json
-from dataclasses import asdict
 from typing import Any
 
 from backend.ranking.benchmark_v2_discovery_cases import (
+    _DISCOVERY_ACRONYM_VS_EXPANDED,
+    _DISCOVERY_EXACT_IDENTIFIER,
     _DISCOVERY_LEXICAL_TRAP,
-    _DISCOVERY_SEMANTIC_PARAPHRASE,
     _DISCOVERY_METHOD_VS_APPLICATION,
-    _DISCOVERY_REVIEW_VS_PRIMARY,
     _DISCOVERY_MISSING_ABSTRACT,
     _DISCOVERY_NEAR_DUPLICATE,
-    _DISCOVERY_SOURCE_RANK_CONFLICT,
-    _DISCOVERY_ACRONYM_VS_EXPANDED,
     _DISCOVERY_NEGATED_FINDINGS,
-    _DISCOVERY_EXACT_IDENTIFIER,
     _DISCOVERY_NEUTRAL,
+    _DISCOVERY_REVIEW_VS_PRIMARY,
+    _DISCOVERY_SEMANTIC_PARAPHRASE,
+    _DISCOVERY_SOURCE_RANK_CONFLICT,
 )
 from backend.ranking.benchmark_v2_retrieval_cases import (
+    _RETRIEVAL_ACRONYM_VS_EXPANDED,
+    _RETRIEVAL_EXACT_IDENTIFIER,
     _RETRIEVAL_LEXICAL_TRAP,
-    _RETRIEVAL_SEMANTIC_PARAPHRASE,
     _RETRIEVAL_METHOD_VS_APPLICATION,
-    _RETRIEVAL_REVIEW_VS_PRIMARY,
     _RETRIEVAL_MISSING_ABSTRACT,
     _RETRIEVAL_NEAR_DUPLICATE,
-    _RETRIEVAL_SOURCE_RANK_CONFLICT,
-    _RETRIEVAL_ACRONYM_VS_EXPANDED,
     _RETRIEVAL_NEGATED_FINDINGS,
-    _RETRIEVAL_EXACT_IDENTIFIER,
     _RETRIEVAL_NEUTRAL,
+    _RETRIEVAL_REVIEW_VS_PRIMARY,
+    _RETRIEVAL_SEMANTIC_PARAPHRASE,
+    _RETRIEVAL_SOURCE_RANK_CONFLICT,
 )
 from backend.ranking.benchmark_v2_schema import (
     ALL_SLICE_TYPES,
-    BenchmarkCaseV2,
-    DISAGREE_NONE,
-    DISAGREE_RESOLVED,
     DISAGREE_SINGLE_PASS,
     DISAGREE_UNRESOLVED,
-    JudgmentProvenance,
     REQUIRED_ADVERSARIAL_SLICES,
     RESEARCH_UTILITY_RUBRIC_V1,
+    BenchmarkCaseV2,
+    JudgmentProvenance,
 )
 
 BENCHMARK_V2_VERSION = "discovery_ranking_v2+retrieval_ranking_v2"
@@ -227,8 +224,8 @@ def compute_provisional_fingerprint() -> str:
 # (generated from the SHA-256-verified adjudication package).
 
 from backend.ranking.benchmark_v2_frozen_adjudication import (  # noqa: E402
-    get_frozen_adjudication,
     frozen_provenance_count,
+    get_frozen_adjudication,
 )
 
 

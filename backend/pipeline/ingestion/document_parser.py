@@ -6,10 +6,8 @@ document formats. Falls back gracefully when optional deps are missing.
 from __future__ import annotations
 
 import csv
-import io
 import logging
 from pathlib import Path
-from typing import Any
 
 from backend.pipeline.ingestion.chunker import DocumentChunk, chunk_text
 
@@ -116,7 +114,7 @@ class DocumentParser:
         """Parse CSV files — extract headers + sample rows as text."""
         path = Path(file_path)
         try:
-            with open(path, "r", encoding="utf-8", errors="replace") as f:
+            with open(path, encoding="utf-8", errors="replace") as f:
                 reader = csv.reader(f)
                 rows = list(reader)
         except Exception as e:

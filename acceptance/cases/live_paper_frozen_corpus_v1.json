@@ -1,0 +1,53 @@
+{
+  "schema_version": "erlab.live-paper-acceptance.v1",
+  "case_id": "live_paper_frozen_corpus_v1",
+  "artifact_class": "non_empirical_research_synthesis",
+  "research_domain": "typology-aware attention mechanisms for low-resource neural machine translation",
+  "research_question": "How can typology-aware attention mechanisms improve neural machine translation for low-resource languages with extremely limited parallel data?",
+  "expected_code_sha": "0000000000000000000000000000000000000000",
+  "strategy": "deep_research",
+  "corpus_mode": "frozen_real",
+  "corpus_manifest_path": "acceptance/corpora/low_resource_mt_v1/corpus_manifest.json",
+  "provider": "zai",
+  "model": "glm-5.2",
+  "embedding_provider": "lmstudio",
+  "embedding_model": "text-embedding-qwen3-embedding-0.6b",
+  "generation_parameters": {
+    "generation_rounds": 1,
+    "ideas_per_round": 1,
+    "max_gaps": 3,
+    "export_format": "markdown"
+  },
+  "budget": {
+    "maximum_cost_usd": 5.00,
+    "maximum_provider_calls": 200,
+    "maximum_input_tokens": 4000000,
+    "maximum_output_tokens": 500000,
+    "maximum_duration_seconds": 1800,
+    "provider_retry_limit": 3
+  },
+  "execution": {
+    "require_clean_tree": true,
+    "require_exact_code_sha": true,
+    "require_new_attempt_directory": true,
+    "require_new_database": true,
+    "require_one_run_record": true,
+    "require_one_session_record": true,
+    "require_restart_recovery": true,
+    "network_policy": "provider_only"
+  },
+  "gates": {
+    "code_origin": true,
+    "identity_isolation": true,
+    "pipeline_outcome": true,
+    "mandatory_stages": true,
+    "research_gap": true,
+    "paper_artifact": true,
+    "paper_evaluation": true,
+    "citation_integrity": true,
+    "accounting": true,
+    "export": true,
+    "restart_recovery": true,
+    "human_readability": true
+  }
+}

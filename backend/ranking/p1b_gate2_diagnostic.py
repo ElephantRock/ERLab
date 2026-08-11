@@ -23,19 +23,16 @@ from __future__ import annotations
 
 import json
 import math
-import random
 import statistics
 from collections import defaultdict
 from pathlib import Path
-from typing import Callable
 
 from backend.ranking.benchmark_v2_registry import (
     BENCHMARK_V2,
-    frozen_v2_cases,
     compute_benchmark_v2_fingerprint,
+    frozen_v2_cases,
 )
-from backend.ranking.contracts import RankingResult
-from backend.ranking.embedding_snapshot import EmbeddingSnapshot, load_snapshot
+from backend.ranking.embedding_snapshot import load_snapshot
 from backend.ranking.evaluation import _ndcg_at_k
 from backend.ranking.p1b3_evaluation import (
     FROZEN_RRF_K,
@@ -47,14 +44,11 @@ from backend.ranking.p1b3_evaluation import (
     _build_request,
     _cosine,
     _grade_for,
-    _run_policy,
-    macro_average,
     paired_bootstrap_ci,
     rank_hybrid_weighted,
     rank_semantic_only,
 )
 from backend.ranking.policies import _keyword_overlap, rank_hybrid_rrf, rank_legacy_lexical
-
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 SNAPSHOT_DIR = REPO_ROOT / "docs" / "p1b_snapshot"

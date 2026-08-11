@@ -18,7 +18,8 @@ Chunked-transfer-encoding safe: the cap accumulates across multiple
 from __future__ import annotations
 
 import json
-from typing import Any, Awaitable, Callable, MutableMapping
+from collections.abc import Awaitable, Callable, MutableMapping
+from typing import Any
 
 # 8 KiB. Generous enough for a single sanitized runtime-error report
 # (event_id, category, route, normalized message, bounded component

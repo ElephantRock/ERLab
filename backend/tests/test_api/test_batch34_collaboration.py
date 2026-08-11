@@ -1,8 +1,7 @@
 """Tests for BATCH-34 TASK-01: Comments + Sharing API routes."""
 
-import json
 from contextlib import contextmanager
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 
 import pytest
 from sqlalchemy import create_engine, select
@@ -10,7 +9,6 @@ from sqlalchemy.orm import sessionmaker
 
 from backend.db.database import Base
 from backend.db.models import Comment, Idea, SharedIdea
-
 
 # ── Fixtures ──────────────────────────────────────────────────────
 
@@ -56,7 +54,7 @@ def _session_ctx(session):
 @pytest.mark.anyio
 async def test_34_01_01_post_comment_adds_comment(db_session, sample_idea):
     """Verify that POST /ideas/{id}/comments adds a comment to the idea."""
-    from backend.api.routes.collaboration import add_comment, CommentCreateRequest
+    from backend.api.routes.collaboration import CommentCreateRequest, add_comment
 
     req = CommentCreateRequest(author="alice", content="Great idea!", parent_id=None)
 

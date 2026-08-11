@@ -119,7 +119,11 @@ class CachedProvider(LLMProvider):
         return self._wrapped.complete_stream(messages, temperature, max_tokens)
 
     async def structured_output(
-        self, messages: list[dict], schema: dict, temperature: float = 0.3
+        self,
+        messages: list[dict],
+        schema: dict,
+        temperature: float = 0.3,
+        max_tokens: int = 4096,
     ) -> dict:
         schema_hash = _hash_schema(schema)
         serialized = self._serialize(messages, temperature=temperature)
@@ -133,7 +137,7 @@ class CachedProvider(LLMProvider):
         if cached is not None and cached.structured is not None:
             return cached.structured
 
-        result = await self._wrapped.structured_output(messages, schema, temperature)
+        result = await self._wrapped.structured_output(messages, schema, temperature, max_tokens=max_tokens)
         response = LLMResponse(content="", structured=result)
         self._store_exact(key, response)
         await self._store_semantic(serialized, response)

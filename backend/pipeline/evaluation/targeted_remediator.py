@@ -17,12 +17,15 @@ import logging
 from dataclasses import dataclass, field
 from typing import Any
 
-from backend.pipeline.evaluation.paper_sections import (
-    parse_paper, assemble_paper, ParsedPaper, verify_byte_identical,
-)
 from backend.pipeline.evaluation.claim_repair import ClaimRepairFinding, derive_repair_findings
+from backend.pipeline.evaluation.paper_sections import (
+    ParsedPaper,
+    assemble_paper,
+    parse_paper,
+)
 from backend.pipeline.evaluation.revision_directive import (
-    EvidenceInvariant, RevisionDirective, verify_revised_paper_invariants,
+    EvidenceInvariant,
+    verify_revised_paper_invariants,
 )
 
 logger = logging.getLogger(__name__)
@@ -261,7 +264,7 @@ async def auto_repair_paper_sections(
     # ── Step 2: Build targeted directive ────────────────────────────
     from backend.pipeline.evaluation.revision_directive import EvidenceInvariant
     result_map_tuple = tuple((m.marker, m.observed_value) for m in result_markers)
-    source_map_tuple = tuple(f"[{e.get('marker', '')}]" for e in (source_map or []))
+    source_map_tuple = tuple(f"[{e.get('marker', '').strip('[]')}]" for e in (source_map or []))
 
     # Load manifest hash
     from backend.db.database import get_session
@@ -307,6 +310,7 @@ async def auto_repair_paper_sections(
     else:
         # Live mode: call the actual provider
         import asyncio
+
         from backend.config import get_settings
         from backend.providers.provider_factory import get_generation_provider
 
@@ -397,7 +401,36 @@ async def auto_repair_paper_sections(
         with get_session() as session:
             proposal = session.get(Proposal, proposal_id)
             if proposal:
+                from backend.pipeline.evaluation.paper_release import (
+                    load_paper_meta,
+                    record_successor_revision_if_released,
+                    write_paper_meta,
+                )
+                record_successor_revision_if_released(
+                    session,
+                    proposal,
+                    revised_paper_md,
+                    eval_status=gate_eval.status,
+                    gates=gate_eval.gates,
+                    source="targeted_remediation",
+                    trigger="post_release_targeted_repair",
+                    experiment_result_id=experiment_result_id,
+                )
+                meta = load_paper_meta(proposal)
+                meta["paper_evaluation"] = {
+                    "status": gate_eval.status,
+                    "scope": "paper",
+                    "paper_hash": revised_hash,
+                    "gates": gate_eval.gates,
+                    "blocking_reasons": gate_eval.blocking_reasons or None,
+                }
+                # Sync metadata so _evaluate_paper reads the promoted text
+                fp = meta.get("full_paper")
+                if isinstance(fp, dict):
+                    fp["paper_markdown"] = revised_paper_md
+                    meta["full_paper"] = fp
                 proposal.paper_md = revised_paper_md
+                write_paper_meta(proposal, meta)
                 session.commit()
         logger.info("Targeted revision promoted for proposal %d", proposal_id)
     else:

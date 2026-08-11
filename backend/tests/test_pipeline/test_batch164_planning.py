@@ -1,8 +1,5 @@
 """BATCH-164: Planning Agent & Adaptive Pipeline."""
-import asyncio
-from unittest.mock import MagicMock
 
-import pytest
 
 
 class TestPlanningAgent:
@@ -28,8 +25,9 @@ class TestPlanningAgent:
         assert any("domain" in b.lower() or "No domain" in b for b in plan.blockers)
 
     def test_04_to_dict_serializable(self):
-        from backend.pipeline.planning.agent import PlanningAgent
         import json
+
+        from backend.pipeline.planning.agent import PlanningAgent
         agent = PlanningAgent()
         plan = agent.plan(domain="AI")
         d = plan.to_dict()
@@ -44,6 +42,7 @@ class TestPlanningAgent:
 
     def test_06_plan_api_returns_data(self):
         from fastapi.testclient import TestClient
+
         from backend.api.app import app
         client = TestClient(app)
         response = client.get("/api/v1/pipeline/plan?strategy=deep_research&domain=AI")

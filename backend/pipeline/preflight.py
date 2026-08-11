@@ -154,7 +154,7 @@ async def _check_llm_provider(settings: Any) -> PreflightResult:
                 message="LLM provider returned empty response",
                 latency_ms=round(latency, 1),
             )
-    except asyncio.TimeoutError:
+    except TimeoutError:
         latency = (time.monotonic() - start) * 1000
         return PreflightResult(
             name="llm_provider",
@@ -206,12 +206,12 @@ async def _check_embedding_provider(settings: Any) -> PreflightResult:
                 message="Embedding provider returned empty vectors (pipeline will degrade)",
                 latency_ms=round(latency, 1),
             )
-    except asyncio.TimeoutError:
+    except TimeoutError:
         latency = (time.monotonic() - start) * 1000
         return PreflightResult(
             name="embedding_provider",
             severity=CheckSeverity.WARNING,
-            message=f"Embedding provider timed out (pipeline will degrade)",
+            message="Embedding provider timed out (pipeline will degrade)",
             detail="Vector search will be unavailable; BM25 only",
             latency_ms=round(latency, 1),
         )
@@ -322,7 +322,7 @@ def _check_export_dir(settings: Any) -> PreflightResult:
         return PreflightResult(
             name="export_dir",
             severity=CheckSeverity.ERROR,
-            message=f"Export directory not writable",
+            message="Export directory not writable",
             detail=str(e)[:200],
         )
 
@@ -330,9 +330,9 @@ def _check_export_dir(settings: Any) -> PreflightResult:
 def _check_strategy(strategy: str) -> PreflightResult:
     """Check if the requested strategy is registered."""
     try:
+        from backend.pipeline.strategies.models import PipelineStrategy
         from backend.pipeline.strategies.presets import register_presets
         from backend.pipeline.strategies.registry import StrategyRegistry
-        from backend.pipeline.strategies.models import PipelineStrategy
 
         registry = StrategyRegistry()
         register_presets(registry)
@@ -393,5 +393,5 @@ def _check_tcp(host: str, port: int, timeout: float = 3.0) -> tuple[bool, float 
         sock.connect((host, port))
         sock.close()
         return True, (time.monotonic() - start) * 1000
-    except (socket.error, OSError):
+    except OSError:
         return False, None

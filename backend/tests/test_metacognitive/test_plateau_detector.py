@@ -1,6 +1,5 @@
 """Tests for PlateauDetector."""
 
-import pytest
 
 from backend.pipeline.metacognitive.ledger import ProgressLedger
 from backend.pipeline.metacognitive.plateau_detector import PlateauDetector, PlateauResult

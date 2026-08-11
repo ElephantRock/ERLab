@@ -8,21 +8,22 @@ AIV v5.3 — T1, T2, T5. Use asyncio.run() not @pytest.mark.asyncio.
 from __future__ import annotations
 
 import asyncio
+from unittest.mock import AsyncMock
+
 import pytest
-from unittest.mock import AsyncMock, MagicMock
 
 from backend.pipeline.evaluation.proposal_evaluator import (
-    ProposalEvaluator,
-    ProposalEvaluation,
-    DimensionScore,
     DIMENSIONS,
+    DimensionScore,
+    ProposalEvaluation,
+    ProposalEvaluator,
 )
 
 
 @pytest.fixture
 def mock_provider():
     provider = AsyncMock()
-    provider.complete = AsyncMock(return_value=(
+    tagged_response = (
         "NOVELTY_SCORE: 0.85\n"
         "NOVELTY_JUSTIFICATION: Highly novel approach using sparse attention.\n"
         "FEASIBILITY_SCORE: 0.72\n"
@@ -34,7 +35,21 @@ def mock_provider():
         "CLARITY_SCORE: 0.90\n"
         "CLARITY_JUSTIFICATION: Well-structured and clearly written.\n"
         "OVERALL_SCORE: 0.78\n"
-    ))
+    )
+    # Legacy complete() stub retained for fallback coverage.
+    provider.complete = AsyncMock(return_value=tagged_response)
+    # ProposalEvaluator.evaluate() prefers complete_with_usage() when present;
+    # AsyncMock would otherwise synthesize it and return an AsyncMock object.
+    # Stub it explicitly so the evaluator receives a real LLMResponse.
+    from backend.providers.base import LLMResponse
+
+    provider.complete_with_usage = AsyncMock(
+        return_value=LLMResponse(
+            content=tagged_response,
+            input_tokens=0,
+            output_tokens=0,
+        )
+    )
     return provider
 
 

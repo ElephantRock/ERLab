@@ -7,9 +7,8 @@ No ranking policy may mutate the candidate or its provenance.
 from __future__ import annotations
 
 import math
+from collections.abc import Mapping
 from dataclasses import dataclass, field
-from typing import Any, Mapping, Sequence
-
 
 # ── Ranking surfaces ─────────────────────────────────────────────────
 

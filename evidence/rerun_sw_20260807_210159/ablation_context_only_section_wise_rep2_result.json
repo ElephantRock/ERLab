@@ -1,0 +1,12 @@
+{
+  "cell_id": "ablation_context_only_section_wise_rep2",
+  "identity": {
+    "identity_pass": true,
+    "gt_method_in_primacy": true,
+    "conflicting_terms_in_primacy": [],
+    "primacy_region_preview": "# Research Paper: machine learning\n**Venue:** Generic\n**Sources:** 2 papers cited\n\n---\n\n## Abstract\n\nThe Iris dataset, comprising sepal and petal measurements across three species, is a canonical benchmark for evaluating classification methods [SOURCE-1].\n\nLogistic regression is a widely used linear"
+  },
+  "markers_present": true,
+  "missing_markers": [],
+  "error": null
+}

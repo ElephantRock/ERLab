@@ -2,13 +2,9 @@
 
 from __future__ import annotations
 
-import pytest
-
 from backend.ranking.benchmark_cases import (
     ALL_DISCOVERY_CASES,
     ALL_RETRIEVAL_CASES,
-    BENCHMARK_V1,
-    BenchmarkCase,
     compute_benchmark_fingerprint,
 )
 

@@ -9,12 +9,11 @@ paper abstracts. Produces a FaithfulnessReport with per-claim scores.
 
 from __future__ import annotations
 
-import json
-
-from backend.pipeline.utils.json_extraction import extract_json
 import logging
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
+
+from backend.pipeline.utils.json_extraction import extract_json
 
 if TYPE_CHECKING:
     from backend.providers.base import LLMProvider

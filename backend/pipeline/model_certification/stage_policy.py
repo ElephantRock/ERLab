@@ -16,8 +16,8 @@ from typing import Any
 import yaml
 
 from backend.pipeline.model_certification.stage_report import (
-    StageScoreCard,
     StageEligibilityDecisionV2,
+    StageScoreCard,
 )
 
 # Default per-stage gates

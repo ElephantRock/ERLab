@@ -23,19 +23,16 @@ Evidence chain verified:
 from __future__ import annotations
 
 import asyncio
-import math
 import sys
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime
 from unittest.mock import MagicMock
 
-import pytest
-from sqlalchemy import create_engine, event, select, text, update, func
+from sqlalchemy import create_engine, event, text, update
 from sqlalchemy.orm import sessionmaker
 
 sys.modules.setdefault("chromadb", MagicMock())
 sys.modules.setdefault("google.generativeai", MagicMock())
 
-import backend.db.models
 from backend.db.database import Base
 from backend.db.models import (
     EmbeddingBindingCutoverItem,
@@ -44,9 +41,9 @@ from backend.db.models import (
     Paper,
     VectorIndexRecord,
 )
-from backend.pipeline.capability.capability_bound_indexer import (
-    MODE_CANDIDATE,
-    index_document_v2,
+from backend.pipeline.capability.activation_service import (
+    activate_binding,
+    seal_cutover,
 )
 from backend.pipeline.capability.capability_bound_retrieval import (
     is_vector_eligible_for_retrieval,
@@ -59,19 +56,10 @@ from backend.pipeline.capability.cutover_snapshot import (
     is_cutover_ready_for_seal,
     snapshot_source_population,
 )
-from backend.pipeline.capability.activation_service import (
-    activate_binding,
-    seal_cutover,
-)
 from backend.pipeline.capability.lifecycle_posture import (
     PHASE_ACTIVE,
-    PHASE_ACTIVATION_READY,
-    PHASE_CUTOVER_REQUIRED,
     PHASE_VERIFICATION_REQUIRED,
     evaluate_lifecycle_posture,
-)
-from backend.pipeline.capability.verified_embedding_runtime import (
-    build_verified_embedding_runtime,
 )
 from backend.pipeline.governed_embedding_adapter import GovernedEmbeddingAdapter
 from backend.pipeline.knowledge.embedding_configuration import (
@@ -85,8 +73,6 @@ from backend.pipeline.knowledge.embedding_provider_identity import (
 from backend.pipeline.knowledge.embedding_service import EmbeddingService
 from backend.pipeline.vector_contracts import (
     VECTOR_INDEX_V1,
-    VectorIndexDocument,
-    compute_content_hash,
 )
 
 _PROFILE_ID = "a" * 64
@@ -202,7 +188,7 @@ class TestControlledEndToEnd:
         sf = sessionmaker(bind=engine, expire_on_commit=False)
 
         # Seed profile + paper + v1 vector
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         with sf() as session:
             session.execute(text(
                 "INSERT INTO embedding_profiles "
@@ -280,7 +266,7 @@ class TestControlledEndToEnd:
             session.add(EmbeddingProfileEmbeddingWriteGuard(
                 embedding_profile_id=_PROFILE_ID, embedding_purpose="paper",
                 state="frozen", guard_epoch=1, cutover_id=cutover_id,
-                frozen_at=datetime.now(timezone.utc),
+                frozen_at=datetime.now(UTC),
             ))
             session.commit()
 
@@ -309,8 +295,6 @@ class TestControlledEndToEnd:
         # The v1 indexer computes its own profile_id from the profile dict.
         # We must use a profile dict that computes to _PROFILE_ID.
         from backend.pipeline.vector_contracts import compute_profile_id
-        from backend.pipeline.vector_indexer import WriteGuardFrozen
-        from backend.pipeline.vector_indexer import index_document
 
         # Verify the profile dict matches _PROFILE_ID
         test_pid = compute_profile_id("openai", "m", 4, "none", "chunk_v1")
@@ -333,7 +317,7 @@ class TestControlledEndToEnd:
         """After activation, only v2 vectors under the active binding are eligible."""
         engine = _make_engine()
         sf = sessionmaker(bind=engine, expire_on_commit=False)
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
 
         with sf() as session:
             session.execute(text(

@@ -1,19 +1,17 @@
 """Tests for BATCH-22/TASK-01: Session filter and grouping for pipeline runs."""
 
-import pytest
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
 from unittest.mock import MagicMock, patch
 
+import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
 
 from backend.api.errors import APIError
 from backend.api.routes.pipeline import router
 from backend.db import crud
 from backend.db.database import Base
-from backend.db.models import PipelineRun
-
 
 # ── Test app setup ──────────────────────────────────────────────
 

@@ -18,10 +18,11 @@ from __future__ import annotations
 import hashlib
 import logging
 import math
-from datetime import datetime, timezone
-from typing import Any, Sequence
+from collections.abc import Sequence
+from datetime import UTC, datetime
+from typing import Any
 
-from sqlalchemy import select, update, func
+from sqlalchemy import select, text, update
 from sqlalchemy.orm import Session, sessionmaker
 
 from backend.pipeline.vector_backend import BackendVectorMatch, GovernedVectorBackend
@@ -29,11 +30,10 @@ from backend.pipeline.vector_contracts import (
     VECTOR_INDEX_V1,
     EligibleVectorSnapshot,
     RetrievalAlreadyClaimedError,
+    ScopedVectorResult,
     ScopedVectorRetrievalOutcome,
     ScopedVectorRetrievalRequest,
-    ScopedVectorResult,
     VectorRetrievalDriftError,
-    compute_collection_name,
 )
 from backend.pipeline.vector_scope import resolve_vector_scope
 
@@ -44,7 +44,7 @@ _DEFAULT_BATCH_SIZE = 500
 
 
 def _now() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 def _query_vector_fingerprint(query_vector: Sequence[float]) -> str:
@@ -295,6 +295,8 @@ async def query_vectors(
             )
         ).scalar_one_or_none()
 
+        _reusing_failed_event = False
+
         if existing is not None:
             if existing.status == "success" and existing.input_fingerprint == input_fp:
                 # Replay — return stored results
@@ -329,59 +331,128 @@ async def query_vectors(
                 raise VectorRetrievalDriftError(
                     f"retrieval drift for {request.run_id}/{request.stage_name}/{request.retrieval_key}"
                 )
+            elif existing.status == "failed":
+                # Previous attempt failed with same inputs — retry by
+                # reusing the existing event row instead of inserting a
+                # duplicate (which would violate the UNIQUE constraint).
+                # Clear any partial results from the failed attempt.
+                session.execute(
+                    text(
+                        "DELETE FROM vector_retrieval_results "
+                        "WHERE retrieval_event_id = :eid"
+                    ),
+                    {"eid": existing.id},
+                )
+                # Also clear scope papers and eligible records to avoid
+                # UNIQUE constraint conflicts on re-insertion.
+                session.execute(
+                    text(
+                        "DELETE FROM vector_retrieval_scope_papers "
+                        "WHERE retrieval_event_id = :eid"
+                    ),
+                    {"eid": existing.id},
+                )
+                session.execute(
+                    text(
+                        "DELETE FROM vector_retrieval_eligible_records "
+                        "WHERE retrieval_event_id = :eid"
+                    ),
+                    {"eid": existing.id},
+                )
+                event = existing  # reuse the row
+                event.status = "pending"
+                event.attempt_count = (event.attempt_count or 0) + 1
+                session.flush()
+                event_id = event.id
+                # Skip to the retrieval step (step 5+)
+                # by jumping past the event creation below.
+                # We achieve this by setting a flag that the code below checks.
+                _reusing_failed_event = True
+            elif existing.status in ("pending", "running"):
+                # Another in-flight or stale attempt — reuse it.
+                event = existing
+                event.status = "pending"
+                event.attempt_count = (event.attempt_count or 0) + 1
+                session.execute(
+                    text(
+                        "DELETE FROM vector_retrieval_results "
+                        "WHERE retrieval_event_id = :eid"
+                    ),
+                    {"eid": existing.id},
+                )
+                session.execute(
+                    text(
+                        "DELETE FROM vector_retrieval_scope_papers "
+                        "WHERE retrieval_event_id = :eid"
+                    ),
+                    {"eid": existing.id},
+                )
+                session.execute(
+                    text(
+                        "DELETE FROM vector_retrieval_eligible_records "
+                        "WHERE retrieval_event_id = :eid"
+                    ),
+                    {"eid": existing.id},
+                )
+                session.flush()
+                event_id = event.id
+                _reusing_failed_event = True
+            else:
+                _reusing_failed_event = False
 
-        # ── 4. Create event + snapshots ──
-        # P0.4A2 Final: record capability evidence on the retrieval event
-        from backend.pipeline.capability.capability_bound_retrieval import (
-            resolve_retrieval_binding_context as _resolve_ctx,
-        )
-        _binding_ctx = _resolve_ctx(session, request.scope.embedding_profile_id)
+        if not _reusing_failed_event:
+            # ── 4. Create event + snapshots ──
+            # P0.4A2 Final: record capability evidence on the retrieval event
+            from backend.pipeline.capability.capability_bound_retrieval import (
+                resolve_retrieval_binding_context as _resolve_ctx,
+            )
+            _binding_ctx = _resolve_ctx(session, request.scope.embedding_profile_id)
 
-        event = VectorRetrievalEvent(
-            run_id=request.run_id,
-            stage_name=request.stage_name,
-            retrieval_key=request.retrieval_key,
-            request_schema_version="vector_retrieval_v1",
-            scope_mode=request.scope.mode,
-            scope_schema_version=request.scope.schema_version,
-            scope_fingerprint=scope.scope_fingerprint,
-            embedding_profile_id=request.scope.embedding_profile_id,
-            profile_verification_status_snapshot=profile.verification_status,
-            query_vector_fingerprint=qvf,
-            input_fingerprint=input_fp,
-            requested_top_k=request.top_k,
-            allow_partial_index_coverage=request.allow_partial_index_coverage,
-            allowed_paper_count=allowed_count,
-            indexed_paper_count=indexed_count,
-            unindexed_paper_count=unindexed_count,
-            eligible_vector_record_count=eligible_count,
-            coverage_status=coverage_status,
-            status="pending",
-            # P0.4A2: capability contract evidence
-            query_embedding_contract_version="capability_v1",
-            vector_eligibility_contract_version=_binding_ctx.vector_eligibility_contract_version,
-            query_capability_binding_id=_binding_ctx.active_binding_id,
-            query_capability_check_id=None,  # populated when query receipt is available
-            binding_activation_id=_binding_ctx.activation_id,
-        )
-        session.add(event)
-        session.flush()
-        event_id = event.id
+            event = VectorRetrievalEvent(
+                run_id=request.run_id,
+                stage_name=request.stage_name,
+                retrieval_key=request.retrieval_key,
+                request_schema_version="vector_retrieval_v1",
+                scope_mode=request.scope.mode,
+                scope_schema_version=request.scope.schema_version,
+                scope_fingerprint=scope.scope_fingerprint,
+                embedding_profile_id=request.scope.embedding_profile_id,
+                profile_verification_status_snapshot=profile.verification_status,
+                query_vector_fingerprint=qvf,
+                input_fingerprint=input_fp,
+                requested_top_k=request.top_k,
+                allow_partial_index_coverage=request.allow_partial_index_coverage,
+                allowed_paper_count=allowed_count,
+                indexed_paper_count=indexed_count,
+                unindexed_paper_count=unindexed_count,
+                eligible_vector_record_count=eligible_count,
+                coverage_status=coverage_status,
+                status="pending",
+                # P0.4A2: capability contract evidence
+                query_embedding_contract_version="capability_v1",
+                vector_eligibility_contract_version=_binding_ctx.vector_eligibility_contract_version,
+                query_capability_binding_id=_binding_ctx.active_binding_id,
+                query_capability_check_id=None,  # populated when query receipt is available
+                binding_activation_id=_binding_ctx.activation_id,
+            )
+            session.add(event)
+            session.flush()
+            event_id = event.id
 
-        # Snapshot allowed papers
-        for pid in allowed_paper_ids:
-            session.add(VectorRetrievalScopePaper(
-                retrieval_event_id=event_id,
-                paper_id=pid,
-                is_indexed=pid in indexed_paper_ids,
-            ))
+            # Snapshot allowed papers (only for new events)
+            for pid in allowed_paper_ids:
+                session.add(VectorRetrievalScopePaper(
+                    retrieval_event_id=event_id,
+                    paper_id=pid,
+                    is_indexed=pid in indexed_paper_ids,
+                ))
 
-        # Snapshot eligible records
-        for e in eligible:
-            session.add(VectorRetrievalEligibleRecord(
-                retrieval_event_id=event_id,
-                vector_record_id=e.vector_record_id,
-            ))
+            # Snapshot eligible records (only for new events)
+            for e in eligible:
+                session.add(VectorRetrievalEligibleRecord(
+                    retrieval_event_id=event_id,
+                    vector_record_id=e.vector_record_id,
+                ))
         session.commit()
     except Exception:
         session.rollback()

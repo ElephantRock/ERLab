@@ -1,10 +1,9 @@
 """Phase C tests: HardGateEngine."""
 
-import pytest
 
-from backend.pipeline.routing.stage_contract import StageContract
 from backend.pipeline.routing.certified_lookup import CertifiedModelCandidate
-from backend.pipeline.routing.hard_gates import HardGateEngine, GateResult
+from backend.pipeline.routing.hard_gates import HardGateEngine
+from backend.pipeline.routing.stage_contract import StageContract
 
 
 def _make_contract(**overrides):

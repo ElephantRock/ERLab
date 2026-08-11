@@ -24,10 +24,10 @@ from __future__ import annotations
 import hashlib
 import logging
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
-from sqlalchemy import select, update, func
-from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy import select, update
+from sqlalchemy.orm import Session
 
 from backend.db.models import (
     EmbeddingBindingCutover,
@@ -133,7 +133,7 @@ def snapshot_source_population(
     session.flush()
 
     # Update cutover with snapshot info
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     session.execute(
         update(EmbeddingBindingCutover).where(
             EmbeddingBindingCutover.cutover_id == cutover_id

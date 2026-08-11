@@ -9,7 +9,6 @@ MOSAIC ablation result:
   - Headers + 1-line summaries only: +71% performance (best result)
 """
 
-import json
 import logging
 from dataclasses import dataclass, field
 from typing import Any

@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter
 
 from backend.api.errors import NotFoundError
 from backend.providers.provider_factory import get_registry

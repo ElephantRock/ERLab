@@ -11,7 +11,7 @@ Proves:
 from __future__ import annotations
 
 import sys
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from unittest.mock import MagicMock
 
 import pytest
@@ -21,9 +21,7 @@ from sqlalchemy.orm import sessionmaker
 sys.modules.setdefault("chromadb", MagicMock())
 sys.modules.setdefault("google.generativeai", MagicMock())
 
-import backend.db.models
 from backend.db.database import Base
-from backend.db.models import EmbeddingProfile
 from backend.pipeline.capability.capability_identity import (
     compute_capability_binding_id,
     compute_check_expiry,
@@ -38,7 +36,6 @@ from backend.pipeline.capability.capability_resolution import (
     POSTURE_CONFIGURED_MATCH,
     POSTURE_CONFIGURED_ONLY,
     POSTURE_EXACT_REVISION,
-    ResolvedBindingInput,
     classify_resolution,
 )
 from backend.pipeline.knowledge.embedding_configuration import (
@@ -210,9 +207,9 @@ class TestCheckIdAndExpiry:
         assert len(ids) == 100
 
     def test_check_expiry(self):
-        probed = datetime(2026, 1, 1, 12, 0, 0, tzinfo=timezone.utc)
+        probed = datetime(2026, 1, 1, 12, 0, 0, tzinfo=UTC)
         expiry = compute_check_expiry(probed, ttl_seconds=3600)
-        assert expiry == datetime(2026, 1, 1, 13, 0, 0, tzinfo=timezone.utc)
+        assert expiry == datetime(2026, 1, 1, 13, 0, 0, tzinfo=UTC)
 
 
 # ── 4. Resolution classifier ──────────────────────────────────────────

@@ -11,12 +11,8 @@ The test file has -p no:asyncio in pytest.ini.
 
 import asyncio
 import json
-import sys
 from dataclasses import fields
-from unittest.mock import AsyncMock, MagicMock, patch
-
-import pytest
-
+from unittest.mock import AsyncMock, MagicMock
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -68,8 +64,8 @@ def _make_research_proposal(title="Test Proposal", abstract="Test abstract"):
 
 def _make_stage_context(proposals=None, all_papers=None):
     """Create a minimal StageContext."""
-    from backend.pipeline.stages import StageContext
     from backend.pipeline.result import PipelineResult
+    from backend.pipeline.stages import StageContext
 
     result = PipelineResult()
     if proposals:
@@ -274,8 +270,8 @@ class TestReSynthesisTriggered:
 
     def test_resynthesis_called_with_revision_notes(self):
         from backend.pipeline.evaluation.adversarial_reviewer import (
-            AdversarialReviewScore,
             AdversarialReviewer,
+            AdversarialReviewScore,
         )
         from backend.pipeline.stages import AdversarialReviewStage
 
@@ -320,8 +316,8 @@ class TestMaxRevisionRounds:
 
     def test_max_2_revision_rounds(self):
         from backend.pipeline.evaluation.adversarial_reviewer import (
-            AdversarialReviewScore,
             AdversarialReviewer,
+            AdversarialReviewScore,
         )
         from backend.pipeline.stages import AdversarialReviewStage
 
@@ -384,7 +380,6 @@ class TestStrategyFlagControlsStage:
 
     def test_stage_skipped_when_flag_disabled(self):
         """When adversarial_review stage is disabled in strategy, it's skipped."""
-        from backend.pipeline.orchestrator import PipelineOrchestrator
 
         # Verify fast_scan has adversarial_review disabled
         from backend.pipeline.strategies import StrategyRegistry, register_presets

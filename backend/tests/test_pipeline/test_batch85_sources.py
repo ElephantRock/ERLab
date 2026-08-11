@@ -8,13 +8,12 @@ AIV v5.3 — T1, T2, T5. Use asyncio.run() not @pytest.mark.asyncio.
 from __future__ import annotations
 
 import asyncio
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from backend.pipeline.literature.pubmed_source import PubMedSource
 from backend.pipeline.literature.crossref_source import CrossRefSource
+from backend.pipeline.literature.models import Paper, SearchResult
 from backend.pipeline.literature.multi_source import MultiSourceSearcher
-from backend.pipeline.literature.models import Paper, SearchResult, Author
+from backend.pipeline.literature.pubmed_source import PubMedSource
 
 
 def _make_paper(title, doi="", year=2024, source="test"):

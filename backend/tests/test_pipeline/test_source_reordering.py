@@ -1,6 +1,6 @@
 """Tests for academic source reordering (BATCH-74/TASK-04)."""
 
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
 
 class TestSourceReordering:

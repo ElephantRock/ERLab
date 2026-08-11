@@ -26,10 +26,11 @@ from fastapi.testclient import TestClient
 from sqlalchemy import create_engine, select
 from sqlalchemy.orm import sessionmaker
 
-from backend.api.routes.review import router as review_router, _source_ref_hash, _compute_human_review_status
+from backend.api.routes.review import _compute_human_review_status, _source_ref_hash
+from backend.api.routes.review import router as review_router
 from backend.db import crud
 from backend.db.database import Base
-from backend.db.models import Idea, PipelineRun, Proposal, SourceReview
+from backend.db.models import Idea, Proposal
 
 
 @pytest.fixture

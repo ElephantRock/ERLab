@@ -12,8 +12,7 @@ from __future__ import annotations
 import json
 import logging
 import sqlite3
-import sys
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -51,7 +50,7 @@ def generate_benchmark(
         conn.close()
 
     dataset = {
-        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "generated_at": datetime.now(UTC).isoformat(),
         "source_db": str(db_path),
         "run_count": len(runs),
         "runs": runs,
@@ -74,7 +73,7 @@ def _fetch_runs(conn: sqlite3.Connection, status_filter: str) -> list[dict]:
         "       stages_completed, stage_report_json, created_at, completed_at, "
         "       session_id "
         "FROM pipeline_runs "
-        f"WHERE status = ? "
+        "WHERE status = ? "
         "ORDER BY id DESC",
         (status_filter,),
     ).fetchall()

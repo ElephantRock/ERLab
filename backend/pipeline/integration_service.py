@@ -6,14 +6,14 @@ service that can be called from the orchestrator at key lifecycle points.
 from __future__ import annotations
 
 import logging
-from typing import Any, TYPE_CHECKING
+from typing import TYPE_CHECKING
 
-from backend.pipeline.soul_loader import inject_soul, clear_cache
+from backend.pipeline.context.manager import ContextBudget, ContextManager
 from backend.pipeline.journal.writer import JournalWriter
-from backend.pipeline.context.manager import ContextManager, ContextBudget
+from backend.pipeline.soul_loader import clear_cache, inject_soul
 
 if TYPE_CHECKING:
-    from backend.pipeline.result import PipelineResult
+    pass
 
 logger = logging.getLogger(__name__)
 

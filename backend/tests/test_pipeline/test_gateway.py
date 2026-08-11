@@ -3,18 +3,19 @@
 Covers: TokenBudgeter, ModelCapabilityRegistry, LLMGateway, GatewayProvider.
 """
 
-import asyncio
 import pytest
 
-from backend.pipeline.gateway.token_budget import (
-    TokenBudget, TokenBudgeter, PromptTooLargeError,
-)
 from backend.pipeline.gateway.capability_registry import (
-    ModelCapabilities, ModelCapabilityRegistry,
+    ModelCapabilities,
+    ModelCapabilityRegistry,
 )
-from backend.pipeline.gateway.gateway import LLMGateway, LLMRequest, LLMResponse
+from backend.pipeline.gateway.gateway import LLMGateway, LLMRequest
 from backend.pipeline.gateway.gateway_provider import GatewayProvider
-
+from backend.pipeline.gateway.token_budget import (
+    PromptTooLargeError,
+    TokenBudget,
+    TokenBudgeter,
+)
 
 # ── TokenBudget ──────────────────────────────────────────────────────────────
 
@@ -296,7 +297,7 @@ class TestLLMGateway:
 
 class TestGatewayProvider:
     def _make_provider(self):
-        from backend.providers.base import LLMProvider, LLMResponse
+        from backend.providers.base import LLMProvider
 
         class MockProvider(LLMProvider):
             def __init__(self):

@@ -18,28 +18,26 @@ codes so a repeatedly-crashing provider cannot appear merely slow.
 from __future__ import annotations
 
 import asyncio
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import MagicMock
 
 import pytest
 
+from backend.pipeline.capability.capability_errors import (
+    CAPABILITY_BINDING_MISMATCH,
+    CAPABILITY_CHECK_EXPIRED,
+    CapabilityAuthorizationError,
+)
+from backend.ranking.embedding_snapshot import (
+    SnapshotBindingEvidence,
+    SnapshotIntegrityError,
+    SnapshotItem,
+    canonical_text_hash,
+    write_snapshot,
+)
 from backend.ranking.generate_embedding_snapshot import (
     SnapshotGenerationFailure,
     _embed_one_with_retry,
     _is_transient_provider_error,
-)
-from backend.ranking.embedding_snapshot import (
-    SnapshotIntegrityError,
-    SnapshotItem,
-    SnapshotBindingEvidence,
-    canonical_text_hash,
-    clear_snapshot_dir,
-    load_snapshot,
-    write_snapshot,
-)
-from backend.pipeline.capability.capability_errors import (
-    CapabilityAuthorizationError,
-    CAPABILITY_CHECK_EXPIRED,
-    CAPABILITY_BINDING_MISMATCH,
 )
 
 
@@ -261,6 +259,7 @@ class TestControlSnapshotNeverOverwritten:
         """
         import importlib
         import os
+
         import backend.ranking.generate_embedding_snapshot as mod
         from backend.config import get_settings
 

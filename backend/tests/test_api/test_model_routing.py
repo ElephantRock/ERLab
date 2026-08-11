@@ -4,8 +4,6 @@ Phase A: Editable Model Routing UI.
 """
 
 import json
-from datetime import datetime, timezone
-from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -13,16 +11,14 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from backend.api.errors import APIError
-from backend.api.routes.model_config import router
 from backend.api.model_assignments import (
-    ASSIGNMENTS_PATH,
-    load_assignments,
-    save_assignments,
     clear_assignments,
-    remove_stage,
     get_stage_override,
+    load_assignments,
+    remove_stage,
+    save_assignments,
 )
-
+from backend.api.routes.model_config import router
 
 # ── Test app setup ──────────────────────────────────────────────
 

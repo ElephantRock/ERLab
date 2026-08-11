@@ -5,11 +5,10 @@ AIV v5.3 — T1, T2, T5.
 from __future__ import annotations
 
 import asyncio
-import pytest
 from unittest.mock import AsyncMock, MagicMock
 
-from backend.pipeline.search_integration import SearchIntegrationService
 from backend.pipeline.literature.models import Paper, SearchResult
+from backend.pipeline.search_integration import SearchIntegrationService
 
 
 def _make_result(title, doi=""):

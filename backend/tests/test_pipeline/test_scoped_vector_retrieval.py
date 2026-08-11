@@ -13,17 +13,16 @@ from __future__ import annotations
 
 import asyncio
 import sys
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from unittest.mock import MagicMock
 
 import pytest
-from sqlalchemy import create_engine, event, select, text
+from sqlalchemy import create_engine, event, select
 from sqlalchemy.orm import sessionmaker
 
 sys.modules.setdefault("chromadb", MagicMock())
 sys.modules.setdefault("google.generativeai", MagicMock())
 
-import backend.db.models
 from backend.db.database import Base
 from backend.db.models import (
     EmbeddingProfile,
@@ -34,6 +33,11 @@ from backend.db.models import (
     VectorIndexRecord,
     VectorRetrievalEvent,
 )
+from backend.pipeline.scoped_vector_service import (
+    query_vectors,
+    validate_query_vector,
+    validate_top_k,
+)
 from backend.pipeline.vector_backend import BackendVectorMatch, GovernedVectorBackend
 from backend.pipeline.vector_contracts import (
     ScopedVectorRetrievalRequest,
@@ -43,11 +47,6 @@ from backend.pipeline.vector_contracts import (
     compute_profile_id,
     compute_vector_record_id,
     derive_domain_scope_key,
-)
-from backend.pipeline.scoped_vector_service import (
-    query_vectors,
-    validate_query_vector,
-    validate_top_k,
 )
 
 
@@ -103,7 +102,7 @@ def _make_governed_run(engine, with_papers=0):
             # Index the paper
             ch = compute_content_hash(f"content {p.id}")
             vid = compute_vector_record_id(p.id, "title_abstract:0", ch, pid)
-            now = datetime.now(timezone.utc)
+            now = datetime.now(UTC)
             s.add(VectorIndexRecord(
                 vector_record_id=vid, paper_id=p.id, chunk_key="title_abstract:0",
                 content_kind="title_abstract", content_hash=ch,

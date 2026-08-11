@@ -14,7 +14,6 @@ from backend.pipeline.generation.models import ResearchIdea
 from backend.pipeline.result import PipelineResult
 from backend.pipeline.stages import StageContext
 
-
 # ── Helpers ──────────────────────────────────────────────────────────
 
 
@@ -126,8 +125,8 @@ class TestIntermediateIdeaPersistence:
             orch._governance_policy = None
             orch._pipeline_evaluator = None
 
-            from backend.pipeline.execution.run_state import RunCheckpoint, StageStatus
-            import time
+
+            from backend.pipeline.execution.run_state import RunCheckpoint
 
             checkpoint = RunCheckpoint.create_new("test", ["idea_generation"])
             orch._persistence.save_checkpoint = MagicMock()

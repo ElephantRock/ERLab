@@ -23,7 +23,7 @@ snapshot fingerprint, created timestamp.
 from __future__ import annotations
 
 import json
-from pathlib import Path
+from datetime import UTC
 
 import pytest
 
@@ -34,12 +34,10 @@ from backend.ranking.embedding_snapshot import (
     SnapshotItem,
     canonical_text_hash,
     clear_snapshot_dir,
-    compute_snapshot_fingerprint,
     load_snapshot,
     vector_fingerprint,
     write_snapshot,
 )
-
 
 BENCH_VER = "discovery_ranking_v2+retrieval_ranking_v2"
 BENCH_FP = "a" * 64
@@ -367,10 +365,10 @@ class TestSnapshotFingerprintStability:
 
     def test_created_at_excluded_from_fingerprint(self, tmp_path, monkeypatch):
         """Different creation timestamps must not change the fingerprint."""
-        from datetime import datetime, timezone, timedelta
+        from datetime import datetime, timedelta
         d1 = tmp_path / "s1"
         d2 = tmp_path / "s2"
-        t1 = datetime(2026, 1, 1, tzinfo=timezone.utc)
+        t1 = datetime(2026, 1, 1, tzinfo=UTC)
         t2 = t1 + timedelta(days=365)
         write_snapshot(d1, benchmark_version=BENCH_VER, benchmark_fingerprint=BENCH_FP,
                        binding=_binding(), items=_items(), created_at=t1)

@@ -5,11 +5,9 @@ AIV v5.3 — T1, T2, T5.
 from __future__ import annotations
 
 import time
-import pytest
 
-from backend.pipeline.budget_guard import BudgetGuard, BudgetConfig, BudgetAction
-from backend.pipeline.prompts.domain_loader import load_domain_prompt, list_available_domains
-
+from backend.pipeline.budget_guard import BudgetAction, BudgetConfig, BudgetGuard
+from backend.pipeline.prompts.domain_loader import list_available_domains, load_domain_prompt
 
 # ══════════════════════════════════════════════════════════
 # TASK-01: BudgetGuard

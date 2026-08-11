@@ -8,32 +8,28 @@ Marked slow: requires LLM provider access.
 - Enforcement behavior for both paths
 - Non-enforced stages remain dry-run
 """
-import asyncio
-import json
+from unittest.mock import AsyncMock
+
 import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
-from dataclasses import dataclass, field
 
 pytestmark = pytest.mark.slow
 
 from backend.pipeline.utils.json_extraction import (
-    extract_json,
-    extract_json_with_llm_repair,
-    RepairLog,
     JsonExtractionError,
+    RepairLog,
+    extract_json_with_llm_repair,
 )
-
 
 # ─── Fixtures ────────────────────────────────────────────────────────
 
 def _make_gateway(enforced_stages=None, mode="enforce"):
     """Create a gateway with SmartRouter enforcement."""
-    from backend.pipeline.gateway.gateway import LLMGateway
     from backend.pipeline.gateway.capability_registry import ModelCapabilityRegistry
+    from backend.pipeline.gateway.gateway import LLMGateway
     from backend.pipeline.gateway.token_budget import TokenBudgeter
-    from backend.pipeline.routing.smart_router import SmartRouter
     from backend.pipeline.routing.certified_lookup import CertifiedCapabilityLookup
     from backend.pipeline.routing.dry_run_logger import DryRunLogger
+    from backend.pipeline.routing.smart_router import SmartRouter
 
     registry = ModelCapabilityRegistry()
     budgeter = TokenBudgeter()
@@ -113,12 +109,12 @@ class TestExtractJsonWithLlmRepair:
         broken = '{"title": "Test", missing'
 
         # Empty lookup → no certified candidates → degraded
-        from backend.pipeline.routing.certified_lookup import CertifiedCapabilityLookup
-        from backend.pipeline.routing.smart_router import SmartRouter
-        from backend.pipeline.gateway.gateway import LLMGateway
         from backend.pipeline.gateway.capability_registry import ModelCapabilityRegistry
+        from backend.pipeline.gateway.gateway import LLMGateway
         from backend.pipeline.gateway.token_budget import TokenBudgeter
+        from backend.pipeline.routing.certified_lookup import CertifiedCapabilityLookup
         from backend.pipeline.routing.dry_run_logger import DryRunLogger
+        from backend.pipeline.routing.smart_router import SmartRouter
 
         registry = ModelCapabilityRegistry()
         budgeter = TokenBudgeter()
@@ -226,13 +222,13 @@ class TestQueryGenerationIntegration:
     @pytest.mark.asyncio
     async def test_degraded_falls_back_to_original(self):
         """Degraded query generation returns empty list, stage uses original queries."""
-        from backend.pipeline.gateway.llm_repair_and_query import LLMQueryGenerator
-        from backend.pipeline.routing.certified_lookup import CertifiedCapabilityLookup
-        from backend.pipeline.routing.smart_router import SmartRouter
-        from backend.pipeline.gateway.gateway import LLMGateway
         from backend.pipeline.gateway.capability_registry import ModelCapabilityRegistry
+        from backend.pipeline.gateway.gateway import LLMGateway
+        from backend.pipeline.gateway.llm_repair_and_query import LLMQueryGenerator
         from backend.pipeline.gateway.token_budget import TokenBudgeter
+        from backend.pipeline.routing.certified_lookup import CertifiedCapabilityLookup
         from backend.pipeline.routing.dry_run_logger import DryRunLogger
+        from backend.pipeline.routing.smart_router import SmartRouter
 
         registry = ModelCapabilityRegistry()
         budgeter = TokenBudgeter()
