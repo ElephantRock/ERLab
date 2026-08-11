@@ -340,16 +340,22 @@ async def run_acceptance(
             f"provider mismatch: manifest={case.provider!r}"
             f" runtime={_s.default_provider!r}"
         )
-    if case.model and getattr(_s, "openai_model", "") != case.model:
+    if case.model and _s.openai_model != case.model:
         _identity_errors.append(
             f"model mismatch: manifest={case.model!r}"
-            f" runtime={getattr(_s, 'openai_model', '')!r}"
+            f" runtime={_s.openai_model!r}"
         )
-    if case.embedding_model and getattr(_s, "embedding_model", "") != case.embedding_model:
+    if case.embedding_provider and _s.embedding_provider != case.embedding_provider:
+        _identity_errors.append(
+            f"embedding_provider mismatch:"
+            f" manifest={case.embedding_provider!r}"
+            f" runtime={_s.embedding_provider!r}"
+        )
+    if case.embedding_model and _s.embedding_model != case.embedding_model:
         _identity_errors.append(
             f"embedding_model mismatch:"
             f" manifest={case.embedding_model!r}"
-            f" runtime={getattr(_s, 'embedding_model', '')!r}"
+            f" runtime={_s.embedding_model!r}"
         )
     if (
         case.corpus_manifest_path
@@ -370,6 +376,31 @@ async def run_acceptance(
                     passed=False,
                     reason_code="manifest_identity_mismatch",
                     detail="; ".join(_identity_errors),
+                ),
+            ],
+            exit_code=1,
+        )
+        write_evidence(evidence_dir, case, verdict, preflight.code_origin)
+        return verdict, evidence_dir
+
+    # ── Budget enforcement preflight ──
+    # Fail-before-execution: when the accounting gate is active but no
+    # BudgetAuthority is supplied, execution would incur provider spend
+    # without an enforceable ceiling. Reject before any provider call.
+    if case.gates.accounting and budget_authority is None:
+        verdict = VerdictReport(
+            verdict=AcceptanceVerdict.INVALID_CASE,
+            case_id=case.case_id,
+            attempt_id="",
+            failed_gates=[
+                GateResult(
+                    gate="budget_enforcement",
+                    passed=False,
+                    reason_code="no_budget_authority_wired",
+                    detail=(
+                        "accounting gate is active but no BudgetAuthority"
+                        " was supplied — cannot enforce ceiling"
+                    ),
                 ),
             ],
             exit_code=1,
