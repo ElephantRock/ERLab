@@ -635,6 +635,19 @@ class PipelineOrchestrator:
             thinking_provider=mm_review_provider or thinking_provider,
         )
 
+    def _load_adaptive_config(self) -> dict:
+        """Load the adaptive_search block from pipeline.yaml.
+
+        Returns empty dict if the block is absent or YAML is unavailable.
+        """
+        try:
+            from backend.pipeline.dag.config import ConfigLoader
+            config = ConfigLoader().load()
+            search = config.get("search", {})
+            return search.get("adaptive_search", {})
+        except Exception:
+            return {}
+
     def _build_stages(self) -> list[PipelineStage]:
         ref_validator = ReferenceValidator(store=self._services.store)
 
@@ -719,7 +732,14 @@ class PipelineOrchestrator:
         from backend.pipeline.dag.trimmer import TrimmerStage
 
         return [
-            LiteratureSearchStage(self._services.search, self._services.hooks, gateway=self._gateway, persistence=self._persistence),
+            LiteratureSearchStage(
+                self._services.search,
+                self._services.hooks,
+                gateway=self._gateway,
+                persistence=self._persistence,
+                adaptive_config=self._load_adaptive_config(),
+                strategy_name=self._strategy_name,
+            ),
             IngestionStage(self._services.store, self._services.bm25, self._services.embedding, kg=self._services.kg, provider=self._provider),
             TrimmerStage(top_k=trim_top_k, max_abstract_chars=trim_max_chars),  # BATCH-184
             GapAnalysisStage(self._services.gap_analyzer, self._services.goal_manager, self._services.hooks, self._services.memory, kg=self._services.kg, faithfulness_checker=self._services.faithfulness_checker),

@@ -75,6 +75,18 @@ search:
   citation_explore: true
   cooldown_seconds: 2
 
+  adaptive_search:
+    enabled: true
+    enabled_strategies:
+      - deep_research
+      - academic_proposal
+    max_rounds: 2
+    queries_per_round: 3
+    limit_per_source: 10
+    digest_max_papers: 20
+    digest_abstract_chars: 600
+    dedup_similarity_threshold: 0.85
+
 strategies:
   deep_research:
     stages:

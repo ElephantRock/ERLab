@@ -142,11 +142,22 @@ class PipelineStage(ABC):
 
 
 class LiteratureSearchStage(PipelineStage):
-    def __init__(self, search, hooks, gateway=None, persistence=None):
+    def __init__(
+        self,
+        search,
+        hooks,
+        gateway=None,
+        persistence=None,
+        *,
+        adaptive_config: dict | None = None,
+        strategy_name: str = "",
+    ):
         self._search = search
         self._hooks = hooks
         self._gateway = gateway
         self._persistence = persistence
+        self._adaptive_config = adaptive_config or {}
+        self._strategy_name = strategy_name
 
     @property
     def name(self) -> str:
@@ -546,6 +557,107 @@ class LiteratureSearchStage(PipelineStage):
         )
         unique_candidates = merged.candidates
 
+        # ── Adaptive evidence search loop (AES-3) ─────────────────────
+        # When enabled for the active strategy and a gateway is available,
+        # inspect retrieved literature and generate follow-up queries
+        # targeting uncovered aspects. Each round goes through the same
+        # governed execution path as the initial search.
+        all_candidates = list(batch.candidates)
+        cfg = self._adaptive_config
+        adaptive_enabled = (
+            bool(cfg.get("enabled"))
+            and self._strategy_name in cfg.get("enabled_strategies", [])
+            and self._gateway is not None
+        )
+        if adaptive_enabled:
+            from backend.pipeline.gateway.llm_repair_and_query import (
+                LLMQueryGenerator,
+            )
+
+            max_rounds = cfg.get("max_rounds", 2)
+            queries_per_round = cfg.get("queries_per_round", 3)
+            adaptive_limit = cfg.get("limit_per_source", 10)
+            digest_max_papers = cfg.get("digest_max_papers", 20)
+            digest_abstract_chars = cfg.get("digest_abstract_chars", 600)
+            dedup_threshold = cfg.get("dedup_similarity_threshold", 0.85)
+
+            gen = LLMQueryGenerator(self._gateway)
+            attempted_queries = [q.query_text for q in search_query_data]
+            next_sequence = len(search_query_data)
+
+            for round_no in range(max_rounds):
+                # Build evidence digest from current governed corpus.
+                proposed = await gen.generate_adaptive_queries(
+                    research_question=(
+                        ctx.research_question.strip()
+                        if ctx.research_question
+                        and ctx.research_question.strip()
+                        else str(ctx.domain)
+                    ),
+                    attempted_queries=attempted_queries,
+                    papers=[c.paper for c in unique_candidates],
+                    n_queries=queries_per_round,
+                    run_id=ctx.run_id or "",
+                    max_papers=digest_max_papers,
+                    abstract_chars=digest_abstract_chars,
+                    dedup_similarity_threshold=dedup_threshold,
+                )
+
+                if not proposed:
+                    break
+
+                # Assign governed identity to each adaptive query.
+                adaptive_query_data = []
+                for query in proposed:
+                    q_key = compute_query_key(
+                        query,
+                        "llm_generated",
+                        "adaptive",
+                        next_sequence,
+                    )
+                    adaptive_query_data.append(SearchQueryData(
+                        query_text=query,
+                        query_type="llm_generated",
+                        generation_origin="adaptive",
+                        sequence_number=next_sequence,
+                        query_key=q_key,
+                    ))
+                    next_sequence += 1
+
+                # Execute through the same governed path.
+                adaptive_batch = await self._execute_query_batch(
+                    ctx=ctx,
+                    query_data=adaptive_query_data,
+                    db_engine=db_engine,
+                    limit_per_source=adaptive_limit,
+                )
+
+                # Merge into the growing corpus.
+                round_merge = self._merge_candidate_corpus(
+                    existing=unique_candidates,
+                    incoming=adaptive_batch.candidates,
+                    fuzzy_threshold=dedup_threshold,
+                )
+                unique_candidates = round_merge.candidates
+
+                search_query_data.extend(adaptive_query_data)
+                attempted_queries.extend(proposed)
+                all_linkage_expectations.extend(
+                    adaptive_batch.linkage_expectations
+                )
+                all_candidates.extend(adaptive_batch.candidates)
+
+                logger.info(
+                    "Adaptive round %d: %d queries, %d new unique papers",
+                    round_no + 1,
+                    len(proposed),
+                    round_merge.new_unique_count,
+                )
+
+                # Convergence: no new papers means stop.
+                if round_merge.new_unique_count == 0:
+                    break
+
         # Extract bare papers for backward compatibility
         unique = [c.paper for c in unique_candidates]
 
@@ -669,7 +781,7 @@ class LiteratureSearchStage(PipelineStage):
         ctx.result.papers_found = len(unique)
         logger.info(
             "Total unique papers: %d (from %d total)",
-            len(unique), len(batch.candidates),
+            len(unique), len(all_candidates),
         )
 
         # B162: Journal note
@@ -678,16 +790,16 @@ class LiteratureSearchStage(PipelineStage):
                 ctx.journal.add_note(
                     "literature_search",
                     f"Found {len(unique)} unique papers"
-                    f" from {len(batch.candidates)} total",
+                    f" from {len(all_candidates)} total",
                     {
                         "unique_papers": len(unique),
-                        "total_found": len(batch.candidates),
+                        "total_found": len(all_candidates),
                     },
                 )
             except Exception:
                 pass
 
-        if not batch.candidates:
+        if not all_candidates:
             logger.warning(
                 "No papers found from any source. Halting pipeline — "
                 "gap analysis requires paper abstracts as input."
