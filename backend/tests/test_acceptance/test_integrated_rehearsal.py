@@ -262,3 +262,73 @@ class TestRecoverySourceIntegrity:
         assert "restart_recovery_ok" in sig.parameters
         # Its default is None (caller must supply), not True.
         assert sig.parameters["restart_recovery_ok"].default is None
+
+
+# ── Corpus manifest rejection (review round 6) ──────────────────────
+
+
+class TestCorpusManifestRejection:
+    """When a corpus manifest is declared but ingestion cannot consume it,
+    the run must be INVALID_CASE (not FAIL), and no provider work starts."""
+
+    def test_unsupported_corpus_manifest_yields_invalid_case(self, tmp_path):
+        from backend.acceptance.live_paper_verdict import AcceptanceVerdict
+        from backend.acceptance.runner import run_acceptance
+
+        # Create a corpus manifest file that exists on disk.
+        manifest_file = tmp_path / "corpus.json"
+        manifest_file.write_text('{"frozen": true}')
+
+        # Build a case JSON that declares the manifest path.
+        case_dict = {
+            "schema_version": "erlab.live-paper-acceptance.v1",
+            "case_id": "corpus_rejection_test",
+            "artifact_class": "non_empirical_research_synthesis",
+            "research_domain": "test",
+            "research_question": "Does the system reject unconsumable corpus?",
+            "expected_code_sha": "abcdef1234567890abcdef1234567890abcdef12",
+            "corpus_mode": "frozen_real",
+            "corpus_manifest_path": str(manifest_file),
+            "provider": "synthetic",
+            "model": "synthetic-model",
+            "embedding_provider": "synthetic",
+            "embedding_model": "synthetic-embed",
+            "execution": {"network_policy": "hermetic"},
+            "budget": {
+                "maximum_cost_usd": 5.0,
+                "maximum_provider_calls": 200,
+                "maximum_input_tokens": 1000,
+                "maximum_output_tokens": 500,
+                "maximum_duration_seconds": 1800,
+            },
+            "gates": {
+                "code_origin": False,
+                "identity_isolation": False,
+                "accounting": False,
+                "restart_recovery": False,
+            },
+        }
+        case_path = tmp_path / "case.json"
+        case_path.write_text(json.dumps(case_dict))
+
+        evidence_dir = tmp_path / "evidence"
+
+        import asyncio
+
+        report, _ = asyncio.run(run_acceptance(
+            str(case_path),
+            str(evidence_dir),
+        ))
+
+        # The verdict must be INVALID_CASE, not FAIL.
+        assert report.verdict is AcceptanceVerdict.INVALID_CASE, (
+            f"Expected INVALID_CASE for unsupported corpus manifest,"
+            f" got {report.verdict}."
+        )
+        # The preflight gate must record the rejection.
+        preflight_gates = [
+            g for g in report.failed_gates if g.gate == "preflight"
+        ]
+        assert len(preflight_gates) >= 1, (
+            f"Expected a preflight gate failure, got: {report.failed_gates}"
+        )

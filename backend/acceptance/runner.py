@@ -441,6 +441,28 @@ async def run_acceptance(
             config, orchestrator_factory=orchestrator_factory,
             budget_authority=budget_authority,
         )
+    except spine.PreflightError as e:
+        # A preflight rejection means the acceptance specimen requests
+        # an execution condition the system cannot honor (e.g. a corpus
+        # manifest the data path cannot consume, or a budget authority
+        # the gateway cannot accept). That is an invalid case, not a
+        # product execution failure.
+        verdict = VerdictReport(
+            verdict=AcceptanceVerdict.INVALID_CASE,
+            case_id=case.case_id,
+            attempt_id=rid,
+            failed_gates=[
+                GateResult(
+                    gate="preflight",
+                    passed=False,
+                    reason_code="preflight_rejection",
+                    detail=str(e)[:300],
+                ),
+            ],
+            exit_code=1,
+        )
+        write_evidence(evidence_dir, case, verdict, preflight.code_origin)
+        return verdict, evidence_dir
     except Exception as e:  # noqa: BLE001 — classify, don't crash
         execution_error = f"{type(e).__name__}: {str(e)[:300]}"
 
