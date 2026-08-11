@@ -259,6 +259,18 @@ async def run_confirmatory(
     # ── 1. Preflight ──
     validate_preflight(config)
 
+    # ── 1a. Corpus manifest binding check ──
+    # When a corpus manifest is declared, the data path must consume it.
+    # The ingestion path does not currently bind to a corpus manifest,
+    # so a declared manifest cannot be truthfully honored. Fail closed
+    # rather than echoing a self-attested hash that proves nothing.
+    if config.corpus_manifest_path:
+        raise PreflightError(
+            "corpus_manifest_path was declared but the data path does"
+            " not consume corpus manifests — cannot bind execution"
+            " identity to the declared corpus"
+        )
+
     # ── 1b. Build effective settings with attempt-isolated session store ──
     from backend.config import get_settings
 
@@ -338,13 +350,19 @@ async def run_confirmatory(
         )
 
     # ── 4c. Wire budget authority into the gateway ──
-    # The authority must govern provider spend through the gateway's
-    # pre-call reservation mechanism. Without this wiring, a supplied
-    # authority would snapshot as clean without ever governing a call.
+    # Mandatory attachment: when an authority is supplied, it MUST be
+    # wired into the gateway before any provider call. If the gateway
+    # or set_budget_authority() is unavailable, execution cannot proceed
+    # safely — the authority would snapshot as clean without governing
+    # any spend.
     if budget_authority is not None:
         _gateway = getattr(orchestrator, "_gateway", None)
-        if _gateway is not None and hasattr(_gateway, "set_budget_authority"):
-            _gateway.set_budget_authority(budget_authority)
+        if _gateway is None or not hasattr(_gateway, "set_budget_authority"):
+            raise PreflightError(
+                "budget_authority was supplied but the orchestrator's"
+                " gateway cannot accept it — cannot enforce ceiling"
+            )
+        _gateway.set_budget_authority(budget_authority)
 
     # ── 5. Execute pipeline with explicit identities ──
     # Resolve parameters: case overrides take precedence over frozen defaults.
@@ -441,10 +459,6 @@ async def run_confirmatory(
         # (evaluate_gates reads .outcome, .stage_report, .proposals, etc.).
         # Existing callers that only access summary dict keys are unaffected.
         "_pipeline_result": result,
-        # Corpus manifest identity: when a frozen corpus was declared,
-        # its SHA-256 is included so post-execution verification can
-        # confirm the run was bound to the declared corpus content.
-        "corpus_manifest_sha256": config.corpus_manifest_sha256,
     }
 
 

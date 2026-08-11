@@ -359,7 +359,7 @@ async def run_acceptance(
         )
     if (
         case.corpus_manifest_path
-        and not Path(case.corpus_manifest_path).resolve().exists()
+        and not Path(case.corpus_manifest_path).resolve().is_file()
     ):
         _identity_errors.append(
             f"corpus_manifest_path declared but absent:"
