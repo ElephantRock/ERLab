@@ -427,6 +427,16 @@ class LiteratureSearchStage(PipelineStage):
         # Extract bare papers for backward compatibility
         unique = [c.paper for c in unique_candidates]
 
+        # Canonical identity set for non-governed enrichment branches.
+        # Initialized from the governed corpus after cross-query dedup so
+        # that knowledge-library, local-upload, and citation-tree enrichment
+        # can dedup against already-accepted papers without a NameError.
+        seen = {
+            p.doi if getattr(p, "doi", None)
+            else p.title.lower().strip()
+            for p in unique
+        }
+
         # Merge pre-existing knowledge library papers
         if pre_existing:
             from backend.pipeline.literature.models import Paper
