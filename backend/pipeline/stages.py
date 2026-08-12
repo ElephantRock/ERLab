@@ -3118,8 +3118,34 @@ class PaperSynthesisStage(PipelineStage):
         # evidence second, empty only when the proposal genuinely has no
         # registered/executed experiment.
         if not result_markers:
-            _eval_spec_id_for_hydration = ctx.params.get("experiment_spec_id")
-            if _eval_spec_id_for_hydration:
+            _eval_spec_id_for_hydration = ctx.params.get(
+                "experiment_spec_id"
+            )
+            _eval_auto_design = ctx.params.get(
+                "autonomous_experiment_design"
+            )
+            if (
+                _eval_spec_id_for_hydration
+                or (
+                    _eval_auto_design
+                    and _eval_auto_design.get("status")
+                    == "designed"
+                )
+            ):
+                if _eval_auto_design and _eval_auto_design.get(
+                    "status"
+                ) == "designed":
+                    hydrated = (
+                        self._hydrate_autonomous_result_markers(
+                            idx, _eval_auto_design,
+                        )
+                    )
+                else:
+                    hydrated = (
+                        self._hydrate_persisted_result_markers(
+                            idx
+                        )
+                    )
                 hydrated = self._hydrate_persisted_result_markers(idx)
                 if hydrated:
                     result_markers = hydrated
@@ -3146,6 +3172,13 @@ class PaperSynthesisStage(PipelineStage):
         exp_alignment_passed = True
         exp_alignment_reason = ""
         _eval_spec_id = ctx.params.get("experiment_spec_id")
+        _eval_auto = ctx.params.get(
+            "autonomous_experiment_design"
+        )
+        _is_auto = (
+            _eval_auto
+            and _eval_auto.get("status") == "designed"
+        )
         if _eval_spec_id and result_markers:
             try:
                 from backend.pipeline.evaluation.claim_alignment import evaluate_claim_alignment
@@ -3159,13 +3192,67 @@ class PaperSynthesisStage(PipelineStage):
                     spec_comparison=_eval_spec.comparison_method,
                 )
                 exp_alignment_passed = claim_result.passed
-                exp_alignment_reason = f"[{claim_result.finding}] {claim_result.reason}"
+                exp_alignment_reason = (
+                    f"[{claim_result.finding}]"
+                    f" {claim_result.reason}"
+                )
             except Exception as e:
-                exp_alignment_reason = f"Alignment check skipped: {e}"
+                exp_alignment_reason = (
+                    f"Alignment check skipped: {e}"
+                )
         elif _eval_spec_id and not result_markers:
-            exp_alignment_reason = "No experiment results to check alignment against"
+            exp_alignment_reason = (
+                "No experiment results to check"
+                " alignment against"
+            )
+        elif _is_auto and result_markers:
+            from backend.pipeline.evaluation.claim_alignment import (
+                evaluate_claim_alignment,
+            )
+            from backend.pipeline.experiment.specification import (
+                _parse_spec,
+            )
+            auto_specs = _eval_auto.get("specs", [])
+            findings = []
+            all_pass = True
+            for spec_dict in auto_specs:
+                ds_name = spec_dict.get(
+                    "dataset", {}
+                ).get("name", "unknown")
+                try:
+                    spec = _parse_spec(spec_dict)
+                    cr = evaluate_claim_alignment(
+                        paper_md=paper_md,
+                        spec_method=spec.analysis_method,
+                        spec_dataset=spec.dataset_name,
+                        spec_baseline=spec.baseline_method,
+                        spec_comparison=(
+                            spec.comparison_method
+                        ),
+                    )
+                    if not cr.passed:
+                        all_pass = False
+                    findings.append(
+                        f"{ds_name}:[{cr.finding}]"
+                    )
+                except Exception as e:
+                    all_pass = False
+                    findings.append(
+                        f"{ds_name}:error:{e}"
+                    )
+            exp_alignment_passed = all_pass
+            exp_alignment_reason = "; ".join(findings)
+        elif _is_auto and not result_markers:
+            exp_alignment_passed = False
+            exp_alignment_reason = (
+                "Autonomous empirical study"
+                " designed but no result"
+                " markers available"
+            )
         else:
-            exp_alignment_reason = "Not an empirical run"
+            exp_alignment_reason = (
+                "Not an empirical run"
+            )
 
         gates.append({
             "gate": "experiment_alignment",
@@ -3429,11 +3516,181 @@ class PaperSynthesisStage(PipelineStage):
                 return markers
 
         except Exception as e:
-            logger.warning("R1: Failed to hydrate persisted result markers for proposal %d: %s", idx, e)
+            logger.warning(
+                "R1: Failed to hydrate persisted result markers"
+                " for proposal %d: %s", idx, e,
+            )
             return []
 
     @staticmethod
-    def _classify_conclusion(ctx, proposal, paper_md: str, result_markers=None):
+    def _hydrate_autonomous_result_markers(
+        idx: int, design_state: dict,
+    ) -> list:
+        """Hydrate multi-dataset markers from persisted results.
+
+        Loads all successful ExperimentResult rows for the proposal,
+        matches them against expected autonomous spec IDs, and
+        reconstructs dataset-qualified markers with the same global
+        numbering as EAD-3b live execution.
+
+        Returns empty list if any expected dataset is missing.
+        """
+        import json as _r1_json
+
+        from sqlalchemy import text as _sa_text
+
+        from backend.db.database import (
+            get_session as _r1_get_session,
+        )
+        from backend.pipeline.experiment.manifest import (
+            ResultMarker,
+        )
+        from backend.pipeline.experiment.specification import (
+            _parse_spec,
+        )
+
+        expected_specs = design_state.get("specs", [])
+        if not expected_specs:
+            return []
+
+        expected_ids = {
+            s.get("experiment_spec_id", ""): s
+            for s in expected_specs
+        }
+
+        try:
+            with _r1_get_session() as session:
+                rows = session.execute(
+                    _sa_text(
+                        "SELECT id, manifest_json"
+                        " FROM experiment_results"
+                        " WHERE proposal_id = :pid"
+                        " ORDER BY id ASC"
+                    ),
+                    {"pid": idx},
+                ).fetchall()
+
+            if not rows:
+                return []
+
+            matched: dict[str, dict] = {}
+            for row in rows:
+                exp_id, manifest_json = row
+                if not manifest_json:
+                    continue
+                manifest = (
+                    _r1_json.loads(manifest_json)
+                    if isinstance(manifest_json, str)
+                    else manifest_json
+                )
+                if manifest.get("status") != "succeeded":
+                    continue
+                spec_id = manifest.get(
+                    "experiment_spec_id", "",
+                )
+                if spec_id in expected_ids:
+                    matched[spec_id] = {
+                        "exp_result_id": exp_id,
+                        "manifest": manifest,
+                    }
+
+            if len(matched) < len(expected_specs):
+                found = set(matched.keys())
+                missing = set(expected_ids) - found
+                logger.warning(
+                    "R1 autonomous hydration: expected"
+                    " %d specs, found %d, missing: %s",
+                    len(expected_specs),
+                    len(matched),
+                    missing,
+                )
+                return []
+
+            all_markers: list[ResultMarker] = []
+            global_idx = 0
+
+            for spec_dict in expected_specs:
+                spec_id = spec_dict.get(
+                    "experiment_spec_id", "",
+                )
+                match = matched.get(spec_id)
+                if not match:
+                    continue
+
+                dataset_name = spec_dict.get(
+                    "dataset", {},
+                ).get("name", "unknown")
+                manifest = match["manifest"]
+                exp_result_id = match["exp_result_id"]
+                results = manifest.get("results", {})
+                artifacts = manifest.get(
+                    "result_artifacts", [],
+                )
+                if not results:
+                    continue
+
+                try:
+                    spec = _parse_spec(spec_dict)
+                    _directions = spec.metric_directions
+                except Exception:
+                    _directions = {}
+
+                for metric_name, value in sorted(
+                    results.items(),
+                ):
+                    global_idx += 1
+                    qualified = (
+                        f"{dataset_name}.{metric_name}"
+                    )
+                    artifact = next(
+                        (
+                            a for a in artifacts
+                            if isinstance(a, dict)
+                            and a.get("artifact_type")
+                            == "metrics"
+                        ),
+                        artifacts[0]
+                        if artifacts else None,
+                    )
+                    _role = "comparison"
+                    if metric_name.startswith("baseline_"):
+                        _role = "baseline"
+                    all_markers.append(ResultMarker(
+                        marker_index=global_idx,
+                        marker=f"RESULT-{global_idx}",
+                        metric_name=qualified,
+                        observed_value=value,
+                        artifact_path=(
+                            f"{dataset_name}/"
+                            f"{artifact.get('filename', '')}"
+                            if isinstance(artifact, dict)
+                            else ""
+                        ),
+                        artifact_sha256=(
+                            artifact.get("sha256", "")
+                            if isinstance(artifact, dict)
+                            else ""
+                        ),
+                        experiment_result_id=exp_result_id,
+                        direction=_directions.get(
+                            metric_name, "",
+                        ),
+                        role=_role,
+                    ))
+
+            return all_markers
+
+        except Exception as e:
+            logger.warning(
+                "R1: Failed autonomous hydration for"
+                " proposal %d: %s", idx, e,
+            )
+            return []
+
+    @staticmethod
+    def _classify_conclusion(
+        ctx, proposal, paper_md: str, result_markers=None,
+    ):
         """Phase 4/4F + Phase 5 — extract abstract + conclusion and classify.
 
         Phase 5: when result_markers are present (experiment succeeded),
@@ -3864,21 +4121,55 @@ class ExperimentExecutionStage(PipelineStage):
 
         # Store multi-run results.
         ctx.result.experiment_runs[selected_idx] = all_runs
-        # Legacy compatibility: first manifest as the primary.
         if all_runs:
             ctx.result.experiments[selected_idx] = all_runs[0]
-        # Combined marker set with global numbering.
         ctx.result.result_markers[selected_idx] = all_markers
 
-        # Persist the selection metadata (same shape as legacy).
         ctx.params["empirical_selection"] = {
             "selected_empirical_proposal_id": selected_idx,
             "selection_method": "feasibility_score",
             "selection_rank": 1,
             "selection_reason": (
-                "Autonomous experiment design selected this proposal"
+                "Autonomous experiment design selected"
+                " this proposal"
             ),
         }
+
+        # EAD-3e: Fail-closed for incomplete autonomous study.
+        # If any required execution failed or produced no markers,
+        # halt the pipeline rather than allowing paper synthesis
+        # to proceed with incomplete evidence.
+        succeeded = [
+            r for r in all_runs
+            if hasattr(r, "status") and r.status == "succeeded"
+        ]
+        if len(succeeded) < len(spec_dicts):
+            from backend.pipeline.result import (
+                PipelineOutcome,
+            )
+            failed_names = [
+                getattr(r.dataset, "name", "?")
+                for r in all_runs
+                if not (
+                    hasattr(r, "status")
+                    and r.status == "succeeded"
+                )
+            ]
+            ctx.result.outcome = PipelineOutcome.FAILED_EXECUTION
+            ctx.result.terminal_stage = (
+                "experiment_execution"
+            )
+            ctx.result.terminal_reason = (
+                f"Autonomous study incomplete:"
+                f" {len(succeeded)}/{len(spec_dicts)}"
+                f" executions succeeded."
+                f" Failed: {failed_names}"
+            )
+            logger.error(
+                "Autonomous study incomplete: %s",
+                ctx.result.terminal_reason,
+            )
+            return False
 
         return True
 
