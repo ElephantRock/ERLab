@@ -58,6 +58,69 @@ class SupportedCapability:
     allowed_hyperparameters: dict[str, Any] = field(default_factory=dict)
 
 
+# ── Production capability for Case 1 ────────────────────────────────────────
+# The checked-in v1 entrypoint implements a fixed protocol:
+# logistic regression with post-hoc calibration (sigmoid/isotonic)
+# vs majority-class baseline, evaluated under fixed covariate-shift
+# severities with selective-classification metrics (AURC, ECE, accuracy).
+# Protocol constants (severities, calibration methods, seed) are frozen
+# inside the entrypoint, not configurable through hyperparameters.
+
+TABULAR_CALIBRATION_SELECTIVE_V1 = SupportedCapability(
+    task_type="classification",
+    supported_metrics={
+        "baseline_accuracy": "higher_better",
+        "0_0_uncalibrated_accuracy": "higher_better",
+        "0_0_uncalibrated_ece": "lower_better",
+        "0_0_uncalibrated_aurc": "lower_better",
+        "0_0_sigmoid_accuracy": "higher_better",
+        "0_0_sigmoid_ece": "lower_better",
+        "0_0_sigmoid_aurc": "lower_better",
+        "0_0_isotonic_accuracy": "higher_better",
+        "0_0_isotonic_ece": "lower_better",
+        "0_0_isotonic_aurc": "lower_better",
+        "0_25_uncalibrated_accuracy": "higher_better",
+        "0_25_uncalibrated_ece": "lower_better",
+        "0_25_uncalibrated_aurc": "lower_better",
+        "0_25_sigmoid_accuracy": "higher_better",
+        "0_25_sigmoid_ece": "lower_better",
+        "0_25_sigmoid_aurc": "lower_better",
+        "0_25_isotonic_accuracy": "higher_better",
+        "0_25_isotonic_ece": "lower_better",
+        "0_25_isotonic_aurc": "lower_better",
+        "0_5_uncalibrated_accuracy": "higher_better",
+        "0_5_uncalibrated_ece": "lower_better",
+        "0_5_uncalibrated_aurc": "lower_better",
+        "0_5_sigmoid_accuracy": "higher_better",
+        "0_5_sigmoid_ece": "lower_better",
+        "0_5_sigmoid_aurc": "lower_better",
+        "0_5_isotonic_accuracy": "higher_better",
+        "0_5_isotonic_ece": "lower_better",
+        "0_5_isotonic_aurc": "lower_better",
+        "0_75_uncalibrated_accuracy": "higher_better",
+        "0_75_uncalibrated_ece": "lower_better",
+        "0_75_uncalibrated_aurc": "lower_better",
+        "0_75_sigmoid_accuracy": "higher_better",
+        "0_75_sigmoid_ece": "lower_better",
+        "0_75_sigmoid_aurc": "lower_better",
+        "0_75_isotonic_accuracy": "higher_better",
+        "0_75_isotonic_ece": "lower_better",
+        "0_75_isotonic_aurc": "lower_better",
+    },
+    baseline_method="majority_class",
+    comparison_method="logistic_regression",
+    analysis_entrypoint=(
+        "experiments/tabular_calibration_selective_v1/analysis.py"
+    ),
+    analysis_method_description=(
+        "logistic regression with post-hoc calibration"
+        " (sigmoid/isotonic) vs majority-class baseline"
+        " under fixed covariate-shift severities"
+    ),
+    model_family="logistic_regression",
+)
+
+
 @dataclass
 class DesignResult:
     """Outcome of design compilation."""
