@@ -2542,55 +2542,113 @@ class PaperSynthesisStage(PipelineStage):
         # proposed architecture. Without this, the LLM may write about quantum
         # computing while the experiment is classical linear regression.
         experiment_contexts: dict[int, str] = {}
-        # Load the experiment spec once for context enrichment
-        _paper_exp_spec = None
-        _paper_spec_id = ctx.params.get("experiment_spec_id")
-        if _paper_spec_id:
-            try:
-                from backend.pipeline.experiment.specification import load_spec as _pls
-                _paper_exp_spec = _pls(_paper_spec_id)
-            except Exception:
-                pass
 
-        for idx, manifest in ctx.result.experiments.items():
-            if hasattr(manifest, 'status') and manifest.status == "succeeded":
-                lines = ["", "## EXPERIMENT SPECIFICATION (the actual experiment this paper reports)", ""]
-                # Phase 8 / 8R.3: inject the spec's method/dataset/target first
-                if _paper_exp_spec:
-                    lines.append(f"Research question: {_paper_exp_spec.research_question}")
-                    lines.append(f"Dataset: {_paper_exp_spec.dataset_name}")
-                    lines.append(f"Analysis method: {_paper_exp_spec.analysis_method}")
-                    if _paper_exp_spec.task_type:
-                        lines.append(f"Task type: {_paper_exp_spec.task_type}")
-                    if _paper_exp_spec.target_name:
-                        lines.append(f"Target: {_paper_exp_spec.target_name}")
-                    if _paper_exp_spec.baseline_method:
-                        lines.append(f"Baseline: {_paper_exp_spec.baseline_method}")
-                    if _paper_exp_spec.comparison_method:
-                        lines.append(f"Comparison model: {_paper_exp_spec.comparison_method}")
-                    if _paper_exp_spec.primary_metric:
-                        lines.append(f"Primary metric: {_paper_exp_spec.primary_metric}")
-                    lines.append("")
-                    lines.append("IMPORTANT: The paper MUST describe the analysis method and dataset")
-                    lines.append("above as the core experiment. Do NOT claim results for a different")
-                    lines.append("method or dataset. The proposed architecture is the context for WHY")
-                    lines.append("this method is interesting, but the EVALUATED method is the one above.")
-                lines.append("")
-                lines.append("## OBSERVED RESULTS (empirically measured — cite with [RESULT-N])")
-                lines.append("")
-                markers = ctx.result.result_markers.get(idx, [])
-                for m in markers:
-                    lines.append(
-                        self._format_result_marker(m, include_provenance=True)
+        # EAD-3d: Check for autonomous multi-dataset design first.
+        _auto_design = ctx.params.get("autonomous_experiment_design")
+        if _auto_design and _auto_design.get("status") == "designed":
+            experiment_contexts = self._build_autonomous_paper_context(
+                ctx, _auto_design,
+            )
+
+        if not experiment_contexts:
+            # Legacy single-spec context path (unchanged).
+            _paper_exp_spec = None
+            _paper_spec_id = ctx.params.get("experiment_spec_id")
+            if _paper_spec_id:
+                try:
+                    from backend.pipeline.experiment.specification import (
+                        load_spec as _pls,
                     )
-                lines.append("")
-                lines.append("These results are from an actual executed experiment. You may state")
-                lines.append("'we demonstrate' or 'our results show' ONLY for claims that cite [RESULT-N]")
-                lines.append("markers above. Do not claim empirical results for metrics not listed here.")
-                lines.append("The role and direction metadata attached to each [RESULT-N] marker are")
-                lines.append("authoritative. Keep each value bound to its stated role (for example,")
-                lines.append("baseline vs comparison/model) and do not reverse the stated metric direction.")
-                experiment_contexts[idx] = "\n".join(lines)
+                    _paper_exp_spec = _pls(_paper_spec_id)
+                except Exception:
+                    pass
+
+            for idx, manifest in ctx.result.experiments.items():
+                if (
+                    hasattr(manifest, "status")
+                    and manifest.status == "succeeded"
+                ):
+                    lines = [
+                        "",
+                        "## EXPERIMENT SPECIFICATION"
+                        " (the actual experiment this paper"
+                        " reports)",
+                        "",
+                    ]
+                    if _paper_exp_spec:
+                        lines.append(
+                            f"Research question:"
+                            f" {_paper_exp_spec.research_question}"
+                        )
+                        lines.append(
+                            f"Dataset:"
+                            f" {_paper_exp_spec.dataset_name}"
+                        )
+                        lines.append(
+                            f"Analysis method:"
+                            f" {_paper_exp_spec.analysis_method}"
+                        )
+                        if _paper_exp_spec.task_type:
+                            lines.append(
+                                f"Task type:"
+                                f" {_paper_exp_spec.task_type}"
+                            )
+                        if _paper_exp_spec.target_name:
+                            lines.append(
+                                f"Target:"
+                                f" {_paper_exp_spec.target_name}"
+                            )
+                        if _paper_exp_spec.baseline_method:
+                            lines.append(
+                                f"Baseline:"
+                                f" {_paper_exp_spec.baseline_method}"
+                            )
+                        if _paper_exp_spec.comparison_method:
+                            lines.append(
+                                f"Comparison model:"
+                                f" {_paper_exp_spec.comparison_method}"
+                            )
+                        if _paper_exp_spec.primary_metric:
+                            lines.append(
+                                f"Primary metric:"
+                                f" {_paper_exp_spec.primary_metric}"
+                            )
+                        lines.append("")
+                        lines.append(
+                            "IMPORTANT: The paper MUST describe"
+                            " the analysis method and dataset"
+                            " above as the core experiment."
+                            " Do NOT claim results for a different"
+                            " method or dataset."
+                        )
+                    lines.append("")
+                    lines.append(
+                        "## OBSERVED RESULTS"
+                        " (empirically measured —"
+                        " cite with [RESULT-N])"
+                    )
+                    lines.append("")
+                    markers = ctx.result.result_markers.get(idx, [])
+                    for m in markers:
+                        lines.append(
+                            self._format_result_marker(
+                                m, include_provenance=True,
+                            )
+                        )
+                    lines.append("")
+                    lines.append(
+                        "These results are from an actual"
+                        " executed experiment. You may state"
+                        " 'we demonstrate' or 'our results"
+                        " show' ONLY for claims that cite"
+                        " [RESULT-N] markers above."
+                    )
+                    lines.append(
+                        "The role and direction metadata"
+                        " attached to each [RESULT-N] marker"
+                        " are authoritative."
+                    )
+                    experiment_contexts[idx] = "\n".join(lines)
 
         # Phase 7 / 7A: When an empirical selection exists, only synthesize
         # paper for the selected proposal. Non-selected proposals get no paper.
@@ -2613,7 +2671,14 @@ class PaperSynthesisStage(PipelineStage):
                 # service-based path. For non-empirical runs that still use
                 # the legacy synthesizer path (when _synthesizer is set and
                 # no experiment context exists), the outer timeout is retained.
-                is_empirical = bool(experiment_contexts.get(idx) or ctx.params.get("experiment_spec_id"))
+                is_empirical = bool(
+                    experiment_contexts.get(idx)
+                    or ctx.params.get("experiment_spec_id")
+                    or (
+                        _auto_design
+                        and _auto_design.get("status") == "designed"
+                    )
+                )
                 if is_empirical:
                     # Phase 7: unified service manages budget internally
                     # Format ResultMarker objects to the verbatim strings the
@@ -2668,6 +2733,104 @@ class PaperSynthesisStage(PipelineStage):
                 self._set_metadata(proposal, metadata)
 
         return True
+
+    def _build_autonomous_paper_context(
+        self, ctx, design_state,
+    ) -> dict[int, str]:
+        """Build multi-dataset study context for autonomous papers.
+
+        Returns ``{selected_idx: context_str}`` containing all
+        executed datasets, each with its observed results under the
+        correct heading. Marker numbers are preserved from
+        ``ctx.result.result_markers`` without renumbering.
+        """
+        selected_idx = design_state.get("selected_proposal_idx")
+        if selected_idx is None:
+            return {}
+
+        runs = ctx.result.experiment_runs.get(selected_idx, [])
+        all_markers = ctx.result.result_markers.get(selected_idx, [])
+        if not runs or not all_markers:
+            return {}
+
+        specs = design_state.get("specs", [])
+        first_spec = specs[0] if specs else {}
+        ri = first_spec.get("research_intent", {})
+
+        lines = [
+            "",
+            "## EMPIRICAL STUDY (multi-dataset)",
+            "",
+            f"Research question:"
+            f" {design_state.get('research_question', '')}",
+            f"Capability:"
+            f" {design_state.get('capability_id', '')}",
+            f"Analysis method:"
+            f" {first_spec.get('analysis', {}).get('method', '')}",
+            f"Baseline: {ri.get('baseline_method', '')}",
+            f"Primary metric:"
+            f" {ri.get('primary_metric', '')}",
+        ]
+
+        executed_datasets = [
+            getattr(r.dataset, "name", "")
+            for r in runs
+            if hasattr(r, "status") and r.status == "succeeded"
+        ]
+        lines.append(
+            f"Datasets executed: {', '.join(executed_datasets)}"
+        )
+        lines.append("")
+        lines.append(
+            "Both datasets are part of the same empirical"
+            " study. Every quantitative claim must retain"
+            " its [RESULT-N] marker. Comparisons across"
+            " datasets are allowed only from the supplied"
+            " results. Do not invent pooled or aggregate"
+            " statistics. Do not attribute a result to"
+            " the wrong dataset. Do not describe datasets"
+            " not listed above as executed."
+        )
+        lines.append(
+            "The paper must describe the actual"
+            " calibration/selective-classification"
+            " capability, not a speculative method from"
+            " the proposal."
+        )
+
+        # Group markers by dataset prefix.
+        markers_by_dataset: dict[str, list] = {}
+        for m in all_markers:
+            dataset = m.metric_name.split(".")[0]
+            markers_by_dataset.setdefault(dataset, []).append(m)
+
+        for dataset_name in executed_datasets:
+            ds_markers = markers_by_dataset.get(dataset_name, [])
+            if not ds_markers:
+                continue
+            lines.append("")
+            lines.append(
+                f"### {dataset_name.upper()}"
+                " — OBSERVED RESULTS"
+            )
+            lines.append("")
+            for m in ds_markers:
+                lines.append(
+                    self._format_result_marker(
+                        m, include_provenance=True,
+                    )
+                )
+
+        lines.append("")
+        lines.append(
+            "These results are from actual executed"
+            " experiments. You may state 'we demonstrate'"
+            " or 'our results show' ONLY for claims that"
+            " cite [RESULT-N] markers. The role and"
+            " direction metadata are authoritative."
+        )
+
+        return {selected_idx: "\n".join(lines)}
 
     async def _synthesize_paper_for_proposal(
         self, idx, proposal, ctx, provider, source_papers, source_ids,
