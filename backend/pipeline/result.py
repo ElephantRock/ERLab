@@ -101,6 +101,8 @@ class PipelineResult:
     # Phase 5: empirical experiment results (proposal_idx -> manifest)
     experiments: dict[int, Any] = field(default_factory=dict)  # dict[int, ExperimentManifest]
     result_markers: dict[int, list] = field(default_factory=dict)  # dict[int, list[ResultMarker]]
+    # EAD-3b: multi-dataset experiment results (proposal_idx -> list[ExperimentManifest])
+    experiment_runs: dict[int, list] = field(default_factory=dict)
     run_id: str = ""
     params_used: dict = field(default_factory=dict)
     persistence_warnings: list[str] = field(default_factory=list)

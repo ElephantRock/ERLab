@@ -118,7 +118,194 @@ def _build_empirical_experiment_constraint(experiment_spec_id: str | None) -> st
     return "\n".join(lines)
 
 
-# Stages that do NOT use LLM models — no receipt required.
+def _build_autonomous_experiment_anchor(design_state: dict) -> str:
+    """Render study-level empirical authority for autonomous design.
+
+    Consumes the already-validated autonomous design state stored in
+    ``ctx.params["autonomous_experiment_design"]`` and describes the
+    multi-dataset study. Does NOT call the legacy renderer (which requires
+    a registered spec_id).
+    """
+    if not design_state or design_state.get("status") != "designed":
+        return ""
+
+    specs = design_state.get("specs", [])
+    if not specs:
+        return ""
+
+    datasets = [
+        s.get("dataset", {}).get("name", "?") for s in specs
+    ]
+    first = specs[0]
+    ri = first.get("research_intent", {})
+    lines = [
+        "EMPIRICAL EXPERIMENT CONSTRAINT — this proposal MUST be"
+        " compatible with:",
+        f"  Research question: {design_state.get('research_question', '')}",
+        f"  Task type: {ri.get('task_type', 'classification')}",
+        f"  Datasets: {', '.join(datasets)}",
+        f"  Analysis method: {first.get('analysis', {}).get('method', '')}",
+        f"  Baseline: {ri.get('baseline_method', '')}",
+        f"  Comparison model: {ri.get('comparison_method', '')}",
+    ]
+    if ri.get("primary_metric"):
+        lines.append(f"  Primary metric: {ri['primary_metric']}")
+    lines.append(
+        "The paper resulting from this proposal will report results from"
+        " experiments on the listed datasets. The proposed approach must"
+        " include the declared analysis method as its core evaluation."
+    )
+    return "\n".join(lines)
+
+
+def ensure_autonomous_experiment_design(ctx: StageContext) -> None:
+    """Design autonomous experiment specs if enabled, before proposal synthesis.
+
+    Idempotent: if ``ctx.params["autonomous_experiment_design"]`` already
+    exists, this function returns without re-running the designer.
+
+    Resolution order:
+      1. Explicit experiment_spec_id → skip autonomous design entirely.
+      2. No explicit spec + autonomous disabled → skip (legacy no-op).
+      3. No explicit spec + autonomous enabled → run SpecDesigner.
+
+    The design state is stored in ``ctx.params["autonomous_experiment_design"]``
+    as a JSON-serializable dict with keys: status, capability_id,
+    selected_proposal_idx, research_question, specs, diagnostics.
+    """
+    if ctx.params.get("experiment_spec_id"):
+        return  # Legacy explicit-spec path — do not interfere.
+
+    if ctx.params.get("autonomous_experiment_design"):
+        return  # Already designed — idempotent.
+
+    enabled = ctx.params.get("autonomous_experiment_enabled", False)
+    if not enabled:
+        return  # Not requested.
+
+    # Select the feasibility winner using the existing rule.
+    all_indices = sorted(ctx.result.proposals.keys())
+    if not all_indices:
+        ctx.params["autonomous_experiment_design"] = {
+            "status": "no_proposals",
+            "diagnostics": ["no proposals available for experiment design"],
+        }
+        return
+
+    selected_idx = None
+    best_score = -1.0
+    for idx in all_indices:
+        score = -1.0
+        report = ctx.result.feasibility_reports.get(idx)
+        if report and hasattr(report, "overall_score") and report.overall_score is not None:
+            score = float(report.overall_score)
+        elif report and hasattr(report, "score") and report.score is not None:
+            score = float(report.score)
+        if score > best_score:
+            best_score = score
+            selected_idx = idx
+
+    idea = ctx.result.ideas[selected_idx] if selected_idx is not None and selected_idx < len(ctx.result.ideas) else None
+
+    from backend.pipeline.experiment.spec_designer import (
+        TABULAR_CALIBRATION_SELECTIVE_V1,
+        IdeaInputs,
+        SpecDesigner,
+    )
+
+    # Extract requested metrics from the idea's evaluation approach.
+    eval_text = getattr(idea, "evaluation_approach", "") if idea else ""
+    requested = []
+    for metric in TABULAR_CALIBRATION_SELECTIVE_V1.supported_metrics:
+        short = metric.split("_")[-1] if "_" in metric else metric
+        if short in eval_text.lower() or metric in eval_text.lower():
+            requested.append(metric)
+    # Always include baseline_accuracy — it is the anchor for every study.
+    if "baseline_accuracy" not in requested:
+        requested.insert(0, "baseline_accuracy")
+
+    designer = SpecDesigner()
+    research_q = (
+        ctx.research_question.strip()
+        if ctx.research_question and ctx.research_question.strip()
+        else str(ctx.domain)
+    )
+    result = designer.design(
+        research_question=research_q,
+        idea=IdeaInputs(
+            proposed_method=getattr(idea, "proposed_method", ""),
+            evaluation_approach=eval_text,
+            requested_metrics=requested,
+        ),
+        capability=TABULAR_CALIBRATION_SELECTIVE_V1,
+        min_datasets=2,
+    )
+
+    if result.status != "success":
+        ctx.params["autonomous_experiment_design"] = {
+            "status": result.status,
+            "diagnostics": result.diagnostics,
+        }
+        logger.warning(
+            "Autonomous experiment design failed: %s — %s",
+            result.status,
+            "; ".join(result.diagnostics[:3]),
+        )
+        return
+
+    ctx.params["autonomous_experiment_design"] = {
+        "status": "designed",
+        "capability_id": "tabular_calibration_selective_v1",
+        "selected_proposal_idx": selected_idx,
+        "research_question": research_q,
+        "specs": [
+            {
+                "experiment_spec_id": s.spec_id,
+                "description": s.description,
+                "dataset": {
+                    "name": s.dataset_name,
+                    "version": s.dataset_version,
+                    "raw_filename": s.dataset_raw_filename,
+                    "raw_sha256": s.dataset_raw_sha256,
+                },
+                "split": {
+                    "method": s.split_method,
+                    "train_fraction": s.train_fraction,
+                    "test_fraction": s.test_fraction,
+                    "random_seed": s.random_seed,
+                },
+                "analysis": {
+                    "entrypoint": s.analysis_entrypoint,
+                    "method": s.analysis_method,
+                    "declared_metrics": list(s.declared_metrics),
+                },
+                "metrics": {
+                    k: {"direction": v}
+                    for k, v in s.metric_directions.items()
+                },
+                "tolerances": dict(s.tolerances),
+                "output_artifacts": list(s.output_artifacts),
+                "research_question": s.research_question,
+                "research_intent": {
+                    "task_type": s.task_type,
+                    "target_name": s.target_name,
+                    "baseline_method": s.baseline_method,
+                    "comparison_method": s.comparison_method,
+                    "primary_metric": s.primary_metric,
+                },
+                "model_family": s.model_family,
+                "hyperparameters": dict(s.hyperparameters),
+            }
+            for s in result.specs
+        ],
+        "diagnostics": result.diagnostics,
+    }
+    logger.info(
+        "Autonomous experiment design: %d specs for proposal %d (%s)",
+        len(result.specs),
+        selected_idx,
+        ", ".join(s.dataset_name for s in result.specs),
+    )
 # All other stages are model-backed and should produce receipts.
 NON_MODEL_STAGES: frozenset[str] = frozenset({
     "literature_search",
@@ -508,7 +695,6 @@ class LiteratureSearchStage(PipelineStage):
             logger.debug("LLM query expansion skipped (no gateway available)")
         # P0.1: Build SearchQueryData with deterministic query_keys
         from backend.pipeline.persistence import (
-            CandidateWithDiscoveries,
             SearchQueryData,
             compute_query_key,
         )
@@ -1506,6 +1692,10 @@ class ProposalSynthesisStage(PipelineStage):
             300.0,
         )
 
+        # EAD-3b: Ensure autonomous experiment design exists before proposal
+        # synthesis so the empirical anchor propagates into the proposal.
+        ensure_autonomous_experiment_design(ctx)
+
         for i, idea in enumerate(ideas):
             novelty = ctx.result.novelty_reports.get(i)
             feasibility = ctx.result.feasibility_reports.get(i)
@@ -1529,6 +1719,14 @@ class ProposalSynthesisStage(PipelineStage):
             spec_anchor = _build_empirical_experiment_constraint(
                 ctx.params.get("experiment_spec_id")
             )
+            # EAD-3b: If no explicit spec but autonomous design is enabled,
+            # anchor proposal synthesis to the designed study authority.
+            if not spec_anchor:
+                _auto_design = ctx.params.get("autonomous_experiment_design")
+                if _auto_design:
+                    spec_anchor = _build_autonomous_experiment_anchor(
+                        _auto_design
+                    )
             if spec_anchor:
                 framing = f"{spec_anchor}\n{framing}".rstrip() if framing else spec_anchor
             try:
@@ -3223,6 +3421,10 @@ class ExperimentExecutionStage(PipelineStage):
     async def execute(self, ctx: StageContext) -> bool:
         spec_id = ctx.params.get("experiment_spec_id")
         if not spec_id:
+            # EAD-3b: Check for autonomous experiment design.
+            _auto = ctx.params.get("autonomous_experiment_design")
+            if _auto and _auto.get("status") == "designed":
+                return await self._execute_autonomous(ctx, _auto)
             # No experiment requested — no-op
             return True
 
@@ -3351,9 +3553,159 @@ class ExperimentExecutionStage(PipelineStage):
 
         return True
 
-    async def _persist_experiment(self, ctx, proposal_idx, manifest, stdout, stderr, exit_code, elapsed):
-        """Persist experiment result immediately so a later paper-synthesis
-        timeout cannot erase an already completed experiment."""
+    async def _execute_autonomous(
+        self, ctx: StageContext, design_state: dict,
+    ) -> bool:
+        """Execute autonomous multi-spec experiments.
+
+        Runs each designed spec as a separate governed execution through
+        ``execute_experiment_spec()``. Stores manifests in
+        ``ctx.result.experiment_runs[idx]`` and builds dataset-qualified
+        result markers with stable global numbering.
+
+        No persistence in EAD-3b — that belongs to EAD-3c.
+        """
+        from pathlib import Path
+
+        from backend.pipeline.experiment.empirical_runner import (
+            execute_experiment_spec,
+        )
+        from backend.pipeline.experiment.manifest import (
+            ExperimentManifest,
+            ResultMarker,
+        )
+        from backend.pipeline.experiment.specification import (
+            _parse_spec,
+        )
+
+        selected_idx = design_state.get("selected_proposal_idx")
+        spec_dicts = design_state.get("specs", [])
+        if not spec_dicts or selected_idx is None:
+            logger.warning(
+                "Autonomous execution: no specs or selected proposal"
+            )
+            return True
+
+        output_base = Path(
+            f"data/experiments/{ctx.run_id or 'run'}"
+        )
+        output_base.mkdir(parents=True, exist_ok=True)
+
+        all_runs: list[ExperimentManifest] = []
+        all_markers: list[ResultMarker] = []
+        global_marker_idx = 0
+
+        for spec_dict in spec_dicts:
+            dataset_name = spec_dict.get("dataset", {}).get("name", "unknown")
+            try:
+                spec = _parse_spec(spec_dict)
+            except Exception as e:
+                logger.warning(
+                    "Autonomous execution: spec for %s failed"
+                    " validation: %s",
+                    dataset_name, e,
+                )
+                all_runs.append(ExperimentManifest(
+                    experiment_spec_id=spec_dict.get("spec_id", ""),
+                    status="failed",
+                ))
+                continue
+
+            output_dir = output_base / f"proposal_{selected_idx}" / dataset_name
+            try:
+                manifest, stdout, stderr, exit_code, elapsed = (
+                    await execute_experiment_spec(
+                        spec, output_dir, timeout_seconds=300.0,
+                    )
+                )
+            except Exception as e:
+                logger.warning(
+                    "Autonomous execution for %s failed: %s",
+                    dataset_name, e,
+                )
+                manifest = ExperimentManifest(
+                    experiment_spec_id=spec.spec_id,
+                    status="failed",
+                )
+
+            all_runs.append(manifest)
+
+            # Build dataset-qualified markers for this execution.
+            if manifest.status == "succeeded" and manifest.results:
+                _directions = spec.metric_directions
+                artifact = next(
+                    (a for a in manifest.result_artifacts
+                     if a.artifact_type == "metrics"),
+                    manifest.result_artifacts[0]
+                    if manifest.result_artifacts else None,
+                )
+                for metric_name, value in sorted(
+                    manifest.results.items()
+                ):
+                    global_marker_idx += 1
+                    qualified_name = f"{dataset_name}.{metric_name}"
+                    _role = "comparison"
+                    if metric_name.startswith("baseline_"):
+                        _role = "baseline"
+                    elif metric_name in (
+                        "improvement",
+                    ) or metric_name.endswith(
+                        "_reduction",
+                    ) or metric_name.endswith("_gain"):
+                        _role = "derived"
+                    all_markers.append(ResultMarker(
+                        marker_index=global_marker_idx,
+                        marker=f"RESULT-{global_marker_idx}",
+                        metric_name=qualified_name,
+                        observed_value=value,
+                        artifact_path=(
+                            f"{dataset_name}/{artifact.filename}"
+                            if artifact else ""
+                        ),
+                        artifact_sha256=(
+                            artifact.sha256 if artifact else ""
+                        ),
+                        experiment_result_id=0,
+                        direction=_directions.get(metric_name, ""),
+                        role=_role,
+                    ))
+
+            logger.info(
+                "Autonomous experiment for %s: status=%s"
+                " metrics=%d",
+                dataset_name, manifest.status,
+                len(manifest.results) if manifest.results else 0,
+            )
+
+        # Store multi-run results.
+        ctx.result.experiment_runs[selected_idx] = all_runs
+        # Legacy compatibility: first manifest as the primary.
+        if all_runs:
+            ctx.result.experiments[selected_idx] = all_runs[0]
+        # Combined marker set with global numbering.
+        ctx.result.result_markers[selected_idx] = all_markers
+
+        # Persist the selection metadata (same shape as legacy).
+        ctx.params["empirical_selection"] = {
+            "selected_empirical_proposal_id": selected_idx,
+            "selection_method": "feasibility_score",
+            "selection_rank": 1,
+            "selection_reason": (
+                "Autonomous experiment design selected this proposal"
+            ),
+        }
+
+        return True
+
+    async def _persist_experiment(
+        self, ctx, proposal_idx, manifest,
+        stdout, stderr, exit_code, elapsed,
+    ):
+        """Persist experiment result immediately.
+
+        Ensures a later paper-synthesis timeout cannot erase an
+        already completed experiment.
+        """
         import json
 
         from backend.db.database import get_session
