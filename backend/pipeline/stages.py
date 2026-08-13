@@ -184,7 +184,9 @@ def ensure_autonomous_experiment_design(ctx: StageContext) -> None:
         return  # Not requested.
 
     # Select the feasibility winner using the existing rule.
-    all_indices = sorted(ctx.result.proposals.keys())
+    # Use ideas (which exist before proposal synthesis) rather than
+    # proposals (which are created inside the synthesis loop).
+    all_indices = list(range(len(ctx.result.ideas)))
     if not all_indices:
         ctx.params["autonomous_experiment_design"] = {
             "status": "no_proposals",
