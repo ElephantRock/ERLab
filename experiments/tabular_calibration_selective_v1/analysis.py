@@ -205,20 +205,40 @@ def fit_sigmoid_calibration(probs, labels, positive_class):
     return best_a, best_b
 
 
-def apply_sigmoid_calibration(probs, a, b):
-    """Apply sigmoid calibration and renormalize to a valid probability
-    distribution.
+def apply_sigmoid_calibration(
+    probs, a, b, positive_class,
+):
+    """Apply sigmoid calibration to the positive class, then
+    redistribute remaining mass proportionally.
 
-    Each class probability is transformed via sigmoid(a*p + b), then
-    all transformed values are renormalized so they sum to 1. Without
-    renormalization the values are not valid multiclass probabilities
-    and downstream metrics (confidence, ECE, AURC) are invalid.
+    The (a,b) parameters are learned from the binary positive-class
+    calibration set. Applying them to the positive-class probability
+    and redistributing 1 - calibrated_positive across other classes
+    proportionally to their original probabilities mirrors the isotonic
+    approach and produces valid multiclass probabilities.
     """
-    transformed = {cls: _sigmoid(a * p + b) for cls, p in probs.items()}
-    total = sum(transformed.values())
-    if total > 0:
-        return {cls: v / total for cls, v in transformed.items()}
-    return transformed
+    p_pos = probs.get(positive_class, 0.5)
+    cal_p = _sigmoid(a * p_pos + b)
+    cal_p = max(1e-12, min(1 - 1e-12, cal_p))
+    other_total = sum(
+        v for cls, v in probs.items()
+        if cls != positive_class
+    )
+    if other_total > 0:
+        remaining = 1.0 - cal_p
+        return {
+            **{
+                cls: remaining * (v / other_total)
+                for cls, v in probs.items()
+                if cls != positive_class
+            },
+            positive_class: cal_p,
+        }
+    return {
+        cls: cal_p if cls == positive_class
+        else (1 - cal_p) / max(1, len(probs) - 1)
+        for cls in probs
+    }
 
 
 def fit_isotonic_calibration(probs, labels, positive_class):
@@ -444,7 +464,10 @@ def main():
             raw_probs = [predict_proba(models, x) for x in s_X]
             if cal_method == "sigmoid":
                 probs = [
-                    apply_sigmoid_calibration(p, sig_a, sig_b) for p in raw_probs
+                    apply_sigmoid_calibration(
+                        p, sig_a, sig_b, positive_class,
+                    )
+                    for p in raw_probs
                 ]
             elif cal_method == "isotonic":
                 probs = [

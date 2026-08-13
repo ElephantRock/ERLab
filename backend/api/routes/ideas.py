@@ -1233,10 +1233,21 @@ async def repair_paper(idea_id: int):
             # persisted metadata from the original pipeline run.
             if markers:
                 pipeline_result.result_markers = {proposal.id: markers}
+            # EAD-3e: Persist autonomous design state into the
+            # proposal's metadata so cold repair can reconstruct it.
+            auto_design = new_meta.get(
+                "autonomous_experiment_design"
+            )
+            eval_params = {}
+            if exp_spec_id:
+                eval_params["experiment_spec_id"] = exp_spec_id
+            if auto_design and auto_design.get("status") == "designed":
+                eval_params["autonomous_experiment_design"] = auto_design
+
             eval_ctx = StageContext(
                 result=pipeline_result,
                 domain="machine learning",
-                params={"experiment_spec_id": exp_spec_id} if exp_spec_id else {},
+                params=eval_params,
             )
             proposal_obj = SimpleNamespace(paper_md=new_md, metadata=new_meta)
 

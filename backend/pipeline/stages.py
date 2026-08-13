@@ -2903,6 +2903,16 @@ class PaperSynthesisStage(PipelineStage):
             }
             metadata["synthesis_strategy"] = synth_result.synthesis_strategy
             metadata["synthesis_state"] = "ready"
+            # EAD-3e: Persist autonomous design state into proposal
+            # metadata so cold repair (POST /paper/repair) can
+            # reconstruct the evaluation context.
+            _persist_auto = ctx.params.get(
+                "autonomous_experiment_design"
+            )
+            if _persist_auto:
+                metadata["autonomous_experiment_design"] = (
+                    _persist_auto
+                )
             # Clear checkpoints after successful assembly
             metadata.pop("section_checkpoints", None)
             logger.info(
@@ -4236,26 +4246,44 @@ class ExperimentExecutionStage(PipelineStage):
         from sqlalchemy import select
 
         # Resolve real persisted proposal + idea identity.
-        # Scope the query to the current run's proposals to avoid
-        # attaching evidence to an unrelated paper in a multi-run DB.
+        # Use proposal_idx to find the selected idea, then find the
+        # persisted Proposal row for that idea within this run.
         proposal_db_id = None
         idea_db_id = None
         if ctx.db_run_id:
-            with get_session() as session:
-                run = session.get(PipelineRun, ctx.db_run_id)
-                if run:
-                    # Find the most recent Proposal whose idea belongs
-                    # to this run's ideas.
-                    existing = session.execute(
-                        select(Proposal).join(
-                            Idea,
-                            Proposal.idea_id == Idea.id,
-                        ).where(
+            # Map proposal_idx to the corresponding idea index.
+            # Ideas and proposals share the same index in the pipeline.
+            idea_obj = (
+                ctx.result.ideas[proposal_idx]
+                if proposal_idx < len(ctx.result.ideas)
+                else None
+            )
+            idea_db_id_for_lookup = None
+            if idea_obj:
+                # Ideas are persisted with pipeline_run_id; look up by
+                # title within this run to get the DB idea_id.
+                with get_session() as session:
+                    existing_idea = session.execute(
+                        select(Idea).where(
                             Idea.pipeline_run_id == ctx.db_run_id,
-                        ).order_by(
-                            Proposal.id.desc(),
+                            Idea.title == getattr(
+                                idea_obj, "title", ""
+                            ),
                         ).limit(1),
                     ).scalar_one_or_none()
+                    if existing_idea:
+                        idea_db_id_for_lookup = existing_idea.id
+
+            with get_session() as session:
+                if idea_db_id_for_lookup:
+                    existing = session.execute(
+                        select(Proposal).where(
+                            Proposal.idea_id
+                            == idea_db_id_for_lookup,
+                        ).limit(1),
+                    ).scalar_one_or_none()
+                else:
+                    existing = None
                 if existing:
                     proposal_db_id = existing.id
                     idea_db_id = existing.idea_id
