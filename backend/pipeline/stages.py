@@ -3126,28 +3126,29 @@ class PaperSynthesisStage(PipelineStage):
             _eval_auto_design = ctx.params.get(
                 "autonomous_experiment_design"
             )
+            # Autonomous design takes precedence over legacy
+            # single-spec hydration. Without this guard, the legacy
+            # hydrator (LIMIT 1) can overwrite autonomous multi-result
+            # hydration, losing one dataset's markers.
             if (
-                _eval_spec_id_for_hydration
-                or (
-                    _eval_auto_design
-                    and _eval_auto_design.get("status")
-                    == "designed"
-                )
+                _eval_auto_design
+                and _eval_auto_design.get("status")
+                == "designed"
             ):
-                if _eval_auto_design and _eval_auto_design.get(
-                    "status"
-                ) == "designed":
-                    hydrated = (
-                        self._hydrate_autonomous_result_markers(
-                            idx, _eval_auto_design,
-                        )
+                hydrated = (
+                    self._hydrate_autonomous_result_markers(
+                        idx, _eval_auto_design,
                     )
-                else:
-                    hydrated = (
-                        self._hydrate_persisted_result_markers(
-                            idx
-                        )
+                )
+                if hydrated:
+                    result_markers = hydrated
+                    logger.info(
+                        "R1: Hydrated %d autonomous"
+                        " result markers for proposal"
+                        " %d",
+                        len(result_markers), idx,
                     )
+            elif _eval_spec_id_for_hydration:
                 hydrated = self._hydrate_persisted_result_markers(idx)
                 if hydrated:
                     result_markers = hydrated
@@ -3844,9 +3845,42 @@ class ExperimentExecutionStage(PipelineStage):
         spec_id = ctx.params.get("experiment_spec_id")
         if not spec_id:
             # EAD-3b: Check for autonomous experiment design.
-            _auto = ctx.params.get("autonomous_experiment_design")
+            _auto = ctx.params.get(
+                "autonomous_experiment_design"
+            )
+            _auto_enabled = ctx.params.get(
+                "autonomous_experiment_enabled", False,
+            )
             if _auto and _auto.get("status") == "designed":
-                return await self._execute_autonomous(ctx, _auto)
+                return await self._execute_autonomous(
+                    ctx, _auto,
+                )
+            if _auto_enabled and _auto and (
+                _auto.get("status") != "designed"
+            ):
+                # Autonomous mode was requested but design
+                # failed. Halt rather than silently producing a
+                # non-empirical paper.
+                from backend.pipeline.result import (
+                    PipelineOutcome,
+                )
+                ctx.result.outcome = (
+                    PipelineOutcome.FAILED_EXECUTION
+                )
+                ctx.result.terminal_stage = (
+                    "experiment_execution"
+                )
+                ctx.result.terminal_reason = (
+                    f"Autonomous experiment design"
+                    f" failed: {_auto.get('status')}"
+                    f" — { '; '.join(_auto.get('diagnostics', [])[:3]) }"
+                )
+                logger.error(
+                    "Autonomous design failed,"
+                    " halting: %s",
+                    ctx.result.terminal_reason,
+                )
+                return False
             # No experiment requested — no-op
             return True
 
@@ -4197,21 +4231,31 @@ class ExperimentExecutionStage(PipelineStage):
         from backend.db.database import get_session
         from backend.db.models import ExperimentResult as ExperimentResultDB
         from backend.db.models import Proposal
+        from backend.db.models import Idea
+        from backend.db.models import PipelineRun
         from sqlalchemy import select
 
         # Resolve real persisted proposal + idea identity.
+        # Scope the query to the current run's proposals to avoid
+        # attaching evidence to an unrelated paper in a multi-run DB.
         proposal_db_id = None
         idea_db_id = None
         if ctx.db_run_id:
             with get_session() as session:
-                # Find the most recent Proposal row for this run.
-                # Proposals are persisted after synthesis; by the time
-                # experiment_execution runs, they exist in the DB.
-                existing = session.execute(
-                    select(Proposal).order_by(
-                        Proposal.id.desc(),
-                    ).limit(1),
-                ).scalar_one_or_none()
+                run = session.get(PipelineRun, ctx.db_run_id)
+                if run:
+                    # Find the most recent Proposal whose idea belongs
+                    # to this run's ideas.
+                    existing = session.execute(
+                        select(Proposal).join(
+                            Idea,
+                            Proposal.idea_id == Idea.id,
+                        ).where(
+                            Idea.pipeline_run_id == ctx.db_run_id,
+                        ).order_by(
+                            Proposal.id.desc(),
+                        ).limit(1),
+                    ).scalar_one_or_none()
                 if existing:
                     proposal_db_id = existing.id
                     idea_db_id = existing.idea_id

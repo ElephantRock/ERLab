@@ -147,14 +147,42 @@ async def execute_experiment_spec(
         )
         return manifest, "", str(e), 1, 0.0
 
-    # Resolve the checked-in analysis entrypoint
-    entrypoint_path = _PROJECT_ROOT / spec.analysis_entrypoint
-    if not entrypoint_path.exists():
-        manifest = ExperimentManifest(
-            experiment_spec_id=spec.spec_id,
-            status="failed",
+    # Resolve the checked-in analysis entrypoint through the
+    # existing security boundary. This rejects absolute paths,
+    # ../ traversal, and symlink escape.
+    # For project-relative entrypoints (the autonomous-design
+    # path), resolve_entrypoint_securely is the authority.
+    # Absolute paths (legacy test fixtures, pre-existing specs)
+    # fall back to a simple existence check since they bypass
+    # the autonomous design boundary.
+    ep = Path(spec.analysis_entrypoint)
+    if ep.is_absolute():
+        entrypoint_path = ep
+        if not entrypoint_path.exists():
+            manifest = ExperimentManifest(
+                experiment_spec_id=spec.spec_id,
+                status="failed",
+            )
+            return (
+                manifest, "",
+                f"Entrypoint not found:"
+                f" {entrypoint_path}", 1, 0.0,
+            )
+    else:
+        resolved, snapshot_or_err = (
+            resolve_entrypoint_securely(
+                spec.analysis_entrypoint,
+            )
         )
-        return manifest, "", f"Entrypoint not found: {entrypoint_path}", 1, 0.0
+        if resolved is None:
+            manifest = ExperimentManifest(
+                experiment_spec_id=spec.spec_id,
+                status="failed",
+            )
+            return (
+                manifest, "", snapshot_or_err, 1, 0.0,
+            )
+        entrypoint_path = resolved
 
     code_sha256 = compute_sha256(entrypoint_path)
     command = f"python {spec.analysis_entrypoint} --input {dataset_path} --output {output_dir}"

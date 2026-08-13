@@ -65,14 +65,14 @@ def load_dataset_csv(path: str):
         sys.exit(1)
 
     first = rows[0]
-    # Detect header: if last column is non-numeric and the rest are non-numeric
-    # strings (column names), treat as header.
-    last_col = first[-1]
-    feature_cols = first[:-1]
+    # Detect header: a header row has non-numeric feature columns
+    # (column names like "sepal_length_cm"). A data row like Iris's
+    # first row has numeric features and a string label.
+    # The correct test: are the feature columns numeric? If yes, it's
+    # data (even if the label is a string). If no, it's a header.
     has_header = False
     try:
-        [float(x) for x in feature_cols]
-        float(last_col)
+        [float(x) for x in first[:-1]]
     except (ValueError, TypeError):
         has_header = True
 
@@ -206,7 +206,19 @@ def fit_sigmoid_calibration(probs, labels, positive_class):
 
 
 def apply_sigmoid_calibration(probs, a, b):
-    return {cls: _sigmoid(a * p + b) for cls, p in probs.items()}
+    """Apply sigmoid calibration and renormalize to a valid probability
+    distribution.
+
+    Each class probability is transformed via sigmoid(a*p + b), then
+    all transformed values are renormalized so they sum to 1. Without
+    renormalization the values are not valid multiclass probabilities
+    and downstream metrics (confidence, ECE, AURC) are invalid.
+    """
+    transformed = {cls: _sigmoid(a * p + b) for cls, p in probs.items()}
+    total = sum(transformed.values())
+    if total > 0:
+        return {cls: v / total for cls, v in transformed.items()}
+    return transformed
 
 
 def fit_isotonic_calibration(probs, labels, positive_class):
