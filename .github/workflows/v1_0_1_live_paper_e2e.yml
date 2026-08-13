@@ -1,0 +1,289 @@
+name: v1.0.1 Live Paper Product E2E
+
+on:
+  push:
+    branches:
+      - audit/v1.0.1-live-paper-e2e
+
+permissions:
+  contents: read
+
+jobs:
+  live-paper-product-e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 100
+    env:
+      EVIDENCE_DIR: ${{ github.workspace }}/evidence/live-paper
+      ERLAB_API_BASE: http://127.0.0.1:8000
+      ERLAB_FRONTEND_URL: http://127.0.0.1:5173
+      ERLAB_PIPELINE_TIMEOUT_SECONDS: "3600"
+      ERLAB_POLL_SECONDS: "10"
+      EROCK_DATABASE_URL: sqlite:///${{ github.workspace }}/evidence/live-paper/live-paper.db
+      EROCK_ENV: development
+      EROCK_AUTH_ENABLED: "false"
+      EROCK_API_KEY: ""
+      EROCK_RATE_LIMIT_ENABLED: "false"
+      EROCK_BUDGET_ENABLED: "true"
+      EROCK_BUDGET_MAX_COST_USD: "2.00"
+      EROCK_BUDGET_MAX_TOKENS: "120000"
+      EROCK_BUDGET_MAX_SECONDS: "3600"
+      EROCK_SEARCH_DEPTH: "1"
+      EROCK_RETRIEVAL_MODE: substring
+      EROCK_RERANKER_ENABLED: "false"
+      EROCK_EMBEDDING_FALLBACK_ENABLED: "true"
+      EROCK_AUTONOMY_ENABLED: "false"
+      EROCK_AUTONOMY_SCHEDULE_ENABLED: "false"
+      EROCK_LMSTUDIO_ENABLED: "false"
+      OPENAI_PRIMARY: ${{ secrets.EROCK_OPENAI_API_KEY }}
+      OPENAI_FALLBACK: ${{ secrets.OPENAI_API_KEY }}
+      ANTHROPIC_PRIMARY: ${{ secrets.EROCK_ANTHROPIC_API_KEY }}
+      ANTHROPIC_FALLBACK: ${{ secrets.ANTHROPIC_API_KEY }}
+      GEMINI_PRIMARY: ${{ secrets.EROCK_GEMINI_API_KEY }}
+      GEMINI_FALLBACK: ${{ secrets.GEMINI_API_KEY }}
+      S2_PRIMARY: ${{ secrets.EROCK_SEMANTIC_SCHOLAR_API_KEY }}
+      S2_FALLBACK: ${{ secrets.SEMANTIC_SCHOLAR_API_KEY }}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Prepare evidence directory
+        run: mkdir -p "$EVIDENCE_DIR"
+
+      - name: Select an available provider without exposing credentials
+        id: provider
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+
+          candidates = [
+              ("openai", os.environ.get("OPENAI_PRIMARY") or os.environ.get("OPENAI_FALLBACK"), "EROCK_OPENAI_API_KEY"),
+              ("anthropic", os.environ.get("ANTHROPIC_PRIMARY") or os.environ.get("ANTHROPIC_FALLBACK"), "EROCK_ANTHROPIC_API_KEY"),
+              ("gemini", os.environ.get("GEMINI_PRIMARY") or os.environ.get("GEMINI_FALLBACK"), "EROCK_GEMINI_API_KEY"),
+          ]
+          selected = next(((name, key, env_name) for name, key, env_name in candidates if key), None)
+          env_file = Path(os.environ["GITHUB_ENV"])
+          if selected:
+              name, key, env_name = selected
+              with env_file.open("a", encoding="utf-8") as handle:
+                  handle.write(f"EROCK_DEFAULT_PROVIDER={name}\n")
+                  handle.write(f"{env_name}={key}\n")
+              status = {"provider": name, "available": True, "credential_recorded": False}
+          else:
+              status = {"provider": None, "available": False, "credential_recorded": False}
+          s2 = os.environ.get("S2_PRIMARY") or os.environ.get("S2_FALLBACK")
+          if s2:
+              with env_file.open("a", encoding="utf-8") as handle:
+                  handle.write(f"EROCK_SEMANTIC_SCHOLAR_API_KEY={s2}\n")
+          evidence = Path(os.environ["EVIDENCE_DIR"])
+          evidence.mkdir(parents=True, exist_ok=True)
+          (evidence / "workflow_provider_availability.json").write_text(json.dumps(status, indent=2))
+          PY
+
+      - name: Install ERLab
+        id: install
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          python -m pip install --upgrade pip 2>&1 | tee "$EVIDENCE_DIR/pip_upgrade.log"
+          pip install -e ".[dev]" 2>&1 | tee "$EVIDENCE_DIR/package_install.log"
+
+      - name: Verify package and migrate fresh database
+        id: bootstrap
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          python - <<'PY' | tee "$EVIDENCE_DIR/package_identity.log"
+          from importlib.metadata import version
+          value = version("elephant-rock")
+          print(value)
+          assert value == "1.0.1"
+          PY
+          alembic upgrade head 2>&1 | tee "$EVIDENCE_DIR/migration.log"
+
+      - name: Start backend
+        id: backend_start
+        continue-on-error: true
+        run: |
+          nohup python -m uvicorn backend.api.app:app --host 127.0.0.1 --port 8000 > "$EVIDENCE_DIR/backend_before_restart.log" 2>&1 &
+          echo $! > "$EVIDENCE_DIR/backend.pid"
+          python - <<'PY'
+          import time, urllib.request
+          deadline = time.time() + 90
+          last = None
+          while time.time() < deadline:
+              try:
+                  with urllib.request.urlopen("http://127.0.0.1:8000/health", timeout=3) as response:
+                      print(response.status)
+                      if response.status == 200:
+                          break
+              except Exception as exc:
+                  last = exc
+                  time.sleep(1)
+          else:
+              raise RuntimeError(f"backend did not start: {last}")
+          PY
+
+      - name: Trigger and observe the live literature-to-paper pipeline
+        id: live_run
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          python audit/live_paper_product_e2e.py run 2>&1 | tee "$EVIDENCE_DIR/live_paper_harness.log"
+
+      - name: Stop backend before restart verification
+        if: always()
+        run: |
+          if [ -f "$EVIDENCE_DIR/backend.pid" ]; then
+            kill "$(cat "$EVIDENCE_DIR/backend.pid")" || true
+            sleep 3
+          fi
+
+      - name: Restart backend against persisted database
+        id: backend_restart
+        if: always()
+        continue-on-error: true
+        run: |
+          nohup python -m uvicorn backend.api.app:app --host 127.0.0.1 --port 8000 > "$EVIDENCE_DIR/backend_after_restart.log" 2>&1 &
+          echo $! > "$EVIDENCE_DIR/backend_restart.pid"
+          python - <<'PY'
+          import time, urllib.request
+          deadline = time.time() + 90
+          last = None
+          while time.time() < deadline:
+              try:
+                  with urllib.request.urlopen("http://127.0.0.1:8000/health", timeout=3) as response:
+                      if response.status == 200:
+                          print(response.status)
+                          break
+              except Exception as exc:
+                  last = exc
+                  time.sleep(1)
+          else:
+              raise RuntimeError(f"backend did not restart: {last}")
+          PY
+
+      - name: Verify paper, evidence, and exports after restart
+        id: restart_verify
+        if: always()
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          python audit/live_paper_product_e2e.py verify 2>&1 | tee "$EVIDENCE_DIR/restart_verification.log"
+
+      - name: Install frontend dependencies
+        id: frontend_install
+        if: always()
+        continue-on-error: true
+        working-directory: frontend
+        run: npm ci 2>&1 | tee "$EVIDENCE_DIR/npm_ci.log"
+
+      - name: Build and test frontend
+        id: frontend_verify
+        if: always()
+        continue-on-error: true
+        working-directory: frontend
+        run: |
+          set -o pipefail
+          npm test 2>&1 | tee "$EVIDENCE_DIR/frontend_tests.log"
+          npm run ts:budget 2>&1 | tee "$EVIDENCE_DIR/frontend_typescript.log"
+          npm run build 2>&1 | tee "$EVIDENCE_DIR/frontend_build.log"
+
+      - name: Install browser audit dependency
+        id: browser_install
+        if: always()
+        continue-on-error: true
+        working-directory: frontend
+        run: |
+          npm install --no-save --package-lock=false @playwright/test@1.55.0 2>&1 | tee "$EVIDENCE_DIR/playwright_package.log"
+          npx playwright install --with-deps chromium 2>&1 | tee "$EVIDENCE_DIR/playwright_browser.log"
+
+      - name: Start frontend
+        id: frontend_start
+        if: always()
+        continue-on-error: true
+        run: |
+          (cd frontend && nohup npm run dev -- --host 127.0.0.1 --port 5173 > "$EVIDENCE_DIR/vite.log" 2>&1 & echo $! > "$EVIDENCE_DIR/vite.pid")
+          python - <<'PY'
+          import time, urllib.request
+          deadline = time.time() + 90
+          last = None
+          while time.time() < deadline:
+              try:
+                  with urllib.request.urlopen("http://127.0.0.1:5173/", timeout=3) as response:
+                      if response.status == 200:
+                          print(response.status)
+                          break
+              except Exception as exc:
+                  last = exc
+                  time.sleep(1)
+          else:
+              raise RuntimeError(f"frontend did not start: {last}")
+          PY
+
+      - name: Retrieve generated research through the browser UI
+        id: browser_verify
+        if: always()
+        continue-on-error: true
+        working-directory: frontend
+        env:
+          EVIDENCE_DIR: ${{ env.EVIDENCE_DIR }}
+          ERLAB_FRONTEND_URL: ${{ env.ERLAB_FRONTEND_URL }}
+        run: node ../audit/live_paper_browser.mjs 2>&1 | tee "$EVIDENCE_DIR/browser_harness.log"
+
+      - name: Capture execution environment and audit-only diff
+        if: always()
+        run: |
+          python --version > "$EVIDENCE_DIR/python_version.txt" 2>&1 || true
+          python -m pip freeze > "$EVIDENCE_DIR/pip_freeze.txt" 2>&1 || true
+          node --version > "$EVIDENCE_DIR/node_version.txt" 2>&1 || true
+          npm --version > "$EVIDENCE_DIR/npm_version.txt" 2>&1 || true
+          git rev-parse HEAD > "$EVIDENCE_DIR/audit_head.txt"
+          git rev-parse v1.0.1^{commit} > "$EVIDENCE_DIR/product_baseline.txt"
+          git diff --name-only v1.0.1...HEAD > "$EVIDENCE_DIR/audit_diff_files.txt"
+          git status --short > "$EVIDENCE_DIR/git_status.txt"
+          find "$EVIDENCE_DIR" -maxdepth 4 -type f -printf '%P\n' | sort > "$EVIDENCE_DIR/evidence_inventory.txt"
+
+      - name: Consolidate live paper E2E verdict
+        id: verdict
+        if: always()
+        continue-on-error: true
+        run: python audit/consolidate_live_paper_e2e.py
+
+      - name: Upload complete live paper E2E evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: erlab-v1.0.1-live-paper-product-e2e
+          path: evidence/live-paper/
+          if-no-files-found: error
+          retention-days: 90
+
+      - name: Enforce the recorded product verdict
+        if: always()
+        run: |
+          python - <<'PY'
+          import json, os, sys
+          from pathlib import Path
+          path = Path(os.environ["EVIDENCE_DIR"]) / "live_paper_e2e_verdict.json"
+          if not path.exists():
+              print("No verdict artifact was generated")
+              sys.exit(1)
+          verdict = json.loads(path.read_text())
+          print("Live paper product E2E verdict:", verdict.get("verdict"))
+          sys.exit(0 if verdict.get("verdict") == "MET" else 1)
+          PY
