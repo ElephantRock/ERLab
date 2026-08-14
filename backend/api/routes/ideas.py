@@ -1133,9 +1133,122 @@ async def repair_paper(idea_id: int):
         spec = None
         markers = []
         exp_result_id = None
-        source_map = meta.get("full_paper", {}).get("source_map", []) if isinstance(meta.get("full_paper"), dict) else []
+        source_map = (
+            meta.get("full_paper", {}).get("source_map", [])
+            if isinstance(meta.get("full_paper"), dict)
+            else []
+        )
 
-        if exp_spec_id:
+        # EAD cold repair: detect autonomous multi-dataset design.
+        # When the persisted metadata carries an autonomous design
+        # state, recover both expected specs, both ExperimentResult
+        # rows, and reconstruct the full dataset-qualified marker
+        # set. This bypasses the single-spec path entirely.
+        auto_design = meta.get("autonomous_experiment_design")
+        if auto_design and auto_design.get("status") == "designed":
+            from backend.pipeline.experiment.specification import (
+                _parse_spec as _auto_parse,
+            )
+            from backend.pipeline.experiment.manifest import ResultMarker
+
+            expected_specs = auto_design.get("specs", [])
+            # Find all successful ExperimentResult rows for this
+            # proposal.
+            exp_rows = session.execute(
+                select(ExperimentResult).where(
+                    ExperimentResult.proposal_id == proposal.id,
+                    ExperimentResult.success == True,  # noqa: E712
+                ).order_by(ExperimentResult.id.asc()),
+            ).scalars().all()
+
+            if not exp_rows:
+                raise ConflictError(
+                    "No persisted experiment results found for"
+                    " autonomous repair. Cannot proceed."
+                )
+
+            # Match results to expected specs by spec_id.
+            exp_by_spec_id = {}
+            for er in exp_rows:
+                m = json.loads(er.manifest_json) if er.manifest_json else {}
+                sid = m.get("experiment_spec_id", "")
+                if m.get("status") == "succeeded" and sid:
+                    exp_by_spec_id[sid] = er
+
+            # Reconstruct markers in the same order as live execution.
+            global_marker_idx = 0
+            reconstructed_markers = []
+            for spec_dict in expected_specs:
+                sid = spec_dict.get("experiment_spec_id", "")
+                er = exp_by_spec_id.get(sid)
+                if not er:
+                    continue
+                dataset_name = spec_dict.get(
+                    "dataset", {},
+                ).get("name", "unknown")
+                manifest = json.loads(
+                    er.manifest_json,
+                ) if er.manifest_json else {}
+                results = manifest.get("results", {})
+                artifacts = manifest.get("result_artifacts", [])
+
+                try:
+                    parsed_spec = _auto_parse(spec_dict)
+                    _directions = parsed_spec.metric_directions
+                    spec = parsed_spec  # last spec for auto_revise
+                except Exception:
+                    _directions = {}
+
+                for metric_name, value in sorted(results.items()):
+                    global_marker_idx += 1
+                    artifact = next(
+                        (
+                            a for a in artifacts
+                            if isinstance(a, dict)
+                            and a.get("artifact_type") == "metrics"
+                        ),
+                        artifacts[0] if artifacts else None,
+                    )
+                    _role = "comparison"
+                    if metric_name.startswith("baseline_"):
+                        _role = "baseline"
+                    reconstructed_markers.append(ResultMarker(
+                        marker_index=global_marker_idx,
+                        marker=f"RESULT-{global_marker_idx}",
+                        metric_name=f"{dataset_name}.{metric_name}",
+                        observed_value=value,
+                        artifact_path=(
+                            f"{dataset_name}/{artifact.get('filename', '')}"
+                            if isinstance(artifact, dict) else ""
+                        ),
+                        artifact_sha256=(
+                            artifact.get("sha256", "")
+                            if isinstance(artifact, dict) else ""
+                        ),
+                        experiment_result_id=er.id,
+                        direction=_directions.get(metric_name, ""),
+                        role=_role,
+                    ))
+
+            markers = reconstructed_markers
+            exp_result_id = exp_rows[0].id
+
+            # Verify all expected datasets were recovered.
+            recovered_ids = set(exp_by_spec_id.keys())
+            expected_ids = {
+                s.get("experiment_spec_id", "")
+                for s in expected_specs
+            }
+            missing = expected_ids - recovered_ids
+            if missing:
+                raise ConflictError(
+                    f"Autonomous repair incomplete: missing"
+                    f" experiment results for {missing}."
+                    f" Expected {len(expected_ids)},"
+                    f" recovered {len(recovered_ids)}."
+                )
+
+        elif exp_spec_id:
             try:
                 spec = load_spec(exp_spec_id)
             except Exception:
