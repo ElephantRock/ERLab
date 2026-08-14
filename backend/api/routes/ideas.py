@@ -1321,6 +1321,11 @@ async def repair_paper(idea_id: int):
         result_markers=markers,
         spec=spec,
         timeout_seconds=600.0,
+        method_facts=(
+            (auto_design or {}).get("method_facts")
+            if isinstance(auto_design, dict)
+            else None
+        ),
     )
 
     # Run the full evaluator on the result (with R1 hydration for persisted markers)

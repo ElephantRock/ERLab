@@ -85,6 +85,13 @@ class RevisionDirective:
     # ── Detection output (from claim_alignment) ─────────────────────
     unexecuted_methods_detected: tuple[str, ...]
 
+    # ── Frozen method contract (from capability, optional) ─────────
+    # fact_id -> {statement, required_patterns, forbidden_patterns}.
+    # When present, the methodology section must state each fact's
+    # statement verbatim; the method_fidelity gate re-checks the
+    # revision against this contract.
+    method_facts: dict | None = None
+
     def to_dict(self) -> dict:
         return {
             "blocking_findings": list(self.blocking_findings),
@@ -101,6 +108,7 @@ class RevisionDirective:
             "random_seed": self.random_seed,
             "evidence": self.evidence.to_dict(),
             "unexecuted_methods_detected": list(self.unexecuted_methods_detected),
+            "method_facts": self.method_facts or {},
         }
 
     def build_revision_prompt(self) -> str:
@@ -148,12 +156,31 @@ class RevisionDirective:
             " place a marker after a value that is not its own — the numeric"
             " fidelity gate checks the value adjacent to each marker."
         )
+        if self.method_facts:
+            lines.append(
+                "8. The Methodology section must state each fact below VERBATIM."
+                " Do NOT paraphrase, reformat, or substitute your own description"
+                " of how the method is usually implemented. Do NOT assert any"
+                " training procedure, calibration scheme, or metric definition"
+                " that contradicts these facts — the method_fidelity gate"
+                " blocks the revision otherwise."
+            )
         lines.append("")
         lines.append("IMMUTABLE EVIDENCE (do not modify):")
         lines.append(f"  RESULT map hash: {self.evidence.result_map_hash[:32]}...")
         lines.append(f"  SOURCE map hash: {self.evidence.source_map_hash[:32]}...")
         for marker, value in self.evidence.result_map:
             lines.append(f"  {marker} = {value}")
+        if self.method_facts:
+            lines.append("")
+            lines.append("EXECUTED PROTOCOL — frozen method facts (reproduce VERBATIM):")
+            for fact_id, fact in self.method_facts.items():
+                statement = (
+                    fact.get("statement", "") if isinstance(fact, dict)
+                    else ""
+                )
+                if statement:
+                    lines.append(f"  [{fact_id}] {statement}")
         return "\n".join(lines)
 
 

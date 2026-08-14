@@ -260,6 +260,12 @@ def ensure_autonomous_experiment_design(ctx: StageContext) -> None:
         "capability_id": "tabular_calibration_selective_v1",
         "selected_proposal_idx": selected_idx,
         "research_question": research_q,
+        # Frozen implementation truth from the capability contract.
+        # Injected verbatim into paper synthesis and remediation
+        # prompts, and enforced by the method_fidelity gate — the LLM
+        # never infers implementation details (run 2713's released
+        # paper misdescribed all four facts when left to infer).
+        "method_facts": dict(TABULAR_CALIBRATION_SELECTIVE_V1.method_facts),
         "specs": [
             {
                 "experiment_spec_id": s.spec_id,
@@ -2800,6 +2806,30 @@ class PaperSynthesisStage(PipelineStage):
             " the proposal."
         )
 
+        # Frozen method contract: the methodology section must state
+        # these implementation facts verbatim. The method_fidelity gate
+        # blocks the paper if the required statements are missing or a
+        # contradicting description appears anywhere.
+        method_facts = design_state.get("method_facts") or {}
+        if method_facts:
+            lines.append("")
+            lines.append(
+                "### EXECUTED PROTOCOL"
+                " (frozen method contract — reproduce VERBATIM"
+                " in the Methodology section; do NOT paraphrase,"
+                " reformat, or replace with your own description"
+                " of how the method is usually implemented)"
+            )
+            lines.append("")
+            for fact_id, fact in method_facts.items():
+                statement = (
+                    fact.get("statement", "") if isinstance(fact, dict)
+                    else ""
+                )
+                if statement:
+                    lines.append(f"- {statement}")
+            lines.append("")
+
         # Group markers by dataset prefix.
         markers_by_dataset: dict[str, list] = {}
         for m in all_markers:
@@ -3313,6 +3343,39 @@ class PaperSynthesisStage(PipelineStage):
             "reason": numeric_fidelity_reason,
         })
 
+        # ── Method-fidelity gate ────────────────────────────────────────
+        # Numeric fidelity proves the NUMBERS belong to the executed
+        # experiment; it says nothing about whether the paper describes
+        # the protocol that produced them. Run 2713 released a paper
+        # claiming multinomial softmax training, per-class calibrators,
+        # top-class-confidence ECE, and a rank-based AURC integral —
+        # none of which the frozen entrypoint implements. The capability
+        # contract freezes the implementation truth (method_facts);
+        # this gate blocks any paper that omits it or asserts a
+        # contradicting description.
+        method_fidelity_passed = True
+        method_fidelity_reason = "No frozen method contract for this run"
+        _mf_facts = (_eval_auto or {}).get("method_facts") or {}
+        if _is_auto and _mf_facts and result_markers:
+            from backend.pipeline.evaluation.method_fidelity import (
+                evaluate_method_fidelity,
+            )
+            _mf = evaluate_method_fidelity(paper_md, _mf_facts)
+            method_fidelity_passed = _mf.passed
+            method_fidelity_reason = _mf.reason[:400]
+        elif _is_auto and _mf_facts and not result_markers:
+            # covered by the no-markers experiment_alignment failure;
+            # keep the gate visible and passing here to avoid
+            # double-blocking the same root cause.
+            method_fidelity_reason = (
+                "No result markers; contract check deferred"
+            )
+        gates.append({
+            "gate": "method_fidelity",
+            "passed": method_fidelity_passed,
+            "reason": method_fidelity_reason,
+        })
+
         # Gate aggregation: any blocking gate downgrades the evaluation.
         blocking_reasons: list[str] = []
         if not prov_gate.passed:
@@ -3325,6 +3388,8 @@ class PaperSynthesisStage(PipelineStage):
             blocking_reasons.append(f"experiment_alignment: {exp_alignment_reason}")
         if not numeric_fidelity_passed:
             blocking_reasons.append(f"numeric_fidelity: {numeric_fidelity_reason}")
+        if not method_fidelity_passed:
+            blocking_reasons.append(f"method_fidelity: {method_fidelity_reason}")
 
         try:
             from backend.pipeline.evaluation.proposal_evaluator import (

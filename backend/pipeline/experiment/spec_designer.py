@@ -56,6 +56,13 @@ class SupportedCapability:
     analysis_method_description: str    # human-readable
     model_family: str = ""
     allowed_hyperparameters: dict[str, Any] = field(default_factory=dict)
+    # Frozen implementation truth, transcribed from the checked-in
+    # entrypoint. Each fact carries the canonical statement (injected
+    # verbatim into paper synthesis and remediation prompts so the LLM
+    # never infers implementation details) plus the pattern contract the
+    # method_fidelity gate enforces: every required pattern must appear
+    # in the paper, no forbidden pattern may appear anywhere.
+    method_facts: dict[str, dict[str, Any]] = field(default_factory=dict)
 
 
 # ── Production capability for Case 1 ────────────────────────────────────────
@@ -118,6 +125,112 @@ TABULAR_CALIBRATION_SELECTIVE_V1 = SupportedCapability(
         " under fixed covariate-shift severities"
     ),
     model_family="logistic_regression",
+    # Transcribed from experiments/tabular_calibration_selective_v1/
+    # analysis.py (constants at module top; implementations at the named
+    # functions). The released run-2713 paper misdescribed all four of
+    # these facts and no gate caught it — these statements are now the
+    # only source the paper may draw methodology claims from.
+    method_facts={
+        "base_model": {
+            "statement": (
+                "The base model is a set of independent one-vs-rest"
+                " binary logistic regression classifiers. Each binary"
+                " model is trained with full-batch gradient descent"
+                " (learning rate 0.05, 1000 epochs, L2 penalty 0.001)"
+                " implemented from first principles; no external"
+                " machine-learning library is used. Per-class scores"
+                " are combined into class probabilities by softmax"
+                " normalization of the per-class logits."
+            ),
+            "required_patterns": [
+                r"one[-. ]vs[. -]rest|one versus rest|one-vs-all",
+                r"gradient[- ]descent|gradient descent",
+            ],
+            "forbidden_patterns": [
+                r"multiclass cross-entropy",
+                r"multinomial logistic",
+                r"softmax logistic",
+                r"softmax regression",
+                r"library default",
+                r"implementation librar",
+                r"scikit-learn|sklearn",
+            ],
+        },
+        "calibration_scheme": {
+            "statement": (
+                "Post-hoc calibration is fitted only for the designated"
+                " positive class (the last class in sorted label order)."
+                " Sigmoid (Platt-style) parameters are selected by grid"
+                " search over a fixed candidate set of (a, b) values"
+                " minimizing binary cross-entropy on the calibration"
+                " split; an isotonic map (pool-adjacent-violators) is"
+                " fitted on the positive-class probability against the"
+                " indicator y = positive class. At application time only"
+                " the positive-class probability is calibrated; the"
+                " remaining probability mass is redistributed across"
+                " the other classes proportionally to their"
+                " uncalibrated probabilities."
+            ),
+            "required_patterns": [
+                r"positive[- ]class",
+                r"redistribut",
+            ],
+            "forbidden_patterns": [
+                r"per-class (?:calibrat|mapping|map\b)",
+                r"fits,? per class",
+                r"calibrat\w* (?:is |are )?(?:fitted|trained|learned|"
+                r"applied) (?:independently |separately )?"
+                r"(?:for|to|on) each class",
+            ],
+        },
+        "ece_definition": {
+            "statement": (
+                "Expected calibration error (ECE) is computed with 10"
+                " equal-width bins on the positive-class probability:"
+                " within each bin it compares the mean positive-class"
+                " probability against the empirical frequency of the"
+                " positive class (y = positive class), and averages the"
+                " absolute gaps weighted by bin size. It is not the"
+                " standard top-class-confidence ECE."
+            ),
+            "required_patterns": [
+                r"(?:ece|expected calibration error)[^.]{0,200}"
+                r"positive[- ]class"
+                r"|positive[- ]class[^.]{0,200}"
+                r"(?:ece|expected calibration error)",
+            ],
+            "forbidden_patterns": [
+                r"(?:ece|expected calibration error)[^.]{0,200}"
+                r"confidence of the predicted class",
+                r"(?:ece|expected calibration error)[^.]{0,200}"
+                r"predicted[- ]class correctness",
+                r"(?:ece|expected calibration error)[^.]{0,200}"
+                r"bins by confidence",
+                r"(?:ece|expected calibration error)[^.]{0,200}"
+                r"binned accuracy and mean confidence",
+            ],
+        },
+        "aurc_definition": {
+            "statement": (
+                "The area under the risk-coverage curve (AURC) is"
+                " estimated by evaluating selective risk and coverage at"
+                " ten fixed confidence thresholds (0.0 to 0.9 in steps"
+                " of 0.1), using the maximum class probability as the"
+                " confidence score and correctness of the predicted"
+                " class as the risk basis, then trapezoid-integrating"
+                " those ten (coverage, risk) points. It is not an"
+                " integral over the full sample ordering."
+            ),
+            "required_patterns": [
+                r"(?:ten|10) fixed (?:confidence )?thresholds",
+            ],
+            "forbidden_patterns": [
+                r"rank[- ]based",
+                r"sorting instances by decreasing confidence",
+                r"swept from full coverage",
+            ],
+        },
+    },
 )
 
 
