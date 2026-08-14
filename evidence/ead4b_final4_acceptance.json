@@ -1,0 +1,61 @@
+{
+  "case": "Case 1 — clean frozen lifecycle acceptance",
+  "date": "2026-08-15",
+  "head": "d940b13",
+  "run": 2714,
+  "run_id_str": "run_20260814_232537",
+  "contract": [
+    "no production changes during the run",
+    "no deleting failed revision rows",
+    "no manual metadata or prose repair",
+    "cold remediation under its normal bounded contract (single revision-1 attempt)",
+    "all gates passing",
+    "exact release identity"
+  ],
+  "input": {
+    "domain": "Robust and reliable machine learning under distribution shift",
+    "research_question": "How does post-hoc probability calibration affect selective classification performance under covariate shift in tabular classification, and are the effects consistent across datasets and shift severities?",
+    "activation": "autonomous_experiment_enabled=True only"
+  },
+  "sequence": {
+    "autonomous_design": "designed; iris + wine_quality specs",
+    "execution": "ExperimentResult 75 (iris) + 76 (wine_quality), both success",
+    "markers": "74 persisted, dataset-qualified",
+    "design_persisted_pre_remediation": "autonomous_experiment_design + method_facts in proposal 121 paper_meta_json",
+    "first_evaluation": "blocked on numeric_fidelity only (28 garbled renderings from fallback synthesis); method_fidelity PASS on first attempt — frozen protocol block reproduced",
+    "cold_repair": "fresh uvicorn process, POST /api/v1/ideas/140/paper/repair, persisted state only; single bounded attempt; 215s",
+    "promotion": "revision 1 promoted; all six gates PASS",
+    "freeze": "rev 28 (revision_number 2), state frozen, release_eligible",
+    "release": "GET /api/v1/export/paper/release/markdown/140"
+  },
+  "final_gates": {
+    "provenance": "True",
+    "scope_alignment": "on_scope",
+    "conclusion_support": "supported_by_paper",
+    "experiment_alignment": "True",
+    "numeric_fidelity": "True",
+    "method_fidelity": "True"
+  },
+  "E_F_R_H": "9f3b92d2526d1c64f0b384e07003d811cfdddf118906c609c0d2a785f16b424e",
+  "invariant": "E==F==R==H True; release body bytes == current paper bytes == frozen revision bytes",
+  "revision_history_preserved": [
+    {"id": 26, "num": 0, "eval": "blocked", "trigger": "initial", "hash": "c55dd9d9..."},
+    {"id": 27, "num": 1, "eval": "ready", "trigger": "alignment_blocked (auto_remediation)", "hash": "9f3b92d2..."},
+    {"id": 28, "num": 2, "eval": "ready", "trigger": "release_freeze", "hash": "9f3b92d2..."}
+  ],
+  "method_fidelity_on_released_bytes": "independently re-verified: all 4 frozen facts present, no contradicting descriptions; released title names 'One-vs-Rest Logistic Regression'",
+  "operator_interventions": "none",
+  "artifacts": [
+    "evidence/ead4b_final4.log",
+    "evidence/ead4b_final4_release.md",
+    "evidence/ead4b_final4_api.log"
+  ],
+  "prior_specimens_preserved": [
+    "run 2712 (blocked specimen, persistence-layer data loss)",
+    "run 2713 + evidence/ead4b_final3_release.md (method-misdescription specimen, blocked by the new gate in regression)"
+  ],
+  "open_items": [
+    "CI red on recent heads — pre-existing order-pollution failures (batch153/batch87 isolated; phase5/phase8/clustering full-suite only); separate blocker before PR #9 merge",
+    "PR #9 remains OPEN at d940b13"
+  ]
+}

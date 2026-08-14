@@ -20,7 +20,7 @@ from backend.config import get_settings
 _settings = get_settings()
 print(f"[EAD-4B] model: {_settings.openai_model}", flush=True)
 print(f"[EAD-4B] embedding: {_settings.embedding_model}", flush=True)
-print(f"[EAD-4B] HEAD: 66382ba", flush=True)
+print(f"[EAD-4B] HEAD: d940b13", flush=True)
 print(
     f"[EAD-4B] autonomous_experiment_enabled: True", flush=True
 )
