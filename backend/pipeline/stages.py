@@ -2860,6 +2860,21 @@ class PaperSynthesisStage(PipelineStage):
         metadata = self._get_metadata(proposal)
         existing_checkpoints = metadata.get("section_checkpoints", {})
 
+        # EAD: Persist autonomous design state into proposal metadata
+        # BEFORE calling synthesize_paper(). Experiment identity is
+        # known at this point and must not depend on whether paper
+        # generation succeeds, times out, or falls back. Without
+        # this, cold repair (/paper/repair) cannot recover the
+        # expected specs from a blocked proposal.
+        _pre_auto = ctx.params.get(
+            "autonomous_experiment_design"
+        )
+        if _pre_auto:
+            metadata["autonomous_experiment_design"] = (
+                _pre_auto
+            )
+            self._set_metadata(proposal, metadata)
+
         # Checkpoint callback: atomically merge section into paper_meta_json
         def _checkpoint_callback(section_id: str, section_data: dict):
             md = self._get_metadata(proposal)
@@ -2903,16 +2918,6 @@ class PaperSynthesisStage(PipelineStage):
             }
             metadata["synthesis_strategy"] = synth_result.synthesis_strategy
             metadata["synthesis_state"] = "ready"
-            # EAD-3e: Persist autonomous design state into proposal
-            # metadata so cold repair (POST /paper/repair) can
-            # reconstruct the evaluation context.
-            _persist_auto = ctx.params.get(
-                "autonomous_experiment_design"
-            )
-            if _persist_auto:
-                metadata["autonomous_experiment_design"] = (
-                    _persist_auto
-                )
             # Clear checkpoints after successful assembly
             metadata.pop("section_checkpoints", None)
             logger.info(
