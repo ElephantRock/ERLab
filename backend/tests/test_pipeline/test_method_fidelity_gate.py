@@ -315,8 +315,11 @@ class TestEvaluatePaperGateWiring:
             ".ProposalEvaluator",
             return_value=fake_eval,
         ):
+            # Mock provider: _evaluate_paper resolves a real thinking
+            # provider when self._provider is None, leaking an open
+            # AsyncOpenAI client into later async tests.
             asyncio.run(
-                PaperSynthesisStage()._evaluate_paper(
+                PaperSynthesisStage(provider=MagicMock())._evaluate_paper(
                     ctx, proposal_obj, metadata, 0,
                 )
             )

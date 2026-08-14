@@ -44,18 +44,20 @@ describe("TEST-144: Form density reduction", () => {
     expect(searchIdx).toBeGreaterThan(advancedContentIdx);
   });
 
-  it("TEST-144-06: exactly 3 primary fields before advanced toggle", () => {
+  it("TEST-144-06: exactly 4 primary fields before advanced toggle", () => {
     // Count data-testid inputs before advanced-toggle that are NOT advanced-related.
     // Phase 1 1B raised this from 2 to 3: research-question is now the primary
-    // input, with domain (optional context) and strategy. The form-density
-    // invariant is preserved at the new intended count.
+    // input, with domain (optional context) and strategy. PR #7 (R4) raised it
+    // from 3 to 4: experiment-spec-select is a primary field for empirical
+    // runs. The form-density invariant is preserved at the new intended count.
     const advancedToggleIdx = content.indexOf('data-testid="advanced-toggle"');
     const beforeAdvanced = content.substring(0, advancedToggleIdx);
     const fieldTestIds = beforeAdvanced.match(/data-testid="[^"]*-input"|data-testid="[^"]*-select"/g);
-    expect(fieldTestIds).toHaveLength(3);
+    expect(fieldTestIds).toHaveLength(4);
     expect(fieldTestIds).toContain('data-testid="research-question-input"');
     expect(fieldTestIds).toContain('data-testid="domain-input"');
     expect(fieldTestIds).toContain('data-testid="strategy-select"');
+    expect(fieldTestIds).toContain('data-testid="experiment-spec-select"');
   });
 
   it("TEST-144-07: default strategy is fast_scan", () => {
