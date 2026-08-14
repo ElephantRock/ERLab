@@ -141,6 +141,13 @@ class RevisionDirective:
         lines.append("4. The CONCLUSION must attribute observed results to the executed method.")
         lines.append("5. All outcome claims must reference [RESULT-N] markers.")
         lines.append("6. Do NOT change any observed metric values, RESULT markers, or SOURCE markers.")
+        lines.append(
+            "7. Every [RESULT-N] marker must be placed IMMEDIATELY AFTER the exact"
+            " observed value it reports (e.g. '0.005185 [RESULT-2]'), matching the"
+            " frozen map below. NEVER group several markers after one number or"
+            " place a marker after a value that is not its own — the numeric"
+            " fidelity gate checks the value adjacent to each marker."
+        )
         lines.append("")
         lines.append("IMMUTABLE EVIDENCE (do not modify):")
         lines.append(f"  RESULT map hash: {self.evidence.result_map_hash[:32]}...")

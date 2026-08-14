@@ -1100,6 +1100,11 @@ async def repair_paper(idea_id: int):
         if not paper_md.strip():
             raise ConflictError("No paper to repair")
 
+        # Capture the run linkage before the session closes — the
+        # post-remediation evaluation needs the run's domain to score
+        # the successor against the original research intent.
+        idea_run_id = idea.pipeline_run_id
+
         meta = json.loads(proposal.paper_meta_json) if proposal.paper_meta_json else {}
         eval_data = meta.get("paper_evaluation", {})
         eval_status = eval_data.get("status", "unknown")
@@ -1133,11 +1138,21 @@ async def repair_paper(idea_id: int):
         spec = None
         markers = []
         exp_result_id = None
-        source_map = (
-            meta.get("full_paper", {}).get("source_map", [])
-            if isinstance(meta.get("full_paper"), dict)
-            else []
-        )
+        # Cold-repair shape: paper_meta_json is the flat dict written by
+        # persistence._extract_paper_artifact, with source_map at the top
+        # level. The nested full_paper shape only exists on the in-memory
+        # proposal during a live run. Read both so the frozen source map
+        # reaches the evidence invariants on either path — with an empty
+        # map every SOURCE marker is falsely "invented" and no revision
+        # can ever be promoted (run 2713, rev 24).
+        source_map = meta.get("source_map")
+        if not isinstance(source_map, list):
+            nested_full_paper = meta.get("full_paper")
+            source_map = (
+                nested_full_paper.get("source_map", [])
+                if isinstance(nested_full_paper, dict)
+                else []
+            )
 
         # EAD cold repair: detect autonomous multi-dataset design.
         # When the persisted metadata carries an autonomous design
@@ -1146,10 +1161,10 @@ async def repair_paper(idea_id: int):
         # set. This bypasses the single-spec path entirely.
         auto_design = meta.get("autonomous_experiment_design")
         if auto_design and auto_design.get("status") == "designed":
+            from backend.pipeline.experiment.manifest import ResultMarker
             from backend.pipeline.experiment.specification import (
                 _parse_spec as _auto_parse,
             )
-            from backend.pipeline.experiment.manifest import ResultMarker
 
             expected_specs = auto_design.get("specs", [])
             # Find all successful ExperimentResult rows for this
@@ -1357,9 +1372,30 @@ async def repair_paper(idea_id: int):
             if auto_design and auto_design.get("status") == "designed":
                 eval_params["autonomous_experiment_design"] = auto_design
 
+            # Cold re-evaluation must score the successor against the
+            # SAME research intent as the original in-run evaluation.
+            # The scope gate prefers ctx.research_question, then domain;
+            # with neither it scored the revised paper against the
+            # two-word generic domain and blocked on a 0.00-overlap
+            # reading (run 2713). The frozen question lives in the
+            # persisted design; the domain on the run row.
+            eval_question = (auto_design or {}).get("research_question") or ""
+            eval_domain = "machine learning"
+            if idea_run_id:
+                try:
+                    with get_session() as dom_session:
+                        from backend.db.models import PipelineRun as _Run
+
+                        run_row = dom_session.get(_Run, idea_run_id)
+                        if run_row is not None and run_row.domain:
+                            eval_domain = run_row.domain
+                except Exception:
+                    pass
+
             eval_ctx = StageContext(
                 result=pipeline_result,
-                domain="machine learning",
+                domain=eval_domain,
+                research_question=eval_question,
                 params=eval_params,
             )
             proposal_obj = SimpleNamespace(paper_md=new_md, metadata=new_meta)
