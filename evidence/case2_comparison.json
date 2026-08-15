@@ -1,6 +1,6 @@
 {
   "question": "Did the same research-production-and-assurance architecture successfully process two independently specified research questions?",
-  "answer": "Yes \u2014 two independently specified questions, two clean autonomous lifecycles, two exact release identities, zero operator interventions in both accepted runs.",
+  "answer": "Case 1 accepted under its own contract (which scripted operator-invoked cold repair as a sequence step). Case 2C reproduced the lifecycle technically but was disqualified under the stricter frozen Case-2 charter; Case 2D automates the remediation continuation in the harness to settle repeatability under the zero-intervention claim.",
   "table": [
     [
       "Frozen head",
@@ -75,7 +75,7 @@
     [
       "Decision",
       "ACCEPTED",
-      "ACCEPTED (2C; 2A/2B failed on environment, specimens preserved)"
+      "NON-QUALIFYING (2C: operator-invoked remediation violates frozen zero-intervention contract; technical results stand; 2D pending)"
     ]
   ]
 }
