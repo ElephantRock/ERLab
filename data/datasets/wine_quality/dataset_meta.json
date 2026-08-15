@@ -1,0 +1,24 @@
+{
+  "name": "wine_quality",
+  "version": "1.0.0",
+  "source": "UCI Machine Learning Repository — Wine Quality (red)",
+  "source_url": "https://archive.ics.uci.edu/ml/datasets/wine+quality",
+  "original_citation": "P. Cortez, A. Cerdeira, F. Almeida, T. Matos and J. Reis. Modeling wine preferences by data mining from physicochemical properties. In Decision Support Systems, Elsevier, 47(4):547-553, 2009.",
+  "license": "CC BY 4.0",
+  "raw_filename": "wine_processed.csv",
+  "raw_sha256": "92dab01d21a5e8b5a5439a0184ef28bd77362a620e54c4a74c6ca999ea3a7740",
+  "n_rows": 1599,
+  "n_features": 11,
+  "features": [
+    "fixed acidity", "volatile acidity", "citric acid", "residual sugar",
+    "chlorides", "free sulfur dioxide", "total sulfur dioxide", "density",
+    "pH", "sulphates", "alcohol"
+  ],
+  "original_target": "quality (integer 3-8)",
+  "transformed_target": "label (good=quality>=6, bad=quality<6)",
+  "transform_note": "Binary label is a Phase 8 transformation, not an original UCI target.",
+  "classes": ["bad", "good"],
+  "class_counts": {"good": 855, "bad": 744},
+  "redistribution": true,
+  "sensitive_attributes": false
+}

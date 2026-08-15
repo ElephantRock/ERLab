@@ -1,0 +1,73 @@
+{
+  "experiment_spec_id": "phase14-rf-wine",
+  "description": "Phase 14: random forest vs majority-class baseline on Wine Quality binary classification",
+  "dataset": {
+    "name": "wine_quality",
+    "version": "1.0.0",
+    "raw_filename": "wine_processed.csv",
+    "raw_sha256": "92dab01d21a5e8b5a5439a0184ef28bd77362a620e54c4a74c6ca999ea3a7740"
+  },
+  "split": {
+    "method": "stratified by binary label, 80% train / 20% test, fixed shuffle (sklearn train_test_split)",
+    "train_fraction": 0.8,
+    "test_fraction": 0.2,
+    "random_seed": 42
+  },
+  "analysis": {
+    "entrypoint": "experiments/phase14_rf_wine/analysis.py",
+    "method": "random forest (n_estimators=100, max_depth=10, min_samples_leaf=2, class_weight=balanced) vs majority-class baseline",
+    "declared_metrics": [
+      "baseline_balanced_accuracy",
+      "baseline_accuracy",
+      "model_balanced_accuracy",
+      "model_accuracy",
+      "model_roc_auc",
+      "top_feature_importance"
+    ]
+  },
+  "metrics": {
+    "baseline_balanced_accuracy": {"direction": "higher_better"},
+    "baseline_accuracy": {"direction": "higher_better"},
+    "model_balanced_accuracy": {"direction": "higher_better"},
+    "model_accuracy": {"direction": "higher_better"},
+    "model_roc_auc": {"direction": "higher_better"},
+    "top_feature_importance": {"direction": "higher_better"}
+  },
+  "tolerances": {
+    "baseline_balanced_accuracy": 0.001,
+    "baseline_accuracy": 0.001,
+    "model_balanced_accuracy": 0.001,
+    "model_accuracy": 0.001,
+    "model_roc_auc": 0.001,
+    "top_feature_importance": 0.001
+  },
+  "output_artifacts": [
+    "metrics.json",
+    "predictions.csv",
+    "results_table.csv",
+    "split_indices.csv",
+    "feature_importance.csv"
+  ],
+  "research_question": "On the frozen Wine Quality (red) dataset and binary classification split, does the predeclared random-forest model outperform the majority-class baseline on balanced test accuracy?",
+  "research_intent": {
+    "task_type": "classification",
+    "target_name": "label (good=quality>=6, bad=quality<6)",
+    "baseline_method": "majority-class predictor",
+    "comparison_method": "random forest with balanced class weights",
+    "primary_metric": "model_balanced_accuracy",
+    "model_family": "random_forest"
+  },
+  "hyperparameters": {
+    "n_estimators": 100,
+    "max_depth": 10,
+    "min_samples_leaf": 2,
+    "class_weight": "balanced",
+    "random_state": 42
+  },
+  "preprocessing": {
+    "feature_scaling": "none (tree-based model)",
+    "missing_value_policy": "none",
+    "categorical_handling": "none"
+  },
+  "frozen_at": "2026-07-31"
+}

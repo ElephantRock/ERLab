@@ -1,0 +1,25 @@
+{
+  "name": "iris",
+  "version": "1.0.0",
+  "source": "UCI Machine Learning Repository (https://archive.ics.uci.edu/dataset/53/iris)",
+  "original_citation": "Fisher, R.A. (1936) The Use of Multiple Measurements in Taxonomic Problems. Annals of Eugenics, 7(2), 179-188.",
+  "license": "Public Domain (UCI policy); dataset is freely usable for research and education.",
+  "raw_filename": "iris_raw.csv",
+  "raw_sha256": "1091a0dfd033acb7733af503637b2c7db8818ebe67ec8ccd5a4d4d5e57f5914f",
+  "n_rows": 150,
+  "n_features": 4,
+  "features": [
+    "sepal_length_cm",
+    "sepal_width_cm",
+    "petal_length_cm",
+    "petal_width_cm"
+  ],
+  "target": "species",
+  "classes": [
+    "Iris-setosa",
+    "Iris-versicolor",
+    "Iris-virginica"
+  ],
+  "redistribution": "This dataset is in the public domain. No access restrictions apply.",
+  "sensitive_attributes": "None. The dataset contains botanical measurements only."
+}

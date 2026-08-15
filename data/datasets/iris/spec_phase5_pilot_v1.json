@@ -1,0 +1,38 @@
+{
+  "experiment_spec_id": "phase5-pilot-v1",
+  "description": "Phase 5 pilot: logistic regression vs majority-class baseline on Iris species classification",
+  "dataset": {
+    "name": "iris",
+    "version": "1.0.0",
+    "raw_filename": "iris_raw.csv",
+    "raw_sha256": "1091a0dfd033acb7733af503637b2c7db8818ebe67ec8ccd5a4d4d5e57f5914f"
+  },
+  "split": {
+    "method": "stratified by species, first 80% train / last 20% test, fixed shuffle",
+    "train_fraction": 0.8,
+    "test_fraction": 0.2,
+    "random_seed": 42
+  },
+  "analysis": {
+    "entrypoint": "experiments/phase5_pilot_v1/analysis.py",
+    "method": "multinomial logistic regression (one-vs-rest via closed-form normal equations on polynomial features) vs majority-class baseline",
+    "declared_metrics": ["baseline_accuracy", "model_accuracy", "improvement"]
+  },
+  "metrics": {
+    "baseline_accuracy": {"direction": "higher_better"},
+    "model_accuracy": {"direction": "higher_better"},
+    "improvement": {"direction": "higher_better"}
+  },
+  "tolerances": {
+    "baseline_accuracy": 0.001,
+    "model_accuracy": 0.001,
+    "improvement": 0.002
+  },
+  "output_artifacts": [
+    "metrics.json",
+    "predictions.csv",
+    "results_table.csv"
+  ],
+  "research_question": "On the frozen Iris dataset and split, does the predeclared logistic-regression model outperform the majority-class baseline on test accuracy?",
+  "frozen_at": "2026-07-29"
+}
