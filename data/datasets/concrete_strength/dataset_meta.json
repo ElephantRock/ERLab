@@ -1,0 +1,25 @@
+{
+  "name": "concrete_strength",
+  "version": "1.0.0",
+  "source": "UCI Machine Learning Repository — Concrete Compressive Strength",
+  "source_url": "https://archive.ics.uci.edu/dataset/165/concrete+compressive+strength",
+  "original_citation": "I-Cheng Yeh, 'Modeling of strength of high-performance concrete using artificial neural networks,' Cement and Concrete Research, Vol. 28, No. 12, pp. 1797-1808, 1998.",
+  "license": "CC BY 4.0",
+  "raw_filename": "concrete_raw.csv",
+  "raw_sha256": "d11d18e168b01a06c53cdb3c2bf605551e27a6a0419114abc25f8fd849412e28",
+  "n_rows": 1030,
+  "n_features": 8,
+  "features": [
+    "Cement (component 1)(kg in a m^3 mixture)",
+    "Blast Furnace Slag (component 2)(kg in a m^3 mixture)",
+    "Fly Ash (component 3)(kg in a m^3 mixture)",
+    "Water (component 4)(kg in a m^3 mixture)",
+    "Superplasticizer (component 5)(kg in a m^3 mixture)",
+    "Coarse Aggregate (component 6)(kg in a m^3 mixture)",
+    "Fine Aggregate (component 7)(kg in a m^3 mixture)",
+    "Age (day)"
+  ],
+  "target": "Concrete compressive strength (MPa)",
+  "redistribution": true,
+  "sensitive_attributes": false
+}

@@ -1,0 +1,70 @@
+{
+  "experiment_spec_id": "phase8-g1-wine",
+  "description": "Phase 8 G1: logistic regression vs majority-class baseline on Wine Quality (red) binary classification (quality >= 6 → good)",
+  "dataset": {
+    "name": "wine_quality",
+    "version": "1.0.0",
+    "raw_filename": "wine_processed.csv",
+    "raw_sha256": "92dab01d21a5e8b5a5439a0184ef28bd77362a620e54c4a74c6ca999ea3a7740"
+  },
+  "split": {
+    "method": "stratified by binary label, 80% train / 20% test, fixed shuffle (sklearn train_test_split)",
+    "train_fraction": 0.8,
+    "test_fraction": 0.2,
+    "random_seed": 42
+  },
+  "analysis": {
+    "entrypoint": "experiments/phase8_g1_wine/analysis.py",
+    "method": "logistic regression (StandardScaler + L2, C=1.0, lbfgs, max_iter=1000) vs majority-class baseline",
+    "declared_metrics": [
+      "baseline_balanced_accuracy",
+      "baseline_accuracy",
+      "baseline_roc_auc",
+      "model_balanced_accuracy",
+      "model_accuracy",
+      "model_roc_auc"
+    ]
+  },
+  "metrics": {
+    "baseline_balanced_accuracy": {"direction": "higher_better"},
+    "baseline_accuracy": {"direction": "higher_better"},
+    "baseline_roc_auc": {"direction": "higher_better"},
+    "model_balanced_accuracy": {"direction": "higher_better"},
+    "model_accuracy": {"direction": "higher_better"},
+    "model_roc_auc": {"direction": "higher_better"}
+  },
+  "tolerances": {
+    "baseline_balanced_accuracy": 0.001,
+    "baseline_accuracy": 0.001,
+    "baseline_roc_auc": 0.001,
+    "model_balanced_accuracy": 0.001,
+    "model_accuracy": 0.001,
+    "model_roc_auc": 0.001
+  },
+  "output_artifacts": [
+    "metrics.json",
+    "predictions.csv",
+    "results_table.csv",
+    "split_indices.csv"
+  ],
+  "research_question": "On the frozen Wine Quality (red) dataset and binary classification split, does the predeclared logistic-regression model outperform the majority-class baseline on balanced test accuracy?",
+  "research_intent": {
+    "task_type": "classification",
+    "target_name": "label (good=quality>=6, bad=quality<6)",
+    "baseline_method": "majority-class predictor",
+    "comparison_method": "logistic regression with StandardScaler",
+    "primary_metric": "model_balanced_accuracy"
+  },
+  "preprocessing": {
+    "missing_value_policy": "none (no missing values)",
+    "categorical_handling": "none (all features numeric)",
+    "feature_scaling": "StandardScaler fit on training data only",
+    "intercept": true,
+    "regularization": "L2, C=1.0",
+    "solver": "lbfgs",
+    "max_iter": 1000,
+    "split_implementation": "sklearn train_test_split with stratify=y",
+    "stratification": "stratified by binary label"
+  },
+  "frozen_at": "2026-07-30"
+}

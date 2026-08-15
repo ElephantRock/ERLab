@@ -1,0 +1,70 @@
+{
+  "experiment_spec_id": "phase8-g2-concrete",
+  "description": "Phase 8 G2: linear regression vs training-mean baseline on Concrete Compressive Strength (regression, lower_better)",
+  "dataset": {
+    "name": "concrete_strength",
+    "version": "1.0.0",
+    "raw_filename": "concrete_raw.csv",
+    "raw_sha256": "d11d18e168b01a06c53cdb3c2bf605551e27a6a0419114abc25f8fd849412e28"
+  },
+  "split": {
+    "method": "80% train / 20% test, fixed shuffle (sklearn train_test_split, no stratification for regression)",
+    "train_fraction": 0.8,
+    "test_fraction": 0.2,
+    "random_seed": 42
+  },
+  "analysis": {
+    "entrypoint": "experiments/phase8_g2_concrete/analysis.py",
+    "method": "linear regression (StandardScaler + OLS) vs training-set mean baseline",
+    "declared_metrics": [
+      "baseline_rmse",
+      "baseline_mae",
+      "model_rmse",
+      "model_mae",
+      "model_r2",
+      "rmse_reduction"
+    ]
+  },
+  "metrics": {
+    "baseline_rmse": {"direction": "lower_better"},
+    "baseline_mae": {"direction": "lower_better"},
+    "model_rmse": {"direction": "lower_better"},
+    "model_mae": {"direction": "lower_better"},
+    "model_r2": {"direction": "higher_better"},
+    "rmse_reduction": {"direction": "higher_better"}
+  },
+  "tolerances": {
+    "baseline_rmse": 0.01,
+    "baseline_mae": 0.01,
+    "model_rmse": 0.01,
+    "model_mae": 0.01,
+    "model_r2": 0.001,
+    "rmse_reduction": 0.02
+  },
+  "output_artifacts": [
+    "metrics.json",
+    "predictions.csv",
+    "results_table.csv",
+    "split_indices.csv"
+  ],
+  "research_question": "On the frozen Concrete Compressive Strength dataset and split, does the predeclared linear-regression model achieve lower RMSE than the training-mean baseline?",
+  "research_intent": {
+    "task_type": "regression",
+    "target_name": "Concrete compressive strength (MPa)",
+    "baseline_method": "training-set mean predictor",
+    "comparison_method": "linear regression with StandardScaler",
+    "primary_metric": "model_rmse"
+  },
+  "preprocessing": {
+    "missing_value_policy": "none (no missing values)",
+    "categorical_handling": "none (all features numeric)",
+    "feature_scaling": "StandardScaler fit on training data only",
+    "intercept": true,
+    "regularization": "none (ordinary least squares)",
+    "solver": "OLS (normal equations via sklearn LinearRegression)",
+    "max_iter": "N/A (closed-form)",
+    "split_implementation": "sklearn train_test_split (no stratification)",
+    "stratification": "none (regression target)"
+  },
+  "frozen_at": "2026-07-30"
+}
