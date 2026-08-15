@@ -13,3 +13,4 @@ evidence/case2c_manifest.json -text
 evidence/case2d_manifest.json -text
 evidence/case2_manifest.json -text
 evidence/*.sha256 -text
+evidence/launch_case2d.py -text
