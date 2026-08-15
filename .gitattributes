@@ -1,0 +1,5 @@
+
+# Registered dataset registry — byte-exact. sha256 hashes in
+# dataset_meta.json are verified against these file contents, so no
+# line-ending conversion is permitted on any platform.
+data/datasets/** -text

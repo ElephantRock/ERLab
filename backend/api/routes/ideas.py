@@ -1100,6 +1100,11 @@ async def repair_paper(idea_id: int):
         if not paper_md.strip():
             raise ConflictError("No paper to repair")
 
+        # Capture the run linkage before the session closes — the
+        # post-remediation evaluation needs the run's domain to score
+        # the successor against the original research intent.
+        idea_run_id = idea.pipeline_run_id
+
         meta = json.loads(proposal.paper_meta_json) if proposal.paper_meta_json else {}
         eval_data = meta.get("paper_evaluation", {})
         eval_status = eval_data.get("status", "unknown")
@@ -1133,9 +1138,132 @@ async def repair_paper(idea_id: int):
         spec = None
         markers = []
         exp_result_id = None
-        source_map = meta.get("full_paper", {}).get("source_map", []) if isinstance(meta.get("full_paper"), dict) else []
+        # Cold-repair shape: paper_meta_json is the flat dict written by
+        # persistence._extract_paper_artifact, with source_map at the top
+        # level. The nested full_paper shape only exists on the in-memory
+        # proposal during a live run. Read both so the frozen source map
+        # reaches the evidence invariants on either path — with an empty
+        # map every SOURCE marker is falsely "invented" and no revision
+        # can ever be promoted (run 2713, rev 24).
+        source_map = meta.get("source_map")
+        if not isinstance(source_map, list):
+            nested_full_paper = meta.get("full_paper")
+            source_map = (
+                nested_full_paper.get("source_map", [])
+                if isinstance(nested_full_paper, dict)
+                else []
+            )
 
-        if exp_spec_id:
+        # EAD cold repair: detect autonomous multi-dataset design.
+        # When the persisted metadata carries an autonomous design
+        # state, recover both expected specs, both ExperimentResult
+        # rows, and reconstruct the full dataset-qualified marker
+        # set. This bypasses the single-spec path entirely.
+        auto_design = meta.get("autonomous_experiment_design")
+        if auto_design and auto_design.get("status") == "designed":
+            from backend.pipeline.experiment.manifest import ResultMarker
+            from backend.pipeline.experiment.specification import (
+                _parse_spec as _auto_parse,
+            )
+
+            expected_specs = auto_design.get("specs", [])
+            # Find all successful ExperimentResult rows for this
+            # proposal.
+            exp_rows = session.execute(
+                select(ExperimentResult).where(
+                    ExperimentResult.proposal_id == proposal.id,
+                    ExperimentResult.success == True,  # noqa: E712
+                ).order_by(ExperimentResult.id.asc()),
+            ).scalars().all()
+
+            if not exp_rows:
+                raise ConflictError(
+                    "No persisted experiment results found for"
+                    " autonomous repair. Cannot proceed."
+                )
+
+            # Match results to expected specs by spec_id.
+            exp_by_spec_id = {}
+            for er in exp_rows:
+                m = json.loads(er.manifest_json) if er.manifest_json else {}
+                sid = m.get("experiment_spec_id", "")
+                if m.get("status") == "succeeded" and sid:
+                    exp_by_spec_id[sid] = er
+
+            # Reconstruct markers in the same order as live execution.
+            global_marker_idx = 0
+            reconstructed_markers = []
+            for spec_dict in expected_specs:
+                sid = spec_dict.get("experiment_spec_id", "")
+                er = exp_by_spec_id.get(sid)
+                if not er:
+                    continue
+                dataset_name = spec_dict.get(
+                    "dataset", {},
+                ).get("name", "unknown")
+                manifest = json.loads(
+                    er.manifest_json,
+                ) if er.manifest_json else {}
+                results = manifest.get("results", {})
+                artifacts = manifest.get("result_artifacts", [])
+
+                try:
+                    parsed_spec = _auto_parse(spec_dict)
+                    _directions = parsed_spec.metric_directions
+                    spec = parsed_spec  # last spec for auto_revise
+                except Exception:
+                    _directions = {}
+
+                for metric_name, value in sorted(results.items()):
+                    global_marker_idx += 1
+                    artifact = next(
+                        (
+                            a for a in artifacts
+                            if isinstance(a, dict)
+                            and a.get("artifact_type") == "metrics"
+                        ),
+                        artifacts[0] if artifacts else None,
+                    )
+                    _role = "comparison"
+                    if metric_name.startswith("baseline_"):
+                        _role = "baseline"
+                    reconstructed_markers.append(ResultMarker(
+                        marker_index=global_marker_idx,
+                        marker=f"RESULT-{global_marker_idx}",
+                        metric_name=f"{dataset_name}.{metric_name}",
+                        observed_value=value,
+                        artifact_path=(
+                            f"{dataset_name}/{artifact.get('filename', '')}"
+                            if isinstance(artifact, dict) else ""
+                        ),
+                        artifact_sha256=(
+                            artifact.get("sha256", "")
+                            if isinstance(artifact, dict) else ""
+                        ),
+                        experiment_result_id=er.id,
+                        direction=_directions.get(metric_name, ""),
+                        role=_role,
+                    ))
+
+            markers = reconstructed_markers
+            exp_result_id = exp_rows[0].id
+
+            # Verify all expected datasets were recovered.
+            recovered_ids = set(exp_by_spec_id.keys())
+            expected_ids = {
+                s.get("experiment_spec_id", "")
+                for s in expected_specs
+            }
+            missing = expected_ids - recovered_ids
+            if missing:
+                raise ConflictError(
+                    f"Autonomous repair incomplete: missing"
+                    f" experiment results for {missing}."
+                    f" Expected {len(expected_ids)},"
+                    f" recovered {len(recovered_ids)}."
+                )
+
+        elif exp_spec_id:
             try:
                 spec = load_spec(exp_spec_id)
             except Exception:
@@ -1193,6 +1321,11 @@ async def repair_paper(idea_id: int):
         result_markers=markers,
         spec=spec,
         timeout_seconds=600.0,
+        method_facts=(
+            (auto_design or {}).get("method_facts")
+            if isinstance(auto_design, dict)
+            else None
+        ),
     )
 
     # Run the full evaluator on the result (with R1 hydration for persisted markers)
@@ -1233,10 +1366,42 @@ async def repair_paper(idea_id: int):
             # persisted metadata from the original pipeline run.
             if markers:
                 pipeline_result.result_markers = {proposal.id: markers}
+            # EAD-3e: Persist autonomous design state into the
+            # proposal's metadata so cold repair can reconstruct it.
+            auto_design = new_meta.get(
+                "autonomous_experiment_design"
+            )
+            eval_params = {}
+            if exp_spec_id:
+                eval_params["experiment_spec_id"] = exp_spec_id
+            if auto_design and auto_design.get("status") == "designed":
+                eval_params["autonomous_experiment_design"] = auto_design
+
+            # Cold re-evaluation must score the successor against the
+            # SAME research intent as the original in-run evaluation.
+            # The scope gate prefers ctx.research_question, then domain;
+            # with neither it scored the revised paper against the
+            # two-word generic domain and blocked on a 0.00-overlap
+            # reading (run 2713). The frozen question lives in the
+            # persisted design; the domain on the run row.
+            eval_question = (auto_design or {}).get("research_question") or ""
+            eval_domain = "machine learning"
+            if idea_run_id:
+                try:
+                    with get_session() as dom_session:
+                        from backend.db.models import PipelineRun as _Run
+
+                        run_row = dom_session.get(_Run, idea_run_id)
+                        if run_row is not None and run_row.domain:
+                            eval_domain = run_row.domain
+                except Exception:
+                    pass
+
             eval_ctx = StageContext(
                 result=pipeline_result,
-                domain="machine learning",
-                params={"experiment_spec_id": exp_spec_id} if exp_spec_id else {},
+                domain=eval_domain,
+                research_question=eval_question,
+                params=eval_params,
             )
             proposal_obj = SimpleNamespace(paper_md=new_md, metadata=new_meta)
 

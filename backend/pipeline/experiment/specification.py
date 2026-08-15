@@ -12,6 +12,10 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 
+class SpecValidationError(ValueError):
+    """Raised when an experiment spec fails structural validation."""
+
+
 @dataclass
 class ExperimentSpec:
     """A registered experiment specification (checked-in JSON)."""
@@ -132,32 +136,175 @@ def load_spec(spec_id: str, specs_dir: Path | None = None) -> ExperimentSpec:
     raise FileNotFoundError(f"Experiment spec '{spec_id}' not found in {base}")
 
 
+def _require_field(obj: dict, key: str, context: str) -> object:
+    """Get a required field or raise SpecValidationError."""
+    if key not in obj:
+        raise SpecValidationError(
+            f"spec validation: missing required field '{key}' in {context}"
+        )
+    return obj[key]
+
+
+def _require_str(obj: dict, key: str, context: str) -> str:
+    """Get a required string field with type check."""
+    val = _require_field(obj, key, context)
+    if not isinstance(val, str) or not val.strip():
+        raise SpecValidationError(
+            f"spec validation: field '{key}' in {context}"
+            f" must be a non-empty string, got {type(val).__name__}"
+        )
+    return val
+
+
+def _require_num(
+    obj: dict, key: str, context: str, *,
+    minimum: float | None = None, maximum: float | None = None,
+) -> float:
+    """Get a required numeric field with type and range check."""
+    val = _require_field(obj, key, context)
+    if isinstance(val, bool) or not isinstance(val, (int, float)):
+        raise SpecValidationError(
+            f"spec validation: field '{key}' in {context}"
+            f" must be a number, got {type(val).__name__}"
+        )
+    if minimum is not None and val < minimum:
+        raise SpecValidationError(
+            f"spec validation: field '{key}' in {context}"
+            f" must be >= {minimum}, got {val}"
+        )
+    if maximum is not None and val > maximum:
+        raise SpecValidationError(
+            f"spec validation: field '{key}' in {context}"
+            f" must be <= {maximum}, got {val}"
+        )
+    return float(val)
+
+
+def _require_list(
+    obj: dict, key: str, context: str, *,
+    min_items: int = 1,
+) -> list:
+    """Get a required list field with type and minimum-length check."""
+    val = _require_field(obj, key, context)
+    if not isinstance(val, list):
+        raise SpecValidationError(
+            f"spec validation: field '{key}' in {context}"
+            f" must be a list, got {type(val).__name__}"
+        )
+    if len(val) < min_items:
+        raise SpecValidationError(
+            f"spec validation: field '{key}' in {context}"
+            f" must have at least {min_items} item(s), got {len(val)}"
+        )
+    return val
+
+
 def _parse_spec(raw: dict) -> ExperimentSpec:
-    ds = raw["dataset"]
-    sp = raw["split"]
-    an = raw["analysis"]
-    # Phase 8 / D2: research_intent is a structured block for new specs.
-    # Backward-compatible: older specs (Iris/Phase 5/7) don't have it, so
-    # all fields default to empty strings. The research_question property
-    # still works as the scope-gate source.
+    """Parse and validate a raw spec dict.
+
+    Raises ``SpecValidationError`` on any structural, type, or range
+    failure. Replaces the previous bare ``KeyError`` behavior so
+    callers receive a clear, actionable error message.
+    """
+    if not isinstance(raw, dict):
+        raise SpecValidationError(
+            "spec validation: top-level spec must be a JSON object"
+        )
+
+    spec_id = _require_str(raw, "experiment_spec_id", "top-level")
+
+    ds = raw.get("dataset")
+    if not isinstance(ds, dict):
+        raise SpecValidationError(
+            "spec validation: 'dataset' must be a JSON object"
+        )
+    dataset_name = _require_str(ds, "name", "dataset")
+    dataset_version = _require_str(ds, "version", "dataset")
+    dataset_raw_filename = _require_str(ds, "raw_filename", "dataset")
+    dataset_raw_sha256 = _require_str(ds, "raw_sha256", "dataset")
+
+    sp = raw.get("split")
+    if not isinstance(sp, dict):
+        raise SpecValidationError(
+            "spec validation: 'split' must be a JSON object"
+        )
+    split_method = _require_str(sp, "method", "split")
+    train_fraction = _require_num(
+        sp, "train_fraction", "split", minimum=0.0, maximum=1.0,
+    )
+    test_fraction = _require_num(
+        sp, "test_fraction", "split", minimum=0.0, maximum=1.0,
+    )
+    random_seed = _require_num(
+        sp, "random_seed", "split", minimum=0.0,
+    )
+
+    an = raw.get("analysis")
+    if not isinstance(an, dict):
+        raise SpecValidationError(
+            "spec validation: 'analysis' must be a JSON object"
+        )
+    analysis_entrypoint = _require_str(an, "entrypoint", "analysis")
+    analysis_method = _require_str(an, "method", "analysis")
+    declared_metrics = _require_list(an, "declared_metrics", "analysis")
+    for i, m in enumerate(declared_metrics):
+        if not isinstance(m, str) or not m.strip():
+            raise SpecValidationError(
+                f"spec validation: declared_metrics[{i}]"
+                f" must be a non-empty string"
+            )
+
+    # Optional fields with defaults (backward-compatible).
+    metrics_raw = raw.get("metrics", {})
+    if not isinstance(metrics_raw, dict):
+        raise SpecValidationError(
+            "spec validation: 'metrics' must be a JSON object"
+        )
+    metric_directions: dict[str, str] = {}
+    for k, v in metrics_raw.items():
+        if isinstance(v, dict) and "direction" in v:
+            metric_directions[k] = v["direction"]
+        else:
+            raise SpecValidationError(
+                f"spec validation: metrics['{k}'] must have"
+                f" a 'direction' field"
+            )
+
+    tolerances = raw.get("tolerances", {})
+    if not isinstance(tolerances, dict):
+        raise SpecValidationError(
+            "spec validation: 'tolerances' must be a JSON object"
+        )
+
+    output_artifacts = raw.get("output_artifacts", [])
+    if not isinstance(output_artifacts, list):
+        raise SpecValidationError(
+            "spec validation: 'output_artifacts' must be a list"
+        )
+
     ri = raw.get("research_intent", {})
+    if not isinstance(ri, dict):
+        raise SpecValidationError(
+            "spec validation: 'research_intent' must be a JSON object"
+        )
+
     return ExperimentSpec(
-        spec_id=raw["experiment_spec_id"],
+        spec_id=spec_id,
         description=raw.get("description", ""),
-        dataset_name=ds["name"],
-        dataset_version=ds["version"],
-        dataset_raw_filename=ds["raw_filename"],
-        dataset_raw_sha256=ds["raw_sha256"],
-        split_method=sp["method"],
-        train_fraction=sp["train_fraction"],
-        test_fraction=sp["test_fraction"],
-        random_seed=sp["random_seed"],
-        analysis_entrypoint=an["entrypoint"],
-        analysis_method=an["method"],
-        declared_metrics=an["declared_metrics"],
-        metric_directions={k: v["direction"] for k, v in raw.get("metrics", {}).items()},
-        tolerances=raw.get("tolerances", {}),
-        output_artifacts=raw.get("output_artifacts", []),
+        dataset_name=dataset_name,
+        dataset_version=dataset_version,
+        dataset_raw_filename=dataset_raw_filename,
+        dataset_raw_sha256=dataset_raw_sha256,
+        split_method=split_method,
+        train_fraction=train_fraction,
+        test_fraction=test_fraction,
+        random_seed=int(random_seed),
+        analysis_entrypoint=analysis_entrypoint,
+        analysis_method=analysis_method,
+        declared_metrics=declared_metrics,
+        metric_directions=metric_directions,
+        tolerances=tolerances,
+        output_artifacts=output_artifacts,
         research_question=raw.get("research_question", ""),
         task_type=ri.get("task_type", ""),
         target_name=ri.get("target_name", ""),

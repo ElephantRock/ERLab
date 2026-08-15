@@ -160,6 +160,22 @@ def content_hash(title: str) -> str:
     return hashlib.sha256(normalize_title(title).encode("utf-8")).hexdigest()
 
 
+def _carry_autonomous_design(meta: dict | None, source: dict) -> dict | None:
+    """Stamp the autonomous experiment design state onto outgoing paper
+    metadata so it survives the schema boundary.
+
+    POST /paper/repair reads autonomous_experiment_design from
+    Proposal.paper_meta_json after a restart. Dropping it here made cold
+    repair impossible for blocked papers (runs 2710-2712): the design
+    state existed on the in-memory proposal but never reached the DB.
+    """
+    design = source.get("autonomous_experiment_design")
+    if meta is None or not design:
+        return meta
+    meta["autonomous_experiment_design"] = design
+    return meta
+
+
 def _extract_paper_artifact(proposal, result_markers=None) -> tuple[str | None, dict | None]:
     """Phase 1 1C: extract the synthesized full paper + metadata from a
     ResearchProposal as written by PaperSynthesisStage.
@@ -201,20 +217,24 @@ def _extract_paper_artifact(proposal, result_markers=None) -> tuple[str | None, 
         # metadata). Persist this minimal metadata so the selection contract
         # survives restart.
         if meta_dict.get("experiment_status") == "not_selected_for_experiment":
-            return None, {
+            return None, _carry_autonomous_design({
                 "status": "not_requested",
                 "experiment_status": meta_dict.get("experiment_status"),
                 "paper_status": meta_dict.get("paper_status", "not_requested"),
-            }
+            }, meta_dict)
         return None, None
     # Paper stage ran but explicitly failed -> record as failed (no markdown).
     if not full_paper or not isinstance(full_paper, dict):
-        return None, {"status": "failed", "generated_at": None}
+        return None, _carry_autonomous_design(
+            {"status": "failed", "generated_at": None}, meta_dict
+        )
 
     paper_md = full_paper.get("paper_markdown") or ""
     # Truth rule: empty/whitespace paper is failed, not ready.
     if not paper_md.strip():
-        return None, {"status": "failed", "generated_at": None}
+        return None, _carry_autonomous_design(
+            {"status": "failed", "generated_at": None}, meta_dict
+        )
 
     meta = {
         "status": "ready",
@@ -262,7 +282,7 @@ def _extract_paper_artifact(proposal, result_markers=None) -> tuple[str | None, 
         if result_markers[0].experiment_result_id:
             meta["experiment_result_id"] = result_markers[0].experiment_result_id
 
-    return paper_md, meta
+    return paper_md, _carry_autonomous_design(meta, meta_dict)
 
 
 def _extract_proposal_evaluation(proposal) -> str | None:

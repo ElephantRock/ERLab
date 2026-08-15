@@ -101,10 +101,6 @@ class TestExperimentExecution:
     @pytest.mark.asyncio
     async def test_exit_zero_missing_metrics_produces_invalid_results(self, tmp_path):
         """Exit zero with missing metrics → 'invalid_results'."""
-        # Create a dummy script that exits 0 but writes no metrics.json
-        dummy_script = tmp_path / "dummy_analysis.py"
-        dummy_script.write_text("import sys; sys.exit(0)\n")
-        # Create a spec pointing to this script
         from backend.pipeline.experiment.specification import ExperimentSpec
         spec = ExperimentSpec(
             spec_id="test-invalid",
@@ -115,7 +111,7 @@ class TestExperimentExecution:
             dataset_raw_sha256="1091a0dfd033acb7733af503637b2c7db8818ebe67ec8ccd5a4d4d5e57f5914f",
             split_method="test", train_fraction=0.8, test_fraction=0.2,
             random_seed=42,
-            analysis_entrypoint=str(dummy_script),
+            analysis_entrypoint="experiments/test_fixtures/exit_zero.py",
             analysis_method="test",
             declared_metrics=["accuracy"],
             metric_directions={"accuracy": "higher_better"},
@@ -123,7 +119,6 @@ class TestExperimentExecution:
             output_artifacts=["metrics.json"],
             research_question="test",
         )
-        # Monkeypatch the spec loader
         from backend.pipeline.experiment import empirical_runner
         original_load = empirical_runner.load_spec
         empirical_runner.load_spec = lambda sid: spec
@@ -138,16 +133,6 @@ class TestExperimentExecution:
     @pytest.mark.asyncio
     async def test_malformed_metric_values_rejected(self, tmp_path):
         """Malformed or non-finite metric values → 'invalid_results'."""
-        dummy_script = tmp_path / "bad_metrics.py"
-        out_dir = tmp_path / "bad_output"
-        out_dir.mkdir()
-        dummy_script.write_text(
-            "import json, os, math\n"
-            f"os.makedirs(r'{out_dir}', exist_ok=True)\n"
-            f"with open(r'{out_dir}/metrics.json', 'w') as f:\n"
-            "    json.dump({'metrics': {'accuracy': float('nan')}}, f)\n"
-            "import sys; sys.exit(0)\n"
-        )
         from backend.pipeline.experiment.specification import ExperimentSpec
         spec = ExperimentSpec(
             spec_id="test-malformed", description="test",
@@ -156,7 +141,7 @@ class TestExperimentExecution:
             dataset_raw_sha256="1091a0dfd033acb7733af503637b2c7db8818ebe67ec8ccd5a4d4d5e57f5914f",
             split_method="test", train_fraction=0.8, test_fraction=0.2,
             random_seed=42,
-            analysis_entrypoint=str(dummy_script),
+            analysis_entrypoint="experiments/test_fixtures/bad_metrics.py",
             analysis_method="test", declared_metrics=["accuracy"],
             metric_directions={"accuracy": "higher_better"},
             tolerances={"accuracy": 0.001},
@@ -167,7 +152,8 @@ class TestExperimentExecution:
         original_load = empirical_runner.load_spec
         empirical_runner.load_spec = lambda sid: spec
         try:
-            manifest, _, _, exit_code, _ = await execute_experiment("test-malformed", out_dir, timeout_seconds=30.0)
+            out = tmp_path / "output"
+            manifest, _, _, exit_code, _ = await execute_experiment("test-malformed", out, timeout_seconds=30.0)
             assert manifest.status == "invalid_results"
         finally:
             empirical_runner.load_spec = original_load

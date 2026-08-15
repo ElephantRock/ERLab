@@ -777,6 +777,7 @@ class PipelineOrchestrator:
         novelty_depth: str | None = None,
         idea_diversity: str | None = None,
         experiment_spec_id: str | None = None,
+        autonomous_experiment_enabled: bool = False,
     ) -> PipelineResult:
         """Execute the full pipeline from literature search to export.
 
@@ -933,6 +934,8 @@ class PipelineOrchestrator:
         }
         if experiment_spec_id:
             params["experiment_spec_id"] = experiment_spec_id
+        if autonomous_experiment_enabled:
+            params["autonomous_experiment_enabled"] = True
         if self._services.evolver:
             evolved = self._services.evolver.propose()
             if generation_rounds is None and "generation_rounds" in evolved:

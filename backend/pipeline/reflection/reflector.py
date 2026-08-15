@@ -153,12 +153,15 @@ class ReflectionStage:
 
     async def _evaluate(self, system_prompt: str, user_prompt: str) -> ReflectionResult:
         """Call LLM and parse the structured response."""
+        # LLMProvider.complete() takes a messages list; passing
+        # system_prompt=/user_prompt= kwargs raises TypeError and the
+        # reflection silently fail-opens (run 2712).
+        messages = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt},
+        ]
         try:
-            response = await self._provider.complete(
-                system_prompt=system_prompt,
-                user_prompt=user_prompt,
-                max_tokens=500,
-            )
+            response = await self._provider.complete(messages, max_tokens=500)
         except TimeoutError:
             logger.warning("LLM timeout during reflection — auto-passing")
             return ReflectionResult(score=1.0, passed=True, justification="LLM timeout — fail-open")

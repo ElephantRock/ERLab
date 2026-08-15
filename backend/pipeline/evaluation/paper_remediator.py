@@ -68,6 +68,7 @@ async def auto_revise_paper(
     result_markers: list,  # list of ResultMarker objects
     spec,  # ExperimentSpec
     timeout_seconds: float = 600.0,
+    method_facts: dict | None = None,
 ) -> RemediationResult:
     """Perform one constrained paper revision from persisted evidence.
 
@@ -89,6 +90,9 @@ async def auto_revise_paper(
         result_markers: The frozen result markers.
         spec: The experiment specification.
         timeout_seconds: Provider timeout.
+        method_facts: Frozen implementation truth from the capability
+            contract; injected verbatim into the revision prompt so the
+            methodology section describes the executed protocol.
 
     Returns:
         RemediationResult with the outcome.
@@ -229,6 +233,7 @@ async def auto_revise_paper(
             claim_result.unexecuted_method_in_abstract,
             claim_result.unexecuted_method_in_conclusion,
         ),
+        method_facts=method_facts or None,
     )
 
     # ── Step 4: Revise the paper ────────────────────────────────────

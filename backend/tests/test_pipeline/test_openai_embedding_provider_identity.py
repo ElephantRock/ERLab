@@ -12,6 +12,7 @@ Per directive B0.1b, these tests prove the provider:
 from __future__ import annotations
 
 import asyncio
+import contextlib
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock
 
@@ -49,6 +50,13 @@ def _provider_with_client(client: Any, **kwargs) -> OpenAIEmbeddingProvider:
     """
     kwargs.setdefault("api_key", "test-placeholder-not-used")
     p = OpenAIEmbeddingProvider(**kwargs)
+    # Close the real SDK client the constructor built before replacing
+    # it. Dropping it open leaks it: GC later finalizes it after its
+    # event loop is gone, the destructor raises "Event loop is closed",
+    # and anyio re-raises that inside whatever async test runs next
+    # (observed as the clustering-test full-suite flake).
+    with contextlib.suppress(Exception):
+        p._client.close()
     p._client = client
     return p
 
@@ -223,6 +231,8 @@ class TestCredentialsExcludedFromEvidence:
         provider = OpenAIEmbeddingProvider(
             model="text-embedding-3-small", api_key="sk-test-secret-do-not-leak",
         )
+        with contextlib.suppress(Exception):
+            provider._client.close()
         provider._client = client
 
         asyncio.run(provider.embed(["a"]))

@@ -103,15 +103,39 @@ async def execute_experiment(
 
     Returns (manifest, stdout, stderr, exit_code, execution_time_seconds).
     The manifest.status reflects the execution outcome.
+
+    This is the legacy public entry point: it accepts a registered
+    ``spec_id`` string, loads it from disk, and delegates to
+    ``execute_experiment_spec``. Callers that already hold an
+    ``ExperimentSpec`` object should call ``execute_experiment_spec``
+    directly to avoid the registration requirement.
     """
     spec = load_spec(spec_id)
+    return await execute_experiment_spec(spec, output_dir, timeout_seconds)
 
+
+async def execute_experiment_spec(
+    spec: ExperimentSpec,
+    output_dir: Path,
+    timeout_seconds: float = 120.0,
+) -> tuple[ExperimentManifest, str, str, int, float]:
+    """Execute an experiment from a pre-loaded ``ExperimentSpec``.
+
+    Returns (manifest, stdout, stderr, exit_code, execution_time_seconds).
+    The manifest.status reflects the execution outcome.
+
+    This function is the trusted execution body. It does NOT require
+    the spec to be registered in ``data/datasets/`` — it operates on
+    the in-memory ``ExperimentSpec`` object directly. The spec must
+    reference a registered dataset (by name) and a checked-in analysis
+    entrypoint (by project-relative path).
+    """
     # Load and verify dataset
     try:
         dataset_identity, dataset_path = load_dataset(spec.dataset_name)
     except (FileNotFoundError, ValueError) as e:
         manifest = ExperimentManifest(
-            experiment_spec_id=spec_id,
+            experiment_spec_id=spec.spec_id,
             status="failed",
             analysis=AnalysisSpec(
                 entrypoint=spec.analysis_entrypoint,
@@ -123,14 +147,22 @@ async def execute_experiment(
         )
         return manifest, "", str(e), 1, 0.0
 
-    # Resolve the checked-in analysis entrypoint
-    entrypoint_path = _PROJECT_ROOT / spec.analysis_entrypoint
-    if not entrypoint_path.exists():
+    # Resolve the checked-in analysis entrypoint through the
+    # existing security boundary. All entrypoints must be
+    # project-relative — absolute paths, ../ traversal, and
+    # symlink escape are all rejected.
+    resolved, snapshot_or_err = resolve_entrypoint_securely(
+        spec.analysis_entrypoint,
+    )
+    if resolved is None:
         manifest = ExperimentManifest(
-            experiment_spec_id=spec_id,
+            experiment_spec_id=spec.spec_id,
             status="failed",
         )
-        return manifest, "", f"Entrypoint not found: {entrypoint_path}", 1, 0.0
+        return (
+            manifest, "", snapshot_or_err, 1, 0.0,
+        )
+    entrypoint_path = resolved
 
     code_sha256 = compute_sha256(entrypoint_path)
     command = f"python {spec.analysis_entrypoint} --input {dataset_path} --output {output_dir}"

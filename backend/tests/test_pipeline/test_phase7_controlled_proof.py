@@ -37,12 +37,19 @@ class TestSynthesisBudget:
         assert timer.section_remaining <= 60
 
     def test_budget_timer_decreases_monotonically(self):
+        import time
+
         b = SynthesisBudget()
         timer = BudgetTimer(b)
         r1 = timer.fallback_remaining
-        import time
-        time.sleep(0.01)
+        # Wait for the clock to actually advance rather than a fixed
+        # sleep: Windows time.monotonic() ticks at ~15ms, so a 10ms
+        # sleep can read the same tick and flake under suite load.
+        give_up = time.monotonic() + 1.0
         r2 = timer.fallback_remaining
+        while r2 >= r1 and time.monotonic() < give_up:
+            time.sleep(0.005)
+            r2 = timer.fallback_remaining
         assert r2 < r1
 
 

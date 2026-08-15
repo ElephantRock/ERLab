@@ -13,8 +13,6 @@ import re
 import sys
 from unittest.mock import MagicMock, patch
 
-import pytest
-
 # Ensure chromadb mock
 sys.modules.setdefault("chromadb", MagicMock())
 sys.modules.setdefault("google.generativeai", MagicMock())
@@ -259,9 +257,12 @@ class TestPaperSynthesisStage:
         """TEST-153-02-04: IEEE template uses IEEEtran document class."""
         assert "IEEEtran" in IEEE_TEMPLATE.document_class
 
-    @pytest.mark.xfail(strict=True, reason="Unified service monolithic threshold rejects FakeProvider on CI Python 3.11")
     def test_02_05_paper_stored_in_metadata(self):
-        """TEST-153-02-05: Paper stored in proposal metadata after stage runs."""
+        """TEST-153-02-05: Paper stored in proposal metadata after stage runs.
+
+        HB-05 accepts short best-effort output (warn, not fail), so the
+        FakeProvider's brief paper is stored instead of rejected. The
+        old strict-xfail expected rejection; that policy is gone."""
         fake_provider = FakeProvider()
         from backend.pipeline.synthesis.paper_synthesizer import PaperSynthesizer
         synthesizer = PaperSynthesizer(fake_provider)
@@ -284,7 +285,13 @@ class TestPaperSynthesisStage:
             domain="AI/NLP",
         )
 
-        stage = PaperSynthesisStage(synthesizer=synthesizer)
+        # Inject a mock provider: without one, execute() constructs a
+        # real generation provider and _evaluate_paper a real thinking
+        # provider. Those clients leak open; on machines with live API
+        # keys their late aclose crashes a later async test.
+        stage = PaperSynthesisStage(
+            synthesizer=synthesizer, provider=MagicMock(),
+        )
         asyncio.run(stage.execute(ctx))
 
         # Check metadata

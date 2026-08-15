@@ -1,0 +1,32 @@
+{
+  "run": 2713,
+  "run_id_str": "run_20260814_200126",
+  "head_start": "5b13aba",
+  "fixes_during_repair": [
+    "persistence._carry_autonomous_design (all metadata paths)",
+    "reflector messages interface",
+    "repair route source_map: persisted flat shape (was meta.full_paper.source_map -> always empty cold)",
+    "directive requirement 7: marker-adjacency contract for numeric gate",
+    "repair route re-eval intent: research_question from persisted design + domain from run row (was generic 2-word domain, scope gate 0.00 overlap)"
+  ],
+  "paper": {
+    "proposal_id": 118,
+    "idea_id": 137,
+    "revisions": "23(initial blocked) -> 24(repair attempt, promoted) -> 25(frozen release)"
+  },
+  "final_gates": {
+    "provenance": "True",
+    "scope_alignment": "on_scope",
+    "conclusion_support": "supported_by_paper",
+    "experiment_alignment": "True",
+    "numeric_fidelity": "True"
+  },
+  "E_F_R_H": "efdf708973bdb22770f07c094b3ccddc20648b8eb8b4274c741196952338cacf",
+  "invariant": "E==F==R==H True; release body == frozen revision bytes == promoted paper",
+  "cold_repair_proof": "fresh uvicorn process; route read specs+results+markers+source_map+research_question purely from paper_meta_json/DB rows",
+  "disclosures": [
+    "rev-1 attempt rows deleted twice before final: first invalidated by empty-source-map route bug (markers were genuinely valid), second by directive missing the adjacency contract the gate enforces; each retry ran the full LLM revision + invariants + gates",
+    "LLM revision attempts: 3 total (2 rejected fail-closed by production checks, 3rd promoted)",
+    "run 2712 remains preserved as blocked specimen; metadata not retrofitted"
+  ]
+}
