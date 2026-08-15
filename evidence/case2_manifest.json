@@ -1,0 +1,40 @@
+{
+  "case": "Case 2 — repeatability qualification",
+  "frozen_head": "1cb8fe048300b5813395eb637feb38b77f52ff8a",
+  "domain": "Robust confidence estimation under dataset shift",
+  "research_question": "Are calibration-method rankings stable as covariate-shift severity increases, or do rank reversals occur in accuracy, positive-class expected calibration error, and selective AURC across tabular classification datasets?",
+  "activation": "autonomous_experiment_enabled=True only",
+  "explicit_experiment_spec": null,
+  "operator_intervention_budget": 0,
+  "production_changes_during_run": false,
+  "acceptance_contract": [
+    "autonomous design",
+    "successful governed execution",
+    "durable evidence",
+    "six existing assurance gates",
+    "bounded native remediation only",
+    "revision history preservation",
+    "exact release identity E == F == R == H"
+  ],
+  "frozen_run_contract": {
+    "code": "1cb8fe0",
+    "input": "exact domain + question above",
+    "activation": "autonomous_experiment_enabled=True",
+    "explicit_experiment_spec": "None",
+    "human_dataset_selection": "None",
+    "human_method_selection": "None",
+    "production_changes_during_run": "Forbidden",
+    "manual_paper_editing": "Forbidden",
+    "manual_metadata_repair": "Forbidden",
+    "manual_evidence_repair": "Forbidden",
+    "deleting_failed_revisions": "Forbidden",
+    "native_bounded_remediation": "Allowed",
+    "final_assurance_gates": "Existing six only",
+    "release_identity": "E == F == R == H",
+    "operator_interventions": 0,
+    "failed_state_preservation": "Required"
+  },
+  "no_expected_scientific_answer": "The charter imposes no expected method ranking, no expected rank-reversal outcome, and no expected conclusion.",
+  "single_attempt": "One acceptance attempt. Built-in retry/reflection/bounded remediation is part of the system; any human stage-retry is an intervention and disqualifies.",
+  "preflight_record": "evidence/case2_preflight.json"
+}

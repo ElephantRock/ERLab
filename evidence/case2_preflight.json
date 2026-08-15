@@ -1,0 +1,28 @@
+{
+  "phase": "0-clean-room-preflight",
+  "captured_at": "2026-08-15T15:53:35.480575+00:00",
+  "head": "1cb8fe048300b5813395eb637feb38b77f52ff8a",
+  "branch": "main",
+  "git_status_porcelain_count": 0,
+  "python": "3.12.1",
+  "platform": "Windows",
+  "model": "glm-5.2",
+  "embedding_model": "text-embedding-bge-m3",
+  "embedding_provider": "lmstudio",
+  "api_key_present": true,
+  "database_url": "sqlite:///./data/elephant_rock.db",
+  "fresh_db": true,
+  "dataset_registry": {
+    "iris": "1b5d7404a49e1c8f",
+    "wine_quality": "5eb88d1451213d47",
+    "concrete_strength": "6af210faf82b8a2c"
+  },
+  "committed_specs": [
+    "phase5-pilot-v1(iris)",
+    "phase8-g1(wine)",
+    "phase8-g2(concrete)",
+    "phase14-rf(wine)"
+  ],
+  "case1_runtime_state_archived_to": "C:/Next-Era/erlab-case2-archive",
+  "notes": "recorded per charter section 5, not acceptance gates; embedding provider (LM Studio) was down during accepted Case-1 run 2714 and is non-fatal"
+}
