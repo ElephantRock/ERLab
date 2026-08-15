@@ -271,12 +271,22 @@ class TestComposedSuccessLifecycle:
             )
             ctx.result.proposals[selected] = proposal_obj
 
-            from backend.providers.provider_factory import (
-                create_provider,
+            # Mock the provider and dimension evaluator: a real provider
+            # needs EROCK_OPENAI_API_KEY, which CI does not have. The
+            # gates still run for real against the markers and design
+            # state — only the LLM dimension scores are stubbed.
+            from unittest.mock import AsyncMock as _AsyncMock
+            from unittest.mock import MagicMock as _MagicMock
+            from unittest.mock import patch as _patch
+
+            fake_evaluator = _MagicMock()
+            fake_evaluator.evaluate = _AsyncMock(
+                return_value=_MagicMock(
+                    to_dict=lambda: {},
+                ),
             )
-            eval_provider = create_provider()
             eval_stage = PaperSynthesisStage(
-                provider=eval_provider
+                provider=_MagicMock(),
             )
             eval_ctx = StageContext(
                 result=ctx.result,
@@ -285,9 +295,14 @@ class TestComposedSuccessLifecycle:
                 params=ctx.params,
                 run_id="run_ead4a",
             )
-            asyncio.run(eval_stage._evaluate_paper(
-                eval_ctx, proposal_obj, metadata, selected,
-            ))
+            with _patch(
+                "backend.pipeline.evaluation."
+                "proposal_evaluator.ProposalEvaluator",
+                return_value=fake_evaluator,
+            ):
+                asyncio.run(eval_stage._evaluate_paper(
+                    eval_ctx, proposal_obj, metadata, selected,
+                ))
 
             eval_result = metadata.get(
                 "paper_evaluation", {}
