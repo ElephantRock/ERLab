@@ -130,5 +130,23 @@
     "evidence/case2c_preflight.json",
     "evidence/case2a_specimen.db",
     "evidence/case2b_specimen.db"
-  ]
+  ],
+  "adjudication": {
+    "rule_frozen_before_outcome": true,
+    "note": "The adjudication rule was stated by the owner while 2C was mid-run (at feasibility scoring) and crossed with completion events; it is applied here exactly as frozen. No action was taken on the active run at any point.",
+    "rule": [
+      "PASS if: autonomous design -> governed execution -> durable evidence -> synthesis -> all six existing gates -> freeze/release -> cold reconstruction -> E==F==R==H, zero operator interventions. Skipped knowledge-indexing and the 19 recoverable query-generation empties are diagnostics, not gates.",
+      "FAIL only if an existing invariant breaks: design cannot complete, required experiments fail, evidence/persistence incomplete, assurance remains blocked, release identity diverges, cold reconstruction fails, or human intervention becomes necessary.",
+      "QUALIFICATION-INVALID (not product-failed) only if later evidence shows the absent EmbeddingProfile was required operating state whose absence materially changed the qualified lifecycle. In that case preserve 2C intact and run 2D from corrected preflight; never repair 2C in place."
+    ],
+    "verdict_under_rule": "PASS \u2014 every PASS condition verified; no FAIL condition triggered; no evidence that the absent EmbeddingProfile was required for the qualified lifecycle (see EmbeddingProfile classification evidence in postmortem notes).",
+    "no_seventh_gate_added": true
+  },
+  "forensics_empty_responses": {
+    "count": 19,
+    "location": "single contiguous burst, log lines 22-40, between literature search and gap clustering (query-generation/gap-analysis phase)",
+    "recoverability": "full \u2014 zero empty responses after line 40; idea generation (2 ideas), novelty, feasibility, proposal synthesis, adversarial review, paper synthesis, citation audit, and the remediation revision all produced real content",
+    "contrast_with_2B": "2B empties spanned ALL stages alongside \"No certified candidates\" (degraded routing); 2C had zero certification degradations and empties confined to one pre-idea burst with certified routing active",
+    "open_diagnostic": "exact per-call cause (e.g. reasoning-token exhaustion on qwen3-4b-2507 for the early prompt shapes) is not resolvable from the emitted log; would need request-level logging in a future run. Recorded as follow-up, not a gate."
+  }
 }
