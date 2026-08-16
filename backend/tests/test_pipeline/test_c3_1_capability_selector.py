@@ -54,6 +54,7 @@ def _fake_capability(cap_id: str, signals: tuple[str, ...]) -> SupportedCapabili
         capability_id=cap_id,
         selection_signals=signals,
         baseline_anchor_metric="baseline_accuracy",
+        family_signals=signals,
     )
 
 
@@ -189,3 +190,80 @@ def _ctx_for_case1() -> StageContext:
         title="T", to_markdown=lambda: "t",
     )}
     return ctx
+
+
+class TestReviewP1Fixes:
+    """C3-1 review P1s: stronger selection evidence and the
+    capability-generic paper directive."""
+
+    def test_single_broad_signal_fails_closed(self):
+        # "confidence intervals for protein folding" matches only the
+        # corroborating "confidence" signal — must be unsupported.
+        with pytest.raises(CapabilitySelectionError) as ei:
+            select_capability(
+                "How should confidence intervals be estimated for"
+                " protein folding? computational biology"
+            )
+        assert ei.value.code == "unsupported_capability"
+
+    def test_two_corroborating_signals_select(self):
+        cap = select_capability(
+            "calibration and ece analysis"
+        )
+        assert cap.capability_id == "tabular_calibration_selective_v1"
+
+    def test_paper_directive_is_capability_generic(self):
+        # The design state carries the directive from the capability
+        # contract; the calibration text is byte-stable.
+        ctx = _ctx_for_case1()
+        ensure_autonomous_experiment_design(ctx)
+        design = ctx.params["autonomous_experiment_design"]
+        assert design["paper_directive"] == (
+            "The paper must describe the actual"
+            " calibration/selective-classification"
+            " capability, not a speculative method from"
+            " the proposal."
+        )
+
+    def test_context_builder_uses_design_directive(self):
+        from backend.pipeline.stages import PaperSynthesisStage
+        marker = SimpleNamespace(status="succeeded", dataset=SimpleNamespace(name="iris"))
+        from backend.pipeline.experiment.manifest import ResultMarker
+        m = ResultMarker(
+            marker_index=1, marker="RESULT-1",
+            metric_name="iris.accuracy", observed_value=0.9,
+            artifact_path="iris/metrics.json", artifact_sha256="a" * 8,
+            experiment_result_id=1, direction="higher_better",
+            role="comparison",
+        )
+        ctx = SimpleNamespace(result=SimpleNamespace(
+            experiment_runs={0: [marker and SimpleNamespace(status="succeeded", dataset=SimpleNamespace(name="iris"))]},
+            result_markers={0: [m]},
+        ))
+        design = {
+            "selected_proposal_idx": 0, "research_question": "q",
+            "capability_id": "c", "specs": [{"analysis": {"method": "m"}, "research_intent": {}}],
+            "method_facts": {}, "paper_directive": "DIRECTIVE-MARKER-XYZ",
+        }
+        context = PaperSynthesisStage()._build_autonomous_paper_context(ctx, design)[0]
+        assert "DIRECTIVE-MARKER-XYZ" in context
+
+    def test_context_builder_generic_fallback(self):
+        from backend.pipeline.experiment.manifest import ResultMarker
+        from backend.pipeline.stages import PaperSynthesisStage
+        m = ResultMarker(
+            marker_index=1, marker="RESULT-1",
+            metric_name="iris.accuracy", observed_value=0.9,
+            artifact_path="", artifact_sha256="", experiment_result_id=1,
+            direction="higher_better", role="comparison",
+        )
+        ctx = SimpleNamespace(result=SimpleNamespace(
+            experiment_runs={0: [SimpleNamespace(status="succeeded", dataset=SimpleNamespace(name="iris"))]},
+            result_markers={0: [m]},
+        ))
+        design = {
+            "selected_proposal_idx": 0, "research_question": "q",
+            "capability_id": "c", "specs": [{"analysis": {"method": "m"}, "research_intent": {}}],
+        }
+        context = PaperSynthesisStage()._build_autonomous_paper_context(ctx, design)[0]
+        assert "executed" in context and "capability" in context

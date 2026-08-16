@@ -293,6 +293,10 @@ def ensure_autonomous_experiment_design(ctx: StageContext) -> None:
         # never infers implementation details (run 2713's released
         # paper misdescribed all four facts when left to infer).
         "method_facts": dict(capability.method_facts),
+        # Capability-generic synthesis directive (C3-1 review P1):
+        # replaces the hardcoded classification-only instruction the
+        # paper context builder previously emitted.
+        "paper_directive": capability.paper_directive or "",
         "specs": [
             {
                 "experiment_spec_id": s.spec_id,
@@ -2827,10 +2831,16 @@ class PaperSynthesisStage(PipelineStage):
             " not listed above as executed."
         )
         lines.append(
-            "The paper must describe the actual"
-            " calibration/selective-classification"
-            " capability, not a speculative method from"
-            " the proposal."
+            # C3-1: capability-generic directive. Previously hardcoded
+            # to "calibration/selective-classification", which would
+            # misdirect a regression paper; the text now comes from
+            # the capability contract via the design state.
+            design_state.get("paper_directive")
+            or (
+                "The paper must describe the actual executed"
+                " capability, not a speculative method from"
+                " the proposal."
+            )
         )
 
         # Frozen method contract: the methodology section must state

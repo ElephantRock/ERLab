@@ -89,6 +89,15 @@ class SupportedCapability:
     capability_id: str = ""
     selection_signals: tuple[str, ...] = ()
     baseline_anchor_metric: str = ""
+    # Task-family terms: at least one family hit OR >=2 corroborating
+    # signal hits makes a capability applicable. Family terms gate the
+    # broad single-signal cases (e.g. "confidence intervals for
+    # protein folding" matches only the corroborating "confidence"
+    # signal and must fail closed as unsupported).
+    family_signals: tuple[str, ...] = ()
+    # Directive injected into the autonomous paper context so the
+    # synthesis instruction is capability-generic (C3-1 review P1).
+    paper_directive: str = ""
 
 
 # ── Production capability for Case 1 ────────────────────────────────────────
@@ -160,6 +169,13 @@ TABULAR_CALIBRATION_SELECTIVE_V1 = SupportedCapability(
         "confidence",
     ),
     baseline_anchor_metric="baseline_accuracy",
+    family_signals=("classification", "classify", "classifier"),
+    paper_directive=(
+        "The paper must describe the actual"
+        " calibration/selective-classification"
+        " capability, not a speculative method from"
+        " the proposal."
+    ),
     # Transcribed from experiments/tabular_calibration_selective_v1/
     # analysis.py (constants at module top; implementations at the named
     # functions). The released run-2713 paper misdescribed all four of
@@ -305,11 +321,19 @@ def select_capability(
     applicable: list[tuple[SupportedCapability, list[str]]] = []
     for cap in caps:
         hits = [
-            s for s in cap.selection_signals
-            if s.casefold() in normalized
+            sig for sig in cap.selection_signals
+            if sig.casefold() in normalized
         ]
-        if hits:
-            applicable.append((cap, hits))
+        family_hits = [
+            sig for sig in cap.family_signals
+            if sig.casefold() in normalized
+        ]
+        # Stronger-evidence rule (C3-1 review P1): a single broad
+        # corroborating signal alone must not select a capability.
+        # Applicable = at least one task-family hit, or >= 2 distinct
+        # corroborating signals.
+        if family_hits or len(hits) >= 2:
+            applicable.append((cap, hits or family_hits))
 
     if not applicable:
         raise CapabilitySelectionError(
