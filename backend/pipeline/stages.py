@@ -209,29 +209,56 @@ def ensure_autonomous_experiment_design(ctx: StageContext) -> None:
 
     idea = ctx.result.ideas[selected_idx] if selected_idx is not None and selected_idx < len(ctx.result.ideas) else None
 
+    # C3-1 generic seam: deterministic, fail-closed capability
+    # selection from the registry replaces the hardcoded
+    # TABULAR_CALIBRATION_SELECTIVE_V1. The selector only decides
+    # which declared capability contract the SpecDesigner compiles;
+    # no LLM involvement, no method invention. Selection failures
+    # surface as design-state statuses that the executor already
+    # terminalizes (any status != "designed" -> FAILED_EXECUTION).
     from backend.pipeline.experiment.spec_designer import (
-        TABULAR_CALIBRATION_SELECTIVE_V1,
+        CapabilitySelectionError,
         IdeaInputs,
         SpecDesigner,
+        select_capability,
     )
 
-    # Extract requested metrics from the idea's evaluation approach.
     eval_text = getattr(idea, "evaluation_approach", "") if idea else ""
-    requested = []
-    for metric in TABULAR_CALIBRATION_SELECTIVE_V1.supported_metrics:
-        short = metric.split("_")[-1] if "_" in metric else metric
-        if short in eval_text.lower() or metric in eval_text.lower():
-            requested.append(metric)
-    # Always include baseline_accuracy — it is the anchor for every study.
-    if "baseline_accuracy" not in requested:
-        requested.insert(0, "baseline_accuracy")
-
-    designer = SpecDesigner()
     research_q = (
         ctx.research_question.strip()
         if ctx.research_question and ctx.research_question.strip()
         else str(ctx.domain)
     )
+    selection_text = f"{research_q} {ctx.domain or ''}"
+
+    try:
+        capability = select_capability(selection_text)
+    except CapabilitySelectionError as e:
+        ctx.params["autonomous_experiment_design"] = {
+            "status": e.code,
+            "diagnostics": [str(e)],
+        }
+        logger.warning(
+            "Autonomous capability selection failed: %s — %s", e.code, e,
+        )
+        return
+
+    # Extract requested metrics from the frozen research input plus
+    # the idea's evaluation approach, parameterized by the selected
+    # capability. The anchor metric is always included.
+    harvest_text = f"{research_q} {ctx.domain or ''} {eval_text}".lower()
+    requested = []
+    for metric in capability.supported_metrics:
+        short = metric.split("_")[-1] if "_" in metric else metric
+        if short in harvest_text or metric in harvest_text:
+            requested.append(metric)
+    if (
+        capability.baseline_anchor_metric
+        and capability.baseline_anchor_metric not in requested
+    ):
+        requested.insert(0, capability.baseline_anchor_metric)
+
+    designer = SpecDesigner()
     result = designer.design(
         research_question=research_q,
         idea=IdeaInputs(
@@ -239,7 +266,7 @@ def ensure_autonomous_experiment_design(ctx: StageContext) -> None:
             evaluation_approach=eval_text,
             requested_metrics=requested,
         ),
-        capability=TABULAR_CALIBRATION_SELECTIVE_V1,
+        capability=capability,
         min_datasets=2,
     )
 
@@ -257,7 +284,7 @@ def ensure_autonomous_experiment_design(ctx: StageContext) -> None:
 
     ctx.params["autonomous_experiment_design"] = {
         "status": "designed",
-        "capability_id": "tabular_calibration_selective_v1",
+        "capability_id": capability.capability_id,
         "selected_proposal_idx": selected_idx,
         "research_question": research_q,
         # Frozen implementation truth from the capability contract.
@@ -265,7 +292,7 @@ def ensure_autonomous_experiment_design(ctx: StageContext) -> None:
         # prompts, and enforced by the method_fidelity gate — the LLM
         # never infers implementation details (run 2713's released
         # paper misdescribed all four facts when left to infer).
-        "method_facts": dict(TABULAR_CALIBRATION_SELECTIVE_V1.method_facts),
+        "method_facts": dict(capability.method_facts),
         "specs": [
             {
                 "experiment_spec_id": s.spec_id,
