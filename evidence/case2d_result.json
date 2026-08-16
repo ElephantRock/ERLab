@@ -1,0 +1,105 @@
+{
+  "case": "Case 2D \u2014 zero-intervention qualification (automated continuation harness)",
+  "frozen_head": "1cb8fe048300b5813395eb637feb38b77f52ff8a",
+  "started_at": "2026-08-15T20:16:43.363030+00:00",
+  "steps": [
+    {
+      "step": 1,
+      "orchestrator": {
+        "run_id": "run_20260815_231659",
+        "outcome": "succeeded",
+        "elapsed_s": 3056.4,
+        "auto_design_status": "designed"
+      }
+    },
+    {
+      "step": 4,
+      "remediation": {
+        "invoked": true,
+        "http": 200,
+        "promoted": true,
+        "revision_number": 1,
+        "eval_status": "ready",
+        "gates": [
+          {
+            "provenance": "True"
+          },
+          {
+            "scope_alignment": "on_scope"
+          },
+          {
+            "conclusion_support": "supported_by_paper"
+          },
+          {
+            "experiment_alignment": "True"
+          },
+          {
+            "numeric_fidelity": "True"
+          },
+          {
+            "method_fidelity": "True"
+          }
+        ]
+      }
+    }
+  ],
+  "proposal_id": 2,
+  "idea_id": 2,
+  "pipeline_run_id": 1,
+  "final_eval_status": "ready",
+  "final_gates": [
+    {
+      "provenance": "True"
+    },
+    {
+      "scope_alignment": "on_scope"
+    },
+    {
+      "conclusion_support": "supported_by_paper"
+    },
+    {
+      "experiment_alignment": "True"
+    },
+    {
+      "numeric_fidelity": "True"
+    },
+    {
+      "method_fidelity": "True"
+    }
+  ],
+  "freeze": {
+    "http": 200,
+    "state": "frozen",
+    "frozen_revision_id": 3,
+    "release_eligible": true,
+    "current_matches_frozen": true
+  },
+  "release_header_hash": "bb808368602fa433e4429855762f84dde96e3f4f076345622ce3ea2f86f0fbc7",
+  "frozen_revision_id": 3,
+  "verification": {
+    "E": "bb808368602fa433e4429855762f84dde96e3f4f076345622ce3ea2f86f0fbc7",
+    "F": "bb808368602fa433e4429855762f84dde96e3f4f076345622ce3ea2f86f0fbc7",
+    "R": "bb808368602fa433e4429855762f84dde96e3f4f076345622ce3ea2f86f0fbc7",
+    "H": "bb808368602fa433e4429855762f84dde96e3f4f076345622ce3ea2f86f0fbc7",
+    "equality": true,
+    "frozen_eval_status": "ready",
+    "release_equals_current_bytes": true
+  },
+  "finished_at": "2026-08-15T21:11:34.252546+00:00",
+  "decision": "ACCEPTED",
+  "operator_interventions": 0,
+  "log": [
+    "[20:16:43Z] STEP1 orchestrator launch (frozen input)",
+    "[21:07:55Z] STEP1 done: {'run_id': 'run_20260815_231659', 'outcome': <PipelineOutcome.SUCCEEDED: 'succeeded'>, 'elapsed_s': 3056.4, 'auto_design_status': 'designed'}",
+    "[21:07:55Z] STEP2 proposal=2 idea=2 eval=blocked",
+    "[21:07:55Z] STEP3 starting production API process",
+    "[21:08:07Z] STEP3 API healthy",
+    "[21:08:07Z] STEP4 policy: blocked -> invoke cold repair ONCE",
+    "[21:11:34Z] STEP4 repair: {\"invoked\": true, \"http\": 200, \"promoted\": true, \"revision_number\": 1, \"eval_status\": \"ready\", \"gates\": [{\"provenance\": \"True\"}, {\"scope_alignment\": \"on_scope\"}, {\"conclusion_support\": \"supported_by_paper\"}, {\"experiment",
+    "[21:11:34Z] STEP5 final evaluation status: ready",
+    "[21:11:34Z] STEP6 freeze",
+    "[21:11:34Z] STEP6 frozen rev=3",
+    "[21:11:34Z] STEP7 release export + E==F==R==H",
+    "[21:11:34Z] STEP7 equality=True bytes_match=True"
+  ]
+}

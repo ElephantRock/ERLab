@@ -1,0 +1,98 @@
+{
+  "case": "Case 2D \u2014 zero-intervention qualification (automated continuation harness)",
+  "decision": "ACCEPTED \u2014 verdict delivered by the pre-registered harness (exit code 0); no human decision between launch and verdict",
+  "recorded_at": "2026-08-15T21:12:36.617747+00:00",
+  "frozen_head": "1cb8fe048300b5813395eb637feb38b77f52ff8a",
+  "manifest": {
+    "path": "evidence/case2d_manifest.json",
+    "sha256": "679bc0fdf189a6126080e0cd30b27cb947c1ac9d26fc5c79543378b3b7752763"
+  },
+  "harness": {
+    "path": "evidence/launch_case2d.py",
+    "sha256": "31bd2ff5531be1cb43bf6185490f9be3846cc28844fe8b0088efe61c2cf0c04d",
+    "policy": "run -> read persisted state -> if blocked invoke cold repair EXACTLY ONCE -> if ready freeze -> release -> verify E==F==R==H -> exit code = verdict"
+  },
+  "run": {
+    "db_run_id": 1,
+    "run_id_str": "run_20260815_231659",
+    "orchestrator_elapsed_s": 3056.4,
+    "auto_design_status": "designed",
+    "outcome": "succeeded"
+  },
+  "sequence": [
+    "20:16:43Z harness launch (frozen input, frozen head)",
+    "21:07:55Z orchestrator completed; proposal=2 idea=2 eval=blocked (persisted state)",
+    "21:08:07Z harness-started production API healthy",
+    "21:11:34Z policy: cold repair invoked ONCE -> promoted, revision 1, eval ready, six gates True",
+    "21:11:34Z final persisted evaluation ready; freeze -> rev 3 frozen, release_eligible",
+    "21:11:34Z release export; E==F==R==H equality True; bytes match"
+  ],
+  "release": {
+    "E": "bb808368602fa433e4429855762f84dde96e3f4f076345622ce3ea2f86f0fbc7",
+    "F": "bb808368602fa433e4429855762f84dde96e3f4f076345622ce3ea2f86f0fbc7",
+    "R": "bb808368602fa433e4429855762f84dde96e3f4f076345622ce3ea2f86f0fbc7",
+    "H": "bb808368602fa433e4429855762f84dde96e3f4f076345622ce3ea2f86f0fbc7",
+    "equality": true,
+    "release_bytes_equal_current_paper": true
+  },
+  "independent_verification": {
+    "four_hash_query_of_persisted_rows": "equality True",
+    "markers": 74,
+    "method_facts_persisted_pre_remediation": true,
+    "experiments": [
+      [
+        1,
+        "success"
+      ],
+      [
+        2,
+        "success"
+      ]
+    ],
+    "revision_history_preserved": [
+      [
+        1,
+        0,
+        "blocked",
+        "initial"
+      ],
+      [
+        2,
+        1,
+        "ready",
+        "alignment_blocked(auto_remediation)"
+      ],
+      [
+        3,
+        2,
+        "ready",
+        "release_freeze"
+      ]
+    ],
+    "method_fidelity_on_released_bytes": true,
+    "final_six_gates": {
+      "provenance": "True",
+      "scope_alignment": "on_scope",
+      "conclusion_support": "supported_by_paper",
+      "experiment_alignment": "True",
+      "numeric_fidelity": "True",
+      "method_fidelity": "True"
+    }
+  },
+  "operator_interventions": 0,
+  "provenance_note": "The repair decision was made by harness policy fixed before launch, not by an operator observing the blocked state. This addresses the owner ruling that disqualified 2C.",
+  "attempt_ledger": [
+    "2A FAIL (environment: embedding provider down at launch \u2014 preflight stop-rule violation)",
+    "2B FAIL (environment: clean-room archive removed model-certification operating state)",
+    "2C NON-QUALIFYING (operator-invoked remediation; technical results stand; specimen preserved)",
+    "2D ACCEPTED (this record)"
+  ],
+  "artifacts": [
+    "evidence/case2d_result.json",
+    "evidence/case2d_release.md",
+    "evidence/case2d_run.log",
+    "evidence/case2d_api.log",
+    "evidence/case2d_preflight.json",
+    "evidence/launch_case2d.py"
+  ]
+}

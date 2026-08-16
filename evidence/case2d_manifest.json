@@ -1,5 +1,5 @@
 {
-  "case": "Case 2B \u2014 repeatability qualification attempt 2 (environment restored)",
+  "case": "Case 2D \u2014 zero-intervention qualification (automated continuation harness)",
   "frozen_head": "1cb8fe048300b5813395eb637feb38b77f52ff8a",
   "domain": "Robust confidence estimation under dataset shift",
   "research_question": "Are calibration-method rankings stable as covariate-shift severity increases, or do rank reversals occur in accuracy, positive-class expected calibration error, and selective AURC across tabular classification datasets?",
@@ -36,10 +36,19 @@
   },
   "no_expected_scientific_answer": "The charter imposes no expected method ranking, no expected rank-reversal outcome, and no expected conclusion.",
   "single_attempt": "One acceptance attempt. Built-in retry/reflection/bounded remediation is part of the system; any human stage-retry is an intervention and disqualifies.",
-  "preflight_record": "evidence/case2_preflight.json",
-  "supersedes": "Case 2A (FAIL \u2014 preflight stop rule violated; evidence/case2_failure.json)",
+  "preflight_record": "evidence/case2d_preflight.json",
+  "supersedes": [
+    "2A FAIL (environment)",
+    "2B FAIL (environment)",
+    "2C NON-QUALIFYING (operator-invoked remediation; technical results stand)"
+  ],
   "change_from_2a": "None to code or configuration. Environment only: LM Studio embedding server was restarted (--bind 0.0.0.0) and verified by functional embedding probe. Embedding availability is a HARD preflight gate for this attempt.",
-  "preflight_hard_gates": [
-    "embedding provider functional call (1024-dim vector from configured model)"
-  ]
+  "change_from_2b": "None to code or configuration. Environment restored to the certified Case-1 baseline: model-certification registry + assignments returned to data/; LM Studio serving qwen3-4b-2507 (identifier qwen3-4b-2507, ctx 8192, gpu max) and text-embedding-qwen3-embedding-0.6b. Research state remains fresh (new DB). Seven hard preflight gates all PASS (evidence/case2c_preflight.json).",
+  "change_from_2c": "No production changes. The bounded remediation/freeze/release continuation is automated in the pre-registered harness evidence/launch_case2d.py so no human decision occurs between launch and verdict. Environment per the state taxonomy: research state fresh, operating state preserved.",
+  "harness": {
+    "path": "evidence/launch_case2d.py",
+    "sha256": "31bd2ff5531be1cb43bf6185490f9be3846cc28844fe8b0088efe61c2cf0c04d",
+    "policy": "run orchestrator; read persisted state; if blocked -> invoke cold repair EXACTLY ONCE via production route; if ready -> freeze -> release; verify E==F==R==H; no retries, no deletions, no edits; exit code = verdict"
+  },
+  "preflight": "seven hard gates + class-3 diagnostics per the clean-room state taxonomy"
 }

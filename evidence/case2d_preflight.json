@@ -1,0 +1,34 @@
+{
+  "phase": "0-hard-preflight-2D",
+  "captured_at": "2026-08-15T20:15:00.034158+00:00",
+  "gates": {
+    "embedding": {
+      "ok": true
+    },
+    "certified_model": {
+      "ok": true
+    },
+    "certification_lookup": {
+      "ok": true
+    },
+    "evaluator_provider": {
+      "ok": true
+    },
+    "fresh_db": {
+      "ok": true
+    },
+    "frozen_head": {
+      "ok": true,
+      "detail": "1cb8fe048300"
+    },
+    "clean_tracked_tree": {
+      "ok": true
+    },
+    "class3_diagnostics": {
+      "embedding_profile_rows": "absent (knowledge indexing will skip; recorded per state taxonomy, not a gate)",
+      "research_state": "fresh (new DB, no chroma/checkpoints/runs)",
+      "operating_state": "preserved (model_certification, model_assignments.json, LM Studio serving both models)"
+    }
+  },
+  "note": "Preflight first executed on the evidence branch (head/tree gates correctly FAILED); corrected by branching case2/run-2d directly from 1cb8fe0. All other gates unchanged. Class-3 diagnostic: EmbeddingProfile rows absent by design (not seeded)."
+}

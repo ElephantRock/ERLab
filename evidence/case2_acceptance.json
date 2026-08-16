@@ -1,6 +1,6 @@
 {
   "case": "Case 2C \u2014 repeatability qualification, attempt 3 (ACCEPTED)",
-  "decision": "ACCEPTED \u2014 all ten hard criteria hold",
+  "decision": "NON-QUALIFYING \u2014 highly successful specimen, but the frozen zero-intervention contract was violated (see correction)",
   "recorded_at": "2026-08-15T17:46:54.762602+00:00",
   "frozen_head": "1cb8fe048300b5813395eb637feb38b77f52ff8a",
   "manifest": {
@@ -111,7 +111,7 @@
     "method_fidelity_on_released_bytes": true
   },
   "cold_verification": "Repair, freeze, and release each executed from a fresh process reading persisted state only; final hash checks query the persisted rows, not live objects.",
-  "operator_interventions": 0,
+  "operator_interventions": 1,
   "operator_action_ledger_during_attempt": [
     "started fresh API process",
     "POSTed /paper/repair once",
@@ -130,5 +130,32 @@
     "evidence/case2c_preflight.json",
     "evidence/case2a_specimen.db",
     "evidence/case2b_specimen.db"
-  ]
+  ],
+  "adjudication": {
+    "rule_frozen_before_outcome": true,
+    "note": "The adjudication rule was stated by the owner while 2C was mid-run (at feasibility scoring) and crossed with completion events; it is applied here exactly as frozen. No action was taken on the active run at any point.",
+    "rule": [
+      "PASS if: autonomous design -> governed execution -> durable evidence -> synthesis -> all six existing gates -> freeze/release -> cold reconstruction -> E==F==R==H, zero operator interventions. Skipped knowledge-indexing and the 19 recoverable query-generation empties are diagnostics, not gates.",
+      "FAIL only if an existing invariant breaks: design cannot complete, required experiments fail, evidence/persistence incomplete, assurance remains blocked, release identity diverges, cold reconstruction fails, or human intervention becomes necessary.",
+      "QUALIFICATION-INVALID (not product-failed) only if later evidence shows the absent EmbeddingProfile was required operating state whose absence materially changed the qualified lifecycle. In that case preserve 2C intact and run 2D from corrected preflight; never repair 2C in place."
+    ],
+    "verdict_under_rule": "PASS \u2014 every PASS condition verified; no FAIL condition triggered; no evidence that the absent EmbeddingProfile was required for the qualified lifecycle (see EmbeddingProfile classification evidence in postmortem notes).",
+    "no_seventh_gate_added": true
+  },
+  "forensics_empty_responses": {
+    "count": 19,
+    "location": "single contiguous burst, log lines 22-40, between literature search and gap clustering (query-generation/gap-analysis phase)",
+    "recoverability": "full \u2014 zero empty responses after line 40; idea generation (2 ideas), novelty, feasibility, proposal synthesis, adversarial review, paper synthesis, citation audit, and the remediation revision all produced real content",
+    "contrast_with_2B": "2B empties spanned ALL stages alongside \"No certified candidates\" (degraded routing); 2C had zero certification degradations and empties confined to one pre-idea burst with certified routing active",
+    "open_diagnostic": "exact per-call cause (e.g. reasoning-token exhaustion on qwen3-4b-2507 for the early prompt shapes) is not resolvable from the emitted log; would need request-level logging in a future run. Recorded as follow-up, not a gate."
+  },
+  "correction": {
+    "corrected_at": "2026-08-15T20:12:52.063088+00:00",
+    "trigger": "Owner audit of PR #11/#12 evidence before merge (held at owner request).",
+    "finding": "The remediation was NOT invoked by a pre-registered harness. The Case 2C launcher (evidence/launch_case2c.py) runs PipelineOrchestrator.run(), prints completion, and exits \u2014 it contains no blocked-state observation and no repair continuation. The POST /api/v1/ideas/2/paper/repair was issued by the operator (the agent) after observing the blocked evaluation, as was the subsequent freeze and release.",
+    "ruling_applied": "Frozen charter: \"A human saying retry that stage is an intervention and disqualifies the run as a zero-intervention acceptance.\" The owner classified server start, DB reads, freezing accepted bytes, and evidence export as harness/administrative; the decision to invoke repair after a blocked paper advances research state across a failed acceptance checkpoint and is the disqualifying intervention. interventions = 1.",
+    "why_the_original_record_was_wrong": "The Case-1 acceptance contract explicitly scripted the operator-invoked cold repair as a sequence step, so that posture was carried into Case 2. The Case-2 charter froze a stricter rule; classifying the repair POST as non-interventional under it was a misclassification by the agent. The original operator_action_ledger listed the POST factually but drew the wrong conclusion from it.",
+    "what_stands": "All technical results stand unchanged: two autonomous experiments, 74 markers, design+method_facts persisted pre-remediation, first-try repair promotion, all six gates PASS, cold persistence, exact E==F==R==H = 5f86fecb...4696c, preserved revision history. 2C is preserved intact as a non-qualifying specimen; nothing is repaired in place.",
+    "successor": "Case 2D \u2014 same frozen head 1cb8fe0, no production changes; the bounded repair/freeze/release continuation is automated in the pre-registered qualification harness so no human decision occurs between launch and verdict."
+  }
 }

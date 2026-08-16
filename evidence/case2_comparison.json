@@ -1,6 +1,6 @@
 {
   "question": "Did the same research-production-and-assurance architecture successfully process two independently specified research questions?",
-  "answer": "Yes \u2014 two independently specified questions, two clean autonomous lifecycles, two exact release identities, zero operator interventions in both accepted runs.",
+  "answer": "Yes. Case 1 accepted under its own contract (operator-invoked repair scripted as a sequence step); Case 2D accepted under the stricter zero-intervention contract (repair/freeze/release automated in a pre-registered harness, verdict = exit code). Two independently specified questions, two clean qualifying lifecycles across two different contract strictness levels.",
   "table": [
     [
       "Frozen head",
@@ -60,22 +60,22 @@
     [
       "E==F==R==H",
       "PASS (9f3b92d2...)",
-      "PASS (5f86fecb...)"
+      "PASS \u2014 2C: 5f86fecb (non-qualifying); 2D: bb808368 (qualifying)"
     ],
     [
       "Operator interventions",
       "0",
-      "0"
+      "2C: 1 (repair decision); 2D: 0"
     ],
     [
       "Runtime",
       "3021s + 215s repair",
-      "3396s + 293s repair"
+      "2C: 3396s+293s; 2D: 3056s+~207s harness-automated"
     ],
     [
       "Decision",
       "ACCEPTED",
-      "ACCEPTED (2C; 2A/2B failed on environment, specimens preserved)"
+      "ACCEPTED via 2D (zero-intervention harness; 2C non-qualifying specimen preserved)"
     ]
   ]
 }
