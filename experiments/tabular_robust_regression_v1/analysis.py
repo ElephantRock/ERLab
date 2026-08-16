@@ -202,7 +202,12 @@ def fit_huber(X_std, y, ridge_w):
             * (resid_sorted[n // 2 - 1] + resid_sorted[n // 2])
         )
         deviations = sorted(abs(r - resid_median) for r in resid)
-        mad = deviations[len(deviations) // 2]
+        m = len(deviations)
+        mad = (
+            deviations[m // 2]
+            if m % 2 == 1
+            else 0.5 * (deviations[m // 2 - 1] + deviations[m // 2])
+        )
         sigma = max(MAD_TO_SIGMA * mad, 1e-8)
         delta = HUBER_DELTA_FACTOR * sigma
         weights = [1.0 if abs(r) <= delta else delta / abs(r) for r in resid]
