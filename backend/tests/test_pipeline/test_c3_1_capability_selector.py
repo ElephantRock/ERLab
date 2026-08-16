@@ -267,3 +267,70 @@ class TestReviewP1Fixes:
         }
         context = PaperSynthesisStage()._build_autonomous_paper_context(ctx, design)[0]
         assert "executed" in context and "capability" in context
+
+
+class TestRegressionFamilyDisambiguation:
+    """PR #19 review P1: once a regression capability is registered,
+    its family signals must not collide with logistic-regression
+    classification phrasing. The regression signal list below is the
+    frozen C3-2 design (see case3_architecture_manifest.json,
+    c3_1_review_addendum.finding_3)."""
+
+    REGRESSION_FAMILY = (
+        "tabular regression", "robust regression",
+        "regression datasets", "regression method",
+        "regression task", "regression analysis",
+    )
+
+    def _regression_cap(self) -> SupportedCapability:
+        return SupportedCapability(
+            task_type="regression",
+            supported_metrics={"baseline_mae": "lower_better"},
+            baseline_method="mean_predictor",
+            comparison_method="ridge_huber",
+            analysis_entrypoint="experiments/test_fixtures/exit_zero.py",
+            analysis_method_description="fake regression capability",
+            model_family="linear_model",
+            capability_id="tabular_robust_regression_v1",
+            selection_signals=self.REGRESSION_FAMILY + ("mae", "rmse", "r2", "huber"),
+            baseline_anchor_metric="baseline_mae",
+            family_signals=self.REGRESSION_FAMILY,
+        )
+
+    def test_case3_input_routes_to_regression_capability(self):
+        question = (
+            "Are robust-regression method rankings stable as covariate"
+            " perturbation severity increases, or do rank reversals"
+            " occur in MAE, RMSE, and R2 across tabular regression"
+            " datasets?"
+        )
+        caps = [
+            TABULAR_CALIBRATION_SELECTIVE_V1,
+            self._regression_cap(),
+        ]
+        cap = select_capability(
+            f"{question} Robust regression under distribution shift",
+            capabilities=caps,
+        )
+        assert cap.capability_id == "tabular_robust_regression_v1"
+
+    def test_logistic_regression_classifiers_route_to_calibration(self):
+        caps = [
+            TABULAR_CALIBRATION_SELECTIVE_V1,
+            self._regression_cap(),
+        ]
+        cap = select_capability(
+            "compare logistic regression classifiers calibration accuracy",
+            capabilities=caps,
+        )
+        assert cap.capability_id == "tabular_calibration_selective_v1"
+
+    def test_case1_input_still_routes_to_calibration_with_two_caps(self):
+        caps = [
+            TABULAR_CALIBRATION_SELECTIVE_V1,
+            self._regression_cap(),
+        ]
+        cap = select_capability(
+            f"{CASE1_QUESTION} {CASE1_DOMAIN}", capabilities=caps,
+        )
+        assert cap.capability_id == "tabular_calibration_selective_v1"

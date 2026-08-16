@@ -135,6 +135,11 @@
       "detail": "select_capability() treated any one signal substring hit as applicable: \"confidence intervals for protein folding\" matched the corroborating \"confidence\" signal and would have selected the classification capability.",
       "resolution": "Stronger-evidence rule: applicable = at least one task-family signal hit (new SupportedCapability.family_signals) OR >= 2 distinct corroborating signal hits. Single-corroborating-only inputs now fail closed as unsupported_capability."
     },
-    "g1_note": "G1 was not yet frozen (PR #18 unmerged) when these fixes landed; both are part of the single permitted generic-seam change set."
+    "g1_note": "G1 was not yet frozen (PR #18 unmerged) when these fixes landed; both are part of the single permitted generic-seam change set.",
+    "finding_3": {
+      "title": "Regression family signal must not collide with logistic-regression classification inputs (PR #19 review)",
+      "detail": "Once the regression capability is registered, a bare \"regression\" family signal would make \"compare logistic regression classifiers\" hit BOTH families (classifier -> calibration; regression -> regression) and halt as ambiguous. Logistic regression IS a classification method; the correct route is calibration alone.",
+      "resolution": "Signal-design constraint frozen now, no selector change: the C3-2 regression capability will use non-colliding family bigrams \u2014 (\"tabular regression\", \"robust regression\", \"regression datasets\", \"regression method\", \"regression task\", \"regression analysis\") \u2014 none of which occur in logistic-regression classification phrasing. Enforced by test_c3_1 capability-selector TestRegressionFamilyDisambiguation with a fake regression capability using exactly this frozen signal list: the Case-3 input routes to it, \"compare logistic regression classifiers\" routes to calibration alone."
+    }
   }
 }
