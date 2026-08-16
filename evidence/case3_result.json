@@ -1,0 +1,100 @@
+{
+  "case": "Case 3 \u2014 zero-intervention architectural qualification",
+  "frozen_head": "a057982845cfeabae55df5e02247748da9ff1c92",
+  "started_at": "2026-08-16T21:08:16.121286+00:00",
+  "steps": [
+    {
+      "step": "1-2",
+      "orchestrator": {
+        "run_id": "run_20260817_000829",
+        "outcome": "succeeded",
+        "outcome_is_success": true,
+        "elapsed_s": 3010.4,
+        "auto_design_status": "designed"
+      }
+    },
+    {
+      "step": "3-4",
+      "design_status": "designed",
+      "capability_id": "tabular_robust_regression_v1",
+      "n_specs": 2,
+      "spec_ids": [
+        "auto-regression-airfoil_self_noise",
+        "auto-regression-concrete_strength"
+      ]
+    },
+    {
+      "step": "5",
+      "experiments_success": 2,
+      "experiments_expected": 2,
+      "initial_eval_status": "blocked",
+      "markers": 54
+    },
+    {
+      "step": "6",
+      "remediation": {
+        "invoked": true,
+        "http": 200,
+        "promoted": true,
+        "eval_status": "ready"
+      }
+    }
+  ],
+  "proposal_id": 2,
+  "idea_id": 2,
+  "pipeline_run_id": 1,
+  "final_eval_status": "ready",
+  "final_gates": [
+    {
+      "provenance": "True"
+    },
+    {
+      "scope_alignment": "on_scope"
+    },
+    {
+      "conclusion_support": "supported_by_paper"
+    },
+    {
+      "experiment_alignment": "True"
+    },
+    {
+      "numeric_fidelity": "True"
+    },
+    {
+      "method_fidelity": "True"
+    }
+  ],
+  "freeze": {
+    "http": 200,
+    "state": "frozen",
+    "frozen_revision_id": 3,
+    "release_eligible": true
+  },
+  "release_header_hash": "010a08f476ec96b1682667a27a5fd68aae9896134dd87c01ab080583a34e646b",
+  "frozen_revision_id": 3,
+  "verification": {
+    "E": "010a08f476ec96b1682667a27a5fd68aae9896134dd87c01ab080583a34e646b",
+    "F": "010a08f476ec96b1682667a27a5fd68aae9896134dd87c01ab080583a34e646b",
+    "R": "010a08f476ec96b1682667a27a5fd68aae9896134dd87c01ab080583a34e646b",
+    "H": "010a08f476ec96b1682667a27a5fd68aae9896134dd87c01ab080583a34e646b",
+    "equality": true,
+    "frozen_eval_status": "ready",
+    "release_equals_current_bytes": true
+  },
+  "finished_at": "2026-08-16T22:02:33.845318+00:00",
+  "decision": "ACCEPTED",
+  "operator_interventions": 0,
+  "log": [
+    "[21:08:16Z] STEP1-2 orchestrator launch (frozen input); REQUIRE SUCCEEDED",
+    "[21:58:40Z] STEP1-2 done: {\"run_id\": \"run_20260817_000829\", \"outcome\": \"succeeded\", \"outcome_is_success\": true, \"elapsed_s\": 3010.4, \"auto_design_status\": \"designed\"}",
+    "[21:58:40Z] STEP3-4 design=designed capability=tabular_robust_regression_v1 specs=2",
+    "[21:58:40Z] STEP5 experiments success=2/2 eval=blocked markers=54",
+    "[21:58:40Z] STEP6 starting production API process",
+    "[21:58:48Z] STEP6 policy: blocked -> cold repair ONCE",
+    "[22:02:33Z] STEP6 repair: {\"invoked\": true, \"http\": 200, \"promoted\": true, \"eval_status\": \"ready\"}",
+    "[22:02:33Z] STEP6 final evaluation: ready",
+    "[22:02:33Z] STEP7 freeze",
+    "[22:02:33Z] STEP7 release + E==F==R==H",
+    "[22:02:33Z] STEP7 equality=True bytes=True"
+  ]
+}

@@ -1,0 +1,53 @@
+{
+  "phase": "C3-5 three-class preflight (hard gates)",
+  "captured_at": "2026-08-16T21:07:44.978758+00:00",
+  "gates": {
+    "embedding": {
+      "ok": true
+    },
+    "certified_model": {
+      "ok": true
+    },
+    "certification_lookup": {
+      "ok": true
+    },
+    "evaluator_provider": {
+      "ok": true
+    },
+    "fresh_db": {
+      "ok": true
+    },
+    "frozen_head_q0": {
+      "ok": true
+    },
+    "clean_tracked_tree": {
+      "ok": true
+    },
+    "manifest_seal": {
+      "ok": true
+    },
+    "harness_seal": {
+      "ok": true
+    },
+    "capability_registration": {
+      "ok": true
+    },
+    "selection_unique_regression": {
+      "ok": true
+    },
+    "two_regression_datasets": {
+      "ok": true
+    },
+    "entrypoint_hash": {
+      "ok": true
+    },
+    "dataset_hash": {
+      "ok": true
+    }
+  },
+  "class_state": {
+    "class1_research_fresh": "new DB (0 runs); chroma/checkpoints/runs archived to erlab-case2-archive/pre-case3-runtime",
+    "class2_operating_preserved": "model_certification + model_assignments.json in data/; LM Studio serving embedding + qwen3-4b-2507; governed datasets incl. airfoil; both capabilities registered",
+    "class3_recorded_not_gated": "EmbeddingProfile DB rows absent (knowledge indexing will skip; Case-2 established this is tolerated)"
+  }
+}
