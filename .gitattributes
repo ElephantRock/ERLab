@@ -3,3 +3,14 @@
 # dataset_meta.json are verified against these file contents, so no
 # line-ending conversion is permitted on any platform.
 data/datasets/** -text
+
+# Sealed Case-2 evidence files — byte-exact. The pre-registration seals
+# are SHA-256 hashes of the exact pre-launch bytes (CRLF line endings as
+# written on Windows); git text normalization broke the link on commit.
+# These files must round-trip byte-for-byte on every platform.
+evidence/case2b_manifest.json -text
+evidence/case2c_manifest.json -text
+evidence/case2d_manifest.json -text
+evidence/case2_manifest.json -text
+evidence/*.sha256 -text
+evidence/launch_case2d.py -text
