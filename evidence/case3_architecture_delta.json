@@ -4,7 +4,7 @@
   "gates": {
     "G0": "d70d7046c3868ba6fbaf73d8f4d2a132c48feaca",
     "G1": "7bfbd1a7a59292d4651d4abb5f14b6f93a93b476",
-    "Q0": "<SHA of this branch's merge, filled at pre-registration>"
+    "Q0": "a057982845cfeabae55df5e02247748da9ff1c92"
   },
   "G0_to_G1": {
     "summary": "Generic multi-capability seam only.",
