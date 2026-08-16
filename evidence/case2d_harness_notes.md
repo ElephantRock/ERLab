@@ -47,3 +47,30 @@ The 2D-finalized `case2_comparison.json` (Decision = "ACCEPTED via
 but omitted from the finalize commit's `git add` list; the branch
 carried the stale "2D pending" version. The finalized version is
 committed here. Content-only omission; no data was lost.
+
+## Review-findings adjudication (PR closeout, 2026-08-16)
+
+The automated review gate flagged four findings on the closeout PR.
+Adjudicated against the repository trees:
+
+1. **HIGH "Ghost evidence: failure to unlink 2D stale files" — false
+   positive.** `git diff --name-status main <delivery>` lists 14 files:
+   4 modified, 10 added, **zero deletions**; and the set of files on
+   `main` absent from the delivery is empty. No stale 2D file exists;
+   there is nothing to unlink. The delivery tree is byte-identical to
+   the verified stack tip (`git diff --stat` between them is empty).
+2. **MEDIUM "`case2a_manifest.json` missing from byte-freeze" — false
+   positive.** No such file exists. Attempt 2A's manifest is
+   `evidence/case2_manifest.json`, which IS listed with `-text` and
+   whose committed blob equals its seal (`4a161e0a…`, verified).
+3. **MEDIUM "SQL injection in launch_case2d.py" — theoretical.** The
+   interpolated values are integer IDs from the process's own prior
+   SELECT on its private SQLite file; no user-controlled input reaches
+   the query. The harness is a sealed historical artifact (owner
+   instruction: preserved as-is, sha256 `31bd2ff5…`); the pattern is
+   noted for successor harnesses, which should use parameterized
+   queries.
+4. **MEDIUM "hardcoded relative paths" — intentional.** The harness is
+   repository-root-relative by design (it is executed from the repo
+   root, like every Case-1/Case-2 launcher); noted for successor
+   harnesses.
