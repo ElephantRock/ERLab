@@ -191,17 +191,19 @@ class TestSpecDesignSuccess:
 
 class TestSpecDesignFailures:
     def test_insufficient_datasets_for_regression(self):
-        """Only 1 regression dataset exists (concrete). Need 2 → fail."""
+        """Two regression datasets exist (concrete, airfoil). Need 3 →
+        fail. (C3-2 registered airfoil; the pre-C3 world had only
+        concrete, and this test demanded min_datasets=2.)"""
         idea = IdeaInputs(requested_metrics=["rmse"])
         result = SpecDesigner().design(
             research_question="regression question",
             idea=idea,
             capability=REGRESSION_CAPABILITY,
-            min_datasets=2,
+            min_datasets=3,
         )
         assert result.status == "insufficient_compatible_datasets"
         assert len(result.specs) == 0
-        assert any("1 compatible" in d for d in result.diagnostics)
+        assert any("2 compatible" in d for d in result.diagnostics)
 
     def test_unsupported_metric_rejected(self):
         """Idea requests metrics not in capability → fail."""
@@ -239,7 +241,9 @@ class TestSpecDesignFailures:
         assert "f1_score" not in result.specs[0].declared_metrics
 
     def test_min_datasets_one_succeeds_for_regression(self):
-        """With min_datasets=1, single regression dataset suffices."""
+        """With min_datasets=1, design succeeds and compiles every
+        compatible regression dataset (concrete + airfoil since
+        C3-2)."""
         idea = IdeaInputs(requested_metrics=["rmse"])
         result = SpecDesigner().design(
             research_question="regression",
@@ -248,7 +252,7 @@ class TestSpecDesignFailures:
             min_datasets=1,
         )
         assert result.status == "success"
-        assert len(result.specs) == 1
+        assert len(result.specs) == 2
 
     def test_diagnostics_explain_incompatibility(self):
         """Concrete is excluded from classification design with reason."""

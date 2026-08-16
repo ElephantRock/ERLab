@@ -1,0 +1,22 @@
+{
+    "name": "airfoil_self_noise",
+    "version": "1.0.0",
+    "source": "UCI Machine Learning Repository — Airfoil Self-Noise",
+    "source_url": "https://archive.ics.uci.edu/dataset/291/airfoil+self+noise",
+    "original_citation": "Thomas F. Brooks, D. Stuart Pope, Michael A. Marcolini, 'Airfoil Self-Noise and Prediction,' NASA Reference Publication 1218, July 1989; contributions by Ignacio Lopez-Diez (Universidad Politecnica de Madrid) and Anwar Hermann (Universitat Stuttgart) to the UCI collection.",
+    "license": "CC BY 4.0",
+    "raw_filename": "airfoil_self_noise.dat",
+    "raw_sha256": "74c75fd71783f1e6b71f8a622b993dc592897a97cd689c5090a07147a1b097b3",
+    "n_rows": 1503,
+    "n_features": 5,
+    "features": [
+        "Frequency (Hz)",
+        "Angle of attack (degrees)",
+        "Chord length (m)",
+        "Free-stream velocity (m/s)",
+        "Suction-side displacement thickness (m)"
+    ],
+    "target": "Scaled sound pressure level (dB)",
+    "redistribution": true,
+    "sensitive_attributes": false
+}

@@ -80,10 +80,12 @@ class TestSelectorUnit:
 
     def test_registry_contains_calibration_with_seam_fields(self):
         caps = list_supported_capabilities()
-        assert [c.capability_id for c in caps] == [
-            "tabular_calibration_selective_v1",
-        ]
-        cal = caps[0]
+        ids = [c.capability_id for c in caps]
+        assert "tabular_calibration_selective_v1" in ids
+        cal = next(
+            c for c in caps
+            if c.capability_id == "tabular_calibration_selective_v1"
+        )
         assert cal.selection_signals
         assert cal.baseline_anchor_metric == "baseline_accuracy"
 
@@ -334,3 +336,19 @@ class TestRegressionFamilyDisambiguation:
             f"{CASE1_QUESTION} {CASE1_DOMAIN}", capabilities=caps,
         )
         assert cap.capability_id == "tabular_calibration_selective_v1"
+
+
+class TestSelectorUnicodeFold:
+    """PR #23 review P2: the generic superscript fold must apply to
+    capability selection, not just metric harvest — "R²" routes
+    identically to "R2"."""
+
+    def test_superscript_r2_selects_where_ascii_would(self):
+        cap_ascii = select_capability(
+            "Evaluate Huber models using R2 robust regression"
+        )
+        cap_super = select_capability(
+            "Evaluate Huber models using R² robust regression"
+        )
+        assert cap_ascii.capability_id == "tabular_robust_regression_v1"
+        assert cap_super.capability_id == cap_ascii.capability_id

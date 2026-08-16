@@ -284,6 +284,152 @@ TABULAR_CALIBRATION_SELECTIVE_V1 = SupportedCapability(
     },
 )
 
+# ── Production capability #2 for Case 3 ─────────────────────────────────────
+# The checked-in v1 entrypoint implements a fixed protocol: ridge and
+# Huber regression vs the mean-predictor baseline on standardized
+# tabular features, under seeded deterministic covariate perturbation,
+# with MAE/RMSE/R2 metrics. Protocol constants are frozen inside the
+# entrypoint. Selection signals follow the frozen non-colliding design
+# (case3_architecture_manifest.json, c3_1_review_addendum.finding_3).
+
+TABULAR_ROBUST_REGRESSION_V1 = SupportedCapability(
+    task_type="regression",
+    supported_metrics={
+        "0_0_ridge_mae": "lower_better",
+        "0_0_ridge_rmse": "lower_better",
+        "0_0_ridge_r2": "higher_better",
+        "0_0_huber_mae": "lower_better",
+        "0_0_huber_rmse": "lower_better",
+        "0_0_huber_r2": "higher_better",
+        "0_25_ridge_mae": "lower_better",
+        "0_25_ridge_rmse": "lower_better",
+        "0_25_ridge_r2": "higher_better",
+        "0_25_huber_mae": "lower_better",
+        "0_25_huber_rmse": "lower_better",
+        "0_25_huber_r2": "higher_better",
+        "0_5_ridge_mae": "lower_better",
+        "0_5_ridge_rmse": "lower_better",
+        "0_5_ridge_r2": "higher_better",
+        "0_5_huber_mae": "lower_better",
+        "0_5_huber_rmse": "lower_better",
+        "0_5_huber_r2": "higher_better",
+        "0_75_ridge_mae": "lower_better",
+        "0_75_ridge_rmse": "lower_better",
+        "0_75_ridge_r2": "higher_better",
+        "0_75_huber_mae": "lower_better",
+        "0_75_huber_rmse": "lower_better",
+        "0_75_huber_r2": "higher_better",
+        "baseline_mae": "lower_better",
+        "baseline_rmse": "lower_better",
+        "baseline_r2": "higher_better",
+    },
+    baseline_method="mean_predictor",
+    comparison_method="ridge_huber_regression",
+    analysis_entrypoint=(
+        "experiments/tabular_robust_regression_v1/analysis.py"
+    ),
+    analysis_method_description=(
+        "ridge and Huber regression vs mean-predictor baseline"
+        " under seeded covariate perturbation severities"
+        " with MAE/RMSE/R2 metrics"
+    ),
+    model_family="linear_regression",
+    capability_id="tabular_robust_regression_v1",
+    selection_signals=(
+        "tabular regression", "robust regression",
+        "regression datasets", "regression method",
+        "regression task", "regression analysis",
+        "mae", "rmse", "r2", "huber", "ridge",
+    ),
+    baseline_anchor_metric="baseline_mae",
+    family_signals=(
+        "tabular regression", "robust regression",
+        "regression datasets", "regression method",
+        "regression task", "regression analysis",
+    ),
+    paper_directive=(
+        "The paper must describe the actual robust-regression"
+        " capability (ridge and Huber regression under seeded"
+        " covariate perturbation), not a speculative method from"
+        " the proposal."
+    ),
+    method_facts={
+        "models": {
+            "statement": (
+                "Two regression models are fitted on features"
+                " standardized with training-set statistics. Ridge"
+                " regression is solved in closed form (lambda = 1.0,"
+                " with the intercept left unregularized) by pure-Python"
+                " Gaussian elimination. Huber regression is fitted by"
+                " iteratively reweighted least squares initialized from"
+                " the ridge solution, with delta = 1.345 times a"
+                " MAD-based residual scale (1.4826 x median absolute"
+                " deviation about the residual median, floored at"
+                " 1e-8) recomputed each iteration, for exactly 50"
+                " iterations. No external machine-learning library is"
+                " used."
+            ),
+            "required_patterns": [r"ridge", r"huber"],
+            "forbidden_patterns": [
+                r"scikit-learn|sklearn",
+                r"library default",
+                r"stochastic gradient|mini-?batch",
+            ],
+        },
+        "baseline": {
+            "statement": (
+                "The baseline is the training-set mean predictor."
+                " Its predictions do not read the covariates, so its"
+                " MAE, RMSE, and R-squared are reported once per"
+                " dataset and are identical at every perturbation"
+                " severity."
+            ),
+            "required_patterns": [r"training-set mean|mean predictor"],
+            "forbidden_patterns": [r"median predictor|zero predictor"],
+        },
+        "perturbation": {
+            "statement": (
+                "Covariate perturbation adds deterministic seeded"
+                " zero-mean Gaussian noise to the standardized test"
+                " features only, with standard deviation equal to"
+                " severity x 0.5 at severities 0.0, 0.25, 0.5, and"
+                " 0.75 (seed 42 plus the severity index, Box-Muller"
+                " sampling). Labels are never perturbed."
+            ),
+            "required_patterns": [r"perturb", r"severity"],
+            "forbidden_patterns": [
+                r"label noise|noisy labels",
+                r"train(?:ing)? set perturb",
+            ],
+        },
+        "metrics": {
+            "statement": (
+                "MAE and RMSE (lower is better) and R-squared"
+                " (R2 = 1 - SS_res/SS_tot with SS_tot taken about the"
+                " test-set mean; higher is better) are computed per"
+                " (severity, method) on the perturbed test set."
+            ),
+            "required_patterns": [
+                r"r2 = 1 - ss_res/ss_tot|r-squared.*test-set mean",
+            ],
+            "forbidden_patterns": [
+                r"adjusted r2|adjusted r-squared",
+            ],
+        },
+        "split": {
+            "statement": (
+                "The data are split by a deterministic seeded shuffle"
+                " (seed 42) into 80% training and 20% test rows;"
+                " standardization statistics come from the training"
+                " split only."
+            ),
+            "required_patterns": [r"80% train|80 percent train"],
+            "forbidden_patterns": [r"cross-validation|k-fold"],
+        },
+    },
+)
+
+
 # ── Capability registry (C3-1 generic seam) ─────────────────────────────────
 # The registered set is the single source of truth for autonomous
 # capability selection. Adding a capability means declaring a
@@ -292,6 +438,7 @@ TABULAR_CALIBRATION_SELECTIVE_V1 = SupportedCapability(
 
 REGISTERED_CAPABILITIES: tuple[SupportedCapability, ...] = (
     TABULAR_CALIBRATION_SELECTIVE_V1,
+    TABULAR_ROBUST_REGRESSION_V1,
 )
 
 
@@ -317,7 +464,15 @@ def select_capability(
     capability contract the SpecDesigner compiles into specs.
     """
     caps = capabilities if capabilities is not None else list_supported_capabilities()
+    # Same generic Unicode normalization as the metric-harvest fold
+    # (superscript digits to ASCII): a question written "R²" must
+    # route identically to one written "R2".
     normalized = " ".join(str(research_input).casefold().split())
+    normalized = (
+        normalized.replace("²", "2")
+        .replace("³", "3")
+        .replace("¹", "1")
+    )
     applicable: list[tuple[SupportedCapability, list[str]]] = []
     for cap in caps:
         hits = [

@@ -1,0 +1,47 @@
+{
+  "case": "Case 3 \u2014 architecture delta record (C3-4 pre-registration input)",
+  "recorded_at": "2026-08-17T00:00:00Z",
+  "gates": {
+    "G0": "d70d7046c3868ba6fbaf73d8f4d2a132c48feaca",
+    "G1": "7bfbd1a7a59292d4651d4abb5f14b6f93a93b476",
+    "Q0": "<SHA of this branch's merge, filled at pre-registration>"
+  },
+  "G0_to_G1": {
+    "summary": "Generic multi-capability seam only.",
+    "files_changed": [
+      "backend/pipeline/stages.py \u2014 ensure_autonomous_experiment_design() selects via the registry; metric harvest parameterized; capability_id/method_facts/paper_directive flow from the contract; fail-closed selection statuses ride the executor's existing generic terminalization",
+      "backend/pipeline/experiment/spec_designer.py \u2014 SupportedCapability gains capability_id / selection_signals / family_signals / baseline_anchor_metric / paper_directive; REGISTERED_CAPABILITIES; list_supported_capabilities(); select_capability() (0/1/>1 fail-closed); CapabilitySelectionError",
+      "backend/pipeline/stages.py \u2014 _build_autonomous_paper_context() uses the design-state paper_directive with a capability-generic fallback (review P1 fix; calibration text byte-identical)",
+      "tests + C3-0 manifest (incl. dated review addendum)"
+    ],
+    "protected_lifecycle_changes": "The seam itself (permitted once, pre-qualification). Nothing in executor, persistence, hydration, synthesis architecture, gates, repair, release, or orchestrator topology.",
+    "review_findings_resolved_pre_freeze": [
+      "P1 classification-only synthesis directive \u2192 capability-generic paper_directive",
+      "P1 single-signal selection \u2192 family-signal or >=2-corroborating rule",
+      "P1 regression-family collision with 'logistic regression classifiers' \u2192 frozen non-colliding family bigrams + tests"
+    ]
+  },
+  "G1_to_Q0": {
+    "summary": "Capability/plugin surfaces + governed data + tests only.",
+    "extension_files": [
+      "backend/pipeline/experiment/spec_designer.py \u2014 TABULAR_ROBUST_REGRESSION_V1 declaration (metrics menu, signals, method_facts, paper_directive) + registration in REGISTERED_CAPABILITIES",
+      "experiments/tabular_robust_regression_v1/analysis.py \u2014 checked-in deterministic pure-Python entrypoint",
+      "data/datasets/airfoil_self_noise/{airfoil_self_noise.dat,dataset_meta.json} \u2014 governed dataset registration (UCI CC BY 4.0, raw sha256 74c75fd7\u2026b097b3; byte-frozen by the existing data/datasets/** -text attribute)",
+      "tests: test_c3_2_regression_capability.py (11), test_c3_3_composition.py (6)"
+    ],
+    "protected_lifecycle_changes": "NONE \u2014 with one disclosed exception below.",
+    "disclosed_exception": {
+      "change": "backend/pipeline: the generic Unicode superscript fold (\u00b2\u21922, \u00b3\u21923, \u00b9\u21921) applies at BOTH generic text sites \u2014 metric-harvest normalization (stages.py, ensure_autonomous_experiment_design) and capability selection (spec_designer.py, select_capability) \u2014 alongside existing casefolding.",
+      "classification_claimed": "GENERIC product fix, not capability-specific alteration",
+      "justification": "The frozen Case-3 question writes 'R\u00b2' with a Unicode superscript; metric names use ASCII 'r2'. Without the fold the study would execute R\u00b2 internally but the paper would omit every R\u00b2 marker \u2014 the question's own subject. The fold is text normalization in an existing generic function, references no capability, and is proven generic by test (the Case-1 harvest set is unchanged: all 36 calibration metrics still harvest). It is the same class of change as the lowercasing already present.",
+      "owner_adjudication_point": "If ruled capability-specific, criterion 12 fails and the verdict path is ARCHITECTURE FAIL with this branch preserved as evidence. Disclosed here rather than buried because criterion 12 is the architectural qualification criterion."
+    },
+    "no_branch_added_proof": "Capability #2 reaches design (registry), execution (common execute_experiment_spec \u2014 manifest spec ids auto-regression-*), persistence (ExperimentResult rows), hydration (_hydrate_autonomous_result_markers), paper context (_build_autonomous_paper_context renders regression facts + directive from the design state), and assurance (method_fidelity gate runs the regression facts unchanged) without any Capability-#2 conditional in those components. Enforced by test_c3_3_composition.py.",
+    "review_fixes_pre_freeze": [
+      "P1 (PR #21): MAD was computed as median(|residual|) instead of the median absolute deviation about the residual median. Fixed to the centered MAD; method_facts statement updated to transcribe the corrected implementation. Huber metric values shifted accordingly (e.g. airfoil 0_0_huber_mae 3.666784 -> 3.666166).",
+      "P1 (PR #21): the IRLS convergence early-stop (~22-23 iterations) contradicted the pre-registered 'fixed 50 iterations'. The tolerance break was removed; exactly 50 iterations now run (converged iterates are numerical no-ops). method_facts updated to 'exactly 50 iterations'.",
+      "P1 (PR #22): the MAD deviations median used the single upper-middle element for even-length splits (both training splits are even: 1202/824 rows). Fixed to the average of the two middle deviations, matching the residual median's even handling. Huber values shifted (airfoil 0_0_huber_mae 3.666166 -> 3.666145).",
+      "P2 (PR #23): the generic superscript fold existed only in metric harvest, not capability selection \u2014 'Evaluate Huber models using R\u00b2' failed unsupported while ASCII 'R2' selected. The same generic normalization now runs in select_capability() (spec_designer, seam machinery in the extension file), with a routing-equivalence test."
+    ]
+  }
+}
