@@ -39,6 +39,23 @@ class DesignError(ValueError):
     """Raised when experiment design compilation fails."""
 
 
+class CapabilitySelectionError(DesignError):
+    """Deterministic capability selection failed (C3-1 generic seam).
+
+    ``code`` is one of:
+      - ``unsupported_capability`` — no registered capability's
+        selection signals match the research input.
+      - ``ambiguous_capability``  — more than one capability matches;
+        halting is required rather than guessing.
+    """
+
+    def __init__(self, code: str, message: str) -> None:
+        super().__init__(message)
+        self.code = code
+
+
+
+
 @dataclass(frozen=True)
 class SupportedCapability:
     """A closed contract for one supported experiment family.
@@ -63,6 +80,24 @@ class SupportedCapability:
     # method_fidelity gate enforces: every required pattern must appear
     # in the paper, no forbidden pattern may appear anywhere.
     method_facts: dict[str, dict[str, Any]] = field(default_factory=dict)
+    # C3-1 generic-seam fields: identity for the design state, the
+    # frozen signal terms the deterministic selector matches against
+    # (research question + domain text, casefolded substring match;
+    # signals must be curated so one input cannot match two
+    # capabilities' family terms unintentionally), and the metric that
+    # anchors every study regardless of what the idea text requests.
+    capability_id: str = ""
+    selection_signals: tuple[str, ...] = ()
+    baseline_anchor_metric: str = ""
+    # Task-family terms: at least one family hit OR >=2 corroborating
+    # signal hits makes a capability applicable. Family terms gate the
+    # broad single-signal cases (e.g. "confidence intervals for
+    # protein folding" matches only the corroborating "confidence"
+    # signal and must fail closed as unsupported).
+    family_signals: tuple[str, ...] = ()
+    # Directive injected into the autonomous paper context so the
+    # synthesis instruction is capability-generic (C3-1 review P1).
+    paper_directive: str = ""
 
 
 # ── Production capability for Case 1 ────────────────────────────────────────
@@ -125,6 +160,22 @@ TABULAR_CALIBRATION_SELECTIVE_V1 = SupportedCapability(
         " under fixed covariate-shift severities"
     ),
     model_family="logistic_regression",
+    capability_id="tabular_calibration_selective_v1",
+    selection_signals=(
+        "classification", "classify", "classifier",
+        "calibration", "calibrated",
+        "selective classification",
+        "accuracy", " ece", "aurc",
+        "confidence",
+    ),
+    baseline_anchor_metric="baseline_accuracy",
+    family_signals=("classification", "classify", "classifier"),
+    paper_directive=(
+        "The paper must describe the actual"
+        " calibration/selective-classification"
+        " capability, not a speculative method from"
+        " the proposal."
+    ),
     # Transcribed from experiments/tabular_calibration_selective_v1/
     # analysis.py (constants at module top; implementations at the named
     # functions). The released run-2713 paper misdescribed all four of
@@ -232,6 +283,73 @@ TABULAR_CALIBRATION_SELECTIVE_V1 = SupportedCapability(
         },
     },
 )
+
+# ── Capability registry (C3-1 generic seam) ─────────────────────────────────
+# The registered set is the single source of truth for autonomous
+# capability selection. Adding a capability means declaring a
+# SupportedCapability with disjoint selection signals and appending it
+# here — nothing in the lifecycle changes.
+
+REGISTERED_CAPABILITIES: tuple[SupportedCapability, ...] = (
+    TABULAR_CALIBRATION_SELECTIVE_V1,
+)
+
+
+def list_supported_capabilities() -> list[SupportedCapability]:
+    """Return the registered production capabilities (copy)."""
+    return list(REGISTERED_CAPABILITIES)
+
+
+def select_capability(
+    research_input: str,
+    capabilities: list[SupportedCapability] | None = None,
+) -> SupportedCapability:
+    """Deterministically select the one applicable capability.
+
+    Matches frozen ``selection_signals`` (casefolded substring) against
+    the research input (question + domain text). Fail-closed:
+
+      0 applicable -> CapabilitySelectionError(unsupported_capability)
+      1 applicable -> return it
+     >1 applicable -> CapabilitySelectionError(ambiguous_capability)
+
+    No LLM involvement: the selector only decides which already-declared
+    capability contract the SpecDesigner compiles into specs.
+    """
+    caps = capabilities if capabilities is not None else list_supported_capabilities()
+    normalized = " ".join(str(research_input).casefold().split())
+    applicable: list[tuple[SupportedCapability, list[str]]] = []
+    for cap in caps:
+        hits = [
+            sig for sig in cap.selection_signals
+            if sig.casefold() in normalized
+        ]
+        family_hits = [
+            sig for sig in cap.family_signals
+            if sig.casefold() in normalized
+        ]
+        # Stronger-evidence rule (C3-1 review P1): a single broad
+        # corroborating signal alone must not select a capability.
+        # Applicable = at least one task-family hit, or >= 2 distinct
+        # corroborating signals.
+        if family_hits or len(hits) >= 2:
+            applicable.append((cap, hits or family_hits))
+
+    if not applicable:
+        raise CapabilitySelectionError(
+            "unsupported_capability",
+            "No registered capability matches the research input."
+            f" Registered: {[c.capability_id for c in caps]};"
+            f" input: {normalized[:200]!r}",
+        )
+    if len(applicable) > 1:
+        names = sorted(c.capability_id or repr(c) for c, _ in applicable)
+        raise CapabilitySelectionError(
+            "ambiguous_capability",
+            f"Research input matches multiple registered capabilities:"
+            f" {names}. Halting rather than selecting arbitrarily.",
+        )
+    return applicable[0][0]
 
 
 @dataclass

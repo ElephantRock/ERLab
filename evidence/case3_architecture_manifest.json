@@ -1,0 +1,145 @@
+{
+  "case": "Case 3 \u2014 architectural/capability generalization",
+  "stage": "C3-0 frozen architectural test",
+  "frozen_at": "2026-08-16T21:30:00Z",
+  "baseline": {
+    "G0": "d70d7046c3868ba6fbaf73d8f4d2a132c48feeca",
+    "verified": "HEAD == main == G0, tracked tree clean at freeze time"
+  },
+  "objective": "Demonstrate that ERLab can autonomously select and execute a second, materially different empirical capability through the same design \u2192 execution \u2192 persistence \u2192 synthesis \u2192 assurance \u2192 remediation \u2192 freeze \u2192 release architecture, with no capability-specific redesign of that lifecycle.",
+  "frozen_input": {
+    "domain": "Robust regression under distribution shift",
+    "research_question": "Are robust-regression method rankings stable as covariate perturbation severity increases, or do rank reversals occur in MAE, RMSE, and R\u00b2 across tabular regression datasets?",
+    "activation": "autonomous_experiment_enabled=True only",
+    "no_predetermined_scientific_answer": true
+  },
+  "capability_candidate": {
+    "working_name": "TABULAR_ROBUST_REGRESSION_V1",
+    "task_type": "regression",
+    "datasets": [
+      {
+        "name": "concrete_strength",
+        "status": "already registered at G0 (UCI, CC BY 4.0)",
+        "role": "existing regression dataset"
+      },
+      {
+        "name": "airfoil_self_noise",
+        "status": "new registration in C3-2",
+        "source": "UCI Machine Learning Repository \u2014 Airfoil Self-Noise (ID 291), https://archive.ics.uci.edu/dataset/291/airfoil+self+noise",
+        "license": "CC BY 4.0",
+        "citation": "Brooks, Pope, Marcolini, NASA Langley Research Center; Lopez-Diez, Departamento de Ingenieria Aeroespacial; et al.",
+        "raw_file": "airfoil_self_noise.dat (1503 rows, tab-separated, no header)",
+        "raw_sha256_frozen_at_download": "74c75fd71783f1e6b71f8a622b993dc592897a97cd689c5090a07147a1b097b3",
+        "features": [
+          "frequency_hz",
+          "angle_of_attack_deg",
+          "chord_length_m",
+          "free_stream_velocity_ms",
+          "suction_side_thickness_m"
+        ],
+        "target": "scaled_sound_pressure_db (continuous)"
+      }
+    ],
+    "protocol_frozen": {
+      "baseline_method": "mean_predictor (training-set mean of target; predictions independent of covariates, so its metrics are severity-independent and reported once per dataset)",
+      "comparison_methods": [
+        "ridge: closed-form ridge regression on standardized features (train statistics), lambda=1.0, solved by pure-Python Gaussian elimination \u2014 the non-robust reference",
+        "huber: Huber regression via iteratively reweighted least squares (IRLS), initialized from the ridge solution, delta=1.345 x MAD-scaled residual spread, fixed 50 iterations \u2014 the robust method"
+      ],
+      "covariate_perturbation": "deterministic seeded Gaussian noise on test-set features only: per-feature zero-mean noise with std = severity x 0.5 x per-feature training std, seed fixed (42 + severity index); severities [0.0, 0.25, 0.5, 0.75]; no label noise",
+      "metrics": [
+        "MAE",
+        "RMSE",
+        "R2 (1 - SS_res/SS_tot about the test-set mean)"
+      ],
+      "flat_metric_layout": "2 datasets x 4 severities x 2 methods x 3 metrics + 2 datasets x 3 baseline metrics (once per dataset, severity-independent) = 54 markers (count is an observation, not a criterion)",
+      "entrypoint": "checked-in deterministic pure-Python analysis (experiments/tabular_robust_regression_v1/analysis.py), --input/--output -> metrics.json; no LLM-generated code, no external ML library",
+      "implementation_truth": "method_facts frozen on the capability at declaration, transcribed from the entrypoint implementation (the Case-1 method-fidelity mechanism)"
+    }
+  },
+  "surface_classification": {
+    "extension_surfaces_permitted": [
+      "SupportedCapability declaration/registration (backend/pipeline/experiment/spec_designer.py capability definitions and a capability registry)",
+      "one checked-in governed analysis entrypoint (experiments/<capability>/analysis.py)",
+      "governed dataset files and metadata (data/datasets/<name>/)",
+      "capability-specific method_facts",
+      "tests (backend/tests/)",
+      "Case-3 qualification/evidence files (evidence/)"
+    ],
+    "generic_seam_permitted_once_before_qualification": [
+      "ensure_autonomous_experiment_design() in backend/pipeline/stages.py: replace the hardcoded TABULAR_CALIBRATION_SELECTIVE_V1 selection with deterministic, fail-closed selection from registered SupportedCapability objects (0 applicable -> unsupported_capability; 1 -> select; >1 -> ambiguous_capability halt). SpecDesigner remains the compiler; the selector only chooses which declared capability contract it receives. This change lands alone as G1 with regression proofs that Case-1 behavior is intact."
+    ],
+    "core_lifecycle_protected": [
+      "ExperimentSpec semantics (backend/pipeline/experiment/specification.py)",
+      "trusted experiment executor (backend/pipeline/experiment/empirical_runner.py)",
+      "ExperimentResult persistence and autonomous result hydration (backend/pipeline/persistence.py, backend/pipeline/stages.py hydration)",
+      "paper synthesis architecture (backend/pipeline/stages.py, backend/pipeline/synthesis/)",
+      "cold repair architecture (backend/api/routes/ideas.py repair route, backend/pipeline/evaluation/paper_remediator.py, revision_directive.py)",
+      "the six paper-assurance gates (provenance, scope_alignment, conclusion_support, experiment_alignment, numeric_fidelity, method_fidelity) \u2014 no seventh gate",
+      "freeze/release semantics (backend/pipeline/evaluation/paper_release.py, export routes)",
+      "orchestrator stage topology (backend/pipeline/orchestrator/)"
+    ]
+  },
+  "gate_sequence": {
+    "G1": "<SHA after C3-1 generic seam, Case-1 behavior proven intact>",
+    "Q0": "<SHA after C3-2/C3-3, CI green, hermetic composition proven>",
+    "rule": "After G1, adding Capability #2 may not require changes to protected lifecycle machinery. If it does, that is ARCHITECTURE FAIL evidence, not implementation work."
+  },
+  "acceptance_criteria": [
+    "1. Capability breadth: qualifying run uses the regression capability, not the Case-1 classification capability",
+    "2. Autonomous selection: input is domain + question only; no explicit spec, no operator selection",
+    "3. Existing spec contract: Capability #2 compiles into the existing ExperimentSpec representation",
+    "4. Existing execution: all required experiments run through the common trusted execute_experiment_spec() path",
+    "5. Existing persistence/recovery: durable results; cold reconstruction recovers the complete expected set without Capability-#2 recovery logic",
+    "6. Existing synthesis/remediation: common empirical synthesis and cold-repair paths consume Capability #2 without a regression branch",
+    "7. Existing assurance: same six gates pass on the final artifact; no seventh gate",
+    "8. Method truth: released methodology matches the frozen Capability-#2 method_facts",
+    "9. Zero intervention: operator_interventions == 0; any human decision after launch disqualifies",
+    "10. Release authority: E == F == R == H; released bytes identical to frozen paper",
+    "11. Preservation: blocked/repaired/frozen revisions and failed states intact",
+    "12. Architectural generality: the G1 -> Q0 delta contains no capability-specific alteration of protected lifecycle machinery (architectural qualification criterion, not a paper gate)"
+  ],
+  "failure_taxonomy": {
+    "PASS": "Capability #2 plugs into generalized architecture and completes the qualifying lifecycle -> close Case 3",
+    "ARCHITECTURE_FAIL": "Capability #2 requires capability-specific core lifecycle changes after G1 -> preserve evidence; the abstraction boundary is false",
+    "RUN_FAIL": "Architecture composed correctly but the frozen scientific/execution run fails -> preserve; investigate under frozen criteria",
+    "INVALID_ATTEMPT": "Environment/preflight violated frozen conditions -> preserve specimen; correct environment; fresh attempt",
+    "GENERIC_PRODUCT_DEFECT": "Common-path bug, not capability-specific design need -> preserve; smallest generic fix; re-freeze Q0; new attempt",
+    "DIFFERENT_SCIENTIFIC_RESULT": "Results differ from expectations -> not a failure"
+  },
+  "out_of_scope": [
+    "time-series schema",
+    "third capability",
+    "new lifecycle stage",
+    "persistence migration absent a demonstrated generic blocker",
+    "new assurance dimensions",
+    "UI redesign",
+    "agent-framework redesign",
+    "generalized code generation",
+    "optimization exercises",
+    "Case-4 reliability work",
+    "researcher validation",
+    "Case-1 or Case-2 reruns"
+  ],
+  "state_taxonomy_note": "C3-5 preflight uses the Case-2 three-class taxonomy: research state fresh; required operating state preserved (model certification, model assignments, provider config, governed datasets, capability registration); optional/reconstructible state may be absent only where the system is designed to tolerate it (recorded as diagnostics, e.g. EmbeddingProfile rows).",
+  "c3_1_review_addendum": {
+    "date": "2026-08-16",
+    "trigger": "PR #18 automated review (chatgpt-codex-connector) raised two P1s before G1 froze.",
+    "finding_1": {
+      "title": "Classification-only synthesis directive in protected paper-context builder",
+      "detail": "PaperSynthesisStage._build_autonomous_paper_context() hardcoded \"The paper must describe the actual calibration/selective-classification capability...\" \u2014 a capability-specific branch inside the protected synthesis surface. Left in place, the C3-2 regression capability would have required a capability-motivated protected-lifecycle change, producing a false ARCHITECTURE-FAIL verdict under criterion 12.",
+      "resolution": "Recorded as a seam-scope extension permitted BEFORE qualification: the directive now comes from the capability contract (new SupportedCapability.paper_directive field) through the design state; the builder uses it with a capability-generic fallback. The calibration capability carries the byte-identical original text, so Case-1 synthesis behavior is unchanged."
+    },
+    "finding_2": {
+      "title": "Single broad signal could select a capability",
+      "detail": "select_capability() treated any one signal substring hit as applicable: \"confidence intervals for protein folding\" matched the corroborating \"confidence\" signal and would have selected the classification capability.",
+      "resolution": "Stronger-evidence rule: applicable = at least one task-family signal hit (new SupportedCapability.family_signals) OR >= 2 distinct corroborating signal hits. Single-corroborating-only inputs now fail closed as unsupported_capability."
+    },
+    "g1_note": "G1 was not yet frozen (PR #18 unmerged) when these fixes landed; both are part of the single permitted generic-seam change set.",
+    "finding_3": {
+      "title": "Regression family signal must not collide with logistic-regression classification inputs (PR #19 review)",
+      "detail": "Once the regression capability is registered, a bare \"regression\" family signal would make \"compare logistic regression classifiers\" hit BOTH families (classifier -> calibration; regression -> regression) and halt as ambiguous. Logistic regression IS a classification method; the correct route is calibration alone.",
+      "resolution": "Signal-design constraint frozen now, no selector change: the C3-2 regression capability will use non-colliding family bigrams \u2014 (\"tabular regression\", \"robust regression\", \"regression datasets\", \"regression method\", \"regression task\", \"regression analysis\") \u2014 none of which occur in logistic-regression classification phrasing. Enforced by test_c3_1 capability-selector TestRegressionFamilyDisambiguation with a fake regression capability using exactly this frozen signal list: the Case-3 input routes to it, \"compare logistic regression classifiers\" routes to calibration alone."
+    }
+  }
+}

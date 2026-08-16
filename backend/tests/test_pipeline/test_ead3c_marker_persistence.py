@@ -328,7 +328,9 @@ class TestPerExecutionPersistence:
         ctx = StageContext(
             result=PipelineResult(),
             domain="ML",
-            research_question="test",
+            # C3-1: the capability selector is input-matched; use a
+            # calibration-classification question so design proceeds.
+            research_question="calibration classification test",
         )
         ctx.params.update(ADAPTIVE_PARAMS)
 
