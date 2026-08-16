@@ -1,0 +1,37 @@
+{
+  "phase": "0-hard-preflight-2C",
+  "captured_at": "2026-08-15T16:40:31.856996+00:00",
+  "gates": {
+    "embedding": {
+      "ok": true,
+      "detail": "1024-dim"
+    },
+    "certification_lookup": {
+      "ok": true,
+      "detail": [
+        "qwen3-4b-2507"
+      ]
+    },
+    "certified_model_completion": {
+      "ok": true,
+      "detail": "'alive'"
+    },
+    "evaluator_provider": {
+      "ok": true,
+      "detail": "'alive'"
+    },
+    "fresh_db": {
+      "ok": true,
+      "detail": "0 runs"
+    },
+    "frozen_head": {
+      "ok": true,
+      "detail": "1cb8fe048300"
+    },
+    "clean_tracked_tree": {
+      "ok": true,
+      "detail": "0 dirty"
+    }
+  },
+  "llm_serving_config": "qwen3-4b-2507 loaded with --context-length 8192 --gpu max --identifier qwen3-4b-2507 (matches registry hardware notes: load-time ctx=8192, RTX 3080 Ti)"
+}

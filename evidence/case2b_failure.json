@@ -1,0 +1,24 @@
+{
+  "case": "Case 2B \u2014 attempt 2 (environment restored for embedding)",
+  "decision": "FAIL (experimenter error: clean-room boundary too aggressive; preserved as evidence)",
+  "recorded_at": "2026-08-15T16:11:08.330351+00:00",
+  "frozen_head": "1cb8fe048300b5813395eb637feb38b77f52ff8a",
+  "manifest_sha256": "34125da55ba7ab091f3a6db91c200686c495f57174530075921a313355cdb561",
+  "run": {
+    "db_run_id": 1,
+    "run_id_str": "run_20260815_190325",
+    "duration_seconds": 289,
+    "stages": 18,
+    "status": "completed"
+  },
+  "first_broken_invariant": "Experimenter error, not a system defect. The Phase-0 archive removed data/model_certification/ (production_registry.yaml) and data/model_assignments.json \u2014 SYSTEM OPERATING STATE required by CertifiedCapabilityLookup (backend/pipeline/routing/certified_lookup.py). Every LLM stage then routed degraded (\"No certified candidates\" x20+), and the degraded call path returned empty responses (\"Empty LLM response\" x20+, \"Structured output was not valid JSON\"), yielding 0 ideas and an aborted export Decision Gate (score 0.00).",
+  "baseline_comparison": "Case-1 accepted run log (evidence/ead4b_final4.log): zero \"No certified candidates\", zero \"Empty LLM response\". z.ai glm-5.2 verified alive by direct provider probe during diagnosis (replied to a completion).",
+  "assurance_containment": "Decision layer again refused to emit a paper: no paper, nothing frozen, nothing released.",
+  "operational_observation_not_fixed": "Degraded model routing yields EMPTY LLM responses (fail-open) rather than failing closed; with certification state absent the pipeline completes 18 stages reporting succeeded. Recorded for the qualification report; no mid-run code change per charter.",
+  "corrective_action_for_2C": "Restore system operating state (data/model_certification/, data/model_assignments.json) from the Phase-0 archive. Research state stays fresh (new DB, new chroma, new checkpoints). Preflight hard gates extended: embedding functional probe AND certification lookup must return candidates for idea_generation. No code change; same frozen SHA.",
+  "specimen": [
+    "evidence/case2b_specimen.db",
+    "evidence/case2b_run.log",
+    "evidence/case2b_manifest.json"
+  ]
+}

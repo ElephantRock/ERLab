@@ -1,0 +1,30 @@
+{
+  "case": "Case 2A \u2014 repeatability qualification attempt 1",
+  "decision": "FAIL (invalid clean attempt; preserved as evidence)",
+  "recorded_at": "2026-08-15T16:02:41.626146+00:00",
+  "frozen_head": "1cb8fe048300b5813395eb637feb38b77f52ff8a",
+  "manifest_sha256": "4a161e0aa53902b165d811ef122acd8e796678e0c888edcc1293473e5cdc7eea",
+  "run": {
+    "db_run_id": 1,
+    "run_id_str": "run_20260815_185439",
+    "duration_seconds": 176,
+    "stages": 18,
+    "status": "completed"
+  },
+  "first_broken_invariant": "Preflight stop rule violated: the embedding provider (LM Studio at 100.64.0.2:1234, configured via .env) was unreachable BEFORE launch. Pre-launch probe was not a hard gate; it was recorded as non-fatal based on Case-1 runs 2713/2714, which tolerated the outage only because their database already held an ingested corpus. On the fresh clean-room database, ingestion hard-depends on the embedding provider.",
+  "failure_chain": [
+    "literature_search retrieved 39 papers (OpenAlex returned HTTP 400 on 3 queries; other sources delivered)",
+    "ingestion exhausted 3 retries: Embedding provider failed (connection refused) \u2014 stage failed, pipeline continued",
+    "idea_generation DEGRADED: no certified candidates; empty LLM response; 0 ideas (contract violation)",
+    "all downstream stages contract-violated on empty outputs (novelty, feasibility, metrics, proposals, evaluation, export)",
+    "export Decision Gate aborted at score 0.00 < 0.15 \u2014 no paper produced, nothing frozen, nothing released"
+  ],
+  "assurance_containment": "Decision layer refused to emit a paper: no false success, no release. Operational observation (not corrected in 2A/2B): run status was recorded as completed/succeeded despite the aborted decision gate.",
+  "corrective_action_for_2B": "Environment restoration only; frozen code unchanged (same SHA). LM Studio server restarted with --bind 0.0.0.0; configured model text-embedding-qwen3-embedding-0.6b verified served; functional embedding probe passed (1024-dim, matches EROCK_EMBEDDING_DIMENSION). Embedding availability is now a HARD preflight gate: the attempt does not start unless a real embedding call succeeds.",
+  "specimen": [
+    "evidence/case2a_specimen.db (full run-1 database)",
+    "evidence/case2_run.log (Case 2A launch log)",
+    "evidence/case2_preflight.json",
+    "evidence/case2_manifest.json"
+  ]
+}

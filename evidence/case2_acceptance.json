@@ -1,0 +1,134 @@
+{
+  "case": "Case 2C \u2014 repeatability qualification, attempt 3 (ACCEPTED)",
+  "decision": "ACCEPTED \u2014 all ten hard criteria hold",
+  "recorded_at": "2026-08-15T17:46:54.762602+00:00",
+  "frozen_head": "1cb8fe048300b5813395eb637feb38b77f52ff8a",
+  "manifest": {
+    "path": "evidence/case2c_manifest.json",
+    "sha256": "35687d0d8fde821baa29f9b1e07f57e5f46c0f5d695dc0b80c29f3855fa1591f"
+  },
+  "run": {
+    "db_run_id": 1,
+    "run_id_str": "run_20260815_194224",
+    "launched": "2026-08-15T19:41:55Z",
+    "completed_after_seconds": 3396,
+    "stages": 18,
+    "outcome": "succeeded",
+    "measurements": {
+      "corpus_papers": 139,
+      "ideas_generated": 2,
+      "nonfatal_early_empty_llm_responses": 19,
+      "governed_knowledge_indexing": "skipped \u2014 fresh DB has no EmbeddingProfile rows (Case-1 baseline had them); non-fatal"
+    }
+  },
+  "input": {
+    "domain": "Robust confidence estimation under dataset shift",
+    "research_question": "Are calibration-method rankings stable as covariate-shift severity increases, or do rank reversals occur in accuracy, positive-class expected calibration error, and selective AURC across tabular classification datasets?",
+    "activation": "autonomous_experiment_enabled=True only"
+  },
+  "autonomous_design": {
+    "status": "designed",
+    "datasets": [
+      "iris",
+      "wine_quality"
+    ],
+    "specs": [
+      "auto-classification-iris",
+      "auto-classification-wine_quality"
+    ]
+  },
+  "execution": {
+    "experiment_results": [
+      1,
+      2
+    ],
+    "both_success": true,
+    "markers_persisted": 74,
+    "dataset_qualified": true
+  },
+  "persistence": {
+    "autonomous_experiment_design_pre_remediation": true,
+    "method_facts_pre_remediation": true
+  },
+  "initial_evaluation": {
+    "status": "blocked",
+    "gates": {
+      "provenance": "True",
+      "scope_alignment": "on_scope",
+      "conclusion_support": "overstated",
+      "experiment_alignment": "True",
+      "numeric_fidelity": "False",
+      "method_fidelity": "True"
+    },
+    "blocking": [
+      "conclusion: 1 empirical claim without [RESULT-N] backing",
+      "numeric_fidelity: garbled renderings (e.g. [RESULT-3] 5.0 vs 0.05)"
+    ]
+  },
+  "remediation": {
+    "mode": "native bounded cold repair via POST /api/v1/ideas/2/paper/repair from a fresh uvicorn process",
+    "attempts": 1,
+    "promoted": true,
+    "duration_seconds": 293,
+    "revised_hash_prefix": "5f86fecb7f7e2b69",
+    "post_gates": {
+      "provenance": "True",
+      "scope_alignment": "on_scope",
+      "conclusion_support": "supported_by_paper",
+      "experiment_alignment": "True",
+      "numeric_fidelity": "True",
+      "method_fidelity": "True"
+    }
+  },
+  "revision_history_preserved": [
+    {
+      "id": 1,
+      "num": 0,
+      "eval": "blocked",
+      "trigger": "initial"
+    },
+    {
+      "id": 2,
+      "num": 1,
+      "eval": "ready",
+      "trigger": "alignment_blocked (auto_remediation)"
+    },
+    {
+      "id": 3,
+      "num": 2,
+      "eval": "ready",
+      "trigger": "release_freeze"
+    }
+  ],
+  "release": {
+    "frozen_revision_id": 3,
+    "E": "5f86fecb7f7e2b69b86f32c50f0c4f50b605b38d63eaadf845117a23da14696c",
+    "F": "5f86fecb7f7e2b69b86f32c50f0c4f50b605b38d63eaadf845117a23da14696c",
+    "R": "5f86fecb7f7e2b69b86f32c50f0c4f50b605b38d63eaadf845117a23da14696c",
+    "H": "5f86fecb7f7e2b69b86f32c50f0c4f50b605b38d63eaadf845117a23da14696c",
+    "equality": true,
+    "release_bytes_equal_current_paper": true,
+    "method_fidelity_on_released_bytes": true
+  },
+  "cold_verification": "Repair, freeze, and release each executed from a fresh process reading persisted state only; final hash checks query the persisted rows, not live objects.",
+  "operator_interventions": 0,
+  "operator_action_ledger_during_attempt": [
+    "started fresh API process",
+    "POSTed /paper/repair once",
+    "POSTed /paper/freeze",
+    "GET release export",
+    "read-only DB queries"
+  ],
+  "prior_attempts": [
+    "Case 2A FAIL \u2014 preflight stop-rule violation (embedding provider down at launch); evidence/case2_failure.json",
+    "Case 2B FAIL \u2014 clean-room archive removed model-certification operating state; evidence/case2b_failure.json"
+  ],
+  "artifacts": [
+    "evidence/case2_release.md",
+    "evidence/case2c_run.log",
+    "evidence/case2c_api.log",
+    "evidence/case2c_preflight.json",
+    "evidence/case2a_specimen.db",
+    "evidence/case2b_specimen.db"
+  ]
+}

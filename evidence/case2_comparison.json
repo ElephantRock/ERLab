@@ -1,0 +1,81 @@
+{
+  "question": "Did the same research-production-and-assurance architecture successfully process two independently specified research questions?",
+  "answer": "Yes \u2014 two independently specified questions, two clean autonomous lifecycles, two exact release identities, zero operator interventions in both accepted runs.",
+  "table": [
+    [
+      "Frozen head",
+      "d940b13 (run-era)",
+      "1cb8fe0"
+    ],
+    [
+      "Research question",
+      "Calibration effect/consistency",
+      "Ranking stability under shift"
+    ],
+    [
+      "Autonomous design",
+      "Yes",
+      "Yes"
+    ],
+    [
+      "Datasets selected",
+      "Iris + Wine Quality",
+      "Iris + Wine Quality"
+    ],
+    [
+      "ExperimentResults",
+      "2 (75/76)",
+      "2 (1/2)"
+    ],
+    [
+      "Persisted markers",
+      "74",
+      "74"
+    ],
+    [
+      "Initial paper",
+      "Blocked numeric_fidelity",
+      "Blocked numeric_fidelity + conclusion_support"
+    ],
+    [
+      "Initial method_fidelity",
+      "PASS",
+      "PASS"
+    ],
+    [
+      "Native remediation",
+      "1 (first-try promotion)",
+      "1 (first-try promotion)"
+    ],
+    [
+      "Final six gates",
+      "PASS",
+      "PASS"
+    ],
+    [
+      "Cold reconstruction",
+      "PASS",
+      "PASS"
+    ],
+    [
+      "E==F==R==H",
+      "PASS (9f3b92d2...)",
+      "PASS (5f86fecb...)"
+    ],
+    [
+      "Operator interventions",
+      "0",
+      "0"
+    ],
+    [
+      "Runtime",
+      "3021s + 215s repair",
+      "3396s + 293s repair"
+    ],
+    [
+      "Decision",
+      "ACCEPTED",
+      "ACCEPTED (2C; 2A/2B failed on environment, specimens preserved)"
+    ]
+  ]
+}
