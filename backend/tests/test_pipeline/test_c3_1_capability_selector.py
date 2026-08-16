@@ -80,10 +80,12 @@ class TestSelectorUnit:
 
     def test_registry_contains_calibration_with_seam_fields(self):
         caps = list_supported_capabilities()
-        assert [c.capability_id for c in caps] == [
-            "tabular_calibration_selective_v1",
-        ]
-        cal = caps[0]
+        ids = [c.capability_id for c in caps]
+        assert "tabular_calibration_selective_v1" in ids
+        cal = next(
+            c for c in caps
+            if c.capability_id == "tabular_calibration_selective_v1"
+        )
         assert cal.selection_signals
         assert cal.baseline_anchor_metric == "baseline_accuracy"
 

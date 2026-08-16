@@ -1,0 +1,41 @@
+{
+  "case": "Case 3 — architecture delta record (C3-4 pre-registration input)",
+  "recorded_at": "2026-08-17T00:00:00Z",
+  "gates": {
+    "G0": "d70d7046c3868ba6fbaf73d8f4d2a132c48feaca",
+    "G1": "7bfbd1a7a59292d4651d4abb5f14b6f93a93b476",
+    "Q0": "<SHA of this branch's merge, filled at pre-registration>"
+  },
+  "G0_to_G1": {
+    "summary": "Generic multi-capability seam only.",
+    "files_changed": [
+      "backend/pipeline/stages.py — ensure_autonomous_experiment_design() selects via the registry; metric harvest parameterized; capability_id/method_facts/paper_directive flow from the contract; fail-closed selection statuses ride the executor's existing generic terminalization",
+      "backend/pipeline/experiment/spec_designer.py — SupportedCapability gains capability_id / selection_signals / family_signals / baseline_anchor_metric / paper_directive; REGISTERED_CAPABILITIES; list_supported_capabilities(); select_capability() (0/1/>1 fail-closed); CapabilitySelectionError",
+      "backend/pipeline/stages.py — _build_autonomous_paper_context() uses the design-state paper_directive with a capability-generic fallback (review P1 fix; calibration text byte-identical)",
+      "tests + C3-0 manifest (incl. dated review addendum)"
+    ],
+    "protected_lifecycle_changes": "The seam itself (permitted once, pre-qualification). Nothing in executor, persistence, hydration, synthesis architecture, gates, repair, release, or orchestrator topology.",
+    "review_findings_resolved_pre_freeze": [
+      "P1 classification-only synthesis directive → capability-generic paper_directive",
+      "P1 single-signal selection → family-signal or >=2-corroborating rule",
+      "P1 regression-family collision with 'logistic regression classifiers' → frozen non-colliding family bigrams + tests"
+    ]
+  },
+  "G1_to_Q0": {
+    "summary": "Capability/plugin surfaces + governed data + tests only.",
+    "extension_files": [
+      "backend/pipeline/experiment/spec_designer.py — TABULAR_ROBUST_REGRESSION_V1 declaration (metrics menu, signals, method_facts, paper_directive) + registration in REGISTERED_CAPABILITIES",
+      "experiments/tabular_robust_regression_v1/analysis.py — checked-in deterministic pure-Python entrypoint",
+      "data/datasets/airfoil_self_noise/{airfoil_self_noise.dat,dataset_meta.json} — governed dataset registration (UCI CC BY 4.0, raw sha256 74c75fd7…b097b3; byte-frozen by the existing data/datasets/** -text attribute)",
+      "tests: test_c3_2_regression_capability.py (11), test_c3_3_composition.py (6)"
+    ],
+    "protected_lifecycle_changes": "NONE — with one disclosed exception below.",
+    "disclosed_exception": {
+      "change": "backend/pipeline/stages.py, ensure_autonomous_experiment_design(): the metric-harvest text normalization now folds Unicode superscript digits to ASCII ('²'→'2', '³'→'3', '¹'→'1') alongside the existing lowercasing.",
+      "classification_claimed": "GENERIC product fix, not capability-specific alteration",
+      "justification": "The frozen Case-3 question writes 'R²' with a Unicode superscript; metric names use ASCII 'r2'. Without the fold the study would execute R² internally but the paper would omit every R² marker — the question's own subject. The fold is text normalization in an existing generic function, references no capability, and is proven generic by test (the Case-1 harvest set is unchanged: all 36 calibration metrics still harvest). It is the same class of change as the lowercasing already present.",
+      "owner_adjudication_point": "If ruled capability-specific, criterion 12 fails and the verdict path is ARCHITECTURE FAIL with this branch preserved as evidence. Disclosed here rather than buried because criterion 12 is the architectural qualification criterion."
+    },
+    "no_branch_added_proof": "Capability #2 reaches design (registry), execution (common execute_experiment_spec — manifest spec ids auto-regression-*), persistence (ExperimentResult rows), hydration (_hydrate_autonomous_result_markers), paper context (_build_autonomous_paper_context renders regression facts + directive from the design state), and assurance (method_fidelity gate runs the regression facts unchanged) without any Capability-#2 conditional in those components. Enforced by test_c3_3_composition.py."
+  }
+}

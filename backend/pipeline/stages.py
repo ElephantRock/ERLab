@@ -245,8 +245,15 @@ def ensure_autonomous_experiment_design(ctx: StageContext) -> None:
 
     # Extract requested metrics from the frozen research input plus
     # the idea's evaluation approach, parameterized by the selected
-    # capability. The anchor metric is always included.
-    harvest_text = f"{research_q} {ctx.domain or ''} {eval_text}".lower()
+    # capability. The anchor metric is always included. Unicode
+    # superscript digits are folded to ASCII (generic normalization,
+    # same class as lowercasing) so metric names like "..._r2" match
+    # research text written as "R²" (disclosed in the Case-3
+    # architecture delta; applies to every capability equally).
+    harvest_text = (
+        f"{research_q} {ctx.domain or ''} {eval_text}".lower()
+        .replace("²", "2").replace("³", "3").replace("¹", "1")
+    )
     requested = []
     for metric in capability.supported_metrics:
         short = metric.split("_")[-1] if "_" in metric else metric
