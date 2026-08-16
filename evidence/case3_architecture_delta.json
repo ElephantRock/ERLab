@@ -31,7 +31,7 @@
     ],
     "protected_lifecycle_changes": "NONE \u2014 with one disclosed exception below.",
     "disclosed_exception": {
-      "change": "backend/pipeline/stages.py, ensure_autonomous_experiment_design(): the metric-harvest text normalization now folds Unicode superscript digits to ASCII ('\u00b2'\u2192'2', '\u00b3'\u2192'3', '\u00b9'\u2192'1') alongside the existing lowercasing.",
+      "change": "backend/pipeline: the generic Unicode superscript fold (\u00b2\u21922, \u00b3\u21923, \u00b9\u21921) applies at BOTH generic text sites \u2014 metric-harvest normalization (stages.py, ensure_autonomous_experiment_design) and capability selection (spec_designer.py, select_capability) \u2014 alongside existing casefolding.",
       "classification_claimed": "GENERIC product fix, not capability-specific alteration",
       "justification": "The frozen Case-3 question writes 'R\u00b2' with a Unicode superscript; metric names use ASCII 'r2'. Without the fold the study would execute R\u00b2 internally but the paper would omit every R\u00b2 marker \u2014 the question's own subject. The fold is text normalization in an existing generic function, references no capability, and is proven generic by test (the Case-1 harvest set is unchanged: all 36 calibration metrics still harvest). It is the same class of change as the lowercasing already present.",
       "owner_adjudication_point": "If ruled capability-specific, criterion 12 fails and the verdict path is ARCHITECTURE FAIL with this branch preserved as evidence. Disclosed here rather than buried because criterion 12 is the architectural qualification criterion."
@@ -40,7 +40,8 @@
     "review_fixes_pre_freeze": [
       "P1 (PR #21): MAD was computed as median(|residual|) instead of the median absolute deviation about the residual median. Fixed to the centered MAD; method_facts statement updated to transcribe the corrected implementation. Huber metric values shifted accordingly (e.g. airfoil 0_0_huber_mae 3.666784 -> 3.666166).",
       "P1 (PR #21): the IRLS convergence early-stop (~22-23 iterations) contradicted the pre-registered 'fixed 50 iterations'. The tolerance break was removed; exactly 50 iterations now run (converged iterates are numerical no-ops). method_facts updated to 'exactly 50 iterations'.",
-      "P1 (PR #22): the MAD deviations median used the single upper-middle element for even-length splits (both training splits are even: 1202/824 rows). Fixed to the average of the two middle deviations, matching the residual median's even handling. Huber values shifted (airfoil 0_0_huber_mae 3.666166 -> 3.666145)."
+      "P1 (PR #22): the MAD deviations median used the single upper-middle element for even-length splits (both training splits are even: 1202/824 rows). Fixed to the average of the two middle deviations, matching the residual median's even handling. Huber values shifted (airfoil 0_0_huber_mae 3.666166 -> 3.666145).",
+      "P2 (PR #23): the generic superscript fold existed only in metric harvest, not capability selection \u2014 'Evaluate Huber models using R\u00b2' failed unsupported while ASCII 'R2' selected. The same generic normalization now runs in select_capability() (spec_designer, seam machinery in the extension file), with a routing-equivalence test."
     ]
   }
 }

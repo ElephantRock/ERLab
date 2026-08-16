@@ -464,7 +464,15 @@ def select_capability(
     capability contract the SpecDesigner compiles into specs.
     """
     caps = capabilities if capabilities is not None else list_supported_capabilities()
+    # Same generic Unicode normalization as the metric-harvest fold
+    # (superscript digits to ASCII): a question written "R²" must
+    # route identically to one written "R2".
     normalized = " ".join(str(research_input).casefold().split())
+    normalized = (
+        normalized.replace("²", "2")
+        .replace("³", "3")
+        .replace("¹", "1")
+    )
     applicable: list[tuple[SupportedCapability, list[str]]] = []
     for cap in caps:
         hits = [
