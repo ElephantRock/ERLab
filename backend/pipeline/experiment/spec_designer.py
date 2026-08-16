@@ -364,9 +364,10 @@ TABULAR_ROBUST_REGRESSION_V1 = SupportedCapability(
                 " iteratively reweighted least squares initialized from"
                 " the ridge solution, with delta = 1.345 times a"
                 " MAD-based residual scale (1.4826 x median absolute"
-                " deviation, floored at 1e-8) recomputed each"
-                " iteration, for at most 50 iterations. No external"
-                " machine-learning library is used."
+                " deviation about the residual median, floored at"
+                " 1e-8) recomputed each iteration, for exactly 50"
+                " iterations. No external machine-learning library is"
+                " used."
             ),
             "required_patterns": [r"ridge", r"huber"],
             "forbidden_patterns": [

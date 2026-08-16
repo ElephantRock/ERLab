@@ -43,7 +43,6 @@ RIDGE_LAMBDA = 1.0
 HUBER_DELTA_FACTOR = 1.345
 MAD_TO_SIGMA = 1.4826
 IRLS_MAX_ITER = 50
-IRLS_TOL = 1e-10
 
 PERTURB_SEVERITIES = [0.0, 0.25, 0.5, 0.75]
 PERTURB_STD_FACTOR = 0.5  # noise std = severity * 0.5 (standardized space)
@@ -178,19 +177,32 @@ def predict_linear(w, X_std):
 def fit_huber(X_std, y, ridge_w):
     """Huber regression via IRLS, initialized from the ridge solution.
 
-    Residual scale sigma = MAD_TO_SIGMA * MAD of the current residuals
-    (floored at 1e-8); delta = HUBER_DELTA_FACTOR * sigma; weight
-    w_i = min(1, delta/|r_i|); each iteration refits weighted ridge
-    with the same RIDGE_LAMBDA (bias unregularized). Stops at
-    IRLS_MAX_ITER or when the parameter change drops below IRLS_TOL.
+    Residual scale sigma = MAD_TO_SIGMA * MAD of the current
+    residuals, where MAD is the median absolute deviation about the
+    residual median (floored at 1e-8); delta = HUBER_DELTA_FACTOR *
+    sigma; weight w_i = min(1, delta/|r_i|); each iteration refits
+    weighted ridge with the same RIDGE_LAMBDA (bias unregularized).
+    Exactly IRLS_MAX_ITER iterations run, per the pre-registered
+    protocol.
     """
+    # Exactly IRLS_MAX_ITER iterations, per the pre-registered
+    # protocol ("fixed 50 iterations"). Converged iterates are
+    # numerical no-ops, so no early stopping.
     w = list(ridge_w)
     Xd = _design(X_std)
     n, d = len(Xd), len(Xd[0])
     for _ in range(IRLS_MAX_ITER):
         resid = [y[i] - sum(w[j] * Xd[i][j] for j in range(d)) for i in range(n)]
-        abs_resid = sorted(abs(r) for r in resid)
-        mad = abs_resid[len(abs_resid) // 2]
+        # MAD about the residual median: median(|r - median(r)|).
+        resid_sorted = sorted(resid)
+        resid_median = (
+            resid_sorted[n // 2]
+            if n % 2 == 1
+            else 0.5
+            * (resid_sorted[n // 2 - 1] + resid_sorted[n // 2])
+        )
+        deviations = sorted(abs(r - resid_median) for r in resid)
+        mad = deviations[len(deviations) // 2]
         sigma = max(MAD_TO_SIGMA * mad, 1e-8)
         delta = HUBER_DELTA_FACTOR * sigma
         weights = [1.0 if abs(r) <= delta else delta / abs(r) for r in resid]
@@ -204,11 +216,7 @@ def fit_huber(X_std, y, ridge_w):
         Xty = [sum(weights[k] * Xd[k][i] * y[k] for k in range(n)) for i in range(d)]
         for i in range(d - 1):
             XtX[i][i] += RIDGE_LAMBDA
-        w_new = solve_linear(XtX, Xty)
-        delta_w = max(abs(a - b) for a, b in zip(w_new, w))
-        w = w_new
-        if delta_w < IRLS_TOL:
-            break
+        w = solve_linear(XtX, Xty)
     return w
 
 
