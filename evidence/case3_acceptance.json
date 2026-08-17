@@ -1,0 +1,118 @@
+{
+  "case": "Case 3 \u2014 architectural/capability generalization qualification",
+  "decision": "NON-QUALIFYING SPECIMEN \u2014 technically successful run; the zero-human-decision qualification (criterion 9) cannot be established because the load-bearing criterion-12 adjudication occurred after C3-6 launched (see correction)",
+  "recorded_at": "2026-08-16T22:03:48.761518+00:00",
+  "gate_chain": {
+    "G0": "d70d7046c3868ba6fbaf73d8f4d2a132c48feeca",
+    "G1": "7bfbd1a7a59292d4651d4abb5f14b6f93a93b476",
+    "Q0": "a057982845cfeabae55df5e02247748da9ff1c92"
+  },
+  "manifest": {
+    "sha256": "9c8644ffa250a16a7230b9c741b44cf0678902f5d49873654fcf0469e7ce919b"
+  },
+  "harness": {
+    "sha256": "d6d300c1e6034b0e75e8b554f4acff6c41ef0f092e17910b652946b04f2b463f"
+  },
+  "run": {
+    "run_id_str": "run_20260817_000829",
+    "orchestrator_elapsed_s": 3010.4,
+    "corpus_papers": 223,
+    "ideas": 2
+  },
+  "harness_step_log": "see evidence/case3_result.json log[]",
+  "capability_selection": {
+    "selected": "tabular_robust_regression_v1 (Capability #2 \u2014 criterion 1)",
+    "not_selected": "tabular_calibration_selective_v1",
+    "specs": [
+      "auto-regression-airfoil_self_noise",
+      "auto-regression-concrete_strength"
+    ],
+    "selection_mode": "autonomous, deterministic, fail-closed (criterion 2)"
+  },
+  "execution": {
+    "experiments_success": "2/2 through the common execute path (criterion 4)",
+    "markers": 54,
+    "dataset_qualified": true
+  },
+  "persistence_recovery": {
+    "method_facts_persisted_pre_remediation": true,
+    "cold_repair_recovered_full_set": true,
+    "no_capability2_recovery_logic": true
+  },
+  "remediation": {
+    "invocations": 1,
+    "mode": "harness policy: cold repair EXACTLY ONCE",
+    "promoted": true,
+    "post_eval": "ready"
+  },
+  "revision_history_preserved": [
+    [
+      1,
+      0,
+      "blocked",
+      "initial"
+    ],
+    [
+      2,
+      1,
+      "ready",
+      "alignment_blocked(auto_remediation)"
+    ],
+    [
+      3,
+      2,
+      "ready",
+      "release_freeze"
+    ]
+  ],
+  "final_six_gates": {
+    "provenance": "True",
+    "scope_alignment": "on_scope",
+    "conclusion_support": "supported_by_paper",
+    "experiment_alignment": "True",
+    "numeric_fidelity": "True",
+    "method_fidelity": "True"
+  },
+  "method_truth": "released methodology re-verified against the REGRESSION capability method_facts (criterion 8): all 5 facts present, no contradicting descriptions",
+  "release": {
+    "E": "010a08f476ec96b1682667a27a5fd68aae9896134dd87c01ab080583a34e646b",
+    "F": "010a08f476ec96b1682667a27a5fd68aae9896134dd87c01ab080583a34e646b",
+    "R": "010a08f476ec96b1682667a27a5fd68aae9896134dd87c01ab080583a34e646b",
+    "H": "010a08f476ec96b1682667a27a5fd68aae9896134dd87c01ab080583a34e646b",
+    "equality": true,
+    "release_bytes_equal_current_paper": true
+  },
+  "operator_interventions": 0,
+  "owner_adjudications": {
+    "criterion_12_superscript_fold": {
+      "ruling": "GENERIC product fix \u2014 not a capability-specific alteration of protected lifecycle machinery; by itself does not fail criterion 12.",
+      "ruled_by_owner": "2026-08-17, static architecture classification of already-frozen Q0, delivered while C3-6 was running under the no-human-decision rule; recorded post-exit per the ruling's own constraint. No harness control flow, retry behavior, state, or verdict path was altered; no rerun or Q0 change occurred.",
+      "owner_reasoning_summary": "At G1 select_capability() already had generic normalization and fail-closed routing; Q0 adds only the Unicode numeric fold before the same capability-independent signal logic \u2014 no regression capability ID, no 'if regression', no special routing branch. The second site applies identical normalization before the already-generic metric loop. The test counterfactual establishes it: the frozen Case-3 input harvests all 27 metrics including the nine _r2 metrics while the Case-1 harvest set remains exactly the complete calibration set."
+    },
+    "baseline_correction": "The frozen G0 is d70d704 (as recorded in the C3-0 manifest); an earlier status table wrongly carried d940b13 (the Case-1 run-era head). This record uses the manifest values."
+  },
+  "architectural_generality_c12": "PASS \u2014 G1->Q0 delta: extension surfaces only (capability declaration, entrypoint, dataset, tests) plus the owner-ruled GENERIC fold; no capability-specific alteration of protected lifecycle machinery; no Capability-#2 branch anywhere in executor/persistence/hydration/synthesis/assurance/repair/release (enforced by test_c3_3_composition.py).",
+  "artifacts": [
+    "evidence/case3_result.json",
+    "evidence/case3_release.md",
+    "evidence/case3_run.log",
+    "evidence/case3_api.log",
+    "evidence/case3_preflight.json",
+    "evidence/case3_manifest.json (.sha256)",
+    "evidence/case3_architecture_manifest.json",
+    "evidence/case3_architecture_delta.json"
+  ],
+  "correction": {
+    "corrected_at": "2026-08-17T02:56:28.024693+00:00",
+    "trigger": "Owner review of PR #25 (held unmerged).",
+    "finding": "Two blockers. (1) The evidence commit landed on the run branch (case3/run, commit 66a4b38) after the checkout to case3/qualification aborted on untracked-file conflicts; the push published only the pre-registration branch (987b6d1), so the PR body described artifacts absent from its diff. (2) A qualification-timing defect the owner isolated in their own prior ruling: criterion 12 was explicitly left for owner adjudication, and the GENERIC ruling was delivered AFTER C3-6 launched. It did not alter execution, repair, state, or release, but it was a load-bearing human decision determining PASS vs ARCHITECTURE_FAIL. Under frozen criterion 9 ('any human decision after launch disqualifies'), this run cannot establish the strict zero-intervention qualification.",
+    "ruling_applied": "Contract-faithful classification: NON-QUALIFYING SPECIMEN, for the same structural reason Case 2C could not be promoted after the fact. The technical run remains highly successful and is preserved intact: harness-decided ACCEPTED (exit 0), capability #2 selected, 2/2 experiments, 54 markers, one policy repair, six gates PASS, E==F==R==H = 010a08f4..., revision history 1/2/3 preserved. The fold classification itself remains GENERIC on the evidence already reviewed; that classification has not changed.",
+    "successor": "Case 3B: freeze the already-established GENERIC classification BEFORE launch; preserve Q0 (no production change); seal the continuation policy with criterion 12 already resolved; fresh zero-intervention attempt. This run and all three revisions remain preserved.",
+    "harness_boolean_scope": "The sealed harness determines ACCEPTED from ready-state/release identity checks; criterion 12 is not part of that boolean. The overall result can only be ACCEPTED by combining the harness verdict with the architectural adjudication \u2014 which is why the adjudication's timing matters."
+  },
+  "operator_interventions_during_attempt": {
+    "harness_path": 0,
+    "adjudication_path": 1,
+    "note": "The single load-bearing human decision was the owner's post-launch criterion-12 ruling."
+  }
+}
