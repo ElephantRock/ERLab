@@ -195,6 +195,25 @@ class RunCoordinator:
                         error=str(e)[:500],
                         retries_used=0,
                     ))
+                    # Q2 review P1: a stage that exhausted its retries on
+                    # a gateway transport failure must terminalize the
+                    # run's typed outcome — otherwise a non-autonomous
+                    # run with earlier-produced gaps/ideas finalizes as
+                    # SUCCEEDED despite the dead provider.
+                    from backend.pipeline.gateway.transport import (
+                        GatewayTransportError,
+                    )
+                    if isinstance(e, GatewayTransportError):
+                        from backend.pipeline.result import (
+                            PipelineOutcome,
+                        )
+
+                        result.outcome = PipelineOutcome.FAILED_EXECUTION
+                        result.terminal_stage = stage.name
+                        result.terminal_reason = (
+                            f"gateway transport failure exhausted"
+                            f" stage retries: {e}"
+                        )
                     if heartbeat:
                         await heartbeat.stop()
                     self._orch._record_stage(stage.name, t0)

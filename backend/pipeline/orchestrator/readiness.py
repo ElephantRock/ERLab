@@ -57,6 +57,21 @@ def lmstudio_required_for_run(settings: Settings) -> bool:
     """
     if settings.default_provider.lower() == "lmstudio":
         return True
+    # Registry availability is a precondition for the determination:
+    # missing or unreadable means UNKNOWN, which fails closed (Q2
+    # review P1). Only a present registry that routes away from
+    # lmstudio may return False.
+    from pathlib import Path as _Path
+
+    registry_path = _Path(
+        "data/model_certification/production_registry.yaml",
+    )
+    if not registry_path.exists():
+        raise ProviderUnavailableError(
+            "capability_registry",
+            "production registry missing at"
+            f" {registry_path} — cannot determine required providers",
+        )
     try:
         from backend.pipeline.routing.certified_lookup import (
             CertifiedCapabilityLookup,
@@ -65,16 +80,15 @@ def lmstudio_required_for_run(settings: Settings) -> bool:
         candidates = CertifiedCapabilityLookup().get_candidates_for_stage(
             "idea_generation",
         )
-        return any(
-            (getattr(c, "provider", "") or "").lower() == "lmstudio"
-            for c in candidates
-        )
     except Exception as e:  # noqa: BLE001 - registry unreadable = unknown
-        logger.warning(
-            "Capability registry lookup failed during readiness"
-            " determination: %s", str(e)[:100],
-        )
-        return False
+        raise ProviderUnavailableError(
+            "capability_registry",
+            f"registry lookup failed: {e}",
+        ) from e
+    return any(
+        (getattr(c, "provider", "") or "").lower() == "lmstudio"
+        for c in candidates
+    )
 
 
 def enforce_required_provider_readiness(
@@ -90,7 +104,10 @@ def enforce_required_provider_readiness(
     """
     from backend.pipeline.research import LMStudioManager
 
-    mgr = LMStudioManager()
+    try:
+        mgr = LMStudioManager(settings=settings)
+    except TypeError:
+        mgr = LMStudioManager()
     try:
         preflight = mgr.preflight_check(auto_fix=True)
     except Exception as e:  # noqa: BLE001 - cannot establish readiness

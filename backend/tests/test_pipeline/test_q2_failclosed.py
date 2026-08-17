@@ -72,18 +72,124 @@ class TestFailClosedReadiness:
             m, pf = enforce_required_provider_readiness(MagicMock())
         assert m is mgr and pf.model_id == "qwen"
 
-    def test_required_determination_from_registry(self):
+    def test_required_determination_from_registry(self, monkeypatch):
+        from backend.pipeline.orchestrator import readiness as rmod
+
+        settings = MagicMock()
+        settings.default_provider = "openai"
+
+        def _candidates(self, stage):
+            return [SimpleNamespace(provider="lmstudio")]
+
+        monkeypatch.setattr(
+            "backend.pipeline.routing.certified_lookup"
+            ".CertifiedCapabilityLookup.get_candidates_for_stage",
+            _candidates,
+        )
+        assert rmod.lmstudio_required_for_run(settings) is True
+
+        settings.default_provider = "lmstudio"
+        assert rmod.lmstudio_required_for_run(settings) is True
+
+    def test_registry_missing_fails_closed(self, monkeypatch, tmp_path):
+        """Q2 review P1: a missing registry means UNKNOWN — never
+        silently not-required."""
         from backend.pipeline.orchestrator.readiness import (
+            ProviderUnavailableError,
             lmstudio_required_for_run,
+        )
+
+        monkeypatch.chdir(tmp_path)  # no data/model_certification here
+        settings = MagicMock()
+        settings.default_provider = "openai"
+        with pytest.raises(
+            ProviderUnavailableError, match="registry missing",
+        ):
+            lmstudio_required_for_run(settings)
+
+    def test_registry_parse_error_fails_closed(self, monkeypatch):
+        from backend.pipeline.orchestrator.readiness import (
+            ProviderUnavailableError,
+            lmstudio_required_for_run,
+        )
+
+        def _boom(self, stage):
+            raise ValueError("yaml corrupt")
+
+        monkeypatch.setattr(
+            "backend.pipeline.routing.certified_lookup"
+            ".CertifiedCapabilityLookup.get_candidates_for_stage",
+            _boom,
         )
         settings = MagicMock()
         settings.default_provider = "openai"
-        # The committed registry routes idea_generation to an
-        # lmstudio-served model, so LM Studio is required regardless.
-        assert lmstudio_required_for_run(settings) is True
+        with pytest.raises(
+            ProviderUnavailableError, match="registry lookup failed",
+        ):
+            lmstudio_required_for_run(settings)
 
-        settings.default_provider = "lmstudio"
-        assert lmstudio_required_for_run(settings) is True
+    def test_coordinator_terminalizes_transport_failure(self):
+        """Q2 review P1: an exhausted gateway transport failure sets
+        the typed outcome — no false SUCCEEDED for non-autonomous
+        runs."""
+        from unittest.mock import patch
+
+        from backend.pipeline.gateway.transport import (
+            GatewayTransportError,
+        )
+        from backend.pipeline.orchestrator.run_coordinator import (
+            RunCoordinator,
+        )
+        from backend.pipeline.result import PipelineOutcome, PipelineResult
+
+        coord = object.__new__(RunCoordinator)
+        orch = MagicMock()
+        orch._strategy_config.stages = {
+            "gap_analysis": MagicMock(enabled=True),
+        }
+        orch._strategy_name = "deep_research"
+        orch._last_stage_retries = 0
+        orch._lifecycle.doom_detected = False
+        orch._settings.heartbeat_enabled = False
+        orch._services.cross_stage_ctx = None
+
+        async def _prep(ctx_, name_):
+            return ctx_
+
+        orch._compaction.prepare_context = _prep
+        coord._orch = orch
+
+        result = PipelineResult()
+        result.gaps = [SimpleNamespace(title="g")]
+
+        stage = MagicMock()
+        stage.name = "gap_analysis"
+
+        async def _execute_with_retry(*a, **kw):
+            raise GatewayTransportError(
+                "gap_analysis", "dead endpoint",
+            )
+
+        orch._execute_stage_with_retry = _execute_with_retry
+
+        async def _no_model_load(*a, **kw):
+            return None
+
+        with patch.object(
+            RunCoordinator, "_ensure_model_loaded", _no_model_load,
+        ), patch(
+            "backend.pipeline.stages.ExportStage", MagicMock(),
+        ):
+            asyncio.run(
+                coord.execute_stage_loop(
+                    [stage], MagicMock(), result, MagicMock(),
+                    "r", "d", None,
+                )
+            )
+
+        assert result.outcome == PipelineOutcome.FAILED_EXECUTION
+        assert result.terminal_stage == "gap_analysis"
+        assert "gateway transport failure" in result.terminal_reason
 
 
 # ── Q2-2: transport-failure identity ────────────────────────────────────────
