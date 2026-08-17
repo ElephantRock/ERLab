@@ -88,10 +88,9 @@ def lmstudio_required_for_run(settings: Settings) -> bool:
         )
 
         # Load candidates from the SAME registry that was just
-        # validated (Q2 review P1): a settings-supplied custom path
-        # must feed the lookup too, not the default location.
-        registry_dir = registry_path.parent
-        lookup = CertifiedCapabilityLookup(registry_dir)
+        # validated (Q2 review P1): the exact configured file's
+        # directory feeds the lookup.
+        lookup = CertifiedCapabilityLookup(registry_path.parent)
         candidates = lookup.get_candidates_for_stage(
             getattr(
                 settings, "readiness_probe_stage", None,

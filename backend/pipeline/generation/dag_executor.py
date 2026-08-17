@@ -16,6 +16,9 @@ from typing import Any
 
 from backend.pipeline.agents.message_bus import AgentMessage, MessageBus
 from backend.pipeline.agents.registry import AgentRegistry
+from backend.pipeline.gateway.transport import (
+    GatewayTransportError,
+)
 from backend.pipeline.generation.topology import DAGNode, ExecutionDAG, NodeType
 
 logger = logging.getLogger(__name__)
@@ -389,6 +392,11 @@ class DAGExecutor:
             try:
                 classification = await self._classify_item(item)
                 route_label = classification.get("complexity", "complex")
+            except GatewayTransportError:
+                # Q2: transport/provider failure keeps its identity —
+                # a dead endpoint reaches the stage executor's typed
+                # handling, never becomes an empty ideation artifact.
+                raise
             except Exception:
                 logger.warning("ROUTE classification failed, defaulting to 'complex'")
                 route_label = "complex"
@@ -532,6 +540,11 @@ class DAGExecutor:
             summaries = result.get("summaries", [])
             if summaries:
                 return [{"type": "summary", "content": s} for s in summaries]
+        except GatewayTransportError:
+            # Q2: transport/provider failure keeps its identity —
+            # a dead endpoint reaches the stage executor's typed
+            # handling, never becomes an empty ideation artifact.
+            raise
         except Exception as e:
             logger.warning("Context summarization failed: %s", e)
 
@@ -577,6 +590,11 @@ class DAGExecutor:
             result = await session.run(context=context or "")
             if result.proposal_id:
                 return [{"proposal_id": result.proposal_id, "consensus": result.is_consensus}]
+        except GatewayTransportError:
+            # Q2: transport/provider failure keeps its identity —
+            # a dead endpoint reaches the stage executor's typed
+            # handling, never becomes an empty ideation artifact.
+            raise
         except Exception as e:
             logger.warning("Negotiation failed, passing through: %s", e)
 

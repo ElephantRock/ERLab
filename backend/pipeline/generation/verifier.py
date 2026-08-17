@@ -12,6 +12,9 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
+from backend.pipeline.gateway.transport import (
+    GatewayTransportError,
+)
 from backend.pipeline.generation.reasoning_graph import ReasoningGraph, ThoughtNode
 
 logger = logging.getLogger(__name__)
@@ -105,6 +108,11 @@ class ReasoningVerifier:
                 issues=result.get("issues", []),
                 consistency_score=result.get("consistency_score", 1.0),
             )
+        except GatewayTransportError:
+            # Q2: transport/provider failure keeps its identity —
+            # a dead endpoint reaches the stage executor's typed
+            # handling, never becomes an empty ideation artifact.
+            raise
         except Exception as e:
             logger.warning("Idea reasoning verification failed: %s", e)
             return VerificationResult(
@@ -145,6 +153,11 @@ class ReasoningVerifier:
                 issues=result.get("issues", []),
                 consistency_score=result.get("consistency_score", 1.0),
             )
+        except GatewayTransportError:
+            # Q2: transport/provider failure keeps its identity —
+            # a dead endpoint reaches the stage executor's typed
+            # handling, never becomes an empty ideation artifact.
+            raise
         except Exception as e:
             logger.warning("Chain verification failed for node %s: %s", node_id[:8], e)
             return VerificationResult(node_id=node_id, passed=True)

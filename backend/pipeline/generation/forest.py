@@ -12,6 +12,7 @@ from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel, Field
 
+from backend.pipeline.gateway.transport import GatewayTransportError
 from backend.pipeline.generation.reasoning_graph import (
     ReasoningGraph,
     ThoughtNode,
@@ -94,6 +95,11 @@ class ForestOfThought:
                     "Forest tree %d (%s): %d leaves",
                     i + 1, perspective[:40], len(leaves),
                 )
+            except GatewayTransportError:
+                # Q2: transport/provider failure keeps its identity —
+                # a dead endpoint reaches the stage executor's typed
+                # handling, never becomes an empty ideation artifact.
+                raise
             except Exception as e:
                 logger.warning("Forest tree %d failed: %s", i + 1, e)
                 results.append([])

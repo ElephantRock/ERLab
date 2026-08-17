@@ -14,9 +14,7 @@ from typing import TYPE_CHECKING
 from jinja2 import Template
 
 from backend.pipeline.gap_analysis.models import ResearchGap
-from backend.pipeline.gateway.transport import (
-    GatewayTransportError,
-)
+from backend.pipeline.gateway.transport import GatewayTransportError
 from backend.pipeline.generation.models import IdeaCandidate
 from backend.pipeline.literature.models import Paper
 from backend.providers.base import LLMProvider

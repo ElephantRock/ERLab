@@ -12,6 +12,9 @@ import logging
 from typing import TYPE_CHECKING
 
 from backend.pipeline.gap_analysis.models import ResearchGap
+from backend.pipeline.gateway.transport import (
+    GatewayTransportError,
+)
 from backend.pipeline.generation.reasoning_graph import (
     GraphOfOperations,
     ReasoningGraph,
@@ -111,6 +114,11 @@ class ToTAdapter:
                 logger.warning("ToT generate: event loop already running, using sync fallback")
                 return [f"Branch {i + 1} from: {parent_content[:100]}" for i in range(n_branches)]
             raise
+        except GatewayTransportError:
+            # Q2: transport/provider failure keeps its identity —
+            # a dead endpoint reaches the stage executor's typed
+            # handling, never becomes an empty ideation artifact.
+            raise
         except Exception as e:
             logger.error("ToT generate failed: %s", e)
             return [f"Branch {i + 1} from: {parent_content[:100]}" for i in range(n_branches)]
@@ -139,6 +147,11 @@ class ToTAdapter:
             if "Event loop" in str(e) and "running" in str(e):
                 logger.warning("ToT score: event loop already running, using heuristic")
                 return [0.5 + 0.1 * i for i in range(len(node_contents))]
+            raise
+        except GatewayTransportError:
+            # Q2: transport/provider failure keeps its identity —
+            # a dead endpoint reaches the stage executor's typed
+            # handling, never becomes an empty ideation artifact.
             raise
         except Exception as e:
             logger.error("ToT score failed: %s", e)

@@ -5,6 +5,9 @@ from pathlib import Path
 
 from jinja2 import Template
 
+from backend.pipeline.gateway.transport import (
+    GatewayTransportError,
+)
 from backend.pipeline.generation.models import Critique, IdeaCandidate, ResearchIdea
 from backend.pipeline.literature.models import Paper
 from backend.providers.base import LLMProvider
@@ -91,6 +94,16 @@ class RefinerAgent:
                     )
                 )
             return sorted(refined, key=lambda r: r.score, reverse=True)
+
+        except GatewayTransportError:
+
+            # Q2: transport/provider failure keeps its identity —
+
+            # a dead endpoint reaches the stage executor's typed
+
+            # handling, never becomes an empty ideation artifact.
+
+            raise
 
         except Exception as e:
             logger.error("RefinerAgent failed: %s", e)

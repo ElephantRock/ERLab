@@ -23,6 +23,9 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Protocol
 
 from backend.pipeline.gap_analysis.models import ResearchGap
+from backend.pipeline.gateway.transport import (
+    GatewayTransportError,
+)
 from backend.pipeline.generation.borda import borda_rank_graph_nodes
 from backend.pipeline.generation.models import IdeaCandidate
 from backend.pipeline.literature.models import Paper
@@ -339,6 +342,11 @@ class TreeSearchEngine:
                 prior_critique=prior_critique,
                 n_ideas=self._config.ideas_per_node,
             )
+        except GatewayTransportError:
+            # Q2: transport/provider failure keeps its identity —
+            # a dead endpoint reaches the stage executor's typed
+            # handling, never becomes an empty ideation artifact.
+            raise
         except Exception as e:
             logger.error("TreeSearchEngine: expansion failed: %s", e)
             return []

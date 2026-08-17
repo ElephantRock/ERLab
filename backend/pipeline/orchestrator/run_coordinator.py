@@ -565,6 +565,22 @@ class RunCoordinator:
                                 f"gateway transport failure"
                                 f" exhausted stage retries (resume): {e}"
                             )
+                            # Q2 review P1: persist the typed failure —
+                            # unlike the normal loop, resume returns
+                            # directly here, so the DB row must be
+                            # marked failed now or the API surfaces a
+                            # dead provider as running/completed.
+                            try:
+                                orch._persistence.mark_run_failed(
+                                    getattr(ctx, "db_run_id", None),
+                                    f"gateway transport failure at"
+                                    f" {stage.name} (resume): {e}",
+                                )
+                            except Exception:
+                                logger.exception(
+                                    "Failed to mark resumed run"
+                                    " failed after transport failure",
+                                )
                         return result
                     import asyncio as _aio
                     await _aio.sleep(2 ** attempt)
