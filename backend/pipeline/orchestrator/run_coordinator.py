@@ -195,6 +195,25 @@ class RunCoordinator:
                         error=str(e)[:500],
                         retries_used=0,
                     ))
+                    # Q2 review P1: a stage that exhausted its retries on
+                    # a gateway transport failure must terminalize the
+                    # run's typed outcome — otherwise a non-autonomous
+                    # run with earlier-produced gaps/ideas finalizes as
+                    # SUCCEEDED despite the dead provider.
+                    from backend.pipeline.gateway.transport import (
+                        GatewayTransportError,
+                    )
+                    if isinstance(e, GatewayTransportError):
+                        from backend.pipeline.result import (
+                            PipelineOutcome,
+                        )
+
+                        result.outcome = PipelineOutcome.FAILED_EXECUTION
+                        result.terminal_stage = stage.name
+                        result.terminal_reason = (
+                            f"gateway transport failure exhausted"
+                            f" stage retries: {e}"
+                        )
                     if heartbeat:
                         await heartbeat.stop()
                     self._orch._record_stage(stage.name, t0)
@@ -527,6 +546,41 @@ class RunCoordinator:
                         checkpoint.mark_stage_failed(stage.name, str(e))
                         orch._persistence.save_checkpoint(checkpoint)
                         logger.error("Stage %s exhausted retries. Checkpoint saved.", stage.name)
+                        # Q2 review P1: an exhausted gateway transport
+                        # failure during resume terminalizes the typed
+                        # outcome — the API must not surface a dead
+                        # provider as a running/completed run.
+                        from backend.pipeline.gateway.transport import (
+                            GatewayTransportError,
+                        )
+                        if isinstance(e, GatewayTransportError):
+                            from backend.pipeline.result import (
+                                PipelineOutcome,
+                            )
+                            result.outcome = (
+                                PipelineOutcome.FAILED_EXECUTION
+                            )
+                            result.terminal_stage = stage.name
+                            result.terminal_reason = (
+                                f"gateway transport failure"
+                                f" exhausted stage retries (resume): {e}"
+                            )
+                            # Q2 review P1: persist the typed failure —
+                            # unlike the normal loop, resume returns
+                            # directly here, so the DB row must be
+                            # marked failed now or the API surfaces a
+                            # dead provider as running/completed.
+                            try:
+                                orch._persistence.mark_run_failed(
+                                    getattr(ctx, "db_run_id", None),
+                                    f"gateway transport failure at"
+                                    f" {stage.name} (resume): {e}",
+                                )
+                            except Exception:
+                                logger.exception(
+                                    "Failed to mark resumed run"
+                                    " failed after transport failure",
+                                )
                         return result
                     import asyncio as _aio
                     await _aio.sleep(2 ** attempt)

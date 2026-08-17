@@ -1,0 +1,47 @@
+{
+  "case": "Case 3D \u2014 fourth qualification attempt (on Q1, harness v2)",
+  "decision": "RUN FAIL \u2014 STOPPED per the pre-registered bound; escalated to owner",
+  "recorded_at": "2026-08-17T06:32:57.145077+00:00",
+  "frozen_head": "00c1050f7b63e0e5a239ef5670632bcc55532ad0 (Q1)",
+  "manifest_sha256": "59d9702f09019c354a404a4964db1fac3ecc94f69ad0e29a27e38b40038ae604",
+  "harness_v2_sha256": "f2e19cb0e7527c634cb5155ad991e0718ee9a54f81733a2b69818f5745fc9860",
+  "run": {
+    "run_id_str": "run_20260817_092054",
+    "elapsed_s": 606.2,
+    "papers": 135,
+    "ideas": 0
+  },
+  "failure": "~20 empty LLM responses during gap analysis / query generation -> 0 ideas -> empty pipeline 'succeeded' through all 18 stages (the known operational observation) -> autonomous design never ran (status None) -> harness v2 failed closed at STEP3-4 exactly as designed.",
+  "bound_invoked": "The manifest pre-registered: if the attempt fails the same way as 3C (total synthesis timeout), STOP and report. 3D failed a DIFFERENT way (the 2A/3B mode: early empties, no ideas) \u2014 but the bound's condition is met in substance: a fourth consecutive environment-driven failure with the model probing healthy between runs. Stopping is the honest move; another silent retry would be thrashing.",
+  "common_root": "All three failed attempts trace to one condition: the single certified local model (qwen3-4b-2507 via LM Studio) cannot sustain the full pipeline lifecycle reliably \u2014 chronic empty-content returns on BOTH structured and plain-completion-then-parse paths (the Q1 fix covers only the former), and intermittent long-form slowdowns (3C). It probes healthy between runs (strict completions, structured batteries, long-form throughput all pass), which is exactly why preflight gates cannot catch it.",
+  "attempt_ledger": [
+    "1st (Q0, harness v1): technical success, E==F==R==H 010a08f4 \u2014 NON-QUALIFYING (owner timing ruling on criterion 9)",
+    "3B (Q0, v1): failed_output_contract at gap-stage Decision Gate \u2014 GENERIC PRODUCT DEFECT; retry fix merged as Q1 (PR #29)",
+    "3C (Q1, v1): capability #2 selected, 2/2 experiments, but total synthesis timeouts \u2014 RUN FAIL; model healthy post-run",
+    "3D (Q1, v2): early empties, 0 ideas \u2014 RUN FAIL; STOPPED per bound"
+  ],
+  "what_is_proven_anyway": "The architectural claim has strong specimen evidence: capability #2 was autonomously selected and executed through the common architecture in three of four attempts (1st, 3C; design reached in 3B's first-attempt cousin), with the 1st attempt's full lifecycle reaching six gates + exact E==F==R==H as a non-qualifying specimen. What is NOT yet achieved is a qualifying zero-intervention acceptance on the strict frozen contract.",
+  "owner_decision_options": [
+    "A. Environment: certify a more reliable pipeline LLM (different local model or a remote provider) \u2014 extension-surface change + certification work, then a fresh attempt",
+    "B. Product: extend the empty-response retry to the remaining plain-completion-then-parse paths (extract_json callers) \u2014 another generic fix + PR + re-freeze, then a fresh attempt",
+    "C. Accept the current evidence: architecture claim supported by specimens; qualifying acceptance deferred"
+  ],
+  "specimen": [
+    "evidence/case3d_specimen.db",
+    "evidence/case3d_run.log",
+    "evidence/case3_result.json (overwritten by this attempt)"
+  ],
+  "post_hoc_appendix": {
+    "appended_at": "2026-08-17T07:54:23.519262+00:00",
+    "owner_observed_server_state": "The owner reports LM Studio was not running at all during the failure window and was started afterwards. This is operator observation, accepted as information. The run logs under-record this condition because of the fail-open defects below \u2014 which is precisely why the observation could not be confirmed from logs alone.",
+    "fail_open_transport_defect_discovered": {
+      "gateway_catch_all": "backend/pipeline/gateway/gateway.py call() converts any provider/transport exception \u2014 including a fully unavailable endpoint \u2014 into LLMResponse(content='', degraded=True). One ERROR log line per call; upstream, indistinguishable from an empty completion.",
+      "adapter_extinguishes_signal": "GatewayProvider falls back to the inner provider on any exception and its returned LLMResponse has no degraded field \u2014 degradation state is lost at the adapter boundary.",
+      "caller_level_fail_open": "extract_json('') returns {} with a warning \u2014 where all ~20 'Empty LLM response' lines per failed run originate.",
+      "startup_probe_non_authoritative": "PipelineOrchestrator.run() does call LMStudioManager.preflight_check(auto_fix=True) and refreshes the capability registry, but preflight.ready == False logs 'proceeding with static defaults' and both checks' exceptions are downgraded to warnings \u2014 the system probes, can discover failure, and is deliberately coded to continue.",
+      "false_succeeded": "Finalization marks failure only for 0 gaps + 0 ideas + 0 proposals; the 3D shape (gaps>0, ideas=0) fell through to PipelineOutcome.SUCCEEDED. The qualification harness caught it externally via REQUIRE design == designed.",
+      "classification_note": "3D's verdict is NOT rewritten to INVALID_ATTEMPT \u2014 the exact server state during the run is not reconstructible from the evidence, per the owner's ruling. The record now carries both the fail-open defect and the owner-observed server state."
+    },
+    "q2_remediation_authorized": "Owner-authorized single bounded Q1->Q2 generic correction: (1) fail-closed required-provider startup readiness (reuse the existing LM Studio preflight; typed failure before research execution); (2) preserve transport-failure identity through the gateway (typed error, no inner-provider fallback, no success-shaped empty); (3) close the false-SUCCEEDED invariant for autonomous runs. Explicitly out of scope: empty-rate thresholds, circuit tuning, blanket extract_json retries, new models. After Q2 is review-clean and CI green: re-freeze, criterion 12 pre-resolved, confirm the certified model live, one fresh zero-intervention attempt (diagnostic per the owner's four-outcome table)."
+  }
+}

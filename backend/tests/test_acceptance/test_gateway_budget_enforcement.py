@@ -179,10 +179,12 @@ class TestGatewayBudgetEnforcement:
             raise RuntimeError("provider transport down")
 
         gateway.set_provider_fn(_failing)
-        # The gateway catches the Exception and returns a degraded response
-        # (does not re-raise), but MUST release the reservation.
-        resp = _run(gateway.call(_request()))
-        assert resp.degraded is True
+        # Q2: the gateway preserves transport-failure identity — it
+        # raises GatewayTransportError (no success-shaped degraded
+        # response) and MUST still release the reservation.
+        from backend.pipeline.gateway.transport import GatewayTransportError
+        with pytest.raises(GatewayTransportError, match="transport down"):
+            _run(gateway.call(_request()))
         # Reservation released: reserved returns to ~0.
         assert auth.reserved_usd() == pytest.approx(0.0)
         # Nothing committed because the call failed.

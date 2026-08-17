@@ -5,6 +5,9 @@ from pathlib import Path
 
 from jinja2 import Template
 
+from backend.pipeline.gateway.transport import (
+    GatewayTransportError,
+)
 from backend.pipeline.generation.error_taxonomy import ErrorTaxonomy
 from backend.pipeline.generation.mechanical_checks import mechanical_quality_check
 from backend.pipeline.generation.models import Critique, IdeaCandidate
@@ -98,6 +101,16 @@ class CriticAgent:
                     if category:
                         self._error_taxonomy.record(category, weakness)
             return critiques
+
+        except GatewayTransportError:
+
+            # Q2: transport/provider failure keeps its identity —
+
+            # a dead endpoint reaches the stage executor's typed
+
+            # handling, never becomes an empty ideation artifact.
+
+            raise
 
         except Exception as e:
             logger.error("CriticAgent failed: %s", e)

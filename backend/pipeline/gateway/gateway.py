@@ -169,6 +169,7 @@ class LLMGateway:
         t0 = time.monotonic()
         error = None
         response = None
+        _reservation_id = None
 
         try:
             # ── Hard pre-call budget reservation (if authority is set) ──
@@ -360,19 +361,27 @@ class LLMGateway:
         except Exception as e:
             # Provider/transport failure: release the outstanding reservation
             # so the budget authority does not hold a phantom reservation.
-            if self._budget_authority is not None:
+            if (
+                self._budget_authority is not None
+                and _reservation_id is not None
+            ):
                 self._budget_authority.release(_reservation_id)
             error = str(e)[:200]
             elapsed_ms = (time.monotonic() - t0) * 1000
             logger.error("Gateway call failed for task '%s': %s", request.task, error)
 
-            return LLMResponse(
-                content="",
-                confidence=0.0,
-                degraded=True,
-                warnings=[f"LLM call failed: {error}"],
-                latency_ms=elapsed_ms,
+            # Q2 (Case-3 3B–3D specimens): transport/provider failure
+            # keeps its identity instead of becoming success-shaped
+            # empty content. The StageExecutor's bounded retries and
+            # typed stage-failure machinery take over from here.
+            from backend.pipeline.gateway.transport import (
+                GatewayTransportError,
             )
+
+            raise GatewayTransportError(
+                request.task or request.stage or "unknown",
+                error,
+            ) from e
 
         finally:
             # Always log

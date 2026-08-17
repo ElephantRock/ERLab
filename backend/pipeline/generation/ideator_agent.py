@@ -14,6 +14,7 @@ from typing import TYPE_CHECKING
 from jinja2 import Template
 
 from backend.pipeline.gap_analysis.models import ResearchGap
+from backend.pipeline.gateway.transport import GatewayTransportError
 from backend.pipeline.generation.models import IdeaCandidate
 from backend.pipeline.literature.models import Paper
 from backend.providers.base import LLMProvider
@@ -111,6 +112,11 @@ class IdeatorAgent:
                 )
             return ideas
 
+        except GatewayTransportError:
+            # Q2 review P1: transport/provider failure keeps its
+            # identity through ideation — a dead endpoint must reach
+            # the stage executor's typed handling, not become [].
+            raise
         except Exception as e:
             logger.error("IdeatorAgent failed: %s", e, exc_info=True)
             return []

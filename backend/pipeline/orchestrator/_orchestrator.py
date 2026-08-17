@@ -761,6 +761,49 @@ class PipelineOrchestrator:
 
     # ── Main Pipeline ────────────────────────────────────────────────
 
+    def _enforce_required_provider_readiness(self):
+        """Q2: fail-closed required-provider readiness for THIS run.
+
+        Returns the LMStudioManager on success (or None when not
+        required / opted out). Raises ProviderUnavailableError before
+        research execution when a required provider cannot establish
+        readiness. Called by both run() and resume().
+        """
+        if not self._settings.enforce_provider_readiness:
+            return None
+        from backend.pipeline.orchestrator.readiness import (
+            ProviderUnavailableError,
+            enforce_required_provider_readiness,
+            lmstudio_required_for_run,
+        )
+        if not lmstudio_required_for_run(self._settings):
+            return None
+        lmstudio_url = getattr(
+            self._settings, 'lmstudio_base_url', None,
+        )
+        if not lmstudio_url:
+            # Q2 review P1: LM Studio is REQUIRED but no endpoint URL
+            # is configured — readiness can never be established. Fail
+            # closed instead of silently proceeding.
+            raise ProviderUnavailableError(
+                "lmstudio",
+                "required by this run but lmstudio_base_url is empty",
+            )
+        mgr, preflight = enforce_required_provider_readiness(
+            self._settings,
+        )
+        self._lmstudio_mgr = mgr  # for grammar enforcement
+        # Operation Executor: authoritative model lifecycle owner
+        from backend.pipeline.operations.executor import OperationExecutor
+        self._operation_executor = OperationExecutor(mgr)
+        logger.info(
+            "LM Studio preflight OK: %s ctx=%d%s",
+            preflight.model_id, preflight.context_length,
+            " (auto-loaded)" if preflight.had_to_load else
+            " (reloaded)" if preflight.had_to_reload else "",
+        )
+        return mgr
+
     async def run(
         self,
         domain: str = "AI/NLP",
@@ -809,38 +852,19 @@ class PipelineOrchestrator:
         self._ccw = ConsolidatedContextWindow()
 
         # Gateway: Preflight LM Studio — ensure model loaded with sufficient context
-        _lmstudio_mgr = None
-        lmstudio_url = getattr(self._settings, 'lmstudio_base_url', None)
-        if lmstudio_url and self._settings.default_provider == 'lmstudio':
-            try:
-                from backend.pipeline.research import LMStudioManager
-                mgr = LMStudioManager()
-                preflight = mgr.preflight_check(auto_fix=True)
-                _lmstudio_mgr = mgr  # Store for teardown
-                self._lmstudio_mgr = mgr  # Also for grammar enforcement
-                # Operation Executor: authoritative model lifecycle owner
-                from backend.pipeline.operations.executor import OperationExecutor
-                self._operation_executor = OperationExecutor(mgr)
-                if preflight.ready:
-                    logger.info(
-                        "LM Studio preflight OK: %s ctx=%d%s",
-                        preflight.model_id, preflight.context_length,
-                        " (auto-loaded)" if preflight.had_to_load else
-                        " (reloaded)" if preflight.had_to_reload else "",
-                    )
-                else:
-                    logger.warning(
-                        "LM Studio preflight failed: %s — proceeding with static defaults",
-                        preflight.errors,
-                    )
-            except Exception as e:
-                logger.warning("LM Studio preflight error (non-fatal): %s", str(e)[:100])
+        # Q2 (Case-3 3B–3D specimens): required-provider readiness is a
+        # precondition, not a warning — fail closed BEFORE research
+        # execution. Shared with resume() via the method.
+        _lmstudio_mgr = self._enforce_required_provider_readiness()
+        _lmstudio_url = getattr(
+            self._settings, 'lmstudio_base_url', None,
+        )
 
         # Gateway: Probe LM Studio for live model capabilities
         if hasattr(self, '_capability_registry') and self._capability_registry:
-            if lmstudio_url:
+            if _lmstudio_url:
                 try:
-                    await self._capability_registry.refresh(lmstudio_url)
+                    await self._capability_registry.refresh(_lmstudio_url)
                     # Update budgeter with live context from probed model
                     default_model = self._gateway._default_model
                     if default_model:
@@ -1190,6 +1214,10 @@ class PipelineOrchestrator:
         Delegates to RunCoordinator.resume_from_checkpoint().
         """
         from backend.pipeline.orchestrator.run_coordinator import RunCoordinator
+
+        # Q2 review P1: resumed runs get the same fail-closed readiness.
+        self._enforce_required_provider_readiness()
+
         coordinator = RunCoordinator(self)
         return await coordinator.resume_from_checkpoint(
             run_id=run_id,

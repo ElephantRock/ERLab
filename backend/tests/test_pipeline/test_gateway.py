@@ -234,6 +234,9 @@ class TestLLMGateway:
 
     @pytest.mark.asyncio
     async def test_degraded_on_provider_failure(self):
+        """Q2: provider/transport failure raises the typed
+        GatewayTransportError instead of returning a success-shaped
+        degraded response."""
         gateway = self._make_gateway()
 
         async def failing_provider(**kw):
@@ -241,15 +244,13 @@ class TestLLMGateway:
 
         gateway.set_provider_fn(failing_provider)
 
-        response = await gateway.call(LLMRequest(
-            task="test",
-            messages=[{"role": "user", "content": "hello"}],
-            max_output_tokens=100,
-        ))
-
-        assert response.degraded is True
-        assert response.confidence == 0.0
-        assert len(response.warnings) > 0
+        from backend.pipeline.gateway.transport import GatewayTransportError
+        with pytest.raises(GatewayTransportError, match="provider down"):
+            await gateway.call(LLMRequest(
+                task="test",
+                messages=[{"role": "user", "content": "hello"}],
+                max_output_tokens=100,
+            ))
 
     @pytest.mark.asyncio
     async def test_validation_warnings(self):

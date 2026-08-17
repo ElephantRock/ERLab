@@ -93,6 +93,12 @@ class Settings(BaseSettings):
     lmstudio_base_url: str = "http://localhost:1234/v1"
     lmstudio_model: str = "qwen/qwen3-4b-2507"
     lmstudio_enabled: bool = False  # Set True to use for thinking tasks
+    # Q2: fail-closed required-provider readiness. When True (default),
+    # PipelineOrchestrator.run() refuses to start if a provider required
+    # by the run (per the certified registry) cannot establish
+    # readiness. Test environments without the live endpoint set this
+    # False explicitly; qualification runs keep it True.
+    enforce_provider_readiness: bool = True
     lmstudio_max_tokens: int = 2048
     lmstudio_context_length: int = 32768  # Preflight target context for model reload
     lmstudio_temperature: float = 0.1
