@@ -125,6 +125,12 @@ class TestRetryOnEmptyUsagePath:
 
     def test_usage_path_bounded(self):
         p, calls = self._usage_provider_with([{}])
+
+        async def empty_fallback(messages, schema, temperature=0.3,
+                                 max_tokens=8192):
+            return {}
+
+        p._structured_output_fallback = empty_fallback
         resp = asyncio.run(
             p.structured_output_with_usage(
                 [{"role": "user", "content": "q"}], SCHEMA,
@@ -132,3 +138,56 @@ class TestRetryOnEmptyUsagePath:
         )
         assert resp.structured == {}
         assert calls["n"] == 4  # 1 initial + 3 retries
+
+
+class TestUsagePathFinalFallback:
+    """PR #28 review P1: after bounded exhaustion on the usage path,
+    the plain-completion fallback must still run before giving up."""
+
+    def test_exhaustion_runs_plain_fallback(self):
+        p = OpenAIProvider(api_key="test", base_url="http://127.0.0.1:9/")
+
+        async def always_empty(messages, schema, temperature=0.3,
+                                max_tokens=8192, stage="", run_id=None):
+            from backend.providers.base import LLMResponse
+            return LLMResponse(
+                content="", structured={}, input_tokens=1,
+                output_tokens=1, served_model="t",
+            )
+
+        async def fallback(messages, schema, temperature=0.3,
+                           max_tokens=8192):
+            return {"x": 7}
+
+        p._structured_output_with_usage_once = always_empty
+        p._structured_output_fallback = fallback
+        resp = asyncio.run(
+            p.structured_output_with_usage(
+                [{"role": "user", "content": "q"}], SCHEMA,
+            )
+        )
+        assert resp.structured == {"x": 7}
+
+    def test_fallback_empty_returns_empty(self):
+        p = OpenAIProvider(api_key="test", base_url="http://127.0.0.1:9/")
+
+        async def always_empty(messages, schema, temperature=0.3,
+                                max_tokens=8192, stage="", run_id=None):
+            from backend.providers.base import LLMResponse
+            return LLMResponse(
+                content="", structured={}, input_tokens=1,
+                output_tokens=1, served_model="t",
+            )
+
+        async def empty_fallback(messages, schema, temperature=0.3,
+                                 max_tokens=8192):
+            return {}
+
+        p._structured_output_with_usage_once = always_empty
+        p._structured_output_fallback = empty_fallback
+        resp = asyncio.run(
+            p.structured_output_with_usage(
+                [{"role": "user", "content": "q"}], SCHEMA,
+            )
+        )
+        assert resp.structured == {}

@@ -303,13 +303,29 @@ class OpenAIProvider(LLMProvider):
                         attempt, self.STRUCTURED_EMPTY_RETRIES,
                     )
                 return last
-        if last is not None and not last.structured:
+        if last is None:
+            last = await self._structured_output_with_usage_once(
+                messages, schema, temperature, max_tokens,
+                stage=stage, run_id=run_id,
+            )
+        if not last.structured:
             logger.warning(
                 "structured_output_with_usage: %d consecutive empty"
-                " structured responses (retries exhausted)",
+                " structured responses — running the plain-completion"
+                " fallback before giving up",
                 self.STRUCTURED_EMPTY_RETRIES + 1,
             )
-        return last  # type: ignore[return-value]
+            fallback_result = await self._structured_output_fallback(
+                messages, schema, temperature, max_tokens,
+            )
+            if fallback_result:
+                return LLMResponse(
+                    content="", structured=fallback_result,
+                    input_tokens=getattr(last, "input_tokens", 0),
+                    output_tokens=getattr(last, "output_tokens", 0),
+                    served_model=getattr(last, "served_model", ""),
+                )
+        return last
 
     async def _structured_output_with_usage_once(
         self,
