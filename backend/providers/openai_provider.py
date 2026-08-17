@@ -118,7 +118,44 @@ class OpenAIProvider(LLMProvider):
             if chunk.choices and chunk.choices[0].delta.content:
                 yield chunk.choices[0].delta.content
 
+    # Bounded retry for structured calls. Local grammatically-
+    # constrained serving (LM Studio json_schema) intermittently returns
+    # empty content at a reproduced 40-75% rate per call while plain
+    # completions stay healthy; a single empty response is therefore not
+    # an error condition but a coin flip (Case 3B specimen,
+    # evidence/case3b_failure.json). Retry the WHOLE dialect chain a
+    # bounded number of times before returning the empty dict.
+    STRUCTURED_EMPTY_RETRIES = 3
+
     async def structured_output(
+        self,
+        messages: list[dict],
+        schema: dict,
+        temperature: float = 0.3,
+        max_tokens: int = 8192,
+    ) -> dict:
+        last: dict = {}
+        for attempt in range(self.STRUCTURED_EMPTY_RETRIES + 1):
+            last = await self._structured_output_once(
+                messages, schema, temperature, max_tokens,
+            )
+            if last:
+                if attempt:
+                    logger.info(
+                        "structured_output: empty response recovered"
+                        " on retry %d/%d",
+                        attempt, self.STRUCTURED_EMPTY_RETRIES,
+                    )
+                return last
+        if last == {}:
+            logger.warning(
+                "structured_output: %d consecutive empty responses"
+                " (retries exhausted)",
+                self.STRUCTURED_EMPTY_RETRIES + 1,
+            )
+        return last
+
+    async def _structured_output_once(
         self,
         messages: list[dict],
         schema: dict,
@@ -239,6 +276,58 @@ class OpenAIProvider(LLMProvider):
         return None
 
     async def structured_output_with_usage(
+        self,
+        messages: list[dict],
+        schema: dict,
+        temperature: float = 0.3,
+        max_tokens: int = 8192,
+        stage: str = "",
+        run_id: str | None = None,
+    ) -> LLMResponse:
+        # Same bounded retry-on-empty as structured_output(): the
+        # orchestrator gateway calls THIS path, so the retry must live
+        # here too (PR #27 review P1). Empty/unparseable structured
+        # results retry the whole chain; bounded exhaustion returns
+        # the empty-structured LLMResponse as before.
+        last: LLMResponse | None = None
+        for attempt in range(self.STRUCTURED_EMPTY_RETRIES + 1):
+            last = await self._structured_output_with_usage_once(
+                messages, schema, temperature, max_tokens,
+                stage=stage, run_id=run_id,
+            )
+            if last.structured:
+                if attempt:
+                    logger.info(
+                        "structured_output_with_usage: empty response"
+                        " recovered on retry %d/%d",
+                        attempt, self.STRUCTURED_EMPTY_RETRIES,
+                    )
+                return last
+        if last is None:
+            last = await self._structured_output_with_usage_once(
+                messages, schema, temperature, max_tokens,
+                stage=stage, run_id=run_id,
+            )
+        if not last.structured:
+            logger.warning(
+                "structured_output_with_usage: %d consecutive empty"
+                " structured responses — running the plain-completion"
+                " fallback before giving up",
+                self.STRUCTURED_EMPTY_RETRIES + 1,
+            )
+            fallback_result = await self._structured_output_fallback(
+                messages, schema, temperature, max_tokens,
+            )
+            if fallback_result:
+                return LLMResponse(
+                    content="", structured=fallback_result,
+                    input_tokens=getattr(last, "input_tokens", 0),
+                    output_tokens=getattr(last, "output_tokens", 0),
+                    served_model=getattr(last, "served_model", ""),
+                )
+        return last
+
+    async def _structured_output_with_usage_once(
         self,
         messages: list[dict],
         schema: dict,

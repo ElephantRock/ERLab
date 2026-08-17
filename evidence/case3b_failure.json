@@ -1,0 +1,37 @@
+{
+  "case": "Case 3B \u2014 second qualification attempt",
+  "decision": "GENERIC PRODUCT DEFECT \u2014 preserved as specimen (diagnosis corrected; see correction)",
+  "recorded_at": "2026-08-17T03:17:23.895570+00:00",
+  "frozen_head": "a057982845cfeabae55df5e02247748da9ff1c92",
+  "manifest_sha256": "a46df0ff5ae340ccf53a2d28e3c7336253183a4e4fa6be7941c83941cc52cd8c",
+  "harness_sha256": "d6d300c1e6034b0e75e8b554f4acff6c41ef0f092e17910b652946b04f2b463f (unchanged)",
+  "run": {
+    "run_id_str": "run_20260817_060404",
+    "elapsed_s": 393.9,
+    "stages": "[literature_search, ingestion, gap_analysis, failed]",
+    "papers": 150,
+    "ideas": 0
+  },
+  "harness_behavior": "Correct fail-closed: REQUIRED outcome==SUCCEEDED; got failed_output_contract (Decision Gate 0.00); wrote FAIL and exited 1. Zero interventions.",
+  "diagnosis": {
+    "signature": "~20 'Empty LLM response \u2014 returning empty dict' during gap analysis; structured JSON extraction failed; Decision Gate aborted at 0.00 immediately after gap_analysis.",
+    "reproduced_post_failure": "json_schema-dialect structured calls against the local qwen3-4b-2507 returned empty content 3/4 times in a post-failure probe battery (plain completions healthy: strict probe 'alive', 2 completion tokens).",
+    "classification": "INVALID ATTEMPT \u2014 the certified model's serving state degraded for structured calls during the run window; the frozen run conditions did not hold through the attempt. LM Studio server had been up ~2 days since the Case-2D-era restart; the first Case-3 attempt already showed 19 early empties (recorded as diagnostics) before recovering.",
+    "preflight_weakness_admitted": "The certified_model gate checked a single non-empty completion \u2014 it cannot detect structured-call degradation. Strengthened for the next attempt: repeated strict-completion battery + repeated json_schema structured battery.",
+    "known_contributing_product_weakness": "Degraded LLM responses fail OPEN to empty dicts (recorded since Case 2 postmortems, deliberately not fixed mid-qualification). Where the empties land determines whether a run survives; the harness's outcome requirement fails closed regardless."
+  },
+  "corrective_action": "Environment restore only (no production change): restart LM Studio server (--bind 0.0.0.0), reload qwen3-4b-2507 per the registry hardware notes (ctx 8192, gpu max, identifier), verify with the strengthened probe batteries, fresh research state, same sealed harness, new attempt (3C).",
+  "specimen": [
+    "evidence/case3b_specimen.db",
+    "evidence/case3b_run.log",
+    "evidence/case3_result.json (overwritten by this attempt \u2014 harness writes a single path)"
+  ],
+  "diagnosis_correction": {
+    "corrected_at": "2026-08-17T03:28:53.353938+00:00",
+    "original_claim": "Transient serving-state degradation during the run window (environment).",
+    "disproof": "A full LM Studio server restart plus model reload did NOT change the behavior: structured json_schema calls still returned empty content 4/8 times post-restore. A degradation window would have cleared.",
+    "corrected_diagnosis": "Chronic, stochastic empty-content returns on structured (json_schema-dialect) calls from the local certified model, at a reproduced 40-75% rate. Historical logs show the SAME signature in every successful run (Case 2D: ~19 empties; Case 3 first attempt: ~19 empties) \u2014 runs succeeded when empties missed load-bearing calls. In 3B the empties hit gap-quality scoring; the Decision Gate correctly aborted at 0.00. Plain completions are unaffected (strict probes 4/4 'alive' throughout).",
+    "taxonomy_classification": "GENERIC PRODUCT DEFECT per the frozen taxonomy: a common-path bug (empty LLM content fails open to an empty dict, making load-bearing stochastic calls fragile), not a capability-specific design need and not an environment violation \u2014 the frozen conditions included this model exactly as it behaves.",
+    "prescribed_path": "Per the frozen taxonomy: preserve attempt; smallest generic fix; re-freeze (Q0 -> Q1); new attempt. The smallest generic fix is a bounded retry-on-empty in the provider's structured_output path \u2014 capability-independent, provider-level, directly targets the reproduced failure mode."
+  }
+}
