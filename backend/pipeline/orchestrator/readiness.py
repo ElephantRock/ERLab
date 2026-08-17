@@ -64,7 +64,10 @@ def lmstudio_required_for_run(settings: Settings) -> bool:
     from pathlib import Path as _Path
 
     registry_path = _Path(
-        "data/model_certification/production_registry.yaml",
+        getattr(
+            settings, "capability_registry_path", None,
+        )
+        or "data/model_certification/production_registry.yaml",
     )
     if not registry_path.exists():
         raise ProviderUnavailableError(
@@ -78,7 +81,10 @@ def lmstudio_required_for_run(settings: Settings) -> bool:
         )
 
         candidates = CertifiedCapabilityLookup().get_candidates_for_stage(
-            "idea_generation",
+            getattr(
+                settings, "readiness_probe_stage", None,
+            )
+            or "idea_generation",
         )
     except Exception as e:  # noqa: BLE001 - registry unreadable = unknown
         raise ProviderUnavailableError(
@@ -104,10 +110,17 @@ def enforce_required_provider_readiness(
     """
     from backend.pipeline.research import LMStudioManager
 
-    try:
-        mgr = LMStudioManager(settings=settings)
-    except TypeError:
-        mgr = LMStudioManager()
+    # Construct from the SUPPLIED settings so a run configured with a
+    # custom endpoint/model is checked against its own endpoint (Q2
+    # review P1): LMStudioManager accepts base_url/model_id/
+    # required_context, not a settings object.
+    mgr = LMStudioManager(
+        base_url=getattr(settings, "lmstudio_base_url", "") or "",
+        model_id=getattr(settings, "lmstudio_model", "") or "",
+        required_context=int(
+            getattr(settings, "lmstudio_required_context", 0) or 0,
+        ),
+    )
     try:
         preflight = mgr.preflight_check(auto_fix=True)
     except Exception as e:  # noqa: BLE001 - cannot establish readiness

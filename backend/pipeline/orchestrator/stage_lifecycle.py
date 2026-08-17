@@ -660,9 +660,18 @@ class StageLifecycle:
                 db_run_id,
                 f"{typed_outcome.value} at {result.terminal_stage}",
             )
-        elif params.get("autonomous_experiment_enabled") and (
-            (params.get("autonomous_experiment_design") or {}).get("status")
-            != "designed"
+        elif (
+            params.get("autonomous_experiment_enabled")
+            # An explicit experiment_spec_id legitimately skips
+            # autonomous design (explicit spec takes precedence) —
+            # that is not a missing design (Q2 review P1).
+            and not params.get("experiment_spec_id")
+            and (
+                (params.get("autonomous_experiment_design") or {}).get(
+                    "status"
+                )
+                != "designed"
+            )
         ):
             # Q2 (Case-3 3D specimen): an autonomous run REQUIRES the
             # autonomous experiment design. Previously a run with gaps

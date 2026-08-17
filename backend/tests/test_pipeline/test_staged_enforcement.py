@@ -229,22 +229,25 @@ class TestLLMRepairService:
         assert repair_calls[0]["enforcement_applied"] is True
 
     @pytest.mark.asyncio
-    async def test_repair_returns_none_on_degraded(self):
-        """Repair returns None when gateway returns degraded."""
-        from backend.pipeline.gateway.llm_repair_and_query import LLMRepairService
+    async def test_repair_raises_on_transport_failure(self):
+        """Q2: transport failure raises GatewayTransportError through
+        the repair service — no silent None on a dead provider."""
+        from backend.pipeline.gateway.llm_repair_and_query import (
+            LLMRepairService,
+        )
+        from backend.pipeline.gateway.transport import (
+            GatewayTransportError,
+        )
 
         gateway = _make_gateway(enforced_stages=["repair"], mode="enforce")
-        # Create a degraded response scenario
         gateway._provider_fn = AsyncMock(side_effect=Exception("LLM failed"))
 
         svc = LLMRepairService(gateway)
-        result = await svc.repair_json(
-            broken_json='{broken',
-            run_id="test",
-        )
-
-        # Gateway returns degraded response, repair service returns None
-        assert result is None
+        with pytest.raises(GatewayTransportError, match="LLM failed"):
+            await svc.repair_json(
+                broken_json='{broken',
+                run_id="test",
+            )
 
 
 @pytest.mark.slow
@@ -276,19 +279,26 @@ class TestLLMQueryGenerator:
         assert qg_calls[0]["enforcement_applied"] is True
 
     @pytest.mark.asyncio
-    async def test_query_gen_returns_empty_on_degraded(self):
-        """Query generation returns [] when gateway returns degraded."""
-        from backend.pipeline.gateway.llm_repair_and_query import LLMQueryGenerator
+    async def test_query_gen_raises_on_transport_failure(self):
+        """Q2: transport failure raises GatewayTransportError through
+        query generation — no silent [] on a dead provider."""
+        from backend.pipeline.gateway.llm_repair_and_query import (
+            LLMQueryGenerator,
+        )
+        from backend.pipeline.gateway.transport import (
+            GatewayTransportError,
+        )
 
-        gateway = _make_gateway(enforced_stages=["query_generation"], mode="enforce")
+        gateway = _make_gateway(
+            enforced_stages=["query_generation"], mode="enforce",
+        )
         gateway._provider_fn = AsyncMock(side_effect=Exception("LLM failed"))
 
         gen = LLMQueryGenerator(gateway)
-        queries = await gen.generate_queries(
-            domain="CS", topic="test", run_id="test",
-        )
-
-        assert queries == []
+        with pytest.raises(GatewayTransportError, match="LLM failed"):
+            await gen.generate_queries(
+                domain="CS", topic="test", run_id="test",
+            )
 
 
 # ── Test: Degraded result for empty certified candidates ─────────────

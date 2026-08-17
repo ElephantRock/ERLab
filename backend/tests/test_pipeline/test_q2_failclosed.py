@@ -72,11 +72,20 @@ class TestFailClosedReadiness:
             m, pf = enforce_required_provider_readiness(MagicMock())
         assert m is mgr and pf.model_id == "qwen"
 
-    def test_required_determination_from_registry(self, monkeypatch):
+    def test_required_determination_from_registry(
+        self, monkeypatch, tmp_path,
+    ):
         from backend.pipeline.orchestrator import readiness as rmod
 
         settings = MagicMock()
         settings.default_provider = "openai"
+        settings.capability_registry_path = None
+        settings.readiness_probe_stage = None
+        # A present registry file (CI has none by default).
+        reg = tmp_path / "data" / "model_certification"
+        reg.mkdir(parents=True)
+        (reg / "production_registry.yaml").write_text("models: {}")
+        monkeypatch.chdir(tmp_path)
 
         def _candidates(self, stage):
             return [SimpleNamespace(provider="lmstudio")]
@@ -102,16 +111,25 @@ class TestFailClosedReadiness:
         monkeypatch.chdir(tmp_path)  # no data/model_certification here
         settings = MagicMock()
         settings.default_provider = "openai"
+        settings.capability_registry_path = None
+        settings.readiness_probe_stage = None
         with pytest.raises(
             ProviderUnavailableError, match="registry missing",
         ):
             lmstudio_required_for_run(settings)
 
-    def test_registry_parse_error_fails_closed(self, monkeypatch):
+    def test_registry_parse_error_fails_closed(
+        self, monkeypatch, tmp_path,
+    ):
         from backend.pipeline.orchestrator.readiness import (
             ProviderUnavailableError,
             lmstudio_required_for_run,
         )
+
+        reg = tmp_path / "data" / "model_certification"
+        reg.mkdir(parents=True)
+        (reg / "production_registry.yaml").write_text("models: {}")
+        monkeypatch.chdir(tmp_path)
 
         def _boom(self, stage):
             raise ValueError("yaml corrupt")
@@ -123,6 +141,8 @@ class TestFailClosedReadiness:
         )
         settings = MagicMock()
         settings.default_provider = "openai"
+        settings.capability_registry_path = None
+        settings.readiness_probe_stage = None
         with pytest.raises(
             ProviderUnavailableError, match="registry lookup failed",
         ):
