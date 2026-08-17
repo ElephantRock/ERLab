@@ -1,0 +1,88 @@
+{
+  "case": "Case 3E \u2014 zero-intervention architectural qualification (harness v2; result reconstructed from persisted DB after a staging error zeroed the original file)",
+  "frozen_head": "afa58e447be2d529f7d10144edffddbbb8665673",
+  "started_at": "2026-08-17T11:46:39Z",
+  "finished_at": "2026-08-17T12:43:51Z",
+  "steps": [
+    {
+      "step": "1-2",
+      "orchestrator": {
+        "run_id": "run_20260817_144650",
+        "outcome": "succeeded",
+        "outcome_is_success": true,
+        "elapsed_s": 3160.6,
+        "auto_design_status": "designed"
+      }
+    },
+    {
+      "step": "3-4",
+      "design_status": "designed",
+      "capability_id": "tabular_robust_regression_v1",
+      "n_specs": 2,
+      "spec_ids": [
+        "auto-regression-airfoil_self_noise",
+        "auto-regression-concrete_strength"
+      ]
+    },
+    {
+      "step": "5",
+      "experiments_success": 2,
+      "experiments_expected": 2,
+      "initial_eval_status": "blocked",
+      "markers": 54
+    },
+    {
+      "step": "6",
+      "remediation": {
+        "invoked": true,
+        "http": 200,
+        "promoted": true,
+        "eval_status": "ready"
+      }
+    }
+  ],
+  "proposal_id": 1,
+  "idea_id": 1,
+  "pipeline_run_id": 1,
+  "final_eval_status": "ready",
+  "final_gates": [
+    {
+      "provenance": "True"
+    },
+    {
+      "scope_alignment": "on_scope"
+    },
+    {
+      "conclusion_support": "supported_by_paper"
+    },
+    {
+      "experiment_alignment": "True"
+    },
+    {
+      "numeric_fidelity": "True"
+    },
+    {
+      "method_fidelity": "True"
+    }
+  ],
+  "freeze": {
+    "http": 200,
+    "state": "frozen",
+    "frozen_revision_id": 3,
+    "release_eligible": true
+  },
+  "frozen_revision_id": 3,
+  "release_header_hash": "afba877a6009413466a1e2f0bc539c14220e111347ca2fd45eccb128872790ec",
+  "verification": {
+    "E": "afba877a6009413466a1e2f0bc539c14220e111347ca2fd45eccb128872790ec",
+    "F": "afba877a6009413466a1e2f0bc539c14220e111347ca2fd45eccb128872790ec",
+    "R": "afba877a6009413466a1e2f0bc539c14220e111347ca2fd45eccb128872790ec",
+    "H": "afba877a6009413466a1e2f0bc539c14220e111347ca2fd45eccb128872790ec",
+    "equality": true,
+    "frozen_eval_status": "ready",
+    "release_equals_current_bytes": true
+  },
+  "decision": "ACCEPTED",
+  "operator_interventions": 0,
+  "reconstruction_note": "The original result JSON and release copy were zeroed by a staging error (git-show of never-committed untracked files restored 0 bytes, which were then written over the working files). Reconstructed field-for-field from the persisted DB (frozen revision 3, evaluation, gates) and the acceptance record written BEFORE the staging error. The release bytes were recovered exactly from frozen revision 3 \u2014 sha256 afba877a... re-verified against the acceptance record and the DB evaluation hash. The unedited harness stdout survives at evidence/case3e_run.log."
+}

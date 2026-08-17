@@ -1,0 +1,94 @@
+{
+  "case": "Case 3E \u2014 architectural qualification on Q2 (the controlled diagnostic attempt)",
+  "decision": "ACCEPTED \u2014 harness-decided (exit code 0); zero operator interventions; all pre-launch adjudications frozen",
+  "recorded_at": "2026-08-17T12:45:42.129463+00:00",
+  "gate_chain": {
+    "G0": "d70d7046c3868baaf73f8f4d2a132c48feeca",
+    "G1": "7bfbd1a7a59292d4651d4abb5f14b6f93a93b476",
+    "Q0": "a057982845cfeabae55df5e02247748da9ff1c92",
+    "Q1": "00c1050f7b63e0e5a239ef5670632bcc55532ad0",
+    "Q2": "afa58e447be2d529f7d10144edffddbbb8665673"
+  },
+  "manifest_sha256": "255d614e0b9157a78802a49b43412f09a67c882943e2105e8d3b18da998c0f58",
+  "harness": {
+    "sha256": "f2e19cb0e7527c634cb5155ad991e0718ee9a54f81733a2b69818f5745fc9860",
+    "provenance": "byte-exact recovery verified against the 3D seal"
+  },
+  "run": {
+    "run_id_str": "run_20260817_144650",
+    "orchestrator_elapsed_s": 3160.6
+  },
+  "sequence": [
+    "11:46:39Z harness launch on exact Q2 (frozen input)",
+    "12:39:30Z orchestrator SUCCEEDED; design designed; capability == tabular_robust_regression_v1",
+    "12:39:30Z 2/2 experiments via the common execute path; 54 dataset-qualified markers; method_facts persisted pre-remediation",
+    "12:39:40Z initial paper blocked -> policy: cold repair EXACTLY ONCE",
+    "12:43:51Z promoted; final evaluation ready",
+    "12:43:51Z freeze rev 3; release; E==F==R==H equality True; bytes identical"
+  ],
+  "release": {
+    "E": "afba877a6009413466a1e2f0bc539c14220e111347ca2fd45eccb128872790ec",
+    "F": "afba877a6009413466a1e2f0bc539c14220e111347ca2fd45eccb128872790ec",
+    "R": "afba877a6009413466a1e2f0bc539c14220e111347ca2fd45eccb128872790ec",
+    "H": "afba877a6009413466a1e2f0bc539c14220e111347ca2fd45eccb128872790ec",
+    "equality": true,
+    "release_bytes_equal_current_paper": true
+  },
+  "independent_verification": {
+    "four_hash_query_of_persisted_rows": "equality True",
+    "markers": 54,
+    "method_facts_persisted_pre_remediation": true,
+    "experiments": [
+      [
+        1,
+        "success"
+      ],
+      [
+        2,
+        "success"
+      ]
+    ],
+    "revision_history_preserved": [
+      [
+        1,
+        0,
+        "blocked",
+        "initial"
+      ],
+      [
+        2,
+        1,
+        "ready",
+        "alignment_blocked(auto_remediation)"
+      ],
+      [
+        3,
+        2,
+        "ready",
+        "release_freeze"
+      ]
+    ],
+    "method_fidelity_on_released_bytes": "True (regression capability facts)",
+    "final_six_gates_from_harness": "provenance True, scope on_scope, conclusion supported_by_paper, experiment_alignment True, numeric_fidelity True, method_fidelity True"
+  },
+  "pre_launch_adjudications_frozen": {
+    "criterion_12": "GENERIC (owner ruling 2026-08-17, static classification of frozen heads; recorded pre-launch in this manifest)"
+  },
+  "attempt_ledger": [
+    "1st (Q0): NON-QUALIFYING SPECIMEN \u2014 technical success E==F==R==H 010a08f4; criterion-9 timing (owner ruling)",
+    "3B (Q0): FAIL \u2014 chronic structured empties = GENERIC PRODUCT DEFECT; retry fix merged as Q1",
+    "3C (Q1): FAIL \u2014 synthesis timeouts; model healthy post-run",
+    "3D (Q1): FAIL \u2014 0 ideas; STOPPED per bound; root cause later identified",
+    "3E (Q2): ACCEPTED"
+  ],
+  "root_cause_epilogue": "The 3B-3D failures trace to one misalignment, discovered when the Q2 readiness gate became the first check using the production settings URL: EROCK_LMSTUDIO_BASE_URL pointed at unreachable 100.64.0.1 while the live certified model served at 100.64.0.2. Evidence-side preflights probed .2 (hardcoded), so they passed while production called .1. With the endpoint corrected AND the Q2 fail-closed machinery in place, the same certified model completed the full qualifying lifecycle \u2014 no model substitution was required. evidence/case3e_endpoint_discovery.json",
+  "operator_interventions": 0,
+  "artifacts": [
+    "evidence/case3_result.json",
+    "evidence/case3_release.md",
+    "evidence/case3e_run.log",
+    "evidence/case3e_preflight.json",
+    "evidence/case3e_manifest.json (.sha256)",
+    "evidence/case3e_endpoint_discovery.json"
+  ]
+}

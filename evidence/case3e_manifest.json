@@ -1,0 +1,94 @@
+{
+  "case": "Case 3E \u2014 zero-intervention architectural qualification on Q2 (the controlled diagnostic attempt)",
+  "frozen_head": "afa58e447be2d529f7d10144edffddbbb8665673",
+  "gate_chain": {
+    "G0": "d70d7046c3868ba6fb73f8f4d2a132c48feeca",
+    "G1": "7bfbd1a7a59292d4651d4abb5f14b6f93a93b476",
+    "Q0": "a057982845cfeabae55df5e02247748da9ff1c92",
+    "Q1": "00c1050f7b63e0e5a239ef5670632bcc55532ad0",
+    "Q2": "afa58e447be2d529f7d10144edffddbbb8665673"
+  },
+  "domain": "Robust regression under distribution shift",
+  "research_question": "Are robust-regression method rankings stable as covariate perturbation severity increases, or do rank reversals occur in MAE, RMSE, and R\u00b2 across tabular regression datasets?",
+  "activation": "autonomous_experiment_enabled=True only",
+  "explicit_experiment_spec": null,
+  "operator_intervention_budget": 0,
+  "production_changes_during_run": false,
+  "capability_expectation": {
+    "must_select": "tabular_robust_regression_v1",
+    "must_not_select": "tabular_calibration_selective_v1",
+    "expected_datasets": [
+      "airfoil_self_noise",
+      "concrete_strength"
+    ],
+    "expected_marker_count": 54,
+    "marker_count_is_observation_not_gate": true
+  },
+  "binding_artifacts": {
+    "architecture_manifest": "evidence/case3_architecture_manifest.json",
+    "architecture_delta": "evidence/case3_architecture_delta.json (records G0->G1 seam-only, G1->Q0 extension-only + the DISCLOSED generic superscript-fold exception awaiting owner adjudication against criterion 12)",
+    "dataset_airfoil_raw_sha256": "74c75fd71783f1e6b71f8a622b993dc592897a97cd689c5090a07147a1b097b3",
+    "entrypoint_sha256": "aa0abd3f75be6cfcbb8df0962941401371064ac3aa3eeb52876bfca5e537959e",
+    "harness": "evidence/launch_case3d.py"
+  },
+  "model_identities": {
+    "pipeline_llm": "qwen3-4b-2507 via LM Studio (local, certified: data/model_certification/production_registry.yaml)",
+    "embedding": "text-embedding-qwen3-embedding-0.6b via LM Studio (1024-dim)",
+    "evaluator_provider": "glm-5.2 via z.ai"
+  },
+  "state_taxonomy": {
+    "class1_research_state_fresh": [
+      "database (new)",
+      "chroma",
+      "checkpoints",
+      "runs",
+      "knowledge indexes"
+    ],
+    "class2_operating_state_preserved": [
+      "data/model_certification/",
+      "data/model_assignments.json",
+      "LM Studio serving both models",
+      "governed datasets (incl. airfoil registration)",
+      "capability registration (both capabilities)"
+    ],
+    "class3_optional_recorded_not_gated": [
+      "EmbeddingProfile DB rows (knowledge indexing skips; Case-2 evidence)"
+    ]
+  },
+  "harness_policy": [
+    "launch orchestrator (domain + question only)",
+    "REQUIRE outcome == SUCCEEDED",
+    "REQUIRE autonomous design status == designed",
+    "REQUIRE selected capability == tabular_robust_regression_v1",
+    "REQUIRE every designed experiment succeeded (ExperimentResult count == len(specs))",
+    "read persisted evaluation; blocked -> invoke cold repair EXACTLY ONCE via production route; ready -> freeze",
+    "release; verify E == F == R == H and release bytes == frozen/current paper",
+    "write verdict; exit code = verdict; no human decision between launch and exit"
+  ],
+  "acceptance_criteria": "The 12 criteria frozen in evidence/case3_architecture_manifest.json (capability breadth; autonomous selection; existing spec contract; existing execution; existing persistence/recovery; existing synthesis/remediation; existing six gates; method truth; zero intervention; release authority; preservation; architectural generality)",
+  "failure_taxonomy": "Frozen in evidence/case3_architecture_manifest.json: PASS / ARCHITECTURE FAIL / RUN FAIL / INVALID ATTEMPT / GENERIC PRODUCT DEFECT / DIFFERENT SCIENTIFIC RESULT (not a failure)",
+  "no_expected_scientific_answer": "No predetermined method ranking, no expected rank-reversal outcome, no expected conclusion.",
+  "harness_sha256": "f2e19cb0e7527c634cb5155ad991e0718ee9a54f81733a2b69818f5745fc9860",
+  "supersedes": [
+    "Case 3 first attempt: NON-QUALIFYING SPECIMEN (owner timing ruling; PR #26)",
+    "Case 3B: GENERIC PRODUCT DEFECT (empty-response retry fix = Q1, PR #29)",
+    "Case 3C: RUN FAIL (synthesis timeouts; model healthy post-run)",
+    "Case 3D: RUN FAIL (early empties, 0 ideas) \u2014 STOPPED per bound; the run's failure mode is now structurally addressed by Q2"
+  ],
+  "change_from_3b": "Q0 -> Q1 adds exactly the generic empty-response fix (bounded retry-on-empty on both structured paths + plain fallback at exhaustion; PR #29 after two review rounds). The sealed harness is UNCHANGED (d6d300c1...). Criterion 12 remains PRE-RESOLVED (GENERIC, owner ruling 2026-08-17). Research state fresh; operating state preserved.",
+  "known_followup_not_blocking": "Merged-review P1 on PR #29: the final plain fallback's complete() call does not report usage/cost. Cost-accounting fidelity only; does not affect results, gates, or release identity. Recorded for follow-up.",
+  "pre_launch_adjudications": {
+    "criterion_12_superscript_fold": {
+      "classification": "GENERIC product fix",
+      "ruled": "2026-08-17, BEFORE this attempt's launch, by the owner \u2014 static architecture classification of frozen Q0",
+      "evidence": "At G1 select_capability() already had generic normalization and fail-closed routing; Q0 adds only the Unicode numeric fold before the same capability-independent signal logic \u2014 no regression capability ID, no 'if regression', no special routing branch. The second site applies identical normalization before the already-generic metric loop. Test counterfactual: the frozen Case-3 input harvests all 27 metrics incl. nine _r2; the Case-1 harvest set remains exactly the complete calibration set.",
+      "effect_on_this_attempt": "Criterion 12 is RESOLVED before launch; no adjudication of it remains pending, so no human decision on it can occur after launch. The harness ACCEPTED boolean (ready state + release identity) plus this pre-frozen resolution constitute the full verdict path."
+    },
+    "gate_chain": "G0 = d70d704; G1 = 7bfbd1a; Q0 = a057982 (unchanged; no production change between attempts)"
+  },
+  "change_from_3c": "No production change (still Q1). Harness v2 (f2e19cb0...): identical policy with an explicit evaluation-None branch \u2014 3C's sealed v1 logged 'ready -> no remediation' when no evaluation existed; the final ready check FAILed correctly but the branch label was wrong. Preflight adds a long-form throughput hard gate (the 3C gap). Criterion 12 remains PRE-RESOLVED.",
+  "retry_bound": "If this attempt fails the same way (total synthesis timeout), STOP and report to the owner rather than loop.",
+  "change_from_3d": "Q1 -> Q2 adds the owner-authorized fail-closed correction (PRs #30-#34, 16 review findings fixed): required-provider readiness fails closed before research execution on BOTH run() and resume(); transport failures keep typed identity end-to-end (gateway -> provider adapter -> ideation layer -> both stage loops, with DB persistence on the resume path); the autonomous false-SUCCEEDED invariant is closed. The sealed harness is UNCHANGED (v2, f2e19cb0). Criterion 12 remains PRE-RESOLVED (GENERIC, owner ruling 2026-08-17).",
+  "diagnostic_outcomes": "Per the owner's four-outcome table: connection outage -> typed failure, never fake success; endpoint dead at launch -> preflight failure, no pipeline run; reachable-but-empty-200s -> genuine model/output-resilience evidence (justifies Option A); reachable-but-timeout -> genuine capacity evidence (justifies Option A); full lifecycle success -> Case 3 qualifies without model substitution.",
+  "harness_provenance_note": "The 3D-era v2 bytes were never committed (untracked on the run branch). This file was reconstructed from the sealed v1 (d6d300c1, committed on case3/qualification) + the documented v2 eval-None branch, and the reconstruction hashes EXACTLY to the 3D manifest's sealed value f2e19cb0... \u2014 byte-exact recovery, verified against the pre-existing seal."
+}

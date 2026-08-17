@@ -1,0 +1,57 @@
+{
+  "phase": "C3-5 three-class preflight (Case 3B; hard gates)",
+  "captured_at": "2026-08-17T03:03:40.628387+00:00",
+  "gates": {
+    "embedding": {
+      "ok": true
+    },
+    "certified_model": {
+      "ok": true
+    },
+    "certification_lookup": {
+      "ok": true
+    },
+    "evaluator_provider": {
+      "ok": true
+    },
+    "fresh_db": {
+      "ok": true
+    },
+    "frozen_head_q0": {
+      "ok": true
+    },
+    "clean_tracked_tree": {
+      "ok": true
+    },
+    "manifest3b_seal": {
+      "ok": true
+    },
+    "harness_seal": {
+      "ok": true
+    },
+    "criterion12_pre_resolved": {
+      "ok": true
+    },
+    "capability_registration": {
+      "ok": true
+    },
+    "selection_unique_regression": {
+      "ok": true
+    },
+    "two_regression_datasets": {
+      "ok": true
+    },
+    "entrypoint_hash": {
+      "ok": true
+    },
+    "dataset_hash": {
+      "ok": true
+    }
+  },
+  "class_state": {
+    "class1_research_fresh": "new DB (0 runs); prior attempt archived to erlab-case2-archive/pre-case3b-runtime; specimen DB preserved as evidence/case3a_specimen.db",
+    "class2_operating_preserved": "model_certification + model_assignments.json; LM Studio serving both models; governed datasets; both capabilities registered",
+    "class3_recorded_not_gated": "EmbeddingProfile rows absent (knowledge indexing skips)"
+  },
+  "difference_from_first_attempt": "None to code, harness, or environment. The 3B manifest records criterion 12 PRE-RESOLVED (owner ruling 2026-08-17, GENERIC, frozen before this launch)."
+}
