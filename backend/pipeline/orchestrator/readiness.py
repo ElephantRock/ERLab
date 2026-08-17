@@ -70,17 +70,29 @@ def lmstudio_required_for_run(settings: Settings) -> bool:
         or "data/model_certification/production_registry.yaml",
     )
     if not registry_path.exists():
-        raise ProviderUnavailableError(
-            "capability_registry",
-            "production registry missing at"
-            f" {registry_path} — cannot determine required providers",
+        # Q2 review P1: deployments that never shipped a registry
+        # (OpenAI/Anthropic-style, no certification data) must not
+        # newly abort on its absence — the registry drives the
+        # SECONDARY requirement signal only. The primary signal
+        # (default_provider == lmstudio) was already checked above
+        # and does not depend on the registry.
+        logger.info(
+            "No production registry at %s — readiness requirement"
+            " falls back to the default-provider signal only",
+            registry_path,
         )
+        return False
     try:
         from backend.pipeline.routing.certified_lookup import (
             CertifiedCapabilityLookup,
         )
 
-        candidates = CertifiedCapabilityLookup().get_candidates_for_stage(
+        # Load candidates from the SAME registry that was just
+        # validated (Q2 review P1): a settings-supplied custom path
+        # must feed the lookup too, not the default location.
+        registry_dir = registry_path.parent
+        lookup = CertifiedCapabilityLookup(registry_dir)
+        candidates = lookup.get_candidates_for_stage(
             getattr(
                 settings, "readiness_probe_stage", None,
             )

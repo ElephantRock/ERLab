@@ -100,11 +100,14 @@ class TestFailClosedReadiness:
         settings.default_provider = "lmstudio"
         assert rmod.lmstudio_required_for_run(settings) is True
 
-    def test_registry_missing_fails_closed(self, monkeypatch, tmp_path):
-        """Q2 review P1: a missing registry means UNKNOWN — never
-        silently not-required."""
+    def test_registry_missing_falls_back_to_primary_signal(
+        self, monkeypatch, tmp_path,
+    ):
+        """Q2 review round-3 P1: deployments that never shipped a
+        registry (OpenAI/Anthropic-style) must not newly abort on its
+        absence — the secondary signal yields to the primary one. With
+        default_provider=openai the answer is simply not-required."""
         from backend.pipeline.orchestrator.readiness import (
-            ProviderUnavailableError,
             lmstudio_required_for_run,
         )
 
@@ -113,10 +116,38 @@ class TestFailClosedReadiness:
         settings.default_provider = "openai"
         settings.capability_registry_path = None
         settings.readiness_probe_stage = None
-        with pytest.raises(
-            ProviderUnavailableError, match="registry missing",
+        assert lmstudio_required_for_run(settings) is False
+
+        # The primary signal alone still requires readiness:
+        settings.default_provider = "lmstudio"
+        assert lmstudio_required_for_run(settings) is True
+
+    def test_required_but_empty_url_fails_closed(self):
+        """Q2 review round-3 P1: LM Studio required with an empty
+        endpoint URL — readiness can never be established."""
+        from backend.pipeline.orchestrator._orchestrator import (
+            PipelineOrchestrator,
+        )
+        from backend.pipeline.orchestrator.readiness import (
+            ProviderUnavailableError,
+        )
+
+        orch = MagicMock()
+        orch._settings.enforce_provider_readiness = True
+        orch._settings.lmstudio_base_url = ""
+        orch._settings.default_provider = "lmstudio"
+
+        with patch(
+            "backend.pipeline.orchestrator.readiness"
+            ".lmstudio_required_for_run",
+            return_value=True,
+        ), pytest.raises(
+            ProviderUnavailableError,
+            match="lmstudio_base_url is empty",
         ):
-            lmstudio_required_for_run(settings)
+            PipelineOrchestrator._enforce_required_provider_readiness(
+                orch,
+            )
 
     def test_registry_parse_error_fails_closed(
         self, monkeypatch, tmp_path,

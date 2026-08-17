@@ -769,17 +769,26 @@ class PipelineOrchestrator:
         research execution when a required provider cannot establish
         readiness. Called by both run() and resume().
         """
-        lmstudio_url = getattr(self._settings, 'lmstudio_base_url', None)
-        if not lmstudio_url:
-            return None
         if not self._settings.enforce_provider_readiness:
             return None
         from backend.pipeline.orchestrator.readiness import (
+            ProviderUnavailableError,
             enforce_required_provider_readiness,
             lmstudio_required_for_run,
         )
         if not lmstudio_required_for_run(self._settings):
             return None
+        lmstudio_url = getattr(
+            self._settings, 'lmstudio_base_url', None,
+        )
+        if not lmstudio_url:
+            # Q2 review P1: LM Studio is REQUIRED but no endpoint URL
+            # is configured — readiness can never be established. Fail
+            # closed instead of silently proceeding.
+            raise ProviderUnavailableError(
+                "lmstudio",
+                "required by this run but lmstudio_base_url is empty",
+            )
         mgr, preflight = enforce_required_provider_readiness(
             self._settings,
         )
