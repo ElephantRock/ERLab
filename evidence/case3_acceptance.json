@@ -1,6 +1,6 @@
 {
   "case": "Case 3 \u2014 architectural/capability generalization qualification",
-  "decision": "ACCEPTED \u2014 harness-decided (exit code 0); zero operator interventions",
+  "decision": "NON-QUALIFYING SPECIMEN \u2014 technically successful run; the zero-human-decision qualification (criterion 9) cannot be established because the load-bearing criterion-12 adjudication occurred after C3-6 launched (see correction)",
   "recorded_at": "2026-08-16T22:03:48.761518+00:00",
   "gate_chain": {
     "G0": "d70d7046c3868ba6fbaf73d8f4d2a132c48feeca",
@@ -101,5 +101,18 @@
     "evidence/case3_manifest.json (.sha256)",
     "evidence/case3_architecture_manifest.json",
     "evidence/case3_architecture_delta.json"
-  ]
+  ],
+  "correction": {
+    "corrected_at": "2026-08-17T02:56:28.024693+00:00",
+    "trigger": "Owner review of PR #25 (held unmerged).",
+    "finding": "Two blockers. (1) The evidence commit landed on the run branch (case3/run, commit 66a4b38) after the checkout to case3/qualification aborted on untracked-file conflicts; the push published only the pre-registration branch (987b6d1), so the PR body described artifacts absent from its diff. (2) A qualification-timing defect the owner isolated in their own prior ruling: criterion 12 was explicitly left for owner adjudication, and the GENERIC ruling was delivered AFTER C3-6 launched. It did not alter execution, repair, state, or release, but it was a load-bearing human decision determining PASS vs ARCHITECTURE_FAIL. Under frozen criterion 9 ('any human decision after launch disqualifies'), this run cannot establish the strict zero-intervention qualification.",
+    "ruling_applied": "Contract-faithful classification: NON-QUALIFYING SPECIMEN, for the same structural reason Case 2C could not be promoted after the fact. The technical run remains highly successful and is preserved intact: harness-decided ACCEPTED (exit 0), capability #2 selected, 2/2 experiments, 54 markers, one policy repair, six gates PASS, E==F==R==H = 010a08f4..., revision history 1/2/3 preserved. The fold classification itself remains GENERIC on the evidence already reviewed; that classification has not changed.",
+    "successor": "Case 3B: freeze the already-established GENERIC classification BEFORE launch; preserve Q0 (no production change); seal the continuation policy with criterion 12 already resolved; fresh zero-intervention attempt. This run and all three revisions remain preserved.",
+    "harness_boolean_scope": "The sealed harness determines ACCEPTED from ready-state/release identity checks; criterion 12 is not part of that boolean. The overall result can only be ACCEPTED by combining the harness verdict with the architectural adjudication \u2014 which is why the adjudication's timing matters."
+  },
+  "operator_interventions_during_attempt": {
+    "harness_path": 0,
+    "adjudication_path": 1,
+    "note": "The single load-bearing human decision was the owner's post-launch criterion-12 ruling."
+  }
 }
