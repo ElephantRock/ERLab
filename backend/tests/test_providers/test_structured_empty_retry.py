@@ -89,3 +89,46 @@ class TestRetryOnEmpty:
             p.structured_output([{"role": "user", "content": "q"}], SCHEMA)
         )
         assert result == {"x": 5}
+
+
+class TestRetryOnEmptyUsagePath:
+    """PR #27 review P1: the orchestrator gateway calls
+    structured_output_with_usage(); the retry must live there too."""
+
+    def _usage_provider_with(self, structured_results):
+        p = OpenAIProvider(api_key="test", base_url="http://127.0.0.1:9/")
+        # Bypass the whole once-chain: stub the inner once-method.
+        calls = {"n": 0}
+
+        async def fake_once(messages, schema, temperature=0.3,
+                            max_tokens=8192, stage="", run_id=None):
+            from backend.providers.base import LLMResponse
+            idx = min(calls["n"], len(structured_results) - 1)
+            calls["n"] += 1
+            return LLMResponse(
+                content="", structured=structured_results[idx],
+                input_tokens=1, output_tokens=1, served_model="t",
+            )
+
+        p._structured_output_with_usage_once = fake_once
+        return p, calls
+
+    def test_usage_path_recovers_after_empties(self):
+        p, calls = self._usage_provider_with([{}, {}, {"x": 1}])
+        resp = asyncio.run(
+            p.structured_output_with_usage(
+                [{"role": "user", "content": "q"}], SCHEMA,
+            )
+        )
+        assert resp.structured == {"x": 1}
+        assert calls["n"] == 3
+
+    def test_usage_path_bounded(self):
+        p, calls = self._usage_provider_with([{}])
+        resp = asyncio.run(
+            p.structured_output_with_usage(
+                [{"role": "user", "content": "q"}], SCHEMA,
+            )
+        )
+        assert resp.structured == {}
+        assert calls["n"] == 4  # 1 initial + 3 retries

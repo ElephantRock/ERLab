@@ -284,6 +284,42 @@ class OpenAIProvider(LLMProvider):
         stage: str = "",
         run_id: str | None = None,
     ) -> LLMResponse:
+        # Same bounded retry-on-empty as structured_output(): the
+        # orchestrator gateway calls THIS path, so the retry must live
+        # here too (PR #27 review P1). Empty/unparseable structured
+        # results retry the whole chain; bounded exhaustion returns
+        # the empty-structured LLMResponse as before.
+        last: LLMResponse | None = None
+        for attempt in range(self.STRUCTURED_EMPTY_RETRIES + 1):
+            last = await self._structured_output_with_usage_once(
+                messages, schema, temperature, max_tokens,
+                stage=stage, run_id=run_id,
+            )
+            if last.structured:
+                if attempt:
+                    logger.info(
+                        "structured_output_with_usage: empty response"
+                        " recovered on retry %d/%d",
+                        attempt, self.STRUCTURED_EMPTY_RETRIES,
+                    )
+                return last
+        if last is not None and not last.structured:
+            logger.warning(
+                "structured_output_with_usage: %d consecutive empty"
+                " structured responses (retries exhausted)",
+                self.STRUCTURED_EMPTY_RETRIES + 1,
+            )
+        return last  # type: ignore[return-value]
+
+    async def _structured_output_with_usage_once(
+        self,
+        messages: list[dict],
+        schema: dict,
+        temperature: float = 0.3,
+        max_tokens: int = 8192,
+        stage: str = "",
+        run_id: str | None = None,
+    ) -> LLMResponse:
         mode = self._structured_output_mode
         try:
             if mode == "json_object":
