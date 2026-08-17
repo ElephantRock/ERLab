@@ -660,6 +660,32 @@ class StageLifecycle:
                 db_run_id,
                 f"{typed_outcome.value} at {result.terminal_stage}",
             )
+        elif params.get("autonomous_experiment_enabled") and (
+            (params.get("autonomous_experiment_design") or {}).get("status")
+            != "designed"
+        ):
+            # Q2 (Case-3 3D specimen): an autonomous run REQUIRES the
+            # autonomous experiment design. Previously a run with gaps
+            # but zero ideas fell through to SUCCEEDED here — the
+            # false-success shape the qualification harness had to
+            # catch externally. Missing design is a typed failure.
+            design_status = (
+                params.get("autonomous_experiment_design") or {}
+            ).get("status", "absent")
+            result.outcome = PipelineOutcome.FAILED_OUTPUT_CONTRACT
+            result.terminal_stage = "autonomous_design"
+            result.terminal_reason = (
+                "Autonomous experiment enabled but the required design"
+                f" was not produced (status={design_status!r})"
+            )
+            logger.error(
+                "Autonomous run without required design (status=%s)"
+                " — marking run failed", design_status,
+            )
+            self._persistence.mark_run_failed(
+                db_run_id,
+                f"autonomous design missing (status={design_status})",
+            )
         elif n_gaps == 0 and n_ideas == 0 and n_proposals == 0:
             # Legacy fallback: pipeline ran but produced nothing and no stage
             # set a typed outcome — mark as failed, not completed.

@@ -809,32 +809,39 @@ class PipelineOrchestrator:
         self._ccw = ConsolidatedContextWindow()
 
         # Gateway: Preflight LM Studio — ensure model loaded with sufficient context
+        # Q2 (Case-3 3B–3D specimens): required-provider readiness is a
+        # precondition, not a warning. When LM Studio is required by the
+        # run (default provider, or the certified registry routes core
+        # stages to an lmstudio-served model) and readiness cannot be
+        # established, fail closed BEFORE research execution instead of
+        # proceeding on static defaults into opaque empty-output
+        # failures downstream.
         _lmstudio_mgr = None
         lmstudio_url = getattr(self._settings, 'lmstudio_base_url', None)
-        if lmstudio_url and self._settings.default_provider == 'lmstudio':
-            try:
-                from backend.pipeline.research import LMStudioManager
-                mgr = LMStudioManager()
-                preflight = mgr.preflight_check(auto_fix=True)
-                _lmstudio_mgr = mgr  # Store for teardown
-                self._lmstudio_mgr = mgr  # Also for grammar enforcement
-                # Operation Executor: authoritative model lifecycle owner
-                from backend.pipeline.operations.executor import OperationExecutor
-                self._operation_executor = OperationExecutor(mgr)
-                if preflight.ready:
-                    logger.info(
-                        "LM Studio preflight OK: %s ctx=%d%s",
-                        preflight.model_id, preflight.context_length,
-                        " (auto-loaded)" if preflight.had_to_load else
-                        " (reloaded)" if preflight.had_to_reload else "",
-                    )
-                else:
-                    logger.warning(
-                        "LM Studio preflight failed: %s — proceeding with static defaults",
-                        preflight.errors,
-                    )
-            except Exception as e:
-                logger.warning("LM Studio preflight error (non-fatal): %s", str(e)[:100])
+        from backend.pipeline.orchestrator.readiness import (
+            lmstudio_required_for_run,
+        )
+        _readiness_enforced = self._settings.enforce_provider_readiness
+        if (
+            lmstudio_url
+            and _readiness_enforced
+            and lmstudio_required_for_run(self._settings)
+        ):
+            from backend.pipeline.orchestrator.readiness import (
+                enforce_required_provider_readiness,
+            )
+            mgr, preflight = enforce_required_provider_readiness(self._settings)
+            _lmstudio_mgr = mgr  # Store for teardown
+            self._lmstudio_mgr = mgr  # Also for grammar enforcement
+            # Operation Executor: authoritative model lifecycle owner
+            from backend.pipeline.operations.executor import OperationExecutor
+            self._operation_executor = OperationExecutor(mgr)
+            logger.info(
+                "LM Studio preflight OK: %s ctx=%d%s",
+                preflight.model_id, preflight.context_length,
+                " (auto-loaded)" if preflight.had_to_load else
+                " (reloaded)" if preflight.had_to_reload else "",
+            )
 
         # Gateway: Probe LM Studio for live model capabilities
         if hasattr(self, '_capability_registry') and self._capability_registry:

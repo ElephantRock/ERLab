@@ -366,13 +366,18 @@ class LLMGateway:
             elapsed_ms = (time.monotonic() - t0) * 1000
             logger.error("Gateway call failed for task '%s': %s", request.task, error)
 
-            return LLMResponse(
-                content="",
-                confidence=0.0,
-                degraded=True,
-                warnings=[f"LLM call failed: {error}"],
-                latency_ms=elapsed_ms,
+            # Q2 (Case-3 3B–3D specimens): transport/provider failure
+            # keeps its identity instead of becoming success-shaped
+            # empty content. The StageExecutor's bounded retries and
+            # typed stage-failure machinery take over from here.
+            from backend.pipeline.gateway.transport import (
+                GatewayTransportError,
             )
+
+            raise GatewayTransportError(
+                request.task or request.stage or "unknown",
+                error,
+            ) from e
 
         finally:
             # Always log

@@ -17,6 +17,7 @@ from collections.abc import AsyncIterator
 from typing import Any
 
 from backend.pipeline.gateway.gateway import LLMGateway, LLMRequest
+from backend.pipeline.gateway.transport import GatewayTransportError
 from backend.pipeline.gateway.token_budget import PromptTooLargeError
 from backend.providers.base import LLMProvider, LLMResponse
 
@@ -77,6 +78,11 @@ class GatewayProvider(LLMProvider):
         except PromptTooLargeError:
             # Re-raise — the caller should compact/split
             raise
+        except GatewayTransportError:
+            # Q2: transport/provider failure keeps its identity — do NOT
+            # fall back to the same failed inner provider. The stage
+            # executor's bounded retries own retry semantics.
+            raise
         except Exception as e:
             logger.warning("Gateway failed, falling back to inner provider: %s", str(e)[:100])
             return await self._inner.complete(messages, temperature, max_tokens)
@@ -112,6 +118,11 @@ class GatewayProvider(LLMProvider):
             )
 
         except PromptTooLargeError:
+            raise
+        except GatewayTransportError:
+            # Q2: transport/provider failure keeps its identity — do NOT
+            # fall back to the same failed inner provider. The stage
+            # executor's bounded retries own retry semantics.
             raise
         except Exception as e:
             logger.warning("Gateway failed, falling back to inner provider: %s", str(e)[:100])
@@ -175,6 +186,11 @@ class GatewayProvider(LLMProvider):
 
         except PromptTooLargeError:
             raise
+        except GatewayTransportError:
+            # Q2: transport/provider failure keeps its identity — do NOT
+            # fall back to the same failed inner provider. The stage
+            # executor's bounded retries own retry semantics.
+            raise
         except Exception as e:
             logger.warning("Gateway failed, falling back to inner provider: %s", str(e)[:100])
             return await self._inner.structured_output(messages, schema, temperature)
@@ -216,6 +232,11 @@ class GatewayProvider(LLMProvider):
 
         except PromptTooLargeError:
             raise
+        except GatewayTransportError:
+            # Q2: transport/provider failure keeps its identity — do NOT
+            # fall back to the same failed inner provider. The stage
+            # executor's bounded retries own retry semantics.
+            raise
         except Exception as e:
             logger.warning("Gateway failed, falling back to inner provider: %s", str(e)[:100])
             return await self._inner.structured_output_with_usage(
@@ -255,6 +276,11 @@ class GatewayProvider(LLMProvider):
             )
 
         except PromptTooLargeError:
+            raise
+        except GatewayTransportError:
+            # Q2: transport/provider failure keeps its identity — do NOT
+            # fall back to the same failed inner provider. The stage
+            # executor's bounded retries own retry semantics.
             raise
         except Exception as e:
             logger.warning("Gateway failed, falling back to inner provider: %s", str(e)[:100])
