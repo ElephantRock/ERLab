@@ -1,0 +1,113 @@
+[11:46:39Z] STEP1-2 orchestrator launch (frozen input); REQUIRE SUCCEEDED
+C:\Next-Era\Elephant-Rock-Research-Lab\backend\providers\gemini_provider.py:6: FutureWarning: 
+
+All support for the `google.generativeai` package has ended. It will no longer be receiving 
+updates or bug fixes. Please switch to the `google.genai` package as soon as possible.
+See README for more details:
+
+https://github.com/google-gemini/deprecated-generative-ai-python/blob/main/README.md
+
+  import google.generativeai as genai
+OpenAlex search failed: HTTP 400
+OpenAlex search failed: HTTP 400
+OpenAlex search failed: HTTP 400
+PubMed search failed (HTTP 429): Client error '429 Too Many Requests' for url 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=pubmed&term=sensitivity+analysis+of+robust+regression+method+performance+to+covariate+perturbation+magnitude+benchmark+study&retmax=20&retmode=json&sort=relevance'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429
+PubMed search failed (HTTP 429): Client error '429 Too Many Requests' for url 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=pubmed&term=Are+robust-regression+method+rankings+stable+as+covariate+perturbation+severity+increases%2C+or+do+rank+reversals+occur+in+MAE%2C+RMSE%2C+and+R%C2%B2+across+tabular+regression+datasets%3F+open+problems&retmax=20&retmode=json&sort=relevance'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429
+PubMed search failed (HTTP 429): Client error '429 Too Many Requests' for url 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=pubmed&term=robust+regression+benchmark+ranking+stability+under+increasing+covariate+shift+severity+MAE+RMSE+R2+tabular&retmax=20&retmode=json&sort=relevance'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429
+Cannot construct governed vector runtime for indexing
+Empty LLM response — returning empty dict
+Empty LLM response — returning empty dict
+Empty LLM response — returning empty dict
+Empty LLM response — returning empty dict
+Empty LLM response — returning empty dict
+Empty LLM response — returning empty dict
+Empty LLM response — returning empty dict
+Could not extract JSON from LLM response (returning empty dict): {"relation_type": "none", "confidence
+Empty LLM response — returning empty dict
+Empty LLM response — returning empty dict
+Empty LLM response — returning empty dict
+Empty LLM response — returning empty dict
+Empty LLM response — returning empty dict
+Empty LLM response — returning empty dict
+Could not extract JSON from LLM response (returning empty dict): {"relation_type
+Empty LLM response — returning empty dict
+Empty LLM response — returning empty dict
+Empty LLM response — returning empty dict
+Empty LLM response — returning empty dict
+Empty LLM response — returning empty dict
+Empty LLM response — returning empty dict
+Empty LLM response — returning empty dict
+C:\Users\USER\AppData\Local\Programs\Python\Python312\Lib\site-packages\umap\umap_.py:1952: UserWarning: n_jobs value 1 overridden to 1 by setting random_state. Use no seed for parallelism.
+  warn(
+TreeSearchEngine: expansion failed: sequence item 0: expected str instance, list found
+TreeSearchEngine: expansion failed: sequence item 0: expected str instance, list found
+Stage novelty_checking failed (attempt 1/4), retrying in 2.1s: governed novelty retrieval requires governed vector runtime; could not construct from settings
+Stage novelty_checking failed (attempt 2/4), retrying in 4.2s: governed novelty retrieval requires governed vector runtime; could not construct from settings
+Stage novelty_checking failed (attempt 3/4), retrying in 7.2s: governed novelty retrieval requires governed vector runtime; could not construct from settings
+Stage novelty_checking exhausted 3 retries: governed novelty retrieval requires governed vector runtime; could not construct from settings
+Stage 'novelty_checking' failed (continuing pipeline): governed novelty retrieval requires governed vector runtime; could not construct from settings
+Traceback (most recent call last):
+  File "C:\Next-Era\Elephant-Rock-Research-Lab\backend\pipeline\orchestrator\run_coordinator.py", line 171, in execute_stage_loop
+    should_continue = await self._orch._execute_stage_with_retry(
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Next-Era\Elephant-Rock-Research-Lab\backend\pipeline\orchestrator\_orchestrator.py", line 1337, in _execute_stage_with_retry
+    return await self._executor.execute_with_retry(stage, ctx, checkpoint)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Next-Era\Elephant-Rock-Research-Lab\backend\pipeline\orchestrator\stage_executor.py", line 74, in execute_with_retry
+    result = await asyncio.wait_for(_run(), timeout=stage_timeout)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\USER\AppData\Local\Programs\Python\Python312\Lib\asyncio\tasks.py", line 520, in wait_for
+    return await fut
+           ^^^^^^^^^
+  File "C:\Next-Era\Elephant-Rock-Research-Lab\backend\pipeline\orchestrator\stage_executor.py", line 67, in _run
+    result, retries = await retry_llm_call(
+                      ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Next-Era\Elephant-Rock-Research-Lab\backend\providers\retry.py", line 54, in retry_llm_call
+    result = await coro_factory()
+             ^^^^^^^^^^^^^^^^^^^^
+  File "C:\Next-Era\Elephant-Rock-Research-Lab\backend\pipeline\stages.py", line 1629, in execute
+    profile, directives = await self._novelty.check_novelty(
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Next-Era\Elephant-Rock-Research-Lab\backend\pipeline\novelty\novelty_checker.py", line 274, in check_novelty
+    governed_result = await self._retrieve_governed(
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Next-Era\Elephant-Rock-Research-Lab\backend\pipeline\novelty\novelty_checker.py", line 188, in _retrieve_governed
+    raise RuntimeError(
+RuntimeError: governed novelty retrieval requires governed vector runtime; could not construct from settings
+
+GEval score parse failed: '', defaulting to 0.5
+GEval score parse failed: '', defaulting to 0.5
+GEval score parse failed: '', defaulting to 0.5
+GEval score parse failed: '', defaulting to 0.5
+GEval score parse failed: '', defaulting to 0.5
+GEval score parse failed: '', defaulting to 0.5
+GEval score parse failed: '', defaulting to 0.5
+GEval score parse failed: '', defaulting to 0.5
+GEval score parse failed: '', defaulting to 0.5
+GEval score parse failed: '', defaulting to 0.5
+GEval score parse failed: '', defaulting to 0.5
+GEval score parse failed: '', defaulting to 0.5
+Proposal synthesis timed out after 300.0s for idea 1: RobustShift-Bench: A Standardized Benchmark for Ro
+Proposal synthesis timed out after 300.0s for idea 2: Outlier-Robust Importance-Weighted Kernel Ridge Re
+CONTRACT VIOLATION: proposal_synthesis — All 2 proposals have very short content (<100 chars) — likely empty LLM responses
+C:\Next-Era\Elephant-Rock-Research-Lab\backend\pipeline\orchestrator\stage_lifecycle.py:453: RuntimeWarning: coroutine 'FaithfulnessScorer.score_proposal' was never awaited
+  logger.debug("Faithfulness scoring skipped: %s", str(e)[:100])
+RuntimeWarning: Enable tracemalloc to get the object allocation traceback
+Adversarial review failed for proposal 0 (non-fatal, HB-03): 
+Adversarial review failed for proposal 1 (non-fatal, HB-03): 
+Knowledge indexing failed: Object of type Author is not JSON serializable
+[12:39:30Z] STEP1-2 done: {"run_id": "run_20260817_144650", "outcome": "succeeded", "outcome_is_success": true, "elapsed_s": 3160.6, "auto_design_status": "designed"}
+[12:39:30Z] STEP3-4 design=designed capability=tabular_robust_regression_v1 specs=2
+[12:39:30Z] STEP5 experiments success=2/2 eval=blocked markers=54
+[12:39:30Z] STEP6 starting production API process
+[12:39:40Z] STEP6 policy: blocked -> cold repair ONCE
+[12:43:51Z] STEP6 repair: {"invoked": true, "http": 200, "promoted": true, "eval_status": "ready"}
+[12:43:51Z] STEP6 final evaluation: ready
+[12:43:51Z] STEP7 freeze
+[12:43:51Z] STEP7 release + E==F==R==H
+[12:43:51Z] STEP7 equality=True bytes=True
+
+[CASE3] DECISION: ACCEPTED
