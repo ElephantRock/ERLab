@@ -479,6 +479,12 @@ class ProposalSynthesizer:
                     logger.warning(
                         "Refinement of %s did not improve — keeping original", section_name
                     )
+            except GatewayTransportError:
+                # Case-4 R2 (adjudicated GENERIC_PRODUCT_DEFECT, 2026-08-18): a
+                # typed provider/transport failure must keep its identity. The Q2
+                # stage-loop terminalization converts it to FAILED_EXECUTION; it
+                # must never become fallback output on a dead provider.
+                raise
             except Exception as e:
                 logger.warning("Refinement of %s failed: %s", section_name, e)
 

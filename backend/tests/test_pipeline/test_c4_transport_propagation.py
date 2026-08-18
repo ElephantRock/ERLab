@@ -123,6 +123,30 @@ class TestHelperLayerPropagation:
                 proposal_id=1,
             ))
 
+
+    def test_synthesis_service_specimen_sequence_re_raises(self):
+        """The exact specimen path: monolithic call returns HTTP-200-empty
+        (HB-02 None, untouched by design), the service falls back to
+        section-wise, and the quota-exhausted transport error raised
+        there must escape instead of producing a partial paper."""
+        from backend.pipeline.synthesis.synthesis_service import (
+            synthesize_paper,
+        )
+
+        provider = MagicMock()
+        provider.complete = AsyncMock(
+            side_effect=["", "1. Introduction", _gte()]
+        )
+        with pytest.raises(GatewayTransportError):
+            asyncio.run(synthesize_paper(
+                provider=provider,
+                proposal_text="proposal text",
+                source_papers=[],
+                source_ids=[],
+                domain="machine learning",
+                proposal_id=1,
+            ))
+
     def test_pipeline_evaluator_debate_re_raises(self):
         from backend.pipeline.evaluation.pipeline_evaluator import (
             PipelineEvaluator,
