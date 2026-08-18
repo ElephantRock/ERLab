@@ -27,6 +27,7 @@ import logging
 from collections.abc import Callable
 from dataclasses import dataclass, field
 
+from backend.pipeline.gateway.transport import GatewayTransportError
 from backend.pipeline.synthesis.paper_synthesizer import PaperSynthesizer
 from backend.pipeline.synthesis.section_wise_synthesizer import (
     DEFAULT_SECTIONS,
@@ -162,6 +163,12 @@ async def synthesize_paper(
     except (TimeoutError, asyncio.CancelledError):
         logger.warning("Monolithic synthesis timed out after %.0fs", timer.elapsed)
         result = None
+    except GatewayTransportError:
+        # Case-4 R2 (adjudicated GENERIC_PRODUCT_DEFECT, 2026-08-18): a
+        # typed provider/transport failure must keep its identity. The Q2
+        # stage-loop terminalization converts it to FAILED_EXECUTION; it
+        # must never become fallback output on a dead provider.
+        raise
     except Exception as e:
         logger.warning("Monolithic synthesis failed: %s", e)
         result = None
@@ -216,6 +223,12 @@ async def synthesize_paper(
     except (TimeoutError, asyncio.CancelledError):
         logger.warning("Outline generation timed out")
         outline = "Standard academic paper structure"
+    except GatewayTransportError:
+        # Case-4 R2 (adjudicated GENERIC_PRODUCT_DEFECT, 2026-08-18): a
+        # typed provider/transport failure must keep its identity. The Q2
+        # stage-loop terminalization converts it to FAILED_EXECUTION; it
+        # must never become fallback output on a dead provider.
+        raise
     except Exception as e:
         logger.warning("Outline generation failed: %s", e)
         outline = "Standard academic paper structure"

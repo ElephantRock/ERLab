@@ -29,6 +29,7 @@ from backend.pipeline.evaluation.scorer import (
     ScoreDimension,
     ScoreResult,
 )
+from backend.pipeline.gateway.transport import GatewayTransportError
 
 logger = logging.getLogger(__name__)
 
@@ -153,6 +154,12 @@ class PipelineEvaluator:
         if self._debate and (gate_result is None or gate_result.passed):
             try:
                 debate_result = await self._debate.debate(idea)
+            except GatewayTransportError:
+                # Case-4 R2 (adjudicated GENERIC_PRODUCT_DEFECT, 2026-08-18): a
+                # typed provider/transport failure must keep its identity. The Q2
+                # stage-loop terminalization converts it to FAILED_EXECUTION; it
+                # must never become fallback output on a dead provider.
+                raise
             except Exception as e:
                 logger.warning("Debate failed for %s: %s", target_id, e)
 

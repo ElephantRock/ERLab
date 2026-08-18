@@ -10,6 +10,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
+from backend.pipeline.gateway.transport import GatewayTransportError
 from backend.pipeline.generation.models import ResearchIdea
 from backend.pipeline.ingestion.chunker import DocumentChunk  # noqa: F401 — re-exported by stages
 from backend.pipeline.novelty.novelty_checker import (
@@ -2269,6 +2270,12 @@ class AdversarialReviewStage(PipelineStage):
                     self._review_proposal(idx, proposal, ctx),
                     timeout=self.PER_PROPOSAL_TIMEOUT,
                 )
+            except GatewayTransportError:
+                # Case-4 R2 (adjudicated GENERIC_PRODUCT_DEFECT, 2026-08-18): a
+                # typed provider/transport failure must keep its identity. The Q2
+                # stage-loop terminalization converts it to FAILED_EXECUTION; it
+                # must never become fallback output on a dead provider.
+                raise
             except Exception as e:
                 logger.warning(
                     "Adversarial review failed for proposal %d (non-fatal, HB-03): %s",
@@ -2769,6 +2776,12 @@ class PaperSynthesisStage(PipelineStage):
                 metadata["full_paper"] = None
                 metadata["synthesis_state"] = "failed"
                 self._set_metadata(proposal, metadata)
+            except GatewayTransportError:
+                # Case-4 R2 (adjudicated GENERIC_PRODUCT_DEFECT, 2026-08-18): a
+                # typed provider/transport failure must keep its identity. The Q2
+                # stage-loop terminalization converts it to FAILED_EXECUTION; it
+                # must never become fallback output on a dead provider.
+                raise
             except Exception as e:
                 logger.warning(
                     "Paper synthesis failed for proposal %d (non-fatal, HB-02): %s",
@@ -4352,12 +4365,11 @@ class ExperimentExecutionStage(PipelineStage):
         """
         import json
 
+        from sqlalchemy import select
+
         from backend.db.database import get_session
         from backend.db.models import ExperimentResult as ExperimentResultDB
-        from backend.db.models import Proposal
-        from backend.db.models import Idea
-        from backend.db.models import PipelineRun
-        from sqlalchemy import select
+        from backend.db.models import Idea, Proposal
 
         # Resolve real persisted proposal + idea identity.
         # Use proposal_idx to find the selected idea, then find the

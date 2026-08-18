@@ -7,6 +7,7 @@ to fix issues when validation fails.
 
 import logging
 
+from backend.pipeline.gateway.transport import GatewayTransportError
 from backend.pipeline.governance.contracts import (
     DEFAULT_CONTRACTS,
     BoundaryContract,
@@ -159,6 +160,12 @@ class OutputValidator:
                 )
             return checks
 
+        except GatewayTransportError:
+            # Case-4 R2 (adjudicated GENERIC_PRODUCT_DEFECT, 2026-08-18): a
+            # typed provider/transport failure must keep its identity. The Q2
+            # stage-loop terminalization converts it to FAILED_EXECUTION; it
+            # must never become fallback output on a dead provider.
+            raise
         except Exception as e:
             logger.error("Governance LLM check failed: %s", e)
             return []
