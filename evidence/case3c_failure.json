@@ -1,0 +1,32 @@
+{
+  "case": "Case 3C \u2014 third qualification attempt (on Q1)",
+  "decision": "RUN FAIL \u2014 preserved as specimen (investigated under frozen criteria)",
+  "recorded_at": "2026-08-17T06:12:06.555808+00:00",
+  "frozen_head": "00c1050f7b63e0e5a239ef5670632bcc55532ad0 (Q1)",
+  "manifest_sha256": "86f0721f5a40421204e73e6038cab1f7c28b8931d42a3672bdf9f11de2eb1501",
+  "harness_sha256": "d6d300c1e6034b0e75e8b554f4acff6c41ef0f092e17910b652946b04f2b463f (unchanged)",
+  "run": {
+    "run_id_str": "run_20260817_075852",
+    "elapsed_s": 4037.1,
+    "outcome": "succeeded (orchestrator), 2 ideas, capability tabular_robust_regression_v1, 2/2 experiments success"
+  },
+  "failure": "No paper was synthesized: both proposal syntheses timed out at 300s (recovered as short content per contract), monolithic paper synthesis timed out at 400s, and the sectioned fallback timed out on every section (0/7 checkpointed) \u2014 structural validation failed, paper synthesis failed, evaluation never ran (eval=None). The harness correctly FAILed closed on the final ready check.",
+  "architecture_composed_correctly": "Capability #2 autonomously selected; both governed experiments executed and persisted. The failure is confined to common-path long-form synthesis under run-time conditions.",
+  "investigation": {
+    "model_health_post_run": "long-form generation probe healthy: 600 tokens in 23.6s (25.4 tok/s), 2000-cap in 41.8s \u2014 timeouts NOT reproducible after the run",
+    "historical_context": "300s proposal-synthesis timeouts appear in every prior run including successful ones; monolithic 400s timeout is pre-existing; total section failure is new to this attempt",
+    "empty_responses": "22 'Empty LLM response' events \u2014 these flow through extract_json() at the CALLER level (plain-completion-then-parse paths), NOT the structured_output paths wrapped by the Q1 fix; 0 retry-exhaustion events from the wrapped paths",
+    "hypothesis": "progressive model-server slowdown during the run window (sustained GPU load / contention), not reproducible post-run; preflight lacked a long-form throughput gate"
+  },
+  "harness_flaw_documented": "STEP6 logged 'ready -> no remediation (Path A)' for eval=None \u2014 the policy keyed on =='blocked' without an explicit None branch. The final ready check caught it, so the verdict is unaffected (repair is only legal when blocked; with no paper there is nothing to repair). The sealed harness cannot change mid-attempt; the successor harness handles None explicitly.",
+  "corrections_for_next_attempt": [
+    "Preflight hard gate: long-form generation throughput (the 3C gap \u2014 structured battery passed while long-form failed)",
+    "Harness v2: explicit eval-None branch (FAIL: no evaluation \u2014 nothing produced to repair); all other policy unchanged",
+    "Bound: if the next attempt fails the same way, STOP and report rather than loop"
+  ],
+  "specimen": [
+    "evidence/case3c_specimen.db",
+    "evidence/case3c_run.log",
+    "evidence/case3_result.json (overwritten by this attempt)"
+  ]
+}

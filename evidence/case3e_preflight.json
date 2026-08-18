@@ -1,0 +1,64 @@
+{
+  "phase": "C3-5 preflight (Case 3E on Q2; RE-RUN after endpoint correction)",
+  "captured_at": "2026-08-17T11:45:39.197356+00:00",
+  "gates": {
+    "embedding": {
+      "ok": true
+    },
+    "certification_lookup": {
+      "ok": true
+    },
+    "evaluator_provider": {
+      "ok": true
+    },
+    "fresh_db": {
+      "ok": true
+    },
+    "frozen_head_q2": {
+      "ok": true
+    },
+    "clean_tracked_tree": {
+      "ok": true
+    },
+    "manifest3e_seal": {
+      "ok": true
+    },
+    "harness_seal": {
+      "ok": true
+    },
+    "criterion12_pre_resolved": {
+      "ok": true
+    },
+    "capability_registration": {
+      "ok": true
+    },
+    "selection_unique_regression": {
+      "ok": true
+    },
+    "two_regression_datasets": {
+      "ok": true
+    },
+    "entrypoint_hash": {
+      "ok": true
+    },
+    "dataset_hash": {
+      "ok": true
+    },
+    "q2_readiness_gate": {
+      "ok": true,
+      "detail": "qwen/qwen3-4b-2507 ctx=32768 at http://100.64.0.2:1234"
+    },
+    "longform_throughput": {
+      "ok": true
+    },
+    "provider_structured_battery_8x": {
+      "ok": true
+    }
+  },
+  "endpoint_correction": "see evidence/case3e_endpoint_discovery.json \u2014 .env pointed at dead .1; corrected to live .2 before this preflight; no production change",
+  "class_state": {
+    "class1_research_fresh": "new DB (0 runs); 3D runtime archived; 3D specimen preserved as evidence/case3d_specimen.db",
+    "class2_operating_preserved": "model_certification + model_assignments.json; LM Studio serving both models AT THE CONFIGURED ENDPOINT; governed datasets; both capabilities",
+    "class3_recorded_not_gated": "EmbeddingProfile rows absent"
+  }
+}

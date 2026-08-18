@@ -1,0 +1,7 @@
+{
+  "discovered_at": "2026-08-17T11:35:50.101861+00:00",
+  "finding": "EROCK_LMSTUDIO_BASE_URL was http://100.64.0.1:1234 (unreachable; probe 000). The live LM Studio \u2014 this host, 100.64.0.2, with the certified qwen/qwen3-4b-2507 loaded \u2014 was NEVER the configured production endpoint. All prior evidence-side preflights probed .2 directly (hardcoded), so they passed while production code called .1.",
+  "retroactive_explanation": "This single misalignment coherently explains 3B-3D: gateway calls to .1 failed -> pre-Q2 they became success-shaped empty content -> extract_json('') -> 0 ideas (3B/3D); long-form work fell back to the inner GLM provider, whose 300-400s timeouts shaped 3C. The owner's observation that LM Studio wasn't running was about the endpoint the pipeline actually used.",
+  "why_q2_caught_it": "The Q2 readiness gate is the first gate that uses the PRODUCTION settings URL rather than a hardcoded probe address. It failed its first live use \u2014 by design.",
+  "correction": "Environment only: .env EROCK_LMSTUDIO_BASE_URL corrected to http://100.64.0.2:1234 (the live host; verified 200 with the certified model). No production change; Q2 unchanged."
+}
