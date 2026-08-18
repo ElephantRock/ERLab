@@ -234,6 +234,12 @@ class TestGovernedRepairPropagation:
             yield session
 
         monkeypatch.setattr(pr, "get_session", _fake_session)
+        # CI has no EROCK_OPENAI_API_KEY; the provider built inside
+        # auto_revise_paper is irrelevant to this test.
+        import backend.providers.provider_factory as pf
+        monkeypatch.setattr(
+            pf, "get_generation_provider", lambda settings: MagicMock()
+        )
 
         async def _raising_synthesize(self, **kwargs):
             raise _gte()
