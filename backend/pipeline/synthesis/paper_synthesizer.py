@@ -10,6 +10,7 @@ import logging
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
+from backend.pipeline.gateway.transport import GatewayTransportError
 from backend.providers.base import LLMProvider
 
 logger = logging.getLogger(__name__)
@@ -143,6 +144,12 @@ class PaperSynthesizer:
                 # paper, large enough that reasoning overhead cannot self-truncate.
                 max_tokens=131072,
             )
+        except GatewayTransportError:
+            # Case-4 R2 (adjudicated GENERIC_PRODUCT_DEFECT, 2026-08-18): a
+            # typed provider/transport failure must keep its identity. The Q2
+            # stage-loop terminalization converts it to FAILED_EXECUTION; it
+            # must never become fallback output on a dead provider.
+            raise
         except Exception as e:
             logger.warning("Paper synthesis LLM call failed (HB-02): %s", e)
             return None

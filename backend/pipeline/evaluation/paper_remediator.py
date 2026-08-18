@@ -25,6 +25,7 @@ from dataclasses import dataclass
 
 from backend.db.database import get_session
 from backend.db.models import ExperimentResult, PaperRevision, Proposal
+from backend.pipeline.gateway.transport import GatewayTransportError
 
 logger = logging.getLogger(__name__)
 
@@ -274,6 +275,12 @@ async def auto_revise_paper(
             ),
             timeout=timeout_seconds,
         )
+    except GatewayTransportError:
+        # Case-4 R2 (adjudicated GENERIC_PRODUCT_DEFECT, 2026-08-18): a
+        # typed provider/transport failure must keep its identity. The Q2
+        # stage-loop terminalization converts it to FAILED_EXECUTION; it
+        # must never become fallback output on a dead provider.
+        raise
     except Exception as e:
         logger.error("Revision synthesis failed: %s", e)
         revised_paper_md = None

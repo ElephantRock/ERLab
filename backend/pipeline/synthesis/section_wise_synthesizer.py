@@ -21,6 +21,7 @@ import re
 from dataclasses import asdict, dataclass
 from pathlib import Path
 
+from backend.pipeline.gateway.transport import GatewayTransportError
 from backend.providers.base import LLMProvider
 
 logger = logging.getLogger(__name__)
@@ -185,6 +186,12 @@ class SectionWiseSynthesizer:
                     section_title, len(sections), len(DEFAULT_SECTIONS),
                 )
                 break
+            except GatewayTransportError:
+                # Case-4 R2 (adjudicated GENERIC_PRODUCT_DEFECT, 2026-08-18): a
+                # typed provider/transport failure must keep its identity. The Q2
+                # stage-loop terminalization converts it to FAILED_EXECUTION; it
+                # must never become fallback output on a dead provider.
+                raise
             except Exception as e:
                 logger.warning("Section '%s' failed (non-fatal): %s", section_title, e)
                 # Continue to next section; the failed section is simply omitted
@@ -271,6 +278,12 @@ class SectionWiseSynthesizer:
                 max_tokens=1024,
             )
             return result.strip() if result else "Standard academic paper structure"
+        except GatewayTransportError:
+            # Case-4 R2 (adjudicated GENERIC_PRODUCT_DEFECT, 2026-08-18): a
+            # typed provider/transport failure must keep its identity. The Q2
+            # stage-loop terminalization converts it to FAILED_EXECUTION; it
+            # must never become fallback output on a dead provider.
+            raise
         except Exception as e:
             logger.warning("Outline generation failed: %s — using default", e)
             return "Standard academic paper structure"
@@ -500,6 +513,12 @@ class SectionWiseSynthesizer:
                         "Section '%s': schema validation failed on attempt 1, retrying",
                         section_title,
                     )
+        except GatewayTransportError:
+            # Case-4 R2 (adjudicated GENERIC_PRODUCT_DEFECT, 2026-08-18): a
+            # typed provider/transport failure must keep its identity. The Q2
+            # stage-loop terminalization converts it to FAILED_EXECUTION; it
+            # must never become fallback output on a dead provider.
+            raise
         except Exception as e:
             logger.info(
                 "Structured output for '%s' failed (%s), trying retry",
@@ -558,6 +577,12 @@ class SectionWiseSynthesizer:
                         claim_types_present=types_present,
                         generation_mode="structured",
                     )
+        except GatewayTransportError:
+            # Case-4 R2 (adjudicated GENERIC_PRODUCT_DEFECT, 2026-08-18): a
+            # typed provider/transport failure must keep its identity. The Q2
+            # stage-loop terminalization converts it to FAILED_EXECUTION; it
+            # must never become fallback output on a dead provider.
+            raise
         except Exception as e:
             logger.info(
                 "Structured retry for '%s' also failed (%s), using prose fallback",
@@ -596,6 +621,12 @@ class SectionWiseSynthesizer:
                 # server-side max (z.ai code 1210 rejects >131072).
                 max_tokens=min(131072, max(max_output, 8192)),
             )
+        except GatewayTransportError:
+            # Case-4 R2 (adjudicated GENERIC_PRODUCT_DEFECT, 2026-08-18): a
+            # typed provider/transport failure must keep its identity. The Q2
+            # stage-loop terminalization converts it to FAILED_EXECUTION; it
+            # must never become fallback output on a dead provider.
+            raise
         except Exception as e:
             logger.warning("Section '%s' generation failed: %s", section_title, e)
             return SectionDraft(

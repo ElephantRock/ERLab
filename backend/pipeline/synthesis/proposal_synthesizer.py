@@ -7,6 +7,7 @@ from pathlib import Path
 from jinja2 import Template
 
 from backend.pipeline.feasibility.feasibility_scorer import FeasibilityReport
+from backend.pipeline.gateway.transport import GatewayTransportError
 from backend.pipeline.generation.models import ResearchIdea
 from backend.pipeline.literature.models import Paper
 from backend.pipeline.novelty.novelty_checker import NoveltyReport
@@ -268,6 +269,12 @@ class ProposalSynthesizer:
             )
             parsed = self._parse_sections(raw_text)
             sections = dict(parsed.sections)
+        except GatewayTransportError:
+            # Case-4 R2 (adjudicated GENERIC_PRODUCT_DEFECT, 2026-08-18): a
+            # typed provider/transport failure must keep its identity. The Q2
+            # stage-loop terminalization converts it to FAILED_EXECUTION; it
+            # must never become fallback output on a dead provider.
+            raise
         except Exception as e:
             logger.error("Full generation failed: %s — falling back to section-by-section", e)
             sections = {}
@@ -285,6 +292,12 @@ class ProposalSynthesizer:
                     # Receipt already collected by main call above
                     if section_text and len(section_text.split()) > len(content.split() if isinstance(content, str) else ""):
                         sections[key] = section_text
+                except GatewayTransportError:
+                    # Case-4 R2 (adjudicated GENERIC_PRODUCT_DEFECT, 2026-08-18): a
+                    # typed provider/transport failure must keep its identity. The Q2
+                    # stage-loop terminalization converts it to FAILED_EXECUTION; it
+                    # must never become fallback output on a dead provider.
+                    raise
                 except Exception as se:
                     logger.warning("Section %s generation failed: %s", section_name, se)
                     if key not in sections:
@@ -466,6 +479,12 @@ class ProposalSynthesizer:
                     logger.warning(
                         "Refinement of %s did not improve — keeping original", section_name
                     )
+            except GatewayTransportError:
+                # Case-4 R2 (adjudicated GENERIC_PRODUCT_DEFECT, 2026-08-18): a
+                # typed provider/transport failure must keep its identity. The Q2
+                # stage-loop terminalization converts it to FAILED_EXECUTION; it
+                # must never become fallback output on a dead provider.
+                raise
             except Exception as e:
                 logger.warning("Refinement of %s failed: %s", section_name, e)
 

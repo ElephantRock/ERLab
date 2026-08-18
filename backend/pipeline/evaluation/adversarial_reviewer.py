@@ -17,6 +17,7 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
 
+from backend.pipeline.gateway.transport import GatewayTransportError
 from backend.providers.base import LLMProvider
 
 logger = logging.getLogger(__name__)
@@ -161,6 +162,12 @@ class AdversarialReviewer:
 
             return self._parse_result(result, round_num)
 
+        except GatewayTransportError:
+            # Case-4 R2 (adjudicated GENERIC_PRODUCT_DEFECT, 2026-08-18): a
+            # typed provider/transport failure must keep its identity. The Q2
+            # stage-loop terminalization converts it to FAILED_EXECUTION; it
+            # must never become fallback output on a dead provider.
+            raise
         except Exception as e:
             logger.warning(
                 "Adversarial review LLM call failed (HB-03): %s — returning fallback score", e,
