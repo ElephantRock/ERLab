@@ -10,7 +10,7 @@ from backend.pipeline.evaluation.proposal_evaluator import ProposalEvaluator
 from backend.pipeline.execution.run_state import RunCheckpoint
 from backend.pipeline.persistence import PipelinePersistence
 from backend.pipeline.reflection.reflector import ReflectionStage
-from backend.pipeline.result import PipelineResult, StageReport
+from backend.pipeline.result import PipelineOutcome, PipelineResult, StageReport
 from backend.pipeline.stages import (
     AdversarialReviewStage,
     CitationAuditStage,
@@ -1017,6 +1017,30 @@ class PipelineOrchestrator:
 
         # Create DB run record
         db_run_id = self._persistence.create_run_record(domain, params, session_id=session_id, run_id=run_id)
+        # Case-4 R1 (adjudicated GENERIC_PRODUCT_DEFECT, 2026-08-18): the
+        # initial run record is the run's persistence authority.
+        # create_run_record() returns None when its insert fails (the
+        # warning is already recorded in persistence warnings). A run that
+        # cannot establish its own run record must fail closed BEFORE any
+        # research stage executes — it must never warn, discard
+        # persistence, run the stages, and finalize as SUCCEEDED.
+        if db_run_id is None:
+            result.outcome = PipelineOutcome.FAILED_EXECUTION
+            result.terminal_stage = "persistence_initialization"
+            result.terminal_reason = (
+                "required initial run record could not be created"
+                " (create_run_record returned None; see persistence"
+                " warnings) — failing closed before research execution"
+            )
+            result.persistence_warnings.extend(
+                list(self._persistence.get_warnings())
+            )
+            logger.error(
+                "Run-record creation failed for run %s — aborting before"
+                " research execution (persistence authority unavailable)",
+                run_id,
+            )
+            return result
 
         # Budget: validate plan and start tracking
         if self._services.budget and self._services.plan_verifier:
