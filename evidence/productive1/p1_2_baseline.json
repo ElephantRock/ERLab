@@ -1,0 +1,47 @@
+{
+  "phase": "P1-2 unchanged-path baseline",
+  "http": 200,
+  "latency_s": 276.5,
+  "repair": {
+    "success": true,
+    "promoted": false,
+    "revision_number": 1,
+    "original_paper_hash": "709558455323500355ec9eca74d14ef27756d5d4c7c97d9c959846484f0e5591",
+    "revised_paper_hash": "ac3929ba3ab6e7d7d4fba14350b6487e3206a0d9a5bb9c111ab079f70f4281df",
+    "findings_count": 3,
+    "findings": [
+      "novelty (score=0.35): The framing\u2014measuring calibration-method *ranking stability* as a function of shift severity\u2014is a reasonable reframing, but the central finding (metrics and methods dissociate; no calibrator dominates) largely confirms what is already established in the cited counterexample literature. The use of iris and wine_quality with Platt/isotonic calibration on from-scratch logistic regression offers little headroom for genuinely new insights about modern shift regimes.",
+      "rigor (score=0.35): No formal loss functions, optimizers, learning rates, regularization, or convergence criteria are specified for the underlying logistic regression or the calibrator fits. Most critically, the covariate-shift construction\u2014what \"severity 0.25/0.5/0.75\" operationally means\u2014is never defined, making the central independent variable unreproducible. There is no statistical significance testing or repeated trials, which is serious given that ECE/AURC estimates on iris-sized data are extremely noisy; limitations are only partially acknowledged.",
+      "Gate finding: numeric_fidelity: [RESULT-6]: Numeric value-fidelity mismatch: [RESULT-6] is rendered as 0.215127 but persisted observed_value is 0.196669. The number; [RESULT-37]: Numeric value-fidelity mismatch: [RESULT-37] is rendered as 333333.0 but persisted observed_value is 0.333333. The numbe; [RESULT-46]: Numeric value-fidelity mismatch: [RESULT-46] is rendered as 0.449834 but persisted observed_value is 0.448188. The numbe; [RESULT-52]: Numeric value-fidelity mismatch: [RESULT-52] is rendered as 0.25 but persisted observed_value is 0.005532. The number ad; [RESULT-56]: Numeric value-fidelity mismatch: [RESULT-56] is rendered as 54878.0 but persisted observed_value is 0.54878. The number ; [RESULT-74]: Numeric value-fidelity mismatch: [RESULT-74] is rendered as 534375.0 but persisted observed_value is 0.534375. The numbe"
+    ]
+  },
+  "evaluation": {
+    "status": "unknown",
+    "paper_hash": "",
+    "gates": []
+  },
+  "revision_lineage": [
+    [
+      0,
+      "blocked",
+      "pipeline",
+      30469,
+      "7095584553235003"
+    ],
+    [
+      1,
+      "blocked",
+      "auto_remediation",
+      34375,
+      "ac3929ba3ab6e7d7"
+    ]
+  ],
+  "rev1_numeric_mismatches": [
+    {
+      "marker": "[RESULT-41]",
+      "claim": "rendered 197.0 beside [RESULT-41]",
+      "metric": "wine_quality.0_0_sigmoid_accuracy"
+    }
+  ],
+  "rev1_mismatch_count": 1
+}
