@@ -1,0 +1,178 @@
+[08:15:43Z] R1 STEP1 provider readiness (production Q2 gate)
+[08:15:45Z] R1 STEP2 orchestrator launch (frozen input)
+C:\Next-Era\Elephant-Rock-Research-Lab\backend\providers\gemini_provider.py:6: FutureWarning: 
+
+All support for the `google.generativeai` package has ended. It will no longer be receiving 
+updates or bug fixes. Please switch to the `google.genai` package as soon as possible.
+See README for more details:
+
+https://github.com/google-gemini/deprecated-generative-ai-python/blob/main/README.md
+
+  import google.generativeai as genai
+Failed to find stale runs: (sqlite3.OperationalError) no such table: pipeline_runs
+[SQL: SELECT pipeline_runs.id AS pipeline_runs_id, pipeline_runs.run_id_str AS pipeline_runs_run_id_str, pipeline_runs.status AS pipeline_runs_status, pipeline_runs.domain AS pipeline_runs_domain, pipeline_runs.config_json AS pipeline_runs_config_json, pipeline_runs.error_message AS pipeline_runs_error_message, pipeline_runs.session_id AS pipeline_runs_session_id, pipeline_runs.current_stage AS pipeline_runs_current_stage, pipeline_runs.stages_completed AS pipeline_runs_stages_completed, pipeline_runs.stage_report_json AS pipeline_runs_stage_report_json, pipeline_runs.cluster_report_json AS pipeline_runs_cluster_report_json, pipeline_runs.tree_data_json AS pipeline_runs_tree_data_json, pipeline_runs.created_at AS pipeline_runs_created_at, pipeline_runs.completed_at AS pipeline_runs_completed_at, pipeline_runs.updated_at AS pipeline_runs_updated_at, pipeline_runs.provenance_version AS pipeline_runs_provenance_version, pipeline_runs.legacy_provenance_reason AS pipeline_runs_legacy_provenance_reason, pipeline_runs.domain_scope_key AS pipeline_runs_domain_scope_key, pipeline_runs.domain_scope_version AS pipeline_runs_domain_scope_version 
+FROM pipeline_runs 
+WHERE pipeline_runs.status = ?]
+[parameters: ('running',)]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+Failed to create DB run record: (sqlite3.OperationalError) no such table: pipeline_runs
+[SQL: SELECT pipeline_runs.id, pipeline_runs.run_id_str, pipeline_runs.status, pipeline_runs.domain, pipeline_runs.config_json, pipeline_runs.error_message, pipeline_runs.session_id, pipeline_runs.current_stage, pipeline_runs.stages_completed, pipeline_runs.stage_report_json, pipeline_runs.cluster_report_json, pipeline_runs.tree_data_json, pipeline_runs.created_at, pipeline_runs.completed_at, pipeline_runs.updated_at, pipeline_runs.provenance_version, pipeline_runs.legacy_provenance_reason, pipeline_runs.domain_scope_key, pipeline_runs.domain_scope_version 
+FROM pipeline_runs 
+WHERE pipeline_runs.run_id_str = ?]
+[parameters: ('run_20260818_111556',)]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+OpenAlex search failed: HTTP 400
+OpenAlex search failed: HTTP 400
+PubMed search failed (HTTP 429): Client error '429 Too Many Requests' for url 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=pubmed&term=Are+calibration-method+rankings+stable+as+covariate-shift+severity+increases%2C+or+do+rank+reversals+occur+in+accuracy%2C+positive-class+expected+calibration+error%2C+and+selective+AURC+across+tabular+classification+datasets%3F+recent+advances&retmax=20&retmode=json&sort=relevance'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429
+PubMed search failed (HTTP 429): Client error '429 Too Many Requests' for url 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=pubmed&term=robustness+calibration+methods+dataset+shift+tabular+classification+positive+class+ECE+evaluation&retmax=20&retmode=json&sort=relevance'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429
+PubMed search failed (HTTP 429): Client error '429 Too Many Requests' for url 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=pubmed&term=calibration+method+ranking+stability+covariate+shift+expected+calibration+error+comparison&retmax=20&retmode=json&sort=relevance'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429
+OpenAlex search failed: HTTP 400
+Search failed for pubmed: HTTPStatusError 429
+Search failed for openalex: HTTPStatusError: Client error '400 Bad Request' for url 'https://api.openalex.org/works?mailto=Nalajmah%40gmail.com&search=Are+calibration-method+rankings+stable+as+covariate-shift+severity+increases%2C+or+do+rank+reversals+occur+in+accuracy%2C+positive-class+expected+calibration+error%2C+and+selective+AURC+across+tabular+classification+datasets%3F+open+problems&per_page=20'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/400
+Search failed for openalex: HTTPStatusError: Client error '400 Bad Request' for url 'https://api.openalex.org/works?mailto=Nalajmah%40gmail.com&search=Are+calibration-method+rankings+stable+as+covariate-shift+severity+increases%2C+or+do+rank+reversals+occur+in+accuracy%2C+positive-class+expected+calibration+error%2C+and+selective+AURC+across+tabular+classification+datasets%3F+recent+advances&per_page=20'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/400
+Search failed for pubmed: HTTPStatusError 429
+Search failed for pubmed: HTTPStatusError 429
+Search failed for openalex: HTTPStatusError: Client error '400 Bad Request' for url 'https://api.openalex.org/works?mailto=Nalajmah%40gmail.com&search=Are+calibration-method+rankings+stable+as+covariate-shift+severity+increases%2C+or+do+rank+reversals+occur+in+accuracy%2C+positive-class+expected+calibration+error%2C+and+selective+AURC+across+tabular+classification+datasets%3F&per_page=20'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/400
+PubMed EFetch failed after ESearch (HTTP 429): Client error '429 Too Many Requests' for url 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=pubmed&id=41756922%2C29395299%2C38636558%2C26648651%2C26441581%2C38187677%2C36135916%2C3286252%2C38726815%2C36454755&retmode=xml'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429
+Search failed for pubmed: EFetch HTTPStatusError 429 after ESearch returned 10 PMID(s)
+LM Studio embedding 400: model=bortunac/text-embedding-bge-m3-embeddings batch=0 inputs=32 status=400 body={"error":"Model reloaded.."} (diagnostic saved to evidence\ingestion_400_diagnostic.json)
+Stage ingestion failed (attempt 1/4), retrying in 1.9s: Embedding provider failed on batch 0: Client error '400 Bad Request' for url 'http://100.64.0.2:1234/v1/embeddings'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/400
+LM Studio embedding 400: model=bortunac/text-embedding-bge-m3-embeddings batch=0 inputs=32 status=400 body={"error":"The model has crashed without additional information. (Exit code: 18446744072635812000)."} (diagnostic saved to evidence\ingestion_400_diagnostic.json)
+Stage ingestion failed (attempt 2/4), retrying in 4.4s: Embedding provider failed on batch 0: Client error '400 Bad Request' for url 'http://100.64.0.2:1234/v1/embeddings'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/400
+LM Studio embedding 400: model=bortunac/text-embedding-bge-m3-embeddings batch=0 inputs=32 status=400 body={"error":"The model has crashed without additional information. (Exit code: 18446744072635812000)."} (diagnostic saved to evidence\ingestion_400_diagnostic.json)
+Stage ingestion failed (attempt 3/4), retrying in 8.1s: Embedding provider failed on batch 0: Client error '400 Bad Request' for url 'http://100.64.0.2:1234/v1/embeddings'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/400
+LM Studio embedding 400: model=bortunac/text-embedding-bge-m3-embeddings batch=0 inputs=32 status=400 body={"error":"The model has crashed without additional information. (Exit code: 18446744072635812000)."} (diagnostic saved to evidence\ingestion_400_diagnostic.json)
+Stage ingestion exhausted 3 retries: Embedding provider failed on batch 0: Client error '400 Bad Request' for url 'http://100.64.0.2:1234/v1/embeddings'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/400
+Stage 'ingestion' failed (continuing pipeline): Embedding provider failed on batch 0: Client error '400 Bad Request' for url 'http://100.64.0.2:1234/v1/embeddings'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/400
+Traceback (most recent call last):
+  File "C:\Next-Era\Elephant-Rock-Research-Lab\backend\pipeline\knowledge\embedding_service.py", line 68, in embed_texts
+    embeddings = await self._provider.embed(batch)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Next-Era\Elephant-Rock-Research-Lab\backend\pipeline\knowledge\embedding_providers.py", line 716, in embed
+    embeddings = await self._wrapped.embed(uncached_texts)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Next-Era\Elephant-Rock-Research-Lab\backend\pipeline\knowledge\embedding_providers.py", line 572, in embed
+    response.raise_for_status()
+    ~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Next-Era\Elephant-Rock-Research-Lab\.venv\Lib\site-packages\httpx\_models.py", line 829, in raise_for_status
+    raise HTTPStatusError(message, request=request, response=self)
+httpx.HTTPStatusError: Client error '400 Bad Request' for url 'http://100.64.0.2:1234/v1/embeddings'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/400
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Next-Era\Elephant-Rock-Research-Lab\backend\pipeline\orchestrator\run_coordinator.py", line 171, in execute_stage_loop
+    should_continue = await self._orch._execute_stage_with_retry(
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        stage, prepared_ctx, checkpoint
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Next-Era\Elephant-Rock-Research-Lab\backend\pipeline\orchestrator\_orchestrator.py", line 1337, in _execute_stage_with_retry
+    return await self._executor.execute_with_retry(stage, ctx, checkpoint)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Next-Era\Elephant-Rock-Research-Lab\backend\pipeline\orchestrator\stage_executor.py", line 74, in execute_with_retry
+    result = await asyncio.wait_for(_run(), timeout=stage_timeout)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\USER\AppData\Roaming\uv\python\cpython-3.14-windows-x86_64-none\Lib\asyncio\tasks.py", line 488, in wait_for
+    return await fut
+           ^^^^^^^^^
+  File "C:\Next-Era\Elephant-Rock-Research-Lab\backend\pipeline\orchestrator\stage_executor.py", line 67, in _run
+    result, retries = await retry_llm_call(
+                      ^^^^^^^^^^^^^^^^^^^^^
+    ...<2 lines>...
+    )
+    ^
+  File "C:\Next-Era\Elephant-Rock-Research-Lab\backend\providers\retry.py", line 54, in retry_llm_call
+    result = await coro_factory()
+             ^^^^^^^^^^^^^^^^^^^^
+  File "C:\Next-Era\Elephant-Rock-Research-Lab\backend\pipeline\stages.py", line 1080, in execute
+    added = await self._store.add_papers(ctx.all_papers, chunks)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Next-Era\Elephant-Rock-Research-Lab\backend\pipeline\knowledge\vector_store.py", line 95, in add_papers
+    all_batch_embeddings = await self._embedding_service.embed_texts(all_batch_texts)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Next-Era\Elephant-Rock-Research-Lab\backend\pipeline\knowledge\embedding_service.py", line 70, in embed_texts
+    raise EmbeddingProviderError(
+        f"Embedding provider failed on batch {i // self._batch_size}: {e}"
+    ) from e
+backend.pipeline.knowledge.embedding_service.EmbeddingProviderError: Embedding provider failed on batch 0: Client error '400 Bad Request' for url 'http://100.64.0.2:1234/v1/embeddings'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/400
+
+C:\Next-Era\Elephant-Rock-Research-Lab\.venv\Lib\site-packages\umap\umap_.py:1952: UserWarning: n_jobs value 1 overridden to 1 by setting random_state. Use no seed for parallelism.
+  warn(
+LM Studio embedding 400: model=bortunac/text-embedding-bge-m3-embeddings batch=0 inputs=1 status=400 body={"error":"Model reloaded.."} (diagnostic saved to evidence\ingestion_400_diagnostic.json)
+Semantic query failed for variant 'Unified confidence guarantees under compound datas': Embedding provider failed on batch 0: Client error '400 Bad Request' for url 'http://100.64.0.2:1234/v1/embeddings'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/400
+LM Studio embedding 400: model=bortunac/text-embedding-bge-m3-embeddings batch=0 inputs=1 status=400 body={"error":"Model reloaded.."} (diagnostic saved to evidence\ingestion_400_diagnostic.json)
+Semantic query failed for variant 'Conformal prediction and selective classification ': Embedding provider failed on batch 0: Client error '400 Bad Request' for url 'http://100.64.0.2:1234/v1/embeddings'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/400
+LM Studio embedding 400: model=bortunac/text-embedding-bge-m3-embeddings batch=0 inputs=1 status=400 body={"error":"The model has crashed without additional information. (Exit code: 18446744072635812000)."} (diagnostic saved to evidence\ingestion_400_diagnostic.json)
+Semantic query failed for variant 'Systematic empirical benchmarking of shift adaptat': Embedding provider failed on batch 0: Client error '400 Bad Request' for url 'http://100.64.0.2:1234/v1/embeddings'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/400
+LM Studio embedding 400: model=bortunac/text-embedding-bge-m3-embeddings batch=0 inputs=1 status=400 body={"error":"The model has crashed without additional information. (Exit code: 18446744072635812000)."} (diagnostic saved to evidence\ingestion_400_diagnostic.json)
+Semantic query failed for variant 'Unified confidence guarantees under compound datas': Embedding provider failed on batch 0: Client error '400 Bad Request' for url 'http://100.64.0.2:1234/v1/embeddings'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/400
+LM Studio embedding 400: model=bortunac/text-embedding-bge-m3-embeddings batch=0 inputs=1 status=400 body={"error":"Model reloaded.."} (diagnostic saved to evidence\ingestion_400_diagnostic.json)
+Semantic query failed for variant 'Conformal prediction and selective classification ': Embedding provider failed on batch 0: Client error '400 Bad Request' for url 'http://100.64.0.2:1234/v1/embeddings'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/400
+LM Studio embedding 400: model=bortunac/text-embedding-bge-m3-embeddings batch=0 inputs=1 status=400 body={"error":"Model reloaded.."} (diagnostic saved to evidence\ingestion_400_diagnostic.json)
+Semantic query failed for variant 'Systematic empirical benchmarking of shift adaptat': Embedding provider failed on batch 0: Client error '400 Bad Request' for url 'http://100.64.0.2:1234/v1/embeddings'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/400
+TreeSearchEngine: expansion failed: sequence item 0: expected str instance, list found
+LM Studio embedding 400: model=bortunac/text-embedding-bge-m3-embeddings batch=0 inputs=1 status=400 body={"error":"The model has crashed without additional information. (Exit code: 18446744072635812000)."} (diagnostic saved to evidence\ingestion_400_diagnostic.json)
+Semantic query failed for variant 'Unified confidence guarantees under compound datas': Embedding provider failed on batch 0: Client error '400 Bad Request' for url 'http://100.64.0.2:1234/v1/embeddings'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/400
+LM Studio embedding 400: model=bortunac/text-embedding-bge-m3-embeddings batch=0 inputs=1 status=400 body={"error":"Model reloaded.."} (diagnostic saved to evidence\ingestion_400_diagnostic.json)
+Semantic query failed for variant 'Conformal prediction and selective classification ': Embedding provider failed on batch 0: Client error '400 Bad Request' for url 'http://100.64.0.2:1234/v1/embeddings'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/400
+LM Studio embedding 400: model=bortunac/text-embedding-bge-m3-embeddings batch=0 inputs=1 status=400 body={"error":"Model reloaded.."} (diagnostic saved to evidence\ingestion_400_diagnostic.json)
+Semantic query failed for variant 'Systematic empirical benchmarking of shift adaptat': Embedding provider failed on batch 0: Client error '400 Bad Request' for url 'http://100.64.0.2:1234/v1/embeddings'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/400
+TreeSearchEngine: expansion failed: sequence item 0: expected str instance, list found
+LM Studio embedding 400: model=bortunac/text-embedding-bge-m3-embeddings batch=0 inputs=1 status=400 body={"error":"Model reloaded.."} (diagnostic saved to evidence\ingestion_400_diagnostic.json)
+Semantic query failed for variant 'CompoundShift: Unified Coverage Guarantees under S': Embedding provider failed on batch 0: Client error '400 Bad Request' for url 'http://100.64.0.2:1234/v1/embeddings'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/400
+LM Studio embedding 400: model=bortunac/text-embedding-bge-m3-embeddings batch=0 inputs=1 status=400 body={"error":"The model has crashed without additional information. (Exit code: 18446744072635812000)."} (diagnostic saved to evidence\ingestion_400_diagnostic.json)
+Semantic query failed for variant 'ShiftBench: A Cross-Modality Benchmark of Adaptati': Embedding provider failed on batch 0: Client error '400 Bad Request' for url 'http://100.64.0.2:1234/v1/embeddings'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/400
+GEval score parse failed: '', defaulting to 0.5
+GEval score parse failed: '', defaulting to 0.5
+GEval score parse failed: '', defaulting to 0.5
+GEval score parse failed: '', defaulting to 0.5
+GEval score parse failed: '', defaulting to 0.5
+GEval score parse failed: '', defaulting to 0.5
+GEval score parse failed: '', defaulting to 0.5
+GEval score parse failed: '', defaulting to 0.5
+GEval score parse failed: '', defaulting to 0.5
+GEval score parse failed: '', defaulting to 0.5
+Proposal synthesis timed out after 300.0s for idea 1: CompoundShift: Unified Coverage Guarantees under S
+Proposal synthesis timed out after 300.0s for idea 2: ShiftBench: A Cross-Modality Benchmark of Adaptati
+CONTRACT VIOLATION: proposal_synthesis — All 2 proposals have very short content (<100 chars) — likely empty LLM responses
+C:\Next-Era\Elephant-Rock-Research-Lab\backend\pipeline\orchestrator\stage_lifecycle.py:453: RuntimeWarning: coroutine 'FaithfulnessScorer.score_proposal' was never awaited
+  logger.debug("Faithfulness scoring skipped: %s", str(e)[:100])
+RuntimeWarning: Enable tracemalloc to get the object allocation traceback
+Adversarial review failed for proposal 0 (non-fatal, HB-03): 
+Adversarial review failed for proposal 1 (non-fatal, HB-03): 
+Monolithic synthesis timed out after 400s
+Section 'Abstract' timed out — checkpointing 0/7 sections
+Structural validation failed: missing required sections ['abstract', 'introduction', 'related_work', 'proposed_method', 'evaluation_plan', 'discussion', 'conclusion'] (completed: 0/7)
+Paper synthesis failed for proposal 0: state=partial_checkpoint error=Missing required sections: ['abstract', 'introduction', 'related_work', 'proposed_method', 'evaluation_plan', 'discussion', 'conclusion']
+Knowledge indexing failed: Object of type Author is not JSON serializable
+[09:18:21Z] R1 STEP2 outcome=succeeded elapsed=3745.1s
+
+[CASE4-R1] DECISION: FAIL
+[CASE4-R1] FAILURE (harness_exception): harness exception: OperationalError('no such table: pipeline_runs')

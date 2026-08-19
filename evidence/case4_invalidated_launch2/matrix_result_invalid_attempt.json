@@ -1,0 +1,33 @@
+{
+  "case": "Case 4 \u2014 bounded serial operational repeatability (C-R-R-C)",
+  "frozen_head": "2ce7a874fc0612d162a37519fdc9282148b65d86",
+  "started_at": "2026-08-18T11:07:34.520549+00:00",
+  "runs": [],
+  "intervention_ledger": {
+    "operator_interventions": 0,
+    "human_decisions_after_launch": 0,
+    "basis": "single sealed invocation; the harness performed every continuation, archive, reset, and fail-fast decision"
+  },
+  "coordinator_log": [
+    "[11:07:18Z] PREFLIGHT product_head: OK",
+    "[11:07:18Z] PREFLIGHT clean_tracked_tree: OK",
+    "[11:07:18Z] PREFLIGHT untracked_only_evidence: OK",
+    "[11:07:18Z] PREFLIGHT no_product_delta_vs_product_head: OK",
+    "[11:07:18Z] PREFLIGHT manifest_seal: OK",
+    "[11:07:18Z] PREFLIGHT harness_seal: OK",
+    "[11:07:18Z] PREFLIGHT controls_seal: OK",
+    "[11:07:19Z] PREFLIGHT api_port_free: OK",
+    "[11:07:22Z] PREFLIGHT provider_readiness_production: OK",
+    "[11:07:22Z] PREFLIGHT certification_assignment_identity: OK",
+    "[11:07:25Z] PREFLIGHT embedding_availability: OK",
+    "[11:07:32Z] PREFLIGHT evaluator_availability: OK",
+    "[11:07:32Z] PREFLIGHT capability_registration: OK",
+    "[11:07:32Z] PREFLIGHT dataset_registration: OK",
+    "[11:07:34Z] PREFLIGHT PASS \u2014 fresh state established, baseline snapshotted"
+  ],
+  "harness_sha256": "548ff31e023574dd8ca1b14659033153201d78a8776f3667f2654427bae97618",
+  "invalid_reason": "tracked tree dirty: ['M evidence/case4_preflight.json']",
+  "finished_at": "2026-08-18T11:07:34.575581+00:00",
+  "verdict": "INVALID_ATTEMPT",
+  "failure_subtype": "product_head"
+}

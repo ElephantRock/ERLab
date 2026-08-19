@@ -1,0 +1,78 @@
+INFO:     Started server process [31768]
+INFO:     Waiting for application startup.
+Sentry DSN not configured — error monitoring disabled
+S2_API_KEY not set. Semantic Scholar API will be rate-limited (429 errors). Get a key at https://www.semanticscholar.org/product/api#api-key
+Governance approval manager initialized
+GPU detected: AMD Radeon 780M Graphics (2.0 GB VRAM, 2.0 GB available)
+GPU VRAM override: 12288 MB
+GPU: AMD Radeon 780M Graphics (12.0 GB VRAM)
+HTTP Request: GET https://api.z.ai/api/coding/paas/v4/v1/models "HTTP/1.1 404 Not Found"
+OpenAI-compatible at https://api.z.ai/api/coding/paas/v4 returned 404
+OpenAI discovery empty at https://api.z.ai/api/coding/paas/v4 — registering model_override 'glm-5.2' as cloud model
+Model catalog: 1 models discovered across 1 endpoints
+No model meets requirements for stage 'adversarial_review' (min_ctx=8192, json=True, tools=False, thinking=False, excluded={'glm-5.2'})
+Graceful degradation: using glm-5.2 for stage 'adversarial_review'
+======================================================================
+MODEL ASSIGNMENTS (Universal Model Manager)
+======================================================================
+Hardware: AMD Radeon 780M Graphics (12.0 GB VRAM)
+Catalog: 1 models discovered (1 loaded)
+----------------------------------------------------------------------
+  ● adversarial_review        → glm-5.2                                  (cloud, cloud, 195K ctx)
+  ● citation_audit            → glm-5.2                                  (cloud, cloud, 195K ctx)
+  ● deepening                 → glm-5.2                                  (cloud, cloud, 195K ctx)
+  ● evaluation                → glm-5.2                                  (cloud, cloud, 195K ctx)
+  ● feasibility_scoring       → glm-5.2                                  (cloud, cloud, 195K ctx)
+  ● gap_analysis              → glm-5.2                                  (cloud, cloud, 195K ctx)
+  ● gap_reflection            → glm-5.2                                  (cloud, cloud, 195K ctx)
+  ● governance                → glm-5.2                                  (cloud, cloud, 195K ctx)
+  ● idea_generation           → glm-5.2                                  (cloud, cloud, 195K ctx)
+  ● idea_reflection           → glm-5.2                                  (cloud, cloud, 195K ctx)
+  ● ingestion                 → glm-5.2                                  (cloud, cloud, 195K ctx)
+  ● literature_search         → glm-5.2                                  (cloud, cloud, 195K ctx)
+  ● novelty_checking          → glm-5.2                                  (cloud, cloud, 195K ctx)
+  ● paper_synthesis           → glm-5.2                                  (cloud, cloud, 195K ctx)
+  ● proposal_synthesis        → glm-5.2                                  (cloud, cloud, 195K ctx)
+  ● query_generation          → glm-5.2                                  (cloud, cloud, 195K ctx)
+  ● reranking                 → glm-5.2                                  (cloud, cloud, 195K ctx)
+======================================================================
+Universal Model Manager initialized
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:8768 (Press CTRL+C to quit)
+{"method": "GET", "path": "/health", "status": 200, "elapsed_ms": 10.84, "event": "request", "level": "info", "timestamp": "2026-08-18T12:28:32.315720Z"}
+INFO:     127.0.0.1:56022 - "GET /health HTTP/1.1" 200 OK
+C:\Next-Era\Elephant-Rock-Research-Lab\backend\providers\gemini_provider.py:6: FutureWarning: 
+
+All support for the `google.generativeai` package has ended. It will no longer be receiving 
+updates or bug fixes. Please switch to the `google.genai` package as soon as possible.
+See README for more details:
+
+https://github.com/google-gemini/deprecated-generative-ai-python/blob/main/README.md
+
+  import google.generativeai as genai
+HTTP Request: POST https://api.z.ai/api/coding/paas/v4/chat/completions "HTTP/1.1 429 Too Many Requests"
+Retrying request to /chat/completions in 0.430296 seconds
+HTTP Request: POST https://api.z.ai/api/coding/paas/v4/chat/completions "HTTP/1.1 429 Too Many Requests"
+Retrying request to /chat/completions in 0.975152 seconds
+HTTP Request: POST https://api.z.ai/api/coding/paas/v4/chat/completions "HTTP/1.1 429 Too Many Requests"
+Retry 1/3 after 28.9s (status=429, decision=cooldown): Error code: 429 - {'error': {'code': '1308', 'message': 'Usage limit reached for 5 hour. Your limit will reset at 2026-08-18 21:09:52'}}
+HTTP Request: POST https://api.z.ai/api/coding/paas/v4/chat/completions "HTTP/1.1 429 Too Many Requests"
+Retrying request to /chat/completions in 0.498655 seconds
+HTTP Request: POST https://api.z.ai/api/coding/paas/v4/chat/completions "HTTP/1.1 429 Too Many Requests"
+Retrying request to /chat/completions in 0.792527 seconds
+HTTP Request: POST https://api.z.ai/api/coding/paas/v4/chat/completions "HTTP/1.1 429 Too Many Requests"
+Retry 2/3 after 30.8s (status=429, decision=cooldown): Error code: 429 - {'error': {'code': '1308', 'message': 'Usage limit reached for 5 hour. Your limit will reset at 2026-08-18 21:09:52'}}
+HTTP Request: POST https://api.z.ai/api/coding/paas/v4/chat/completions "HTTP/1.1 429 Too Many Requests"
+Retrying request to /chat/completions in 0.390902 seconds
+HTTP Request: POST https://api.z.ai/api/coding/paas/v4/chat/completions "HTTP/1.1 429 Too Many Requests"
+Retrying request to /chat/completions in 0.780894 seconds
+HTTP Request: POST https://api.z.ai/api/coding/paas/v4/chat/completions "HTTP/1.1 429 Too Many Requests"
+Retry 3/3 after 31.4s (status=429, decision=cooldown): Error code: 429 - {'error': {'code': '1308', 'message': 'Usage limit reached for 5 hour. Your limit will reset at 2026-08-18 21:09:52'}}
+HTTP Request: POST https://api.z.ai/api/coding/paas/v4/chat/completions "HTTP/1.1 429 Too Many Requests"
+Retrying request to /chat/completions in 0.383127 seconds
+HTTP Request: POST https://api.z.ai/api/coding/paas/v4/chat/completions "HTTP/1.1 429 Too Many Requests"
+Retrying request to /chat/completions in 0.836543 seconds
+HTTP Request: POST https://api.z.ai/api/coding/paas/v4/chat/completions "HTTP/1.1 429 Too Many Requests"
+Paper synthesis LLM call failed (HB-02): Error code: 429 - {'error': {'code': '1308', 'message': 'Usage limit reached for 5 hour. Your limit will reset at 2026-08-18 21:09:52'}}
+{"method": "POST", "path": "/api/v1/ideas/2/paper/repair", "status": 200, "elapsed_ms": 108006.98, "event": "request", "level": "info", "timestamp": "2026-08-18T12:30:20.326745Z"}
+INFO:     127.0.0.1:56023 - "POST /api/v1/ideas/2/paper/repair HTTP/1.1" 200 OK

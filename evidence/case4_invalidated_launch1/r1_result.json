@@ -1,0 +1,85 @@
+{
+  "case": "Case 4 \u2014 matrix run R1 (case2_calibration)",
+  "frozen_head": "d4e3125786f23c710d794d741e792aab24dd0f06",
+  "config": {
+    "label": "R1",
+    "family": "case2_calibration",
+    "expected_capability": "tabular_calibration_selective_v1",
+    "domain": "Robust confidence estimation under dataset shift",
+    "research_question": "Are calibration-method rankings stable as covariate-shift severity increases, or do rank reversals occur in accuracy, positive-class expected calibration error, and selective AURC across tabular classification datasets?",
+    "activation": "autonomous_experiment_enabled=True only"
+  },
+  "started_at": "2026-08-18T08:15:43.067264+00:00",
+  "steps": [
+    {
+      "step": "1",
+      "readiness": {
+        "required": true,
+        "ready": true,
+        "errors": [],
+        "model": ""
+      }
+    },
+    {
+      "step": "2",
+      "orchestrator": {
+        "run_id": "run_20260818_111556",
+        "outcome": "succeeded",
+        "outcome_is_success": true,
+        "elapsed_s": 3745.1,
+        "params_keys": [
+          "autonomous_experiment_design",
+          "autonomous_experiment_enabled",
+          "empirical_selection",
+          "generation_rounds",
+          "ideas_per_round",
+          "max_gaps",
+          "quality_settings"
+        ],
+        "auto_design_status": "designed"
+      }
+    }
+  ],
+  "operator_interventions": 0,
+  "failure": "harness exception: OperationalError('no such table: pipeline_runs')",
+  "finished_at": "2026-08-18T09:18:21.408251+00:00",
+  "decision": "FAIL",
+  "failure_type": "harness_exception",
+  "subtype_group": "invalid_attempt",
+  "facts": {
+    "label": "R1",
+    "expected_capability": "tabular_calibration_selective_v1",
+    "provider_ready": true,
+    "outcome": "succeeded",
+    "outcome_is_success": true,
+    "design_status": null,
+    "capability_id": null,
+    "n_specs": 0,
+    "spec_ids": [],
+    "spec_ids_complete": false,
+    "experiments_success": 0,
+    "method_facts_count": 0,
+    "method_facts_keys": [],
+    "eval_state": null,
+    "repair_invoked": false,
+    "final_eval_status": null,
+    "gates_raw": {},
+    "gates_set_ok": false,
+    "gates_all_passed": false,
+    "revision_rows": [],
+    "revisions_preserved": false,
+    "freeze_state": null,
+    "release_eligible": false,
+    "E": "",
+    "F": "",
+    "R": "",
+    "H": "",
+    "release_equals_current": false,
+    "frozen_eval_status": null
+  },
+  "log": [
+    "[08:15:43Z] R1 STEP1 provider readiness (production Q2 gate)",
+    "[08:15:45Z] R1 STEP2 orchestrator launch (frozen input)",
+    "[09:18:21Z] R1 STEP2 outcome=succeeded elapsed=3745.1s"
+  ]
+}

@@ -1,0 +1,146 @@
+{
+  "case": "Case 4 \u2014 matrix run R1 (case2_calibration)",
+  "frozen_head": "2ce7a874fc0612d162a37519fdc9282148b65d86",
+  "config": {
+    "label": "R1",
+    "family": "case2_calibration",
+    "expected_capability": "tabular_calibration_selective_v1",
+    "domain": "Robust confidence estimation under dataset shift",
+    "research_question": "Are calibration-method rankings stable as covariate-shift severity increases, or do rank reversals occur in accuracy, positive-class expected calibration error, and selective AURC across tabular classification datasets?",
+    "activation": "autonomous_experiment_enabled=True only"
+  },
+  "started_at": "2026-08-18T12:01:42.385232+00:00",
+  "steps": [
+    {
+      "step": "1",
+      "readiness": {
+        "required": true,
+        "ready": true,
+        "errors": [],
+        "model": ""
+      }
+    },
+    {
+      "step": "2",
+      "orchestrator": {
+        "run_id": "run_20260818_150154",
+        "outcome": "succeeded",
+        "outcome_is_success": true,
+        "elapsed_s": 1592.3,
+        "params_keys": [
+          "autonomous_experiment_design",
+          "autonomous_experiment_enabled",
+          "empirical_selection",
+          "generation_rounds",
+          "ideas_per_round",
+          "max_gaps",
+          "quality_settings"
+        ],
+        "auto_design_status": "designed"
+      }
+    },
+    {
+      "step": "3-6",
+      "design_status": "designed",
+      "capability_id": "tabular_calibration_selective_v1",
+      "n_specs": 2,
+      "spec_ids": [
+        "auto-classification-iris",
+        "auto-classification-wine_quality"
+      ],
+      "method_facts_count": 4,
+      "method_facts_persisted_pre_remediation": true
+    },
+    {
+      "step": "5-7",
+      "experiments_success": 2,
+      "experiments_expected": 2,
+      "initial_eval_status": "blocked",
+      "markers": 74
+    },
+    {
+      "step": "7",
+      "remediation": {
+        "invoked": true,
+        "http": 200,
+        "promoted": false,
+        "eval_status": "unknown"
+      }
+    }
+  ],
+  "operator_interventions": 0,
+  "proposal_id": 2,
+  "idea_id": 2,
+  "pipeline_run_id": 1,
+  "final_eval_status": "blocked",
+  "final_gates": {
+    "provenance": true,
+    "scope_alignment": "on_scope",
+    "conclusion_support": "unavailable",
+    "experiment_alignment": true,
+    "numeric_fidelity": true,
+    "method_fidelity": false
+  },
+  "failure": "final evaluation/gates gate failed: remediation (status=blocked, gates={'provenance': True, 'scope_alignment': 'on_scope', 'conclusion_support': 'unavailable', 'experiment_alignment': True, 'numeric_fidelity': True, 'method_fidelity': False})",
+  "finished_at": "2026-08-18T12:30:20.330925+00:00",
+  "decision": "FAIL",
+  "failure_type": "remediation",
+  "subtype_group": "assurance_remediation",
+  "facts": {
+    "label": "R1",
+    "expected_capability": "tabular_calibration_selective_v1",
+    "provider_ready": true,
+    "outcome": "succeeded",
+    "outcome_is_success": true,
+    "design_status": "designed",
+    "capability_id": "tabular_calibration_selective_v1",
+    "n_specs": 2,
+    "spec_ids": [
+      "auto-classification-iris",
+      "auto-classification-wine_quality"
+    ],
+    "spec_ids_complete": true,
+    "experiments_success": 2,
+    "method_facts_count": 4,
+    "method_facts_keys": [
+      "aurc_definition",
+      "base_model",
+      "calibration_scheme",
+      "ece_definition"
+    ],
+    "eval_state": "blocked",
+    "repair_invoked": true,
+    "final_eval_status": "blocked",
+    "gates_raw": {
+      "provenance": true,
+      "scope_alignment": "on_scope",
+      "conclusion_support": "unavailable",
+      "experiment_alignment": true,
+      "numeric_fidelity": true,
+      "method_fidelity": false
+    },
+    "gates_set_ok": true,
+    "gates_all_passed": false,
+    "revision_rows": [],
+    "revisions_preserved": false,
+    "freeze_state": null,
+    "release_eligible": false,
+    "E": "",
+    "F": "",
+    "R": "",
+    "H": "",
+    "release_equals_current": false,
+    "frozen_eval_status": null
+  },
+  "log": [
+    "[12:01:42Z] R1 STEP1 provider readiness (production Q2 gate)",
+    "[12:01:45Z] R1 STEP2 orchestrator launch (frozen input)",
+    "[12:28:26Z] R1 STEP2 outcome=succeeded elapsed=1592.3s",
+    "[12:28:26Z] R1 STEP3-6 design=designed cap=tabular_calibration_selective_v1 specs=2 facts=4",
+    "[12:28:26Z] R1 STEP5 experiments=2/2 eval=blocked markers=74",
+    "[12:28:27Z] R1 STEP8 starting fresh API process",
+    "[12:28:32Z] R1 policy: blocked -> cold repair ONCE",
+    "[12:30:20Z] R1 repair: {\"invoked\": true, \"http\": 200, \"promoted\": false, \"eval_status\": \"unknown\"}",
+    "[12:30:20Z] R1 final eval=blocked gates_ok=False"
+  ]
+}

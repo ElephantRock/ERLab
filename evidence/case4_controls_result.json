@@ -1,0 +1,262 @@
+{
+  "phase": "C4-2 harness qualification \u2014 synthetic controls",
+  "captured_at": "2026-08-19T19:07:58.699920+00:00",
+  "controls": [
+    {
+      "control": "positive_ready_without_repair",
+      "expected": "pass",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "control": "positive_blocked_one_repair",
+      "expected": "pass",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "control": "phase_no_premature_failure",
+      "expected": "pass",
+      "ok": true,
+      "detail": {
+        "phase": "design",
+        "got": null
+      }
+    },
+    {
+      "control": "phase_fails_own_violation",
+      "expected": "pass",
+      "ok": true,
+      "detail": {
+        "phase": "design",
+        "got": "design"
+      }
+    },
+    {
+      "control": "negative_orchestrator_nonsuccess",
+      "expected": "fail_closed",
+      "ok": true,
+      "detail": {
+        "expected": "orchestration",
+        "got": "orchestration"
+      }
+    },
+    {
+      "control": "negative_missing_design",
+      "expected": "fail_closed",
+      "ok": true,
+      "detail": {
+        "expected": "design",
+        "got": "design"
+      }
+    },
+    {
+      "control": "negative_wrong_capability",
+      "expected": "fail_closed",
+      "ok": true,
+      "detail": {
+        "expected": "capability",
+        "got": "capability"
+      }
+    },
+    {
+      "control": "negative_incomplete_specs",
+      "expected": "fail_closed",
+      "ok": true,
+      "detail": {
+        "expected": "specs",
+        "got": "specs"
+      }
+    },
+    {
+      "control": "negative_unsuccessful_experiment_count",
+      "expected": "fail_closed",
+      "ok": true,
+      "detail": {
+        "expected": "experiments",
+        "got": "experiments"
+      }
+    },
+    {
+      "control": "negative_missing_method_facts",
+      "expected": "fail_closed",
+      "ok": true,
+      "detail": {
+        "expected": "persistence",
+        "got": "persistence"
+      }
+    },
+    {
+      "control": "negative_missing_evaluation",
+      "expected": "fail_closed",
+      "ok": true,
+      "detail": {
+        "expected": "evaluation",
+        "got": "evaluation"
+      }
+    },
+    {
+      "control": "negative_repair_failure",
+      "expected": "fail_closed",
+      "ok": true,
+      "detail": {
+        "expected": "remediation",
+        "got": "remediation"
+      }
+    },
+    {
+      "control": "negative_final_not_ready_without_repair",
+      "expected": "fail_closed",
+      "ok": true,
+      "detail": {
+        "expected": "final_ready",
+        "got": "final_ready"
+      }
+    },
+    {
+      "control": "negative_gate_missing",
+      "expected": "fail_closed",
+      "ok": true,
+      "detail": {
+        "expected": "gates",
+        "got": "gates"
+      }
+    },
+    {
+      "control": "negative_gate_failed",
+      "expected": "fail_closed",
+      "ok": true,
+      "detail": {
+        "expected": "gates",
+        "got": "gates"
+      }
+    },
+    {
+      "control": "negative_revisions_deleted",
+      "expected": "fail_closed",
+      "ok": true,
+      "detail": {
+        "expected": "revisions",
+        "got": "revisions"
+      }
+    },
+    {
+      "control": "negative_freeze_not_frozen",
+      "expected": "fail_closed",
+      "ok": true,
+      "detail": {
+        "expected": "freeze",
+        "got": "freeze"
+      }
+    },
+    {
+      "control": "negative_efrh_mismatch",
+      "expected": "fail_closed",
+      "ok": true,
+      "detail": {
+        "expected": "release_identity",
+        "got": "release_identity"
+      }
+    },
+    {
+      "control": "negative_release_bytes_differ",
+      "expected": "fail_closed",
+      "ok": true,
+      "detail": {
+        "expected": "release_identity",
+        "got": "release_identity"
+      }
+    },
+    {
+      "control": "negative_provider_not_ready",
+      "expected": "fail_closed",
+      "ok": true,
+      "detail": {
+        "expected": "provider_readiness",
+        "got": "provider_readiness"
+      }
+    },
+    {
+      "control": "state_verify_intact",
+      "expected": "pass",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "control": "state_detect_extra_file",
+      "expected": "pass",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "control": "state_detect_modified_file",
+      "expected": "pass",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "control": "state_restore_recovers",
+      "expected": "pass",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "control": "state_detect_deleted_file",
+      "expected": "pass",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "control": "subtype_map_complete",
+      "expected": "pass",
+      "ok": true,
+      "detail": []
+    },
+    {
+      "control": "phase_alignment_no_premature_failure",
+      "expected": "pass",
+      "ok": true,
+      "detail": []
+    },
+    {
+      "control": "guard_missing_facts_raise_before_milestone",
+      "expected": "pass",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "control": "revisions_prefix_preserved_ok",
+      "expected": "pass",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "control": "revisions_prefix_tampered_fails",
+      "expected": "pass",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "control": "revisions_frozen_id_missing_fails",
+      "expected": "pass",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "control": "behavioral_cold_init_creates_schema",
+      "expected": "pass",
+      "ok": true,
+      "detail": {
+        "exit": 0,
+        "stdout_tail": "[SCHEMA-SELFCHECK] OK: 5 required tables present in C:\\Next-Era\\Elephant-Rock-Research-Lab\\evidence\\case4_runtime\\controls_sandbox\\schema_selfcheck.db",
+        "stderr_tail": "",
+        "db": "C:\\Next-Era\\Elephant-Rock-Research-Lab\\evidence\\case4_runtime\\controls_sandbox\\schema_selfcheck.db"
+      }
+    }
+  ],
+  "summary": {
+    "total": 32,
+    "ok": 32
+  },
+  "decision": "CONTROLS_PASS"
+}

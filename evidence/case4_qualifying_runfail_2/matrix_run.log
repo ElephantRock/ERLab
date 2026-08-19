@@ -1,0 +1,6 @@
+2026-08-18T12:01:42.173865+00:00 R1: fresh state verified (empty-schema DB intact, other Class-1 absent, Class-2 intact)
+2026-08-18T12:01:42.174263+00:00 R1: launching worker subprocess
+2026-08-18T12:30:21.916130+00:00 MATRIX VERDICT: RUN_FAIL (assurance_remediation)
+2026-08-18T22:53:09.173158+00:00 R1: fresh state verified (empty-schema DB intact, other Class-1 absent, Class-2 intact)
+2026-08-18T22:53:09.173736+00:00 R1: launching worker subprocess
+2026-08-18T23:47:45.119516+00:00 MATRIX VERDICT: RUN_FAIL (persistence)

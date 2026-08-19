@@ -1,0 +1,93 @@
+{
+  "phase": "C4-4 preflight (Case 4 reliability qualification)",
+  "captured_at": "2026-08-18T04:09:39.714204+00:00",
+  "gates": {
+    "product_head_r0": {
+      "ok": true,
+      "detail": "cedcc1944b0c35d4e41d4bb9aa82089f02254769"
+    },
+    "clean_tracked_tree": {
+      "ok": true,
+      "detail": []
+    },
+    "untracked_only_evidence": {
+      "ok": true,
+      "detail": []
+    },
+    "no_product_delta_vs_r0": {
+      "ok": true,
+      "detail": {
+        "changed": [
+          ".gitattributes",
+          "evidence/case4_charter.md",
+          "evidence/case4_controls_result.json",
+          "evidence/case4_manifest.json",
+          "evidence/case4_manifest.sha256",
+          "evidence/case4_runtime/.gitignore",
+          "evidence/launch_case4.py"
+        ],
+        "illegal": []
+      }
+    },
+    "manifest_seal": {
+      "ok": true,
+      "detail": {
+        "seal": "33c8feb56a0e0d2bc9f39e75a3fa20b2725fda3c55f01ceeee90c6af30d4f82f",
+        "r0": "d4e3125786f23c710d794d741e792aab24dd0f06"
+      }
+    },
+    "harness_seal": {
+      "ok": true,
+      "detail": "83afb61d96f303ee2d844aff0aba4b556067c734e4d183d2e63d2675ccdf415a"
+    },
+    "controls_seal": {
+      "ok": true,
+      "detail": "c70d3de94b66b9540908261c73ad07a58a71c5d8c8e305f1c844744c068f15c6"
+    },
+    "api_port_free": {
+      "ok": true
+    },
+    "provider_readiness_production": {
+      "ok": true,
+      "detail": {
+        "required": true,
+        "ready": true,
+        "errors": [],
+        "model": ""
+      }
+    },
+    "certification_assignment_identity": {
+      "ok": true
+    },
+    "embedding_availability": {
+      "ok": false,
+      "detail": "LMStudioEmbeddingOutputError(\"LM Studio /v1/embeddings returned malformed response: missing 'data' field (got dict)\")"
+    },
+    "evaluator_availability": {
+      "ok": true,
+      "detail": {
+        "ok": true,
+        "model": "",
+        "latency_s": 10.0
+      }
+    },
+    "capability_registration": {
+      "ok": true,
+      "detail": [
+        "tabular_calibration_selective_v1",
+        "tabular_robust_regression_v1"
+      ]
+    },
+    "dataset_registration": {
+      "ok": true,
+      "detail": [
+        "airfoil_self_noise",
+        "concrete_strength",
+        "iris",
+        "wine_quality"
+      ]
+    }
+  },
+  "class_state": {},
+  "decision": "PREFLIGHT_FAIL"
+}

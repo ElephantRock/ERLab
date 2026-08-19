@@ -1,0 +1,186 @@
+{
+  "phase": "C4-4 preflight (Case 4 reliability qualification)",
+  "captured_at": "2026-08-18T12:01:27.480751+00:00",
+  "gates": {
+    "product_head": {
+      "ok": true,
+      "detail": "133b56ab9d7506950beb1fbd5f3b19ec175c5b8a"
+    },
+    "clean_tracked_tree": {
+      "ok": true,
+      "detail": []
+    },
+    "untracked_only_evidence": {
+      "ok": true,
+      "detail": []
+    },
+    "no_product_delta_vs_product_head": {
+      "ok": true,
+      "detail": {
+        "changed": [
+          ".gitattributes",
+          "evidence/case4_charter.md",
+          "evidence/case4_controls_result.json",
+          "evidence/case4_invalidated_launch1/matrix_result_runfail.json",
+          "evidence/case4_invalidated_launch1/matrix_run.log",
+          "evidence/case4_invalidated_launch1/preflight_14of14.json",
+          "evidence/case4_invalidated_launch1/r1_result.json",
+          "evidence/case4_invalidated_launch1/r1_run.log",
+          "evidence/case4_invalidated_launch1/r1_specimen_0byte.db",
+          "evidence/case4_invalidated_launch2/matrix_result_invalid_attempt.json",
+          "evidence/case4_invalidated_launch2/matrix_run.log",
+          "evidence/case4_invalidated_launch2/preflight_14of14.json",
+          "evidence/case4_manifest.json",
+          "evidence/case4_manifest.sha256",
+          "evidence/case4_preflight_attempt1_failed.json",
+          "evidence/case4_runtime/.gitignore",
+          "evidence/launch_case4.py"
+        ],
+        "illegal": []
+      }
+    },
+    "manifest_seal": {
+      "ok": true,
+      "detail": {
+        "seal": "3c1bb42030d37aeb708836941b5a7034812b0805031c39fe32022db6def24948",
+        "product_head": "2ce7a874fc0612d162a37519fdc9282148b65d86"
+      }
+    },
+    "harness_seal": {
+      "ok": true,
+      "detail": "548ff31e023574dd8ca1b14659033153201d78a8776f3667f2654427bae97618"
+    },
+    "controls_seal": {
+      "ok": true,
+      "detail": "3016c1d203b3b5b4f4b63a6ee84b5a8fbeef9b9010beaa8f8e103325e5d5a8b4"
+    },
+    "api_port_free": {
+      "ok": true
+    },
+    "provider_readiness_production": {
+      "ok": true,
+      "detail": {
+        "required": true,
+        "ready": true,
+        "errors": [],
+        "model": ""
+      }
+    },
+    "certification_assignment_identity": {
+      "ok": true
+    },
+    "embedding_availability": {
+      "ok": true,
+      "detail": {
+        "ok": true,
+        "dimension": 1024,
+        "expected_dimension": 1024,
+        "model": "text-embedding-bge-m3"
+      }
+    },
+    "evaluator_availability": {
+      "ok": true,
+      "detail": {
+        "ok": true,
+        "model": "",
+        "latency_s": 6.5
+      }
+    },
+    "capability_registration": {
+      "ok": true,
+      "detail": [
+        "tabular_calibration_selective_v1",
+        "tabular_robust_regression_v1"
+      ]
+    },
+    "dataset_registration": {
+      "ok": true,
+      "detail": [
+        "airfoil_self_noise",
+        "concrete_strength",
+        "iris",
+        "wine_quality"
+      ]
+    }
+  },
+  "class_state": {
+    "preflight_archive": {
+      "archived_to": "C:\\Next-Era\\Elephant-Rock-Research-Lab\\evidence\\case4_runtime\\preflight_archive\\20260818T120139Z",
+      "entries": {
+        "data/elephant_rock.db": "archived",
+        "data/chroma": "absent",
+        "data/checkpoints": "absent",
+        "data/runs": "absent",
+        "data/knowledge": "absent",
+        "data/bm25": "absent",
+        "data/error_knowledge.db": "absent",
+        "data/knowledge_graph.json": "absent",
+        "data/knowledge_graph.changes.jsonl": "absent",
+        "data/memory": "absent",
+        "data/goals.json": "absent",
+        "data/world_model.json": "absent",
+        "data/governance_audit.jsonl": "absent",
+        "data/experiments": "absent",
+        "data/costs": "absent",
+        "data/exports": "absent"
+      }
+    },
+    "fresh_class1": {
+      "ok": true,
+      "basis": "empty schema-initialized DB (file entry, hashed) + all other Class-1 entries absent",
+      "manifest": {
+        "data/elephant_rock.db": {
+          "type": "file",
+          "sha256": "606ae16abf539d59f995d548647a57e6b3c4cb1c90739b082868c24e35f3db12"
+        },
+        "data/chroma": {
+          "type": "absent"
+        },
+        "data/checkpoints": {
+          "type": "absent"
+        },
+        "data/runs": {
+          "type": "absent"
+        },
+        "data/knowledge": {
+          "type": "absent"
+        },
+        "data/bm25": {
+          "type": "absent"
+        },
+        "data/error_knowledge.db": {
+          "type": "absent"
+        },
+        "data/knowledge_graph.json": {
+          "type": "absent"
+        },
+        "data/knowledge_graph.changes.jsonl": {
+          "type": "absent"
+        },
+        "data/memory": {
+          "type": "absent"
+        },
+        "data/goals.json": {
+          "type": "absent"
+        },
+        "data/world_model.json": {
+          "type": "absent"
+        },
+        "data/governance_audit.jsonl": {
+          "type": "absent"
+        },
+        "data/experiments": {
+          "type": "absent"
+        },
+        "data/costs": {
+          "type": "absent"
+        },
+        "data/exports": {
+          "type": "absent"
+        }
+      }
+    },
+    "class2_preserved_fingerprint": "evidence/case4_runtime/preserved_fingerprint.json"
+  },
+  "decision": "PREFLIGHT_PASS"
+}

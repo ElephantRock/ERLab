@@ -1,0 +1,4 @@
+2026-08-18T08:15:42.859123+00:00 R1: fresh state verified (empty-schema DB intact, other Class-1 absent, Class-2 intact)
+2026-08-18T08:15:42.859497+00:00 R1: launching worker subprocess
+2026-08-18T09:18:23.280446+00:00 MATRIX VERDICT: RUN_FAIL (invalid_attempt)
+2026-08-18T11:07:34.577088+00:00 MATRIX VERDICT: INVALID_ATTEMPT (product_head)

@@ -1,0 +1,217 @@
+{
+  "case": "Case 4 \u2014 bounded serial operational repeatability (reliability qualification)",
+  "phase_at_seal": "Rebound + resealed for the R2 restart (provider-entitlement ruling still gates any launch). R2 = PR #39 GatewayTransportError propagation (second adjudicated GENERIC_PRODUCT_DEFECT from the qualifying-run specimen: quota-exhaustion transport errors lost typed identity in post-ideation fail-soft catchalls and let a run finalize SUCCEEDED with fallback artifacts). Acceptance criteria unchanged.",
+  "sealed_at": "2026-08-19T23:10:00Z",
+  "reseal_note": "v8 (runfail_2 checker repair, owner plan 2026-08-19): predecessor checker = seal-v7 harness sha 95296aa7\u2026 (preserved unchanged, with its specimen, in git history and evidence/case4_qualifying_runfail_2/ + evidence/case4_runfail2_adjudication.md). The ONLY semantic change is fact ordering/availability: (1) CHECK_ORDER and the worker milestones now place the revisions check AFTER freeze (its frozen-revision-id input exists only post-freeze); (2) the worker captures an immutable pre-freeze revision-row snapshot BEFORE invoking freeze and revisions_preserved verifies that snapshot is an exact prefix of the post-freeze rows; (3) require_facts availability guards fail closed BEFORE a milestone assertion when required facts are uncollected. No acceptance criterion, contract item, subtype mapping, preflight gate, or product byte changed. Controls 32/32 (five new: phase-alignment invariant that recreates the false-failure shape, pre-freeze guard, prefix-preservation ok/tampered/missing-frozen-id). Consumption adjudication: INVALID_ATTEMPT (harness/checker defect) \u2014 preserved and invalidated, not consumed; one zero-intervention relaunch authorized by the owner plan if the Coding Plan window holds.",
+  "charter": {
+    "path": "evidence/case4_charter.md",
+    "sha256": "51d47687d1ec65886b5483522ce06f2baa0f8cfe4b4fd46627a63b2d965920c2",
+    "note": "owner plan text verbatim below the BEGIN marker; freeze-record header carries six additive pre-seal disclosures (R1-R4 run labels; 9,500 s hang watchdog; fresh-state operationalization via production init_db; exact-product-bytes-at-HEAD gate semantics; 2026-08-18 first adjudication record R0->R1; quota adjudication + R2 binding + entitlement gate)"
+  },
+  "harness": {
+    "path": "evidence/launch_case4.py",
+    "sha256": "54702efa52f7cc180839ea76bff27a3d008868c8ebc4ce6c29cbef228e62456c",
+    "modes": [
+      "launch",
+      "preflight",
+      "matrix",
+      "worker",
+      "controls",
+      "verify",
+      "schema-selfcheck"
+    ],
+    "launch_command": ".venv/Scripts/python.exe evidence/launch_case4.py --mode launch",
+    "policy": "per matrix entry: production Q2 readiness gate -> orchestrator (frozen input, autonomous_experiment_enabled=True only) -> REQUIRE SUCCEEDED -> design designed + expected capability + complete spec ids + method_facts persisted -> all experiments succeeded -> fresh API process -> ready-direct | blocked-one-cold-repair | else FAIL -> final ready + same six gates only -> revision history preserved -> frozen release-eligible revision -> E==F==R==H + bytes equality; coordinator archives specimen, restores fresh baseline, fail-fast; PASS requires 4/4",
+    "worker_logic_provenance": "Case-3E qualified v2 lifecycle (f2e19cb0\u2026) parameterized per matrix entry; eval-None branch made explicit; per-call-site HTTP status typing; ensure_schema loads backend.db.models before init_db and asserts REQUIRED_TABLES"
+  },
+  "controls": {
+    "path": "evidence/case4_controls_result.json",
+    "sha256": "206b93105cd41e6a253efdc9fde08ea36c1a7957359424d01ed246f3b85d21e7",
+    "decision": "CONTROLS_PASS (32/32)",
+    "coverage": "2 positive branches; 16 negatives covering every contract check; 2 phase-semantics; 5 state-manifest sandbox; 1 subtype-map; 1 behavioral cold-init; 5 runfail_2 checker-repair controls (phase-alignment invariant, availability guard, prefix-preservation x3)"
+  },
+  "matrix": [
+    {
+      "label": "R1",
+      "family": "case2_calibration",
+      "expected_capability": "tabular_calibration_selective_v1",
+      "input_ref": "Case-2D frozen input"
+    },
+    {
+      "label": "R2",
+      "family": "case3_regression",
+      "expected_capability": "tabular_robust_regression_v1",
+      "input_ref": "Case-3E frozen input"
+    },
+    {
+      "label": "R3",
+      "family": "case3_regression",
+      "expected_capability": "tabular_robust_regression_v1",
+      "input_ref": "Case-3E frozen input"
+    },
+    {
+      "label": "R4",
+      "family": "case2_calibration",
+      "expected_capability": "tabular_calibration_selective_v1",
+      "input_ref": "Case-2D frozen input"
+    }
+  ],
+  "frozen_inputs": {
+    "case2_calibration": {
+      "domain": "Robust confidence estimation under dataset shift",
+      "research_question": "Are calibration-method rankings stable as covariate-shift severity increases, or do rank reversals occur in accuracy, positive-class expected calibration error, and selective AURC across tabular classification datasets?",
+      "activation": "autonomous_experiment_enabled=True only",
+      "provenance": "evidence/case2d_manifest.json (accepted 2D run)"
+    },
+    "case3_regression": {
+      "domain": "Robust regression under distribution shift",
+      "research_question": "Are robust-regression method rankings stable as covariate perturbation severity increases, or do rank reversals occur in MAE, RMSE, and R\u00b2 across tabular regression datasets?",
+      "activation": "autonomous_experiment_enabled=True only",
+      "provenance": "evidence/case3e_manifest.json (accepted 3E run)"
+    },
+    "orchestrator_params": "strategy=deep_research, max_gaps=3, generation_rounds=1, ideas_per_round=1 (identical to the qualified 2D/3E harnesses)"
+  },
+  "state_taxonomy": {
+    "class1_reset_archived": [
+      "data/elephant_rock.db (baseline: schema-initialized empty DB via production init_db, hashed file entry)",
+      "data/chroma",
+      "data/checkpoints",
+      "data/runs",
+      "data/knowledge",
+      "data/bm25",
+      "data/error_knowledge.db",
+      "data/knowledge_graph.json",
+      "data/knowledge_graph.changes.jsonl",
+      "data/memory",
+      "data/goals.json",
+      "data/world_model.json",
+      "data/governance_audit.jsonl",
+      "data/experiments",
+      "data/costs",
+      "data/exports"
+    ],
+    "class1_basis": "empirical Case-3E write set (paths touched by the 2026-08-17 14:46\u201315:43 qualifying run)",
+    "class2_preserved_fingerprinted": [
+      "data/model_certification/",
+      "data/model_assignments.json",
+      "data/datasets/"
+    ],
+    "expected_datasets": [
+      "airfoil_self_noise",
+      "concrete_strength",
+      "iris",
+      "wine_quality"
+    ]
+  },
+  "preflight_hard_gates": [
+    "product_head (exact product bytes at HEAD: HEAD==the product head, or evidence-branch HEAD descending from it with only the allowed delta)",
+    "clean_tracked_tree",
+    "untracked_only_evidence",
+    "no_product_delta_vs_product_head (evidence/** plus exactly .gitattributes)",
+    "manifest_seal",
+    "harness_seal",
+    "controls_seal",
+    "api_port_free",
+    "provider_readiness_production (Q2 gate via configured endpoint)",
+    "certification_assignment_identity",
+    "embedding_availability (production factory)",
+    "evaluator_availability (production provider stack)",
+    "capability_registration (production listing)",
+    "dataset_registration",
+    "fresh_class1 (schema-initialized empty DB with zero missing required tables + others absent)"
+  ],
+  "preflight_simplification_vs_3e": "the 8x structured-response battery and long-form throughput probe are NOT Case-4 gates (charter: diagnostics around 3C/3D uncertainty; Case 4 tests nominal production readiness)",
+  "acceptance": {
+    "matrix_pass_requires": "4/4 accepted runs; no partial qualification",
+    "per_run_contract": "the 14 items frozen in evidence/case4_charter.md (Per-run acceptance contract)",
+    "no_cross_run_determinism_requirement": true,
+    "zero_intervention": "operator budget 0 from --mode launch start to final verdict; single sealed invocation"
+  },
+  "failure_taxonomy": {
+    "outcomes": [
+      "PASS",
+      "RUN_FAIL",
+      "GENERIC_PRODUCT_DEFECT (adjudicated)",
+      "INVALID_ATTEMPT"
+    ],
+    "run_fail_subtypes_preserved": "provider_availability_transport, orchestration, autonomous_design, experiment_execution, persistence, synthesis, assurance_remediation, freeze, release_identity, watchdog_hang (hang guard, not latency)",
+    "no_automatic_second_attempt": true
+  },
+  "scope_exclusions": "no third capability; no seventh gate; no new retry layer; no new circuit breaker; no latency SLA (watchdog is a hang guard only); no model substitution; no scientific-result equality; no capability-specific Case-4 production code; no deliberate fault injection (Cases 5\u20136)",
+  "allowed_branch_delta": "evidence/** plus exactly .gitattributes (byte-exact -text entries for sealed Case-4 files; same companion change the Q2\u2192main delta carries)",
+  "independent_review": {
+    "product_pr_38": {
+      "verdict": "GO (0 P0/P1; 1 non-blocking pre-existing-parity P2: early abort sends no terminal notification/DB mark, mirroring the budget-abort pattern \u2014 left out per frozen scope)",
+      "ci": "all checks green on GitHub (backend-tests 9m42s, backend-lint, frontend-tests, frontend-lint)"
+    },
+    "harness_repair": {
+      "verdict": "GO for resealing (7 verification questions passed; P1 was this reseal checklist; P2s fixed pre-seal: ensure_schema parameterized to the target DB, controls mode wrapped in guarded(), stale r0 gate labels renamed)",
+      "confirmations": "ensure_schema fail-closed on schema-less outcome; selfcheck cold (env before any backend import) and cannot pass against the wrong DB; behavioral control verified independently by the parent via direct sqlite; fresh gate requires DB-file hash AND zero missing tables; R1 guard coexists with worker checks; CHECK_ORDER/subtypes/fail-fast/archive-restore/watchdog unchanged"
+    },
+    "product_pr_39": {
+      "verdict": "GO after two rounds (round 1 P0: specimen path still swallowed at the SynthesisService section loop + two P2 secondary swallows \u2014 all fixed with the identical idiom; round 2 verified every chain end-to-end: escape -> stage re-raise -> Q2 terminalization -> FAILED_EXECUTION)",
+      "ci": "all checks green on GitHub (backend-tests 9m40s after the CI test fix PR #40; lint; frontend)",
+      "ci_fix_pr": 40
+    }
+  },
+  "artifacts_map": {
+    "charter": "evidence/case4_charter.md",
+    "harness": "evidence/launch_case4.py",
+    "controls": "evidence/case4_controls_result.json",
+    "manifest_seal": "evidence/case4_manifest.sha256",
+    "preflight_record": "evidence/case4_preflight.json (C4-4)",
+    "matrix_record": "evidence/case4_matrix_result.json + case4_matrix_run.log (C4-5)",
+    "per_run": "evidence/case4_r{n}_result.json / _run.log / _api.log / _release.md / _specimen.db",
+    "local_only_runtime": "evidence/case4_runtime/ (baseline, preflight archive, specimen write-set archives; self-gitignored, hashes recorded)",
+    "verification": "evidence/case4_verification.json (C4-6)"
+  },
+  "known_followups_not_blocking": [
+    "product PR #38 review P2: early fail-closed abort sends no terminal notification and marks no DB row (pre-existing parity with the budget abort); recorded for follow-up, outside the frozen scope",
+    "coordinator exception guard writes a minimal INVALID_ATTEMPT record; per-run files remain the authoritative evidence (accepted residual)",
+    "localhost URLError after verified-healthy API start remains typed harness_exception (accepted residual)",
+    "backend/cli/main.py passes run_novelty/run_feasibility kwargs run() no longer accepts (pre-existing on main, unrelated)",
+    "20 legacy case3/* branches still await owner cleanup (pre-existing)"
+  ],
+  "product_head": "7e5462637bff4ea83a4141e6149ea04c049e80b8",
+  "product_head_lineage": {
+    "R0": "d4e3125786f23c710d794d741e792aab24dd0f06",
+    "R1": "2ce7a874fc0612d162a37519fdc9282148b65d86",
+    "transition": "GENERIC_PRODUCT_DEFECT adjudicated 2026-08-18 from the invalidated-attempt specimen: false SUCCEEDED on required persistence failure. PR #38 adds the smallest generic correction (fail closed on initial create_run_record None, FAILED_EXECUTION, terminal_stage persistence_initialization). Whole matrix restarts on R1 per the frozen charter.",
+    "R2": "7e5462637bff4ea83a4141e6149ea04c049e80b8",
+    "transition_r2": "Second GENERIC_PRODUCT_DEFECT adjudicated 2026-08-18 from the qualifying-run specimen (RUN_FAIL whose root cause was an exhausted shared Z.AI 5h quota, HTTP 429 code 1308): the typed GatewayTransportError was swallowed by post-ideation fail-soft catchalls (207-char stub paper, fallback review scores, non-promoting repair) while the orchestrator finalized SUCCEEDED. PR #39 re-raises GatewayTransportError at 19 specimen-proven sites so the existing Q2 stage-loop terminalization yields FAILED_EXECUTION; 10 regressions incl. the specimen-sequenced test; two review rounds, GO."
+  },
+  "invalidated_attempt_record": {
+    "adjudication": "INVALID_ATTEMPT caused by a sealed-harness defect (2026-08-18 owner ruling); the attempt is preserved and invalidated, not consumed; no relaunch on R0 authorized",
+    "specimen_commit": "4f2e068",
+    "artifacts": [
+      "evidence/case4_preflight_attempt1_failed.json (pre-boundary environmental stop)",
+      "evidence/case4_preflight.json (14/14 pass of the invalidated attempt)",
+      "evidence/case4_matrix_result.json",
+      "evidence/case4_matrix_run.log",
+      "evidence/case4_r1_result.json",
+      "evidence/case4_r1_run.log",
+      "evidence/case4_r1_specimen.db (0-byte, zero tables)"
+    ],
+    "environmental_stop": ".env embedding base URL corrected to http://100.64.0.2:1234/v1 before the authorized relaunch (owner-authorized, pre-boundary)"
+  },
+  "launch_blocker": {
+    "provider_entitlement": "Owner ruling 2026-08-18: NO further ERLab matrix against the Z.AI Coding Plan endpoint (api.z.ai/api/coding/paas/v4) until the owner either confirms with Z.AI that this ERLab usage is authorized or moves ERLab to the normal Z.AI API/billing endpoint (or another legitimately provisioned provider) and freezes that operating state. Residuals recorded: debate-path transport failures land as non-typed generic failed via the API handler (never SUCCEEDED); dormant governance/refinement.py catch noted by review."
+  },
+  "provider_operating_state": {
+    "ruling": "Owner 2026-08-18 (updated plan): Coding Plan endpoint selected for this attempt given the remaining ~4:57 window and the unprovisioned general-API balance; supersedes the earlier option-2 general-endpoint ruling for this attempt. Account-isolation protocol in force from seal until matrix exit: no unrelated Coding Plan activity.",
+    "endpoint": "https://api.z.ai/api/coding/paas/v4",
+    "v6_record": "general-API state (paas/v4) sealed as v6 5c784a56, abandoned: 429/1113 no balance; restored coding endpoint in .env before this seal",
+    "changed": ".env EROCK_OPENAI_BASE_URL only (untracked environment)",
+    "unchanged": "LM Studio (local, both models), embedding configuration (/v1), capability configuration, retry semantics, R2 product bytes, harness/charter/controls bytes",
+    "probe_policy": "No standalone provider probe: the sealed 14-gate preflight is the provider health check (owner instruction; avoids consuming quota).",
+    "budget_flag_recorded": "EROCK_BUDGET_ENABLED=false remains as previously reported (owner did not authorize a change); spend ceiling is moot on the quota-based endpoint \u2014 the limiting resource is the five-hour pool, not metered balance.",
+    "matrix_launch": "AUTHORIZED (owner: once v7 sealed and non-provider controls pass, no further GO)",
+    "expected_quota_failure_semantics": "On R2, a 429/1308 quota exhaustion preserves typed identity (PR #39) and terminates the run as RUN_FAIL(provider_availability_transport) \u2014 preserve the specimen and stop; no quota-reset continuation, no combining with prior results."
+  },
+  "runfail2_adjudication": {
+    "record": "evidence/case4_runfail2_adjudication.md",
+    "classification": "HARNESS/CHECKER DEFECT; attempt INVALID_ATTEMPT \u2014 preserved and invalidated, not consumed",
+    "specimen": "evidence/case4_qualifying_runfail_2/ (commit d1a7a0a)",
+    "predecessor_checker_sha256": "95296aa7772c4c4bec39b258a6e7d917bb8e1b55786d74a6b9f1ca61dff1f62a"
+  }
+}

@@ -1,0 +1,73 @@
+{
+  "case": "Case 4 \u2014 bounded serial operational repeatability (C-R-R-C)",
+  "frozen_head": "7e5462637bff4ea83a4141e6149ea04c049e80b8",
+  "started_at": "2026-08-18T22:53:08.056070+00:00",
+  "runs": [
+    {
+      "label": "R1",
+      "family": "case2_calibration",
+      "expected_capability": "tabular_calibration_selective_v1",
+      "elapsed_s": 3275.7,
+      "verdict": "FAIL",
+      "failure_type": "revisions",
+      "subtype_group": "persistence",
+      "failure_detail": "freeze did not produce a release-eligible frozen revision ('frozen', eligible=True)",
+      "capability_id": "tabular_calibration_selective_v1",
+      "spec_ids": [
+        "auto-classification-iris",
+        "auto-classification-wine_quality"
+      ],
+      "initial_eval_status": "blocked",
+      "repair_invoked": true,
+      "final_eval_status": "ready",
+      "gates": {
+        "provenance": true,
+        "scope_alignment": "on_scope",
+        "conclusion_support": "supported_by_paper",
+        "experiment_alignment": true,
+        "numeric_fidelity": true,
+        "method_fidelity": true
+      },
+      "revision_sequence": [],
+      "release": null,
+      "diagnostics": {
+        "orchestrator_elapsed_s": 3029.4,
+        "run_id": 1,
+        "failure_subtype_preserved": "revisions"
+      },
+      "specimen": {
+        "path": "evidence/case4_r1_specimen.db",
+        "sha256": "dc8a3295ce331288dd87d1e3cf4d2e6187449ef8cf490b42731a29775c74157d"
+      },
+      "specimen_archive": "C:\\Next-Era\\Elephant-Rock-Research-Lab\\evidence\\case4_runtime\\specimens\\R1"
+    }
+  ],
+  "intervention_ledger": {
+    "operator_interventions": 0,
+    "human_decisions_after_launch": 0,
+    "basis": "single sealed invocation; the harness performed every continuation, archive, reset, and fail-fast decision"
+  },
+  "coordinator_log": [
+    "[22:52:55Z] PREFLIGHT product_head: OK",
+    "[22:52:55Z] PREFLIGHT clean_tracked_tree: OK",
+    "[22:52:55Z] PREFLIGHT untracked_only_evidence: OK",
+    "[22:52:55Z] PREFLIGHT no_product_delta_vs_product_head: OK",
+    "[22:52:55Z] PREFLIGHT manifest_seal: OK",
+    "[22:52:55Z] PREFLIGHT harness_seal: OK",
+    "[22:52:55Z] PREFLIGHT controls_seal: OK",
+    "[22:52:56Z] PREFLIGHT api_port_free: OK",
+    "[22:52:57Z] PREFLIGHT provider_readiness_production: OK",
+    "[22:52:57Z] PREFLIGHT certification_assignment_identity: OK",
+    "[22:52:59Z] PREFLIGHT embedding_availability: OK",
+    "[22:53:04Z] PREFLIGHT evaluator_availability: OK",
+    "[22:53:04Z] PREFLIGHT capability_registration: OK",
+    "[22:53:04Z] PREFLIGHT dataset_registration: OK",
+    "[22:53:08Z] PREFLIGHT PASS \u2014 fresh state established, baseline snapshotted",
+    "[22:53:09Z] R1: fresh state verified (empty-schema DB intact, other Class-1 absent, Class-2 intact)",
+    "[22:53:09Z] R1: launching worker subprocess"
+  ],
+  "harness_sha256": "95296aa7772c4c4bec39b258a6e7d917bb8e1b55786d74a6b9f1ca61dff1f62a",
+  "finished_at": "2026-08-18T23:47:45.118667+00:00",
+  "verdict": "RUN_FAIL",
+  "failure_subtype": "persistence"
+}

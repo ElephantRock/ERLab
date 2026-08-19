@@ -29,3 +29,17 @@ evidence/launch_case3c.py -text
 evidence/launch_case3d.py -text
 evidence/case3_release.md -text
 evidence/case3e_run.log -text
+
+# Case-4 sealed evidence — byte-exact for the same reason as Case-2/3
+# above: seals are SHA-256 of the exact written bytes and this repo runs
+# core.autocrlf=true. All Case-4 artifacts (charter, harness, manifest,
+# controls, preflight, per-run results/logs/releases, specimen DBs)
+# must round-trip byte-for-byte on every platform.
+evidence/case4_* -text
+evidence/launch_case4.py -text
+# Case-4 invalidated-attempt history directories — byte-exact preserved
+# specimens (subdirectories are not covered by the flat case4_* pattern).
+evidence/case4_invalidated_launch1/** -text
+evidence/case4_invalidated_launch2/** -text
+# Case-4 qualifying-run failure specimens — byte-exact preserved records.
+evidence/case4_qualifying_runfail_*/** -text

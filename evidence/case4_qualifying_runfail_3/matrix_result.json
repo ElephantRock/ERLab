@@ -1,0 +1,73 @@
+{
+  "case": "Case 4 \u2014 bounded serial operational repeatability (C-R-R-C)",
+  "frozen_head": "7e5462637bff4ea83a4141e6149ea04c049e80b8",
+  "started_at": "2026-08-19T19:11:40.925398+00:00",
+  "runs": [
+    {
+      "label": "R1",
+      "family": "case2_calibration",
+      "expected_capability": "tabular_calibration_selective_v1",
+      "elapsed_s": 3276.8,
+      "verdict": "FAIL",
+      "failure_type": "remediation",
+      "subtype_group": "assurance_remediation",
+      "failure_detail": "final evaluation/gates gate failed: remediation (status=blocked, gates={'provenance': True, 'scope_alignment': 'on_scope', 'conclusion_support': 'supported_by_paper', 'experiment_alignment': True, 'numeric_fidelity': False, 'method_fidelity': True})",
+      "capability_id": "tabular_calibration_selective_v1",
+      "spec_ids": [
+        "auto-classification-iris",
+        "auto-classification-wine_quality"
+      ],
+      "initial_eval_status": "blocked",
+      "repair_invoked": true,
+      "final_eval_status": "blocked",
+      "gates": {
+        "provenance": true,
+        "scope_alignment": "on_scope",
+        "conclusion_support": "supported_by_paper",
+        "experiment_alignment": true,
+        "numeric_fidelity": false,
+        "method_fidelity": true
+      },
+      "revision_sequence": [],
+      "release": null,
+      "diagnostics": {
+        "orchestrator_elapsed_s": 3046.5,
+        "run_id": 1,
+        "failure_subtype_preserved": "remediation"
+      },
+      "specimen": {
+        "path": "evidence/case4_r1_specimen.db",
+        "sha256": "108f38e716906ce63cdf2bdfc38abc344b28fc48596c4a6108ce7ea5c1496298"
+      },
+      "specimen_archive": "C:\\Next-Era\\Elephant-Rock-Research-Lab\\evidence\\case4_runtime\\specimens\\R1"
+    }
+  ],
+  "intervention_ledger": {
+    "operator_interventions": 0,
+    "human_decisions_after_launch": 0,
+    "basis": "single sealed invocation; the harness performed every continuation, archive, reset, and fail-fast decision"
+  },
+  "coordinator_log": [
+    "[19:11:27Z] PREFLIGHT product_head: OK",
+    "[19:11:27Z] PREFLIGHT clean_tracked_tree: OK",
+    "[19:11:27Z] PREFLIGHT untracked_only_evidence: OK",
+    "[19:11:27Z] PREFLIGHT no_product_delta_vs_product_head: OK",
+    "[19:11:27Z] PREFLIGHT manifest_seal: OK",
+    "[19:11:27Z] PREFLIGHT harness_seal: OK",
+    "[19:11:27Z] PREFLIGHT controls_seal: OK",
+    "[19:11:28Z] PREFLIGHT api_port_free: OK",
+    "[19:11:29Z] PREFLIGHT provider_readiness_production: OK",
+    "[19:11:29Z] PREFLIGHT certification_assignment_identity: OK",
+    "[19:11:34Z] PREFLIGHT embedding_availability: OK",
+    "[19:11:39Z] PREFLIGHT evaluator_availability: OK",
+    "[19:11:39Z] PREFLIGHT capability_registration: OK",
+    "[19:11:39Z] PREFLIGHT dataset_registration: OK",
+    "[19:11:40Z] PREFLIGHT PASS \u2014 fresh state established, baseline snapshotted",
+    "[19:11:42Z] R1: fresh state verified (empty-schema DB intact, other Class-1 absent, Class-2 intact)",
+    "[19:11:42Z] R1: launching worker subprocess"
+  ],
+  "harness_sha256": "54702efa52f7cc180839ea76bff27a3d008868c8ebc4ce6c29cbef228e62456c",
+  "finished_at": "2026-08-19T20:06:19.317364+00:00",
+  "verdict": "RUN_FAIL",
+  "failure_subtype": "assurance_remediation"
+}
