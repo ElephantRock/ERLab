@@ -19,7 +19,7 @@ import urllib.request
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent.parent
-CLONE = ROOT / ".p1_tmp/p1_2_clone.db"
+CLONE = ROOT / ".p1_tmp/p1_9_clone.db"
 BASE = "http://127.0.0.1:8770"
 
 shutil.copyfile(ROOT / ".p1_tmp/r1_specimen.db", CLONE)
@@ -36,7 +36,7 @@ server = subprocess.Popen(
     [sys.executable, "-m", "uvicorn", "backend.api.app:app",
      "--host", "127.0.0.1", "--port", "8770"],
     cwd=str(ROOT), env=env,
-    stdout=open(ROOT / ".p1_tmp/p1_2_api.log", "w"),
+    stdout=open(ROOT / ".p1_tmp/p1_9_api.log", "w"),
     stderr=subprocess.STDOUT,
 )
 
@@ -51,7 +51,8 @@ def health(deadline=120.0):
             time.sleep(2)
     return False
 
-record = {"phase": "P1-2 unchanged-path baseline"}
+OUT = sys.argv[1] if len(sys.argv) > 1 else "evidence/productive1/p1_2_baseline.json"
+record = {"phase": OUT}
 try:
     if not health():
         record["error"] = "API failed to start"
@@ -146,9 +147,7 @@ if rev1:
     ]
     record["rev1_mismatch_count"] = len(mism)
 
-Path("evidence/productive1/p1_2_baseline.json").write_text(
-    json.dumps(record, indent=2), encoding="utf-8"
-)
+Path(OUT).write_text(json.dumps(record, indent=2), encoding="utf-8")
 print(json.dumps({k: record.get(k) for k in (
     "http", "latency_s", "repair", "evaluation_status",
     "rev1_mismatch_count", "revision_lineage")}, indent=1)[:800])

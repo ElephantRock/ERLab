@@ -1,0 +1,72 @@
+{
+  "phase": "evidence/productive1/p1_9_integration.json",
+  "http": 200,
+  "latency_s": 305.0,
+  "repair": {
+    "success": true,
+    "promoted": true,
+    "revision_number": 1,
+    "original_paper_hash": "709558455323500355ec9eca74d14ef27756d5d4c7c97d9c959846484f0e5591",
+    "revised_paper_hash": "df0ffd83dd9cdb17ed576feb7f566fe2831184d81113c25ea9f4544d7d9d43cc",
+    "findings_count": 3,
+    "findings": [
+      "novelty (score=0.35): The framing\u2014measuring calibration-method *ranking stability* as a function of shift severity\u2014is a reasonable reframing, but the central finding (metrics and methods dissociate; no calibrator dominates) largely confirms what is already established in the cited counterexample literature. The use of iris and wine_quality with Platt/isotonic calibration on from-scratch logistic regression offers little headroom for genuinely new insights about modern shift regimes.",
+      "rigor (score=0.35): No formal loss functions, optimizers, learning rates, regularization, or convergence criteria are specified for the underlying logistic regression or the calibrator fits. Most critically, the covariate-shift construction\u2014what \"severity 0.25/0.5/0.75\" operationally means\u2014is never defined, making the central independent variable unreproducible. There is no statistical significance testing or repeated trials, which is serious given that ECE/AURC estimates on iris-sized data are extremely noisy; limitations are only partially acknowledged.",
+      "Gate finding: numeric_fidelity: [RESULT-6]: Numeric value-fidelity mismatch: [RESULT-6] is rendered as 0.215127 but persisted observed_value is 0.196669. The number; [RESULT-37]: Numeric value-fidelity mismatch: [RESULT-37] is rendered as 333333.0 but persisted observed_value is 0.333333. The numbe; [RESULT-46]: Numeric value-fidelity mismatch: [RESULT-46] is rendered as 0.449834 but persisted observed_value is 0.448188. The numbe; [RESULT-52]: Numeric value-fidelity mismatch: [RESULT-52] is rendered as 0.25 but persisted observed_value is 0.005532. The number ad; [RESULT-56]: Numeric value-fidelity mismatch: [RESULT-56] is rendered as 54878.0 but persisted observed_value is 0.54878. The number ; [RESULT-74]: Numeric value-fidelity mismatch: [RESULT-74] is rendered as 534375.0 but persisted observed_value is 0.534375. The numbe"
+    ]
+  },
+  "evaluation": {
+    "status": "ready",
+    "paper_hash": "df0ffd83dd9cdb17ed576feb7f566fe2831184d81113c25ea9f4544d7d9d43cc",
+    "gates": [
+      {
+        "gate": "provenance",
+        "passed": true,
+        "reason": "30 mapped source(s)"
+      },
+      {
+        "gate": "scope_alignment",
+        "classification": "on_scope",
+        "reason": "Paper aligns with research intent (combined overlap 0.15, 19 intent terms hit)."
+      },
+      {
+        "gate": "conclusion_support",
+        "classification": "supported_by_paper",
+        "reason": "Claims are consistent with reported empirical results (indicators: claims causation; claims results demonstrate)."
+      },
+      {
+        "gate": "experiment_alignment",
+        "passed": true,
+        "reason": "iris:[no_concern]; wine_quality:[no_concern]"
+      },
+      {
+        "gate": "numeric_fidelity",
+        "passed": true,
+        "reason": "74 RESULT marker(s) validated; 0 numeric mismatches"
+      },
+      {
+        "gate": "method_fidelity",
+        "passed": true,
+        "reason": "All 4 frozen method fact(s) verified: required statements present, no contradicting descriptions"
+      }
+    ]
+  },
+  "revision_lineage": [
+    [
+      0,
+      "blocked",
+      "pipeline",
+      30469,
+      "7095584553235003"
+    ],
+    [
+      1,
+      "ready",
+      "auto_remediation",
+      33863,
+      "df0ffd83dd9cdb17"
+    ]
+  ],
+  "rev1_numeric_mismatches": [],
+  "rev1_mismatch_count": 0
+}
