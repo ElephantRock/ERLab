@@ -1,0 +1,98 @@
+{
+  "phase": "P1-1 defect reconstruction",
+  "specimen": "evidence/case4_qualifying_runfail_3/r1_specimen.db (Case-4 final consumed RUN_FAIL)",
+  "markers_reconstructed": 74,
+  "repaired_paper_rev1": {
+    "chars": 39460,
+    "numeric_fidelity_mismatches": [
+      {
+        "marker": "[RESULT-38]",
+        "rendered_value": "165.0",
+        "persisted_observed_value": 0.515625,
+        "metric_name": "wine_quality.0_0_isotonic_accuracy",
+        "role": "comparison",
+        "experiment_result_id": 2,
+        "artifact_path": "wine_quality/metrics.json",
+        "artifact_sha256": "a4bb1b619168624f",
+        "reason": "Numeric value-fidelity mismatch: [RESULT-38] is rendered as 165.0 but persisted observed_value is 0.515625. The number adjacent to a RESULT marker must equal its registered value."
+      }
+    ]
+  },
+  "original_paper_rev0": {
+    "chars": 30469,
+    "numeric_fidelity_mismatches": [
+      {
+        "marker": "[RESULT-6]",
+        "rendered_value": "0.215127",
+        "persisted_observed_value": 0.196669,
+        "metric_name": "iris.0_0_sigmoid_ece",
+        "role": "comparison",
+        "experiment_result_id": 1,
+        "artifact_path": "iris/metrics.json",
+        "artifact_sha256": "f9e8bf9ab91a26b4",
+        "reason": "Numeric value-fidelity mismatch: [RESULT-6] is rendered as 0.215127 but persisted observed_value is 0.196669. The number adjacent to a RESULT marker must equal its registered value."
+      },
+      {
+        "marker": "[RESULT-37]",
+        "rendered_value": "333333.0",
+        "persisted_observed_value": 0.333333,
+        "metric_name": "iris.baseline_accuracy",
+        "role": "baseline",
+        "experiment_result_id": 1,
+        "artifact_path": "iris/metrics.json",
+        "artifact_sha256": "f9e8bf9ab91a26b4",
+        "reason": "Numeric value-fidelity mismatch: [RESULT-37] is rendered as 333333.0 but persisted observed_value is 0.333333. The number adjacent to a RESULT marker must equal its registered value."
+      },
+      {
+        "marker": "[RESULT-46]",
+        "rendered_value": "0.449834",
+        "persisted_observed_value": 0.448188,
+        "metric_name": "wine_quality.0_0_uncalibrated_ece",
+        "role": "comparison",
+        "experiment_result_id": 2,
+        "artifact_path": "wine_quality/metrics.json",
+        "artifact_sha256": "a4bb1b619168624f",
+        "reason": "Numeric value-fidelity mismatch: [RESULT-46] is rendered as 0.449834 but persisted observed_value is 0.448188. The number adjacent to a RESULT marker must equal its registered value."
+      },
+      {
+        "marker": "[RESULT-52]",
+        "rendered_value": "0.25",
+        "persisted_observed_value": 0.005532,
+        "metric_name": "wine_quality.0_25_sigmoid_ece",
+        "role": "comparison",
+        "experiment_result_id": 2,
+        "artifact_path": "wine_quality/metrics.json",
+        "artifact_sha256": "a4bb1b619168624f",
+        "reason": "Numeric value-fidelity mismatch: [RESULT-52] is rendered as 0.25 but persisted observed_value is 0.005532. The number adjacent to a RESULT marker must equal its registered value."
+      },
+      {
+        "marker": "[RESULT-56]",
+        "rendered_value": "54878.0",
+        "persisted_observed_value": 0.54878,
+        "metric_name": "wine_quality.0_5_isotonic_accuracy",
+        "role": "comparison",
+        "experiment_result_id": 2,
+        "artifact_path": "wine_quality/metrics.json",
+        "artifact_sha256": "a4bb1b619168624f",
+        "reason": "Numeric value-fidelity mismatch: [RESULT-56] is rendered as 54878.0 but persisted observed_value is 0.54878. The number adjacent to a RESULT marker must equal its registered value."
+      },
+      {
+        "marker": "[RESULT-74]",
+        "rendered_value": "534375.0",
+        "persisted_observed_value": 0.534375,
+        "metric_name": "wine_quality.baseline_accuracy",
+        "role": "baseline",
+        "experiment_result_id": 2,
+        "artifact_path": "wine_quality/metrics.json",
+        "artifact_sha256": "a4bb1b619168624f",
+        "reason": "Numeric value-fidelity mismatch: [RESULT-74] is rendered as 534375.0 but persisted observed_value is 0.534375. The number adjacent to a RESULT marker must equal its registered value."
+      }
+    ]
+  },
+  "analysis": {
+    "canonical_paper_note": "The failed repair did not promote, so proposal.paper_md remained the ORIGINAL (rev0, 30,469 chars). The final evaluation in the proposal meta \u2014 the one the Case-4 harness read \u2014 therefore carries rev0's six numeric mismatches, verified identical to this record's rev0 set ([RESULT-6, 37, 46, 52, 56, 74]).",
+    "repair_delta": "The repaired paper (rev1) contains exactly ONE numeric mismatch: [RESULT-38] rendered 165.0 vs persisted 0.515625 (wine_quality.0_0_isotonic_accuracy, role=comparison). The single repair fixed five of the original six numeric defects and introduced/kept one new one.",
+    "stop_condition_check": "PASSED: the persisted value is correct (0.515625 from the frozen artifact wine_quality/metrics.json, sha a4bb1b6\u2026); the unchanged validator produces no false positive (165.0 is not a scale transform of 0.515625; the model rendered an unrelated value beside the marker). Remediation-side repair is the correct ownership.",
+    "hypothesis_support": "Context loss is supported: the directive's evidence block renders bare 'RESULT-N = value' lines with no metric name, role, or dataset identity, and no per-marker targeting of the diagnosed numeric defects. RESULT-38's metric name ('wine_quality.0_0_isotonic_accuracy') gives no unaided hint that its value must lie in [0,1]; '165.0' (plausibly a dataset-row count) was placed beside it without any structural guard."
+  }
+}
