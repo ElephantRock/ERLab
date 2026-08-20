@@ -25,6 +25,7 @@ import sys
 from contextlib import contextmanager
 from unittest.mock import MagicMock, patch
 
+import pytest
 from sqlalchemy.orm import sessionmaker
 
 sys.modules.setdefault("chromadb", MagicMock())
@@ -486,3 +487,109 @@ class TestRemediatorIdempotencyNoResynthesis:
         assert result.revision_number == 1
         assert result.revised_paper_hash == existing_hash
         assert result.eval_status == "ready"
+        # Owner review of PR #43: an unstamped screening-ready revision
+        # must NOT be treated as an authoritative promotion.
+        assert result.promoted is False
+
+    @pytest.mark.parametrize("final_status,expect_promoted", [
+        ("ready", True), ("blocked", False),
+    ])
+    def test_unstamped_ready_retry_full_real_path(
+        self, final_status, expect_promoted,
+    ):
+        """The exact PR-#43 blocking sequence, through the REAL
+        remediator and route: an unstamped screening-ready revision 1
+        exists, the canonical paper is still the original — retry must
+        perform NO synthesis, return promoted=False from the remediator,
+        run the authoritative full evaluator exactly once, and only a
+        final ready can promote."""
+        engine = _make_engine()
+        with _patched_session(engine):
+            run_id, idea_id, proposal_id = _setup_blocked_autonomous(
+                engine)
+            with db_mod.get_session() as s:
+                prop = s.get(Proposal, proposal_id)
+                original = prop.paper_md
+            candidate_md = original + "\n\nunstamped ready candidate"
+            candidate_hash = hashlib.sha256(
+                candidate_md.encode()).hexdigest()
+            sf = sessionmaker(bind=engine)
+            s = sf()
+            s.add(PaperRevision(
+                proposal_id=proposal_id, revision_number=1,
+                parent_revision_id=None, paper_md=candidate_md,
+                paper_hash=candidate_hash, source="auto_remediation",
+                trigger="alignment_blocked",
+                trigger_detail_json=json.dumps(
+                    {"blocking_findings": ["x"]}),
+                directive_json="{}", eval_status="ready",
+                gates_json="[]",
+            ))
+            s.commit()
+            s.close()
+
+            synthesis_calls = {"n": 0}
+
+            async def _counting_synthesize(self, **kwargs):
+                synthesis_calls["n"] += 1
+                raise AssertionError("must not synthesize again")
+
+            eval_calls = {"n": 0}
+
+            async def _stub_evaluate(self, ctx, proposal_obj, meta, idx):
+                eval_calls["n"] += 1
+                meta["paper_evaluation"] = {
+                    "status": final_status,
+                    "paper_hash": hashlib.sha256(
+                        proposal_obj.paper_md.encode()).hexdigest(),
+                    "gates": [
+                        {"gate": "provenance", "passed": True},
+                        {"gate": "conclusion_support",
+                         "classification": (
+                             "supported_by_paper"
+                             if final_status == "ready"
+                             else "overstated")},
+                    ],
+                }
+
+            import backend.pipeline.evaluation.paper_remediator as _pr_mod
+
+            @contextmanager
+            def _rem_session():
+                sess = sessionmaker(bind=engine)()
+                try:
+                    yield sess
+                except Exception:
+                    sess.rollback()
+                    raise
+                finally:
+                    sess.close()
+
+            with patch(
+                "backend.pipeline.synthesis.paper_synthesizer"
+                ".PaperSynthesizer.synthesize",
+                new=_counting_synthesize,
+            ), patch(
+                "backend.providers.provider_factory"
+                ".get_generation_provider",
+                lambda settings: MagicMock(),
+            ), patch.object(
+                _pr_mod, "get_session", _rem_session,
+            ), patch(
+                "backend.pipeline.stages.PaperSynthesisStage"
+                "._evaluate_paper",
+                new=_stub_evaluate,
+            ):
+                from backend.api.routes.ideas import repair_paper
+                out = asyncio.run(repair_paper(idea_id))
+
+        assert synthesis_calls["n"] == 0      # no second model call
+        assert eval_calls["n"] == 1           # evaluation ran, exactly once
+        assert out["repair"]["promoted"] is expect_promoted
+        assert out["evaluation"]["status"] == final_status
+        with _patched_session(engine):
+            after_md, _, rev1 = _canonical(engine, proposal_id)
+        if expect_promoted:
+            assert after_md == rev1.paper_md == candidate_md
+        else:
+            assert after_md == original       # canonical untouched

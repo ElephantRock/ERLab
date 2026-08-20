@@ -24,7 +24,7 @@ import logging
 from dataclasses import dataclass
 
 from backend.db.database import get_session
-from backend.db.models import ExperimentResult, PaperRevision, Proposal
+from backend.db.models import ExperimentResult, PaperRevision
 from backend.pipeline.gateway.transport import GatewayTransportError
 
 logger = logging.getLogger(__name__)
@@ -182,14 +182,23 @@ async def auto_revise_paper(
             if existing:
                 # Idempotent retry (PAC-7). Two interruption classes:
                 # (a) revision 1 carries a TERMINAL authoritative record
-                #     (stamped by the route's atomic finalization) —
-                #     return that terminal result; never synthesize
-                #     again;
+                #     (stamped by the route's atomic finalization in the
+                #     SAME commit as the promotion) — return that
+                #     terminal result; never synthesize again;
                 # (b) revision 1 exists WITHOUT an authoritative record
                 #     (crash between synthesis and authoritative
-                #     evaluation) — return the persisted candidate so
-                #     the route can continue to evaluation; NO second
-                #     model call.
+                #     evaluation) — return the persisted candidate with
+                #     promoted=False so the route performs the
+                #     authoritative full evaluation; NO second model
+                #     call. An unstamped revision must NEVER be treated
+                #     as authoritative merely because its screening
+                #     eval_status is "ready" (owner review of PR #43:
+                #     that inference let retry bypass the required
+                #     full-paper evaluation while the canonical paper
+                #     was still the original). A crash after the
+                #     route's atomic commit cannot produce an unstamped
+                #     promoted revision — the stamp is written before
+                #     that same session.commit().
                 detail = {}
                 if existing.trigger_detail_json:
                     try:
@@ -197,11 +206,6 @@ async def auto_revise_paper(
                     except Exception:
                         detail = {}
                 authoritative = detail.get("authoritative")
-                if existing.eval_status == "ready" and not authoritative:
-                    # Promotion committed by the route before the
-                    # authoritative stamp could be written (crash after
-                    # commit, before stamp) — treat as terminal ready.
-                    authoritative = {"status": "ready"}
                 logger.info(
                     "Revision 1 already exists for proposal %d — %s",
                     proposal_id,
