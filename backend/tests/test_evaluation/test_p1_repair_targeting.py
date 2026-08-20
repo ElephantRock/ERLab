@@ -18,7 +18,7 @@ the validator remains the authority and one repair remains the maximum.
 import asyncio
 import contextlib
 from types import SimpleNamespace
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -256,11 +256,6 @@ class TestPromptContract:
         assert "Full result context" not in prompt
 
     def test_evidence_hashes_unchanged_by_new_fields(self):
-        ev = EvidenceInvariant(
-            result_map=(("RESULT-1", 0.51),),
-            source_map=("[S1]",), experiment_manifest_hash="h",
-            dataset_hash="d", analysis_code_hash="c",
-        )
         d1 = _directive((), ())
         d2 = _directive(
             ({"marker": "[RESULT-3]", "rendered_value": "165.0",
