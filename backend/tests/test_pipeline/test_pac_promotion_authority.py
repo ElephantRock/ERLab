@@ -576,6 +576,9 @@ class TestRemediatorIdempotencyNoResynthesis:
             ), patch.object(
                 _pr_mod, "get_session", _rem_session,
             ), patch(
+                "backend.providers.provider_factory.create_provider",
+                return_value=MagicMock(),
+            ), patch(
                 "backend.pipeline.stages.PaperSynthesisStage"
                 "._evaluate_paper",
                 new=_stub_evaluate,
