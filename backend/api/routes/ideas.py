@@ -1033,6 +1033,32 @@ async def backfill_all_citations():
 # ─── R2: Autonomous paper repair ─────────────────────────────────
 
 
+def _stamp_revision_authority(
+    revision,
+    authoritative: dict,
+    screening: dict | None = None,
+) -> None:
+    """PAC-5: record the authoritative outcome (and, when the candidate
+    passed screening first, those screening diagnostics) inside the
+    revision's existing trigger-detail JSON — the audit trail keeps
+    both 'passed preliminary screening' and the authoritative verdict.
+    No schema change."""
+    import json as _json
+
+    detail = {}
+    if revision.trigger_detail_json:
+        try:
+            detail = _json.loads(revision.trigger_detail_json)
+        except Exception:
+            detail = {}
+    if not isinstance(detail, dict):
+        detail = {}
+    detail["authoritative"] = authoritative
+    if screening is not None:
+        detail["screening"] = screening
+    revision.trigger_detail_json = _json.dumps(detail)
+
+
 def _derive_blocking_findings(eval_data: dict) -> list[str]:
     """Convert a persisted blocked evaluation into actionable repair findings.
 
@@ -1077,7 +1103,12 @@ async def repair_paper(idea_id: int):
     from types import SimpleNamespace
 
     from backend.db.database import get_session
-    from backend.db.models import ExperimentResult, Idea, Proposal
+    from backend.db.models import (
+        ExperimentResult,
+        Idea,
+        PaperRevision,
+        Proposal,
+    )
     from backend.pipeline.evaluation.paper_remediator import auto_revise_paper
     from backend.pipeline.experiment.manifest import ResultMarker
     from backend.pipeline.experiment.specification import load_spec
@@ -1311,6 +1342,13 @@ async def repair_paper(idea_id: int):
                 "Repair requires registered experiment evidence."
             )
 
+    # PAC-4: identity of the canonical bytes at route entry — the
+    # finalization must refuse promotion if the canonical paper changed
+    # underneath the repair (stale/concurrent state).
+    original_canonical_hash = _hashlib.sha256(
+        paper_md.encode()
+    ).hexdigest()
+
     # Invoke the remediator (outside the session — it manages its own sessions)
     result = await auto_revise_paper(
         proposal_id=proposal.id,
@@ -1328,46 +1366,60 @@ async def repair_paper(idea_id: int):
         ),
     )
 
-    # Run the full evaluator on the result (with R1 hydration for persisted markers)
+    # ── Post-remediation authority (PAC-3..PAC-7) ───────────────────
+    # The remediator is a candidate producer; this route is the single
+    # promotion authority. A screening-ready candidate is evaluated by
+    # the production full-paper evaluator against the PERSISTED
+    # revision-1 bytes (never the canonical paper), and promotion
+    # happens in one atomic transaction after — and only after — that
+    # authoritative evaluation returns ready for the exact candidate.
     repair_eval_status = "unknown"
     repair_eval_hash = ""
     repair_gates = []
+    final_promoted = False
+    finalization_note = ""
 
-    if result.success and result.promoted:
+    if result.success and result.eval_status == "ready" and not result.promoted:
+        # Fresh or crash-recovered screening-ready candidate: evaluate
+        # revision 1's persisted bytes.
         try:
+            with get_session() as session:
+                rev1 = session.execute(
+                    select(PaperRevision).where(
+                        PaperRevision.proposal_id == proposal.id,
+                        PaperRevision.revision_number == 1,
+                    )
+                ).scalar_one_or_none()
+                if rev1 is None or not rev1.paper_md:
+                    raise RuntimeError(
+                        "screening-ready result but revision 1 is"
+                        " missing — refusing to evaluate"
+                    )
+                canonical_row = session.execute(
+                    select(Proposal.paper_md, Proposal.paper_meta_json)
+                    .where(Proposal.id == proposal.id)
+                ).fetchone()
+                canonical_md_now = canonical_row[0]
+                canonical_meta_now = (
+                    json.loads(canonical_row[1]) if canonical_row[1] else {}
+                )
+
+            # PAC-3: evaluate the candidate, not the canonical paper.
+            new_meta = canonical_meta_now
+            new_meta["paper_evaluation"] = {
+                "status": "pending", "scope": "paper",
+            }
+            new_meta["full_paper"] = {
+                "paper_markdown": rev1.paper_md,
+                "source_map": new_meta.get("source_map", []),
+            }
+
             provider = create_provider()
             stage = PaperSynthesisStage(provider=provider)
 
-            with get_session() as session:
-                row = session.execute(
-                    select(Proposal.paper_md, Proposal.paper_meta_json).where(
-                        Proposal.id == proposal.id
-                    )
-                ).fetchone()
-                new_md = row[0]
-                new_meta = json.loads(row[1]) if row[1] else {}
-                new_meta["paper_evaluation"] = {"status": "pending", "scope": "paper"}
-                # Wire the promoted paper into the metadata so _evaluate_paper()
-                # can read it. The evaluator reads metadata["full_paper"]
-                # ["paper_markdown"] and ["source_map"], not proposal.paper_md
-                # directly. Without this, the post-remediation evaluation
-                # returns "unavailable" and the hash-binding contract
-                # (eval.paper_hash == SHA256 of the current paper) is never
-                # established for the successor.
-                new_meta["full_paper"] = {
-                    "paper_markdown": new_md,
-                    "source_map": new_meta.get("source_map", []),
-                }
-
             pipeline_result = PipelineResult()
-            # Wire result_markers into the context so the numeric-fidelity
-            # and experiment-alignment gates fire non-vacuously on the
-            # successor paper. The markers are already in the proposal's
-            # persisted metadata from the original pipeline run.
             if markers:
                 pipeline_result.result_markers = {proposal.id: markers}
-            # EAD-3e: Persist autonomous design state into the
-            # proposal's metadata so cold repair can reconstruct it.
             auto_design = new_meta.get(
                 "autonomous_experiment_design"
             )
@@ -1377,13 +1429,6 @@ async def repair_paper(idea_id: int):
             if auto_design and auto_design.get("status") == "designed":
                 eval_params["autonomous_experiment_design"] = auto_design
 
-            # Cold re-evaluation must score the successor against the
-            # SAME research intent as the original in-run evaluation.
-            # The scope gate prefers ctx.research_question, then domain;
-            # with neither it scored the revised paper against the
-            # two-word generic domain and blocked on a 0.00-overlap
-            # reading (run 2713). The frozen question lives in the
-            # persisted design; the domain on the run row.
             eval_question = (auto_design or {}).get("research_question") or ""
             eval_domain = "machine learning"
             if idea_run_id:
@@ -1403,37 +1448,129 @@ async def repair_paper(idea_id: int):
                 research_question=eval_question,
                 params=eval_params,
             )
-            proposal_obj = SimpleNamespace(paper_md=new_md, metadata=new_meta)
+            proposal_obj = SimpleNamespace(
+                paper_md=rev1.paper_md, metadata=new_meta,
+            )
 
-            await stage._evaluate_paper(eval_ctx, proposal_obj, new_meta, proposal.id)
+            await stage._evaluate_paper(
+                eval_ctx, proposal_obj, new_meta, proposal.id,
+            )
 
             eval_result = new_meta.get("paper_evaluation", {})
             repair_eval_status = eval_result.get("status", "unknown")
             repair_eval_hash = eval_result.get("paper_hash", "")
             repair_gates = eval_result.get("gates", [])
 
+            # ── Single atomic finalization (PAC-4) ───────────────────
             with get_session() as session:
-                session.execute(
-                    Proposal.__table__.update().where(
-                        Proposal.id == proposal.id
-                    ).values(paper_meta_json=json.dumps(new_meta))
+                prop = session.get(Proposal, proposal.id)
+                rev1f = session.execute(
+                    select(PaperRevision).where(
+                        PaperRevision.proposal_id == proposal.id,
+                        PaperRevision.revision_number == 1,
+                    )
+                ).scalar_one_or_none()
+                canonical_hash_now = (
+                    _hashlib.sha256(prop.paper_md.encode()).hexdigest()
+                    if prop is not None and prop.paper_md else ""
                 )
-                session.commit()
+                revision_hash_now = (
+                    _hashlib.sha256(rev1f.paper_md.encode()).hexdigest()
+                    if rev1f is not None and rev1f.paper_md else ""
+                )
+                stale = (
+                    canonical_hash_now != original_canonical_hash
+                    or revision_hash_now != result.revised_paper_hash
+                    or not repair_eval_hash
+                    or repair_eval_hash != result.revised_paper_hash
+                )
+                if stale:
+                    # Fail closed: no promotion, no canonical mutation.
+                    finalization_note = (
+                        "promotion refused: stale or concurrent state"
+                        " (canonical/revision/evaluation identity"
+                        " mismatch)"
+                    )
+                    logger.error(
+                        "Repair finalization failed identity checks for"
+                        " proposal %d: canonical=%s revision=%s"
+                        " evaluation=%s",
+                        proposal.id,
+                        canonical_hash_now == original_canonical_hash,
+                        revision_hash_now == result.revised_paper_hash,
+                        repair_eval_hash == result.revised_paper_hash,
+                    )
+                elif repair_eval_status == "ready":
+                    meta = (
+                        json.loads(prop.paper_meta_json)
+                        if prop.paper_meta_json else {}
+                    )
+                    fp = meta.get("full_paper")
+                    if not isinstance(fp, dict):
+                        fp = {}
+                    fp["paper_markdown"] = rev1f.paper_md
+                    meta["full_paper"] = fp
+                    meta["paper_evaluation"] = eval_result
+                    prop.paper_md = rev1f.paper_md
+                    prop.paper_meta_json = json.dumps(meta)
+                    rev1f.eval_status = "ready"
+                    rev1f.gates_json = json.dumps(repair_gates)
+                    _stamp_revision_authority(
+                        rev1f,
+                        {"status": "ready",
+                         "paper_hash": repair_eval_hash,
+                         "gates": repair_gates},
+                    )
+                    session.commit()
+                    final_promoted = True
+                else:
+                    # PAC-5/PAC-6: blocked or failed authoritative
+                    # evaluation — candidate preserved, canonical paper
+                    # and its hash-bound evaluation remain untouched.
+                    _stamp_revision_authority(
+                        rev1f,
+                        {"status": repair_eval_status,
+                         "paper_hash": repair_eval_hash,
+                         "gates": repair_gates},
+                        screening={
+                            "status": result.eval_status,
+                            "gates": result.gates,
+                        },
+                    )
+                    rev1f.eval_status = repair_eval_status
+                    rev1f.gates_json = json.dumps(repair_gates)
+                    session.commit()
         except Exception:
+            # PAC-6: evaluation failure is fail-closed.
             repair_eval_status = "failed"
             repair_eval_hash = ""
+    elif result.success and result.promoted:
+        # Terminal retry of an already-authoritatively-promoted
+        # revision (PAC-7): report the recorded outcome; no synthesis,
+        # no re-evaluation.
+        final_promoted = True
+        repair_eval_status = result.eval_status
+        repair_eval_hash = result.revised_paper_hash
+        repair_gates = list(result.gates or [])
+    elif result.success:
+        # Screening-blocked candidate (or terminal authoritative
+        # blocked retry): report the candidate outcome.
+        repair_eval_status = result.eval_status or "unknown"
+        repair_gates = list(result.gates or [])
 
     return {
         "idea_id": idea_id,
         "proposal_id": proposal.id,
         "repair": {
             "success": result.success,
-            "promoted": result.promoted,
+            "promoted": final_promoted,
             "revision_number": result.revision_number,
             "original_paper_hash": result.original_paper_hash,
             "revised_paper_hash": result.revised_paper_hash,
             "findings_count": len(blocking_findings),
             "findings": blocking_findings,
+            **({"finalization_note": finalization_note}
+               if finalization_note else {}),
         },
         "evaluation": {
             "status": repair_eval_status,

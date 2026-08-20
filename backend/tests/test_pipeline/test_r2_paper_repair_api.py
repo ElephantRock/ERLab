@@ -220,7 +220,11 @@ class TestRepairEligibility:
         )
 
         mock_result = SimpleNamespace(
-            success=True, promoted=True, revision_number=1,
+            # PAC contract: the remediator is a candidate producer —
+            # a screening-ready candidate returns promoted=False with
+            # eval_status="ready"; the route is the promotion authority.
+            success=True, promoted=False, revision_number=1,
+            eval_status="ready", gates=[], blocking_reasons=[],
             original_paper_hash=hashlib.sha256(paper.encode()).hexdigest(),
             revised_paper_hash="abc123",
             invariant_violations=[],
