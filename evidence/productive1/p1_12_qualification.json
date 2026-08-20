@@ -1,0 +1,629 @@
+{
+  "trials": [
+    {
+      "trial": "calib-A#1",
+      "family": "calibration",
+      "latency_s": 305.7,
+      "http": 200,
+      "promoted": true,
+      "repair": {
+        "success": true,
+        "promoted": true,
+        "revision_number": 1,
+        "original_paper_hash": "709558455323500355ec9eca74d14ef27756d5d4c7c97d9c959846484f0e5591",
+        "revised_paper_hash": "d893c185aeb1733ef68b67c916966180fe575cc08cdf7a2b7335b44c83a85662",
+        "findings_count": 3,
+        "findings": [
+          "novelty (score=0.35): The framing\u2014measuring calibration-method *ranking stability* as a function of shift severity\u2014is a reasonable reframing, but the central finding (metrics and methods dissociate; no calibrator dominates) largely confirms what is already established in the cited counterexample literature. The use of iris and wine_quality with Platt/isotonic calibration on from-scratch logistic regression offers little headroom for genuinely new insights about modern shift regimes.",
+          "rigor (score=0.35): No formal loss functions, optimizers, learning rates, regularization, or convergence criteria are specified for the underlying logistic regression or the calibrator fits. Most critically, the covariate-shift construction\u2014what \"severity 0.25/0.5/0.75\" operationally means\u2014is never defined, making the central independent variable unreproducible. There is no statistical significance testing or repeated trials, which is serious given that ECE/AURC estimates on iris-sized data are extremely noisy; limitations are only partially acknowledged.",
+          "Gate finding: numeric_fidelity: [RESULT-6]: Numeric value-fidelity mismatch: [RESULT-6] is rendered as 0.215127 but persisted observed_value is 0.196669. The number; [RESULT-37]: Numeric value-fidelity mismatch: [RESULT-37] is rendered as 333333.0 but persisted observed_value is 0.333333. The numbe; [RESULT-46]: Numeric value-fidelity mismatch: [RESULT-46] is rendered as 0.449834 but persisted observed_value is 0.448188. The numbe; [RESULT-52]: Numeric value-fidelity mismatch: [RESULT-52] is rendered as 0.25 but persisted observed_value is 0.005532. The number ad; [RESULT-56]: Numeric value-fidelity mismatch: [RESULT-56] is rendered as 54878.0 but persisted observed_value is 0.54878. The number ; [RESULT-74]: Numeric value-fidelity mismatch: [RESULT-74] is rendered as 534375.0 but persisted observed_value is 0.534375. The numbe"
+        ]
+      },
+      "gates": [
+        {
+          "gate": "provenance",
+          "passed": true,
+          "reason": "30 mapped source(s)"
+        },
+        {
+          "gate": "scope_alignment",
+          "classification": "on_scope",
+          "reason": "Paper aligns with research intent (combined overlap 0.15, 21 intent terms hit)."
+        },
+        {
+          "gate": "conclusion_support",
+          "classification": "supported_by_paper",
+          "reason": "Claims are consistent with reported empirical results (indicators: claims causation)."
+        },
+        {
+          "gate": "experiment_alignment",
+          "passed": true,
+          "reason": "iris:[no_concern]; wine_quality:[no_concern]"
+        },
+        {
+          "gate": "numeric_fidelity",
+          "passed": true,
+          "reason": "74 RESULT marker(s) validated; 0 numeric mismatches"
+        },
+        {
+          "gate": "method_fidelity",
+          "passed": true,
+          "reason": "All 4 frozen method fact(s) verified: required statements present, no contradicting descriptions"
+        }
+      ],
+      "eval_status": "ready",
+      "revision_lineage": [
+        [
+          0,
+          "blocked",
+          "pipeline",
+          "709558455323"
+        ],
+        [
+          1,
+          "ready",
+          "auto_remediation",
+          "d893c185aeb1"
+        ]
+      ],
+      "rev1_numeric_mismatch_count": 0,
+      "rev1_numeric_mismatches": [],
+      "freeze": {
+        "http": 200,
+        "state": "frozen",
+        "frozen_revision_id": 3
+      },
+      "release_identity": {
+        "E": "d893c185aeb1733ef68b67c916966180fe575cc08cdf7a2b7335b44c83a85662",
+        "F": "d893c185aeb1733ef68b67c916966180fe575cc08cdf7a2b7335b44c83a85662",
+        "R": "d893c185aeb1733ef68b67c916966180fe575cc08cdf7a2b7335b44c83a85662",
+        "H": "d893c185aeb1733ef68b67c916966180fe575cc08cdf7a2b7335b44c83a85662",
+        "equality": true
+      }
+    },
+    {
+      "trial": "calib-A#2",
+      "family": "calibration",
+      "latency_s": 330.7,
+      "http": 200,
+      "promoted": true,
+      "repair": {
+        "success": true,
+        "promoted": true,
+        "revision_number": 1,
+        "original_paper_hash": "709558455323500355ec9eca74d14ef27756d5d4c7c97d9c959846484f0e5591",
+        "revised_paper_hash": "39a99d0d6b23cc464c3544d2b564f380857d70070e26fde61cb8c1afd56fff15",
+        "findings_count": 3,
+        "findings": [
+          "novelty (score=0.35): The framing\u2014measuring calibration-method *ranking stability* as a function of shift severity\u2014is a reasonable reframing, but the central finding (metrics and methods dissociate; no calibrator dominates) largely confirms what is already established in the cited counterexample literature. The use of iris and wine_quality with Platt/isotonic calibration on from-scratch logistic regression offers little headroom for genuinely new insights about modern shift regimes.",
+          "rigor (score=0.35): No formal loss functions, optimizers, learning rates, regularization, or convergence criteria are specified for the underlying logistic regression or the calibrator fits. Most critically, the covariate-shift construction\u2014what \"severity 0.25/0.5/0.75\" operationally means\u2014is never defined, making the central independent variable unreproducible. There is no statistical significance testing or repeated trials, which is serious given that ECE/AURC estimates on iris-sized data are extremely noisy; limitations are only partially acknowledged.",
+          "Gate finding: numeric_fidelity: [RESULT-6]: Numeric value-fidelity mismatch: [RESULT-6] is rendered as 0.215127 but persisted observed_value is 0.196669. The number; [RESULT-37]: Numeric value-fidelity mismatch: [RESULT-37] is rendered as 333333.0 but persisted observed_value is 0.333333. The numbe; [RESULT-46]: Numeric value-fidelity mismatch: [RESULT-46] is rendered as 0.449834 but persisted observed_value is 0.448188. The numbe; [RESULT-52]: Numeric value-fidelity mismatch: [RESULT-52] is rendered as 0.25 but persisted observed_value is 0.005532. The number ad; [RESULT-56]: Numeric value-fidelity mismatch: [RESULT-56] is rendered as 54878.0 but persisted observed_value is 0.54878. The number ; [RESULT-74]: Numeric value-fidelity mismatch: [RESULT-74] is rendered as 534375.0 but persisted observed_value is 0.534375. The numbe"
+        ]
+      },
+      "gates": [
+        {
+          "gate": "provenance",
+          "passed": true,
+          "reason": "30 mapped source(s)"
+        },
+        {
+          "gate": "scope_alignment",
+          "classification": "on_scope",
+          "reason": "Paper aligns with research intent (combined overlap 0.18, 23 intent terms hit)."
+        },
+        {
+          "gate": "conclusion_support",
+          "classification": "supported_by_paper",
+          "reason": "Claims are consistent with reported empirical results (indicators: claims causation)."
+        },
+        {
+          "gate": "experiment_alignment",
+          "passed": true,
+          "reason": "iris:[no_concern]; wine_quality:[no_concern]"
+        },
+        {
+          "gate": "numeric_fidelity",
+          "passed": true,
+          "reason": "74 RESULT marker(s) validated; 0 numeric mismatches"
+        },
+        {
+          "gate": "method_fidelity",
+          "passed": true,
+          "reason": "All 4 frozen method fact(s) verified: required statements present, no contradicting descriptions"
+        }
+      ],
+      "eval_status": "ready",
+      "revision_lineage": [
+        [
+          0,
+          "blocked",
+          "pipeline",
+          "709558455323"
+        ],
+        [
+          1,
+          "ready",
+          "auto_remediation",
+          "39a99d0d6b23"
+        ]
+      ],
+      "rev1_numeric_mismatch_count": 0,
+      "rev1_numeric_mismatches": [],
+      "freeze": {
+        "http": 200,
+        "state": "frozen",
+        "frozen_revision_id": 3
+      },
+      "release_identity": {
+        "E": "39a99d0d6b23cc464c3544d2b564f380857d70070e26fde61cb8c1afd56fff15",
+        "F": "39a99d0d6b23cc464c3544d2b564f380857d70070e26fde61cb8c1afd56fff15",
+        "R": "39a99d0d6b23cc464c3544d2b564f380857d70070e26fde61cb8c1afd56fff15",
+        "H": "39a99d0d6b23cc464c3544d2b564f380857d70070e26fde61cb8c1afd56fff15",
+        "equality": true
+      }
+    },
+    {
+      "trial": "calib-B#1",
+      "family": "calibration",
+      "latency_s": 210.6,
+      "http": 200,
+      "promoted": true,
+      "repair": {
+        "success": true,
+        "promoted": true,
+        "revision_number": 1,
+        "original_paper_hash": "b4f799c61cc917d5d3000c19610256a05c95c39c81b79d970348a91def442ffa",
+        "revised_paper_hash": "e22d212749e08cac876cbc62132e18e07dd57869d55396ba725e9fbabcca4a34",
+        "findings_count": 1,
+        "findings": [
+          "Gate finding: claim_result_alignment: [RESULT-2] (role=comparison) credited to numeric: Numeric value-fidelity mismatch: [RESULT-2] is rendered as 5185.0 but persisted observed_value is 0.; [RESULT-2] (role=comparison) credited to numeric: Numeric value-fidelity mismatch: [RESULT-2] is rendered as 5185.0 but persisted observed_value is 0.; [RESULT-3] (role=comparison) credited to numeric: Numeric value-fidelity mismatch: [RESULT-3] is rendered as 5.0 but persisted observed_value is 0.05.; [RESULT-18] (role=comparison) credited to numeric: Numeric value-fidelity mismatch: [RESULT-18] is rendered as 116041.0 but persisted observed_value is; [RESULT-37] (role=baseline) credited to numeric: Numeric value-fidelity mismatch: [RESULT-37] is rendered as 333333.0 but persisted observed_value is; [RESULT-37] (role=baseline) credited to numeric: Numeric value-fidelity mismatch: [RESULT-37] is rendered as 333333.0 but persisted observed_value is; [RESULT-41] (role=comparison) credited to numeric: Numeric value-fidelity mismatch: [RESULT-41] is rendered as 615625.0 but persisted observed_value is; [RESULT-43] (role=comparison) credited to numeric: Numeric value-fidelity mismatch: [RESULT-43] is rendered as 19094.0 but persisted observed_value is ; [RESULT-45] (role=comparison) credited to numeric: Numeric value-fidelity mismatch: [RESULT-45] is rendered as 24025.0 but persisted observed_value is ; [RESULT-49] (role=comparison) credited to numeric: Numeric value-fidelity mismatch: [RESULT-49] is rendered as 334098.0 but persisted observed_value is; [RESULT-53] (role=comparison) credited to numeric: Numeric value-fidelity mismatch: [RESULT-53] is rendered as 54417.0 but persisted observed_value is ; [RESULT-74] (role=baseline) credited to numeric: Numeric value-fidelity mismatch: [RESULT-74] is rendered as 534375.0 but persisted observed_value is; [RESULT-74] (role=baseline) credited to numeric: Numeric value-fidelity mismatch: [RESULT-74] is rendered as 534375.0 but persisted observed_value is"
+        ]
+      },
+      "gates": [
+        {
+          "gate": "provenance",
+          "passed": true,
+          "reason": "30 mapped source(s)"
+        },
+        {
+          "gate": "scope_alignment",
+          "classification": "on_scope",
+          "reason": "Paper aligns with research intent (combined overlap 0.16, 21 intent terms hit)."
+        },
+        {
+          "gate": "conclusion_support",
+          "classification": "supported_by_paper",
+          "reason": "No overreach indicators; abstract/conclusion does not assert empirical demonstration."
+        },
+        {
+          "gate": "experiment_alignment",
+          "passed": true,
+          "reason": "iris:[minor_concern]; wine_quality:[minor_concern]"
+        },
+        {
+          "gate": "numeric_fidelity",
+          "passed": true,
+          "reason": "74 RESULT marker(s) validated; 0 numeric mismatches"
+        },
+        {
+          "gate": "method_fidelity",
+          "passed": true,
+          "reason": "All 4 frozen method fact(s) verified: required statements present, no contradicting descriptions"
+        }
+      ],
+      "eval_status": "ready",
+      "revision_lineage": [
+        [
+          0,
+          "blocked",
+          "pipeline",
+          "b4f799c61cc9"
+        ],
+        [
+          1,
+          "ready",
+          "auto_remediation",
+          "e22d212749e0"
+        ]
+      ],
+      "rev1_numeric_mismatch_count": 0,
+      "rev1_numeric_mismatches": [],
+      "freeze": {
+        "http": 200,
+        "state": "frozen",
+        "frozen_revision_id": 3
+      },
+      "release_identity": {
+        "E": "e22d212749e08cac876cbc62132e18e07dd57869d55396ba725e9fbabcca4a34",
+        "F": "e22d212749e08cac876cbc62132e18e07dd57869d55396ba725e9fbabcca4a34",
+        "R": "e22d212749e08cac876cbc62132e18e07dd57869d55396ba725e9fbabcca4a34",
+        "H": "e22d212749e08cac876cbc62132e18e07dd57869d55396ba725e9fbabcca4a34",
+        "equality": true
+      }
+    },
+    {
+      "trial": "calib-B#2",
+      "family": "calibration",
+      "latency_s": 266.5,
+      "http": 200,
+      "promoted": true,
+      "repair": {
+        "success": true,
+        "promoted": true,
+        "revision_number": 1,
+        "original_paper_hash": "b4f799c61cc917d5d3000c19610256a05c95c39c81b79d970348a91def442ffa",
+        "revised_paper_hash": "7b5fb28eaabed860e98912c1e824c9328079d13d96e3d2c22693175725eb63f5",
+        "findings_count": 1,
+        "findings": [
+          "Gate finding: claim_result_alignment: [RESULT-2] (role=comparison) credited to numeric: Numeric value-fidelity mismatch: [RESULT-2] is rendered as 5185.0 but persisted observed_value is 0.; [RESULT-2] (role=comparison) credited to numeric: Numeric value-fidelity mismatch: [RESULT-2] is rendered as 5185.0 but persisted observed_value is 0.; [RESULT-3] (role=comparison) credited to numeric: Numeric value-fidelity mismatch: [RESULT-3] is rendered as 5.0 but persisted observed_value is 0.05.; [RESULT-18] (role=comparison) credited to numeric: Numeric value-fidelity mismatch: [RESULT-18] is rendered as 116041.0 but persisted observed_value is; [RESULT-37] (role=baseline) credited to numeric: Numeric value-fidelity mismatch: [RESULT-37] is rendered as 333333.0 but persisted observed_value is; [RESULT-37] (role=baseline) credited to numeric: Numeric value-fidelity mismatch: [RESULT-37] is rendered as 333333.0 but persisted observed_value is; [RESULT-41] (role=comparison) credited to numeric: Numeric value-fidelity mismatch: [RESULT-41] is rendered as 615625.0 but persisted observed_value is; [RESULT-43] (role=comparison) credited to numeric: Numeric value-fidelity mismatch: [RESULT-43] is rendered as 19094.0 but persisted observed_value is ; [RESULT-45] (role=comparison) credited to numeric: Numeric value-fidelity mismatch: [RESULT-45] is rendered as 24025.0 but persisted observed_value is ; [RESULT-49] (role=comparison) credited to numeric: Numeric value-fidelity mismatch: [RESULT-49] is rendered as 334098.0 but persisted observed_value is; [RESULT-53] (role=comparison) credited to numeric: Numeric value-fidelity mismatch: [RESULT-53] is rendered as 54417.0 but persisted observed_value is ; [RESULT-74] (role=baseline) credited to numeric: Numeric value-fidelity mismatch: [RESULT-74] is rendered as 534375.0 but persisted observed_value is; [RESULT-74] (role=baseline) credited to numeric: Numeric value-fidelity mismatch: [RESULT-74] is rendered as 534375.0 but persisted observed_value is"
+        ]
+      },
+      "gates": [
+        {
+          "gate": "provenance",
+          "passed": true,
+          "reason": "30 mapped source(s)"
+        },
+        {
+          "gate": "scope_alignment",
+          "classification": "on_scope",
+          "reason": "Paper aligns with research intent (combined overlap 0.17, 21 intent terms hit)."
+        },
+        {
+          "gate": "conclusion_support",
+          "classification": "supported_by_paper",
+          "reason": "No overreach indicators; abstract/conclusion does not assert empirical demonstration."
+        },
+        {
+          "gate": "experiment_alignment",
+          "passed": true,
+          "reason": "iris:[no_concern]; wine_quality:[no_concern]"
+        },
+        {
+          "gate": "numeric_fidelity",
+          "passed": true,
+          "reason": "74 RESULT marker(s) validated; 0 numeric mismatches"
+        },
+        {
+          "gate": "method_fidelity",
+          "passed": true,
+          "reason": "All 4 frozen method fact(s) verified: required statements present, no contradicting descriptions"
+        }
+      ],
+      "eval_status": "ready",
+      "revision_lineage": [
+        [
+          0,
+          "blocked",
+          "pipeline",
+          "b4f799c61cc9"
+        ],
+        [
+          1,
+          "ready",
+          "auto_remediation",
+          "7b5fb28eaabe"
+        ]
+      ],
+      "rev1_numeric_mismatch_count": 0,
+      "rev1_numeric_mismatches": [],
+      "freeze": {
+        "http": 200,
+        "state": "frozen",
+        "frozen_revision_id": 3
+      },
+      "release_identity": {
+        "E": "7b5fb28eaabed860e98912c1e824c9328079d13d96e3d2c22693175725eb63f5",
+        "F": "7b5fb28eaabed860e98912c1e824c9328079d13d96e3d2c22693175725eb63f5",
+        "R": "7b5fb28eaabed860e98912c1e824c9328079d13d96e3d2c22693175725eb63f5",
+        "H": "7b5fb28eaabed860e98912c1e824c9328079d13d96e3d2c22693175725eb63f5",
+        "equality": true
+      }
+    },
+    {
+      "trial": "regr-A#1",
+      "family": "regression",
+      "latency_s": 243.9,
+      "http": 200,
+      "promoted": true,
+      "repair": {
+        "success": true,
+        "promoted": true,
+        "revision_number": 1,
+        "original_paper_hash": "64785feb942b2c6b2c89ffafb002302be9d3834c3873e5bee4859c54c0503568",
+        "revised_paper_hash": "f7a02842f8880cdce1e9f34170b1d9ce335347cb55768b9be63f810e5f1ed995",
+        "findings_count": 1,
+        "findings": [
+          "Gate finding: claim_result_alignment: [RESULT-7] (role=comparison) credited to numeric: Numeric value-fidelity mismatch: [RESULT-7] is rendered as 742593.0 but persisted observed_value is ; [RESULT-22] (role=comparison) credited to numeric: Numeric value-fidelity mismatch: [RESULT-22] is rendered as 392018.0 but persisted observed_value is; [RESULT-26] (role=baseline) credited to numeric: Numeric value-fidelity mismatch: [RESULT-26] is rendered as 0.006701 but persisted observed_value is; [RESULT-26] (role=baseline) credited to numeric: Numeric value-fidelity mismatch: [RESULT-26] is rendered as 0.006701 but persisted observed_value is; [RESULT-26] (role=baseline) credited to numeric: Numeric value-fidelity mismatch: [RESULT-26] is rendered as 0.006701 but persisted observed_value is; [RESULT-46] (role=comparison) credited to numeric: Numeric value-fidelity mismatch: [RESULT-46] is rendered as 327266.0 but persisted observed_value is; [RESULT-49] (role=comparison) credited to numeric: Numeric value-fidelity mismatch: [RESULT-49] is rendered as 212387.0 but persisted observed_value is; [RESULT-49] (role=comparison) credited to numeric: Numeric value-fidelity mismatch: [RESULT-49] is rendered as 212387.0 but persisted observed_value is; [RESULT-53] (role=baseline) credited to numeric: Numeric value-fidelity mismatch: [RESULT-53] is rendered as 0.012442 but persisted observed_value is; [RESULT-53] (role=baseline) credited to numeric: Numeric value-fidelity mismatch: [RESULT-53] is rendered as 0.012442 but persisted observed_value is"
+        ]
+      },
+      "gates": [
+        {
+          "gate": "provenance",
+          "passed": true,
+          "reason": "30 mapped source(s)"
+        },
+        {
+          "gate": "scope_alignment",
+          "classification": "on_scope",
+          "reason": "Paper aligns with research intent (combined overlap 0.10, 13 intent terms hit)."
+        },
+        {
+          "gate": "conclusion_support",
+          "classification": "supported_by_paper",
+          "reason": "Claims are consistent with reported empirical results (indicators: claims proof)."
+        },
+        {
+          "gate": "experiment_alignment",
+          "passed": true,
+          "reason": "airfoil_self_noise:[minor_concern]; concrete_strength:[minor_concern]"
+        },
+        {
+          "gate": "numeric_fidelity",
+          "passed": true,
+          "reason": "54 RESULT marker(s) validated; 0 numeric mismatches"
+        },
+        {
+          "gate": "method_fidelity",
+          "passed": true,
+          "reason": "All 5 frozen method fact(s) verified: required statements present, no contradicting descriptions"
+        }
+      ],
+      "eval_status": "ready",
+      "revision_lineage": [
+        [
+          0,
+          "blocked",
+          "pipeline",
+          "64785feb942b"
+        ],
+        [
+          1,
+          "ready",
+          "auto_remediation",
+          "f7a02842f888"
+        ]
+      ],
+      "rev1_numeric_mismatch_count": 0,
+      "rev1_numeric_mismatches": [],
+      "freeze": {
+        "http": 200,
+        "state": "frozen",
+        "frozen_revision_id": 3
+      },
+      "release_identity": {
+        "E": "f7a02842f8880cdce1e9f34170b1d9ce335347cb55768b9be63f810e5f1ed995",
+        "F": "f7a02842f8880cdce1e9f34170b1d9ce335347cb55768b9be63f810e5f1ed995",
+        "R": "f7a02842f8880cdce1e9f34170b1d9ce335347cb55768b9be63f810e5f1ed995",
+        "H": "f7a02842f8880cdce1e9f34170b1d9ce335347cb55768b9be63f810e5f1ed995",
+        "equality": true
+      }
+    },
+    {
+      "trial": "regr-A#2",
+      "family": "regression",
+      "latency_s": 305.1,
+      "http": 200,
+      "promoted": true,
+      "repair": {
+        "success": true,
+        "promoted": true,
+        "revision_number": 1,
+        "original_paper_hash": "64785feb942b2c6b2c89ffafb002302be9d3834c3873e5bee4859c54c0503568",
+        "revised_paper_hash": "2e9075107bd7227655b36bd3ad8dd8ff08fd196cfbb12be0137b2a548a5c8dc6",
+        "findings_count": 1,
+        "findings": [
+          "Gate finding: claim_result_alignment: [RESULT-7] (role=comparison) credited to numeric: Numeric value-fidelity mismatch: [RESULT-7] is rendered as 742593.0 but persisted observed_value is ; [RESULT-22] (role=comparison) credited to numeric: Numeric value-fidelity mismatch: [RESULT-22] is rendered as 392018.0 but persisted observed_value is; [RESULT-26] (role=baseline) credited to numeric: Numeric value-fidelity mismatch: [RESULT-26] is rendered as 0.006701 but persisted observed_value is; [RESULT-26] (role=baseline) credited to numeric: Numeric value-fidelity mismatch: [RESULT-26] is rendered as 0.006701 but persisted observed_value is; [RESULT-26] (role=baseline) credited to numeric: Numeric value-fidelity mismatch: [RESULT-26] is rendered as 0.006701 but persisted observed_value is; [RESULT-46] (role=comparison) credited to numeric: Numeric value-fidelity mismatch: [RESULT-46] is rendered as 327266.0 but persisted observed_value is; [RESULT-49] (role=comparison) credited to numeric: Numeric value-fidelity mismatch: [RESULT-49] is rendered as 212387.0 but persisted observed_value is; [RESULT-49] (role=comparison) credited to numeric: Numeric value-fidelity mismatch: [RESULT-49] is rendered as 212387.0 but persisted observed_value is; [RESULT-53] (role=baseline) credited to numeric: Numeric value-fidelity mismatch: [RESULT-53] is rendered as 0.012442 but persisted observed_value is; [RESULT-53] (role=baseline) credited to numeric: Numeric value-fidelity mismatch: [RESULT-53] is rendered as 0.012442 but persisted observed_value is"
+        ]
+      },
+      "gates": [
+        {
+          "gate": "provenance",
+          "passed": true,
+          "reason": "30 mapped source(s)"
+        },
+        {
+          "gate": "scope_alignment",
+          "classification": "on_scope",
+          "reason": "Paper aligns with research intent (combined overlap 0.10, 13 intent terms hit)."
+        },
+        {
+          "gate": "conclusion_support",
+          "classification": "supported_by_paper",
+          "reason": "Claims are consistent with reported empirical results (indicators: claims proof)."
+        },
+        {
+          "gate": "experiment_alignment",
+          "passed": true,
+          "reason": "airfoil_self_noise:[no_concern]; concrete_strength:[no_concern]"
+        },
+        {
+          "gate": "numeric_fidelity",
+          "passed": true,
+          "reason": "54 RESULT marker(s) validated; 0 numeric mismatches"
+        },
+        {
+          "gate": "method_fidelity",
+          "passed": true,
+          "reason": "All 5 frozen method fact(s) verified: required statements present, no contradicting descriptions"
+        }
+      ],
+      "eval_status": "ready",
+      "revision_lineage": [
+        [
+          0,
+          "blocked",
+          "pipeline",
+          "64785feb942b"
+        ],
+        [
+          1,
+          "ready",
+          "auto_remediation",
+          "2e9075107bd7"
+        ]
+      ],
+      "rev1_numeric_mismatch_count": 0,
+      "rev1_numeric_mismatches": [],
+      "freeze": {
+        "http": 200,
+        "state": "frozen",
+        "frozen_revision_id": 3
+      },
+      "release_identity": {
+        "E": "2e9075107bd7227655b36bd3ad8dd8ff08fd196cfbb12be0137b2a548a5c8dc6",
+        "F": "2e9075107bd7227655b36bd3ad8dd8ff08fd196cfbb12be0137b2a548a5c8dc6",
+        "R": "2e9075107bd7227655b36bd3ad8dd8ff08fd196cfbb12be0137b2a548a5c8dc6",
+        "H": "2e9075107bd7227655b36bd3ad8dd8ff08fd196cfbb12be0137b2a548a5c8dc6",
+        "equality": true
+      }
+    },
+    {
+      "trial": "regr-B#1",
+      "family": "regression",
+      "latency_s": 247.3,
+      "http": 200,
+      "promoted": false,
+      "repair": {
+        "success": true,
+        "promoted": false,
+        "revision_number": 1,
+        "original_paper_hash": "e7429d316e923b8d59d98921ea236adf96c90d78c3b341cd12688d68eae62c44",
+        "revised_paper_hash": "173c80a89437f61aa1235db6b9b45669be125fb13c91af2e60ed6e3e2e9d88eb",
+        "findings_count": 1,
+        "findings": [
+          "Gate finding: claim_result_alignment: [RESULT-4] (role=comparison) credited to numeric: Numeric value-fidelity mismatch: [RESULT-4] is rendered as 691782.0 but persisted observed_value is ; [RESULT-10] (role=comparison) credited to numeric: Numeric value-fidelity mismatch: [RESULT-10] is rendered as 741122.0 but persisted observed_value is; [RESULT-25] (role=baseline) credited to numeric: Numeric value-fidelity mismatch: [RESULT-25] is rendered as 524907.0 but persisted observed_value is; [RESULT-26] (role=baseline) credited to numeric: Numeric value-fidelity mismatch: [RESULT-26] is rendered as 0.006701 but persisted observed_value is; [RESULT-26] (role=baseline) credited to numeric: Numeric value-fidelity mismatch: [RESULT-26] is rendered as 0.006701 but persisted observed_value is; [RESULT-52] (role=baseline) credited to numeric: Numeric value-fidelity mismatch: [RESULT-52] is rendered as 773691.0 but persisted observed_value is; [RESULT-53] (role=baseline) credited to numeric: Numeric value-fidelity mismatch: [RESULT-53] is rendered as 0.012442 but persisted observed_value is; [RESULT-53] (role=baseline) credited to numeric: Numeric value-fidelity mismatch: [RESULT-53] is rendered as 0.012442 but persisted observed_value is"
+        ]
+      },
+      "gates": [],
+      "eval_status": "unknown",
+      "revision_lineage": [
+        [
+          0,
+          "blocked",
+          "pipeline",
+          "e7429d316e92"
+        ],
+        [
+          1,
+          "blocked",
+          "auto_remediation",
+          "173c80a89437"
+        ]
+      ],
+      "rev1_numeric_mismatch_count": 6,
+      "rev1_numeric_mismatches": [
+        {
+          "marker": "[RESULT-26]",
+          "claim": "rendered 0.006701 beside [RESULT-26]"
+        },
+        {
+          "marker": "[RESULT-26]",
+          "claim": "rendered 0.006701 beside [RESULT-26]"
+        },
+        {
+          "marker": "[RESULT-26]",
+          "claim": "rendered 0.006701 beside [RESULT-26]"
+        },
+        {
+          "marker": "[RESULT-53]",
+          "claim": "rendered 0.012442 beside [RESULT-53]"
+        },
+        {
+          "marker": "[RESULT-53]",
+          "claim": "rendered 0.012442 beside [RESULT-53]"
+        },
+        {
+          "marker": "[RESULT-53]",
+          "claim": "rendered 0.012442 beside [RESULT-53]"
+        }
+      ]
+    },
+    {
+      "trial": "regr-B#2",
+      "family": "regression",
+      "latency_s": 236.9,
+      "http": 200,
+      "promoted": true,
+      "repair": {
+        "success": true,
+        "promoted": true,
+        "revision_number": 1,
+        "original_paper_hash": "e7429d316e923b8d59d98921ea236adf96c90d78c3b341cd12688d68eae62c44",
+        "revised_paper_hash": "2f6ae774fcf055cc471b5212590adff00a014bb7b0d7a5dd201fd2df905eca98",
+        "findings_count": 1,
+        "findings": [
+          "Gate finding: claim_result_alignment: [RESULT-4] (role=comparison) credited to numeric: Numeric value-fidelity mismatch: [RESULT-4] is rendered as 691782.0 but persisted observed_value is ; [RESULT-10] (role=comparison) credited to numeric: Numeric value-fidelity mismatch: [RESULT-10] is rendered as 741122.0 but persisted observed_value is; [RESULT-25] (role=baseline) credited to numeric: Numeric value-fidelity mismatch: [RESULT-25] is rendered as 524907.0 but persisted observed_value is; [RESULT-26] (role=baseline) credited to numeric: Numeric value-fidelity mismatch: [RESULT-26] is rendered as 0.006701 but persisted observed_value is; [RESULT-26] (role=baseline) credited to numeric: Numeric value-fidelity mismatch: [RESULT-26] is rendered as 0.006701 but persisted observed_value is; [RESULT-52] (role=baseline) credited to numeric: Numeric value-fidelity mismatch: [RESULT-52] is rendered as 773691.0 but persisted observed_value is; [RESULT-53] (role=baseline) credited to numeric: Numeric value-fidelity mismatch: [RESULT-53] is rendered as 0.012442 but persisted observed_value is; [RESULT-53] (role=baseline) credited to numeric: Numeric value-fidelity mismatch: [RESULT-53] is rendered as 0.012442 but persisted observed_value is"
+        ]
+      },
+      "gates": [
+        {
+          "gate": "provenance",
+          "passed": true,
+          "reason": "30 mapped source(s)"
+        },
+        {
+          "gate": "scope_alignment",
+          "classification": "on_scope",
+          "reason": "Paper aligns with research intent (combined overlap 0.10, 12 intent terms hit)."
+        },
+        {
+          "gate": "conclusion_support",
+          "classification": "overstated",
+          "reason": "Experiment succeeded but 1 empirical claim(s) lack [RESULT-N] backing: empirical claim 'results show that' without [RESULT-N] backing"
+        },
+        {
+          "gate": "experiment_alignment",
+          "passed": true,
+          "reason": "airfoil_self_noise:[no_concern]; concrete_strength:[no_concern]"
+        },
+        {
+          "gate": "numeric_fidelity",
+          "passed": true,
+          "reason": "54 RESULT marker(s) validated; 0 numeric mismatches"
+        },
+        {
+          "gate": "method_fidelity",
+          "passed": true,
+          "reason": "All 5 frozen method fact(s) verified: required statements present, no contradicting descriptions"
+        }
+      ],
+      "eval_status": "blocked",
+      "revision_lineage": [
+        [
+          0,
+          "blocked",
+          "pipeline",
+          "e7429d316e92"
+        ],
+        [
+          1,
+          "ready",
+          "auto_remediation",
+          "2f6ae774fcf0"
+        ]
+      ],
+      "rev1_numeric_mismatch_count": 0,
+      "rev1_numeric_mismatches": []
+    }
+  ],
+  "adjudication": {
+    "overall_success": 6,
+    "overall_required": 7,
+    "per_family": {
+      "calibration": {
+        "success": 4,
+        "of": 4
+      },
+      "regression": {
+        "success": 2,
+        "of": 4
+      }
+    },
+    "negative_control": {
+      "blocked": true,
+      "mismatches": 1
+    },
+    "pass": false
+  }
+}
