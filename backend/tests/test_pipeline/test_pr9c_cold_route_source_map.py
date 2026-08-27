@@ -294,15 +294,37 @@ class TestColdReEvaluationIntent:
             s.close()
 
             async def _stub_revise(**kwargs):
+                # PAC contract: the remediator is a candidate producer —
+                # it returns a screening-ready candidate (promoted=False)
+                # and has already persisted revision 1 with those bytes.
+                import hashlib as _h
+
+                from backend.db.models import PaperRevision
                 from backend.pipeline.evaluation.paper_remediator import (
                     RemediationResult,
                 )
+                candidate_md = kwargs["original_paper_md"] + "\nrevised"
+                rev_hash = _h.sha256(candidate_md.encode()).hexdigest()
+                sf2 = sessionmaker(bind=engine)
+                s2 = sf2()
+                s2.add(PaperRevision(
+                    proposal_id=kwargs["proposal_id"],
+                    revision_number=1, parent_revision_id=None,
+                    paper_md=candidate_md, paper_hash=rev_hash,
+                    source="auto_remediation", trigger="test",
+                    trigger_detail_json="{}",
+                    directive_json="{}", eval_status="ready",
+                    gates_json="[]",
+                ))
+                s2.commit()
+                s2.close()
                 return RemediationResult(
-                    success=True, promoted=True, revision_number=1,
+                    success=True, promoted=False, revision_number=1,
                     eval_status="ready", gates=[],
                     blocking_reasons=[],
-                    original_paper_hash="x",
-                    revised_paper_hash="y",
+                    original_paper_hash=kwargs.get(
+                        "original_paper_hash", "x"),
+                    revised_paper_hash=rev_hash,
                     invariant_violations=[],
                 )
 

@@ -24,7 +24,7 @@ import logging
 from dataclasses import dataclass
 
 from backend.db.database import get_session
-from backend.db.models import ExperimentResult, PaperRevision, Proposal
+from backend.db.models import ExperimentResult, PaperRevision
 from backend.pipeline.gateway.transport import GatewayTransportError
 
 logger = logging.getLogger(__name__)
@@ -180,18 +180,66 @@ async def auto_revise_paper(
             ).scalar_one_or_none()
 
             if existing:
-                # Idempotent: return the existing revision result
+                # Idempotent retry (PAC-7). Two interruption classes:
+                # (a) revision 1 carries a TERMINAL authoritative record
+                #     (stamped by the route's atomic finalization in the
+                #     SAME commit as the promotion) — return that
+                #     terminal result; never synthesize again;
+                # (b) revision 1 exists WITHOUT an authoritative record
+                #     (crash between synthesis and authoritative
+                #     evaluation) — return the persisted candidate with
+                #     promoted=False so the route performs the
+                #     authoritative full evaluation; NO second model
+                #     call. An unstamped revision must NEVER be treated
+                #     as authoritative merely because its screening
+                #     eval_status is "ready" (owner review of PR #43:
+                #     that inference let retry bypass the required
+                #     full-paper evaluation while the canonical paper
+                #     was still the original). A crash after the
+                #     route's atomic commit cannot produce an unstamped
+                #     promoted revision — the stamp is written before
+                #     that same session.commit().
+                detail = {}
+                if existing.trigger_detail_json:
+                    try:
+                        detail = json.loads(existing.trigger_detail_json)
+                    except Exception:
+                        detail = {}
+                authoritative = detail.get("authoritative")
                 logger.info(
-                    "Revision 1 already exists for proposal %d — returning cached result",
+                    "Revision 1 already exists for proposal %d — %s",
                     proposal_id,
+                    "returning terminal authoritative result"
+                    if authoritative
+                    else "returning persisted candidate for"
+                         " authoritative evaluation",
                 )
+                if authoritative:
+                    status = authoritative.get(
+                        "status", existing.eval_status)
+                    return RemediationResult(
+                        success=True,
+                        promoted=(status == "ready"),
+                        revision_number=1,
+                        eval_status=status,
+                        gates=authoritative.get(
+                            "gates",
+                            json.loads(existing.gates_json)
+                            if existing.gates_json else [],
+                        ),
+                        blocking_reasons=detail.get(
+                            "blocking_findings", []),
+                        original_paper_hash=original_hash,
+                        revised_paper_hash=existing.paper_hash,
+                        invariant_violations=[],
+                    )
                 return RemediationResult(
                     success=True,
-                    promoted=(existing.eval_status == "ready"),
+                    promoted=False,
                     revision_number=1,
                     eval_status=existing.eval_status,
                     gates=json.loads(existing.gates_json) if existing.gates_json else [],
-                    blocking_reasons=json.loads(existing.trigger_detail_json).get("blocking_findings", []) if existing.trigger_detail_json else [],
+                    blocking_reasons=detail.get("blocking_findings", []),
                     original_paper_hash=original_hash,
                     revised_paper_hash=existing.paper_hash,
                     invariant_violations=[],
@@ -342,29 +390,29 @@ async def auto_revise_paper(
         spec_comparison=spec.comparison_method,
     )
 
-    # ── Step 7: Promote only if all gates pass ──────────────────────
+    # ── Step 7: Screening verdict — NOT promotion (PAC-2) ───────────
+    # The remediator is a candidate producer. The pure gate screen above
+    # remains useful (an obviously blocked revision skips the more
+    # expensive full evaluation downstream), but it no longer mutates
+    # the canonical Proposal: promotion authority moved to the repair
+    # route's atomic finalization after the production full-paper
+    # evaluation returns ready for the exact candidate bytes
+    # (Promotion-Authority-Consistency successor, owner plan 2026-08-20;
+    # demonstrated defect: split authority let promoted=true coexist
+    # with a final authoritative blocked evaluation — regr-B#2).
     if gate_eval.status == "ready":
-        # Promote: update the canonical paper_md AND the metadata's
-        # full_paper.paper_markdown so that downstream evaluation
-        # (_evaluate_paper reads from metadata["full_paper"]) sees the
-        # exact promoted text, not a stale P1 version.
-        with get_session() as session:
-            proposal = session.get(Proposal, proposal_id)
-            if proposal:
-                proposal.paper_md = revised_paper_md
-                # Sync metadata so _evaluate_paper reads the promoted text
-                meta = json.loads(proposal.paper_meta_json) if proposal.paper_meta_json else {}
-                fp = meta.get("full_paper")
-                if isinstance(fp, dict):
-                    fp["paper_markdown"] = revised_paper_md
-                    meta["full_paper"] = fp
-                    proposal.paper_meta_json = json.dumps(meta)
-                session.commit()
-        logger.info("Revision 1 promoted for proposal %d (eval=ready)", proposal_id)
+        logger.info(
+            "Revision 1 candidate passed screening for proposal %d"
+            " (authoritative full evaluation pending)",
+            proposal_id,
+        )
     else:
-        logger.info("Revision 1 blocked for proposal %d: %s", proposal_id, gate_eval.blocking_reasons)
+        logger.info(
+            "Revision 1 blocked at screening for proposal %d: %s",
+            proposal_id, gate_eval.blocking_reasons,
+        )
 
-    # Persist the revision record
+    # Persist the revision record (the immutable candidate)
     _persist_revision(
         proposal_id, experiment_result_id, parent_id, revised_paper_md,
         source="auto_remediation",
@@ -378,7 +426,10 @@ async def auto_revise_paper(
 
     return RemediationResult(
         success=True,
-        promoted=(gate_eval.status == "ready"),
+        # Truthful under the new contract: a newly generated candidate
+        # performs no canonical mutation. The route's atomic
+        # finalization is the only promotion authority.
+        promoted=False,
         revision_number=1,
         eval_status=gate_eval.status,
         gates=gate_eval.gates,
