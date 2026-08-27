@@ -273,6 +273,73 @@ class TestPromotionAuthorityStates:
             after_md, _, _ = _canonical(engine, proposal_id)
         assert after_md == before_md
 
+    def test_toctou_competing_write_after_identity_check(self):
+        """PAC acceptance invariant (owner review of PR #46, Codex
+        finding): a competing canonical write landing AFTER the
+        finalization's identity check but BEFORE its promotion update
+        must NOT be overwritten. The compare-and-swap predicate
+        (WHERE paper_md = route-entry bytes) enforces this at the
+        database level; this test interleaves the competing write via
+        a SQLAlchemy before_cursor_execute event so it lands exactly
+        between the locked read and the CAS update."""
+        from sqlalchemy import event as _sa_event
+
+        engine = _make_engine()
+        run_id, idea_id, proposal_id = self._setup(engine)
+        interleaved = {"fired": False}
+
+        def _competing_write_hook(conn, cursor, statement,
+                                  parameters, context, executemany):
+            if interleaved["fired"]:
+                return
+            if "UPDATE proposals SET" not in statement:
+                return
+            if "paper_md" not in statement:
+                return
+            # This is the CAS promotion update about to execute —
+            # fire the competing write FIRST from a raw separate
+            # connection so it lands in the TOCTOU window (after the
+            # locked read / identity check, before the update).
+            interleaved["fired"] = True
+            raw = engine.raw_connection()
+            raw.cursor().execute(
+                "UPDATE proposals SET paper_md = ? WHERE id = ?",
+                ("# competing writer won the race", proposal_id),
+            )
+            raw.commit()
+            raw.close()
+
+        with _patched_session(engine):
+            before_md, _, _ = _canonical(engine, proposal_id)
+            _sa_event.listen(
+                engine, "before_cursor_execute",
+                _competing_write_hook,
+            )
+            try:
+                out, _ = _run_route(
+                    engine, idea_id, proposal_id, eval_status="ready")
+            finally:
+                _sa_event.remove(
+                    engine, "before_cursor_execute",
+                    _competing_write_hook,
+                )
+        assert interleaved["fired"], (
+            "the competing-write hook never fired — the CAS update"
+            " was not reached or the statement shape changed"
+        )
+        assert out["repair"]["promoted"] is False, (
+            "a competing canonical write in the TOCTOU window must"
+            " fail closed, not promote over it"
+        )
+        assert "finalization_note" in out["repair"]
+        assert "compare-and-swap" in out["repair"]["finalization_note"]
+        with _patched_session(engine):
+            after_md, _, _ = _canonical(engine, proposal_id)
+        assert after_md == "# competing writer won the race", (
+            "the competing writer's bytes must survive; PAC must not"
+            " overwrite them"
+        )
+
 
 class TestIdempotencyAndRecovery:
     def _setup(self, engine):
