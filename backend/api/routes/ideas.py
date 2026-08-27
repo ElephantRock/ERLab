@@ -1462,13 +1462,30 @@ async def repair_paper(idea_id: int):
             repair_gates = eval_result.get("gates", [])
 
             # ── Single atomic finalization (PAC-4) ───────────────────
+            # TOCTOU fix (owner review of PR #46, Codex finding): the
+            # finalization previously read the canonical Proposal
+            # WITHOUT a lock, computed its hash, and only later wrote
+            # and committed — under PostgreSQL READ COMMITTED a
+            # concurrent transaction could commit a new canonical
+            # paper after the read but before the write, and PAC would
+            # overwrite it and still return promoted=true. Both rows
+            # are now locked (with_for_update) before identity
+            # computation, held through the promotion commit; and the
+            # ready-branch promotion is a compare-and-swap update that
+            # succeeds only when the canonical bytes still equal the
+            # route-entry bytes — the portable second guard for
+            # databases where row locks are unavailable or un-honored.
             with get_session() as session:
-                prop = session.get(Proposal, proposal.id)
+                prop = session.execute(
+                    select(Proposal).where(
+                        Proposal.id == proposal.id
+                    ).with_for_update()
+                ).scalar_one_or_none()
                 rev1f = session.execute(
                     select(PaperRevision).where(
                         PaperRevision.proposal_id == proposal.id,
                         PaperRevision.revision_number == 1,
-                    )
+                    ).with_for_update()
                 ).scalar_one_or_none()
                 canonical_hash_now = (
                     _hashlib.sha256(prop.paper_md.encode()).hexdigest()
@@ -1511,18 +1528,44 @@ async def repair_paper(idea_id: int):
                     fp["paper_markdown"] = rev1f.paper_md
                     meta["full_paper"] = fp
                     meta["paper_evaluation"] = eval_result
-                    prop.paper_md = rev1f.paper_md
-                    prop.paper_meta_json = json.dumps(meta)
-                    rev1f.eval_status = "ready"
-                    rev1f.gates_json = json.dumps(repair_gates)
-                    _stamp_revision_authority(
-                        rev1f,
-                        {"status": "ready",
-                         "paper_hash": repair_eval_hash,
-                         "gates": repair_gates},
+                    # Compare-and-swap promotion: succeeds ONLY when
+                    # the canonical bytes still equal the route-entry
+                    # bytes. If a concurrent writer changed the
+                    # canonical between the locked read above and
+                    # this update, the CAS predicate fails (rowcount
+                    # 0) and the promotion is refused.
+                    cas = session.execute(
+                        Proposal.__table__.update().where(
+                            Proposal.id == proposal.id,
+                            Proposal.paper_md == paper_md,
+                        ).values(
+                            paper_md=rev1f.paper_md,
+                            paper_meta_json=json.dumps(meta),
+                        )
                     )
-                    session.commit()
-                    final_promoted = True
+                    if cas.rowcount != 1:
+                        finalization_note = (
+                            "promotion refused: compare-and-swap"
+                            " failed — the canonical paper changed"
+                            " concurrently during finalization"
+                        )
+                        logger.error(
+                            "Repair CAS promotion failed for proposal"
+                            " %d: canonical changed between locked read"
+                            " and update",
+                            proposal.id,
+                        )
+                    else:
+                        rev1f.eval_status = "ready"
+                        rev1f.gates_json = json.dumps(repair_gates)
+                        _stamp_revision_authority(
+                            rev1f,
+                            {"status": "ready",
+                             "paper_hash": repair_eval_hash,
+                             "gates": repair_gates},
+                        )
+                        session.commit()
+                        final_promoted = True
                 else:
                     # PAC-5/PAC-6: blocked or failed authoritative
                     # evaluation — candidate preserved, canonical paper
