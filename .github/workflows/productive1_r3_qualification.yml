@@ -1,9 +1,9 @@
 name: Productive-1 R3 qualification
 
 on:
-  push:
+  pull_request:
     branches:
-      - qualification/r3-execution
+      - productive1-r3-repair-targeting
 
 permissions:
   contents: read
