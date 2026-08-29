@@ -92,6 +92,23 @@ class RevisionDirective:
     # revision against this contract.
     method_facts: dict | None = None
 
+    # ── Productive-1 structured numeric repair targets (optional) ──
+    # Derived from the existing numeric-fidelity validator output joined
+    # back to its ResultMarker. Each target is an immutable dict:
+    #   marker | rendered_value (the defective claim) | required_value
+    #   (the persisted observed_value) | metric_name | role
+    #   | experiment_result_id | artifact_path | artifact_sha256
+    # No new numeric judgment is introduced — this transports facts the
+    # system already possesses at the assurance boundary.
+    numeric_repair_targets: tuple = ()
+
+    # ── Productive-1 full result context (optional) ────────────────
+    # (marker, dataset-qualified metric_name, role, observed_value) for
+    # every marker, so the single revision call sees the identity of
+    # each value, not just a bare map. Backward compatible: when empty,
+    # the prompt renders the previous bare RESULT-N = value form.
+    result_context: tuple = ()
+
     def to_dict(self) -> dict:
         return {
             "blocking_findings": list(self.blocking_findings),
@@ -109,6 +126,8 @@ class RevisionDirective:
             "evidence": self.evidence.to_dict(),
             "unexecuted_methods_detected": list(self.unexecuted_methods_detected),
             "method_facts": self.method_facts or {},
+            "numeric_repair_targets": list(self.numeric_repair_targets),
+            "result_context": list(self.result_context),
         }
 
     def build_revision_prompt(self) -> str:
@@ -126,6 +145,32 @@ class RevisionDirective:
         for i, finding in enumerate(self.blocking_findings, 1):
             lines.append(f"  {i}. {finding}")
         lines.append("")
+
+        # Productive-1 R3: explicit structured numeric repair targets.
+        # Each diagnosed numeric-fidelity defect is named with its exact
+        # persisted value and full identity, so the single revision call
+        # knows precisely which facts it got wrong. This adds no numeric
+        # judgment — it transports validator output.
+        if self.numeric_repair_targets:
+            lines.append("NUMERIC REPAIR TARGETS — these exact defects MUST be corrected:")
+            for t in self.numeric_repair_targets:
+                lines.append(f"  {t['marker']} — metric={t['metric_name']},"
+                             f" role={t['role']}")
+                lines.append(f"    Current defective rendering:"
+                             f" {t['rendered_value']}")
+                lines.append(f"    Required persisted value:"
+                             f" {t['required_value']}")
+                lines.append(f"    Correct only this marker/value"
+                             f" attribution."
+                             f" (evidence: experiment_result"
+                             f" {t['experiment_result_id']},"
+                             f" artifact {t['artifact_path']})")
+            lines.append(
+                "  PRESERVATION RULE: marker/value pairs that are already"
+                " correct MUST remain unchanged — do not touch values that"
+                " pass the fidelity check."
+            )
+            lines.append("")
         lines.append("The paper reports this executed experiment:")
         lines.append(f"  Research question: {self.research_question}")
         lines.append(f"  Task type: {self.task_type}")
@@ -147,10 +192,17 @@ class RevisionDirective:
             )
             lines.append("   They must NOT be presented as the paper's demonstrated contribution.")
         lines.append("4. The CONCLUSION must attribute observed results to the executed method.")
-        lines.append("5. All outcome claims must reference [RESULT-N] markers.")
-        lines.append("6. Do NOT change any observed metric values, RESULT markers, or SOURCE markers.")
         lines.append(
-            "7. Every [RESULT-N] marker must be placed IMMEDIATELY AFTER the exact"
+            "5. CONCLUSION SUPPORT: every empirical claim in the ABSTRACT or CONCLUSION "
+            "using language such as 'we demonstrate', 'demonstrates that', "
+            "'experimental results show/indicate', or 'results show/indicate that' "
+            "MUST include a supporting [RESULT-N] marker in the same claim or sentence. "
+            "Do not leave empirical conclusion claims without [RESULT-N] backing."
+        )
+        lines.append("6. All outcome claims must reference [RESULT-N] markers.")
+        lines.append("7. Do NOT change any observed metric values, RESULT markers, or SOURCE markers.")
+        lines.append(
+            "8. Every [RESULT-N] marker must be placed IMMEDIATELY AFTER the exact"
             " observed value it reports (e.g. '0.005185 [RESULT-2]'), matching the"
             " frozen map below. NEVER group several markers after one number or"
             " place a marker after a value that is not its own — the numeric"
@@ -158,7 +210,7 @@ class RevisionDirective:
         )
         if self.method_facts:
             lines.append(
-                "8. The Methodology section must state each fact below VERBATIM."
+                "9. The Methodology section must state each fact below VERBATIM."
                 " Do NOT paraphrase, reformat, or substitute your own description"
                 " of how the method is usually implemented. Do NOT assert any"
                 " training procedure, calibration scheme, or metric definition"
@@ -169,8 +221,18 @@ class RevisionDirective:
         lines.append("IMMUTABLE EVIDENCE (do not modify):")
         lines.append(f"  RESULT map hash: {self.evidence.result_map_hash[:32]}...")
         lines.append(f"  SOURCE map hash: {self.evidence.source_map_hash[:32]}...")
-        for marker, value in self.evidence.result_map:
-            lines.append(f"  {marker} = {value}")
+        if self.result_context:
+            # Productive-1: full frozen context with dataset-qualified
+            # identities, so each value carries what it IS (metric, role)
+            # and not just its magnitude. Values are the persisted
+            # observed_values; percentage/decimal conversion remains
+            # impermissible (the validator rejects unmodeled transforms).
+            lines.append("  Full result context (marker | metric | role | value):")
+            for marker, metric, role, value in self.result_context:
+                lines.append(f"    {marker} | {metric} | {role} | {value}")
+        else:
+            for marker, value in self.evidence.result_map:
+                lines.append(f"  {marker} = {value}")
         if self.method_facts:
             lines.append("")
             lines.append("EXECUTED PROTOCOL — frozen method facts (reproduce VERBATIM):")
