@@ -1,0 +1,92 @@
+name: Productive-1 R3 qualification
+
+on:
+  push:
+    branches:
+      - qualification/r3-execution
+
+permissions:
+  contents: read
+
+jobs:
+  frozen-qualification:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      EROCK_DEFAULT_PROVIDER: openai
+      EROCK_OPENAI_API_KEY: ${{ secrets.ZAI_API_KEY || secrets.ZHIPU_API_KEY || secrets.EROCK_OPENAI_API_KEY }}
+      EROCK_OPENAI_BASE_URL: https://api.z.ai/api/coding/paas/v4
+      EROCK_OPENAI_MODEL: glm-5.2
+      EROCK_GENERATION_MODEL: ""
+      EROCK_BUDGET_ENABLED: "false"
+      EROCK_AUTH_ENABLED: "false"
+
+    steps:
+      - name: Checkout qualification execution branch
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Verify frozen candidate product bytes
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git merge-base HEAD fc6cc8dc31a3ec0155d50d16807942e11de1dc54)" = "fc6cc8dc31a3ec0155d50d16807942e11de1dc54"
+          if git diff --name-only fc6cc8dc31a3ec0155d50d16807942e11de1dc54..HEAD -- backend/ | grep -q .; then
+            echo "product files differ from frozen candidate"
+            git diff --name-only fc6cc8dc31a3ec0155d50d16807942e11de1dc54..HEAD -- backend/
+            exit 1
+          fi
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        shell: bash
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+
+      - name: Materialize the four frozen starting states
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p .r3_qual_inputs
+          git fetch --depth=1 origin case4/evidence-publication:refs/remotes/origin/case4/evidence-publication
+          git show origin/case4/evidence-publication:evidence/case4_qualifying_runfail_3/r1_specimen.db > .r3_qual_inputs/calib-A_runfail3.db
+          git show origin/case4/evidence-publication:evidence/case4_qualifying_runfail_2/r1_specimen.db > .r3_qual_inputs/calib-B_runfail2.db
+
+          git fetch --depth=1 origin productive1/r3-qualification-specimens:refs/remotes/origin/productive1/r3-qualification-specimens
+          git show origin/productive1/r3-qualification-specimens:evidence/productive1_r3_specimens/regr-A_case3a_specimen.db > .r3_qual_inputs/regr-A_case3a.db
+          git show origin/productive1/r3-qualification-specimens:evidence/productive1_r3_specimens/regr-B_3E_era_specimen.db > .r3_qual_inputs/regr-B_3E_era.db
+
+          echo "Frozen input hashes:"
+          sha256sum .r3_qual_inputs/*.db
+          echo "9a0e5cc85618e187240c1338f4703ba4d42df9a5190b040c399e93fe34ad0f9f  .r3_qual_inputs/regr-A_case3a.db" | sha256sum -c -
+          echo "5cdfa0d078ee4d32af32a499f1bf28198c8e234a8c5231e71323f82fdc0185c4  .r3_qual_inputs/regr-B_3E_era.db" | sha256sum -c -
+
+      - name: Check frozen repair provider credential
+        shell: bash
+        run: |
+          if [ -z "${EROCK_OPENAI_API_KEY:-}" ]; then
+            echo "No Z.AI Coding Plan key is available to this workflow under ZAI_API_KEY, ZHIPU_API_KEY, or EROCK_OPENAI_API_KEY."
+            exit 2
+          fi
+
+      - name: Execute frozen eight-trial qualification
+        id: qualification
+        shell: bash
+        run: python evidence/productive1_r3/p1_r3_qualify.py
+
+      - name: Upload qualification record
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: productive1-r3-qualification
+          if-no-files-found: warn
+          path: |
+            evidence/productive1_r3/p1_r3_qualification.json
+            .r3_qual_tmp/*.log
