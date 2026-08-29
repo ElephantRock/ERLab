@@ -60,6 +60,62 @@ class RemediationResult:
         }
 
 
+def derive_numeric_repair_targets(paper_md: str, result_markers: list) -> tuple:
+    """Productive-1 R3: exact structured numeric repair targets and
+    full result context, derived from the existing validator.
+
+    The numeric-fidelity validator already knows the offending marker,
+    rendered value, persisted value, metric, and role. This helper only
+    transports those facts into the single revision prompt; it introduces
+    no new numeric judgment. The unchanged validator remains authoritative
+    after generation.
+
+    Returns (numeric_repair_targets, result_context).
+    """
+    from backend.pipeline.evaluation.claim_result_validator import (
+        validate_claim_result_alignment,
+    )
+
+    marker_by_bracket = {
+        f"[{m.marker}]": m for m in (result_markers or [])
+    }
+    numeric_repair_targets = []
+    for mismatch in validate_claim_result_alignment(
+        paper_md, list(result_markers or []),
+    ):
+        if mismatch.section != "numeric_fidelity":
+            continue
+        marker_obj = marker_by_bracket.get(mismatch.marker)
+        rendered = (
+            mismatch.claim_text.split()[1]
+            if mismatch.claim_text.startswith("rendered ") else ""
+        )
+        numeric_repair_targets.append({
+            "marker": mismatch.marker,
+            "rendered_value": rendered,
+            "required_value": (
+                marker_obj.observed_value if marker_obj else None
+            ),
+            "metric_name": mismatch.marker_metric,
+            "role": mismatch.marker_role,
+            "experiment_result_id": (
+                marker_obj.experiment_result_id if marker_obj else None
+            ),
+            "artifact_path": (
+                marker_obj.artifact_path if marker_obj else ""
+            ),
+            "artifact_sha256": (
+                marker_obj.artifact_sha256 if marker_obj else ""
+            ),
+        })
+    result_context = tuple(
+        (f"[{m.marker}]", m.metric_name,
+         getattr(m, "role", ""), m.observed_value)
+        for m in (result_markers or [])
+    )
+    return tuple(numeric_repair_targets), result_context
+
+
 async def auto_revise_paper(
     proposal_id: int,
     experiment_result_id: int,
@@ -264,6 +320,13 @@ async def auto_revise_paper(
         spec_comparison=spec.comparison_method,
     )
 
+    # Productive-1 R3: structured numeric repair targets + full result
+    # context from the existing validator. The validator remains the
+    # authority; this only improves the single revision call's context.
+    numeric_repair_targets, result_context = derive_numeric_repair_targets(
+        original_paper_md, result_markers,
+    )
+
     directive = RevisionDirective(
         blocking_findings=tuple(blocking_findings),
         research_question=spec.research_question,
@@ -283,6 +346,8 @@ async def auto_revise_paper(
             claim_result.unexecuted_method_in_conclusion,
         ),
         method_facts=method_facts or None,
+        numeric_repair_targets=tuple(numeric_repair_targets),
+        result_context=result_context,
     )
 
     # ── Step 4: Revise the paper ────────────────────────────────────
