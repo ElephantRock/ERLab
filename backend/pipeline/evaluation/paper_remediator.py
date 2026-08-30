@@ -1,43 +1,41 @@
-"""Phase 9 / 9E — constrained one-attempt paper remediation.
-
-The remediation orchestrator:
-  1. Verifies the evidence package (hashes match)
-  2. Atomically claims the one revision allowance
-  3. Revises the paper from persisted evidence (NOT fresh synthesis)
-  4. Verifies evidence invariants after revision
-  5. Re-evaluates all gates
-  6. Promotes the revision only if all gates pass
-
-Key constraints (from Phase 9 corrections):
-  - Revision receives the original paper as mandatory input
-  - No experiment reruns, no retrieval, no proposal generation
-  - One revision max (enforced by UNIQUE(proposal_id, revision_number))
-  - Failed revision is persisted but NOT promoted
-  - Eligible only for text-correctable blockers
-"""
+"""One-attempt, evidence-constrained paper remediation."""
 
 from __future__ import annotations
 
+import asyncio
 import hashlib
 import json
 import logging
+import re
 from dataclasses import dataclass
+
+from sqlalchemy import select
 
 from backend.db.database import get_session
 from backend.db.models import ExperimentResult, PaperRevision
+from backend.pipeline.evaluation.claim_result_validator import (
+    validate_claim_result_alignment,
+)
+from backend.pipeline.evaluation.paper_sections import parse_paper
 from backend.pipeline.gateway.transport import GatewayTransportError
 
 logger = logging.getLogger(__name__)
 
+_EMPIRICAL_PATTERNS = (
+    re.compile(r"\bwe\s+demonstrate\b", re.I),
+    re.compile(r"\bdemonstrates?\s+that\b", re.I),
+    re.compile(r"\bexperimental\s+results?\b.{0,40}\b(show|indicate)\b", re.I),
+    re.compile(r"\bresults?\s+(show|indicate)\s+that\b", re.I),
+)
+_RESULT_RE = re.compile(r"\[RESULT-\d+\]")
+
 
 @dataclass
 class RemediationResult:
-    """Result of a remediation attempt."""
-
     success: bool
-    promoted: bool  # True if the revised paper became canonical
+    promoted: bool
     revision_number: int
-    eval_status: str  # ready | blocked
+    eval_status: str
     gates: list[dict]
     blocking_reasons: list[str]
     original_paper_hash: str
@@ -60,91 +58,286 @@ class RemediationResult:
         }
 
 
+def derive_numeric_repair_targets(paper_md: str, result_markers: list) -> tuple:
+    """Transport existing numeric-validator findings into the revision prompt."""
+    marker_by_bracket = {f"[{m.marker}]": m for m in (result_markers or [])}
+    targets = []
+    for mismatch in validate_claim_result_alignment(paper_md, list(result_markers or [])):
+        if mismatch.section != "numeric_fidelity":
+            continue
+        marker_obj = marker_by_bracket.get(mismatch.marker)
+        rendered = (
+            mismatch.claim_text.split()[1]
+            if mismatch.claim_text.startswith("rendered ") else ""
+        )
+        targets.append({
+            "marker": mismatch.marker,
+            "rendered_value": rendered,
+            "required_value": marker_obj.observed_value if marker_obj else None,
+            "metric_name": mismatch.marker_metric,
+            "role": mismatch.marker_role,
+            "experiment_result_id": (
+                marker_obj.experiment_result_id if marker_obj else None
+            ),
+            "artifact_path": marker_obj.artifact_path if marker_obj else "",
+            "artifact_sha256": marker_obj.artifact_sha256 if marker_obj else "",
+        })
+    context = tuple(
+        (f"[{m.marker}]", m.metric_name, getattr(m, "role", ""), m.observed_value)
+        for m in (result_markers or [])
+    )
+    return tuple(targets), context
+
+
+def _sentences(text: str) -> list[tuple[str, str]]:
+    parts = re.split(r"(?<=[.!?])(\s+)", text)
+    return [
+        (parts[i], parts[i + 1] if i + 1 < len(parts) else "")
+        for i in range(0, len(parts), 2)
+    ]
+
+
+def _empirical(sentence: str) -> bool:
+    return any(p.search(sentence) for p in _EMPIRICAL_PATTERNS)
+
+
+def _backed_mappings(paper_md: str) -> dict[str, set[frozenset[str]]]:
+    parsed = parse_paper(paper_md)
+    out: dict[str, set[frozenset[str]]] = {}
+    for name in ("abstract", "conclusion"):
+        section = parsed.get_section(name)
+        if not section:
+            continue
+        for sentence, _ in _sentences(section.body):
+            markers = frozenset(_RESULT_RE.findall(sentence))
+            if _empirical(sentence) and markers:
+                out.setdefault(name, set()).add(markers)
+    return out
+
+
+def _unbacked_sections(paper_md: str) -> set[str]:
+    parsed = parse_paper(paper_md)
+    out = set()
+    for name in ("abstract", "conclusion"):
+        section = parsed.get_section(name)
+        if section and any(
+            _empirical(s) and not _RESULT_RE.search(s) for s, _ in _sentences(section.body)
+        ):
+            out.add(name)
+    return out
+
+
+def _derive_repair_sections(
+    paper_md: str,
+    blocking_findings: list[str],
+    numeric_repair_targets: tuple,
+    result_markers: list,
+    claim_result,
+) -> tuple[str, ...]:
+    """Map existing diagnostics to the smallest existing editable section set."""
+    parsed = parse_paper(paper_md)
+    selected: set[str] = set()
+    markers = {t["marker"] for t in numeric_repair_targets}
+    markers.update(
+        m.marker for m in validate_claim_result_alignment(paper_md, result_markers or [])
+    )
+    for section in parsed.sections:
+        if section.name != "references" and any(m in section.full_text for m in markers):
+            selected.add(section.name)
+
+    text = "\n".join(map(str, blocking_findings or [])).lower()
+    if "conclusion" in text:
+        selected.update({"abstract", "conclusion"})
+    if "scope" in text:
+        selected.add("abstract")
+    if "experiment_alignment" in text or "experiment alignment" in text:
+        selected.update({"abstract", "conclusion"})
+    if "method_fidelity" in text or "method fidelity" in text or "methodology" in text:
+        selected.add("methods")
+    if "contribution" in text:
+        selected.update({"abstract", "introduction"})
+    if getattr(claim_result, "unexecuted_method_in_abstract", None):
+        selected.add("abstract")
+    if getattr(claim_result, "unexecuted_method_in_conclusion", None):
+        selected.add("conclusion")
+    selected.update(_unbacked_sections(paper_md))
+
+    existing = {s.name for s in parsed.sections}
+    selected &= existing
+    selected -= {"references", "title"}
+    if not selected:
+        selected.update(name for name in ("abstract", "conclusion") if name in existing)
+    return tuple(s.name for s in parsed.sections if s.name in selected)
+
+
+def _build_scoped_revision_prompt(paper_md: str, directive, targets: tuple[str, ...]) -> str:
+    parsed = parse_paper(paper_md)
+    lines = [
+        "## DEFECT-SCOPED PAPER REVISION",
+        "Revise ONLY the sections below. Untargeted paper bytes are immutable.",
+        "Do not return a full paper or an unlisted section.",
+        "",
+        directive.build_revision_prompt(),
+        "",
+        "## TARGET SECTIONS",
+    ]
+    for name in targets:
+        section = parsed.get_section(name)
+        lines.extend([f"### TARGET: {name}", section.full_text if section else ""])
+    lines.extend([
+        "",
+        "## REQUIRED OUTPUT FORMAT",
+        "Return every target exactly once, including its unchanged heading:",
+    ])
+    for name in targets:
+        lines.extend([
+            f"<<<SECTION:{name}>>>",
+            f"<full revised {name} section>",
+            "<<<END_SECTION>>>",
+        ])
+    lines.extend([
+        "Do not invent RESULT or SOURCE markers or change correct values.",
+        "Unsupported Abstract/Conclusion empirical assertions may be removed or weakened.",
+    ])
+    return "\n".join(lines)
+
+
+def _parse_scoped_replacements(
+    response: str, targets: tuple[str, ...], paper_md: str,
+) -> dict[str, str] | None:
+    parsed = parse_paper(paper_md)
+    expected = set(targets)
+    found: dict[str, str] = {}
+    pattern = re.compile(
+        r"<<<SECTION:(?P<name>[a-z_]+)>>>\s*\n?(?P<text>.*?)\n?<<<END_SECTION>>>",
+        re.S,
+    )
+    for match in pattern.finditer(response or ""):
+        name, text = match.group("name"), match.group("text").strip("\n")
+        section = parsed.get_section(name)
+        if name not in expected or name in found or not section or not text.strip():
+            return None
+        if text.split("\n", 1)[0].strip() != section.heading:
+            return None
+        found[name] = text
+    return found if set(found) == expected else None
+
+
+def _assemble_scoped_candidate(original: str, replacements: dict[str, str]) -> str:
+    parsed = parse_paper(original)
+    edits = []
+    for name, replacement in replacements.items():
+        section = parsed.get_section(name)
+        if not section:
+            raise ValueError(f"Unknown target section: {name}")
+        span = original[section.start:section.end]
+        suffix_match = re.search(r"\s*$", span)
+        suffix = suffix_match.group(0) if suffix_match else ""
+        edits.append((section.start, section.end, replacement.rstrip() + suffix))
+    revised = original
+    for start, end, replacement in sorted(edits, reverse=True):
+        revised = revised[:start] + replacement + revised[end:]
+    return revised
+
+
+def _finalize_conclusion_support(
+    original: str, revised: str, allowed_sections: tuple[str, ...],
+) -> tuple[str, list[str], list[str]]:
+    """Remove new/unbacked strong claims; never add a RESULT mapping."""
+    backed, allowed = _backed_mappings(original), set(allowed_sections)
+    parsed = parse_paper(revised)
+    replacements, removed, violations = {}, [], []
+    for name in ("abstract", "conclusion"):
+        section = parsed.get_section(name)
+        if not section:
+            continue
+        kept, changed = [], False
+        for sentence, ws in _sentences(section.body):
+            if not _empirical(sentence):
+                kept.extend([sentence, ws])
+                continue
+            markers = frozenset(_RESULT_RE.findall(sentence))
+            if markers and markers in backed.get(name, set()):
+                kept.extend([sentence, ws])
+            elif name not in allowed:
+                violations.append(f"unbacked empirical claim in untargeted {name}")
+                kept.extend([sentence, ws])
+            else:
+                changed = True
+                removed.append(sentence.strip())
+        if changed:
+            body = "".join(kept).strip("\n")
+            replacements[name] = section.heading + "\n" + body
+    if violations or not replacements:
+        return revised, removed, violations
+    return _assemble_scoped_candidate(revised, replacements), removed, []
+
+
+def _blocked(
+    original_hash: str,
+    blocking_findings: list[str],
+    error: str,
+    revised_hash: str | None = None,
+    violations: list[str] | None = None,
+) -> RemediationResult:
+    return RemediationResult(
+        success=False,
+        promoted=False,
+        revision_number=1,
+        eval_status="blocked",
+        gates=[],
+        blocking_reasons=blocking_findings,
+        original_paper_hash=original_hash,
+        revised_paper_hash=revised_hash or original_hash,
+        invariant_violations=violations or [],
+        error=error,
+    )
+
+
 async def auto_revise_paper(
     proposal_id: int,
     experiment_result_id: int,
     original_paper_md: str,
     blocking_findings: list[str],
     source_map: list[dict],
-    result_markers: list,  # list of ResultMarker objects
-    spec,  # ExperimentSpec
+    result_markers: list,
+    spec,
     timeout_seconds: float = 600.0,
     method_facts: dict | None = None,
 ) -> RemediationResult:
-    """Perform one constrained paper revision from persisted evidence.
-
-    This is the Phase 9 automatic remediation entry point. It:
-      1. Verifies the evidence package
-      2. Claims revision 1 atomically (stores original as revision 0)
-      3. Builds a RevisionDirective from the blocking findings
-      4. Calls the synthesis provider with the original paper + directive
-      5. Verifies evidence invariants
-      6. Re-evaluates gates
-      7. Promotes only if all gates pass
-
-    Args:
-        proposal_id: The proposal to revise.
-        experiment_result_id: The persisted ExperimentResult.
-        original_paper_md: The original (blocked) paper text — mandatory.
-        blocking_findings: The gate findings that triggered remediation.
-        source_map: The frozen source map.
-        result_markers: The frozen result markers.
-        spec: The experiment specification.
-        timeout_seconds: Provider timeout.
-        method_facts: Frozen implementation truth from the capability
-            contract; injected verbatim into the revision prompt so the
-            methodology section describes the executed protocol.
-
-    Returns:
-        RemediationResult with the outcome.
-    """
-    original_hash = hashlib.sha256(original_paper_md.encode()).hexdigest()
-
-    # ── Step 1: Verify evidence package ─────────────────────────────
+    """Produce one defect-scoped candidate; the API route owns promotion."""
+    from backend.pipeline.evaluation.claim_alignment import evaluate_claim_alignment
     from backend.pipeline.evaluation.revision_directive import (
         EvidenceInvariant,
         RevisionDirective,
         verify_revised_paper_invariants,
     )
 
-    result_map_tuple = tuple(
-        (m.marker, m.observed_value) for m in result_markers
-    )
-    source_map_tuple = tuple(
+    original_hash = hashlib.sha256(original_paper_md.encode()).hexdigest()
+    result_map = tuple((m.marker, m.observed_value) for m in result_markers)
+    source_ids = tuple(
         f"[{entry.get('marker', '').strip('[]')}]" for entry in (source_map or [])
     )
-
-    # Load manifest hash
     with get_session() as session:
         exp = session.get(ExperimentResult, experiment_result_id)
         manifest_hash = hashlib.sha256(
             (exp.manifest_json or "").encode()
         ).hexdigest() if exp and exp.manifest_json else ""
-
     evidence = EvidenceInvariant(
-        result_map=result_map_tuple,
-        source_map=source_map_tuple,
+        result_map=result_map,
+        source_map=source_ids,
         experiment_manifest_hash=manifest_hash,
         dataset_hash=spec.dataset_raw_sha256,
-        analysis_code_hash="",  # filled from manifest
+        analysis_code_hash="",
     )
 
-    # ── Step 2: Store revision 0 (original) ─────────────────────────
-    # The original paper MUST be preserved in the revision table BEFORE
-    # any revision attempt. This happens unconditionally, before the
-    # idempotency check for revision 1.
     parent_id = None
     try:
         with get_session() as session:
-            from sqlalchemy import select
-            # Store revision 0 (original) if not already stored
-            rev0 = session.execute(
-                select(PaperRevision).where(
-                    PaperRevision.proposal_id == proposal_id,
-                    PaperRevision.revision_number == 0,
-                )
-            ).scalar_one_or_none()
-
+            rev0 = session.execute(select(PaperRevision).where(
+                PaperRevision.proposal_id == proposal_id,
+                PaperRevision.revision_number == 0,
+            )).scalar_one_or_none()
             if not rev0:
                 rev0 = PaperRevision(
                     proposal_id=proposal_id,
@@ -162,43 +355,18 @@ async def auto_revise_paper(
                     experiment_manifest_hash=manifest_hash,
                 )
                 session.add(rev0)
-                session.commit()  # MUST commit, not just flush — get_session() rolls back on close
-
+                session.commit()
             parent_id = rev0.id
-    except Exception as e:
-        logger.error("Failed to store revision 0: %s", e)
+    except Exception as exc:
+        logger.error("Failed to store revision 0: %s", exc)
 
-    # ── Step 2b: Check idempotency for revision 1 ───────────────────
     try:
         with get_session() as session:
-            from sqlalchemy import select
-            existing = session.execute(
-                select(PaperRevision).where(
-                    PaperRevision.proposal_id == proposal_id,
-                    PaperRevision.revision_number == 1,
-                )
-            ).scalar_one_or_none()
-
+            existing = session.execute(select(PaperRevision).where(
+                PaperRevision.proposal_id == proposal_id,
+                PaperRevision.revision_number == 1,
+            )).scalar_one_or_none()
             if existing:
-                # Idempotent retry (PAC-7). Two interruption classes:
-                # (a) revision 1 carries a TERMINAL authoritative record
-                #     (stamped by the route's atomic finalization in the
-                #     SAME commit as the promotion) — return that
-                #     terminal result; never synthesize again;
-                # (b) revision 1 exists WITHOUT an authoritative record
-                #     (crash between synthesis and authoritative
-                #     evaluation) — return the persisted candidate with
-                #     promoted=False so the route performs the
-                #     authoritative full evaluation; NO second model
-                #     call. An unstamped revision must NEVER be treated
-                #     as authoritative merely because its screening
-                #     eval_status is "ready" (owner review of PR #43:
-                #     that inference let retry bypass the required
-                #     full-paper evaluation while the canonical paper
-                #     was still the original). A crash after the
-                #     route's atomic commit cannot produce an unstamped
-                #     promoted revision — the stamp is written before
-                #     that same session.commit().
                 detail = {}
                 if existing.trigger_detail_json:
                     try:
@@ -206,55 +374,29 @@ async def auto_revise_paper(
                     except Exception:
                         detail = {}
                 authoritative = detail.get("authoritative")
-                logger.info(
-                    "Revision 1 already exists for proposal %d — %s",
-                    proposal_id,
-                    "returning terminal authoritative result"
-                    if authoritative
-                    else "returning persisted candidate for"
-                         " authoritative evaluation",
-                )
                 if authoritative:
-                    status = authoritative.get(
-                        "status", existing.eval_status)
+                    status = authoritative.get("status", existing.eval_status)
                     return RemediationResult(
-                        success=True,
-                        promoted=(status == "ready"),
-                        revision_number=1,
-                        eval_status=status,
-                        gates=authoritative.get(
+                        True, status == "ready", 1, status,
+                        authoritative.get(
                             "gates",
-                            json.loads(existing.gates_json)
-                            if existing.gates_json else [],
+                            json.loads(existing.gates_json) if existing.gates_json else [],
                         ),
-                        blocking_reasons=detail.get(
-                            "blocking_findings", []),
-                        original_paper_hash=original_hash,
-                        revised_paper_hash=existing.paper_hash,
-                        invariant_violations=[],
+                        detail.get("blocking_findings", []),
+                        original_hash, existing.paper_hash, [],
                     )
                 return RemediationResult(
-                    success=True,
-                    promoted=False,
-                    revision_number=1,
-                    eval_status=existing.eval_status,
-                    gates=json.loads(existing.gates_json) if existing.gates_json else [],
-                    blocking_reasons=detail.get("blocking_findings", []),
-                    original_paper_hash=original_hash,
-                    revised_paper_hash=existing.paper_hash,
-                    invariant_violations=[],
+                    True, False, 1, existing.eval_status,
+                    json.loads(existing.gates_json) if existing.gates_json else [],
+                    detail.get("blocking_findings", []),
+                    original_hash, existing.paper_hash, [],
                 )
-    except Exception as e:
-        logger.error("Failed to store revision 0: %s", e)
+    except Exception as exc:
+        logger.error("Failed to inspect revision 1: %s", exc)
         return RemediationResult(
-            success=False, promoted=False, revision_number=0,
-            eval_status="blocked", gates=[], blocking_reasons=blocking_findings,
-            original_paper_hash=original_hash, revised_paper_hash=original_hash,
-            invariant_violations=[], error=str(e),
+            False, False, 0, "blocked", [], blocking_findings,
+            original_hash, original_hash, [], str(exc),
         )
-
-    # ── Step 3: Build revision directive ────────────────────────────
-    from backend.pipeline.evaluation.claim_alignment import evaluate_claim_alignment
 
     claim_result = evaluate_claim_alignment(
         paper_md=original_paper_md,
@@ -263,7 +405,9 @@ async def auto_revise_paper(
         spec_baseline=spec.baseline_method,
         spec_comparison=spec.comparison_method,
     )
-
+    numeric_targets, result_context = derive_numeric_repair_targets(
+        original_paper_md, result_markers,
+    )
     directive = RevisionDirective(
         blocking_findings=tuple(blocking_findings),
         research_question=spec.research_question,
@@ -283,103 +427,94 @@ async def auto_revise_paper(
             claim_result.unexecuted_method_in_conclusion,
         ),
         method_facts=method_facts or None,
+        numeric_repair_targets=numeric_targets,
+        result_context=result_context,
     )
+    targets = _derive_repair_sections(
+        original_paper_md, blocking_findings, numeric_targets,
+        result_markers, claim_result,
+    )
+    if not targets:
+        _persist_revision(
+            proposal_id, experiment_result_id, parent_id, original_paper_md,
+            "auto_remediation", "alignment_blocked", blocking_findings,
+            directive, "blocked", [], evidence,
+        )
+        return _blocked(original_hash, blocking_findings, "no_repairable_sections")
 
-    # ── Step 4: Revise the paper ────────────────────────────────────
-    # Per correction #3: this is a REVISION, not fresh synthesis.
-    # The original paper is included in the prompt and the LLM is
-    # instructed to fix specific defects while preserving the structure.
     from backend.config import get_settings
-    from backend.pipeline.synthesis.paper_synthesizer import PaperSynthesizer
     from backend.providers.provider_factory import get_generation_provider
 
-    settings = get_settings()
-    provider = get_generation_provider(settings)
-    synthesizer = PaperSynthesizer(provider)
-
-    revision_prompt = directive.build_revision_prompt()
-    # The original paper is part of the revision context — the LLM must
-    # revise it, not write a new one from scratch.
-    full_context = (
-        f"## ORIGINAL PAPER (revise this — do not write a new paper from scratch)\n\n"
-        f"{original_paper_md}\n\n"
-        f"{revision_prompt}\n\n"
-        f"## INSTRUCTION\n"
-        f"Revise the ORIGINAL PAPER above to fix the blocking findings. "
-        f"Preserve the overall structure, all [RESULT-N] and [SOURCE-N] markers, "
-        f"and all observed metric values. Change only the sections that contain "
-        f"the defects (typically the abstract, contribution statement, and conclusion). "
-        f"The revised paper must describe the executed experiment as its central contribution."
-    )
-
+    provider = get_generation_provider(get_settings())
+    prompt = _build_scoped_revision_prompt(original_paper_md, directive, targets)
     try:
-        import asyncio
-        result = await asyncio.wait_for(
-            synthesizer.synthesize(
-                proposal_text=full_context,
-                source_papers=[],  # sources are in the original paper
-                domain=spec.task_type or "machine learning",
-                proposal_id=proposal_id,
+        response = await asyncio.wait_for(
+            provider.complete(
+                messages=[{"role": "user", "content": prompt}],
+                temperature=0.3,
+                max_tokens=32768,
             ),
             timeout=timeout_seconds,
         )
     except GatewayTransportError:
-        # Case-4 R2 (adjudicated GENERIC_PRODUCT_DEFECT, 2026-08-18): a
-        # typed provider/transport failure must keep its identity. The Q2
-        # stage-loop terminalization converts it to FAILED_EXECUTION; it
-        # must never become fallback output on a dead provider.
         raise
-    except Exception as e:
-        logger.error("Revision synthesis failed: %s", e)
-        revised_paper_md = None
-    else:
-        revised_paper_md = result.paper_markdown if result else None
-
-    if not revised_paper_md or len(revised_paper_md.split()) < 200:
-        # Revision failed — persist as blocked, do NOT promote
+    except TimeoutError:
+        logger.error("Revision synthesis timed out after %.1fs", timeout_seconds)
         _persist_revision(
-            proposal_id, experiment_result_id, parent_id,
-            revised_paper_md or original_paper_md,
-            source="auto_remediation",
-            trigger="alignment_blocked",
-            blocking_findings=blocking_findings,
-            directive=directive,
-            eval_status="blocked",
-            gates=[],
-            evidence=evidence,
+            proposal_id, experiment_result_id, parent_id, original_paper_md,
+            "auto_remediation", "alignment_blocked", blocking_findings,
+            directive, "blocked", [], evidence,
         )
-        return RemediationResult(
-            success=False, promoted=False, revision_number=1,
-            eval_status="blocked", gates=[], blocking_reasons=blocking_findings,
-            original_paper_hash=original_hash,
-            revised_paper_hash=hashlib.sha256((revised_paper_md or "").encode()).hexdigest(),
-            invariant_violations=[], error="Revision synthesis produced no output",
+        return _blocked(original_hash, blocking_findings, "revision_timeout")
+    except Exception as exc:
+        logger.error("Revision synthesis failed: %s", exc)
+        response = ""
+
+    replacements = _parse_scoped_replacements(response or "", targets, original_paper_md)
+    if not replacements:
+        _persist_revision(
+            proposal_id, experiment_result_id, parent_id, original_paper_md,
+            "auto_remediation", "alignment_blocked", blocking_findings,
+            directive, "blocked", [], evidence,
+        )
+        return _blocked(
+            original_hash, blocking_findings, "invalid_scoped_revision_output",
         )
 
-    revised_hash = hashlib.sha256(revised_paper_md.encode()).hexdigest()
+    revised = _assemble_scoped_candidate(original_paper_md, replacements)
+    revised, removed, finalizer_violations = _finalize_conclusion_support(
+        original_paper_md, revised, targets,
+    )
+    if removed:
+        logger.info("R4 finalizer removed %d unsupported empirical claim(s)", len(removed))
+    revised_hash = hashlib.sha256(revised.encode()).hexdigest()
+    if finalizer_violations:
+        _persist_revision(
+            proposal_id, experiment_result_id, parent_id, revised,
+            "auto_remediation", "alignment_blocked", blocking_findings,
+            directive, "blocked", [], evidence,
+        )
+        return _blocked(
+            original_hash, blocking_findings,
+            "conclusion_support_postcondition_failed", revised_hash,
+            finalizer_violations,
+        )
 
-    # ── Step 5: Verify evidence invariants ──────────────────────────
-    ok, violations = verify_revised_paper_invariants(revised_paper_md, evidence)
+    ok, violations = verify_revised_paper_invariants(revised, evidence)
     if not ok:
-        logger.warning("Revision violated evidence invariants: %s", violations)
         _persist_revision(
-            proposal_id, experiment_result_id, parent_id, revised_paper_md,
-            source="auto_remediation", trigger="alignment_blocked",
-            blocking_findings=blocking_findings, directive=directive,
-            eval_status="blocked", gates=[],
-            evidence=evidence,
+            proposal_id, experiment_result_id, parent_id, revised,
+            "auto_remediation", "alignment_blocked", blocking_findings,
+            directive, "blocked", [], evidence,
         )
-        return RemediationResult(
-            success=False, promoted=False, revision_number=1,
-            eval_status="blocked", gates=[], blocking_reasons=blocking_findings,
-            original_paper_hash=original_hash, revised_paper_hash=revised_hash,
-            invariant_violations=violations,
+        return _blocked(
+            original_hash, blocking_findings, "", revised_hash, violations,
         )
 
-    # ── Step 6: Re-evaluate gates ───────────────────────────────────
     from backend.pipeline.evaluation.paper_gate_evaluator import evaluate_paper_gates
+
     gate_eval = evaluate_paper_gates(
-        paper_md=revised_paper_md,
+        paper_md=revised,
         source_map=source_map,
         research_intent=spec.research_question,
         domain=spec.task_type or "machine learning",
@@ -389,54 +524,14 @@ async def auto_revise_paper(
         spec_baseline=spec.baseline_method,
         spec_comparison=spec.comparison_method,
     )
-
-    # ── Step 7: Screening verdict — NOT promotion (PAC-2) ───────────
-    # The remediator is a candidate producer. The pure gate screen above
-    # remains useful (an obviously blocked revision skips the more
-    # expensive full evaluation downstream), but it no longer mutates
-    # the canonical Proposal: promotion authority moved to the repair
-    # route's atomic finalization after the production full-paper
-    # evaluation returns ready for the exact candidate bytes
-    # (Promotion-Authority-Consistency successor, owner plan 2026-08-20;
-    # demonstrated defect: split authority let promoted=true coexist
-    # with a final authoritative blocked evaluation — regr-B#2).
-    if gate_eval.status == "ready":
-        logger.info(
-            "Revision 1 candidate passed screening for proposal %d"
-            " (authoritative full evaluation pending)",
-            proposal_id,
-        )
-    else:
-        logger.info(
-            "Revision 1 blocked at screening for proposal %d: %s",
-            proposal_id, gate_eval.blocking_reasons,
-        )
-
-    # Persist the revision record (the immutable candidate)
     _persist_revision(
-        proposal_id, experiment_result_id, parent_id, revised_paper_md,
-        source="auto_remediation",
-        trigger="alignment_blocked",
-        blocking_findings=blocking_findings,
-        directive=directive,
-        eval_status=gate_eval.status,
-        gates=gate_eval.gates,
-        evidence=evidence,
+        proposal_id, experiment_result_id, parent_id, revised,
+        "auto_remediation", "alignment_blocked", blocking_findings,
+        directive, gate_eval.status, gate_eval.gates, evidence,
     )
-
     return RemediationResult(
-        success=True,
-        # Truthful under the new contract: a newly generated candidate
-        # performs no canonical mutation. The route's atomic
-        # finalization is the only promotion authority.
-        promoted=False,
-        revision_number=1,
-        eval_status=gate_eval.status,
-        gates=gate_eval.gates,
-        blocking_reasons=gate_eval.blocking_reasons,
-        original_paper_hash=original_hash,
-        revised_paper_hash=revised_hash,
-        invariant_violations=[],
+        True, False, 1, gate_eval.status, gate_eval.gates,
+        gate_eval.blocking_reasons, original_hash, revised_hash, [],
     )
 
 
@@ -445,12 +540,9 @@ def _persist_revision(
     source, trigger, blocking_findings, directive, eval_status,
     gates, evidence,
 ):
-    """Persist a revision record to the paper_revisions table."""
-    import json as _json
     paper_hash = hashlib.sha256(paper_md.encode()).hexdigest()
-
     with get_session() as session:
-        rev = PaperRevision(
+        session.add(PaperRevision(
             proposal_id=proposal_id,
             experiment_result_id=experiment_result_id,
             revision_number=1,
@@ -459,13 +551,12 @@ def _persist_revision(
             paper_hash=paper_hash,
             source=source,
             trigger=trigger,
-            trigger_detail_json=_json.dumps({"blocking_findings": blocking_findings}),
-            directive_json=_json.dumps(directive.to_dict()),
+            trigger_detail_json=json.dumps({"blocking_findings": blocking_findings}),
+            directive_json=json.dumps(directive.to_dict()),
             eval_status=eval_status,
-            gates_json=_json.dumps(gates),
+            gates_json=json.dumps(gates),
             experiment_manifest_hash=evidence.experiment_manifest_hash,
             result_map_hash=evidence.result_map_hash,
             source_map_hash=evidence.source_map_hash,
-        )
-        session.add(rev)
+        ))
         session.commit()

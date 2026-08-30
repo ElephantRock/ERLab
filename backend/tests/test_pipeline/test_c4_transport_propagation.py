@@ -123,7 +123,6 @@ class TestHelperLayerPropagation:
                 proposal_id=1,
             ))
 
-
     def test_synthesis_service_specimen_sequence_re_raises(self):
         """The exact specimen path: monolithic call returns HTTP-200-empty
         (HB-02 None, untouched by design), the service falls back to
@@ -234,21 +233,14 @@ class TestGovernedRepairPropagation:
             yield session
 
         monkeypatch.setattr(pr, "get_session", _fake_session)
-        # CI has no EROCK_OPENAI_API_KEY; the provider built inside
-        # auto_revise_paper is irrelevant to this test.
+
+        # R4 calls the generation provider directly for one defect-scoped
+        # completion rather than routing through the full-paper synthesizer.
+        # The transport contract is unchanged: typed gateway failures escape.
         import backend.providers.provider_factory as pf
+        provider = _raising_provider()
         monkeypatch.setattr(
-            pf, "get_generation_provider", lambda settings: MagicMock()
-        )
-
-        async def _raising_synthesize(self, **kwargs):
-            raise _gte()
-
-        from backend.pipeline.synthesis.paper_synthesizer import (
-            PaperSynthesizer,
-        )
-        monkeypatch.setattr(
-            PaperSynthesizer, "synthesize", _raising_synthesize
+            pf, "get_generation_provider", lambda settings: provider
         )
 
         spec = SimpleNamespace(
@@ -265,13 +257,22 @@ class TestGovernedRepairPropagation:
             dataset_raw_sha256="",
             random_seed=42,
         )
+        blocked_paper = (
+            "# Blocked paper\n\n"
+            "## Abstract\n"
+            "A blocked abstract.\n\n"
+            "## Conclusion\n"
+            "A blocked conclusion.\n"
+        )
         with pytest.raises(GatewayTransportError):
             asyncio.run(pr.auto_revise_paper(
                 proposal_id=1,
                 experiment_result_id=1,
-                original_paper_md="# Blocked paper",
-                blocking_findings=["finding"],
+                original_paper_md=blocked_paper,
+                blocking_findings=["conclusion: finding"],
                 source_map=[],
                 result_markers=[],
                 spec=spec,
             ))
+
+        assert provider.complete.await_count == 1
