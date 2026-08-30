@@ -10,7 +10,7 @@ unchanged.
 import asyncio
 import contextlib
 from types import SimpleNamespace
-from unittest.mock import MagicMock
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
@@ -238,23 +238,25 @@ def test_single_revision_call_and_typed_transport_semantics_unchanged(monkeypatc
         yield session
 
     monkeypatch.setattr(pr, "get_session", _fake_session)
+    monkeypatch.setattr(pr, "_persist_revision", MagicMock())
 
-    import backend.providers.provider_factory as pf
-    monkeypatch.setattr(pf, "get_generation_provider", lambda settings: MagicMock())
-
+    provider = MagicMock()
     calls = {"n": 0}
 
-    async def _spy_synthesize(self, **kwargs):
+    async def _spy_complete(*args, **kwargs):
         calls["n"] += 1
-        prompt = kwargs.get("proposal_text", "")
+        prompt = kwargs["messages"][0]["content"]
         assert "NUMERIC REPAIR TARGETS" in prompt
         assert "CONCLUSION SUPPORT" in prompt
+        assert "DEFECT-SCOPED PAPER REVISION" in prompt
         raise GatewayTransportError(
             "paper_synthesis", "injected: usage limit reached"
         )
 
-    from backend.pipeline.synthesis.paper_synthesizer import PaperSynthesizer
-    monkeypatch.setattr(PaperSynthesizer, "synthesize", _spy_synthesize)
+    provider.complete = AsyncMock(side_effect=_spy_complete)
+
+    import backend.providers.provider_factory as pf
+    monkeypatch.setattr(pf, "get_generation_provider", lambda settings: provider)
 
     markers = _case4_markers()
     paper = _paper([
