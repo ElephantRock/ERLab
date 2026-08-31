@@ -220,6 +220,17 @@ class TestStageLayerPropagation:
 
 class TestGovernedRepairPropagation:
     def test_auto_revise_paper_re_raises(self, monkeypatch):
+        """R5 translation of the Case-4 R2 regression.
+
+        Original property: a typed transport failure inside the
+        remediator's synthesis call must keep its identity and never
+        become fallback output. The frozen R5 charter (owner,
+        2026-08-31) removes the repair-side provider call entirely, so
+        the property is now enforced the stronger way: the repair path
+        must not construct a provider at all. If repair ever regains a
+        transport surface, this test fails at the construction site —
+        before any fail-soft catchall could swallow the failure.
+        """
         import backend.pipeline.evaluation.paper_remediator as pr
 
         @contextlib.contextmanager
@@ -234,22 +245,27 @@ class TestGovernedRepairPropagation:
             yield session
 
         monkeypatch.setattr(pr, "get_session", _fake_session)
-        # CI has no EROCK_OPENAI_API_KEY; the provider built inside
-        # auto_revise_paper is irrelevant to this test.
-        import backend.providers.provider_factory as pf
-        monkeypatch.setattr(
-            pf, "get_generation_provider", lambda settings: MagicMock()
-        )
 
-        async def _raising_synthesize(self, **kwargs):
-            raise _gte()
+        def _provider_must_not_exist(settings):
+            raise AssertionError(
+                "R5 frozen-contract violation: the deterministic repair"
+                " path constructed a generation provider"
+            )
+
+        import backend.providers.provider_factory as pf
+        monkeypatch.setattr(pf, "get_generation_provider", _provider_must_not_exist)
 
         from backend.pipeline.synthesis.paper_synthesizer import (
             PaperSynthesizer,
         )
-        monkeypatch.setattr(
-            PaperSynthesizer, "synthesize", _raising_synthesize
-        )
+
+        def _synth_must_not_be_built(*args, **kwargs):
+            raise AssertionError(
+                "R5 frozen-contract violation: the deterministic repair"
+                " path built a PaperSynthesizer"
+            )
+
+        monkeypatch.setattr(PaperSynthesizer, "__init__", _synth_must_not_be_built)
 
         spec = SimpleNamespace(
             research_question="rq",
@@ -265,13 +281,16 @@ class TestGovernedRepairPropagation:
             dataset_raw_sha256="",
             random_seed=42,
         )
-        with pytest.raises(GatewayTransportError):
-            asyncio.run(pr.auto_revise_paper(
-                proposal_id=1,
-                experiment_result_id=1,
-                original_paper_md="# Blocked paper",
-                blocking_findings=["finding"],
-                source_map=[],
-                result_markers=[],
-                spec=spec,
-            ))
+        result = asyncio.run(pr.auto_revise_paper(
+            proposal_id=1,
+            experiment_result_id=1,
+            original_paper_md="# Blocked paper",
+            blocking_findings=["finding"],
+            source_map=[],
+            result_markers=[],
+            spec=spec,
+        ))
+        # No markers -> the typed fail-closed path; crucially, reaching
+        # ANY result proves no provider was constructed along the way.
+        assert result.success is False
+        assert result.error == "no_numeric_defects"
