@@ -1612,6 +1612,14 @@ async def repair_paper(idea_id: int):
             "revised_paper_hash": result.revised_paper_hash,
             "findings_count": len(blocking_findings),
             "findings": blocking_findings,
+            # Productive-1 R5: the deterministic patch manifest and the
+            # typed fail-closed reason travel in the response so a
+            # rejected candidate never needs branch-elimination
+            # forensics (R3/R4 evidence gap).
+            "patch_count": len(getattr(result, "patch_manifest", []) or []),
+            "patch_manifest": list(getattr(result, "patch_manifest", []) or []),
+            **({"failure_reason": result.error}
+               if getattr(result, "error", "") else {}),
             **({"finalization_note": finalization_note}
                if finalization_note else {}),
         },

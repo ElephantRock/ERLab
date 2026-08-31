@@ -1,0 +1,126 @@
+{
+ "calib-A": {
+  "rev0_mismatches": 6,
+  "patches": 6,
+  "verify": {
+   "numeric_mismatches_after": 0,
+   "method_fidelity_before_after": [
+    true,
+    true
+   ],
+   "pure_gates_after": {
+    "provenance": true,
+    "scope_alignment": "on_scope",
+    "conclusion_support": "supported_by_paper",
+    "experiment_alignment": true,
+    "claim_result_alignment": true
+   },
+   "pure_blocking_after": [],
+   "section_names_identical": true,
+   "section_headings_identical": true,
+   "result_marker_count_identical": true,
+   "source_marker_count_identical": true,
+   "net_chars_changed": 10,
+   "patched_sha256_16": "2772c88d6e96a4e0",
+   "remediator_invariants_after": [
+    false,
+    [
+     "Invented RESULT markers: {'[RESULT-12]', '[RESULT-32]', '[RESULT-67]', '[RESULT-54]', '[RESULT-57]', '[RESULT-24]', '[RESULT-58]', '[RESULT-5]', '[RESULT-14]', '[RESULT-35]', '[RESULT-13]', '[RESULT-4]', '[RESULT-11]', '[RESULT-9]', '[RESULT-30]', '[RESULT-41]', '[RESULT-50]', '[RESULT-6]', '[RESULT-46]', '[RESULT-48]', '[RESULT-15]', '[RESULT-68]', '[RESULT-47]', '[RESULT-71]', '[RESULT-34]', '[RESULT-43]', '[RESULT-73]', '[RESULT-37]', '[RESULT-38]', '[RESULT-19]', '[RESULT-20]', '[RESULT-42]', '[RESULT-65]', '[RESULT-1]', '[RESULT-74]', '[RESULT-52]', '[RESULT-55]', '[RESULT-36]', '[RESULT-49]', '[RESULT-61]', '[RESULT-56]', '[RESULT-72]', '[RESULT-23]', '[RESULT-31]', '[RESULT-29]', '[RESULT-18]', '[RESULT-64]', '[RESULT-51]', '[RESULT-39]', '[RESULT-59]', '[RESULT-28]', '[RESULT-7]', '[RESULT-26]', '[RESULT-22]', '[RESULT-21]', '[RESULT-17]', '[RESULT-60]', '[RESULT-53]', '[RESULT-33]', '[RESULT-66]', '[RESULT-3]', '[RESULT-2]', '[RESULT-10]', '[RESULT-8]', '[RESULT-25]', '[RESULT-62]', '[RESULT-63]', '[RESULT-45]', '[RESULT-27]', '[RESULT-69]', '[RESULT-70]', '[RESULT-44]', '[RESULT-40]', '[RESULT-16]'}"
+    ]
+   ]
+  }
+ },
+ "calib-B": {
+  "rev0_mismatches": 13,
+  "patches": 13,
+  "verify": {
+   "numeric_mismatches_after": 0,
+   "method_fidelity_before_after": [
+    true,
+    true
+   ],
+   "pure_gates_after": {
+    "provenance": true,
+    "scope_alignment": "on_scope",
+    "conclusion_support": "supported_by_paper",
+    "experiment_alignment": true,
+    "claim_result_alignment": true
+   },
+   "pure_blocking_after": [],
+   "section_names_identical": true,
+   "section_headings_identical": true,
+   "result_marker_count_identical": true,
+   "source_marker_count_identical": true,
+   "net_chars_changed": 26,
+   "patched_sha256_16": "bc9b19201c216d20",
+   "remediator_invariants_after": [
+    false,
+    [
+     "Invented RESULT markers: {'[RESULT-12]', '[RESULT-32]', '[RESULT-67]', '[RESULT-54]', '[RESULT-57]', '[RESULT-24]', '[RESULT-58]', '[RESULT-5]', '[RESULT-14]', '[RESULT-35]', '[RESULT-13]', '[RESULT-4]', '[RESULT-11]', '[RESULT-9]', '[RESULT-6]', '[RESULT-41]', '[RESULT-50]', '[RESULT-30]', '[RESULT-46]', '[RESULT-48]', '[RESULT-15]', '[RESULT-68]', '[RESULT-71]', '[RESULT-47]', '[RESULT-34]', '[RESULT-43]', '[RESULT-73]', '[RESULT-37]', '[RESULT-38]', '[RESULT-19]', '[RESULT-20]', '[RESULT-42]', '[RESULT-65]', '[RESULT-1]', '[RESULT-74]', '[RESULT-52]', '[RESULT-61]', '[RESULT-36]', '[RESULT-55]', '[RESULT-49]', '[RESULT-56]', '[RESULT-72]', '[RESULT-23]', '[RESULT-31]', '[RESULT-29]', '[RESULT-18]', '[RESULT-64]', '[RESULT-39]', '[RESULT-51]', '[RESULT-59]', '[RESULT-28]', '[RESULT-7]', '[RESULT-26]', '[RESULT-22]', '[RESULT-21]', '[RESULT-17]', '[RESULT-60]', '[RESULT-53]', '[RESULT-33]', '[RESULT-66]', '[RESULT-3]', '[RESULT-2]', '[RESULT-10]', '[RESULT-8]', '[RESULT-25]', '[RESULT-62]', '[RESULT-63]', '[RESULT-45]', '[RESULT-27]', '[RESULT-69]', '[RESULT-70]', '[RESULT-44]', '[RESULT-40]', '[RESULT-16]'}"
+    ]
+   ]
+  }
+ },
+ "regr-A": {
+  "rev0_mismatches": 10,
+  "patches": 10,
+  "verify": {
+   "numeric_mismatches_after": 0,
+   "method_fidelity_before_after": [
+    true,
+    true
+   ],
+   "pure_gates_after": {
+    "provenance": true,
+    "scope_alignment": "on_scope",
+    "conclusion_support": "supported_by_paper",
+    "experiment_alignment": true,
+    "claim_result_alignment": true
+   },
+   "pure_blocking_after": [],
+   "section_names_identical": true,
+   "section_headings_identical": true,
+   "result_marker_count_identical": true,
+   "source_marker_count_identical": true,
+   "net_chars_changed": 15,
+   "patched_sha256_16": "fbf1c2839ed221e5",
+   "remediator_invariants_after": [
+    false,
+    [
+     "Invented RESULT markers: {'[RESULT-12]', '[RESULT-32]', '[RESULT-54]', '[RESULT-24]', '[RESULT-5]', '[RESULT-14]', '[RESULT-35]', '[RESULT-13]', '[RESULT-4]', '[RESULT-11]', '[RESULT-9]', '[RESULT-30]', '[RESULT-41]', '[RESULT-50]', '[RESULT-6]', '[RESULT-46]', '[RESULT-48]', '[RESULT-15]', '[RESULT-43]', '[RESULT-47]', '[RESULT-34]', '[RESULT-37]', '[RESULT-38]', '[RESULT-19]', '[RESULT-20]', '[RESULT-42]', '[RESULT-1]', '[RESULT-52]', '[RESULT-49]', '[RESULT-36]', '[RESULT-23]', '[RESULT-31]', '[RESULT-29]', '[RESULT-18]', '[RESULT-39]', '[RESULT-51]', '[RESULT-28]', '[RESULT-7]', '[RESULT-26]', '[RESULT-22]', '[RESULT-21]', '[RESULT-17]', '[RESULT-53]', '[RESULT-33]', '[RESULT-10]', '[RESULT-3]', '[RESULT-2]', '[RESULT-8]', '[RESULT-25]', '[RESULT-45]', '[RESULT-27]', '[RESULT-44]', '[RESULT-40]', '[RESULT-16]'}"
+    ]
+   ]
+  }
+ },
+ "regr-B": {
+  "rev0_mismatches": 8,
+  "patches": 8,
+  "verify": {
+   "numeric_mismatches_after": 0,
+   "method_fidelity_before_after": [
+    true,
+    true
+   ],
+   "pure_gates_after": {
+    "provenance": true,
+    "scope_alignment": "on_scope",
+    "conclusion_support": "supported_by_paper",
+    "experiment_alignment": true,
+    "claim_result_alignment": true
+   },
+   "pure_blocking_after": [],
+   "section_names_identical": true,
+   "section_headings_identical": true,
+   "result_marker_count_identical": true,
+   "source_marker_count_identical": true,
+   "net_chars_changed": 13,
+   "patched_sha256_16": "2ec2f3e64c71ec89",
+   "remediator_invariants_after": [
+    false,
+    [
+     "Invented RESULT markers: {'[RESULT-12]', '[RESULT-32]', '[RESULT-54]', '[RESULT-24]', '[RESULT-5]', '[RESULT-14]', '[RESULT-35]', '[RESULT-13]', '[RESULT-4]', '[RESULT-11]', '[RESULT-9]', '[RESULT-30]', '[RESULT-41]', '[RESULT-50]', '[RESULT-6]', '[RESULT-46]', '[RESULT-48]', '[RESULT-15]', '[RESULT-43]', '[RESULT-47]', '[RESULT-34]', '[RESULT-37]', '[RESULT-38]', '[RESULT-19]', '[RESULT-20]', '[RESULT-42]', '[RESULT-1]', '[RESULT-52]', '[RESULT-49]', '[RESULT-36]', '[RESULT-23]', '[RESULT-31]', '[RESULT-29]', '[RESULT-18]', '[RESULT-39]', '[RESULT-51]', '[RESULT-28]', '[RESULT-7]', '[RESULT-26]', '[RESULT-22]', '[RESULT-21]', '[RESULT-17]', '[RESULT-53]', '[RESULT-33]', '[RESULT-3]', '[RESULT-2]', '[RESULT-10]', '[RESULT-8]', '[RESULT-25]', '[RESULT-45]', '[RESULT-27]', '[RESULT-44]', '[RESULT-40]', '[RESULT-16]'}"
+    ]
+   ]
+  }
+ }
+}
