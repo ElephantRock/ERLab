@@ -61,7 +61,7 @@ jobs:
 
           git fetch --depth=1 origin productive1/r3-qualification-specimens:refs/remotes/origin/productive1/r3-qualification-specimens
           git show origin/productive1/r3-qualification-specimens:evidence/productive1_r3_specimens/regr-A_case3a_specimen.db > .r5_qual_inputs/regr-A_case3a.db
-          git show origin/productive1/r3-qualification-specimens:evidence/productive1_r3_specimens/regr-B_3E_era.db > .r5_qual_inputs/regr-B_3E_era.db
+          git show origin/productive1/r3-qualification-specimens:evidence/productive1_r3_specimens/regr-B_3E_era_specimen.db > .r5_qual_inputs/regr-B_3E_era.db
 
           echo "Frozen input hashes:"
           sha256sum .r5_qual_inputs/*.db
