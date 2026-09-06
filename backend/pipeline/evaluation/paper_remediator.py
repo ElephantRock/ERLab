@@ -32,10 +32,10 @@ from backend.db.database import get_session
 from backend.db.models import ExperimentResult, PaperRevision
 from backend.pipeline.evaluation.numeric_patcher import (
     PatchApplicationError,
-    apply_numeric_patches,
+    apply_combined_patches,
     derive_numeric_patch_manifest,
     gate_regressions,
-    verify_patch_postconditions,
+    verify_combined_postconditions,
 )
 
 logger = logging.getLogger(__name__)
@@ -56,6 +56,7 @@ class RemediationResult:
     invariant_violations: list[str]
     error: str = ""
     patch_manifest: list[dict] = field(default_factory=list)
+    conclusion_removals: list[dict] = field(default_factory=list)
 
     def to_dict(self) -> dict:
         return {
@@ -70,6 +71,7 @@ class RemediationResult:
             "invariant_violations": self.invariant_violations,
             "error": self.error,
             "patch_manifest": self.patch_manifest,
+            "conclusion_removals": self.conclusion_removals,
         }
 
 
@@ -281,13 +283,56 @@ async def auto_revise_paper(
     # section-rewrite path (destroyer of already-passing method
     # fidelity, inventor of section structure) is gone.
     manifest = derive_numeric_patch_manifest(original_paper_md, result_markers)
+
+    # ── Step 3b: Derive deterministic R-REMOVE patches (R6) ─────────
+    # Frozen charter (owner, 2026-08-31): unmapped empirical assertions
+    # under the canonical shared conclusion-support rule are repaired by
+    # EXACT removal of the complete containing sentence — no paraphrase,
+    # no weakening, no citations. Spans derive against the original
+    # revision; any ambiguity fails closed with a typed reason.
+    from backend.pipeline.evaluation.conclusion_support import (
+        evaluate_conclusion_support,
+    )
+    from backend.pipeline.evaluation.numeric_patcher import (
+        ConclusionRemovalError,
+        derive_conclusion_removal_patches,
+    )
+
+    conclusion_before = evaluate_conclusion_support(
+        original_paper_md, result_markers,
+    )
+    removal_patches, removal_errors = derive_conclusion_removal_patches(
+        original_paper_md, conclusion_before,
+    )
+
     manifest_payload = {
         "derived_from": "persisted RESULT evidence",
         "blocking_findings": list(blocking_findings),
         "patch_manifest": [dict(p) for p in manifest],
+        "conclusion_removals": [dict(p) for p in removal_patches],
+        "conclusion_pre_classification": conclusion_before.classification,
     }
 
-    if not manifest:
+    if removal_errors:
+        logger.error("R-REMOVE derivation failed closed: %s", removal_errors)
+        _persist_revision(
+            proposal_id, experiment_result_id, parent_id, original_paper_md,
+            source="auto_remediation", trigger="alignment_blocked",
+            blocking_findings=blocking_findings,
+            directive_payload=manifest_payload,
+            eval_status="blocked", gates=[], evidence=evidence,
+        )
+        return RemediationResult(
+            success=False, promoted=False, revision_number=1,
+            eval_status="blocked", gates=[],
+            blocking_reasons=blocking_findings + removal_errors,
+            original_paper_hash=original_hash, revised_paper_hash=original_hash,
+            invariant_violations=[], error="; ".join(removal_errors),
+            patch_manifest=[dict(p) for p in manifest],
+            conclusion_removals=[],
+        )
+
+    if not manifest and not removal_patches:
         _persist_revision(
             proposal_id, experiment_result_id, parent_id, original_paper_md,
             source="auto_remediation", trigger="alignment_blocked",
@@ -301,13 +346,19 @@ async def auto_revise_paper(
             original_paper_hash=original_hash, revised_paper_hash=original_hash,
             invariant_violations=[], error="no_numeric_defects",
             patch_manifest=[],
+            conclusion_removals=[],
         )
 
-    # ── Step 4: Apply the patches deterministically ─────────────────
+    # ── Step 4: Apply the combined patches deterministically ────────
+    # One atomic manifest: numeric replacements and conclusion removals
+    # are validated together against the same original bytes; any
+    # invalid patch means no candidate at all.
     try:
-        revised_paper_md = apply_numeric_patches(original_paper_md, manifest)
-    except PatchApplicationError as exc:
-        logger.error("Numeric patch application failed closed: %s", exc)
+        revised_paper_md = apply_combined_patches(
+            original_paper_md, manifest, removal_patches,
+        )
+    except (PatchApplicationError, ConclusionRemovalError) as exc:
+        logger.error("Combined patch application failed closed: %s", exc)
         _persist_revision(
             proposal_id, experiment_result_id, parent_id, original_paper_md,
             source="auto_remediation", trigger="alignment_blocked",
@@ -321,19 +372,34 @@ async def auto_revise_paper(
             original_paper_hash=original_hash, revised_paper_hash=original_hash,
             invariant_violations=[], error=str(exc),
             patch_manifest=[dict(p) for p in manifest],
+            conclusion_removals=[dict(p) for p in removal_patches],
         )
 
-    # ── Step 4b: Structural postconditions (fail-closed, typed) ─────
-    # Reconstruction proves byte identity outside the authorized spans;
-    # the heading sequence and RESULT/SOURCE token multiset must be
-    # identical. A numeric-token patch cannot represent a structural
-    # change — this check makes that a proven contract, not an
-    # emergent hope.
-    post_violations = verify_patch_postconditions(
-        original_paper_md, revised_paper_md, manifest,
+    # ── Step 4b: Structural + conclusion postconditions (typed) ─────
+    # Reconstruction proves byte identity outside the union of
+    # authorized spans (numeric + R-REMOVE); the heading sequence and
+    # RESULT/SOURCE token multiset must be identical (removal sentences
+    # are marker-free by derivation). The conclusion postcondition
+    # re-runs the canonical shared rule on the candidate: every unmapped
+    # empirical assertion the repair targeted must be gone, and no new
+    # one may have appeared.
+    post_violations = verify_combined_postconditions(
+        original_paper_md, revised_paper_md, manifest, removal_patches,
     )
+    conclusion_after = evaluate_conclusion_support(
+        revised_paper_md, result_markers,
+    )
+    manifest_payload["conclusion_post_classification"] = (
+        conclusion_after.classification
+    )
+    if conclusion_after.unmapped_claims:
+        post_violations.append(
+            "conclusion_postcondition_failed: "
+            f"{len(conclusion_after.unmapped_claims)} unmapped empirical"
+            " claim(s) remain after R-REMOVE"
+        )
     if post_violations:
-        logger.warning("Numeric patch postconditions violated: %s", post_violations)
+        logger.warning("Combined patch postconditions violated: %s", post_violations)
         _persist_revision(
             proposal_id, experiment_result_id, parent_id, revised_paper_md,
             source="auto_remediation", trigger="alignment_blocked",
@@ -350,6 +416,7 @@ async def auto_revise_paper(
             invariant_violations=post_violations,
             error="; ".join(post_violations),
             patch_manifest=[dict(p) for p in manifest],
+            conclusion_removals=[dict(p) for p in removal_patches],
         )
 
     # ── Step 4c: Preservation postconditions (P4) ───────────────────
@@ -501,6 +568,7 @@ async def auto_revise_paper(
         revised_paper_hash=revised_hash,
         invariant_violations=[],
         patch_manifest=[dict(p) for p in manifest],
+        conclusion_removals=[dict(p) for p in removal_patches],
     )
 
 

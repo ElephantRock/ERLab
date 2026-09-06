@@ -236,3 +236,241 @@ def gate_regressions(gates_before: list[dict], gates_after: list[dict]) -> list[
         elif _is_green(gate) and not _is_green(counterpart):
             regressions.append(f"preservation_violation:{name}")
     return regressions
+
+
+# ── Productive-1 R6: deterministic R-REMOVE targeting ────────────────
+#
+# Frozen charter semantics: for an unmapped empirical assertion (per the
+# canonical shared conclusion-support rule), one R-REMOVE patch may cover
+# EXACTLY the complete sentence containing the matched assertion. The
+# sentence must contain no RESULT/SOURCE marker; boundaries follow the
+# decimal-aware deterministic rule (digit.digit never terminates a
+# sentence; a terminal period followed by whitespace/end-of-text may);
+# spans derive against the original revision and must not overlap
+# numeric patches. Anything ambiguous fails closed with a typed reason.
+# No paraphrasing, no weakening, no citation — removal only.
+
+_MARKER_ANY_RE = re.compile(r"\[(RESULT|SOURCE)-\d+\]")
+_WS_RUN_RE = re.compile(r"\s+")
+
+
+class ConclusionRemovalError(RuntimeError):
+    """Typed fail-closed R-REMOVE derivation/application failure."""
+
+    def __init__(self, kind: str, detail: str) -> None:
+        self.kind = kind
+        self.detail = detail
+        super().__init__(f"{kind}: {detail}")
+
+
+def split_sentences_decimal_aware(text: str) -> list[tuple[int, int, str]]:
+    """Split into sentence spans under the frozen deterministic rule.
+
+    A terminator (``.``, ``!``, ``?``) ends a sentence only when it is
+    followed by whitespace or end-of-text, and — for ``.`` — when it is
+    NOT a decimal point (a digit on both sides). Newlines count as
+    whitespace. Non-terminating periods keep the sentence intact.
+    """
+    spans: list[tuple[int, int, str]] = []
+    start = 0
+    i = 0
+    n = len(text)
+    while i < n:
+        ch = text[i]
+        if ch in ".!?":
+            is_decimal = (
+                ch == "."
+                and i > 0
+                and i + 1 < n
+                and text[i - 1].isdigit()
+                and text[i + 1].isdigit()
+            )
+            followed_by_ws = (i + 1 >= n) or text[i + 1].isspace()
+            if not is_decimal and followed_by_ws:
+                sentence = text[start:i + 1]
+                if sentence.strip():
+                    spans.append((start, i + 1, sentence))
+                start = i + 1
+        i += 1
+    if start < n and text[start:].strip():
+        spans.append((start, n, text[start:]))
+    return spans
+
+
+def _normalized(text: str) -> str:
+    return _WS_RUN_RE.sub(" ", text).strip()
+
+
+def derive_conclusion_removal_patches(
+    paper_md: str, assessment,
+) -> tuple[tuple[dict, ...], list[str]]:
+    """Derive R-REMOVE patches for the assessment's unmapped claims.
+
+    Returns (patches, typed_errors). Any error means NO patches — the
+    caller fails closed; there is never a partial removal set.
+    """
+    import hashlib
+
+    if not assessment.unmapped_claims:
+        return ((), [])
+
+    joined = assessment.joined_text
+    joined_sentences = [
+        (s, e, t) for s, e, t in split_sentences_decimal_aware(joined)
+    ]
+    original_sentences = split_sentences_decimal_aware(paper_md)
+
+    patches: list[dict] = []
+    errors: list[str] = []
+    for claim in assessment.unmapped_claims:
+        # 1. The claim's containing sentence in the canonical joined text.
+        containing = [
+            t for s, e, t in joined_sentences if s <= claim.start and claim.end <= e
+        ]
+        if len(containing) != 1:
+            errors.append(
+                "conclusion_sentence_ambiguous: "
+                f"claim '{claim.label}' does not sit in exactly one joined-text "
+                f"sentence (found {len(containing)})"
+            )
+            continue
+        target_normalized = _normalized(containing[0])
+
+        # 2. Unique match of that sentence's content in the original bytes.
+        matches = [
+            (s, e)
+            for s, e, t in original_sentences
+            if _normalized(t) == target_normalized
+        ]
+        if len(matches) != 1:
+            errors.append(
+                "conclusion_sentence_ambiguous: "
+                f"sentence for claim '{claim.label}' matches {len(matches)} "
+                "original spans (must be exactly 1)"
+            )
+            continue
+        span_start, span_end = matches[0]
+        sentence_text = paper_md[span_start:span_end]
+
+        # 3. Marker-bearing sentences are never removable.
+        if _MARKER_ANY_RE.search(sentence_text):
+            errors.append(
+                "conclusion_sentence_marker_bearing: "
+                f"sentence for claim '{claim.label}' contains a RESULT/SOURCE marker"
+            )
+            continue
+
+        patches.append({
+            "type": "conclusion_removal",
+            "span_start": span_start,
+            "span_end": span_end,
+            "old_text": sentence_text,
+            "new_text": "",
+            "matched_pattern": claim.label,
+            "sentence_sha256": hashlib.sha256(sentence_text.encode()).hexdigest(),
+            "pre_classification": assessment.classification,
+        })
+
+    if errors:
+        return ((), errors)
+    return (tuple(sorted(patches, key=lambda p: p["span_start"])), [])
+
+
+def apply_combined_patches(
+    paper_md: str,
+    numeric_patches: tuple[dict, ...],
+    removal_patches: tuple[dict, ...],
+) -> str:
+    """Apply numeric replacements and conclusion removals atomically.
+
+    All spans — across both sets — are validated against the SAME
+    original bytes before anything applies: disjoint, in-bounds, and
+    byte-identical ``old_text``. Numeric replacements additionally keep
+    their lexical-resolution check. Any violation raises typed and
+    leaves the original untouched (this function is pure).
+    """
+    all_patches = sorted(
+        [(p, "numeric") for p in numeric_patches]
+        + [(p, "removal") for p in removal_patches],
+        key=lambda pair: pair[0]["span_start"],
+    )
+    previous_end = -1
+    for patch, kind in all_patches:
+        start, end = patch["span_start"], patch["span_end"]
+        if start < 0 or end > len(paper_md) or start >= end:
+            raise PatchApplicationError(
+                "patch_span_drift",
+                f"out-of-range span {start}:{end} ({kind} patch)",
+            )
+        if start < previous_end:
+            raise PatchApplicationError(
+                "patch_overlap",
+                f"{kind} span {start}:{end} overlaps a prior patch",
+            )
+        if paper_md[start:end] != patch["old_text"]:
+            raise PatchApplicationError(
+                "patch_span_drift",
+                f"source bytes at {start}:{end} ({kind}) are "
+                f"{paper_md[start:end]!r}, manifest expected {patch['old_text']!r}",
+            )
+        if kind == "numeric":
+            try:
+                rendered = float(patch["new_text"])
+            except ValueError as exc:
+                raise PatchApplicationError(
+                    "patch_value_invalid",
+                    f"replacement {patch['new_text']!r} is not numeric",
+                ) from exc
+            if abs(rendered - float(patch["required_value"])) > _VALUE_TOLERANCE:
+                raise PatchApplicationError(
+                    "patch_value_invalid",
+                    f"replacement {patch['new_text']!r} does not resolve to the"
+                    f" persisted value {patch['required_value']!r}",
+                )
+        previous_end = end
+
+    revised = paper_md
+    for patch, _kind in reversed(all_patches):
+        revised = (
+            revised[: patch["span_start"]]
+            + patch["new_text"]
+            + revised[patch["span_end"]:]
+        )
+    return revised
+
+
+def verify_combined_postconditions(
+    original: str,
+    revised: str,
+    numeric_patches: tuple[dict, ...],
+    removal_patches: tuple[dict, ...],
+) -> list[str]:
+    """Prove the R6 preservation contract over the combined repair.
+
+    Reconstruction over the union of authorized spans, heading-sequence
+    identity, and RESULT/SOURCE marker-multiset identity (R-REMOVE
+    sentences are marker-free by derivation, so the multiset must be
+    exactly identical). Returns typed violations; empty means clean.
+    """
+    violations: list[str] = []
+    try:
+        reconstructed = apply_combined_patches(
+            original, numeric_patches, removal_patches,
+        )
+        if reconstructed != revised:
+            violations.append("reconstruction_mismatch")
+    except PatchApplicationError as exc:
+        violations.append(f"reconstruction_mismatch: {exc}")
+
+    from backend.pipeline.evaluation.paper_sections import parse_paper
+
+    before = parse_paper(original)
+    after = parse_paper(revised)
+    if [s.name for s in before.sections] != [s.name for s in after.sections] or (
+        [s.heading for s in before.sections] != [s.heading for s in after.sections]
+    ):
+        violations.append("structural_change: section sequence differs")
+
+    if _marker_multiset(original) != _marker_multiset(revised):
+        violations.append("marker_identity_change: RESULT/SOURCE tokens differ")
+    return violations
