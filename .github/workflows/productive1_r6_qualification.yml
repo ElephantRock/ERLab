@@ -1,0 +1,95 @@
+name: Productive-1 R6 qualification
+
+on:
+  pull_request:
+    branches:
+      - productive1/r6-conclusion-r-remove
+
+permissions:
+  contents: read
+
+jobs:
+  frozen-qualification:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      EROCK_DEFAULT_PROVIDER: openai
+      EROCK_OPENAI_API_KEY: ${{ secrets.ZAI_API_KEY || secrets.ZHIPU_API_KEY || secrets.EROCK_OPENAI_API_KEY }}
+      EROCK_OPENAI_BASE_URL: https://api.z.ai/api/coding/paas/v4
+      EROCK_OPENAI_MODEL: glm-5.2
+      EROCK_GENERATION_MODEL: ""
+      EROCK_BUDGET_ENABLED: "false"
+      EROCK_AUTH_ENABLED: "false"
+
+    steps:
+      - name: Checkout qualification execution branch
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Verify frozen candidate product bytes
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git merge-base HEAD 8b0664b8b29995c665cbc55f2ebd278ce39f1d3b)" = "8b0664b8b29995c665cbc55f2ebd278ce39f1d3b"
+          if git diff --name-only 8b0664b8b29995c665cbc55f2ebd278ce39f1d3b..HEAD -- backend/ | grep -q .; then
+            echo "product files differ from frozen candidate"
+            git diff --name-only 8b0664b8b29995c665cbc55f2ebd278ce39f1d3b..HEAD -- backend/
+            exit 1
+          fi
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        shell: bash
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+
+      - name: Materialize the four frozen starting states
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p .r6_qual_inputs
+          git fetch --depth=1 origin case4/evidence-publication:refs/remotes/origin/case4/evidence-publication
+          git show origin/case4/evidence-publication:evidence/case4_qualifying_runfail_3/r1_specimen.db > .r6_qual_inputs/calib-A_runfail3.db
+          git show origin/case4/evidence-publication:evidence/case4_qualifying_runfail_2/r1_specimen.db > .r6_qual_inputs/calib-B_runfail2.db
+
+          git fetch --depth=1 origin productive1/r3-qualification-specimens:refs/remotes/origin/productive1/r3-qualification-specimens
+          git show origin/productive1/r3-qualification-specimens:evidence/productive1_r3_specimens/regr-A_case3a_specimen.db > .r6_qual_inputs/regr-A_case3a.db
+          git show origin/productive1/r3-qualification-specimens:evidence/productive1_r3_specimens/regr-B_3E_era_specimen.db > .r6_qual_inputs/regr-B_3E_era.db
+
+          echo "Frozen input hashes:"
+          sha256sum .r6_qual_inputs/*.db
+          echo "108f38e716906ce63cdf2bdfc38abc344b28fc48596c4a6108ce7ea5c1496298  .r6_qual_inputs/calib-A_runfail3.db" | sha256sum -c -
+          echo "dc8a3295ce331288dd87d1e3cf4d2e6187449ef8cf490b42731a29775c74157d  .r6_qual_inputs/calib-B_runfail2.db" | sha256sum -c -
+          echo "9a0e5cc85618e187240c1338f4703ba4d42df9a5190b040c399e93fe34ad0f9f  .r6_qual_inputs/regr-A_case3a.db" | sha256sum -c -
+          echo "5cdfa0d078ee4d32af32a499f1bf28198c8e234a8c5231e71323f82fdc0185c4  .r6_qual_inputs/regr-B_3E_era.db" | sha256sum -c -
+
+      - name: Check authoritative-evaluation provider credential
+        shell: bash
+        run: |
+          if [ -z "${EROCK_OPENAI_API_KEY:-}" ]; then
+            echo "No Z.AI key is available to this workflow under ZAI_API_KEY, ZHIPU_API_KEY, or EROCK_OPENAI_API_KEY."
+            exit 2
+          fi
+
+      - name: Execute frozen eight-trial qualification
+        id: qualification
+        shell: bash
+        run: python evidence/productive1_r6/p1_r6_qualify.py
+
+      - name: Upload qualification evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: productive1-r6-qualification
+          if-no-files-found: warn
+          path: |
+            evidence/productive1_r6/p1_r6_qualification.json
+            evidence/productive1_r6/trials/
+            .r6_qual_tmp/
