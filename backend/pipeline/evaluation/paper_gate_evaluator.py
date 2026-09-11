@@ -128,23 +128,25 @@ def evaluate_paper_gates(
         blocking_reasons.append(f"scope: {scope_result.reason}")
 
     # ── Gate 3: Conclusion support ──────────────────────────────────
-    from backend.pipeline.evaluation.claim_alignment import _extract_abstract, _extract_conclusion
-    from backend.pipeline.evaluation.conclusion_checker import classify_conclusion_support
-    abstract_text = _extract_abstract(paper_md)
-    conclusion_text = _extract_conclusion(paper_md)
-    has_empirical = bool(result_markers)
-    conclusion_result = classify_conclusion_support(
-        abstract=abstract_text,
-        conclusion=conclusion_text,
-        has_empirical_results=has_empirical,
+    # Productive-1 R6: screening uses the SAME canonical rule as the
+    # authoritative stage evaluation (one extraction, one empirical-
+    # claim rule). This replaces the pure path's private extraction and
+    # bare classify call, which diverged from the authority on blob
+    # papers and lacked the ±200-character RESULT-backing override —
+    # the divergence that let the regr-B conclusion defect pass
+    # screening while blocking authoritatively (R5 qualification,
+    # run 33414701494).
+    from backend.pipeline.evaluation.conclusion_support import (
+        evaluate_conclusion_support,
     )
+    conclusion_assessment = evaluate_conclusion_support(paper_md, result_markers)
     gates.append({
         "gate": "conclusion_support",
-        "classification": conclusion_result.classification,
-        "reason": conclusion_result.reason,
+        "classification": conclusion_assessment.classification,
+        "reason": conclusion_assessment.reason,
     })
-    if conclusion_result.classification == "overstated":
-        blocking_reasons.append(f"conclusion: {conclusion_result.reason}")
+    if conclusion_assessment.classification == "overstated":
+        blocking_reasons.append(f"conclusion: {conclusion_assessment.reason}")
 
     # ── Gate 4: Experiment alignment ────────────────────────────────
     exp_alignment_passed = True

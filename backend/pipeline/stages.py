@@ -3836,125 +3836,19 @@ class PaperSynthesisStage(PipelineStage):
         Phase 5: when result_markers are present (experiment succeeded),
         check whether empirical claims in the paper are backed by [RESULT-N]
         references. A claim that says "we demonstrate" must cite a [RESULT-N].
+
+        Productive-1 R6: the semantics live in the canonical shared module
+        (conclusion_support.py) so screening and authoritative evaluation
+        apply one rule. This delegate is a refactor-with-parity — the
+        shared function reproduces this method's pre-R6 behavior exactly.
         """
-        from backend.pipeline.evaluation.conclusion_checker import classify_conclusion_support
-
-        abstract = ""
-        conclusion = ""
-        if paper_md:
-            lines = paper_md.splitlines()
-            # Abstract block.
-            abs_lines: list[str] = []
-            in_section = False
-            for ln in lines:
-                s = ln.strip()
-                low = s.lower()
-                if s.startswith("#"):
-                    if "abstract" in low:
-                        in_section = True
-                        continue
-                    if in_section:
-                        in_section = False
-                    continue
-                if in_section and s:
-                    abs_lines.append(s)
-            abstract = " ".join(abs_lines)
-            # Conclusion block.
-            conc_lines: list[str] = []
-            in_section = False
-            for ln in lines:
-                s = ln.strip()
-                low = s.lower()
-                if s.startswith("#"):
-                    if "conclusion" in low or "discussion" in low:
-                        in_section = True
-                        continue
-                    if in_section:
-                        in_section = False
-                    continue
-                if in_section and s:
-                    conc_lines.append(s)
-            conclusion = " ".join(conc_lines)
-
-        # has_empirical_results: inferred from the presence of ACTUAL results
-        # sections (not evaluation-PLAN or expected-results sections). Design+
-        # projection papers have "## Evaluation" describing their plan, and
-        # "Expected Results" sections — neither constitutes empirical results.
-        has_results = False
-        if paper_md:
-            lower = paper_md.lower()
-            # Only count results if there's a results section AND it's NOT
-            # an "expected results" or "evaluation plan" section.
-            has_results_heading = any(
-                h in lower for h in ("## results", "# results")
-            )
-            has_expected_results = "expected results" in lower
-            has_experiments_heading = any(
-                h in lower for h in ("## experiments", "# experiments",
-                                     "## experimental setup", "# experimental setup")
-            )
-            # Actual results: results heading without "expected" qualifier,
-            # OR experiments heading (which implies experiments were run).
-            has_results = (has_results_heading and not has_expected_results) or has_experiments_heading
-
-        # Phase 5: when result markers exist from a succeeded experiment,
-        # use them as the authoritative empirical signal.
-        result_backed = False
-        unmapped_result_claims: list[str] = []
-        if result_markers:
-            # Check whether the paper actually cites any [RESULT-N] markers
-            result_marker_re = re.compile(r"\[RESULT-(\d+)\]")
-            cited_markers = set(result_marker_re.findall(paper_md or ""))
-            available_markers = {str(m.marker_index) for m in result_markers}
-            if cited_markers & available_markers:
-                result_backed = True  # at least one empirical claim is backed
-
-            # Find empirical assertion sentences without [RESULT-N] backing
-            text = f"{abstract}\n{conclusion}"
-            for pattern, label in [
-                (r"\bwe\s+demonstrate\b", "we demonstrate"),
-                (r"\bdemonstrates?\s+that\b", "demonstrates that"),
-                (r"\bexperimental\s+results?\b.{0,40}\b(show|indicate)\b", "experimental results show"),
-                (r"\bresults?\s+(show|indicate)\s+that\b", "results show that"),
-            ]:
-                for m in re.finditer(pattern, text, re.IGNORECASE):
-                    # Check if this sentence contains a [RESULT-N] reference
-                    start = max(0, m.start() - 200)
-                    end = min(len(text), m.end() + 200)
-                    context = text[start:end]
-                    if not result_marker_re.search(context):
-                        unmapped_result_claims.append(
-                            f"empirical claim '{label}' without [RESULT-N] backing"
-                        )
-
-        # Determine has_empirical_results for the conclusion checker
-        if result_markers:
-            # Experiment ran — empirical claims are only valid if result-backed
-            has_empirical = result_backed
-        elif has_results:
-            has_empirical = True
-        else:
-            has_empirical = None  # let the checker infer
-
-        result = classify_conclusion_support(
-            abstract=abstract,
-            conclusion=conclusion,
-            has_empirical_results=has_empirical,
+        from backend.pipeline.evaluation.conclusion_support import (
+            evaluate_conclusion_support,
         )
 
-        # If experiment ran but claims lack result backing, override to overstated
-        if result_markers and unmapped_result_claims:
-            from backend.pipeline.evaluation.conclusion_checker import ConclusionSupportResult
-            return ConclusionSupportResult(
-                classification="overstated",
-                reason=(
-                    f"Experiment succeeded but {len(unmapped_result_claims)} empirical claim(s) "
-                    f"lack [RESULT-N] backing: {'; '.join(unmapped_result_claims[:3])}"
-                ),
-                indicators=unmapped_result_claims,
-            )
-
-        return result
+        return evaluate_conclusion_support(
+            paper_md, result_markers,
+        ).as_result()
 
 
 class ExperimentExecutionStage(PipelineStage):
