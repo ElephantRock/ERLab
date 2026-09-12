@@ -23,11 +23,31 @@ def _get_observability():
 async def trace_summary():
     """Get summary of all in-memory traces.
 
-    Returns:
-        {"total_traces": 42, "active_traces": 3, "error_rate": 0.05}
+    Returns the documented contract plus the additive fields the trace
+    viewer consumes:
 
-    Example response:
-        {"total_traces": 42, "active_traces": 3, "error_rate": 0.05}
+        {
+          "total_traces": 42,        # documented
+          "active_traces": 3,        # documented; trace with span activity
+                                     # within the last 5 minutes
+          "error_rate": 0.05,        # documented; error spans / total spans
+          "recent_traces": [         # additive; newest first, bounded (50)
+            {
+              "trace_id": "abc123...",
+              "span_count": 12,
+              "started_at": 1726100000.0,
+              "last_activity": 1726100120.0,
+              "duration_ms": 120000.0,
+              "error_count": 0,
+              "models": ["glm-5.2"]   # providers seen via cost linkage
+            }
+          ],
+          "span_count": 500, "trace_count": 42, "by_kind": {...},
+          "by_status": {...}, "total_duration_ms": ..., "avg_duration_ms": ...
+        }
+
+    The legacy aggregate keys (span_count, trace_count, by_kind, by_status,
+    total_duration_ms, avg_duration_ms) are preserved for existing consumers.
     """
     return _get_observability().get_trace_summary()
 
@@ -63,10 +83,12 @@ async def get_trace(trace_id: str):
 async def trace_metrics():
     """Get current metrics snapshot.
 
-    Returns:
-        {"p50_ms": 120, "p99_ms": 3500, "error_rate": 0.02}
+    Returns the documented flat aggregate plus the per-kind breakdown:
 
-    Example response:
-        {"p50_ms": 120, "p99_ms": 3500, "error_rate": 0.02}
+        {
+          "p50_ms": 120, "p95_ms": 800, "p99_ms": 3500, "avg_ms": 210.5,
+          "error_rate": 0.02, "call_count": 128,
+          "by_kind": {"stage": {"count": ..., "latency_ms": {...}}, ...}
+        }
     """
     return _get_observability().get_metrics()

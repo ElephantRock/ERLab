@@ -9,6 +9,7 @@ Inspired by OpenAI Agents TracingProcessor with NoOp zero-cost mode.
 from __future__ import annotations
 
 import logging
+import time
 from abc import ABC, abstractmethod
 from typing import Any
 
@@ -58,6 +59,11 @@ class LoggingProcessor(TracingProcessor):
 class InMemoryProcessor(TracingProcessor):
     """Stores all spans in memory. Provides query and summary methods."""
 
+    #: A trace whose most recent span ended within this window counts as
+    #: "active" in summary(). Spans are only recorded on completion, so
+    #: activity is the honest proxy for in-flight work.
+    ACTIVE_WINDOW_SECONDS = 300.0
+
     def __init__(self, max_spans: int = 10000):
         self._spans: list[Span] = []
         self._max_spans = max_spans
@@ -76,23 +82,79 @@ class InMemoryProcessor(TracingProcessor):
     def query_by_kind(self, kind: str) -> list[Span]:
         return [s for s in self._spans if s.kind.value == kind]
 
-    def summary(self) -> dict[str, Any]:
-        if not self._spans:
-            return {"span_count": 0, "trace_count": 0}
+    def summary(self, recent_limit: int = 50) -> dict[str, Any]:
+        """Summarize stored spans across traces.
 
-        trace_ids = {s.trace_id for s in self._spans}
+        Returns the contract documented by /api/v1/traces/summary —
+        ``total_traces``, ``active_traces``, ``error_rate``, plus
+        ``recent_traces`` carrying REAL trace ids for the viewer — alongside
+        the legacy aggregate keys (span_count, trace_count, by_kind,
+        by_status, total_duration_ms, avg_duration_ms) preserved for
+        existing consumers.
+        """
+        if not self._spans:
+            return {
+                "span_count": 0,
+                "trace_count": 0,
+                "total_traces": 0,
+                "active_traces": 0,
+                "error_rate": 0.0,
+                "recent_traces": [],
+                "by_kind": {},
+                "by_status": {},
+                "total_duration_ms": 0.0,
+                "avg_duration_ms": 0.0,
+            }
+
+        traces: dict[str, list[Span]] = {}
         by_kind: dict[str, int] = {}
         by_status: dict[str, int] = {}
         total_duration = 0.0
 
         for s in self._spans:
+            traces.setdefault(s.trace_id, []).append(s)
             by_kind[s.kind.value] = by_kind.get(s.kind.value, 0) + 1
             by_status[s.status] = by_status.get(s.status, 0) + 1
             total_duration += s.duration_ms
 
+        now = time.time()
+        error_spans = 0
+        active_traces = 0
+        recent: list[dict[str, Any]] = []
+        for tid, spans in traces.items():
+            for s in spans:
+                if s.status == "error":
+                    error_spans += 1
+            started_at = min(s.start_time for s in spans)
+            last_activity = max(s.end_time for s in spans)
+            models: set[str] = set()
+            for s in spans:
+                attr_models = s.attributes.get("models")
+                if isinstance(attr_models, list):
+                    models.update(m for m in attr_models if isinstance(m, str))
+            recent.append(
+                {
+                    "trace_id": tid,
+                    "span_count": len(spans),
+                    "started_at": started_at,
+                    "last_activity": last_activity,
+                    "duration_ms": max(0.0, (last_activity - started_at) * 1000),
+                    "error_count": sum(1 for s in spans if s.status == "error"),
+                    "models": sorted(models),
+                }
+            )
+            if now - last_activity <= self.ACTIVE_WINDOW_SECONDS:
+                active_traces += 1
+
+        recent.sort(key=lambda r: r["last_activity"], reverse=True)
+
         return {
             "span_count": len(self._spans),
-            "trace_count": len(trace_ids),
+            "trace_count": len(traces),
+            "total_traces": len(traces),
+            "active_traces": active_traces,
+            "error_rate": error_spans / len(self._spans),
+            "recent_traces": recent[:recent_limit],
             "by_kind": by_kind,
             "by_status": by_status,
             "total_duration_ms": total_duration,

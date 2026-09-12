@@ -58,3 +58,26 @@ class MetricsCollector(TracingProcessor):
                 },
             }
         return result
+
+    def flat_snapshot(self) -> dict[str, Any]:
+        """Aggregate across all span kinds into the flat shape documented by
+        GET /api/v1/traces/metrics: {p50_ms, p95_ms, p99_ms, avg_ms,
+        error_rate, call_count, by_kind}. Returns the documented zero shape
+        when no spans have been observed.
+        """
+        by_kind = self.snapshot()
+        total_calls = sum(kind["count"] for kind in by_kind.values())
+        total_errors = sum(kind["errors"] for kind in by_kind.values())
+        all_latencies: list[float] = []
+        for kind_latencies in self._latencies.values():
+            all_latencies.extend(kind_latencies)
+        all_latencies.sort()
+        return {
+            "p50_ms": self._percentile(all_latencies, 50),
+            "p95_ms": self._percentile(all_latencies, 95),
+            "p99_ms": self._percentile(all_latencies, 99),
+            "avg_ms": (sum(all_latencies) / len(all_latencies)) if all_latencies else 0.0,
+            "error_rate": (total_errors / total_calls) if total_calls else 0.0,
+            "call_count": total_calls,
+            "by_kind": by_kind,
+        }

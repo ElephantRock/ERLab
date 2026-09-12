@@ -69,8 +69,27 @@ class TestObservabilityManager:
         with create_span(SpanKind.TOOL, "t1"):
             pass
         metrics = mgr.get_metrics()
-        assert "tool" in metrics
-        assert metrics["tool"]["count"] == 1
+        # get_metrics returns the documented FLAT contract with the
+        # per-kind breakdown preserved under by_kind.
+        assert metrics["call_count"] == 1
+        assert metrics["by_kind"]["tool"]["count"] == 1
+        for key in ("p50_ms", "p95_ms", "p99_ms", "avg_ms", "error_rate"):
+            assert key in metrics
+
+    def test_get_metrics_disabled_returns_documented_zero_shape(self):
+        mgr = ObservabilityManager(metrics_enabled=False)
+        metrics = mgr.get_metrics()
+        assert metrics["call_count"] == 0
+        assert metrics["error_rate"] == 0.0
+        assert metrics["by_kind"] == {}
+
+    def test_get_trace_summary_memory_disabled_returns_contract_shape(self):
+        mgr = ObservabilityManager(trace_memory=False)
+        summary = mgr.get_trace_summary()
+        assert summary["total_traces"] == 0
+        assert summary["active_traces"] == 0
+        assert summary["error_rate"] == 0.0
+        assert summary["recent_traces"] == []
 
     def test_active_manager(self):
         mgr = ObservabilityManager()

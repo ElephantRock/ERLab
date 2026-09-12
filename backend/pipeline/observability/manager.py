@@ -32,7 +32,13 @@ def get_active_manager() -> ObservabilityManager | None:
 
 
 class _CostLinkingProcessor(TracingProcessor):
-    """Attaches cost data from CostTracker to completed spans."""
+    """Attaches cost data from CostTracker to completed spans.
+
+    Cost events carry the serving provider/model, so the linker also stamps
+    ``models``/``providers`` onto the span attributes — this is what makes
+    per-stage model attribution visible in the trace viewer without any
+    per-call instrumentation.
+    """
 
     def __init__(self, cost_tracker: CostTracker) -> None:
         self._tracker = cost_tracker
@@ -47,6 +53,12 @@ class _CostLinkingProcessor(TracingProcessor):
         if events:
             span.cost_usd = sum(e.cost_usd for e in events)
             span.token_count = sum(e.total_tokens for e in events)
+            models = sorted({e.model for e in events if e.model})
+            providers = sorted({e.provider for e in events if e.provider})
+            if models:
+                span.attributes["models"] = models
+            if providers:
+                span.attributes["providers"] = providers
 
 
 class ObservabilityManager:
@@ -127,13 +139,28 @@ class ObservabilityManager:
 
     def get_trace_summary(self) -> dict:
         if not self._memory_processor:
-            return {"span_count": 0, "trace_count": 0}
+            return {
+                "span_count": 0,
+                "trace_count": 0,
+                "total_traces": 0,
+                "active_traces": 0,
+                "error_rate": 0.0,
+                "recent_traces": [],
+            }
         return self._memory_processor.summary()
 
     def get_metrics(self) -> dict:
         if not self._metrics:
-            return {}
-        return self._metrics.snapshot()
+            return {
+                "p50_ms": 0.0,
+                "p95_ms": 0.0,
+                "p99_ms": 0.0,
+                "avg_ms": 0.0,
+                "error_rate": 0.0,
+                "call_count": 0,
+                "by_kind": {},
+            }
+        return self._metrics.flat_snapshot()
 
     def shutdown(self) -> None:
         if self._otlp_exporter and hasattr(self._otlp_exporter, "shutdown"):

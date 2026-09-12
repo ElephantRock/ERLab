@@ -17,10 +17,25 @@ import {
 
 // ── Types ────────────────────────────────────────────────────────
 
+/** One recent trace from GET /traces/summary — real id, real stats. */
+export interface RecentTrace {
+  trace_id: string;
+  span_count: number;
+  /** Epoch seconds of the trace's earliest span start. */
+  started_at?: number;
+  /** Epoch seconds of the trace's most recent span end. */
+  last_activity?: number;
+  duration_ms: number;
+  error_count?: number;
+  /** Provider models observed on the trace's spans via cost linkage. */
+  models?: string[];
+}
+
 export interface TraceSummary {
   total_traces: number;
   active_traces: number;
   error_rate: number;
+  recent_traces: RecentTrace[];
 }
 
 export interface TraceSpan {
@@ -38,6 +53,10 @@ export interface TraceMetrics {
   p50_ms: number;
   p99_ms: number;
   error_rate: number;
+  p95_ms?: number;
+  avg_ms?: number;
+  call_count?: number;
+  by_kind?: Record<string, unknown>;
 }
 
 // ── API Functions ────────────────────────────────────────────────

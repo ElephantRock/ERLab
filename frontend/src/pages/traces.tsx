@@ -15,6 +15,7 @@ import type {
   TraceSummary as TraceSummaryData,
   TraceDetail,
   TraceMetrics as TraceMetricsData,
+  RecentTrace,
 } from "@/api/traces";
 import { TraceSummary } from "@/components/traces/trace-summary";
 import { SpanDetail } from "@/components/traces/span-detail";
@@ -22,11 +23,17 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Activity } from "lucide-react";
 
+/** A trace is shown as Active while its latest span ended within this window. */
+const ACTIVE_BADGE_WINDOW_MS = 60_000;
+
 export default function TracesPage() {
   const [summary, setSummary] = useState<TraceSummaryData | null>(null);
   const [metrics, setMetrics] = useState<TraceMetricsData | null>(null);
   const [selectedTrace, setSelectedTrace] = useState<TraceDetail | null>(null);
+  const [detailError, setDetailError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // Captured in the load effect — never read Date.now() during render.
+  const [loadedAtMs, setLoadedAtMs] = useState(0);
   const [loading, setLoading] = useState(true);
   const [serviceUnavailable, setServiceUnavailable] = useState(false);
 
@@ -43,6 +50,7 @@ export default function TracesPage() {
 
         setSummary(sum);
         setMetrics(met);
+        setLoadedAtMs(Date.now());
         setError(null);
         setServiceUnavailable(false);
       } catch (err) {
@@ -63,11 +71,17 @@ export default function TracesPage() {
   }, []);
 
   const handleTraceClick = useCallback(async (traceId: string) => {
+    setDetailError(null);
     try {
       const detail = await getTrace(traceId);
       setSelectedTrace(detail);
     } catch (err) {
-      console.warn("[traces] Failed to load trace detail:", err);
+      // Surfaced inline next to the list — a failed click must not look
+      // like a no-op (PRODUCT.md §6: if data failed to load, it says so).
+      setSelectedTrace(null);
+      setDetailError(
+        err instanceof Error ? err.message : String(err),
+      );
     }
   }, []);
 
@@ -163,28 +177,49 @@ export default function TracesPage() {
         />
       )}
 
-      {/* Trace list — shows active + recent traces */}
+      {/* Trace list — real traces, newest first */}
       {summary && !isEmpty && (
         <div data-testid="traces-list">
           <div className="rounded-lg border bg-card p-6">
             <h3 className="text-sm font-medium text-muted-foreground mb-4">Recent Traces</h3>
+            {detailError && (
+              <p className="mb-3 text-sm text-destructive" data-testid="trace-detail-error">
+                Couldn't load that trace: {detailError}
+              </p>
+            )}
             <div className="space-y-2">
-              {Array.from({ length: summary.total_traces }, (_, i) => {
-                const traceId = `trace-${i + 1}`;
-                const isActive = i < summary.active_traces;
+              {summary.recent_traces.map((trace: RecentTrace) => {
+                const isActive =
+                  trace.last_activity !== undefined &&
+                  loadedAtMs - trace.last_activity * 1000 < ACTIVE_BADGE_WINDOW_MS;
                 return (
                   <button
-                    key={traceId}
-                    className="flex w-full items-center justify-between rounded-md border px-4 py-2 text-left hover:bg-accent transition-colors"
-                    data-testid={`trace-item-${traceId}`}
-                    onClick={() => handleTraceClick(traceId)}
+                    key={trace.trace_id}
+                    className="flex w-full items-center justify-between gap-3 rounded-md border px-4 py-2 text-left hover:bg-accent transition-colors"
+                    data-testid={`trace-item-${trace.trace_id}`}
+                    onClick={() => handleTraceClick(trace.trace_id)}
                   >
-                    <span className="text-sm font-medium font-mono">{traceId}</span>
-                    {isActive && (
-                      <span className="text-xs px-2 py-0.5 rounded-full bg-success/10 text-success">
-                        Active
+                    <span className="text-sm font-medium font-mono truncate">{trace.trace_id}</span>
+                    <span className="flex items-center gap-2 shrink-0">
+                      {trace.models && trace.models.length > 0 && (
+                        <span className="text-xs text-muted-foreground font-mono">
+                          {trace.models.slice(0, 3).join(", ")}
+                        </span>
+                      )}
+                      <span className="text-xs text-muted-foreground">
+                        {trace.span_count} spans · {formatDuration(trace.duration_ms)}
                       </span>
-                    )}
+                      {(trace.error_count ?? 0) > 0 && (
+                        <span className="text-xs px-2 py-0.5 rounded-full bg-destructive/10 text-destructive">
+                          {trace.error_count} err
+                        </span>
+                      )}
+                      {isActive && (
+                        <span className="text-xs px-2 py-0.5 rounded-full bg-success/10 text-success">
+                          Active
+                        </span>
+                      )}
+                    </span>
                   </button>
                 );
               })}
