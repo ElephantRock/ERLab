@@ -61,6 +61,33 @@ def _get_default_lmstudio_url() -> str:
         return "http://localhost:1234/v1"
 
 
+
+def resolve_embedding_base_url(settings, provider_name: str) -> str | None:
+    """Resolve the embedding endpoint base URL for a provider.
+
+    Single source of truth shared by call sites that construct embedding
+    providers, so the preflight gate, peripheral routes, and the pipeline's
+    runtime paths cannot drift apart. Precedence (mirrors
+    orchestrator/service_registry.py):
+
+      1. explicit ``settings.embedding_base_url`` override (with ``/v1``
+         appended when missing — LM Studio serves under ``/v1``),
+      2. LM Studio's own base URL when provider is ``lmstudio``,
+      3. ``settings.ollama_base_url`` otherwise (also the default for the
+         ``ollama`` provider).
+    """
+    name = (provider_name or "").lower().strip()
+    explicit = getattr(settings, "embedding_base_url", "") or ""
+    if explicit:
+        base = explicit.rstrip("/")
+        return base if base.endswith("/v1") else f"{base}/v1"
+    if name == "lmstudio":
+        base = getattr(settings, "lmstudio_base_url", "http://localhost:1234/v1")
+        base = (base or "http://localhost:1234/v1").rstrip("/")
+        return base if base.endswith("/v1") else f"{base}/v1"
+    return getattr(settings, "ollama_base_url", None)
+
+
 class EmbeddingProvider(ABC):
     """Abstract embedding provider."""
 

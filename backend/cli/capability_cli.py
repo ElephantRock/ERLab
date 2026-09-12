@@ -66,6 +66,7 @@ def _build_adapter_and_config():
     )
     from backend.pipeline.knowledge.embedding_providers import (
         create_embedding_provider,
+        resolve_embedding_base_url,
     )
     from backend.pipeline.knowledge.embedding_service import EmbeddingService
 
@@ -76,7 +77,7 @@ def _build_adapter_and_config():
         provider_name=settings.embedding_provider,
         model=settings.embedding_model,
         api_key=settings.openai_api_key,
-        base_url=getattr(settings, "ollama_base_url", None),
+        base_url=resolve_embedding_base_url(settings, settings.embedding_provider),
         dimension=settings.embedding_dimension or None,
     )
     emb_service = EmbeddingService(provider)

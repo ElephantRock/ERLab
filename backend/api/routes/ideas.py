@@ -659,7 +659,10 @@ async def refine_idea(idea_id: int):
             )
 
             from backend.config import get_settings
-            from backend.pipeline.knowledge.embedding_providers import create_embedding_provider
+            from backend.pipeline.knowledge.embedding_providers import (
+                create_embedding_provider,
+                resolve_embedding_base_url,
+            )
             from backend.pipeline.knowledge.embedding_service import EmbeddingService
             from backend.pipeline.knowledge.vector_store import VectorStore
 
@@ -668,7 +671,7 @@ async def refine_idea(idea_id: int):
                 provider_name=settings.embedding_provider,
                 model=settings.embedding_model,
                 api_key=settings.openai_api_key,
-                base_url=settings.ollama_base_url,
+                base_url=resolve_embedding_base_url(settings, settings.embedding_provider),
                 dimension=settings.embedding_dimension or None,
             )
             embedding_service = EmbeddingService(embedding_provider, expected_dimension=settings.embedding_dimension or 768)
