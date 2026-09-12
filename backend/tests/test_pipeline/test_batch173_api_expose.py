@@ -40,6 +40,7 @@ def mock_run_with_report(sample_stage_report):
         "idea_generation", "idea_reflection", "novelty_checking", "feasibility_scoring",
         "mechanical_metrics", "proposal_synthesis",
     ])
+    run.stages_failed = json.dumps([])
     run.stage_report_json = json.dumps([r.to_dict() for r in sample_stage_report])
     run.tree_data_json = None
     run.created_at = datetime.now(UTC)
@@ -59,6 +60,7 @@ def mock_run_without_report():
     run.current_stage = "completed"
     run.config_json = json.dumps({"domain": "AI/NLP"})
     run.stages_completed = json.dumps(["literature_search", "ingestion"])
+    run.stages_failed = json.dumps([])
     run.stage_report_json = None
     run.tree_data_json = None
     run.created_at = datetime.now(UTC)
