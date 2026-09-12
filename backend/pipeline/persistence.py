@@ -719,8 +719,18 @@ class PipelinePersistence:
             from backend.db import crud
             from backend.db.database import get_session
             from backend.db.models import Idea as IdeaModel
+            from backend.db.models import PipelineRun
 
             with get_session() as session:
+                # Commissioning remediation (2026-09-12): the run's domain is
+                # authoritative provenance — ideas inherit it rather than the
+                # generator's default ("AI/NLP"), so exports and lineage show
+                # the domain the run was actually configured with.
+                run_row = session.query(PipelineRun).filter(
+                    PipelineRun.id == db_run_id
+                ).first()
+                run_domain = (getattr(run_row, "domain", "") or "").strip() if run_row else ""
+
                 for i, idea in enumerate(result.ideas):
                     # Idempotency key: stable identity material, not just title.
                     # Uses run_id + content hash of (title + problem + method)
@@ -814,7 +824,7 @@ class PipelinePersistence:
                         problem_statement=idea.problem_statement,
                         proposed_method=idea.proposed_method,
                         expected_contributions=getattr(idea, 'expected_contributions', ''),
-                        domain=getattr(idea, 'domain', 'AI/NLP'),
+                        domain=run_domain or getattr(idea, 'domain', 'AI/NLP'),
                         source_gap_ids=gap_ids_json,
                         pipeline_run_id=db_run_id,
                     )
@@ -1145,7 +1155,19 @@ class PipelinePersistence:
             self.warnings.append(f"persist_tree_data: {e}")
 
     def advance_stage(self, run_id: int, stage_name: str) -> None:
-        """Update the current stage, append to stages_completed, and update updated_at."""
+        """Backward-compat alias: mark the stage entered (current_stage only).
+
+        Historically this ALSO appended the stage to ``stages_completed`` at
+        entry, so a stage that later failed — or never ran — still appeared
+        in the completed list (commissioning-run defect, 2026-09-12). New
+        code must use :meth:`set_current_stage` at entry,
+        :meth:`complete_stage` on success, and :meth:`fail_stage` on
+        absorbed failure.
+        """
+        self.set_current_stage(run_id, stage_name)
+
+    def set_current_stage(self, run_id: int, stage_name: str) -> None:
+        """Record that *stage_name* is now the stage being executed."""
         try:
             from backend.db.database import get_session
             from backend.db.models import PipelineRun
@@ -1154,6 +1176,25 @@ class PipelinePersistence:
                 run = session.query(PipelineRun).filter(PipelineRun.id == run_id).first()
                 if run:
                     run.current_stage = stage_name
+                    run.updated_at = datetime.now(UTC)
+                    session.commit()
+        except Exception as e:
+            logger.warning("Failed to set current stage: %s", e)
+            self.warnings.append(f"set_current_stage: {e}")
+
+    def complete_stage(self, run_id: int, stage_name: str) -> None:
+        """Append *stage_name* to ``stages_completed`` — on SUCCESS only.
+
+        A stage that failed and was absorbed must appear in
+        ``stages_failed`` (see :meth:`fail_stage`), never here.
+        """
+        try:
+            from backend.db.database import get_session
+            from backend.db.models import PipelineRun
+
+            with get_session() as session:
+                run = session.query(PipelineRun).filter(PipelineRun.id == run_id).first()
+                if run:
                     stages = json.loads(run.stages_completed) if run.stages_completed else []
                     if stage_name not in stages:
                         stages.append(stage_name)
@@ -1161,8 +1202,38 @@ class PipelinePersistence:
                     run.updated_at = datetime.now(UTC)
                     session.commit()
         except Exception as e:
-            logger.warning("Failed to advance stage: %s", e)
-            self.warnings.append(f"advance_stage: {e}")
+            logger.warning("Failed to record stage completion: %s", e)
+            self.warnings.append(f"complete_stage: {e}")
+
+    def fail_stage(self, run_id: int | None, stage_name: str, error: str) -> None:
+        """Record an absorbed stage failure in ``stages_failed``.
+
+        Runs continue after absorbed stage failures by design; the failure
+        must still be visible on the run record so completion status cannot
+        masquerade as full success.
+        """
+        if not run_id:
+            return
+        try:
+            from backend.db.database import get_session
+            from backend.db.models import PipelineRun
+
+            with get_session() as session:
+                run = session.query(PipelineRun).filter(PipelineRun.id == run_id).first()
+                if run:
+                    failed = (
+                        json.loads(run.stages_failed)
+                        if getattr(run, "stages_failed", None) else []
+                    )
+                    entry = {"stage": stage_name, "error": str(error)[:500]}
+                    if entry not in failed:
+                        failed.append(entry)
+                    run.stages_failed = json.dumps(failed)
+                    run.updated_at = datetime.now(UTC)
+                    session.commit()
+        except Exception as e:
+            logger.warning("Failed to record stage failure: %s", e)
+            self.warnings.append(f"fail_stage: {e}")
 
     def mark_run_failed(self, db_run_id: int | None, message: str) -> None:
         if not db_run_id:

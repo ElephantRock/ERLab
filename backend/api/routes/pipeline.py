@@ -507,6 +507,9 @@ async def get_run(run_id: str):
             "current_stage": run.current_stage,
             "config": json.loads(run.config_json) if run.config_json else {},
             "stages_completed": json.loads(run.stages_completed) if run.stages_completed else [],
+            "stages_failed": (
+                json.loads(run.stages_failed) if getattr(run, "stages_failed", None) else []
+            ),
             "ideas": [
                 {
                     "id": i.id,

@@ -438,19 +438,27 @@ class StageLifecycle:
                 p.abstract for p in ctx.all_papers[:30]
                 if hasattr(p, 'abstract') and p.abstract
             ]
-            for prop in result.proposals:
-                report = asyncio.get_event_loop().run_until_complete(
-                    scorer.score_proposal(
-                        proposal_text=prop.methodology if hasattr(prop, 'methodology') else str(prop),
-                        proposal_title=prop.title if hasattr(prop, 'title') else "",
-                        proposal_id=str(prop.id) if hasattr(prop, 'id') else "",
-                        source_texts=source_abstracts,
-                    )
+            for prop in result.proposals.values():
+                # Commissioning remediation (2026-09-12): iterate the VALUES
+                # (the old ``for prop in result.proposals`` looped over dict
+                # KEYS — ints), and await directly (the old
+                # run_until_complete raised inside the running loop).
+                # context — the old get_event_loop().run_until_complete()
+                # call raised immediately (loop already running), leaving
+                # the coroutine never-awaited and the whole scorer silently
+                # skipped via the debug-level swallow below.
+                report = await scorer.score_proposal(
+                    proposal_text=prop.methodology if hasattr(prop, 'methodology') else str(prop),
+                    proposal_title=prop.title if hasattr(prop, 'title') else "",
+                    proposal_id=str(prop.id) if hasattr(prop, 'id') else "",
+                    source_texts=source_abstracts,
                 )
                 prop._faithfulness_report = report
             logger.info("Faithfulness scoring complete for %d proposals", len(result.proposals))
         except Exception as e:
-            logger.debug("Faithfulness scoring skipped: %s", str(e)[:100])
+            # Visible at warning level: a skipped advertised evaluation must
+            # not vanish into debug logs.
+            logger.warning("Faithfulness scoring skipped: %s", str(e)[:200])
 
         # Phase 4: Evidence provenance checking
         if getattr(self._settings, "provenance_check_enabled", True):
