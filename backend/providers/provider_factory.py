@@ -298,14 +298,17 @@ def _wrap_cached(
     ttl_seconds = getattr(settings, "caching_ttl_seconds", 3600)
 
     if cache_type == "semantic":
-        from backend.pipeline.knowledge.embedding_providers import create_embedding_provider
+        from backend.pipeline.knowledge.embedding_providers import (
+            create_embedding_provider,
+            resolve_embedding_base_url,
+        )
         from backend.pipeline.knowledge.embedding_service import EmbeddingService
 
         emb_provider = create_embedding_provider(
             provider_name=settings.embedding_provider,
             model=settings.embedding_model,
             api_key=settings.openai_api_key,
-            base_url=settings.ollama_base_url,
+            base_url=resolve_embedding_base_url(settings, settings.embedding_provider),
             dimension=settings.embedding_dimension or None,
         )
         emb_service = EmbeddingService(

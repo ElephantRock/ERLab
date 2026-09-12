@@ -178,12 +178,15 @@ async def _check_embedding_provider(settings: Any) -> PreflightResult:
     import time
     start = time.monotonic()
     try:
-        from backend.pipeline.knowledge.embedding_providers import create_embedding_provider
+        from backend.pipeline.knowledge.embedding_providers import (
+            create_embedding_provider,
+            resolve_embedding_base_url,
+        )
         provider = create_embedding_provider(
             provider_name=settings.embedding_provider,
             model=settings.embedding_model,
             api_key=settings.openai_api_key,
-            base_url=settings.ollama_base_url,
+            base_url=resolve_embedding_base_url(settings, settings.embedding_provider),
             dimension=settings.embedding_dimension or None,
         )
         vectors = await asyncio.wait_for(
