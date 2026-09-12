@@ -81,10 +81,20 @@ class TestSearchAllUnwrapsOutcomes:
         assert [p.title for p in papers] == ["From OpenAlex"]
 
     @pytest.mark.asyncio
-    async def test_bare_list_return_is_skipped_loudly_not_fatal(self):
+    async def test_bare_list_return_still_accepted_for_backcompat(self):
+        """Bare list[SearchResult] remains a valid (legacy) adapter return."""
         svc = _service(
             _FakeSource("openalex", _outcome("success", [_sr("Good")])),
-            _FakeSource("legacy", [_sr("Bare list")]),  # invalid adapter return
+            _FakeSource("legacy", [_sr("Bare list")]),
+        )
+        papers = await svc.search_all("query")
+        assert sorted(p.title for p in papers) == ["Bare list", "Good"]
+
+    @pytest.mark.asyncio
+    async def test_non_list_non_outcome_return_skipped_not_fatal(self):
+        svc = _service(
+            _FakeSource("openalex", _outcome("success", [_sr("Good")])),
+            _FakeSource("broken", object()),  # invalid adapter return
         )
         papers = await svc.search_all("query")
         assert [p.title for p in papers] == ["Good"]

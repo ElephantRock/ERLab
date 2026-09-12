@@ -55,9 +55,9 @@ class SearchService:
 
         all_results: list[SearchResult] = []
         # Adapters return SourceSearchOutcome (see contracts) — unwrap it the
-        # same way the legacy provenance path does; bare iterables are no
-        # longer a valid adapter return type but are skipped loudly rather
-        # than crashing the whole search.
+        # same way the legacy provenance path does. Bare iterables of
+        # SearchResult remain accepted for backward compatibility with
+        # existing call sites and tests.
         from backend.pipeline.literature.contracts import SourceSearchOutcome
 
         for name, result in zip(active.keys(), results_per_source, strict=True):
@@ -70,6 +70,8 @@ class SearchService:
                     logger.warning(
                         "Search failed for %s: %s", name, result.error_detail,
                     )
+            elif isinstance(result, (list, tuple)):
+                all_results.extend(result)
             else:
                 logger.warning(
                     "Unexpected return type from %s: %s", name, type(result),
