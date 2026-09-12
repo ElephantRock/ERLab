@@ -11,10 +11,32 @@ import TracesPage from "@/pages/traces";
 
 // ── Mock the traces API ──────────────────────────────────────────
 
+const NOW_SECONDS = Date.now() / 1000;
+
 const mockSummary = {
-  total_traces: 5,
-  active_traces: 2,
+  total_traces: 2,
+  active_traces: 1,
   error_rate: 0.05,
+  recent_traces: [
+    {
+      trace_id: "abc123def456",
+      span_count: 4,
+      duration_ms: 9000,
+      started_at: NOW_SECONDS - 10,
+      last_activity: NOW_SECONDS - 5,
+      error_count: 0,
+      models: ["glm-5.2"],
+    },
+    {
+      trace_id: "old789",
+      span_count: 2,
+      duration_ms: 1500,
+      started_at: NOW_SECONDS - 7200,
+      last_activity: NOW_SECONDS - 7000,
+      error_count: 1,
+      models: [],
+    },
+  ],
 };
 
 const mockMetrics = {
@@ -24,10 +46,10 @@ const mockMetrics = {
 };
 
 const mockTraceDetail = {
-  trace_id: "trace-1",
+  trace_id: "abc123def456",
   spans: [
-    { name: "generation", duration_ms: 1500 },
-    { name: "evaluation", duration_ms: 800 },
+    { name: "generation", duration_ms: 1500, kind: "stage", status: "ok" },
+    { name: "evaluation", duration_ms: 800, kind: "llm_call", status: "ok" },
   ],
 };
 
@@ -77,12 +99,12 @@ describe("BATCH-21/TASK-02: Traces Viewer Page", () => {
 
     expect(screen.getByText("Traces")).toBeInTheDocument();
     expect(screen.getByTestId("traces-summary-section")).toBeInTheDocument();
-    expect(screen.getByTestId("total-traces")).toHaveTextContent("5");
-    expect(screen.getByTestId("active-traces")).toHaveTextContent("2");
+    expect(screen.getByTestId("total-traces")).toHaveTextContent("2");
+    expect(screen.getByTestId("active-traces")).toHaveTextContent("1");
   });
 
-  // ── TEST-21-02-02: Trace list loads from summary ───────────
-  it("TEST-21-02-02: Trace list loads from summary", async () => {
+  // ── TEST-21-02-02: Trace list renders REAL trace ids from summary ──
+  it("TEST-21-02-02: Trace list renders real trace ids from summary", async () => {
     setupMocks();
     renderTracesPage();
 
@@ -90,13 +112,17 @@ describe("BATCH-21/TASK-02: Traces Viewer Page", () => {
       expect(screen.getByTestId("traces-list")).toBeInTheDocument();
     });
 
-    // 5 traces listed from summary.total_traces
-    expect(screen.getByTestId("trace-item-trace-1")).toBeInTheDocument();
-    expect(screen.getByTestId("trace-item-trace-5")).toBeInTheDocument();
+    // Both traces listed by their real ids (no fabricated trace-N ids).
+    expect(screen.getByTestId("trace-item-abc123def456")).toBeInTheDocument();
+    expect(screen.getByTestId("trace-item-old789")).toBeInTheDocument();
+    expect(screen.queryByTestId("trace-item-trace-1")).not.toBeInTheDocument();
 
-    // First 2 are active
-    expect(screen.getByTestId("trace-item-trace-1").textContent).toContain("Active");
-    expect(screen.getByTestId("trace-item-trace-2").textContent).toContain("Active");
+    // Recently-active trace shows the Active badge; the stale one shows an
+    // error badge instead.
+    expect(screen.getByTestId("trace-item-abc123def456").textContent).toContain("Active");
+    expect(screen.getByTestId("trace-item-old789").textContent).toContain("1 err");
+    // Model attribution is surfaced on the list rows.
+    expect(screen.getByTestId("trace-item-abc123def456").textContent).toContain("glm-5.2");
   });
 
   // ── TEST-21-02-03: Click trace shows span detail ───────────
@@ -105,18 +131,38 @@ describe("BATCH-21/TASK-02: Traces Viewer Page", () => {
     renderTracesPage();
 
     await waitFor(() => {
-      expect(screen.getByTestId("trace-item-trace-1")).toBeInTheDocument();
+      expect(screen.getByTestId("trace-item-abc123def456")).toBeInTheDocument();
     });
 
-    await userEvent.click(screen.getByTestId("trace-item-trace-1"));
+    await userEvent.click(screen.getByTestId("trace-item-abc123def456"));
 
     await waitFor(() => {
       expect(screen.getByTestId("traces-span-detail")).toBeInTheDocument();
     });
 
-    expect(getTrace).toHaveBeenCalledWith("trace-1");
-    expect(screen.getByTestId("span-trace-id")).toHaveTextContent("trace-1");
+    expect(getTrace).toHaveBeenCalledWith("abc123def456");
+    expect(screen.getByTestId("span-trace-id")).toHaveTextContent("abc123def456");
     expect(screen.getByTestId("span-name-0")).toHaveTextContent("generation");
+  });
+
+  // ── TEST-21-02-03b: Detail load failure is visible, not swallowed ──
+  it("TEST-21-02-03b: Detail load failure surfaces inline error", async () => {
+    setupMocks();
+    vi.mocked(getTrace).mockRejectedValue(new Error("No spans found for trace abc123def456"));
+    renderTracesPage();
+
+    await waitFor(() => {
+      expect(screen.getByTestId("trace-item-abc123def456")).toBeInTheDocument();
+    });
+
+    await userEvent.click(screen.getByTestId("trace-item-abc123def456"));
+
+    await waitFor(() => {
+      expect(screen.getByTestId("trace-detail-error")).toBeInTheDocument();
+    });
+    expect(screen.getByTestId("trace-detail-error").textContent).toContain(
+      "No spans found",
+    );
   });
 
   // ── TEST-21-02-04: Latency metrics displayed ───────────────
@@ -153,6 +199,7 @@ describe("BATCH-21/TASK-02: Traces Viewer Page", () => {
       total_traces: 0,
       active_traces: 0,
       error_rate: 0,
+      recent_traces: [],
     });
     vi.mocked(getTraceMetrics).mockResolvedValue({
       p50_ms: 0,

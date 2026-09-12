@@ -16,6 +16,7 @@ const mockSummary: TraceSummaryData = {
   total_traces: 42,
   active_traces: 3,
   error_rate: 0.05,
+  recent_traces: [],
 };
 
 const mockSpans: TraceSpan[] = [
@@ -41,6 +42,7 @@ describe("TraceSummary", () => {
       total_traces: 12345,
       active_traces: 100,
       error_rate: 0.123,
+      recent_traces: [],
     };
     render(<TraceSummary summary={largeSummary} />);
 
