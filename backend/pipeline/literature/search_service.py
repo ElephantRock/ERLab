@@ -54,11 +54,26 @@ class SearchService:
         results_per_source = await asyncio.gather(*tasks, return_exceptions=True)
 
         all_results: list[SearchResult] = []
+        # Adapters return SourceSearchOutcome (see contracts) — unwrap it the
+        # same way the legacy provenance path does; bare iterables are no
+        # longer a valid adapter return type but are skipped loudly rather
+        # than crashing the whole search.
+        from backend.pipeline.literature.contracts import SourceSearchOutcome
+
         for name, result in zip(active.keys(), results_per_source, strict=True):
             if isinstance(result, Exception):
                 logger.warning("Search failed for %s: %s", name, result)
+            elif isinstance(result, SourceSearchOutcome):
+                if result.status == "success" or result.status == "partial":
+                    all_results.extend(result.results)
+                else:
+                    logger.warning(
+                        "Search failed for %s: %s", name, result.error_detail,
+                    )
             else:
-                all_results.extend(result)  # type: ignore[arg-type]
+                logger.warning(
+                    "Unexpected return type from %s: %s", name, type(result),
+                )
 
         if deduplicate:
             papers = self._deduplicate(all_results)
