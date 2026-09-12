@@ -115,6 +115,9 @@ class TestCrudOperations:
         updated = crud.get_pipeline_run(db_session, run.id)
         import json
 
-        stages = json.loads(updated.stages_completed)
-        assert "literature_search" in stages
-        assert "gap_analysis" in stages
+        # 2026-09-12 remediation: update_pipeline_run tracks POSITION only.
+        # The completed list is appended exclusively by
+        # Persistence.complete_stage() on successful execution — entering a
+        # stage (or marking a terminal marker) must not record completion.
+        assert updated.current_stage == "gap_analysis"
+        assert json.loads(updated.stages_completed) == []

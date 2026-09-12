@@ -247,6 +247,9 @@ class PipelineRun(Base):
     # Stage tracking
     current_stage: Mapped[str | None] = mapped_column(String(50), nullable=True)
     stages_completed: Mapped[str] = mapped_column(Text, default="[]")  # JSON list
+    # JSON list of {stage, error} for stages that failed and were absorbed —
+    # the run continues by design, but completion status must not hide them.
+    stages_failed: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     # Stage observability report (BATCH-173)
     stage_report_json: Mapped[str | None] = mapped_column(Text, nullable=True)

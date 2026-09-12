@@ -26,7 +26,7 @@ def _make_session_factory(engine):
 
 
 def test_57_02_01_advance_stage_updates_current_stage():
-    """advance_stage sets current_stage and appends to stages_completed."""
+    """advance_stage sets current_stage only; completion is success-only."""
     engine = create_engine("sqlite:///:memory:")
     Base.metadata.create_all(bind=engine)
     get_test_session = _make_session_factory(engine)
@@ -51,13 +51,14 @@ def test_57_02_01_advance_stage_updates_current_stage():
 
         pers.advance_stage(run_id, "literature_search")
         pers.advance_stage(run_id, "gap_analysis")
+        # Completion is recorded separately, on success only.
+        pers.complete_stage(run_id, "literature_search")
 
         with get_test_session() as s:
             run = s.query(PipelineRun).get(run_id)
             assert run.current_stage == "gap_analysis"
             stages = json.loads(run.stages_completed)
-            assert "literature_search" in stages
-            assert "gap_analysis" in stages
+            assert stages == ["literature_search"]
 
 
 def test_57_02_02_mark_completed_sets_timestamp():

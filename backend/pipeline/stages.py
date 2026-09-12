@@ -1485,6 +1485,12 @@ class IdeaGenerationStage(PipelineStage):
             provider=provider,
             receipts=ctx.receipts if receipts is None else receipts,
         )
+        # Commissioning remediation (2026-09-12): the run's domain is the
+        # authoritative research provenance — ideas generated for this run
+        # inherit it instead of the generator's default ("AI/NLP").
+        if ctx.domain:
+            for idea in ideas:
+                idea.domain = ctx.domain
         ctx.result.ideas = ideas
         ctx.result.critique_history = self._agent.last_critique_history
         ctx.result.refinement_history = self._agent.last_refinement_history
@@ -1776,30 +1782,54 @@ class ProposalSynthesisStage(PipelineStage):
                     )
             if spec_anchor:
                 framing = f"{spec_anchor}\n{framing}".rstrip() if framing else spec_anchor
-            try:
-                proposal = await asyncio.wait_for(
-                    self._synthesizer.synthesize(
-                        idea=idea,
-                        novelty_report=novelty,
-                        feasibility_report=feasibility,
-                        supporting_papers=ctx.all_papers[:30],
-                        gaps=ctx.result.gaps,
-                        framing_directive=framing,
-                        provider=provider,
-                        receipts=receipts,
-                    ),
-                    timeout=timeout,
-                )
-            except TimeoutError:
-                logger.warning(
-                    "Proposal synthesis timed out after %.1fs for idea %d: %s",
-                    timeout, i + 1, idea.title[:50],
-                )
+            # Commissioning remediation: a synthesis timeout must never be
+            # stored as section content. Retry once against the (known-slow)
+            # provider; if it still times out, persist EMPTY sections with an
+            # explicit synthesis_status marker so the quality checker, the
+            # remediation hints, and the export all report a failure instead
+            # of shipping error strings as valid prose.
+            proposal: ResearchProposal | None = None
+            for synthesis_attempt in (1, 2):
+                try:
+                    proposal = await asyncio.wait_for(
+                        self._synthesizer.synthesize(
+                            idea=idea,
+                            novelty_report=novelty,
+                            feasibility_report=feasibility,
+                            supporting_papers=ctx.all_papers[:30],
+                            gaps=ctx.result.gaps,
+                            framing_directive=framing,
+                            provider=provider,
+                            receipts=receipts,
+                        ),
+                        timeout=timeout,
+                    )
+                    break
+                except TimeoutError:
+                    logger.error(
+                        "Proposal synthesis timed out after %.1fs for idea %d "
+                        "(attempt %d/2): %s",
+                        timeout, i + 1, synthesis_attempt, idea.title[:50],
+                    )
+            if proposal is None:
                 proposal = ResearchProposal(
                     title=idea.title,
-                    abstract=f"Synthesis timed out after {timeout:.0f}s",
-                    introduction="Timed out",
+                    abstract="",
+                    introduction="",
                     proposed_method=idea.proposed_method,
+                )
+                proposal.sections["synthesis_status"] = "timeout"
+                proposal.sections["synthesis_error"] = (
+                    f"Synthesis timed out after {timeout:.0f}s "
+                    f"(2 attempts). Sections left empty — regenerate via "
+                    f"section refinement before treating this proposal as "
+                    f"complete."
+                )
+                logger.error(
+                    "Idea %d ('%s') persisted with synthesis_status=timeout: "
+                    "abstract and introduction are EMPTY by design; regenerate "
+                    "them via section refinement.",
+                    i + 1, idea.title[:50],
                 )
 
             if self._governance_validator:
@@ -1894,7 +1924,7 @@ class TreeSearchStage(PipelineStage):
         )
 
         # BATCH-75/TASK-01: Convert IdeaCandidate → ResearchIdea (HB-01)
-        ideas = self._convert_to_research_ideas(raw_ideas)
+        ideas = self._convert_to_research_ideas(raw_ideas, domain=ctx.domain)
         assert all(isinstance(i, ResearchIdea) for i in ideas), (
             "HB-01 violation: TreeSearchStage must assign only ResearchIdea to ctx.result.ideas"
         )
@@ -1959,7 +1989,7 @@ class TreeSearchStage(PipelineStage):
     # ── BATCH-75/TASK-01: IdeaCandidate → ResearchIdea conversion ──────
 
     @staticmethod
-    def _convert_to_research_ideas(candidates: list) -> list[ResearchIdea]:
+    def _convert_to_research_ideas(candidates: list, domain: str = "") -> list[ResearchIdea]:
         """Convert IdeaCandidate objects to ResearchIdea with safe defaults.
 
         Handles field mapping for fields that IdeaCandidate lacks
@@ -1987,7 +2017,7 @@ class TreeSearchStage(PipelineStage):
                 expected_contributions=getattr(c, "expected_contributions", "") or "",
                 novelty_rationale=getattr(c, "novelty_rationale", "") or "",
                 evaluation_approach=getattr(c, "evaluation_approach", "") or "",
-                domain="AI/NLP",
+                domain=domain or "AI/NLP",
                 round_generated=1,
                 score=getattr(c, "overall_score", 0.0),
                 supporting_papers=[],

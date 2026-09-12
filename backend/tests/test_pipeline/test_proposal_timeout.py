@@ -59,14 +59,19 @@ class TestProposalTimeout:
     """TEST-61-01-01: Single proposal timeout → placeholder saved, batch continues."""
 
     @pytest.mark.anyio
-    async def test_single_timeout_produces_placeholder_and_continues(self):
+    async def test_single_timeout_retries_then_marks_synthesis_status(self):
+        """Commissioning remediation: a timed-out idea is retried once; if
+        synthesis still fails, sections persist EMPTY with an explicit
+        synthesis_status marker — never error strings as content — and the
+        run continues for the remaining ideas."""
         stage = ProposalSynthesisStage(synthesizer=MagicMock())
 
-        # First call times out, second and third succeed
+        # Idea 0: both attempts time out. Ideas 1 and 2 succeed.
         real_proposal_1 = _make_proposal("Idea 1")
         real_proposal_2 = _make_proposal("Idea 2")
         stage._synthesizer.synthesize = AsyncMock(
             side_effect=[
+                TimeoutError(),
                 TimeoutError(),
                 real_proposal_1,
                 real_proposal_2,
@@ -82,9 +87,11 @@ class TestProposalTimeout:
         assert result is True
         proposals = ctx.result.proposals
 
-        # Idea 0 should be a placeholder
+        # Idea 0: honest failure — empty sections + explicit marker
         assert 0 in proposals
-        assert "timed out" in proposals[0].abstract.lower()
+        assert proposals[0].abstract == ""
+        assert proposals[0].sections.get("synthesis_status") == "timeout"
+        assert "timed out" not in (proposals[0].abstract or "").lower()
         assert proposals[0].title == "Idea 0"
 
         # Ideas 1 and 2 should be real proposals

@@ -197,7 +197,7 @@ async def test_execute_raises_assertion_on_non_research_idea():
     stage = TreeSearchStage(engine=engine, hooks=hooks)
 
     # Monkeypatch the conversion to return raw IdeaCandidate (bypass conversion)
-    stage._convert_to_research_ideas = lambda candidates: candidates  # type: ignore[assignment]
+    stage._convert_to_research_ideas = lambda candidates, domain="": candidates  # type: ignore[assignment]
 
     with pytest.raises(AssertionError, match="HB-01"):
         await stage.execute(ctx)

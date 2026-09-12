@@ -53,6 +53,7 @@ def _make_run_detail(
     run.current_stage = "running"
     run.config_json = "{}"
     run.stages_completed = "[]"
+    run.stages_failed = "[]"
     run.ideas = []
     run.tree_data_json = None
     run.stage_report_json = None

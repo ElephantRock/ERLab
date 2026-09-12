@@ -104,7 +104,7 @@ class RunCoordinator:
 
             # ── 4. DB stage tracking ──────────────────────────
             if db_run_id:
-                self._orch._persistence.advance_stage(db_run_id, stage.name)
+                self._orch._persistence.set_current_stage(db_run_id, stage.name)
 
             # ── 5. Model routing cascade ──────────────────────
             await self._route_model_for_stage(stage, ctx, run_id)
@@ -195,6 +195,10 @@ class RunCoordinator:
                         error=str(e)[:500],
                         retries_used=0,
                     ))
+                    # Commissioning remediation (2026-09-12): an absorbed
+                    # stage failure is recorded on the run row — the run
+                    # continues, but completion status can no longer hide it.
+                    self._orch._persistence.fail_stage(db_run_id, stage.name, e)
                     # Q2 review P1: a stage that exhausted its retries on
                     # a gateway transport failure must terminalize the
                     # run's typed outcome — otherwise a non-autonomous
@@ -252,6 +256,8 @@ class RunCoordinator:
 
             # ── 10. Checkpoint save ───────────────────────────
             checkpoint.mark_stage_completed(stage.name)
+            if db_run_id:
+                self._orch._persistence.complete_stage(db_run_id, stage.name)
             next_idx = self._orch._STAGE_ORDER.index(stage.name) + 1 if stage.name in self._orch._STAGE_ORDER else -1
             if next_idx < len(stages):
                 checkpoint.mark_stage_running(stages[next_idx].name)
@@ -535,6 +541,8 @@ class RunCoordinator:
                     )
 
                     checkpoint.mark_stage_completed(stage.name)
+                    if db_run_id:
+                        orch._persistence.complete_stage(db_run_id, stage.name)
                     orch._persistence.save_checkpoint(checkpoint)
                     break
                 except Exception as e:
@@ -544,6 +552,7 @@ class RunCoordinator:
                     )
                     if attempt == max_stage_retries:
                         checkpoint.mark_stage_failed(stage.name, str(e))
+                        orch._persistence.fail_stage(db_run_id, stage.name, e)
                         orch._persistence.save_checkpoint(checkpoint)
                         logger.error("Stage %s exhausted retries. Checkpoint saved.", stage.name)
                         # Q2 review P1: an exhausted gateway transport
