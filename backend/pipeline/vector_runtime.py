@@ -122,8 +122,38 @@ def build_governed_vector_runtime_from_settings(db_engine: Any) -> GovernedVecto
             ).scalar_one_or_none()
 
         if profile_row is None:
-            logger.debug("Embedding profile %s... not registered", profile_id[:12])
-            return None
+            # Commissioning remediation (2026-09-12): auto-register the
+            # settings-derived profile (same registration the governed
+            # indexer performs — replay-safe, drift-detecting, status
+            # "unverified" until validated). Without it the governed
+            # novelty path could never construct on deployments that index
+            # through the legacy store, and the stage failed invisibly.
+            from backend.pipeline.vector_indexer import register_embedding_profile
+
+            with get_session() as session:
+                register_embedding_profile(
+                    session,
+                    provider=app_settings.embedding_provider,
+                    model_identifier=app_settings.embedding_model,
+                    dimension=configured_dimension,
+                    normalization_policy="none",
+                    chunking_schema_version="chunk_v1",
+                )
+                profile_row = session.execute(
+                    select(EmbeddingProfile).where(
+                        EmbeddingProfile.profile_id == profile_id
+                    )
+                ).scalar_one_or_none()
+            if profile_row is None:
+                logger.warning(
+                    "Embedding profile %s... could not be registered",
+                    profile_id[:12],
+                )
+                return None
+            logger.info(
+                "Embedding profile %s... auto-registered from settings "
+                "(status: unverified)", profile_id[:12],
+            )
 
         profile_snapshot = EmbeddingProfileSnapshot(
             embedding_profile_id=profile_row.profile_id,

@@ -339,11 +339,12 @@ def update_pipeline_run(
     if status is not None:
         run.status = status
     if current_stage is not None:
+        # Commissioning remediation (2026-09-12): setting current_stage no
+        # longer appends to stages_completed — that recorded every stage
+        # ENTERED (including failed/absorbed ones and the terminal
+        # "completed"/"failed" markers) as completed. The completed list is
+        # owned exclusively by Persistence.complete_stage().
         run.current_stage = current_stage
-        completed = json.loads(run.stages_completed)
-        if current_stage not in completed:
-            completed.append(current_stage)
-            run.stages_completed = json.dumps(completed)
     if error_message is not None:
         run.error_message = error_message
     from datetime import datetime

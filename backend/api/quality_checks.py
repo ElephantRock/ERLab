@@ -27,6 +27,30 @@ from backend.pipeline.synthesis.proposal_synthesizer import MIN_WORDS, SECTION_C
 # ``references``, ``title``, and ``ensemble_review`` are excluded.
 _PROSE_SECTIONS = set(MIN_WORDS.keys())
 
+# Stored-failure placeholders: section content that is a persisted error
+# string rather than prose. These must FAIL validation outright — the
+# word-count check alone classifies them as merely "short prose".
+_FAILURE_PLACEHOLDER_RES = tuple(
+    re.compile(p, re.IGNORECASE)
+    for p in (
+        r"^\s*synthesis timed out after \d+(\.\d+)?s\s*$",
+        r"^\s*timed out\s*$",
+    )
+)
+
+
+def _placeholder_failure(value: Any) -> str | None:
+    """Return a failure message when a section holds a stored error string."""
+    if not isinstance(value, str):
+        return None
+    for pattern in _FAILURE_PLACEHOLDER_RES:
+        if pattern.match(value):
+            return (
+                "section content is a stored synthesis-failure placeholder, "
+                "not prose — regenerate this section"
+            )
+    return None
+
 
 def _word_count(value: Any) -> int:
     """Word count for a section value (str, list, or dict)."""
@@ -89,8 +113,19 @@ def compute_quality_checks(
         check_results: list[dict[str, Any]] = []
         failures: list[str] = []
 
-        # Word-count check
-        if present and not meets_wc:
+        # Stored-failure placeholder check — a section whose content is a
+        # persisted error string is a synthesis failure, never valid prose.
+        placeholder_failure = _placeholder_failure(value) if present else None
+        if placeholder_failure:
+            failures.append(placeholder_failure)
+            check_results.append({
+                "name": "no stored failure placeholder",
+                "passed": False,
+            })
+
+        # Word-count check (skipped when the section is a placeholder —
+        # the placeholder failure is the finding; word count is noise)
+        if present and not meets_wc and not placeholder_failure:
             failures.append(f"word count {wc} < {min_words}")
 
         # Pattern checklist (only for present string sections)
@@ -250,6 +285,24 @@ def compute_remediation_hints(
 
         for failure in check["failures"]:
             failure_lower = failure.lower()
+
+            if failure_lower.startswith("section content is a stored"):
+                # A persisted error placeholder is a synthesis failure, not
+                # stylistic feedback — severity error, not a word-count nit.
+                hints.append({
+                    "section": key,
+                    "label": label,
+                    "issue_type": "synthesis_failure_placeholder",
+                    "severity": "error",
+                    "message": failure,
+                    "suggestion": (
+                        f"The {label} section holds a stored synthesis-failure "
+                        "placeholder. Regenerate this section via section "
+                        "refinement before using this proposal."
+                    ),
+                    "refinement_available": True,
+                })
+                continue
 
             if failure_lower.startswith("word count"):
                 hints.append({
