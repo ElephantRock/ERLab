@@ -139,6 +139,11 @@ def build_governed_vector_runtime_from_settings(db_engine: Any) -> GovernedVecto
                     normalization_policy="none",
                     chunking_schema_version="chunk_v1",
                 )
+                # Commit: register_embedding_profile only flushes, and
+                # get_session() rolls back on close — without an explicit
+                # commit the registration is lost and the next call
+                # re-registers from scratch.
+                session.commit()
                 profile_row = session.execute(
                     select(EmbeddingProfile).where(
                         EmbeddingProfile.profile_id == profile_id

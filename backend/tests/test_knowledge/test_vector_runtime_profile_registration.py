@@ -16,6 +16,9 @@ from sqlalchemy.pool import StaticPool
 import backend.db.database as db_database
 from backend.config import get_settings
 from backend.db.models import Base, EmbeddingProfile
+from backend.pipeline.knowledge.embedding_configuration import (
+    EmbeddingConfigurationError,
+)
 
 
 @pytest.fixture

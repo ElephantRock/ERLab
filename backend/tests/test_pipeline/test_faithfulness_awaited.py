@@ -7,7 +7,6 @@ bare ``except Exception: logger.debug`` swallowed it, so the advertised
 faithfulness evaluation silently never executed.
 """
 
-import asyncio
 from unittest.mock import MagicMock
 
 import pytest

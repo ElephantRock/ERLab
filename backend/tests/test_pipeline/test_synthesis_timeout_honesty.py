@@ -8,13 +8,12 @@ explicit ``synthesis_status`` marker instead of error strings.
 """
 
 import asyncio
-from unittest.mock import MagicMock
 
 import pytest
 
-from backend.pipeline.stages import ProposalSynthesisStage, StageContext
-from backend.pipeline.result import PipelineResult
 from backend.pipeline.generation.models import ResearchIdea
+from backend.pipeline.result import PipelineResult
+from backend.pipeline.stages import ProposalSynthesisStage, StageContext
 from backend.pipeline.synthesis.proposal_synthesizer import ResearchProposal
 
 
