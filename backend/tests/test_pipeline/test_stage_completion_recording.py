@@ -105,29 +105,27 @@ class TestHonestStageRecording:
 
 
 class TestIdeaDomainInheritance:
-    def test_idea_inherits_run_domain(self, override_get_session):
-        run_id = _make_run(override_get_session, domain="LLM memory systems, databases")
-        persistence = PipelinePersistence()
+    def test_tree_conversion_stamps_run_domain(self):
+        """Idea creation stamps the run's domain (authoritative provenance)."""
+        from types import SimpleNamespace
 
-        result = PipelineResult()
-        result.ideas = [
-            ResearchIdea(
+        from backend.pipeline.stages import TreeSearchStage
+
+        candidates = [
+            SimpleNamespace(
                 title="Cognitive Linearizability",
                 problem_statement="p",
                 proposed_method="m",
-                expected_contributions="c",
-                novelty_rationale="n",
-                evaluation_approach="e",
+                overall_score=5.0,
             )
         ]
-        persistence.persist_ideas(result, run_id)
+        ideas = TreeSearchStage._convert_to_research_ideas(
+            candidates, domain="LLM memory systems, databases"
+        )
+        assert ideas[0].domain == "LLM memory systems, databases"
 
-        with override_get_session() as session:
-            idea = session.query(Idea).filter(Idea.pipeline_run_id == run_id).one()
-            assert idea.domain == "LLM memory systems, databases"
-
-    def test_idea_keeps_domain_when_run_unset(self, override_get_session):
-        run_id = _make_run(override_get_session, domain="")
+    def test_persistence_preserves_explicit_idea_domain(self, override_get_session):
+        run_id = _make_run(override_get_session, domain="AI/NLP")
         persistence = PipelinePersistence()
 
         result = PipelineResult()

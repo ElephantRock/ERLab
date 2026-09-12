@@ -1485,6 +1485,12 @@ class IdeaGenerationStage(PipelineStage):
             provider=provider,
             receipts=ctx.receipts if receipts is None else receipts,
         )
+        # Commissioning remediation (2026-09-12): the run's domain is the
+        # authoritative research provenance — ideas generated for this run
+        # inherit it instead of the generator's default ("AI/NLP").
+        if ctx.domain:
+            for idea in ideas:
+                idea.domain = ctx.domain
         ctx.result.ideas = ideas
         ctx.result.critique_history = self._agent.last_critique_history
         ctx.result.refinement_history = self._agent.last_refinement_history

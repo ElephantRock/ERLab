@@ -719,18 +719,8 @@ class PipelinePersistence:
             from backend.db import crud
             from backend.db.database import get_session
             from backend.db.models import Idea as IdeaModel
-            from backend.db.models import PipelineRun
 
             with get_session() as session:
-                # Commissioning remediation (2026-09-12): the run's domain is
-                # authoritative provenance — ideas inherit it rather than the
-                # generator's default ("AI/NLP"), so exports and lineage show
-                # the domain the run was actually configured with.
-                run_row = session.query(PipelineRun).filter(
-                    PipelineRun.id == db_run_id
-                ).first()
-                run_domain = (getattr(run_row, "domain", "") or "").strip() if run_row else ""
-
                 for i, idea in enumerate(result.ideas):
                     # Idempotency key: stable identity material, not just title.
                     # Uses run_id + content hash of (title + problem + method)
@@ -824,7 +814,7 @@ class PipelinePersistence:
                         problem_statement=idea.problem_statement,
                         proposed_method=idea.proposed_method,
                         expected_contributions=getattr(idea, 'expected_contributions', ''),
-                        domain=run_domain or getattr(idea, 'domain', 'AI/NLP'),
+                        domain=getattr(idea, 'domain', 'AI/NLP'),
                         source_gap_ids=gap_ids_json,
                         pipeline_run_id=db_run_id,
                     )
