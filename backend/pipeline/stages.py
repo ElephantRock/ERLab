@@ -1737,18 +1737,18 @@ class ProposalSynthesisStage(PipelineStage):
         if not ideas:
             return True
 
-        # Per-proposal timeout from settings. Hard ceiling raised from 300s
-        # to 900s by owner decision (2026-09-13, HB-01 boundary revision):
-        # timing records from runs 104/135 show full proposal syntheses on
-        # the current provider exceed 300s routinely (both runs exhausted
-        # the cap; run 135 exhausted 2x300s including retry), so the old
-        # ceiling was the normal path, not a hang guard.
+        # Per-proposal timeout from settings. CEILING OPENED by owner
+        # decision (2026-09-13): runs 138/139 measured full proposal
+        # syntheses on the current provider exceeding even the 900s ceiling
+        # (0 completions in 5 attempts at it), so a hard cap was the binding
+        # constraint on producing a paper, not a hang guard.
+        # per_proposal_timeout = 0 (the new default) means NO per-proposal
+        # timeout — synthesis runs to natural completion; a positive value
+        # caps it if a bounded run is wanted. Provider-level HTTP timeouts
+        # and the LLM retry layer still catch true connection hangs.
         from backend.config import get_settings
 
-        timeout = min(
-            getattr(get_settings(), "per_proposal_timeout", 120.0),
-            900.0,
-        )
+        timeout = getattr(get_settings(), "per_proposal_timeout", 0.0)
 
         # EAD-3b: Ensure autonomous experiment design exists before proposal
         # synthesis so the empirical anchor propagates into the proposal.
@@ -1788,27 +1788,30 @@ class ProposalSynthesisStage(PipelineStage):
             if spec_anchor:
                 framing = f"{spec_anchor}\n{framing}".rstrip() if framing else spec_anchor
             # Commissioning remediation: a synthesis timeout must never be
-            # stored as section content. Retry once against the (known-slow)
-            # provider; if it still times out, persist EMPTY sections with an
-            # explicit synthesis_status marker so the quality checker, the
-            # remediation hints, and the export all report a failure instead
-            # of shipping error strings as valid prose.
+            # stored as section content. With the ceiling OPEN (timeout=0)
+            # the retry loop runs at most once and cannot time out; a
+            # positive per_proposal_timeout caps each attempt with the same
+            # retry-then-honest-failure path.
             proposal: ResearchProposal | None = None
             for synthesis_attempt in (1, 2):
                 try:
-                    proposal = await asyncio.wait_for(
-                        self._synthesizer.synthesize(
-                            idea=idea,
-                            novelty_report=novelty,
-                            feasibility_report=feasibility,
-                            supporting_papers=ctx.all_papers[:30],
-                            gaps=ctx.result.gaps,
-                            framing_directive=framing,
-                            provider=provider,
-                            receipts=receipts,
-                        ),
-                        timeout=timeout,
+                    synthesize_call = self._synthesizer.synthesize(
+                        idea=idea,
+                        novelty_report=novelty,
+                        feasibility_report=feasibility,
+                        supporting_papers=ctx.all_papers[:30],
+                        gaps=ctx.result.gaps,
+                        framing_directive=framing,
+                        provider=provider,
+                        receipts=receipts,
                     )
+                    if timeout and timeout > 0:
+                        proposal = await asyncio.wait_for(
+                            synthesize_call,
+                            timeout=timeout,
+                        )
+                    else:
+                        proposal = await synthesize_call
                     break
                 except TimeoutError:
                     logger.error(

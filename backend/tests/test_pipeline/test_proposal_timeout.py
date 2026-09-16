@@ -124,26 +124,21 @@ class TestProposalTimeout:
             assert "timed out" not in proposals[i].abstract.lower()
             assert proposals[i].title == f"Idea {i}"
 
-    def test_timeout_respects_900s_cap(self):
-        """TEST-61-01-03: Timeout value respects the 900s HB-01 ceiling
-        (raised from 300s on 2026-09-13 after runs 104/135 exhausted the
-        old cap)."""
-        # When config says 1200s, the effective timeout is capped at 900s
+    def test_timeout_ceiling_open_zero_is_uncapped(self):
+        """TEST-61-01-03: per_proposal_timeout=0 means NO per-proposal cap.
+
+        The HB-01 300s ceiling was raised to 900s (2026-09-13 morning) and
+        then OPENED entirely (2026-09-13, after runs 138/139 measured
+        syntheses exceeding even 900s) — 0 is the new default and means
+        synthesis runs to natural completion. The stage applies the value
+        directly and treats 0 as unbounded.
+        """
+        # 0 = uncapped: the stage must NOT wrap synthesis in a timeout
+        settings = MagicMock(per_proposal_timeout=0.0)
+        timeout = getattr(settings, "per_proposal_timeout", 0.0)
+        assert not (timeout and timeout > 0), "0 must mean uncapped"
+
+        # A positive configured value still caps
         settings = MagicMock(per_proposal_timeout=1200.0)
-        effective = min(getattr(settings, "per_proposal_timeout", 120.0), 900.0)
-        assert effective == 900.0
-
-        # When config says 120s, no capping needed
-        settings = MagicMock(per_proposal_timeout=120.0)
-        effective = min(getattr(settings, "per_proposal_timeout", 120.0), 900.0)
-        assert effective == 120.0
-
-        # When config says 900s exactly, it passes uncapped
-        settings = MagicMock(per_proposal_timeout=900.0)
-        effective = min(getattr(settings, "per_proposal_timeout", 120.0), 900.0)
-        assert effective == 900.0
-
-        # When config says 901s, it caps to 900s
-        settings = MagicMock(per_proposal_timeout=901.0)
-        effective = min(getattr(settings, "per_proposal_timeout", 120.0), 900.0)
-        assert effective == 900.0
+        timeout = getattr(settings, "per_proposal_timeout", 0.0)
+        assert timeout == 1200.0 and timeout > 0
