@@ -1737,12 +1737,17 @@ class ProposalSynthesisStage(PipelineStage):
         if not ideas:
             return True
 
-        # Per-proposal timeout from settings (capped at 300s by HB-01)
+        # Per-proposal timeout from settings. Hard ceiling raised from 300s
+        # to 900s by owner decision (2026-09-13, HB-01 boundary revision):
+        # timing records from runs 104/135 show full proposal syntheses on
+        # the current provider exceed 300s routinely (both runs exhausted
+        # the cap; run 135 exhausted 2x300s including retry), so the old
+        # ceiling was the normal path, not a hang guard.
         from backend.config import get_settings
 
         timeout = min(
             getattr(get_settings(), "per_proposal_timeout", 120.0),
-            300.0,
+            900.0,
         )
 
         # EAD-3b: Ensure autonomous experiment design exists before proposal
