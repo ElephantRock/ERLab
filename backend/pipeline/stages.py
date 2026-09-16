@@ -3018,7 +3018,8 @@ class PaperSynthesisStage(PipelineStage):
             source_ids=source_ids,
             domain=ctx.domain,
             proposal_id=idx,
-            budget=SynthesisBudget(),
+            # Ceiling OPENED by owner decision — synthesis runs until done.
+            budget=SynthesisBudget.open(),
             experiment_context=experiment_context,
             result_markers=list(result_markers) if result_markers else None,
             existing_checkpoints=existing_checkpoints if existing_checkpoints else None,

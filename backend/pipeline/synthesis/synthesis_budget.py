@@ -43,6 +43,21 @@ class SynthesisBudget:
     fallback_reserved_seconds: float = 800.0
     section_call_timeout: float = 120.0
 
+    @classmethod
+    def open(cls) -> "SynthesisBudget":
+        """An unbounded budget — ceiling OPENED by owner decision
+        (2026-09-16) after runs 138/139/140 measured full paper synthesis
+        exceeding every finite budget in the stack. Infinities satisfy the
+        invariant and neutralize every wait_for/insufficient-time break:
+        the workflow runs until the work is done. Structural validation is
+        unaffected — partial papers are still refused."""
+        return cls(
+            total_workflow_timeout=float("inf"),
+            monolithic_attempt_timeout=float("inf"),
+            fallback_reserved_seconds=0.0,
+            section_call_timeout=float("inf"),
+        )
+
     def __post_init__(self):
         """Validate the budget invariant."""
         if self.monolithic_attempt_timeout > self.total_workflow_timeout - self.fallback_reserved_seconds:
