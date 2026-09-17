@@ -60,6 +60,11 @@ class StageExecutor:
         stage_timeouts = getattr(self._settings, "stage_timeouts", {})
         default_timeout = getattr(self._settings, "stage_default_timeout", 1800)
         stage_timeout = stage_timeouts.get(stage.name, default_timeout)
+        # 0 or None on a stage timeout = unbounded (ceiling opened by owner
+        # decision 2026-09-13 for synthesis-bound stages; asyncio.wait_for
+        # with timeout=None waits indefinitely).
+        if not stage_timeout:
+            stage_timeout = None
 
         for attempt in range(max_retries + 1):
             try:

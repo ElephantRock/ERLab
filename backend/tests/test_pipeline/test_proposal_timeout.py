@@ -124,24 +124,21 @@ class TestProposalTimeout:
             assert "timed out" not in proposals[i].abstract.lower()
             assert proposals[i].title == f"Idea {i}"
 
-    def test_timeout_respects_300s_cap(self):
-        """TEST-61-01-03: Timeout value respects 300s cap from HB-01."""
-        # When config says 500s, the effective timeout should be 300s
-        settings = MagicMock(per_proposal_timeout=500.0)
-        effective = min(getattr(settings, "per_proposal_timeout", 120.0), 300.0)
-        assert effective == 300.0
+    def test_timeout_ceiling_open_zero_is_uncapped(self):
+        """TEST-61-01-03: per_proposal_timeout=0 means NO per-proposal cap.
 
-        # When config says 120s, no capping needed
-        settings = MagicMock(per_proposal_timeout=120.0)
-        effective = min(getattr(settings, "per_proposal_timeout", 120.0), 300.0)
-        assert effective == 120.0
+        The HB-01 300s ceiling was raised to 900s (2026-09-13 morning) and
+        then OPENED entirely (2026-09-13, after runs 138/139 measured
+        syntheses exceeding even 900s) — 0 is the new default and means
+        synthesis runs to natural completion. The stage applies the value
+        directly and treats 0 as unbounded.
+        """
+        # 0 = uncapped: the stage must NOT wrap synthesis in a timeout
+        settings = MagicMock(per_proposal_timeout=0.0)
+        timeout = getattr(settings, "per_proposal_timeout", 0.0)
+        assert not (timeout and timeout > 0), "0 must mean uncapped"
 
-        # When config says 300s exactly, it passes
-        settings = MagicMock(per_proposal_timeout=300.0)
-        effective = min(getattr(settings, "per_proposal_timeout", 120.0), 300.0)
-        assert effective == 300.0
-
-        # When config says 301s, it caps to 300s
-        settings = MagicMock(per_proposal_timeout=301.0)
-        effective = min(getattr(settings, "per_proposal_timeout", 120.0), 300.0)
-        assert effective == 300.0
+        # A positive configured value still caps
+        settings = MagicMock(per_proposal_timeout=1200.0)
+        timeout = getattr(settings, "per_proposal_timeout", 0.0)
+        assert timeout == 1200.0 and timeout > 0
