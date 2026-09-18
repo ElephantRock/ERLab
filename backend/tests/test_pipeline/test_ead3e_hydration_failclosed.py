@@ -14,7 +14,6 @@ from contextlib import contextmanager
 from types import SimpleNamespace
 from unittest.mock import MagicMock
 
-import pytest
 from sqlalchemy import create_engine, event, select
 from sqlalchemy.orm import sessionmaker
 
@@ -29,10 +28,6 @@ from backend.db.models import (
     Idea,
     PipelineRun,
     Proposal,
-)
-from backend.pipeline.experiment.manifest import (
-    ExperimentManifest,
-    ResultMarker,
 )
 from backend.pipeline.generation.models import ResearchIdea
 from backend.pipeline.result import PipelineOutcome, PipelineResult

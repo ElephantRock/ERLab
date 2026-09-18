@@ -41,7 +41,6 @@ from backend.pipeline.dag.config import ConfigLoader
 from backend.pipeline.gateway.gateway import LLMRequest
 from backend.pipeline.literature.contracts import (
     SourceQueryPlan,
-    SourceResultAccounting,
     SourceSearchOutcome,
     canonical_plan_json,
 )
@@ -138,8 +137,8 @@ def _seed_run(engine) -> int:
 @contextmanager
 def _patched_session(engine):
     """Monkeypatch get_session to bind to the test engine."""
-    import backend.pipeline.persistence as persist_mod
     import backend.db.database as db_mod
+    import backend.pipeline.persistence as persist_mod
 
     test_session_factory = sessionmaker(bind=engine, expire_on_commit=False)
 

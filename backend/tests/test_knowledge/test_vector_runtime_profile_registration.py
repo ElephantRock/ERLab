@@ -101,8 +101,8 @@ def test_registration_is_replay_safe(session_factory, lmstudio_settings, monkeyp
 
 def test_existing_profile_is_reused_not_duplicated(session_factory, lmstudio_settings, monkeypatch):
     _stop_after_registration(monkeypatch)
-    from backend.pipeline.vector_runtime import build_governed_vector_runtime_from_settings
     from backend.pipeline.vector_access_policy import resolve_profile_id
+    from backend.pipeline.vector_runtime import build_governed_vector_runtime_from_settings
 
     profile_id = resolve_profile_id(
         embedding_provider="lmstudio",

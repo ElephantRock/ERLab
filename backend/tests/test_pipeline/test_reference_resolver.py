@@ -2,7 +2,8 @@
 
 
 import pytest
-from sqlalchemy import create_engine, select as sa_select
+from sqlalchemy import create_engine
+from sqlalchemy import select as sa_select
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
@@ -107,7 +108,6 @@ def db_session():
 def db_session_with_admitted_run(db_session, sample_papers):
     """Session plus a run with sample papers ADMITTED (selected_for_downstream)."""
     from types import SimpleNamespace
-    from backend.db.models import PipelineRun, RunPaper
 
     run = PipelineRun(status="running", domain="test", provenance_version="provenance_v1")
     db_session.add(run)

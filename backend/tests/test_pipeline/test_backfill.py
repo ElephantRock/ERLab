@@ -62,7 +62,6 @@ def sample_run_and_idea(db_session):
     db_session.flush()
 
     # Citation-integrity: admit papers into the run's corpus
-    from backend.db.models import RunPaper
     for p in papers:
         db_session.add(RunPaper(
             run_id=run.id, paper_id=p.id,

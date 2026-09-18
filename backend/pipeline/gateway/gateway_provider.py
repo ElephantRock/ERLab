@@ -17,8 +17,8 @@ from collections.abc import AsyncIterator
 from typing import Any
 
 from backend.pipeline.gateway.gateway import LLMGateway, LLMRequest
-from backend.pipeline.gateway.transport import GatewayTransportError
 from backend.pipeline.gateway.token_budget import PromptTooLargeError
+from backend.pipeline.gateway.transport import GatewayTransportError
 from backend.providers.base import LLMProvider, LLMResponse
 
 logger = logging.getLogger(__name__)

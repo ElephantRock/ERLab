@@ -13,7 +13,7 @@ from __future__ import annotations
 import asyncio
 import sys
 from contextlib import contextmanager
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 from sqlalchemy import create_engine, event, select
@@ -122,10 +122,11 @@ def _patched_session(engine):
 
 
 def _ctx(engine, run_id: int) -> StageContext:
+    from types import SimpleNamespace
+
     from backend.pipeline.synthesis.proposal_synthesizer import (
         FeasibilityReport,
     )
-    from types import SimpleNamespace
 
     result = PipelineResult()
     ctx = StageContext(
@@ -334,10 +335,11 @@ class TestPerExecutionPersistence:
         )
         ctx.params.update(ADAPTIVE_PARAMS)
 
+        from types import SimpleNamespace
+
         from backend.pipeline.synthesis.proposal_synthesizer import (
             FeasibilityReport,
         )
-        from types import SimpleNamespace
 
         ctx.result.ideas = [ResearchIdea(
             title="T", problem_statement="P",
