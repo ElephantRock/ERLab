@@ -153,10 +153,16 @@ async def get_review(idea_id: int):
     sections_json = json.loads(proposal.sections_json) if proposal.sections_json else {}
     refs_raw = extract_proposal_references(proposal)
     # resolve_references needs a DB session to match against Paper rows.
+    # Citation-integrity: resolve run-scoped to the owning idea's corpus.
+    from backend.db.models import Idea as IdeaModel
     with get_session() as session:
         # Re-attach the proposal/idea to this session so attribute access works.
         session.merge(proposal)
-        resolved_refs = resolve_references(refs_raw, session)
+        idea_row = session.execute(
+            select(IdeaModel).where(IdeaModel.id == proposal.idea_id)
+        ).scalars().first()
+        run_scope = idea_row.pipeline_run_id if idea_row else None
+        resolved_refs = resolve_references(refs_raw, session, pipeline_run_id=run_scope)
     # Serialize ResolvedReference dataclasses to dicts (audit_citations expects
     # dicts; mirrors the ideas.py route's conversion). Keep both the dict list
     # (for audit_citations) and the dataclass list (for the source builder).

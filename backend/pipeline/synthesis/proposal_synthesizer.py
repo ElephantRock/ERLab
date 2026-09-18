@@ -93,19 +93,27 @@ class ResearchProposal:
                 if isinstance(value, list):
                     for i, ref in enumerate(value, 1):
                         if isinstance(ref, dict):
-                            authors = ref.get("authors", "Unknown")
-                            year = ref.get("year", "n.d.")
-                            title = ref.get("title", "Untitled")
-                            venue = ref.get("venue", "")
-                            doi = ref.get("doi", "")
-                            url = ref.get("url", "")
-                            line = f"[{i}] {authors} ({year}). {title}."
-                            if venue:
-                                line += f" {venue}."
-                            if doi:
-                                line += f" DOI: {doi}"
-                            elif url:
-                                line += f" URL: {url}"
+                            # Citation-integrity: render structured fields only
+                            # when present; fall back to raw verbatim — never
+                            # fabricate Unknown/n.d./Untitled placeholders.
+                            title = ref.get("title")
+                            if title and title != "Untitled":
+                                authors = ref.get("authors", "Unknown")
+                                year = ref.get("year", "n.d.")
+                                line = f"[{i}] {authors} ({year}). {title}."
+                                venue = ref.get("venue", "")
+                                doi = ref.get("doi", "")
+                                url = ref.get("url", "")
+                                if venue:
+                                    line += f" {venue}."
+                                if doi:
+                                    line += f" DOI: {doi}"
+                                elif url:
+                                    line += f" URL: {url}"
+                            elif ref.get("raw"):
+                                line = f"[{i}] {ref['raw']}"
+                            else:
+                                continue
                             md_parts.append(line)
                         else:
                             md_parts.append(f"- {ref}")
@@ -778,19 +786,40 @@ class ProposalSynthesizer:
 
     @staticmethod
     def _parse_references(text: str) -> str | list[dict]:
-        """Try to parse references into structured dicts; fall back to raw text."""
+        """Parse references into structured dicts, always preserving raw.
+
+        Citation-integrity remediation: attempts to extract authors, year,
+        title, and venue from common academic formats. The raw line is
+        always preserved so unresolved references keep their original text
+        instead of being fabricated into placeholder metadata downstream.
+        """
         refs = []
-        # Match patterns like [1] Author (Year). Title. Venue.
         for m in re.finditer(
-            r"\[\d+\]\s*(.+?)(?:\n|$)",
+            r"\[(\d+)\]\s*(.+?)(?:\n|$)",
             text,
         ):
-            line = m.group(1).strip()
-            refs.append({"raw": line})
+            num = int(m.group(1))
+            body = m.group(2).strip()
+            entry: dict = {"raw": body, "number": num}
+
+            # Extract authors + year: "Smith et al. (2024)."
+            am = re.match(r"^(.+?)\s*\((\d{4})\)\.\s*", body)
+            if am:
+                entry["authors"] = am.group(1).strip()
+                entry["year"] = am.group(2)
+                remainder = body[am.end():].strip()
+                tm = re.match(r"^(.+?)\.\s*", remainder)
+                if tm:
+                    entry["title"] = tm.group(1).strip()
+                    venue = remainder[tm.end():].strip().lstrip(". ").rstrip(".")
+                    if venue:
+                        entry["venue"] = venue
+
+            refs.append(entry)
 
         if refs:
             return refs
-        return text  # Return raw text if parsing fails
+        return text
 
     @staticmethod
     def _find_short_sections(proposal: ResearchProposal) -> list[str]:
