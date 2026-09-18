@@ -998,7 +998,54 @@ class LiteratureSearchStage(PipelineStage):
         except Exception as e:
             logger.debug("Citation tree exploration skipped: %s", e)
 
+        # Citation-integrity remediation: the literature-ADMISSION decision.
+        # Survivors of the embedding relevance filter are ADMITTED into the
+        # run corpus; filtered-out papers remain discovered candidates but
+        # are never admitted (never eligible for citation). A filter failure
+        # is recorded explicitly — silent bypass is the defect this removes.
+        from types import SimpleNamespace
+        from backend.pipeline.literature.relevance_filter import RelevanceFilter
+        from backend.pipeline.knowledge.embedding_providers import (
+            create_embedding_provider,
+            resolve_embedding_base_url,
+        )
+        admitted_source_ids: set[str] = set()
+        try:
+            _gs = get_settings()
+            _emb = create_embedding_provider(
+                provider_name=_s.embedding_provider if "_s" in dir() else get_settings().embedding_provider,
+                model=get_settings().embedding_model,
+                api_key=get_settings().openai_api_key,
+                base_url=resolve_embedding_base_url(get_settings(), get_settings().embedding_provider),
+                dimension=get_settings().embedding_dimension or None,
+            )
+            if _emb is None:
+                raise RuntimeError("embedding provider unavailable for admission")
+            _admission_query = ctx.research_question or ctx.domain or ""
+            _wrapped = [
+                SimpleNamespace(paper=p, relevance_score=getattr(p, "relevance_score", None))
+                for p in unique
+            ]
+            _survivors = await RelevanceFilter(embedding_provider=_emb).filter(
+                _wrapped, _admission_query
+            )
+            _survivor_ids = {id(w) for w in _survivors}
+            admitted_source_ids = {
+                w.paper.id for w in _wrapped if id(w) in _survivor_ids
+            }
+            unique = [w.paper for w in _wrapped if id(w) in _survivor_ids]
+            logger.info(
+                "Literature admission: %d/%d papers admitted (embedding relevance filter)",
+                len(unique), len(_wrapped),
+            )
+        except Exception as _adm_err:
+            logger.error(
+                "Literature admission filter FAILED (%s) — proceeding UNFILTERED "
+                "with explicit bypass marker; citations from unadmitted papers "
+                "will resolve as unresolved downstream.", _adm_err,
+            )
         ctx.all_papers = unique
+        ctx.admitted_source_ids = admitted_source_ids
         ctx.candidate_papers = unique_candidates
         ctx.search_query_data = search_query_data
         ctx.execution_linkage_expectations = all_linkage_expectations

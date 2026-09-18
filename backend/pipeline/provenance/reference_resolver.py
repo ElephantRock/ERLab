@@ -265,7 +265,8 @@ def resolve_references(
             a raw string, or None.
         session: SQLAlchemy session.
         pipeline_run_id: Restrict paper lookup to this run when possible.
-            Falls back to all papers if no papers are found for the run.
+            None means no run scope: every reference resolves as
+            unresolved — deliberately no global-corpus fallback.
 
     Returns:
         List of ResolvedReference objects.  Always preserves ``raw``.
