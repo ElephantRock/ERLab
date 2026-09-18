@@ -1008,11 +1008,12 @@ class LiteratureSearchStage(PipelineStage):
         # are never admitted (never eligible for citation). A filter failure
         # is recorded explicitly — silent bypass is the defect this removes.
         from types import SimpleNamespace
-        from backend.pipeline.literature.relevance_filter import RelevanceFilter
+
         from backend.pipeline.knowledge.embedding_providers import (
             create_embedding_provider,
             resolve_embedding_base_url,
         )
+        from backend.pipeline.literature.relevance_filter import RelevanceFilter
         admitted_source_ids: set[str] = set()
         try:
             _gs = get_settings()

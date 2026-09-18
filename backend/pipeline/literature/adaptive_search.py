@@ -11,7 +11,6 @@ the adaptive loop in LiteratureSearchStage (AES-3).
 
 from __future__ import annotations
 
-import re
 import unicodedata
 from difflib import SequenceMatcher
 

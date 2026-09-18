@@ -56,7 +56,9 @@ class ServiceRegistry:
             provider_name=settings.embedding_provider,
             model=settings.embedding_model,
             api_key=settings.openai_api_key,
-            base_url=resolve_embedding_base_url(settings, settings.embedding_provider),
+            base_url=resolve_embedding_base_url(
+                settings, settings.embedding_provider
+            ),
             dimension=settings.embedding_dimension or None,
         )
         self.search = SearchService(embedding_provider=_search_emb)

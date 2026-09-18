@@ -12,15 +12,11 @@ import sys
 from types import SimpleNamespace
 from unittest.mock import MagicMock
 
-import pytest
-
 sys.modules.setdefault("chromadb", MagicMock())
 sys.modules.setdefault("google.generativeai", MagicMock())
 
 from backend.pipeline.experiment.manifest import ExperimentManifest
-from backend.pipeline.experiment.specification import load_spec
 from backend.pipeline.generation.models import ResearchIdea
-from backend.pipeline.literature.models import Author, Paper
 from backend.pipeline.result import PipelineResult
 from backend.pipeline.stages import (
     ExperimentExecutionStage,

@@ -507,6 +507,7 @@ class PipelinePersistence:
         search_queries: list[SearchQueryData],
         db_run_id: int,
         execution_linkage_expectations: list | None = None,
+        admitted_source_ids: set[str] | None = None,
     ) -> None:
         """Single governed persistence boundary for literature search results.
 
@@ -603,13 +604,35 @@ class PipelinePersistence:
                     ).scalar_one_or_none()
 
                     if not existing_rp:
+                        _paper_source_id = (
+                            candidate.paper.id if hasattr(candidate, "paper") else None
+                        )
+                        _is_admitted = bool(
+                            admitted_source_ids and _paper_source_id in admitted_source_ids
+                        )
                         new_rp = RunPaper(
                             run_id=db_run_id,
                             paper_id=paper_db_id,
                             inclusion_origin=candidate.discoveries[0].discovery_origin
                             if candidate.discoveries
                             else "remote_search",
+                            selected_for_downstream=_is_admitted,
+                            selection_stage="literature_relevance_filter" if _is_admitted else None,
                         )
+                        session.add(new_rp)
+                        session.flush()
+                    elif (
+                        admitted_source_ids is not None
+                        and hasattr(candidate, "paper")
+                    ):
+                        # Citation-integrity: update existing RunPaper to mark
+                        # admission when the source_id is in the admitted set.
+                        _paper_source_id = (
+                            candidate.paper.id if hasattr(candidate, "paper") else None
+                        )
+                        if _paper_source_id and _paper_source_id in admitted_source_ids:
+                            existing_rp.selected_for_downstream = True
+                            existing_rp.selection_stage = "literature_relevance_filter"
                         session.add(new_rp)
                         session.flush()
 
@@ -886,13 +909,13 @@ class PipelinePersistence:
         if not supporting_ids:
             return
 
+        # Citation-integrity remediation: resolve against papers ADMITTED
+        # into this run's corpus, not the global table. A foreign-run
+        # source_id must not link even if globally unique.
         from sqlalchemy import select as sa_select
 
-        from backend.db.models import IdeaPaperLink, Paper
+        from backend.db.models import IdeaPaperLink, Paper, RunPaper
 
-        # Resolve source_ids to Paper rows.
-        # Paper.source_id is globally unique, so this lookup is unambiguous
-        # — the same source_id can never resolve to papers from different runs.
         resolved_ids: list[int] = []
         unresolved: list[str] = []
 
@@ -900,7 +923,13 @@ class PipelinePersistence:
             if not isinstance(source_id, str):
                 continue
             paper = session.execute(
-                sa_select(Paper).where(Paper.source_id == source_id)
+                sa_select(Paper)
+                .join(RunPaper, RunPaper.paper_id == Paper.id)
+                .where(
+                    RunPaper.run_id == db_run_id,
+                    RunPaper.selected_for_downstream.is_(True),
+                    Paper.source_id == source_id,
+                )
             ).scalars().first()
             if paper:
                 resolved_ids.append(paper.id)

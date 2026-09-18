@@ -83,8 +83,15 @@ def backfill_cited_links_for_idea(
             except json.JSONDecodeError:
                 pass
 
+    # Citation-integrity: resolve run-scoped to the owning idea's corpus
+    from backend.db.models import Idea as IdeaModel
+    idea_row = session.execute(
+        select(IdeaModel).where(IdeaModel.id == idea_id)
+    ).scalars().first()
+    run_scope = idea_row.pipeline_run_id if idea_row else None
+
     # Resolve against Paper table
-    resolved_refs = resolve_references(refs_raw, session)
+    resolved_refs = resolve_references(refs_raw, session, pipeline_run_id=run_scope)
     matched = [r for r in resolved_refs if r.resolved and r.paper]
 
     new_links = 0

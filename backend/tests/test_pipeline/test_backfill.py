@@ -6,7 +6,7 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from backend.db.database import Base
-from backend.db.models import Idea, IdeaPaperLink, Paper, PipelineRun, Proposal
+from backend.db.models import Idea, IdeaPaperLink, Paper, PipelineRun, Proposal, RunPaper
 from backend.pipeline.provenance.backfill import (
     backfill_cited_links_for_all_ideas,
     backfill_cited_links_for_idea,
@@ -59,6 +59,15 @@ def sample_run_and_idea(db_session):
     ]
     for p in papers:
         db_session.add(p)
+    db_session.flush()
+
+    # Citation-integrity: admit papers into the run's corpus
+    for p in papers:
+        db_session.add(RunPaper(
+            run_id=run.id, paper_id=p.id,
+            inclusion_origin="remote_search",
+            selected_for_downstream=True,
+        ))
     db_session.flush()
 
     idea = Idea(

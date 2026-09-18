@@ -38,6 +38,8 @@ from sqlalchemy.orm import sessionmaker
 sys.modules.setdefault("chromadb", MagicMock())
 sys.modules.setdefault("google.generativeai", MagicMock())
 
+from pathlib import Path as _Path  # noqa: E402
+
 from backend.db.models import Base, PaperRevision, Proposal  # noqa: E402
 from backend.pipeline.evaluation.claim_result_validator import (  # noqa: E402
     validate_claim_result_alignment,
@@ -61,8 +63,6 @@ from backend.pipeline.evaluation.paper_gate_evaluator import (  # noqa: E402
     evaluate_paper_gates,
 )
 from backend.pipeline.experiment.manifest import ResultMarker  # noqa: E402
-
-from pathlib import Path as _Path  # noqa: E402
 
 FIXTURE = _Path(__file__).resolve().parents[1] / "fixtures" / "p1_r6_preserved_corpus.json"
 

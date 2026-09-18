@@ -20,13 +20,11 @@ sys.modules.setdefault("google.generativeai", MagicMock())
 
 from backend.pipeline.gateway.llm_repair_and_query import LLMQueryGenerator
 from backend.pipeline.literature.adaptive_search import (
-    filter_adaptive_queries,
     is_terminal_planner_text,
     normalize_query,
     query_similarity,
 )
 from backend.pipeline.literature.models import Author, Paper
-
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
 

@@ -37,7 +37,6 @@ from backend.pipeline.result import PipelineResult
 from backend.pipeline.stages import LiteratureSearchStage, StageContext
 from backend.pipeline.strategies.models import StageConfig, StrategyConfig
 
-
 # ── Helpers ──────────────────────────────────────────────────────────────────
 
 

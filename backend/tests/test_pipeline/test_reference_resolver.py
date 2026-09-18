@@ -3,11 +3,12 @@
 
 import pytest
 from sqlalchemy import create_engine
+from sqlalchemy import select as sa_select
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from backend.db.database import Base
-from backend.db.models import Paper
+from backend.db.models import Paper, PipelineRun, RunPaper
 from backend.pipeline.provenance.reference_resolver import (
     StructuredReference,
     _jaccard,
@@ -101,6 +102,25 @@ def db_session():
     session = Session()
     yield session
     session.close()
+
+
+@pytest.fixture
+def db_session_with_admitted_run(db_session, sample_papers):
+    """Session plus a run with sample papers ADMITTED (selected_for_downstream)."""
+    from types import SimpleNamespace
+
+    run = PipelineRun(status="running", domain="test", provenance_version="provenance_v1")
+    db_session.add(run)
+    db_session.flush()
+    for p in db_session.execute(sa_select(Paper)).scalars():
+        db_session.add(RunPaper(
+            run_id=run.id, paper_id=p.id,
+            inclusion_origin="remote_search",
+            selected_for_downstream=True,
+        ))
+    db_session.commit()
+    db_session.expire_all()
+    return SimpleNamespace(session=db_session, run_id=run.id)
 
 
 @pytest.fixture
@@ -257,20 +277,26 @@ class TestResolveReferencesBatch:
         results = resolve_references([{"raw": raw}], db_session)
         assert results[0].raw == raw
 
-    def test_resolved_flag_correct(self, sample_papers, db_session):
+    def test_resolved_flag_correct(self, sample_papers, db_session_with_admitted_run):
         refs = [
             {"raw": "[1] (2024). Attention Transfer Mechanism for Neural Networks."},
             {"raw": "[2] (1900). Nonexistent Paper."},
         ]
-        results = resolve_references(refs, db_session)
+        results = resolve_references(
+            refs, db_session_with_admitted_run.session,
+            pipeline_run_id=db_session_with_admitted_run.run_id,
+        )
         assert results[0].resolved is True
         assert results[0].paper is not None
         assert results[0].match_method == "title_exact"
         assert results[1].resolved is False
         assert results[1].paper is None
 
-    def test_match_confidence_populated(self, sample_papers, db_session):
+    def test_match_confidence_populated(self, sample_papers, db_session_with_admitted_run):
         refs = [{"raw": "[1] DOI: 10.1234/attn-transfer."}]
-        results = resolve_references(refs, db_session)
+        results = resolve_references(
+            refs, db_session_with_admitted_run.session,
+            pipeline_run_id=db_session_with_admitted_run.run_id,
+        )
         assert results[0].match_confidence == 1.0
         assert results[0].match_method == "doi"
