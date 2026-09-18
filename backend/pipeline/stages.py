@@ -8,6 +8,7 @@ import logging
 import re
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
+from types import SimpleNamespace
 from typing import TYPE_CHECKING, Any
 
 from backend.pipeline.gateway.transport import GatewayTransportError
@@ -998,8 +999,59 @@ class LiteratureSearchStage(PipelineStage):
         except Exception as e:
             logger.debug("Citation tree exploration skipped: %s", e)
 
+        # Citation-integrity remediation: the literature-ADMISSION decision.
+        # Survivors of the embedding relevance filter are ADMITTED into the
+        # run corpus; filtered-out papers remain discovered candidates but
+        # are never admitted (never eligible for citation). If the filter
+        # itself fails, the bypass is recorded explicitly — silent bypass
+        # was the defect this tranche removes.
+        admitted_source_ids: set[str] = set()
+        relevance_admission_bypassed = False
+        try:
+            from backend.config import get_settings as _gs
+            from backend.pipeline.knowledge.embedding_providers import (
+                create_embedding_provider,
+                resolve_embedding_base_url,
+            )
+            from backend.pipeline.literature.relevance_filter import RelevanceFilter
+            _s = _gs()
+            _emb = create_embedding_provider(
+                provider_name=_s.embedding_provider,
+                model=_s.embedding_model,
+                api_key=_s.openai_api_key,
+                base_url=resolve_embedding_base_url(_s, _s.embedding_provider),
+                dimension=_s.embedding_dimension or None,
+            )
+            if _emb is None:
+                raise RuntimeError("embedding provider unavailable for admission")
+            _admission_query = ctx.research_question or ctx.domain or ""
+            _wrapped = [
+                SimpleNamespace(paper=p, relevance_score=getattr(p, "relevance_score", None))
+                for p in unique
+            ]
+            _survivors = await RelevanceFilter(embedding_provider=_emb).filter(
+                _wrapped, _admission_query
+            )
+            _survivor_source_ids = {w.paper.id for w in _survivors}
+            admitted_source_ids.update(_survivor_source_ids)
+            unique = [w.paper for w in _wrapped if w.paper.id in _survivor_source_ids]
+            logger.info(
+                "Literature admission: %d/%d papers admitted (embedding relevance filter)",
+                len(unique), len(_wrapped),
+            )
+        except Exception as _adm_err:
+            relevance_admission_bypassed = True
+            logger.error(
+                "Literature admission filter FAILED (%s) — proceeding UNFILTERED "
+                "with explicit bypass marker; citations from unadmitted papers "
+                "will resolve as unresolved downstream.", _adm_err,
+            )
         ctx.all_papers = unique
         ctx.candidate_papers = unique_candidates
+        # Durable admission evidence for the persistence layer (run_papers
+        # selected_for_downstream marking) and downstream honesty checks.
+        ctx.admitted_source_ids = admitted_source_ids
+        ctx.relevance_admission_bypassed = relevance_admission_bypassed
         ctx.search_query_data = search_query_data
         ctx.execution_linkage_expectations = all_linkage_expectations
         # P0.2.7: Populate explicit governed-search marker if governed path ran.

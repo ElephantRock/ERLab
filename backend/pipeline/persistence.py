@@ -323,13 +323,14 @@ class PipelinePersistence:
     def get_warnings(self) -> list[str]:
         return self.warnings.copy()
 
-    def create_run_record(self, domain: str, params: dict, session_id: str | None = None, run_id: str | None = None) -> int | None:
+    def create_run_record(self, domain: str, params: dict, session_id: str | None = None,
+        run_id: str | None = None) -> int | None:
         try:
             from sqlalchemy import select as sa_select
 
             from backend.db import crud
             from backend.db.database import get_session
-            from backend.db.models import PipelineRun as _PR
+            from backend.db.models import RunPaper as _PR
 
             with get_session() as session:
                 # Check if record already exists (created by run_svc.create_run)
@@ -507,6 +508,7 @@ class PipelinePersistence:
         search_queries: list[SearchQueryData],
         db_run_id: int,
         execution_linkage_expectations: list | None = None,
+        admitted_source_ids: set[str] | None = None,
     ) -> None:
         """Single governed persistence boundary for literature search results.
 
@@ -603,12 +605,20 @@ class PipelinePersistence:
                     ).scalar_one_or_none()
 
                     if not existing_rp:
+                        _paper_source_id = (
+                            candidate.paper.id if hasattr(candidate, "paper") else None
+                        )
+                        _is_admitted = bool(
+                            admitted_source_ids and _paper_source_id in admitted_source_ids
+                        )
                         new_rp = RunPaper(
                             run_id=db_run_id,
                             paper_id=paper_db_id,
                             inclusion_origin=candidate.discoveries[0].discovery_origin
                             if candidate.discoveries
                             else "remote_search",
+                            selected_for_downstream=_is_admitted,
+                            selection_stage="literature_relevance_filter" if _is_admitted else None,
                         )
                         session.add(new_rp)
                         session.flush()
@@ -899,8 +909,16 @@ class PipelinePersistence:
         for source_id in supporting_ids:
             if not isinstance(source_id, str):
                 continue
+            # Citation-integrity remediation (2026-09-17): resolve against
+            # papers ADMITTED into this run's corpus, not the global table.
             paper = session.execute(
-                sa_select(Paper).where(Paper.source_id == source_id)
+                sa_select(Paper)
+                .join(RunPaper, RunPaper.paper_id == Paper.id)
+                .where(
+                    RunPaper.run_id == db_run_id,
+                    RunPaper.selected_for_downstream.is_(True),
+                    Paper.source_id == source_id,
+                )
             ).scalars().first()
             if paper:
                 resolved_ids.append(paper.id)

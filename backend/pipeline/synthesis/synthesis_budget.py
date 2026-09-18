@@ -44,7 +44,7 @@ class SynthesisBudget:
     section_call_timeout: float = 120.0
 
     @classmethod
-    def open(cls) -> "SynthesisBudget":
+    def open(cls) -> SynthesisBudget:
         """An unbounded budget — ceiling OPENED by owner decision
         (2026-09-16) after runs 138/139/140 measured full paper synthesis
         exceeding every finite budget in the stack. Infinities satisfy the
@@ -60,7 +60,10 @@ class SynthesisBudget:
 
     def __post_init__(self):
         """Validate the budget invariant."""
-        if self.monolithic_attempt_timeout > self.total_workflow_timeout - self.fallback_reserved_seconds:
+        if (
+            self.monolithic_attempt_timeout
+            > self.total_workflow_timeout - self.fallback_reserved_seconds
+        ):
             raise ValueError(
                 f"Budget invariant violated: monolithic_attempt_timeout "
                 f"({self.monolithic_attempt_timeout}) > total ({self.total_workflow_timeout}) "

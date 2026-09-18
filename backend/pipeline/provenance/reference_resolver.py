@@ -241,14 +241,10 @@ def resolve_reference(
         if best_match and best_score >= _TITLE_SIMILARITY_THRESHOLD:
             return best_match, "title_fuzzy", best_score
 
-    # 5. Author + year match (weaker — only as tiebreaker on title)
-    if ref.authors and ref.year:
-        ref_surname = ref.authors.split(",")[0].split()[-1].lower()
-        for p in papers:
-            if p.year and str(p.year) == ref.year:
-                # Check if surname appears in paper authors JSON
-                if ref_surname and ref_surname in (p.authors or "").lower():
-                    return p, "author_year", 0.7
+    # 5. Author + year: deliberately NOT an authoritative resolver.
+    # Citation-integrity remediation (2026-09-17): the previous substring
+    # containment check resolved surname "ma" to "Kumar" at confidence 0.7.
+    # Weak/ambiguous matches must stay unresolved (fail-closed).
 
     return None, None, 0.0
 
@@ -264,8 +260,10 @@ def resolve_references(
         refs: Raw references — either a list of ``{"raw": "..."}`` dicts,
             a raw string, or None.
         session: SQLAlchemy session.
-        pipeline_run_id: Restrict paper lookup to this run when possible.
-            Falls back to all papers if no papers are found for the run.
+        pipeline_run_id: Restrict resolution to papers admitted into this
+            run's corpus (run_papers.selected_for_downstream). None means
+            no run scope: every reference resolves as unresolved — there is
+            deliberately no global-corpus fallback.
 
     Returns:
         List of ResolvedReference objects.  Always preserves ``raw``.
@@ -287,15 +285,31 @@ def resolve_references(
     if not raw_strings:
         return []
 
-    # Fetch candidate papers — prefer same run
-    # Papers are not directly linked to runs, so we fetch all and filter
-    # if needed.  For most deployments the corpus is manageable.
-    all_papers = session.execute(select(Paper)).scalars().all()
+    # Fetch candidate papers — run-scoped to ADMITTED papers only.
+    # Citation-integrity remediation (2026-09-17): the previous behavior
+    # loaded the entire global Paper table, so any citation could resolve
+    # against any paper from any historical run. Authoritative resolution
+    # is now scoped to papers admitted into this run's corpus
+    # (run_papers.selected_for_downstream). Without a run id, or when the
+    # run has no admitted papers, every reference stays unresolved —
+    # missing evidence stays explicit instead of being manufactured.
+    candidates: list[Paper] = []
+    if pipeline_run_id is not None:
+        from backend.db.models import RunPaper
+
+        candidates = session.execute(
+            select(Paper)
+            .join(RunPaper, RunPaper.paper_id == Paper.id)
+            .where(
+                RunPaper.run_id == pipeline_run_id,
+                RunPaper.selected_for_downstream.is_(True),
+            )
+        ).scalars().all()
 
     results: list[ResolvedReference] = []
     for raw in raw_strings:
         parsed = parse_reference(raw)
-        matched_paper, method, confidence = resolve_reference(parsed, all_papers)
+        matched_paper, method, confidence = resolve_reference(parsed, candidates)
 
         results.append(ResolvedReference(
             raw=raw,
