@@ -61,6 +61,17 @@ def sample_run_and_idea(db_session):
         db_session.add(p)
     db_session.flush()
 
+    # Citation-integrity: admit papers into the run's corpus so the
+    # run-scoped resolver can find them.
+    from backend.db.models import RunPaper
+    for p in papers:
+        db_session.add(RunPaper(
+            run_id=run.id, paper_id=p.id,
+            inclusion_origin="remote_search",
+            selected_for_downstream=True,
+        ))
+    db_session.flush()
+
     idea = Idea(
         title="Test Idea for Backfill",
         domain="AI/NLP",
