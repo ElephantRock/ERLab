@@ -46,7 +46,20 @@ class ServiceRegistry:
         from backend.pipeline.literature.search_service import SearchService
         self._effective = build_effective_domain_configurations(settings)
 
-        self.search = SearchService()
+        # Citation-integrity: wire the embedding provider into SearchService
+        # so the relevance filter activates during literature search.
+        from backend.pipeline.knowledge.embedding_providers import (
+            create_embedding_provider,
+            resolve_embedding_base_url,
+        )
+        _search_emb = create_embedding_provider(
+            provider_name=settings.embedding_provider,
+            model=settings.embedding_model,
+            api_key=settings.openai_api_key,
+            base_url=resolve_embedding_base_url(settings, settings.embedding_provider),
+            dimension=settings.embedding_dimension or None,
+        )
+        self.search = SearchService(embedding_provider=_search_emb)
         self.pdf = PDFService(mode=settings.s1_parser_mode, s1_parser_url=settings.s1_parser_url)
 
         from backend.pipeline.knowledge.embedding_providers import create_embedding_provider
