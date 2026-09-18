@@ -246,6 +246,7 @@ class StageLifecycle:
                         execution_linkage_expectations=list(
                             governed_ctx.execution_linkage_expectations
                         ),
+                        admitted_source_ids=getattr(ctx, "admitted_source_ids", None),
                     )
                     # P0.2.6: Reconcile after governed corpus commit.
                     try:
@@ -262,6 +263,7 @@ class StageLifecycle:
                         execution_linkage_expectations=getattr(
                             ctx, "execution_linkage_expectations", None
                         ),
+                        admitted_source_ids=getattr(ctx, "admitted_source_ids", None),
                     )
                     try:
                         from backend.pipeline.literature.run_reconciliation import (
