@@ -241,14 +241,10 @@ def resolve_reference(
         if best_match and best_score >= _TITLE_SIMILARITY_THRESHOLD:
             return best_match, "title_fuzzy", best_score
 
-    # 5. Author + year match (weaker — only as tiebreaker on title)
-    if ref.authors and ref.year:
-        ref_surname = ref.authors.split(",")[0].split()[-1].lower()
-        for p in papers:
-            if p.year and str(p.year) == ref.year:
-                # Check if surname appears in paper authors JSON
-                if ref_surname and ref_surname in (p.authors or "").lower():
-                    return p, "author_year", 0.7
+    # 5. Author + year: deliberately NOT an authoritative resolver.
+    # Citation-integrity remediation (2026-09-17): the previous substring
+    # containment check resolved surname "ma" to "Kumar" at confidence 0.7.
+    # Weak or ambiguous matches must stay unresolved (fail-closed).
 
     return None, None, 0.0
 
@@ -288,15 +284,27 @@ def resolve_references(
     if not raw_strings:
         return []
 
-    # Fetch candidate papers — prefer same run
-    # Papers are not directly linked to runs, so we fetch all and filter
-    # if needed.  For most deployments the corpus is manageable.
-    all_papers = session.execute(select(Paper)).scalars().all()
+    # Citation-integrity remediation: fetch candidates scoped to papers
+    # ADMITTED into this run's corpus (run_papers.selected_for_downstream).
+    # Without a run id, or when the run has no admitted papers, every
+    # reference resolves as unresolved — missing evidence stays explicit.
+    from backend.db.models import RunPaper as _RunPaper
+
+    candidates: list[Paper] = []
+    if pipeline_run_id is not None:
+        candidates = session.execute(
+            select(Paper)
+            .join(_RunPaper, _RunPaper.paper_id == Paper.id)
+            .where(
+                _RunPaper.run_id == pipeline_run_id,
+                _RunPaper.selected_for_downstream.is_(True),
+            )
+        ).scalars().all()
 
     results: list[ResolvedReference] = []
     for raw in raw_strings:
         parsed = parse_reference(raw)
-        matched_paper, method, confidence = resolve_reference(parsed, all_papers)
+        matched_paper, method, confidence = resolve_reference(parsed, candidates)
 
         results.append(ResolvedReference(
             raw=raw,
