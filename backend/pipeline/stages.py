@@ -208,7 +208,11 @@ def ensure_autonomous_experiment_design(ctx: StageContext) -> None:
             best_score = score
             selected_idx = idx
 
-    idea = ctx.result.ideas[selected_idx] if selected_idx is not None and selected_idx < len(ctx.result.ideas) else None
+    idea = (
+        ctx.result.ideas[selected_idx]
+        if selected_idx is not None and selected_idx < len(ctx.result.ideas)
+        else None
+    )
 
     # C3-1 generic seam: deterministic, fail-closed capability
     # selection from the registry replaces the hardcoded
@@ -1013,11 +1017,13 @@ class LiteratureSearchStage(PipelineStage):
         try:
             _gs = get_settings()
             _emb = create_embedding_provider(
-                provider_name=_s.embedding_provider if "_s" in dir() else get_settings().embedding_provider,
-                model=get_settings().embedding_model,
-                api_key=get_settings().openai_api_key,
-                base_url=resolve_embedding_base_url(get_settings(), get_settings().embedding_provider),
-                dimension=get_settings().embedding_dimension or None,
+                provider_name=_gs.embedding_provider,
+                model=_gs.embedding_model,
+                api_key=_gs.openai_api_key,
+                base_url=resolve_embedding_base_url(
+                    _gs, _gs.embedding_provider
+                ),
+                dimension=_gs.embedding_dimension or None,
             )
             if _emb is None:
                 raise RuntimeError("embedding provider unavailable for admission")
