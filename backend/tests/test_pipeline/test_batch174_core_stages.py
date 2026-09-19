@@ -8,8 +8,9 @@ from __future__ import annotations
 
 import asyncio
 import sys
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
 
 # ── Stub heavy imports before anything else ─────────────────────────────────
 sys.modules.setdefault("chromadb", MagicMock())
