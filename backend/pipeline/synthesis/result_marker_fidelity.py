@@ -341,3 +341,34 @@ def build_correction_instruction(violations: list[str]) -> str:
         "marker MUST be restated as hypotheses or expectations, not as "
         "observations."
     )
+
+
+def enforce_repaired_paper_fidelity(
+    paper_md: str, marker_strings: list[str]
+) -> str:
+    """Late-boundary enforcement for post-synthesis paper rewrites.
+
+    Any downstream rewrite of an empirical paper (e.g. the Stage-16 legacy
+    evidence-repair loop) re-renders text outside the synthesis-time
+    fidelity boundary and can reintroduce numeric corruption
+    (run_31187f170e93: ``333333 [RESULT-1]`` re-entered here). This applies
+    the same contract at the late boundary: marker-adjacent numbers are
+    reconciled to the exact persisted values, and the same-sentence rule is
+    re-checked. Unrepairable values or unbacked empirical conclusions raise
+    instead of the rewritten text becoming authoritative.
+    """
+    marker_values = parse_marker_strings(marker_strings)
+    repaired, report = reconcile_marker_values(paper_md, marker_values)
+    if not report.ok:
+        raise ResultMarkerFidelityError(
+            "Repaired empirical paper contains marker-adjacent numbers that "
+            "cannot be reconciled to persisted results: "
+            + "; ".join(report.violations[:5])
+        )
+    violations = empirical_claim_violations(repaired, marker_values)
+    if violations:
+        raise ResultMarkerFidelityError(
+            "Repaired empirical paper retains unbacked empirical "
+            "conclusions: " + "; ".join(violations[:5])
+        )
+    return repaired
