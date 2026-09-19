@@ -8,11 +8,16 @@ from __future__ import annotations
 
 import asyncio
 import sys
+import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 
 # ── Stub heavy imports before anything else ─────────────────────────────────
 sys.modules.setdefault("chromadb", MagicMock())
 sys.modules.setdefault("google.generativeai", MagicMock())
+
+# Admission is fail-closed since the citation-integrity remediation; stage-level
+# tests need a working embedding path instead of a live endpoint.
+pytestmark = pytest.mark.usefixtures("uniform_embedding_provider")
 
 from backend.pipeline.gap_analysis.models import ClusterReport, ResearchGap
 from backend.pipeline.generation.models import ResearchIdea
