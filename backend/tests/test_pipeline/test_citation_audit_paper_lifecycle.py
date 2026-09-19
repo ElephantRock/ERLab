@@ -108,7 +108,7 @@ def test_changed_paper_is_reevaluated_on_repaired_text():
     )
     ctx = _ctx()
 
-    def mutate(_idx, _proposal_text, _corpus, metadata, full_paper):
+    def mutate(_idx, _proposal_text, _corpus, metadata, full_paper, marker_strings=None):
         full_paper["paper_markdown"] = _repaired_paper()
         metadata["full_paper"] = full_paper
 
@@ -160,7 +160,7 @@ def test_post_repair_evaluation_failure_never_leaves_old_evaluation_attached():
     )
     ctx = _ctx()
 
-    def mutate(_idx, _proposal_text, _corpus, metadata, full_paper):
+    def mutate(_idx, _proposal_text, _corpus, metadata, full_paper, marker_strings=None):
         full_paper["paper_markdown"] = _repaired_paper()
         metadata["full_paper"] = full_paper
 

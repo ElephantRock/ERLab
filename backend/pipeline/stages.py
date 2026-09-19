@@ -4629,6 +4629,10 @@ class CitationAuditStage(PipelineStage):
         return "citation_audit"
 
     async def execute(self, ctx: StageContext) -> bool:
+        from backend.pipeline.synthesis.result_marker_fidelity import (
+            ResultMarkerFidelityError,
+        )
+
         # Check strategy flag — skip if citation_audit disabled
         strategy_config = getattr(ctx, 'params', {}).get('strategy_config', None)
         if strategy_config:
@@ -4679,6 +4683,11 @@ class CitationAuditStage(PipelineStage):
         for idx, proposal in ctx.result.proposals.items():
             try:
                 await self._audit_proposal(idx, proposal, ctx, auditor, source_papers)
+            except ResultMarkerFidelityError:
+                # Fail-closed empirical fidelity: an unrepairable repaired
+                # paper must fail the stage — not be downgraded to a
+                # skipped audit while the invalid rewrite would ship.
+                raise
             except Exception as e:
                 # HB-02: Per-proposal failure is non-fatal
                 logger.warning(
@@ -4801,6 +4810,7 @@ class CitationAuditStage(PipelineStage):
             # --- Fallback: Legacy prose validation + repair ---
             self._run_legacy_validation_and_repair(
                 idx, proposal_text, corpus, metadata, full_paper,
+                marker_strings=self._empirical_marker_strings(ctx, idx),
             )
 
         # Lifecycle consistency: Stage 15 evaluates the synthesized paper, but
@@ -5111,8 +5121,15 @@ class CitationAuditStage(PipelineStage):
         corpus: dict[str, str],
         metadata: dict,
         full_paper,
+        marker_strings: list[str] | None = None,
     ) -> None:
-        """Fallback: legacy prose-based validation and repair."""
+        """Fallback: legacy prose-based validation and repair.
+
+        ``marker_strings`` carries the authoritative ``[RESULT-N] metric =
+        value`` contract for empirical runs. When present, the repair
+        output is a candidate: the result-marker fidelity contract is
+        enforced on it before it becomes authoritative (fail closed).
+        """
         try:
             from backend.pipeline.gateway.claim_evidence_validator import ClaimEvidenceValidator
             from backend.pipeline.gateway.evidence_repair import (
@@ -5148,33 +5165,24 @@ class CitationAuditStage(PipelineStage):
                 metadata["evidence_repair"] = repair_report.to_dict()
 
                 if repair_report.repaired_text and full_paper and isinstance(full_paper, dict):
-                    full_paper["paper_markdown"] = repair_report.repaired_text
-                    metadata["full_paper"] = full_paper
-
                     # Citation-integrity empirical boundary: the evidence-
                     # repair loop re-renders paper text outside the
                     # synthesis-time fidelity boundary (run_31187f170e93:
-                    # dropped-decimal corruption re-entered here). Before
-                    # the repaired text becomes authoritative, reconcile
-                    # marker-adjacent numbers to the persisted values and
-                    # re-apply the same-sentence rule; failures propagate.
-                    _auth_markers = metadata.get("result_markers") or []
-                    if _auth_markers:
+                    # dropped-decimal corruption re-entered here). The
+                    # rewrite is a CANDIDATE only — enforce the marker
+                    # contract on it first; it becomes authoritative only
+                    # when enforcement passes. Unrepairable values or
+                    # unbacked empirical conclusions fail closed.
+                    candidate = repair_report.repaired_text
+                    if marker_strings:
                         from backend.pipeline.synthesis.result_marker_fidelity import (
                             enforce_repaired_paper_fidelity,
                         )
-                        _marker_strings = [
-                            f"[{m['marker']}] {m['metric_id']} = "
-                            f"{m['observed_value']}"
-                            for m in _auth_markers
-                        ]
-                        full_paper["paper_markdown"] = (
-                            enforce_repaired_paper_fidelity(
-                                full_paper["paper_markdown"],
-                                _marker_strings,
-                            )
+                        candidate = enforce_repaired_paper_fidelity(
+                            candidate, marker_strings
                         )
-                        metadata["full_paper"] = full_paper
+                    full_paper["paper_markdown"] = candidate
+                    metadata["full_paper"] = full_paper
 
                 survival_rate = repair_report.repaired_survival_rate
                 quality_level = ExportQualityGate.classify(survival_rate)
@@ -5210,6 +5218,19 @@ class CitationAuditStage(PipelineStage):
                 "status": "error",
                 "reason": str(e),
             }
+
+    @staticmethod
+    def _empirical_marker_strings(ctx: StageContext, idx: int) -> list[str]:
+        """Authoritative [RESULT-N] contract strings for this proposal.
+
+        Sourced from the live in-memory markers the experiment stage wrote
+        (``ctx.result.result_markers[idx]``) through the same formatting
+        contract paper synthesis consumes — the single canonical authority.
+        """
+        markers = []
+        if ctx is not None and getattr(ctx, "result", None) is not None:
+            markers = ctx.result.result_markers.get(idx, []) or []
+        return [PaperSynthesisStage._format_result_marker(m) for m in markers]
 
     @staticmethod
     def _get_metadata(proposal) -> dict:

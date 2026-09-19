@@ -5,50 +5,63 @@ replaced the reconciled empirical paper with its own re-rendered text,
 reintroducing dropped-decimal corruption (``333333 [RESULT-1]`` /
 ``966667 [RESULT-3]``) after the synthesis-time fidelity boundary had
 clean values. The boundary now re-applies at the Stage-16 integration
-point: marker-adjacent numbers are restored to the exact persisted values
-and the same-sentence rule is re-checked; unrepairable values or unbacked
-empirical conclusions fail closed (the stage's broad non-fatal handler
-must NOT swallow them).
+point: the repair output is a candidate only — marker-adjacent numbers
+are reconciled to the exact persisted values from the LIVE canonical
+markers (``ctx.result.result_markers``) and the same-sentence rule is
+re-checked before the rewrite becomes authoritative. Unrepairable values
+or unbacked empirical conclusions propagate through
+``CitationAuditStage.execute`` (fail closed), leaving the previously
+valid paper authoritative.
 
-These tests exercise the actual integration point
-(``CitationAuditStage._run_legacy_validation_and_repair``) with stubbed
-validator/repair-loop classes, not ``result_marker_fidelity`` in
-isolation. Use asyncio-free, plain calls — the function is synchronous.
+Uses real ``ResultMarker`` objects and live-shaped ctx — the same
+authority the experiment stage writes and paper synthesis consumes.
 """
 from __future__ import annotations
 
+import asyncio
 import re
 from types import SimpleNamespace
 
-import pytest
-
+from backend.pipeline.experiment.manifest import ResultMarker
 from backend.pipeline.stages import CitationAuditStage
 from backend.pipeline.synthesis.result_marker_fidelity import (
     ResultMarkerFidelityError,
 )
 
-AUTHORITATIVE = [
-    {
-        "marker": "RESULT-1",
-        "metric_id": "baseline_accuracy",
-        "observed_value": 0.333333,
-        "experiment_result_id": 29,
-        "role": "baseline",
-    },
-    {
-        "marker": "RESULT-2",
-        "metric_id": "improvement",
-        "observed_value": 0.633333,
-        "experiment_result_id": 29,
-        "role": "derived",
-    },
-    {
-        "marker": "RESULT-3",
-        "metric_id": "model_accuracy",
-        "observed_value": 0.966667,
-        "experiment_result_id": 29,
-        "role": "comparison",
-    },
+AUTHORITATIVE_MARKERS = [
+    ResultMarker(
+        marker_index=1,
+        marker="RESULT-1",
+        metric_name="baseline_accuracy",
+        observed_value=0.333333,
+        artifact_path="metrics.json",
+        artifact_sha256="0" * 64,
+        experiment_result_id=29,
+        role="baseline",
+        direction="higher_better",
+    ),
+    ResultMarker(
+        marker_index=2,
+        marker="RESULT-2",
+        metric_name="improvement",
+        observed_value=0.633333,
+        artifact_path="metrics.json",
+        artifact_sha256="0" * 64,
+        experiment_result_id=29,
+        role="derived",
+        direction="higher_better",
+    ),
+    ResultMarker(
+        marker_index=3,
+        marker="RESULT-3",
+        metric_name="model_accuracy",
+        observed_value=0.966667,
+        artifact_path="metrics.json",
+        artifact_sha256="0" * 64,
+        experiment_result_id=29,
+        role="comparison",
+        direction="higher_better",
+    ),
 ]
 
 CLEAN_PAPER = (
@@ -60,13 +73,18 @@ CLEAN_PAPER = (
     "the predeclared majority predictor.\n"
 )
 
-CORRUPTED_REWRITE = (
-    "# Paper\n\n## Abstract\nWe evaluate the frozen protocol: the "
-    "baseline scored 333333 [RESULT-1] and the model 966667 [RESULT-3].\n\n"
-    "## Results\n"
-    + ("The frozen partition is held fixed across every measurement. " * 8)
-    + "\n\n## Conclusion\nThe improvement was 0.633333 [RESULT-2] over "
-    "the predeclared majority predictor.\n"
+CORRUPTED_REWRITE = CLEAN_PAPER.replace(
+    "0.333333 [RESULT-1]", "333333 [RESULT-1]"
+).replace("0.966667 [RESULT-3]", "966667 [RESULT-3]")
+
+PERCENT_REWRITE = CLEAN_PAPER.replace(
+    "0.333333 [RESULT-1]", "97% [RESULT-1]"
+)
+
+UNBACKED_REWRITE = CLEAN_PAPER.replace(
+    "## Conclusion\n",
+    "## Conclusion\nThese observed gaps demonstrate that the classifier "
+    "recovers all signal without any marker here. ",
 )
 
 
@@ -84,135 +102,126 @@ class _StubValidator:
 
 
 class _StubRepair:
-    def __init__(self, corpus_texts):
-        pass
+    """Returns the scripted rewrite for every repair() call."""
+
+    def __init__(self, rewritten):
+        self._rewritten = rewritten
+        self.calls = 0
 
     def repair(self, validation_results, original_text):
+        self.calls += 1
         return SimpleNamespace(
-            repaired_text=CORRUPTED_REWRITE,
-            to_dict=lambda: {"repairs": 2},
-            original_survival_rate=0.08,
-            repaired_survival_rate=0.18,
-        )
-
-
-class _StubRepair97:
-    def __init__(self, corpus_texts):
-        pass
-
-    def repair(self, validation_results, original_text):
-        rewritten = CORRUPTED_REWRITE.replace(
-            "333333 [RESULT-1]", "97% [RESULT-1]"
-        )
-        return SimpleNamespace(
-            repaired_text=rewritten,
+            repaired_text=self._rewritten,
             to_dict=lambda: {"repairs": 1},
             original_survival_rate=0.08,
             repaired_survival_rate=0.18,
         )
 
 
-class _StubRepairUnbacked:
-    def __init__(self, corpus_texts):
-        pass
+class _StubAuditor:
+    def __init__(self):
+        self.calls = 0
 
-    def repair(self, validation_results, original_text):
-        rewritten = CLEAN_PAPER.replace(
-            "## Conclusion\n",
-            "## Conclusion\nThese observed gaps demonstrate that the "
-            "classifier recovers all signal without any marker here. ",
-        )
+    async def audit(self, proposal_text, source_papers, proposal_id):
+        self.calls += 1
         return SimpleNamespace(
-            repaired_text=rewritten,
-            to_dict=lambda: {"repairs": 1},
-            original_survival_rate=0.08,
-            repaired_survival_rate=0.18,
+            to_dict=lambda: {"trust_score": 0.9},
+            trust_score=0.9,
+            fabricated_citations=0,
+            context_mismatches=0,
+            quantitative_errors=0,
+            items=[],
         )
 
 
-def _metadata():
-    return {
-        "result_markers": AUTHORITATIVE,
-        "full_paper": {"paper_markdown": CLEAN_PAPER, "word_count": 200},
-    }
+def _live_ctx(markers, proposal):
+    """Live-shaped ctx: proposals + result_markers exactly as the
+    experiment stage leaves them."""
+    from backend.pipeline.result import PipelineResult
+
+    result = PipelineResult()
+    result.proposals = {0: proposal}
+    result.result_markers = {0: list(markers)}
+    return SimpleNamespace(params={}, result=result, all_papers=[], run_id=None)
 
 
-def _patch_gateway(monkeypatch, repair_cls):
+def _make_proposal(paper_md: str):
+    return SimpleNamespace(
+        metadata={"full_paper": {"paper_markdown": paper_md, "word_count": 200}},
+        to_markdown=lambda: "proposal text",
+    )
+
+
+def _run_stage(monkeypatch, ctx, rewritten):
     from backend.pipeline.gateway import claim_evidence_validator, evidence_repair
 
+    repair = _StubRepair(rewritten)
     monkeypatch.setattr(
         claim_evidence_validator, "ClaimEvidenceValidator", _StubValidator
     )
-    monkeypatch.setattr(evidence_repair, "EvidenceRepairLoop", repair_cls)
+    monkeypatch.setattr(
+        evidence_repair,
+        "EvidenceRepairLoop",
+        lambda corpus_texts: repair,
+    )
+
+    stage = CitationAuditStage(auditor=_StubAuditor())
+    exc = None
+    try:
+        asyncio.run(stage.execute(ctx))
+    except ResultMarkerFidelityError as e:
+        exc = e
+    return repair, stage, exc
 
 
 def test_stage16_rewrite_reconciled_to_exact_values(monkeypatch):
     """The exact bypass: a Stage-16 rewrite carrying 333333/966667 is
-    reconciled to the persisted 0.333333/0.966667 before becoming
+    reconciled to the persisted 0.333333/0.966667 before it becomes
     authoritative."""
-    _patch_gateway(monkeypatch, _StubRepair)
-    metadata = _metadata()
-    full_paper = metadata["full_paper"]
+    proposal = _make_proposal(CLEAN_PAPER)
+    ctx = _live_ctx(AUTHORITATIVE_MARKERS, proposal)
+    repair, stage, exc = _run_stage(monkeypatch, ctx, CORRUPTED_REWRITE)
 
-    CitationAuditStage._run_legacy_validation_and_repair(
-        0, CLEAN_PAPER, {"s1": "evidence"}, metadata, full_paper
-    )
-
-    final = full_paper["paper_markdown"]
+    assert exc is None
+    final = proposal.metadata["full_paper"]["paper_markdown"]
     assert "0.333333 [RESULT-1]" in final
     assert "0.966667 [RESULT-3]" in final
     assert not re.search(r"(?<![\d.])333333 \[RESULT-1\]", final)
     assert not re.search(r"(?<![\d.])966667 \[RESULT-3\]", final)
 
 
-def test_stage16_unrelated_percentage_fails_closed(monkeypatch):
-    _patch_gateway(monkeypatch, _StubRepair97)
-    metadata = _metadata()
-    full_paper = metadata["full_paper"]
+def test_stage16_unrelated_percentage_propagates_and_keeps_valid_paper(monkeypatch):
+    """A 97% rewrite fails closed through CitationAuditStage.execute and
+    the previously valid paper remains authoritative (candidate-only
+    assignment)."""
+    proposal = _make_proposal(CLEAN_PAPER)
+    ctx = _live_ctx(AUTHORITATIVE_MARKERS, proposal)
+    repair, stage, exc = _run_stage(monkeypatch, ctx, PERCENT_REWRITE)
 
-    with pytest.raises(ResultMarkerFidelityError):
-        CitationAuditStage._run_legacy_validation_and_repair(
-            0, CLEAN_PAPER, {"s1": "evidence"}, metadata, full_paper
-        )
-    assert "97% [RESULT-1]" in full_paper["paper_markdown"]  # untouched
+    assert isinstance(exc, ResultMarkerFidelityError)
+    # The invalid candidate never became authoritative.
+    assert proposal.metadata["full_paper"]["paper_markdown"] == CLEAN_PAPER
+    assert "97% [RESULT-1]" not in proposal.metadata["full_paper"]["paper_markdown"]
+    # Not downgraded to a skipped audit.
+    assert proposal.metadata.get("citation_audit", {}).get("status") != "skipped"
 
 
 def test_stage16_unbacked_claim_reintroduced_fails_closed(monkeypatch):
-    _patch_gateway(monkeypatch, _StubRepairUnbacked)
-    metadata = _metadata()
-    full_paper = metadata["full_paper"]
+    proposal = _make_proposal(CLEAN_PAPER)
+    ctx = _live_ctx(AUTHORITATIVE_MARKERS, proposal)
+    repair, stage, exc = _run_stage(monkeypatch, ctx, UNBACKED_REWRITE)
 
-    with pytest.raises(ResultMarkerFidelityError):
-        CitationAuditStage._run_legacy_validation_and_repair(
-            0, CLEAN_PAPER, {"s1": "evidence"}, metadata, full_paper
-        )
+    assert isinstance(exc, ResultMarkerFidelityError)
+    assert proposal.metadata["full_paper"]["paper_markdown"] == CLEAN_PAPER
 
 
 def test_non_empirical_repair_path_unaffected(monkeypatch):
-    """Without authoritative result markers the repair path behaves as
+    """Without canonical markers on the context the repair path behaves as
     before (no fidelity enforcement)."""
-    _patch_gateway(monkeypatch, _StubRepair)
-    metadata = {"full_paper": {"paper_markdown": CLEAN_PAPER}}
+    proposal = _make_proposal(CLEAN_PAPER)
+    ctx = _live_ctx([], proposal)
+    repair, stage, exc = _run_stage(monkeypatch, ctx, CORRUPTED_REWRITE)
 
-    CitationAuditStage._run_legacy_validation_and_repair(
-        0, CLEAN_PAPER, {"s1": "evidence"}, metadata,
-        metadata["full_paper"],
-    )
-    assert "333333 [RESULT-1]" in metadata["full_paper"]["paper_markdown"]
-
-
-def test_stage16_fail_closed_not_swallowed_by_nonfatal_handler(monkeypatch):
-    """The stage's broad non-fatal handler must not convert the
-    fail-closed fidelity error into a warning + error marker."""
-    _patch_gateway(monkeypatch, _StubRepair97)
-    metadata = _metadata()
-    full_paper = metadata["full_paper"]
-
-    with pytest.raises(ResultMarkerFidelityError):
-        CitationAuditStage._run_legacy_validation_and_repair(
-            0, CLEAN_PAPER, {"s1": "evidence"}, metadata, full_paper
-        )
-    assert "evidence_repair" not in metadata or metadata[
-        "evidence_repair"
-    ].get("status") != "error"
-
+    assert exc is None
+    final = proposal.metadata["full_paper"]["paper_markdown"]
+    assert re.search(r"(?<![\d.])333333 \[RESULT-1\]", final)
