@@ -246,23 +246,47 @@ def test_stage_admission_provider_failure_fails_closed(monkeypatch):
         asyncio.run(stage._admit_corpus(papers, _DOMAIN))
 
 
-def test_stage_admission_zero_survivors_never_unfiltered(monkeypatch):
-    """A provider that validly scores nothing yields an empty admission —
-    the stage must never fall back to the unfiltered corpus."""
+def test_stage_admission_all_unscorable_fails_closed(monkeypatch):
+    """A corpus where every candidate fails scoring fails the stage.
+
+    Zero survivors from all-failed scoring is an admission-scoring
+    failure, not a valid empty admission — the stage must raise.
+    """
     from backend.pipeline.knowledge import embedding_providers as ep
 
     provider = MalformedProvider(_table([]), "t:any", "cardinality")
     monkeypatch.setattr(ep, "create_embedding_provider", lambda **kwargs: provider)
     stage = _mk_stage()
-    # The stage consumes bare paper objects (candidate.paper), not wrappers.
-    papers = [_result("p1", "One", "t:any").paper]
+    papers = [_result("p1", "One", "t:any").paper, _result("p2", "Two", "t:any").paper]
+    with pytest.raises(LiteratureAdmissionError):
+        asyncio.run(stage._admit_corpus(papers, _DOMAIN))
+
+
+def test_stage_admission_all_below_threshold_is_valid_empty(monkeypatch):
+    """Valid scoring that admits nobody is a legitimate empty decision.
+
+    Every candidate scores validly but below the threshold with no floor
+    available; the stage completes with an explicitly empty admission —
+    it must NOT raise, distinguishing scored-out from unscorable.
+    """
+    from backend.pipeline.knowledge import embedding_providers as ep
+
+    table = _table(
+        [("t:low", [0.0, 1.0, 0.0, 0.0])]  # cos 0.0 against the domain
+    )
+    monkeypatch.setattr(
+        ep, "create_embedding_provider", lambda **kwargs: StrictBatchProvider(table)
+    )
+    stage = _mk_stage()
+    papers = [_result("p1", "One", "t:low").paper, _result("p2", "Two", "t:low").paper]
     unique, admitted, scores, exclusions = asyncio.run(
         stage._admit_corpus(papers, _DOMAIN)
     )
     assert unique == []
     assert admitted == set()
-    assert scores == {}
-    assert set(exclusions) == {"p1"}
+    assert set(scores) == {"p1", "p2"}
+    assert scores["p1"] == pytest.approx(0.0)
+    assert exclusions == {}
 
 
 def test_stage_admission_returns_decision(monkeypatch):

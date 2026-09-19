@@ -646,14 +646,25 @@ class PipelinePersistence:
                         session.add(new_rp)
                         session.flush()
                     else:
-                        # Citation-integrity: reconcile an existing RunPaper row
-                        # with this run's admission decision and score audit.
-                        if _is_admitted:
-                            existing_rp.selected_for_downstream = True
-                            existing_rp.selection_stage = "literature_relevance_filter"
-                        if _score is not None:
+                        # Citation-integrity: fully reconcile an existing
+                        # RunPaper row with the CURRENT admission decision.
+                        # Replay/resume must not preserve stale state: a
+                        # now-excluded paper loses prior admission, and a
+                        # decision that carries no score for this paper
+                        # clears a prior score (explicit NULL, not stale).
+                        if admitted_source_ids is not None:
+                            existing_rp.selected_for_downstream = _is_admitted
+                            existing_rp.selection_stage = (
+                                "literature_relevance_filter"
+                                if _is_admitted
+                                else None
+                            )
+                        if relevance_scores is not None:
                             existing_rp.relevance_score = _score
-                        if _exclusion_reason is not None:
+                        if (
+                            admission_exclusions is not None
+                            or relevance_scores is not None
+                        ):
                             existing_rp.exclusion_reason = _exclusion_reason
                         session.add(existing_rp)
                         session.flush()

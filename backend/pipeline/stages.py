@@ -454,6 +454,14 @@ class LiteratureSearchStage(PipelineStage):
             _outcome = await RelevanceFilter(embedding_provider=_emb).filter_with_scores(
                 _wrapped, domain_query
             )
+            if _outcome.failures and not _outcome.scores:
+                # Every candidate failed scoring: the provider path is
+                # broken, so this is an admission-scoring failure — fail
+                # closed, never an empty-but-"completed" admission.
+                raise RuntimeError(
+                    f"relevance scoring failed for all {len(_outcome.failures)} "
+                    "candidates (no valid scores produced)"
+                )
             _survivor_ids = {id(w) for w in _outcome.survivors}
             admitted_ids = {
                 str(w.paper.id) for w in _wrapped if id(w) in _survivor_ids
