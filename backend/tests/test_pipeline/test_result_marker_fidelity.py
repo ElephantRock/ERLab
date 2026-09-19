@@ -276,6 +276,25 @@ def test_unit_marked_percent_after_marker_repaired():
     assert _oracle_mismatches(text) == []
 
 
+def test_unrelated_percentage_before_marker_fails_closed():
+    """97% beside a marker persisted at 0.333333 is a different number —
+    it must fail closed, never be silently rewritten to the persisted
+    value (review blocker: unconditional percentified repair)."""
+    paper = "The cohort was 97% [RESULT-1] of the frozen split size."
+    text, report = reconcile_marker_values(paper, _markers())
+    assert not report.ok
+    assert any("97" in v for v in report.violations)
+    assert "97% [RESULT-1]" in text
+
+
+def test_unrelated_percentage_after_marker_fails_closed():
+    paper = "The frozen split yields [RESULT-1] = 97% by sample count."
+    text, report = reconcile_marker_values(paper, _markers())
+    assert not report.ok
+    assert any("97" in v for v in report.violations)
+    assert "[RESULT-1] = 97%" in text
+
+
 # ── Service-level wiring (monolithic + section fallback) ─────────
 
 
@@ -544,12 +563,12 @@ def test_recovery_passes_authoritative_markers(monkeypatch):
 
     captured = {}
 
-    class _Captured(Exception):
+    class _CapturedError(Exception):
         pass
 
     async def fake_synthesize_paper(**kwargs):
         captured.update(kwargs)
-        raise _Captured()
+        raise _CapturedError()
 
     from backend.pipeline.experiment import paper_recovery
     from backend.pipeline.synthesis import synthesis_service
@@ -571,7 +590,7 @@ def test_recovery_passes_authoritative_markers(monkeypatch):
 
     monkeypatch.setattr(paper_recovery, "get_session", patched_get_session)
 
-    with pytest.raises(_Captured):
+    with pytest.raises(_CapturedError):
         asyncio.run(
             paper_recovery.resume_empirical_paper(
                 proposal_id=proposal_id, experiment_result_id=exp_id

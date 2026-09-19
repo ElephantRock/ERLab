@@ -117,19 +117,28 @@ def _is_sanctioned_corruption(
     Sanctioned (deterministically repairable to the authoritative value):
       - dropped decimal point: ``0.333333`` rendered as ``333333``
         (token equals the authoritative digits with the point removed);
-      - percentified form: ``33.3333%`` against ``0.333333``
-        (float(token) == observed_value * 100).
+      - percentified forms within the fidelity tolerance: ``0.333333%``
+        (value-correct, unit-marked) and ``33.3333%`` (scaled by 100)
+        against a persisted ``0.333333``.
 
     Everything else — sign flips, decimal-position shifts such as
-    ``3.33333``, truncated values — fails closed.
+    ``3.33333``, unrelated percentages such as ``97%`` — fails closed.
     """
     if token[:1] in ("-", "+"):
         return False
     if percentified:
-        # Any percent rendering beside the marker is a unit error against
-        # the fraction-valued contract: normalize to the authoritative
-        # value (covers both 33.3333% scaled and 0.333333% unit-marked).
-        return True
+        # Only two percent shapes are sanctioned: the value-correct unit
+        # error (``0.333333%`` against ``0.333333``) and the scaled form
+        # (``33.3333%`` = observed_value * 100). Both normalize to the
+        # authoritative fraction. Any other percentage (``97%``) is a
+        # different number and fails closed.
+        try:
+            rendered = float(token.rstrip("%"))
+        except ValueError:
+            return False
+        return crv._values_agree(
+            rendered, marker.observed_value
+        ) or crv._values_agree(rendered, marker.observed_value * 100)
     dropped = (
         marker.value_text.replace(".", "").replace(",", "").lstrip("0") or "0"
     )
