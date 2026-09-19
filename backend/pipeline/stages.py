@@ -5119,6 +5119,9 @@ class CitationAuditStage(PipelineStage):
                 EvidenceRepairLoop,
                 ExportQualityGate,
             )
+            from backend.pipeline.synthesis.result_marker_fidelity import (
+                ResultMarkerFidelityError,
+            )
 
             corpus_ids = set(corpus.keys())
             validator = ClaimEvidenceValidator(corpus_ids=corpus_ids)
@@ -5148,6 +5151,31 @@ class CitationAuditStage(PipelineStage):
                     full_paper["paper_markdown"] = repair_report.repaired_text
                     metadata["full_paper"] = full_paper
 
+                    # Citation-integrity empirical boundary: the evidence-
+                    # repair loop re-renders paper text outside the
+                    # synthesis-time fidelity boundary (run_31187f170e93:
+                    # dropped-decimal corruption re-entered here). Before
+                    # the repaired text becomes authoritative, reconcile
+                    # marker-adjacent numbers to the persisted values and
+                    # re-apply the same-sentence rule; failures propagate.
+                    _auth_markers = metadata.get("result_markers") or []
+                    if _auth_markers:
+                        from backend.pipeline.synthesis.result_marker_fidelity import (
+                            enforce_repaired_paper_fidelity,
+                        )
+                        _marker_strings = [
+                            f"[{m['marker']}] {m['metric_id']} = "
+                            f"{m['observed_value']}"
+                            for m in _auth_markers
+                        ]
+                        full_paper["paper_markdown"] = (
+                            enforce_repaired_paper_fidelity(
+                                full_paper["paper_markdown"],
+                                _marker_strings,
+                            )
+                        )
+                        metadata["full_paper"] = full_paper
+
                 survival_rate = repair_report.repaired_survival_rate
                 quality_level = ExportQualityGate.classify(survival_rate)
                 quality_banner = ExportQualityGate.get_banner(survival_rate)
@@ -5168,6 +5196,11 @@ class CitationAuditStage(PipelineStage):
                     quality_level,
                 )
 
+        except ResultMarkerFidelityError:
+            # Fail-closed empirical fidelity: a repaired paper that cannot
+            # satisfy the marker contract must fail the stage, not be
+            # swallowed as a non-fatal repair error.
+            raise
         except Exception as e:
             logger.warning(
                 "Legacy validation/repair failed for proposal %d (non-fatal): %s",
