@@ -21,6 +21,10 @@ import pytest
 sys.modules.setdefault("chromadb", MagicMock())
 sys.modules.setdefault("google.generativeai", MagicMock())
 
+# Admission is fail-closed since the citation-integrity remediation; these
+# stage-level tests need a working embedding path to exercise their subject.
+pytestmark = pytest.mark.usefixtures("uniform_embedding_provider")
+
 from backend.pipeline.literature.contracts import SearchBatchOutcome
 from backend.pipeline.literature.models import Author, Paper
 from backend.pipeline.persistence import CandidateWithDiscoveries

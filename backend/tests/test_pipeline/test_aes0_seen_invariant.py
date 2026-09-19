@@ -21,9 +21,23 @@ import asyncio
 import sys
 from unittest.mock import AsyncMock, MagicMock, patch
 
+import pytest
+
 # Stub heavy imports before anything else.
 sys.modules.setdefault("chromadb", MagicMock())
 sys.modules.setdefault("google.generativeai", MagicMock())
+
+# Admission is fail-closed since the citation-integrity remediation; these
+# stage-level tests need a working embedding path to exercise their subject.
+pytestmark = pytest.mark.usefixtures("uniform_embedding_provider")
+
+
+class _UniformEmbeddings:
+    """Batch-contract embedding stub: one identical unit vector per text."""
+
+    async def embed(self, texts):
+        return [[1.0, 0.0, 0.0, 0.0] for _ in texts]
+
 
 from backend.pipeline.literature.citation_explorer import (
     CitationExplorer,
@@ -168,7 +182,8 @@ def test_local_upload_duplicate_does_not_double():
 
         with patch(
             "backend.pipeline.knowledge.embedding_providers"
-            ".create_embedding_provider"
+            ".create_embedding_provider",
+            return_value=_UniformEmbeddings(),
         ), patch(
             "backend.pipeline.knowledge.embedding_service.EmbeddingService"
         ), patch(

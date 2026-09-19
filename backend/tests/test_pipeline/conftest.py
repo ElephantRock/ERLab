@@ -321,3 +321,25 @@ def many_papers():
         )
         for i in range(10)
     ]
+
+
+@pytest.fixture
+def uniform_embedding_provider(monkeypatch):
+    """Deterministic embedding provider for stage-level literature tests.
+
+    Every text embeds to the same unit vector, so all candidates score
+    similarity 1.0 and the admission decision admits the whole corpus —
+    the corpus semantics these tests were written under. Admission is
+    fail-closed since the citation-integrity remediation, so tests that
+    drive ``LiteratureSearchStage.execute`` with mocked settings must
+    supply a working provider through this fixture.
+    """
+    from backend.pipeline.knowledge import embedding_providers as ep
+
+    class UniformProvider:
+        async def embed(self, texts):
+            return [[1.0, 0.0, 0.0, 0.0] for _ in texts]
+
+    monkeypatch.setattr(
+        ep, "create_embedding_provider", lambda **kwargs: UniformProvider()
+    )

@@ -508,6 +508,8 @@ class PipelinePersistence:
         db_run_id: int,
         execution_linkage_expectations: list | None = None,
         admitted_source_ids: set[str] | None = None,
+        relevance_scores: dict[str, float] | None = None,
+        admission_exclusions: dict[str, str] | None = None,
     ) -> None:
         """Single governed persistence boundary for literature search results.
 
@@ -519,6 +521,11 @@ class PipelinePersistence:
             candidates: deduplicated papers with preserved discovery routes
             search_queries: logical queries to persist
             db_run_id: integer PK of the pipeline run
+            relevance_scores: paper source id -> cosine relevance score for
+                every validly scored candidate (admitted or excluded), so the
+                admission decision is durably auditable.
+            admission_exclusions: paper source id -> reason for candidates
+                whose relevance scoring failed (never admitted, NULL score).
         """
         if not db_run_id:
             return
@@ -603,13 +610,28 @@ class PipelinePersistence:
                         )
                     ).scalar_one_or_none()
 
+                    _paper_source_id = (
+                        str(candidate.paper.id)
+                        if hasattr(candidate, "paper") and candidate.paper is not None
+                        else None
+                    )
+                    _is_admitted = bool(
+                        admitted_source_ids
+                        and _paper_source_id in admitted_source_ids
+                    )
+                    _score = (
+                        relevance_scores.get(_paper_source_id)
+                        if relevance_scores and _paper_source_id
+                        else None
+                    )
+                    _exclusion_reason = None
+                    if not _is_admitted and _paper_source_id:
+                        if admission_exclusions and _paper_source_id in admission_exclusions:
+                            _exclusion_reason = admission_exclusions[_paper_source_id]
+                        elif relevance_scores and _paper_source_id in relevance_scores:
+                            _exclusion_reason = "below_threshold"
+
                     if not existing_rp:
-                        _paper_source_id = (
-                            candidate.paper.id if hasattr(candidate, "paper") else None
-                        )
-                        _is_admitted = bool(
-                            admitted_source_ids and _paper_source_id in admitted_source_ids
-                        )
                         new_rp = RunPaper(
                             run_id=db_run_id,
                             paper_id=paper_db_id,
@@ -618,22 +640,33 @@ class PipelinePersistence:
                             else "remote_search",
                             selected_for_downstream=_is_admitted,
                             selection_stage="literature_relevance_filter" if _is_admitted else None,
+                            relevance_score=_score,
+                            exclusion_reason=_exclusion_reason,
                         )
                         session.add(new_rp)
                         session.flush()
-                    elif (
-                        admitted_source_ids is not None
-                        and hasattr(candidate, "paper")
-                    ):
-                        # Citation-integrity: update existing RunPaper to mark
-                        # admission when the source_id is in the admitted set.
-                        _paper_source_id = (
-                            candidate.paper.id if hasattr(candidate, "paper") else None
-                        )
-                        if _paper_source_id and _paper_source_id in admitted_source_ids:
-                            existing_rp.selected_for_downstream = True
-                            existing_rp.selection_stage = "literature_relevance_filter"
-                        session.add(new_rp)
+                    else:
+                        # Citation-integrity: fully reconcile an existing
+                        # RunPaper row with the CURRENT admission decision.
+                        # Replay/resume must not preserve stale state: a
+                        # now-excluded paper loses prior admission, and a
+                        # decision that carries no score for this paper
+                        # clears a prior score (explicit NULL, not stale).
+                        if admitted_source_ids is not None:
+                            existing_rp.selected_for_downstream = _is_admitted
+                            existing_rp.selection_stage = (
+                                "literature_relevance_filter"
+                                if _is_admitted
+                                else None
+                            )
+                        if relevance_scores is not None:
+                            existing_rp.relevance_score = _score
+                        if (
+                            admission_exclusions is not None
+                            or relevance_scores is not None
+                        ):
+                            existing_rp.exclusion_reason = _exclusion_reason
+                        session.add(existing_rp)
                         session.flush()
 
                     # 2c. Insert PaperDiscovery rows (idempotent via discovery_key)

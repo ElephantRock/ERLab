@@ -29,6 +29,10 @@ from sqlalchemy.orm import sessionmaker
 sys.modules.setdefault("chromadb", MagicMock())
 sys.modules.setdefault("google.generativeai", MagicMock())
 
+# Admission is fail-closed since the citation-integrity remediation; these
+# stage-level tests need a working embedding path to exercise their subject.
+pytestmark = pytest.mark.usefixtures("uniform_embedding_provider")
+
 from backend.db.database import Base
 from backend.db.models import (
     PaperDiscovery,
