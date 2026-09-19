@@ -44,8 +44,14 @@ class SearchIntegrationService:
         results = await self._searcher.search(
             query, limit=limit, year_from=year_from, year_to=year_to,
         )
-        # Relevance filter
-        filtered = await self._filter.filter(results, query)
+        # Relevance filter. The filter is strict (raises on provider
+        # failure); this non-authoritative search path degrades explicitly
+        # to unfiltered results instead of propagating.
+        try:
+            filtered = await self._filter.filter(results, query)
+        except Exception as e:
+            logger.warning("Relevance filter failed: %s — returning unfiltered results", e)
+            filtered = results
         return filtered
 
     def check_proposal(self, text: str) -> GuardResult:

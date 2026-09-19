@@ -1,6 +1,10 @@
 """Tests for BATCH-86 — Relevance Filter.
 
 AIV v5.3 — T1, T2, T5. Use asyncio.run() not @pytest.mark.asyncio.
+
+Updated for the citation-integrity admission contract: providers expose the
+batch API embed(texts: list[str]) -> list[list[float]], and admission is
+fail-closed (a scoring failure raises instead of returning the corpus).
 """
 from __future__ import annotations
 
@@ -12,6 +16,7 @@ import pytest
 from backend.pipeline.literature.models import Paper, SearchResult
 from backend.pipeline.literature.relevance_filter import (
     RelevanceFilter,
+    RelevanceFilterError,
     _cosine_similarity,
 )
 
@@ -25,16 +30,21 @@ def _make_result(title, abstract="", score=1.0):
 
 
 class MockEmbeddingProvider:
-    """Returns deterministic embeddings based on text content."""
-    async def embed(self, text: str) -> list[float]:
-        if "machine learning" in text.lower():
-            return [0.9, 0.1, 0.0]
-        elif "deep learning" in text.lower():
-            return [0.85, 0.15, 0.0]
-        elif "cooking" in text.lower():
-            return [0.1, 0.1, 0.8]
-        else:
-            return [0.5, 0.5, 0.0]
+    """Batch-contract provider with deterministic content-keyed vectors."""
+
+    async def embed(self, texts: list[str]) -> list[list[float]]:
+        vectors = []
+        for text in texts:
+            lowered = text.lower()
+            if "machine learning" in lowered:
+                vectors.append([0.9, 0.1, 0.0])
+            elif "deep learning" in lowered:
+                vectors.append([0.85, 0.15, 0.0])
+            elif "cooking" in lowered:
+                vectors.append([0.1, 0.1, 0.8])
+            else:
+                vectors.append([0.5, 0.5, 0.0])
+        return vectors
 
 
 def test_86_01_cosine_similarity_identical():
@@ -89,19 +99,40 @@ def test_86_02_minimum_papers_guarantee():
     assert len(result) >= 2
 
 
-def test_86_02_no_provider_returns_all():
-    """No embedding provider means no filtering."""
+def test_86_02_no_provider_fails_closed():
+    """No embedding provider is an error, never an unfiltered pass-through."""
     f = RelevanceFilter(embedding_provider=None)
     papers = [_make_result("Paper A"), _make_result("Paper B")]
-    result = asyncio.run(f.filter(papers, "test"))
-    assert len(result) == 2
+    with pytest.raises(RelevanceFilterError):
+        asyncio.run(f.filter(papers, "test"))
 
 
-def test_86_02_filter_failure_returns_original():
-    """Provider failure returns original list (HB-02)."""
+def test_86_02_provider_failure_fails_closed():
+    """Provider failure raises instead of returning the original corpus."""
     failing_provider = AsyncMock()
     failing_provider.embed = AsyncMock(side_effect=Exception("Embedding failed"))
     f = RelevanceFilter(embedding_provider=failing_provider)
     papers = [_make_result("Paper A")]
-    result = asyncio.run(f.filter(papers, "test"))
-    assert len(result) == 1
+    with pytest.raises(RelevanceFilterError):
+        asyncio.run(f.filter(papers, "test"))
+
+
+def test_86_02_floor_selects_top_scored_not_insertion_order():
+    """Regression: the min-papers floor takes the highest-scoring papers.
+
+    The pre-remediation filter silently scored everything 0.0 (string/list
+    provider contract mismatch), so the floor returned the first papers in
+    insertion order. With valid scoring the floor must select by score.
+    """
+    provider = MockEmbeddingProvider()
+    f = RelevanceFilter(embedding_provider=provider, threshold=0.99, min_papers=2)
+    # Input order deliberately reversed relative to expected score order.
+    papers = [
+        _make_result("Cooking Italian Pasta"),      # lowest similarity
+        _make_result("Deep Learning for NLP"),      # middle
+        _make_result("Machine Learning Advances"),  # highest
+    ]
+    result = asyncio.run(f.filter(papers, "machine learning"))
+    assert len(result) == 2
+    assert result[0].paper.title == "Machine Learning Advances"
+    assert result[1].paper.title == "Deep Learning for NLP"

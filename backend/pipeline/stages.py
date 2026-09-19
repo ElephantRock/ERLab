@@ -60,6 +60,11 @@ class StageContext:
     execution_linkage_expectations: list = field(default_factory=list)
     # P0.2.7: Explicit governed-search marker (replaces context-truthiness)
     governed_search_context: Any = None  # GovernedSearchContext | None
+    # Citation-integrity: admission audit maps (paper id -> score / reason).
+    # scores covers every validly scored candidate; exclusions maps papers
+    # whose relevance scoring failed to the failure reason.
+    admission_scores: dict = field(default_factory=dict)
+    admission_exclusions: dict = field(default_factory=dict)
 
 
 @dataclass
@@ -400,6 +405,74 @@ class LiteratureSearchStage(PipelineStage):
     @property
     def name(self) -> str:
         return "literature_search"
+
+    async def _admit_corpus(
+        self,
+        papers: list,
+        domain_query: str,
+    ) -> tuple[list, set, dict, dict]:
+        """Score `papers` against `domain_query` and return the admission decision.
+
+        Returns (admitted_papers, admitted_source_ids, scores, exclusions):
+        scores covers every validly scored paper (admitted or not), exclusions
+        maps unscorable paper ids to the failure reason. Any failure of the
+        scoring pathway raises LiteratureAdmissionError — an unfiltered corpus
+        is never presented as the admission decision.
+        """
+        from types import SimpleNamespace
+
+        from backend.config import get_settings
+        from backend.pipeline.knowledge.embedding_providers import (
+            create_embedding_provider,
+            resolve_embedding_base_url,
+        )
+        from backend.pipeline.literature.relevance_filter import (
+            LiteratureAdmissionError,
+            RelevanceFilter,
+        )
+
+        if not papers:
+            return [], set(), {}, {}
+
+        try:
+            _gs = get_settings()
+            _emb = create_embedding_provider(
+                provider_name=_gs.embedding_provider,
+                model=_gs.embedding_model,
+                api_key=_gs.openai_api_key,
+                base_url=resolve_embedding_base_url(
+                    _gs, _gs.embedding_provider
+                ),
+                dimension=_gs.embedding_dimension or None,
+            )
+            if _emb is None:
+                raise RuntimeError("embedding provider unavailable for admission")
+            _wrapped = [
+                SimpleNamespace(paper=p, relevance_score=getattr(p, "relevance_score", None))
+                for p in papers
+            ]
+            _outcome = await RelevanceFilter(embedding_provider=_emb).filter_with_scores(
+                _wrapped, domain_query
+            )
+            _survivor_ids = {id(w) for w in _outcome.survivors}
+            admitted_ids = {
+                str(w.paper.id) for w in _wrapped if id(w) in _survivor_ids
+            }
+            admitted = [w.paper for w in _wrapped if id(w) in _survivor_ids]
+            logger.info(
+                "Literature admission: %d/%d papers admitted (%d scored, %d unscorable)",
+                len(admitted), len(_wrapped),
+                len(_outcome.scores), len(_outcome.failures),
+            )
+            return admitted, admitted_ids, dict(_outcome.scores), dict(_outcome.failures)
+        except Exception as _adm_err:
+            logger.error(
+                "Literature admission FAILED (%s) — failing stage closed: no valid "
+                "relevance scoring, no admission decision.", _adm_err,
+            )
+            raise LiteratureAdmissionError(
+                f"Literature admission failed closed: {_adm_err}"
+            ) from _adm_err
 
     async def _execute_query_batch(
         self,
@@ -1005,54 +1078,20 @@ class LiteratureSearchStage(PipelineStage):
         # Citation-integrity remediation: the literature-ADMISSION decision.
         # Survivors of the embedding relevance filter are ADMITTED into the
         # run corpus; filtered-out papers remain discovered candidates but
-        # are never admitted (never eligible for citation). A filter failure
-        # is recorded explicitly — silent bypass is the defect this removes.
-        from types import SimpleNamespace
-
-        from backend.pipeline.knowledge.embedding_providers import (
-            create_embedding_provider,
-            resolve_embedding_base_url,
-        )
-        from backend.pipeline.literature.relevance_filter import RelevanceFilter
-        admitted_source_ids: set[str] = set()
-        try:
-            _gs = get_settings()
-            _emb = create_embedding_provider(
-                provider_name=_gs.embedding_provider,
-                model=_gs.embedding_model,
-                api_key=_gs.openai_api_key,
-                base_url=resolve_embedding_base_url(
-                    _gs, _gs.embedding_provider
-                ),
-                dimension=_gs.embedding_dimension or None,
-            )
-            if _emb is None:
-                raise RuntimeError("embedding provider unavailable for admission")
-            _admission_query = ctx.research_question or ctx.domain or ""
-            _wrapped = [
-                SimpleNamespace(paper=p, relevance_score=getattr(p, "relevance_score", None))
-                for p in unique
-            ]
-            _survivors = await RelevanceFilter(embedding_provider=_emb).filter(
-                _wrapped, _admission_query
-            )
-            _survivor_ids = {id(w) for w in _survivors}
-            admitted_source_ids = {
-                w.paper.id for w in _wrapped if id(w) in _survivor_ids
-            }
-            unique = [w.paper for w in _wrapped if id(w) in _survivor_ids]
-            logger.info(
-                "Literature admission: %d/%d papers admitted (embedding relevance filter)",
-                len(unique), len(_wrapped),
-            )
-        except Exception as _adm_err:
-            logger.error(
-                "Literature admission filter FAILED (%s) — proceeding UNFILTERED "
-                "with explicit bypass marker; citations from unadmitted papers "
-                "will resolve as unresolved downstream.", _adm_err,
-            )
+        # are never admitted (never eligible for citation). Admission-scoring
+        # failure FAILS CLOSED: the stage aborts rather than continuing with
+        # an unfiltered corpus masquerading as admitted.
+        _admission_query = ctx.research_question or ctx.domain or ""
+        (
+            unique,
+            admitted_source_ids,
+            admission_scores,
+            admission_exclusions,
+        ) = await self._admit_corpus(unique, _admission_query)
         ctx.all_papers = unique
         ctx.admitted_source_ids = admitted_source_ids
+        ctx.admission_scores = admission_scores
+        ctx.admission_exclusions = admission_exclusions
         ctx.candidate_papers = unique_candidates
         ctx.search_query_data = search_query_data
         ctx.execution_linkage_expectations = all_linkage_expectations
