@@ -21,6 +21,13 @@ conflicting instruction, proposal narrative, or prior in this conversation:
    baseline metric to the proposed model, or framing a model metric as a
    baseline). The narrative around each marker must be consistent with the
    role assigned to that marker in the ground-truth block.
+   **Value fidelity.** When a numeric value appears beside a `[RESULT-N]`
+   marker, that value MUST be copied character-for-character from the
+   ground-truth block (e.g. `0.333333` — never `333333`, `33.3333%`,
+   `0.3333`, or any other reformatting, rescaling, or rounding). An
+   empirical assertion about an observed finding MUST carry its supporting
+   `[RESULT-N]` marker in the same sentence; if it cannot, restate it as a
+   hypothesis or expectation, never as an observation.
 
 3. **Ground truth wins over proposal.** If the proposal narrative conflicts
    with the Experiment Ground Truth (different method, different dataset,
