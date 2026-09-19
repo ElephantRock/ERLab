@@ -404,6 +404,14 @@ class SectionWiseSynthesizer:
             parts.append("### Authorized result markers (use verbatim)")
             for m in result_markers:  # type: ignore[union-attr]
                 parts.append(f"- {m}")
+            parts.append(
+                "Render each metric value EXACTLY as written above, "
+                "character-for-character, immediately beside its marker — "
+                "never reformatted, percentified, rescaled, or rounded "
+                "(write 0.333333, never 333333 or 33.3333%). Every "
+                "empirical assertion about an observed finding must carry "
+                "its [RESULT-N] marker in the same sentence."
+            )
             parts.append("")
 
         return "\n".join(parts) + "\n"

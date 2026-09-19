@@ -103,6 +103,17 @@ async def synthesize_paper(
     This is the single entry point for all paper synthesis: pipeline stage,
     automatic recovery, and manual CLI recovery.
 
+    For empirical synthesis (``result_markers`` present), the output passes
+    through deterministic result-marker reconciliation before returning:
+    marker-adjacent numbers are repaired to the exact persisted values, and
+    unbacked empirical conclusions trigger ONE bounded corrective
+    re-synthesis. Failures that cannot be reconciled raise
+    ``ResultMarkerFidelityError`` (fail-closed) — an empirical paper is
+    never returned with values the numeric-fidelity gate would block. Both
+    synthesis routes (monolithic and section-wise) are covered: the
+    reconciliation is applied here, at the single return boundary they
+    share.
+
     Args:
         provider: LLM provider for generation.
         proposal_text: The proposal markdown.
@@ -124,6 +135,114 @@ async def synthesize_paper(
             monolithic attempt (used by PaperSynthesisStage to honor an
             injected synthesizer, e.g. in tests). When None the service
             constructs its own from ``provider``.
+    """
+    from backend.pipeline.synthesis.result_marker_fidelity import (
+        ResultMarkerFidelityError,
+        build_correction_instruction,
+        empirical_claim_violations,
+        parse_marker_strings,
+        reconcile_marker_values,
+    )
+
+    marker_values = parse_marker_strings(result_markers) if result_markers else []
+    if not marker_values:
+        # Non-empirical synthesis: unchanged behavior, no reconciliation.
+        return await _synthesize_paper_attempt(
+            provider=provider,
+            proposal_text=proposal_text,
+            source_papers=source_papers,
+            source_ids=source_ids,
+            domain=domain,
+            proposal_id=proposal_id,
+            budget=budget,
+            experiment_context=experiment_context,
+            result_markers=None,
+            existing_checkpoints=existing_checkpoints,
+            checkpoint_callback=checkpoint_callback,
+            context_window=context_window,
+            synthesizer_override=synthesizer_override,
+        )
+
+    correction = None
+    violations: list[str] = []
+    max_attempts = 2  # initial synthesis + one bounded corrective pass
+    for attempt in range(1, max_attempts + 1):
+        ec = experiment_context
+        if correction:
+            ec = (
+                f"{experiment_context}\n\n{correction}"
+                if experiment_context
+                else correction
+            )
+        result = await _synthesize_paper_attempt(
+            provider=provider,
+            proposal_text=proposal_text,
+            source_papers=source_papers,
+            source_ids=source_ids,
+            domain=domain,
+            proposal_id=proposal_id,
+            budget=budget,
+            experiment_context=ec,
+            result_markers=result_markers,
+            existing_checkpoints=existing_checkpoints,
+            checkpoint_callback=checkpoint_callback,
+            context_window=context_window,
+            synthesizer_override=synthesizer_override,
+        )
+        if not result.success:
+            return result
+
+        repaired, report = reconcile_marker_values(
+            result.paper_markdown, marker_values
+        )
+        if not report.ok:
+            raise ResultMarkerFidelityError(
+                "Empirical paper contains marker-adjacent numbers that "
+                "cannot be reconciled to persisted results: "
+                + "; ".join(report.violations[:5])
+            )
+        if report.repairs:
+            result.paper_markdown = repaired
+            result.word_count = len(repaired.split())
+
+        violations = empirical_claim_violations(
+            result.paper_markdown, marker_values
+        )
+        if not violations:
+            return result
+        logger.warning(
+            "Synthesis attempt %d: %d empirical conclusion(s) lack "
+            "[RESULT-N] backing — %s",
+            attempt, len(violations), "; ".join(violations[:3]),
+        )
+        if attempt < max_attempts:
+            correction = build_correction_instruction(violations)
+
+    raise ResultMarkerFidelityError(
+        "Empirical paper retains unbacked empirical conclusions after the "
+        "corrective re-synthesis: " + "; ".join(violations[:5])
+    )
+
+
+async def _synthesize_paper_attempt(
+    provider: LLMProvider,
+    proposal_text: str,
+    source_papers: list[str],
+    source_ids: list[str],
+    domain: str,
+    proposal_id: int,
+    budget: SynthesisBudget | None = None,
+    experiment_context: str | None = None,
+    result_markers: list[str] | None = None,
+    existing_checkpoints: dict[str, dict] | None = None,
+    checkpoint_callback: Callable[[str, dict], None] | None = None,
+    context_window: int = 128000,
+    synthesizer_override=None,
+) -> SynthesisServiceResult:
+    """One full synthesis flow: monolithic attempt, then section fallback.
+
+    Formerly the body of ``synthesize_paper``; extracted so the empirical
+    marker-fidelity wrapper can run a bounded corrective re-synthesis.
     """
     if budget is None:
         budget = SynthesisBudget()
