@@ -5229,7 +5229,8 @@ class CitationAuditStage(PipelineStage):
         """
         markers = []
         if ctx is not None and getattr(ctx, "result", None) is not None:
-            markers = ctx.result.result_markers.get(idx, []) or []
+            markers_map = getattr(ctx.result, "result_markers", None) or {}
+            markers = markers_map.get(idx, []) or []
         return [PaperSynthesisStage._format_result_marker(m) for m in markers]
 
     @staticmethod
