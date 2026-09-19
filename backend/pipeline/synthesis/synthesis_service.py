@@ -174,6 +174,11 @@ async def synthesize_paper(
                 if experiment_context
                 else correction
             )
+        # The corrective pass must not reuse prior section checkpoints
+        # (they would deterministically reproduce the same violations) and
+        # must not write resume state for a possibly-discarded attempt.
+        attempt_checkpoints = existing_checkpoints if attempt == 1 else None
+        attempt_callback = checkpoint_callback if attempt == 1 else None
         result = await _synthesize_paper_attempt(
             provider=provider,
             proposal_text=proposal_text,
@@ -184,8 +189,8 @@ async def synthesize_paper(
             budget=budget,
             experiment_context=ec,
             result_markers=result_markers,
-            existing_checkpoints=existing_checkpoints,
-            checkpoint_callback=checkpoint_callback,
+            existing_checkpoints=attempt_checkpoints,
+            checkpoint_callback=attempt_callback,
             context_window=context_window,
             synthesizer_override=synthesizer_override,
         )

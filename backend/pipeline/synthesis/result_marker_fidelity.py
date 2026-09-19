@@ -101,13 +101,45 @@ def parse_marker_strings(result_markers: list[str]) -> list[MarkerValue]:
 def _norm_digits(token: str) -> str:
     """Digits of a numeric token with separators and leading zeros dropped.
 
-    ``0.333333`` → ``333333``; ``333333`` → ``333333``; ``33.3333`` →
-    ``333333``. Two tokens with equal normalized digits differ only by a
-    dropped decimal point (the observed corruption) or a percentified
-    scale — both deterministically repairable to the authoritative value.
+    ``0.333333`` → ``333333``; ``333333`` → ``333333``. Sign is preserved
+    as a prefix so a flipped sign never normalizes into the positive
+    authoritative value.
     """
     stripped = token.replace(".", "").replace(",", "").replace("%", "")
     return stripped.lstrip("0") or "0"
+
+
+def _is_sanctioned_corruption(
+    token: str, marker: MarkerValue, *, percentified: bool
+) -> bool:
+    """True iff the token is one of the two sanctioned corruption shapes.
+
+    Sanctioned (deterministically repairable to the authoritative value):
+      - dropped decimal point: ``0.333333`` rendered as ``333333``
+        (token equals the authoritative digits with the point removed);
+      - percentified form: ``33.3333%`` against ``0.333333``
+        (float(token) == observed_value * 100).
+
+    Everything else — sign flips, decimal-position shifts such as
+    ``3.33333``, truncated values — fails closed.
+    """
+    if token[:1] in ("-", "+"):
+        return False
+    bare = token.rstrip("%")
+    if percentified:
+        try:
+            return abs(
+                float(bare) - marker.observed_value * 100
+            ) <= abs(marker.observed_value * 100) * 1e-6 + 1e-9
+        except ValueError:
+            return False
+    dropped = (
+        marker.value_text.replace(".", "").replace(",", "").lstrip("0") or "0"
+    )
+    return (
+        token.replace(".", "").replace(",", "").lstrip("0") == dropped
+        and token.lstrip("-+").find(".") == -1
+    )
 
 
 def _repair_span(match: re.Match, value_text: str) -> str:
@@ -165,7 +197,9 @@ def reconcile_marker_values(
                 continue
         except ValueError:
             pass
-        if _norm_digits(token) == _norm_digits(marker.value_text):
+        if _is_sanctioned_corruption(
+            token, marker, percentified="%" in m.group(0)
+        ):
             repairs.append(
                 (
                     m.start(),
@@ -188,12 +222,12 @@ def reconcile_marker_values(
     # Run on the repaired text so spans reflect any before-marker fixes.
     repairs = []
     for bracket, marker in by_bracket.items():
-        inner = bracket[1:-1]
-        after_re = re.compile(
-            r"\[" + inner + r"\]\s*(?:of|=|:)?\s*"
-            r"(?P<num>[-+]?(?:\d+\.?\d*|\.\d+)(?:[eE][-+]?\d+)?)\s*%?"
-        )
-        for m in after_re.finditer(text):
+        # Oracle parity: the validator's own after-marker pattern, filtered
+        # to this bracket (the validator scans generically and filters by
+        # marker index the same way).
+        for m in crv._NUM_AFTER_RE.finditer(text):
+            if bracket not in m.group(0):
+                continue
             report.checked += 1
             token = m.group("num")
             try:
@@ -202,7 +236,9 @@ def reconcile_marker_values(
                     continue
             except ValueError:
                 continue
-            if _norm_digits(token) == _norm_digits(marker.value_text):
+            if _is_sanctioned_corruption(
+                token, marker, percentified="%" in m.group(0)
+            ):
                 repairs.append(
                     (
                         m.start(),

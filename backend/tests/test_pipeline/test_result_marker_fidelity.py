@@ -138,6 +138,20 @@ def test_wrong_digits_fail_closed():
     assert "999999" in text  # never silently rewritten to a guess
 
 
+def test_sign_flipped_number_fails_closed():
+    paper = "The baseline scored -333333 [RESULT-1] on the frozen split."
+    text, report = reconcile_marker_values(paper, _markers())
+    assert not report.ok
+    assert "-333333" in text  # sign flip is never silently repaired
+
+
+def test_decimal_shift_fails_closed():
+    paper = "The baseline scored 3.33333 [RESULT-1] on the frozen split."
+    text, report = reconcile_marker_values(paper, _markers())
+    assert not report.ok
+    assert "3.33333" in text  # a 10x decimal shift is a violation, not a repair
+
+
 def test_referential_marker_without_number_untouched():
     paper = "See [RESULT-1] for the per-class breakdown on the frozen split."
     text, report = reconcile_marker_values(paper, _markers())
