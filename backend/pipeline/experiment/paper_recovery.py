@@ -214,11 +214,20 @@ async def resume_empirical_paper(
     synthesis_sources = list(source_papers) + [experiment_context]
 
     # ── 4. Synthesize paper via unified service ────────────────────
+    from backend.pipeline.stages import PaperSynthesisStage
     from backend.pipeline.synthesis.synthesis_budget import SynthesisBudget
     from backend.pipeline.synthesis.synthesis_service import synthesize_paper
 
     settings = get_settings()
     provider = get_generation_provider(settings)
+
+    # Empirical fidelity boundary: the authoritative marker strings MUST be
+    # passed so the unified service applies result-marker reconciliation to
+    # recovered synthesis too. Omitting them would mark the run
+    # non-empirical and bypass the same-sentence/value checks.
+    authoritative_markers = [
+        PaperSynthesisStage._format_result_marker(m) for m in result_markers
+    ]
 
     synth_result = await synthesize_paper(
         provider=provider,
@@ -229,6 +238,7 @@ async def resume_empirical_paper(
         proposal_id=proposal_id,
         budget=SynthesisBudget(),  # default 1200s total, 400s monolithic, 800s fallback
         experiment_context=experiment_context,
+        result_markers=authoritative_markers,
     )
 
     if not synth_result.success:

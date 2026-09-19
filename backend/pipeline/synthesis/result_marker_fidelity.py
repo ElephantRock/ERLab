@@ -26,11 +26,11 @@ from __future__ import annotations
 import logging
 import re
 from dataclasses import dataclass, field
-from types import SimpleNamespace
 
 from backend.pipeline.evaluation import claim_result_validator as crv
 from backend.pipeline.evaluation.conclusion_support import (
-    evaluate_conclusion_support,
+    EMPIRICAL_CLAIM_PATTERNS,
+    extract_abstract_and_conclusion,
 )
 
 logger = logging.getLogger(__name__)
@@ -125,14 +125,11 @@ def _is_sanctioned_corruption(
     """
     if token[:1] in ("-", "+"):
         return False
-    bare = token.rstrip("%")
     if percentified:
-        try:
-            return abs(
-                float(bare) - marker.observed_value * 100
-            ) <= abs(marker.observed_value * 100) * 1e-6 + 1e-9
-        except ValueError:
-            return False
+        # Any percent rendering beside the marker is a unit error against
+        # the fraction-valued contract: normalize to the authoritative
+        # value (covers both 33.3333% scaled and 0.333333% unit-marked).
+        return True
     dropped = (
         marker.value_text.replace(".", "").replace(",", "").lstrip("0") or "0"
     )
@@ -191,15 +188,19 @@ def reconcile_marker_values(
             continue
         report.checked += 1
         token = m.group("num")
-        try:
-            rendered = float(token)
-            if crv._values_agree(rendered, marker.observed_value):
-                continue
-        except ValueError:
-            pass
-        if _is_sanctioned_corruption(
-            token, marker, percentified="%" in m.group(0)
-        ):
+        percentified = "%" in m.group(0)
+        if not percentified:
+            # A bare number that already agrees passes through; a
+            # percent-marked number participates in reconciliation even
+            # when its magnitude agrees — the persisted value is a
+            # fraction, and "0.333333%" is a 100x unit error.
+            try:
+                rendered = float(token)
+                if crv._values_agree(rendered, marker.observed_value):
+                    continue
+            except ValueError:
+                pass
+        if _is_sanctioned_corruption(token, marker, percentified=percentified):
             repairs.append(
                 (
                     m.start(),
@@ -230,15 +231,15 @@ def reconcile_marker_values(
                 continue
             report.checked += 1
             token = m.group("num")
-            try:
-                rendered = float(token)
-                if crv._values_agree(rendered, marker.observed_value):
+            percentified = "%" in m.group(0)
+            if not percentified:
+                try:
+                    rendered = float(token)
+                    if crv._values_agree(rendered, marker.observed_value):
+                        continue
+                except ValueError:
                     continue
-            except ValueError:
-                continue
-            if _is_sanctioned_corruption(
-                token, marker, percentified="%" in m.group(0)
-            ):
+            if _is_sanctioned_corruption(token, marker, percentified=percentified):
                 repairs.append(
                     (
                         m.start(),
@@ -275,18 +276,46 @@ def reconcile_marker_values(
 def empirical_claim_violations(
     paper_md: str, markers: list[MarkerValue]
 ) -> list[str]:
-    """Empirical conclusions in abstract/conclusion lacking marker backing.
+    """Empirical assertions lacking a [RESULT-N] marker in the SAME sentence.
 
-    Reuses the canonical shared rule (``evaluation.conclusion_support``)
-    read-only — the same detector the evaluation gate applies — so a
-    violation here is exactly a violation the gate would block on.
+    Producer-side contract for the empirical remediation: an observed
+    empirical assertion (the canonical empirical-claim patterns from
+    ``evaluation.conclusion_support``, over the same abstract/conclusion
+    scope) must carry its supporting marker in the same sentence. The
+    canonical gate's ±200-character window is intentionally NOT weakened —
+    it still applies at evaluation time — but this producer check is
+    stricter: a marker in a neighboring sentence does not satisfy it.
+    Diagnostics on properly backed claims (e.g. ``self-claim: 'we
+    demonstrate'`` on a supported paper) are not violations.
     """
-    pseudo = [
-        SimpleNamespace(marker_index=int(m.bracket[len("[RESULT-"):-1]))
-        for m in markers
-    ]
-    assessment = evaluate_conclusion_support(paper_md, pseudo)
-    return list(assessment.indicators or [])
+    if not markers or not paper_md:
+        return []
+
+    available = {m.bracket for m in markers}
+    abstract, conclusion = extract_abstract_and_conclusion(paper_md)
+    text = f"{abstract}\n{conclusion}"
+
+    violations: list[str] = []
+    for sentence in re.split(r"(?<=[.!?])\s+|\n+", text):
+        if not sentence.strip():
+            continue
+        hit = next(
+            (
+                label
+                for pattern, label in EMPIRICAL_CLAIM_PATTERNS
+                if re.search(pattern, sentence, re.IGNORECASE)
+            ),
+            None,
+        )
+        if hit is None:
+            continue
+        cited = set(re.findall(r"\[RESULT-\d+\]", sentence))
+        if not (cited & available):
+            violations.append(
+                f"empirical assertion '{hit}' without a same-sentence "
+                f"[RESULT-N] marker: '{sentence.strip()[:140]}'"
+            )
+    return violations
 
 
 def build_correction_instruction(violations: list[str]) -> str:

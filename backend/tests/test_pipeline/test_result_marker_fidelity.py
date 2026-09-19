@@ -227,6 +227,55 @@ def test_correction_instruction_quotes_violations():
     assert "[RESULT-N]" in instruction
 
 
+def test_backed_self_claim_not_a_violation():
+    """A properly backed 'we demonstrate' claim is accepted — the canonical
+    detector retains a diagnostic indicator for it, but only unbacked
+    assertions are corrective violations (review blocker 1)."""
+    paper = _paper_with(
+        "We demonstrate that the frozen protocol is reproducible: the "
+        "baseline scored 0.333333 [RESULT-1] on the frozen split.",
+        "The model reached 0.966667 [RESULT-3]. The improvement was "
+        "0.633333 [RESULT-2].",
+    )
+    assert empirical_claim_violations(paper, _markers()) == []
+
+
+def test_marker_in_neighboring_sentence_fails_same_sentence_rule():
+    """The producer contract requires the marker in the SAME sentence; a
+    marker in the next sentence (within the canonical gate's 200-char
+    window) does not satisfy it (review contract gap)."""
+    paper = _paper_with(
+        "We evaluate a frozen baseline-referenced protocol.",
+        "These observed gaps demonstrate that the classifier recovers "
+        "nearly all discriminative signal. The model reached 0.966667 "
+        "[RESULT-3] on the frozen split.",
+    )
+    violations = empirical_claim_violations(paper, _markers())
+    assert violations
+    assert any("same-sentence" in v for v in violations)
+
+
+# ── Percent-unit participation (review blocker 2) ────────────────
+
+
+def test_unit_marked_percent_before_marker_repaired():
+    paper = "Accuracy was 0.333333% [RESULT-1] on the frozen split."
+    text, report = reconcile_marker_values(paper, _markers())
+    assert report.ok, report.violations
+    assert "0.333333 [RESULT-1]" in text
+    assert "%" not in text
+    assert _oracle_mismatches(text) == []
+
+
+def test_unit_marked_percent_after_marker_repaired():
+    paper = "The frozen split yields [RESULT-1] = 0.333333% exactly."
+    text, report = reconcile_marker_values(paper, _markers())
+    assert report.ok, report.violations
+    assert "[RESULT-1] = 0.333333" in text
+    assert "%" not in text
+    assert _oracle_mismatches(text) == []
+
+
 # ── Service-level wiring (monolithic + section fallback) ─────────
 
 
@@ -386,3 +435,157 @@ def test_section_fallback_output_reconciled(monkeypatch):
     assert result.synthesis_strategy == "section_wise"
     assert "0.333333 [RESULT-1]" in result.paper_markdown
     assert not re.search(r"(?<![\d.])333333 \[RESULT-1\]", result.paper_markdown)
+
+
+# ── Recovery path enters the fidelity boundary (review blocker 3) ──
+
+
+def test_recovery_passes_authoritative_markers(monkeypatch):
+    """resume_empirical_paper must format and pass the authoritative
+    [RESULT-N] strings so recovered empirical synthesis goes through the
+    same fidelity boundary as pipeline synthesis."""
+    import json
+    import sys
+    from contextlib import contextmanager
+    from unittest.mock import MagicMock
+
+    sys.modules.setdefault("chromadb", MagicMock())
+    sys.modules.setdefault("google.generativeai", MagicMock())
+
+    from sqlalchemy import create_engine
+    from sqlalchemy.orm import sessionmaker
+
+    from backend.db.database import Base
+    from backend.db.models import (
+        ExperimentResult,
+        Idea,
+        Paper,
+        PaperSourceMarker,
+        PipelineRun,
+        Proposal,
+    )
+
+    engine = create_engine(
+        "sqlite:///:memory:", connect_args={"check_same_thread": False}
+    )
+    Base.metadata.create_all(engine)
+    factory = sessionmaker(bind=engine, expire_on_commit=False)
+
+    setup = factory()
+    run = PipelineRun(
+        run_id_str="run_recovery", domain="test", status="completed",
+        provenance_version="provenance_v1",
+    )
+    setup.add(run)
+    setup.flush()
+    idea = Idea(
+        title="Recovery idea", problem_statement="p",
+        proposed_method="m", expected_contributions="c",
+        pipeline_run_id=run.id,
+    )
+    setup.add(idea)
+    setup.flush()
+    proposal = Proposal(idea_id=idea.id, content_md="proposal text")
+    setup.add(proposal)
+    setup.flush()
+    papers = [
+        Paper(source_id=f"w{i}", source="openalex", title=f"Paper {i}",
+              authors="[]", year=2020, venue="V", abstract="abstract text")
+        for i in (1, 2)
+    ]
+    setup.add_all(papers)
+    setup.flush()
+    for i, paper in enumerate(papers, 1):
+        setup.add(PaperSourceMarker(
+            proposal_id=proposal.id, marker_index=i,
+            marker=f"SOURCE-{i}", source_paper_id=paper.id,
+            mapping_status="mapped",
+        ))
+    manifest = {
+        "schema_version": "1",
+        "experiment_spec_id": "phase5-pilot-v1",
+        "dataset": {
+            "name": "iris", "version": "1.0.0",
+            "source": "UCI", "license": "PD",
+            "relative_path": "data/datasets/iris/iris_raw.csv",
+            "raw_sha256": "1091a0dfd033acb7733af503637b2c7db8818ebe67ec8ccd5a4d4d5e57f5914f",
+        },
+        "split": {
+            "method": "stratified, first 80% train / last 20% test",
+            "train_fraction": 0.8, "test_fraction": 0.2, "random_seed": 42,
+        },
+        "analysis": {
+            "entrypoint": "experiments/phase5_pilot_v1/analysis.py",
+            "code_sha256": "0" * 64,
+            "command": "python experiments/phase5_pilot_v1/analysis.py",
+            "method": "logistic regression vs majority baseline",
+            "declared_metrics": [
+                "baseline_accuracy", "model_accuracy", "improvement"
+            ],
+        },
+        "results": {
+            "baseline_accuracy": 0.333333,
+            "model_accuracy": 0.966667,
+            "improvement": 0.633333,
+        },
+        "result_artifacts": [],
+        "status": "succeeded",
+    }
+    exp = ExperimentResult(
+        idea_id=idea.id, success=1, exit_code=0,
+        code_md="# checked-in analysis", stdout="", stderr="",
+        manifest_json=json.dumps(manifest),
+    )
+    setup.add(exp)
+    setup.commit()
+    proposal_id = proposal.id
+    exp_id = exp.id
+    setup.close()
+
+    captured = {}
+
+    class _Captured(Exception):
+        pass
+
+    async def fake_synthesize_paper(**kwargs):
+        captured.update(kwargs)
+        raise _Captured()
+
+    from backend.pipeline.experiment import paper_recovery
+    from backend.pipeline.synthesis import synthesis_service
+
+    monkeypatch.setattr(
+        synthesis_service, "synthesize_paper", fake_synthesize_paper
+    )
+    monkeypatch.setattr(
+        paper_recovery, "get_generation_provider", lambda settings: object()
+    )
+
+    @contextmanager
+    def patched_get_session():
+        session = factory()
+        try:
+            yield session
+        finally:
+            session.close()
+
+    monkeypatch.setattr(paper_recovery, "get_session", patched_get_session)
+
+    with pytest.raises(_Captured):
+        asyncio.run(
+            paper_recovery.resume_empirical_paper(
+                proposal_id=proposal_id, experiment_result_id=exp_id
+            )
+        )
+
+    assert "result_markers" in captured, (
+        "recovery must pass authoritative marker strings into the fidelity "
+        "boundary"
+    )
+    ms = captured["result_markers"]
+    assert any(
+        m.startswith("[RESULT-1] baseline_accuracy = 0.333333") for m in ms
+    )
+    assert any(
+        m.startswith("[RESULT-3] model_accuracy = 0.966667") for m in ms
+    )
