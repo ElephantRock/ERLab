@@ -1,0 +1,284 @@
+name: Arabic domain-transfer data census
+
+on:
+  push:
+    branches:
+      - audit/arabic-domain-transfer-freeze
+    paths:
+      - .github/workflows/arabic-domain-transfer-census.yml
+
+permissions:
+  contents: read
+
+jobs:
+  census:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Fetch pinned UniMorph ara_new bytes
+        shell: bash
+        run: |
+          set -euo pipefail
+          url='https://raw.githubusercontent.com/unimorph/ara/e9b7521ab75e3a7da6f996a428031164993e6f19/ara_new'
+          curl --fail --location --retry 3 --retry-all-errors --silent --show-error \
+            "$url" -o ara_new
+          test "$(wc -c < ara_new)" -eq 10476193
+
+      - name: Compute exact identity, Unicode/data census, and frozen split facts
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from __future__ import annotations
+
+          import collections
+          import hashlib
+          import json
+          import math
+          import sys
+          import unicodedata
+          from pathlib import Path
+
+          SOURCE = {
+              "repository": "https://github.com/unimorph/ara",
+              "commit": "e9b7521ab75e3a7da6f996a428031164993e6f19",
+              "path": "ara_new",
+              "expected_git_blob_sha1": "22639239a59524301fcddbfe7794d336d389b221",
+              "expected_size_bytes": 10476193,
+          }
+          SPLIT_SALT = "42"
+
+          p = Path("ara_new")
+          raw = p.read_bytes()
+          source_sha256 = hashlib.sha256(raw).hexdigest()
+          git_blob_sha1 = hashlib.sha1(
+              b"blob " + str(len(raw)).encode("ascii") + b"\0" + raw
+          ).hexdigest()
+          if len(raw) != SOURCE["expected_size_bytes"]:
+              raise SystemExit(f"size mismatch: {len(raw)}")
+          if git_blob_sha1 != SOURCE["expected_git_blob_sha1"]:
+              raise SystemExit(f"git blob mismatch: {git_blob_sha1}")
+
+          # Strict decode is itself a UTF-8 validity check.
+          text = raw.decode("utf-8", errors="strict")
+          lines = text.splitlines()
+          newline_lf = raw.count(b"\n")
+          newline_crlf = raw.count(b"\r\n")
+          newline_cr = raw.count(b"\r")
+          trailing_newline = raw.endswith((b"\n", b"\r"))
+
+          malformed = []
+          records = []
+          for i, line in enumerate(lines, 1):
+              parts = line.split("\t")
+              if len(parts) != 3 or any(part == "" for part in parts):
+                  malformed.append({"line": i, "field_count": len(parts), "preview": line[:120]})
+                  continue
+              records.append(tuple(parts))
+
+          record_counter = collections.Counter(records)
+          duplicate_extra_rows = sum(n - 1 for n in record_counter.values() if n > 1)
+          duplicate_groups = sum(1 for n in record_counter.values() if n > 1)
+          duplicate_examples = [
+              {"lemma": rec[0], "surface": rec[1], "features": rec[2], "count": n}
+              for rec, n in sorted(record_counter.items(), key=lambda x: (-x[1], x[0]))
+              if n > 1
+          ][:20]
+
+          lemmas = sorted({r[0] for r in records})
+          surfaces = {r[1] for r in records}
+          feature_counter = collections.Counter(r[2] for r in records)
+          row_pos_counter = collections.Counter(r[2].split(";", 1)[0] for r in records)
+
+          lemma_pos = collections.defaultdict(set)
+          for lemma, _, features in records:
+              lemma_pos[lemma].add(features.split(";", 1)[0])
+          lemma_pos_counter = collections.Counter()
+          for lemma, pos_set in lemma_pos.items():
+              for pos in pos_set:
+                  lemma_pos_counter[pos] += 1
+          multi_pos_lemmas = {
+              lemma: sorted(pos_set)
+              for lemma, pos_set in sorted(lemma_pos.items())
+              if len(pos_set) > 1
+          }
+
+          lexical_text = "".join(r[0] + r[1] for r in records)
+          lexical_counter = collections.Counter(lexical_text)
+          full_counter = collections.Counter(text)
+
+          codepoints = []
+          for ch, count in sorted(lexical_counter.items(), key=lambda kv: ord(kv[0])):
+              codepoints.append(
+                  {
+                      "codepoint": f"U+{ord(ch):04X}",
+                      "char": ch,
+                      "name": unicodedata.name(ch, "<UNNAMED>"),
+                      "category": unicodedata.category(ch),
+                      "count": count,
+                  }
+              )
+
+          combining_marks = []
+          for ch, count in sorted(lexical_counter.items(), key=lambda kv: ord(kv[0])):
+              if unicodedata.category(ch).startswith("M"):
+                  combining_marks.append(
+                      {
+                          "codepoint": f"U+{ord(ch):04X}",
+                          "char": ch,
+                          "name": unicodedata.name(ch, "<UNNAMED>"),
+                          "category": unicodedata.category(ch),
+                          "count": count,
+                      }
+                  )
+
+          unexpected_controls = []
+          for ch, count in sorted(full_counter.items(), key=lambda kv: ord(kv[0])):
+              if unicodedata.category(ch).startswith("C") and ch not in "\t\r\n":
+                  unexpected_controls.append(
+                      {
+                          "codepoint": f"U+{ord(ch):04X}",
+                          "name": unicodedata.name(ch, "<UNNAMED>"),
+                          "category": unicodedata.category(ch),
+                          "count": count,
+                      }
+                  )
+
+          non_nfc_lemma_rows = 0
+          non_nfc_surface_rows = 0
+          nfc_changed_rows = 0
+          nfc_records = []
+          for lemma, surface, features in records:
+              n_lemma = unicodedata.normalize("NFC", lemma)
+              n_surface = unicodedata.normalize("NFC", surface)
+              if n_lemma != lemma:
+                  non_nfc_lemma_rows += 1
+              if n_surface != surface:
+                  non_nfc_surface_rows += 1
+              if n_lemma != lemma or n_surface != surface:
+                  nfc_changed_rows += 1
+              nfc_records.append((n_lemma, n_surface, features))
+          nfc_counter = collections.Counter(nfc_records)
+          nfc_duplicate_extra_rows = sum(n - 1 for n in nfc_counter.values() if n > 1)
+
+          # Deterministic 80/20 lemma-disjoint split: rank by SHA-256(salt NUL UTF-8 lemma),
+          # then UTF-8 lemma bytes as a collision tie-break. First floor(0.8*N) -> train.
+          ranked = sorted(
+              lemmas,
+              key=lambda lemma: (
+                  hashlib.sha256(
+                      SPLIT_SALT.encode("ascii") + b"\0" + lemma.encode("utf-8")
+                  ).digest(),
+                  lemma.encode("utf-8"),
+              ),
+          )
+          train_n = (4 * len(ranked)) // 5
+          train_lemmas = set(ranked[:train_n])
+          test_lemmas = set(ranked[train_n:])
+          assert train_lemmas.isdisjoint(test_lemmas)
+          assert train_lemmas | test_lemmas == set(lemmas)
+
+          split_rows = collections.Counter()
+          split_pos_lemmas = {"train": collections.Counter(), "test": collections.Counter()}
+          for lemma, _, _ in records:
+              split_rows["train" if lemma in train_lemmas else "test"] += 1
+          for lemma, pos_set in lemma_pos.items():
+              part = "train" if lemma in train_lemmas else "test"
+              for pos in pos_set:
+                  split_pos_lemmas[part][pos] += 1
+
+          # Canonical split-manifest digest: NFC is NOT applied here; source lemma bytes are authority.
+          manifest = "".join(
+              f"{lemma}\t{'train' if lemma in train_lemmas else 'test'}\n"
+              for lemma in sorted(lemmas)
+          ).encode("utf-8")
+          split_manifest_sha256 = hashlib.sha256(manifest).hexdigest()
+
+          result = {
+              "source": {
+                  **SOURCE,
+                  "size_bytes": len(raw),
+                  "sha256": source_sha256,
+                  "git_blob_sha1": git_blob_sha1,
+              },
+              "runtime": {
+                  "python": sys.version.split()[0],
+                  "unicode_database": unicodedata.unidata_version,
+              },
+              "encoding_and_newlines": {
+                  "utf8_strict_decode": True,
+                  "lf_bytes": newline_lf,
+                  "crlf_sequences": newline_crlf,
+                  "cr_bytes": newline_cr,
+                  "trailing_newline": trailing_newline,
+                  "bom_utf8": raw.startswith(b"\xef\xbb\xbf"),
+              },
+              "rows": {
+                  "splitlines_count": len(lines),
+                  "valid_rows": len(records),
+                  "malformed_rows": len(malformed),
+                  "malformed_examples": malformed[:20],
+                  "unique_exact_triples": len(record_counter),
+                  "duplicate_exact_extra_rows": duplicate_extra_rows,
+                  "duplicate_exact_groups": duplicate_groups,
+                  "duplicate_examples": duplicate_examples,
+              },
+              "lexicon": {
+                  "unique_lemmas": len(lemmas),
+                  "unique_surfaces": len(surfaces),
+                  "lemma_pos_distribution": dict(sorted(lemma_pos_counter.items())),
+                  "row_pos_distribution": dict(sorted(row_pos_counter.items())),
+                  "multi_pos_lemma_count": len(multi_pos_lemmas),
+                  "multi_pos_lemmas": multi_pos_lemmas,
+              },
+              "features": {
+                  "unique_feature_bundles": len(feature_counter),
+                  "distribution": dict(sorted(feature_counter.items())),
+              },
+              "unicode": {
+                  "lexical_unique_codepoints": len(codepoints),
+                  "lexical_codepoint_inventory": codepoints,
+                  "combining_mark_inventory": combining_marks,
+                  "tatweel_U0640_count": lexical_counter.get("ـ", 0),
+                  "unexpected_control_inventory": unexpected_controls,
+              },
+              "normalization": {
+                  "proposed_policy": "NFC only; preserve Arabic diacritics; no dediacritization; no tatweel stripping",
+                  "non_nfc_lemma_rows": non_nfc_lemma_rows,
+                  "non_nfc_surface_rows": non_nfc_surface_rows,
+                  "nfc_changed_rows": nfc_changed_rows,
+                  "nfc_unique_triples": len(nfc_counter),
+                  "nfc_duplicate_extra_rows": nfc_duplicate_extra_rows,
+                  "duplicate_extra_delta_after_nfc": nfc_duplicate_extra_rows - duplicate_extra_rows,
+              },
+              "split": {
+                  "policy": "rank lemmas by SHA-256(ASCII('42') || NUL || UTF-8(source lemma)); UTF-8 lemma tie-break; first floor(0.8*N) train, remainder test",
+                  "salt": SPLIT_SALT,
+                  "train_lemmas": len(train_lemmas),
+                  "test_lemmas": len(test_lemmas),
+                  "train_rows": split_rows["train"],
+                  "test_rows": split_rows["test"],
+                  "lemma_overlap": len(train_lemmas & test_lemmas),
+                  "train_lemma_pos_distribution": dict(sorted(split_pos_lemmas["train"].items())),
+                  "test_lemma_pos_distribution": dict(sorted(split_pos_lemmas["test"].items())),
+                  "manifest_sha256": split_manifest_sha256,
+              },
+          }
+
+          Path("arabic_freeze_census.json").write_text(
+              json.dumps(result, ensure_ascii=False, sort_keys=True, indent=2) + "\n",
+              encoding="utf-8",
+              newline="\n",
+          )
+          print("=== ERLAB_ARABIC_FREEZE_CENSUS_BEGIN ===")
+          print(json.dumps(result, ensure_ascii=False, sort_keys=True, indent=2))
+          print("=== ERLAB_ARABIC_FREEZE_CENSUS_END ===")
+          PY
+
+      - name: Upload census artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: arabic-domain-transfer-census
+          path: arabic_freeze_census.json
+          if-no-files-found: error
+          retention-days: 7
