@@ -34,7 +34,6 @@ jobs:
           import collections
           import hashlib
           import json
-          import math
           import sys
           import unicodedata
           from pathlib import Path
@@ -48,8 +47,7 @@ jobs:
           }
           SPLIT_SALT = "42"
 
-          p = Path("ara_new")
-          raw = p.read_bytes()
+          raw = Path("ara_new").read_bytes()
           source_sha256 = hashlib.sha256(raw).hexdigest()
           git_blob_sha1 = hashlib.sha1(
               b"blob " + str(len(raw)).encode("ascii") + b"\0" + raw
@@ -59,14 +57,8 @@ jobs:
           if git_blob_sha1 != SOURCE["expected_git_blob_sha1"]:
               raise SystemExit(f"git blob mismatch: {git_blob_sha1}")
 
-          # Strict decode is itself a UTF-8 validity check.
           text = raw.decode("utf-8", errors="strict")
           lines = text.splitlines()
-          newline_lf = raw.count(b"\n")
-          newline_crlf = raw.count(b"\r\n")
-          newline_cr = raw.count(b"\r")
-          trailing_newline = raw.endswith((b"\n", b"\r"))
-
           malformed = []
           records = []
           for i, line in enumerate(lines, 1):
@@ -106,43 +98,27 @@ jobs:
           lexical_text = "".join(r[0] + r[1] for r in records)
           lexical_counter = collections.Counter(lexical_text)
           full_counter = collections.Counter(text)
-
-          codepoints = []
-          for ch, count in sorted(lexical_counter.items(), key=lambda kv: ord(kv[0])):
-              codepoints.append(
-                  {
-                      "codepoint": f"U+{ord(ch):04X}",
-                      "char": ch,
-                      "name": unicodedata.name(ch, "<UNNAMED>"),
-                      "category": unicodedata.category(ch),
-                      "count": count,
-                  }
-              )
-
-          combining_marks = []
-          for ch, count in sorted(lexical_counter.items(), key=lambda kv: ord(kv[0])):
-              if unicodedata.category(ch).startswith("M"):
-                  combining_marks.append(
-                      {
-                          "codepoint": f"U+{ord(ch):04X}",
-                          "char": ch,
-                          "name": unicodedata.name(ch, "<UNNAMED>"),
-                          "category": unicodedata.category(ch),
-                          "count": count,
-                      }
-                  )
-
-          unexpected_controls = []
-          for ch, count in sorted(full_counter.items(), key=lambda kv: ord(kv[0])):
-              if unicodedata.category(ch).startswith("C") and ch not in "\t\r\n":
-                  unexpected_controls.append(
-                      {
-                          "codepoint": f"U+{ord(ch):04X}",
-                          "name": unicodedata.name(ch, "<UNNAMED>"),
-                          "category": unicodedata.category(ch),
-                          "count": count,
-                      }
-                  )
+          codepoints = [
+              {
+                  "codepoint": f"U+{ord(ch):04X}",
+                  "char": ch,
+                  "name": unicodedata.name(ch, "<UNNAMED>"),
+                  "category": unicodedata.category(ch),
+                  "count": count,
+              }
+              for ch, count in sorted(lexical_counter.items(), key=lambda kv: ord(kv[0]))
+          ]
+          combining_marks = [x for x in codepoints if x["category"].startswith("M")]
+          unexpected_controls = [
+              {
+                  "codepoint": f"U+{ord(ch):04X}",
+                  "name": unicodedata.name(ch, "<UNNAMED>"),
+                  "category": unicodedata.category(ch),
+                  "count": count,
+              }
+              for ch, count in sorted(full_counter.items(), key=lambda kv: ord(kv[0]))
+              if unicodedata.category(ch).startswith("C") and ch not in "\t\r\n"
+          ]
 
           non_nfc_lemma_rows = 0
           non_nfc_surface_rows = 0
@@ -161,8 +137,17 @@ jobs:
           nfc_counter = collections.Counter(nfc_records)
           nfc_duplicate_extra_rows = sum(n - 1 for n in nfc_counter.values() if n > 1)
 
-          # Deterministic 80/20 lemma-disjoint split: rank by SHA-256(salt NUL UTF-8 lemma),
-          # then UTF-8 lemma bytes as a collision tie-break. First floor(0.8*N) -> train.
+          # Source-byte lemma identity is the split authority. Check explicitly whether
+          # later NFC normalization would merge any distinct source lemmas.
+          nfc_lemma_to_sources = collections.defaultdict(list)
+          for lemma in lemmas:
+              nfc_lemma_to_sources[unicodedata.normalize("NFC", lemma)].append(lemma)
+          nfc_lemma_collisions = {
+              nfc: sources
+              for nfc, sources in sorted(nfc_lemma_to_sources.items())
+              if len(sources) > 1
+          }
+
           ranked = sorted(
               lemmas,
               key=lambda lemma: (
@@ -178,6 +163,10 @@ jobs:
           assert train_lemmas.isdisjoint(test_lemmas)
           assert train_lemmas | test_lemmas == set(lemmas)
 
+          normalized_train = {unicodedata.normalize("NFC", x) for x in train_lemmas}
+          normalized_test = {unicodedata.normalize("NFC", x) for x in test_lemmas}
+          normalized_overlap = normalized_train & normalized_test
+
           split_rows = collections.Counter()
           split_pos_lemmas = {"train": collections.Counter(), "test": collections.Counter()}
           for lemma, _, _ in records:
@@ -187,7 +176,6 @@ jobs:
               for pos in pos_set:
                   split_pos_lemmas[part][pos] += 1
 
-          # Canonical split-manifest digest: NFC is NOT applied here; source lemma bytes are authority.
           manifest = "".join(
               f"{lemma}\t{'train' if lemma in train_lemmas else 'test'}\n"
               for lemma in sorted(lemmas)
@@ -207,10 +195,10 @@ jobs:
               },
               "encoding_and_newlines": {
                   "utf8_strict_decode": True,
-                  "lf_bytes": newline_lf,
-                  "crlf_sequences": newline_crlf,
-                  "cr_bytes": newline_cr,
-                  "trailing_newline": trailing_newline,
+                  "lf_bytes": raw.count(b"\n"),
+                  "crlf_sequences": raw.count(b"\r\n"),
+                  "cr_bytes": raw.count(b"\r"),
+                  "trailing_newline": raw.endswith((b"\n", b"\r")),
                   "bom_utf8": raw.startswith(b"\xef\xbb\xbf"),
               },
               "rows": {
@@ -250,6 +238,9 @@ jobs:
                   "nfc_unique_triples": len(nfc_counter),
                   "nfc_duplicate_extra_rows": nfc_duplicate_extra_rows,
                   "duplicate_extra_delta_after_nfc": nfc_duplicate_extra_rows - duplicate_extra_rows,
+                  "nfc_unique_lemmas": len(nfc_lemma_to_sources),
+                  "source_lemma_collisions_after_nfc": len(nfc_lemma_collisions),
+                  "source_lemma_collision_examples": dict(list(nfc_lemma_collisions.items())[:20]),
               },
               "split": {
                   "policy": "rank lemmas by SHA-256(ASCII('42') || NUL || UTF-8(source lemma)); UTF-8 lemma tie-break; first floor(0.8*N) train, remainder test",
@@ -259,6 +250,8 @@ jobs:
                   "train_rows": split_rows["train"],
                   "test_rows": split_rows["test"],
                   "lemma_overlap": len(train_lemmas & test_lemmas),
+                  "normalized_lemma_overlap_after_nfc": len(normalized_overlap),
+                  "normalized_overlap_examples": sorted(normalized_overlap)[:20],
                   "train_lemma_pos_distribution": dict(sorted(split_pos_lemmas["train"].items())),
                   "test_lemma_pos_distribution": dict(sorted(split_pos_lemmas["test"].items())),
                   "manifest_sha256": split_manifest_sha256,
