@@ -1,0 +1,178 @@
+name: Arabic domain-transfer preprocessing diagnostic
+
+on:
+  push:
+    branches:
+      - audit/arabic-domain-transfer-freeze
+    paths:
+      - .github/workflows/arabic-domain-transfer-preprocessing-diagnostic.yml
+
+permissions:
+  contents: read
+
+jobs:
+  diagnostic:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Fetch and verify pinned UniMorph ara_new
+        shell: bash
+        run: |
+          set -euo pipefail
+          url='https://raw.githubusercontent.com/unimorph/ara/e9b7521ab75e3a7da6f996a428031164993e6f19/ara_new'
+          curl --fail --location --retry 3 --retry-all-errors --silent --show-error "$url" -o ara_new
+          python - <<'PY'
+          import hashlib
+          from pathlib import Path
+          raw = Path('ara_new').read_bytes()
+          assert len(raw) == 10476193
+          assert hashlib.sha256(raw).hexdigest() == '2295e4db73427cf1690f04a7615c6cf64015d3341285e6914a672c177285602c'
+          blob = hashlib.sha1(b'blob ' + str(len(raw)).encode() + b'\0' + raw).hexdigest()
+          assert blob == '22639239a59524301fcddbfe7794d336d389b221'
+          PY
+
+      - name: Run four-cell preprocessing baseline diagnostic
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from __future__ import annotations
+          import collections
+          import hashlib
+          import json
+          import unicodedata
+          from pathlib import Path
+
+          SALT = b'42'
+          raw = Path('ara_new').read_bytes()
+          records = []
+          for line in raw.decode('utf-8', errors='strict').splitlines():
+              parts = line.split('\t')
+              if len(parts) != 3 or any(p == '' for p in parts):
+                  raise SystemExit(f'malformed row: {line[:120]!r}')
+              records.append(tuple(parts))
+
+          lemmas = sorted({r[0] for r in records})
+          ranked = sorted(
+              lemmas,
+              key=lambda lemma: (
+                  hashlib.sha256(SALT + b'\0' + lemma.encode('utf-8')).digest(),
+                  lemma.encode('utf-8'),
+              ),
+          )
+          train_n = (4 * len(ranked)) // 5
+          train_lemmas = set(ranked[:train_n])
+          test_lemmas = set(ranked[train_n:])
+          assert train_lemmas.isdisjoint(test_lemmas)
+          test_source = [r for r in records if r[0] in test_lemmas]
+
+          def nfc_record(r):
+              return (unicodedata.normalize('NFC', r[0]), unicodedata.normalize('NFC', r[1]), r[2])
+
+          def dedupe(rows):
+              # Stable first occurrence. Exact triple identity only.
+              return list(dict.fromkeys(rows))
+
+          cells = {
+              'A_source_duplicates_retained': test_source,
+              'B_source_exact_triples_deduped': dedupe(test_source),
+              'C_nfc_duplicates_retained': [nfc_record(r) for r in test_source],
+              'D_nfc_exact_triples_deduped': dedupe([nfc_record(r) for r in test_source]),
+          }
+
+          def summarize(rows):
+              correct = sum(1 for lemma, surface, _ in rows if lemma == surface)
+              by_pos = collections.defaultdict(lambda: [0, 0])
+              for lemma, surface, feats in rows:
+                  pos = feats.split(';', 1)[0]
+                  by_pos[pos][1] += 1
+                  if lemma == surface:
+                      by_pos[pos][0] += 1
+              return {
+                  'rows': len(rows),
+                  'baseline_correct': correct,
+                  'baseline_accuracy': correct / len(rows) if rows else 0.0,
+                  'by_pos': {
+                      pos: {
+                          'correct': vals[0],
+                          'rows': vals[1],
+                          'accuracy': vals[0] / vals[1] if vals[1] else 0.0,
+                      }
+                      for pos, vals in sorted(by_pos.items())
+                  },
+              }
+
+          source_to_nfc = [(r, nfc_record(r)) for r in test_source]
+          changed_lemma = sum(1 for a, b in source_to_nfc if a[0] != b[0])
+          changed_surface = sum(1 for a, b in source_to_nfc if a[1] != b[1])
+          changed_either = sum(1 for a, b in source_to_nfc if a[:2] != b[:2])
+          source_correct = [a[0] == a[1] for a, _ in source_to_nfc]
+          nfc_correct = [b[0] == b[1] for _, b in source_to_nfc]
+          flips_false_to_true = sum(1 for x, y in zip(source_correct, nfc_correct) if not x and y)
+          flips_true_to_false = sum(1 for x, y in zip(source_correct, nfc_correct) if x and not y)
+
+          duplicate_counts = collections.Counter(test_source)
+          duplicate_extra_test = sum(n - 1 for n in duplicate_counts.values() if n > 1)
+          duplicate_groups_test = sum(1 for n in duplicate_counts.values() if n > 1)
+
+          nfc_test = [nfc_record(r) for r in test_source]
+          nfc_counts = collections.Counter(nfc_test)
+          nfc_duplicate_extra_test = sum(n - 1 for n in nfc_counts.values() if n > 1)
+
+          result = {
+              'source': {
+                  'commit': 'e9b7521ab75e3a7da6f996a428031164993e6f19',
+                  'path': 'ara_new',
+                  'sha256': hashlib.sha256(raw).hexdigest(),
+              },
+              'split': {
+                  'salt': '42',
+                  'train_lemmas': len(train_lemmas),
+                  'test_lemmas': len(test_lemmas),
+                  'test_source_rows': len(test_source),
+              },
+              'test_preprocessing': {
+                  'source_duplicate_extra_rows': duplicate_extra_test,
+                  'source_duplicate_groups': duplicate_groups_test,
+                  'nfc_duplicate_extra_rows': nfc_duplicate_extra_test,
+                  'duplicate_extra_delta_after_nfc': nfc_duplicate_extra_test - duplicate_extra_test,
+                  'nfc_changed_lemma_rows': changed_lemma,
+                  'nfc_changed_surface_rows': changed_surface,
+                  'nfc_changed_either_rows': changed_either,
+                  'baseline_false_to_true_after_nfc': flips_false_to_true,
+                  'baseline_true_to_false_after_nfc': flips_true_to_false,
+              },
+              'cells': {name: summarize(rows) for name, rows in cells.items()},
+          }
+          result['comparisons'] = {
+              'dedupe_accuracy_delta_source_B_minus_A': (
+                  result['cells']['B_source_exact_triples_deduped']['baseline_accuracy']
+                  - result['cells']['A_source_duplicates_retained']['baseline_accuracy']
+              ),
+              'nfc_accuracy_delta_C_minus_A': (
+                  result['cells']['C_nfc_duplicates_retained']['baseline_accuracy']
+                  - result['cells']['A_source_duplicates_retained']['baseline_accuracy']
+              ),
+              'dedupe_accuracy_delta_nfc_D_minus_C': (
+                  result['cells']['D_nfc_exact_triples_deduped']['baseline_accuracy']
+                  - result['cells']['C_nfc_duplicates_retained']['baseline_accuracy']
+              ),
+          }
+
+          Path('arabic_preprocessing_baseline_diagnostic.json').write_text(
+              json.dumps(result, ensure_ascii=False, sort_keys=True, indent=2) + '\n',
+              encoding='utf-8',
+              newline='\n',
+          )
+          print('=== ERLAB_ARABIC_PREPROCESSING_DIAGNOSTIC_BEGIN ===')
+          print(json.dumps(result, ensure_ascii=False, sort_keys=True, indent=2))
+          print('=== ERLAB_ARABIC_PREPROCESSING_DIAGNOSTIC_END ===')
+          PY
+
+      - name: Upload diagnostic artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: arabic-domain-transfer-preprocessing-diagnostic
+          path: arabic_preprocessing_baseline_diagnostic.json
+          if-no-files-found: error
+          retention-days: 7
